@@ -10,9 +10,7 @@ var _opened_from_landscape: bool = false
 @onready var draggable_bottom_sheet: DraggableBottomSheet = %DraggableBottomSheet
 @onready var avatar_container: MarginContainer = %SafeTopMarginContainer
 @onready var canvas_layer: CanvasLayer = $CanvasLayer
-@onready var button_back: Button = %Button_BackToExplorer
-@onready var button_save: Button = %Button_Save
-@onready var button_cancel: Button = %Button_Cancel
+@onready var profile_editor = %ProfileEditor
 
 
 func _ready() -> void:
@@ -23,13 +21,13 @@ func _ready() -> void:
 		content.stop_emote.connect(_on_stop_emote)
 		content.edit_profile_pressed.connect(show_editor)
 
-	button_back.pressed.connect(_on_close_editor)
-	button_save.pressed.connect(_on_close_editor)
-	button_cancel.pressed.connect(_on_close_editor)
+	profile_editor.close_requested.connect(_on_close_editor)
+	profile_editor.save_failed.connect(_on_save_failed)
 
 
 func _on_visibility_changed() -> void:
 	if visible:
+		hide_editor()
 		_show_avatar()
 		_refresh_content()
 	else:
@@ -39,6 +37,9 @@ func _on_visibility_changed() -> void:
 
 func show_editor(from_landscape: bool = false) -> void:
 	_opened_from_landscape = from_landscape
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
+		profile_editor.populate(profile)
 	canvas_layer.visible = true
 
 
@@ -47,8 +48,10 @@ func hide_editor() -> void:
 		canvas_layer.visible = false
 
 
-func _on_close_editor() -> void:
+func _on_close_editor(saved: bool = false) -> void:
 	hide_editor()
+	if saved:
+		_refresh_content_from_mutable()
 	if _opened_from_landscape:
 		_opened_from_landscape = false
 		Global.set_orientation_landscape()
@@ -84,6 +87,19 @@ func _refresh_content() -> void:
 	var content = draggable_bottom_sheet.get_content_instance()
 	if content and content.has_method("refresh"):
 		content.refresh(profile)
+
+
+func _refresh_content_from_mutable() -> void:
+	var profile: DclUserProfile = Global.player_identity.get_mutable_profile()
+	if profile == null:
+		return
+	var content = draggable_bottom_sheet.get_content_instance()
+	if content and content.has_method("refresh"):
+		content.refresh(profile)
+
+
+func _on_save_failed() -> void:
+	_refresh_content()
 
 
 func _on_emote_pressed(urn: String) -> void:

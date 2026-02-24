@@ -1,21 +1,11 @@
-[gd_scene load_steps=15 format=3 uid="uid://btq6yub1bbxql"]
+[gd_scene load_steps=7 format=3 uid="uid://btq6yub1bbxql"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_r1c1w"]
 [ext_resource type="Script" uid="uid://ddebfpq6x2w6v" path="res://src/ui/components/profile/profile_portrait.gd" id="2_4odgj"]
 [ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="3_5n6w4"]
 [ext_resource type="PackedScene" uid="uid://bmmj6rsmuc0rq" path="res://src/ui/components/draggable_bottom_sheet/draggable_bottom_sheet.tscn" id="5_munvl"]
-[ext_resource type="Texture2D" uid="uid://dftgrrlty2cp5" path="res://assets/ui/settings-background.png" id="6_bvtpj"]
 [ext_resource type="PackedScene" uid="uid://0icleo1x2y07" path="res://src/ui/components/profile/profile_portrait_content.tscn" id="6_content"]
-[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="7_hxdcr"]
-[ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/components/discover/icons/back.svg" id="8_xwcb6"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_2ha3k"]
-[ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="10_uejcb"]
-[ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="11_o5y28"]
-[ext_resource type="PackedScene" uid="uid://bhmbr0xh4h188" path="res://src/ui/components/dropdown_list/dropdown_list.tscn" id="11_xwcb6"]
-[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_hxdcr"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xwcb6"]
-bg_color = Color(0.2784314, 0, 0.44313726, 1)
+[ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_editor.tscn" id="7_editor"]
 
 [node name="ProfilePortrait" type="Control"]
 layout_mode = 3
@@ -62,142 +52,8 @@ content_scene = ExtResource("6_content")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 unique_name_in_owner = true
-visible = false
 
-[node name="TextureRect_Editor" type="TextureRect" parent="CanvasLayer"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("6_bvtpj")
-expand_mode = 1
-stretch_mode = 6
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/TextureRect_Editor"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="SafeTopMarginContainer" type="MarginContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_constants/margin_left = 48
-theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 20
-script = ExtResource("7_hxdcr")
-use_left = false
-use_right = false
-use_bottom = false
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/SafeTopMarginContainer"]
-layout_mode = 2
-
-[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/SafeTopMarginContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 8
-theme_override_constants/separation = 14
-
-[node name="Button_BackToExplorer" type="Button" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
+[node name="ProfileEditor" parent="CanvasLayer" instance=ExtResource("7_editor")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 60)
-layout_mode = 2
-focus_mode = 0
-icon = ExtResource("8_xwcb6")
-flat = true
-expand_icon = true
-
-[node name="Label_EditProfileTitle" type="Label" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_fonts/font = ExtResource("9_2ha3k")
-theme_override_font_sizes/font_size = 28
-text = "Edit Profile"
-label_settings = ExtResource("10_uejcb")
-
-[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/margin_left = 48
-theme_override_constants/margin_right = 48
-
-[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/MarginContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/MarginContainer/ScrollContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-
-[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
-layout_mode = 2
-alignment = 1
-
-[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_bottom = 32
-
-[node name="ProfilePicture" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer/MarginContainer" instance=ExtResource("11_o5y28")]
-custom_minimum_size = Vector2(175, 175)
-layout_mode = 2
-picture_size = 0
-
-[node name="DropdownList" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer" instance=ExtResource("11_xwcb6")]
-layout_mode = 2
-title = "Pronouns"
-
-[node name="DropdownList2" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer" instance=ExtResource("11_xwcb6")]
-layout_mode = 2
-title = "Gender"
-
-[node name="PanelContainer_Footer" type="PanelContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 142)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_xwcb6")
-
-[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/PanelContainer_Footer"]
-layout_mode = 2
-theme_override_constants/margin_left = 48
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 86
-
-[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/PanelContainer_Footer/MarginContainer"]
-custom_minimum_size = Vector2(0, 66)
-layout_mode = 2
-theme_override_constants/separation = 20
-alignment = 2
-
-[node name="Button_Save" type="Button" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme = ExtResource("12_hxdcr")
-theme_type_variation = &"SecondaryButton"
-theme_override_font_sizes/font_size = 30
-text = "CANCEL"
-icon_alignment = 2
-expand_icon = true
-
-[node name="Button_Cancel" type="Button" parent="CanvasLayer/TextureRect_Editor/VBoxContainer/PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme = ExtResource("12_hxdcr")
-theme_override_font_sizes/font_size = 30
-text = "SAVE"
-icon_alignment = 2
-expand_icon = true
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

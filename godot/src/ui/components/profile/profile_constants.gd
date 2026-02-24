@@ -2,7 +2,6 @@ class_name ProfileConstants
 extends Node
 
 const COUNTRIES = [
-	"- Select an option -",
 	"Afghanistan",
 	"Albania",
 	"Algeria",
@@ -203,7 +202,6 @@ const COUNTRIES = [
 ]
 
 const LANGUAGES = [
-	"- Select an option -",
 	"Afrikaans",
 	"Albanian",
 	"Amharic",
@@ -297,7 +295,6 @@ const LANGUAGES = [
 ]
 
 const GENDERS = [
-	"- Select an option -",
 	"Female",
 	"Male",
 	"Transgender",
@@ -325,7 +322,6 @@ const SEXUAL_ORIENTATIONS = [
 ]
 
 const PRONOUNS = [
-	"- Select an option -",
 	"He / Him",
 	"She / Her",
 	"They / Them",
@@ -337,7 +333,6 @@ const PRONOUNS = [
 ]
 
 const RELATIONSHIP_STATUS = [
-	"- Select an option -",
 	"Single",
 	"In a relationship",
 	"Engaged",
@@ -351,7 +346,6 @@ const RELATIONSHIP_STATUS = [
 ]
 
 const EMPLOYMENT_STATUS = [
-	"- Select an option -",
 	"Studying",
 	"Working",
 	"Chilling",
