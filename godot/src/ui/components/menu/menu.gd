@@ -27,6 +27,7 @@ var fade_in_tween: Tween = null
 @onready var control_settings := PlaceholderManager.new(%Control_Settings)
 @onready var control_backpack := PlaceholderManager.new(%Control_Backpack)
 @onready var control_profile_settings := PlaceholderManager.new(%Control_ProfileSettings)
+@onready var control_profile_portrait := PlaceholderManager.new(%Control_ProfilePortrait)
 
 @onready var control_deploying_profile := %Control_DeployingProfile
 
@@ -66,6 +67,7 @@ func _ready():
 	control_discover.placeholder.visible = false
 	control_backpack.placeholder.visible = false
 	control_profile_settings.placeholder.visible = false
+	control_profile_portrait.placeholder.visible = false
 
 	# Connect to notification clicked signal for reward notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
@@ -141,9 +143,10 @@ func async_show_settings():
 
 
 func async_show_own_profile():
-	await control_profile_settings._async_instantiate()
-
-	select_profile_screen()
+	if not Global.is_orientation_portrait():
+		return
+	await control_profile_portrait._async_instantiate()
+	select_profile_screen(true, true)
 	_open()
 
 
@@ -191,10 +194,11 @@ func select_backpack_screen(play_sfx: bool = true):
 	select_node(control_backpack, play_sfx)
 
 
-func select_profile_screen(play_sfx: bool = true):
-	current_screen_name = ("PROFILE" if Global.is_orientation_portrait() else "PROFILE_IN_GAME")
+func select_profile_screen(play_sfx: bool = true, portrait: bool = false):
+	current_screen_name = ("PROFILE" if portrait else "PROFILE_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_profile_settings, play_sfx)
+	var node = control_profile_portrait if portrait else control_profile_settings
+	select_node(node, play_sfx)
 
 
 func select_node(node: PlaceholderManager, play_sfx: bool = true):

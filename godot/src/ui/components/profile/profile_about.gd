@@ -2,6 +2,9 @@ extends MarginContainer
 
 enum AboutMode { NONE, DESCRIPTION_ONLY, ABOUT_DATA_ONLY, BOTH }
 
+## If true, always shows expanded view, hides SEE MORE, and uses a 2-column grid.
+@export var is_portrait: bool = false
+
 var _about_mode: int = AboutMode.NONE
 var _about_data_count: int = 0
 var _description_truncated: bool = false
@@ -72,8 +75,35 @@ func refresh(profile: DclUserProfile) -> void:
 	else:
 		_about_mode = AboutMode.NONE
 
-	underlined_button_see_more.set_pressed_no_signal(false)
-	_set_compact_view()
+	if is_portrait:
+		grid_container_about.columns = 2
+		_set_portrait_view()
+	else:
+		underlined_button_see_more.set_pressed_no_signal(false)
+		_set_compact_view()
+
+
+func _set_portrait_view() -> void:
+	margin_container_see_more.hide()
+	match _about_mode:
+		AboutMode.NONE:
+			hide()
+		AboutMode.DESCRIPTION_ONLY:
+			show()
+			margin_container_description.show()
+			_expand_description()
+			margin_container_data_about.hide()
+		AboutMode.ABOUT_DATA_ONLY:
+			show()
+			margin_container_description.hide()
+			margin_container_data_about.show()
+			_show_all_about_data()
+		AboutMode.BOTH:
+			show()
+			margin_container_description.show()
+			_expand_description()
+			margin_container_data_about.show()
+			_show_all_about_data()
 
 
 func _set_compact_view() -> void:

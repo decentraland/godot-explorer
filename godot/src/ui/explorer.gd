@@ -262,6 +262,7 @@ func _ready():
 
 	Global.open_profile_by_address.connect(_async_open_profile_by_address)
 	Global.open_profile_by_avatar.connect(_async_open_profile_by_avatar)
+	Global.open_own_profile.connect(_on_global_open_own_profile)
 
 	ui_root.grab_focus.call_deferred()
 
@@ -893,9 +894,16 @@ func _on_control_menu_open_profile() -> void:
 	_open_own_profile()
 
 
+func _on_global_open_own_profile() -> void:
+	if Global.is_orientation_portrait():
+		return
+	_open_own_profile()
+
+
 func _open_own_profile() -> void:
-	control_menu.async_show_own_profile()
-	release_mouse()
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
+		_open_profile(profile)
 
 
 func _get_viewport_scale_factors() -> Vector2:

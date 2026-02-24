@@ -1,0 +1,48 @@
+[gd_scene load_steps=6 format=3 uid="uid://btq6yub1bbxql"]
+
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_r1c1w"]
+[ext_resource type="Script" uid="uid://ddebfpq6x2w6v" path="res://src/ui/components/profile/profile_portrait.gd" id="2_4odgj"]
+[ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="3_5n6w4"]
+[ext_resource type="PackedScene" uid="uid://bmmj6rsmuc0rq" path="res://src/ui/components/draggable_bottom_sheet/draggable_bottom_sheet.tscn" id="5_munvl"]
+[ext_resource type="PackedScene" uid="uid://0icleo1x2y07" path="res://src/ui/components/profile/profile_portrait_content.tscn" id="6_content"]
+
+[node name="ProfilePortrait" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 1
+theme = ExtResource("1_r1c1w")
+script = ExtResource("2_4odgj")
+metadata/mobile_preview_orientation = "portrait"
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_5n6w4")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="SafeTopMarginContainer" type="MarginContainer" parent="TextureRect"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DraggableBottomSheet" parent="." instance=ExtResource("5_munvl")]
+unique_name_in_owner = true
+layout_mode = 1
+content_scene = ExtResource("6_content")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
