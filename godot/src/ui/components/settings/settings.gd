@@ -526,10 +526,6 @@ func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
 
 
-func _on_button_sign_out_pressed() -> void:
-	Global.sign_out()
-
-
 func _on_button_test_notification_pressed() -> void:
 	# Test notification with emojis and accents in both title and body
 	# This will test if iOS can display both correctly
@@ -803,3 +799,7 @@ func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
 	Global.get_config().audio_avatar_and_emotes_volume = value
 	AudioSettings.apply_avatar_and_emotes_volume_settings()
 	Global.get_config().save_to_settings_file()
+
+
+func _on_custom_button_sign_out_pressed() -> void:
+	Global.sign_out()
