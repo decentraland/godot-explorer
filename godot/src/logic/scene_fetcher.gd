@@ -88,14 +88,14 @@ var _floating_islands_created: int = 0
 var _large_scene_floor: Node3D = null
 
 # Preview WebSocket for hot reload
-var _preview_ws := WebSocketPeer.new()
-var _preview_ws_pending_url: String = ""
-var _preview_ws_dirty_connected: bool = false
-var _preview_ws_dirty_closed: bool = false
+var _preview_ws := PreviewWebSocket.new()
 
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
+
+	add_child(_preview_ws)
+	_preview_ws.scene_update.connect(_on_preview_scene_update)
 
 	# Initialize wall manager and base floor manager only for floating islands mode
 	if is_using_floating_islands():
@@ -206,8 +206,6 @@ func is_dynamic_loading_mode() -> bool:
 
 # gdlint:ignore = async-function-name
 func _process(_dt):
-	_process_preview_ws()
-
 	# Process async floating islands generation (2 parcels per frame)
 	_process_floating_islands_batch()
 
@@ -1328,46 +1326,12 @@ func reload_scene(scene_id: String) -> void:
 
 
 func set_preview_url(url: String) -> void:
-	_preview_ws_pending_url = (url.to_lower().replace("http://", "ws://").replace(
-		"https://", "wss://"
-	))
+	_preview_ws.set_url(url)
 
 
-func _process_preview_ws():
-	_preview_ws.poll()
-
-	var state = _preview_ws.get_ready_state()
-	if state == WebSocketPeer.STATE_OPEN:
-		if not _preview_ws_pending_url.is_empty():
-			_preview_ws.close()
-
-		if _preview_ws_dirty_connected:
-			_preview_ws_dirty_connected = false
-			_preview_ws_dirty_closed = true
-
-		while _preview_ws.get_available_packet_count():
-			var packet = _preview_ws.get_packet().get_string_from_utf8()
-			var json = JSON.parse_string(packet)
-			if json != null and json is Dictionary:
-				var msg_type = json.get("type", "")
-				match msg_type:
-					"SCENE_UPDATE":
-						var scene_id = json.get("payload", {}).get("sceneId", "unknown")
-						_is_hot_reloading = true
-						reload_scene(scene_id)
-					_:
-						printerr("preview-ws > unknown message type ", msg_type)
-
-	elif state == WebSocketPeer.STATE_CLOSING:
-		_preview_ws_dirty_closed = true
-	elif state == WebSocketPeer.STATE_CLOSED:
-		if _preview_ws_dirty_closed:
-			_preview_ws_dirty_closed = false
-
-		if not _preview_ws_pending_url.is_empty():
-			_preview_ws.connect_to_url(_preview_ws_pending_url)
-			_preview_ws_pending_url = ""
-			_preview_ws_dirty_connected = true
+func _on_preview_scene_update(scene_id: String) -> void:
+	_is_hot_reloading = true
+	reload_scene(scene_id)
 
 
 func set_debugging_js_scene_id(id: String) -> void:
