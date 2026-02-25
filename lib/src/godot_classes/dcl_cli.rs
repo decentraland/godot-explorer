@@ -402,6 +402,19 @@ impl DclCli {
                 arg_type: ArgType::Value("<number>".to_string()),
                 category: "Authentication".to_string(),
             },
+            // Logging
+            ArgDefinition {
+                name: "--rust-log".to_string(),
+                description: "Set Rust log filter (e.g., debug, info, warn, dclgodot::comms=debug,info). Works via deeplink on all platforms".to_string(),
+                arg_type: ArgType::Value("<filter>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-pipe-logging".to_string(),
+                description: "Disable piping Rust logs to Godot console (use platform default: stdout/logcat/oslog)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
         ]
     }
 
