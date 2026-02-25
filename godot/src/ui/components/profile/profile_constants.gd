@@ -321,14 +321,7 @@ const SEXUAL_ORIENTATIONS = [
 ]
 
 const PRONOUNS = [
-	"He / Him",
-	"She / Her",
-	"They / Them",
-	"Ze / Zir",
-	"Xe / Xem",
-	"Ze / Hir",
-	"Per / Per",
-	"Other"
+	"He / Him", "She / Her", "They / Them", "Ze / Zir", "Xe / Xem", "Ze / Hir", "Per / Per", "Other"
 ]
 
 const RELATIONSHIP_STATUS = [
@@ -345,11 +338,5 @@ const RELATIONSHIP_STATUS = [
 ]
 
 const EMPLOYMENT_STATUS = [
-	"Studying",
-	"Working",
-	"Chilling",
-	"Looking for a job",
-	"Home/Family",
-	"Retired",
-	"Other"
+	"Studying", "Working", "Chilling", "Looking for a job", "Home/Family", "Retired", "Other"
 ]

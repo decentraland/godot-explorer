@@ -93,7 +93,9 @@ func populate(profile: DclUserProfile) -> void:
 	_current_links = []
 	var links = profile.get_links()
 	for link in links:
-		_current_links.append({"title": str(link.get("title", "")), "url": str(link.get("url", ""))})
+		_current_links.append(
+			{"title": str(link.get("title", "")), "url": str(link.get("url", ""))}
+		)
 	_refresh_links_ui()
 
 	var pronouns_val := profile.get_pronouns().strip_edges()

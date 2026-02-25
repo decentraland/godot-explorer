@@ -5,6 +5,8 @@ signal emote_pressed(urn: String)
 signal stop_emote
 signal edit_profile_pressed
 
+var _address: String = ""
+
 @onready var custom_button_edit_profile: Button = %CustomButton_EditProfile
 @onready var label_nickname: Label = %Label_Nickname
 @onready var label_tag: Label = %Label_Tag
@@ -17,8 +19,6 @@ signal edit_profile_pressed
 @onready var profile_links: VBoxContainer = %ProfileLinks
 @onready var separator_about: HSeparator = %HSeparator2
 @onready var separator_links: HSeparator = %HSeparator4
-
-var _address: String = ""
 
 
 func _ready() -> void:
