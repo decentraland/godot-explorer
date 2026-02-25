@@ -56,9 +56,9 @@ func _initialize() -> void:
 
 
 func _before_send(event: SentryEvent) -> SentryEvent:
-	# TODO: Re-enable after Sentry testing
-	#if self.is_dev_version:
-	#	return null
+	# Discard events for dev builds - only prod and staging report to Sentry
+	if self.is_dev_version:
+		return null
 
 	# if event.message.contains("Bruno"):
 	#	# Scrub sensitive information from the event.
