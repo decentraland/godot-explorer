@@ -3,7 +3,11 @@ extends TextureRect
 signal close_requested(saved: bool)
 signal save_failed
 
+const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
+const MAX_LINKS = 5
+
 var _original_values: Dictionary = {}
+var _current_links: Array = []
 
 @onready var button_back: Button = %Button_BackToExplorer
 @onready var button_save: Button = %Button_Save
@@ -20,6 +24,9 @@ var _original_values: Dictionary = {}
 @onready var dcl_line_edit_profession = %DclLineEdit_Profession
 @onready var dcl_line_edit_real_name = %DclLineEdit_RealName
 @onready var dcl_line_edit_hobby = %DclLineEdit_Hobby
+@onready var h_flow_container_links: HFlowContainer = %HFlowContainer_Links
+@onready var button_add_link: Button = %Button_AddLink
+@onready var profile_new_link_popup = %ProfileNewLinkPopup
 
 
 func _ready() -> void:
@@ -81,6 +88,14 @@ func populate(profile: DclUserProfile) -> void:
 	dcl_line_edit_real_name.set_text_value(real_name_val)
 	dcl_line_edit_hobby.set_text_value(hobby_val)
 
+	profile_new_link_popup.hide()
+
+	_current_links = []
+	var links = profile.get_links()
+	for link in links:
+		_current_links.append({"title": str(link.get("title", "")), "url": str(link.get("url", ""))})
+	_refresh_links_ui()
+
 	var pronouns_val := profile.get_pronouns().strip_edges()
 	var gender_val := profile.get_gender().strip_edges()
 	var sexual_orientation_val := profile.get_sexual_orientation().strip_edges()
@@ -112,6 +127,7 @@ func populate(profile: DclUserProfile) -> void:
 		"profession": profession_val,
 		"real_name": real_name_val,
 		"hobby": hobby_val,
+		"links": _current_links.duplicate(true),
 	}
 
 	button_save.disabled = true
@@ -177,6 +193,8 @@ func _check_dirty() -> void:
 	elif dcl_line_edit_real_name.get_text_value() != _original_values.get("real_name", ""):
 		is_dirty = true
 	elif dcl_line_edit_hobby.get_text_value() != _original_values.get("hobby", ""):
+		is_dirty = true
+	elif _are_links_dirty():
 		is_dirty = true
 
 	button_save.disabled = !is_dirty
@@ -248,6 +266,12 @@ func _async_save_profile() -> void:
 	if current_hobby != _original_values.get("hobby", ""):
 		mutable_profile.set_hobbies(current_hobby)
 
+	if _are_links_dirty():
+		var typed_links: Array[Dictionary] = []
+		for link in _current_links:
+			typed_links.append(link)
+		mutable_profile.set_links(typed_links)
+
 	# Optimistic: close immediately and let portrait refresh with mutable profile
 	close_requested.emit(true)
 
@@ -258,3 +282,56 @@ func _async_save_profile() -> void:
 	if promise.is_rejected():
 		printerr("Failed to save profile: ", PromiseUtils.get_error_message(promise))
 		save_failed.emit()
+
+
+func _are_links_dirty() -> bool:
+	var original_links: Array = _original_values.get("links", [])
+	if _current_links.size() != original_links.size():
+		return true
+	for i in range(_current_links.size()):
+		if _current_links[i]["title"] != original_links[i]["title"]:
+			return true
+		if _current_links[i]["url"] != original_links[i]["url"]:
+			return true
+	return false
+
+
+func _refresh_links_ui() -> void:
+	for child in h_flow_container_links.get_children():
+		if child == button_add_link:
+			continue
+		h_flow_container_links.remove_child(child)
+		child.queue_free()
+
+	for i in range(_current_links.size()):
+		var link = _current_links[i]
+		var button = PROFILE_LINK_BUTTON.instantiate()
+		h_flow_container_links.add_child(button)
+		button.text = link["title"]
+		button.url = link["url"]
+		button.emit_signal("change_editing", true)
+		var idx = i
+		button.delete_link.connect(func(): _on_link_deleted(idx))
+
+	# Keep add link button always last
+	h_flow_container_links.move_child(button_add_link, -1)
+	button_add_link.visible = _current_links.size() < MAX_LINKS
+
+
+func _on_link_deleted(index: int) -> void:
+	if index >= 0 and index < _current_links.size():
+		_current_links.remove_at(index)
+		_refresh_links_ui()
+		_check_dirty()
+
+
+func _on_add_link_pressed() -> void:
+	profile_new_link_popup.open()
+
+
+func _on_profile_new_link_popup_add_link(link_title: String, link_url: String) -> void:
+	if _current_links.size() >= MAX_LINKS:
+		return
+	_current_links.append({"title": link_title, "url": link_url})
+	_refresh_links_ui()
+	_check_dirty()

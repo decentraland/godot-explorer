@@ -808,4 +808,3 @@ layout_mode = 2
 [connection signal="pressed" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_CloseProfile" to="." method="close"]
 [connection signal="pressed" from="MarginContainer/MarginContainer/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer/Button_CopyAddress" to="." method="_on_copy_address_pressed"]
 [connection signal="update_name_on_profile" from="ChangeNickPopup" to="." method="_async_on_change_nick_popup_update_name_on_profile"]
-[connection signal="add_link" from="ProfileNewLinkPopup" to="." method="_on_profile_new_link_popup_add_link"]

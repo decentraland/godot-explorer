@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://biapgh26sgkca"]
+[gd_scene load_steps=7 format=3 uid="uid://biapgh26sgkca"]
 
 [ext_resource type="StyleBox" uid="uid://cocacywor1hkb" path="res://src/ui/components/profile/profile_link_button_normal.tres" id="1_j0r87"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_oyqjs"]
 [ext_resource type="Script" uid="uid://c7ktnujnnsko8" path="res://src/ui/components/profile/profile_link_button.gd" id="2_j0r87"]
 [ext_resource type="Texture2D" uid="uid://c22ghvgmgry8" path="res://assets/ui/profile/link-icon.svg" id="2_oyqjs"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_3knha"]
@@ -10,7 +11,9 @@
 custom_minimum_size = Vector2(0, 64)
 offset_right = 133.0
 offset_bottom = 42.0
+focus_mode = 0
 mouse_filter = 1
+theme = ExtResource("1_oyqjs")
 theme_override_colors/font_color = Color(0.627451, 0.67058825, 1, 1)
 theme_override_colors/font_focus_color = Color(0.627451, 0.67058825, 1, 1)
 theme_override_colors/font_pressed_color = Color(0.627451, 0.67058825, 1, 1)

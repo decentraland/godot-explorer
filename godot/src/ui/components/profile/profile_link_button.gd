@@ -34,4 +34,3 @@ func _on_button_remove_pressed() -> void:
 
 func _on_pressed() -> void:
 	emit_signal("try_open_link", url)
-	print(url)
