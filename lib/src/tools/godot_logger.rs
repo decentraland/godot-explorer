@@ -11,7 +11,7 @@ use tracing_subscriber::{reload, Layer, Registry};
 static RELOAD_HANDLE: OnceLock<reload::Handle<EnvFilter, Registry>> = OnceLock::new();
 
 /// Visitor to extract the message field from a tracing event.
-/// Shared between GodotTracingLayer and SentryTracingLayer.
+/// Shared between GodotTracingLayer and IosOsLogLayer.
 #[derive(Default)]
 pub struct MessageVisitor {
     pub message: String,
@@ -254,4 +254,13 @@ pub fn set_log_filter(filter_str: &str) -> Result<(), String> {
         filter_str
     );
     Ok(())
+}
+
+/// Emits test messages at various log levels to verify Sentry integration.
+pub fn emit_sentry_test_messages() {
+    tracing::trace!("[Sentry Test] Rust: tracing::trace() - ignored");
+    tracing::debug!("[Sentry Test] Rust: tracing::debug() - ignored");
+    tracing::info!("[Sentry Test] Rust: tracing::info() - breadcrumb");
+    tracing::warn!("[Sentry Test] Rust: tracing::warn() - breadcrumb");
+    tracing::error!("[Sentry Test] Rust: tracing::error() - breadcrumb");
 }

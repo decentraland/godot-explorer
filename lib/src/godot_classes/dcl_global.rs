@@ -62,11 +62,46 @@ mod android {
 #[cfg(target_os = "ios")]
 mod ios {
     use crate::tools::godot_logger::{
-        create_reload_filter, should_pipe_to_godot, GodotTracingLayer,
+        create_reload_filter, should_pipe_to_godot, GodotTracingLayer, MessageVisitor,
     };
-    use tracing_oslog::OsLogger;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
+
+    /// A tracing layer that uses the `oslog` crate to write to Apple's Unified Logging.
+    /// Unlike `tracing-oslog`, the `oslog` crate uses `%{public}s` in its C wrapper,
+    /// so messages are fully visible in Console.app instead of showing `<private>`.
+    struct IosOsLogLayer {
+        logger: oslog::OsLog,
+    }
+
+    impl<S: tracing::Subscriber> tracing_subscriber::layer::Layer<S> for IosOsLogLayer {
+        fn on_event(
+            &self,
+            event: &tracing::Event<'_>,
+            _ctx: tracing_subscriber::layer::Context<'_, S>,
+        ) {
+            let metadata = event.metadata();
+            let level = metadata.level();
+            let target = metadata.target();
+            let file = metadata.file().unwrap_or("unknown");
+            let line = metadata.line().unwrap_or(0);
+
+            let mut visitor = MessageVisitor::default();
+            event.record(&mut visitor);
+
+            let formatted = format!(
+                "[{}] [{}] {} ({}:{})",
+                level, target, visitor.message, file, line
+            );
+
+            let oslog_level = match *level {
+                tracing::Level::ERROR | tracing::Level::WARN => oslog::Level::Error,
+                tracing::Level::INFO => oslog::Level::Info,
+                tracing::Level::DEBUG | tracing::Level::TRACE => oslog::Level::Debug,
+            };
+            self.logger.with_level(oslog_level, &formatted);
+        }
+    }
 
     pub fn init_logger() {
         let pipe_to_godot = should_pipe_to_godot();
@@ -75,7 +110,9 @@ mod ios {
         if pipe_to_godot {
             registry().with(filter_layer).with(GodotTracingLayer).init();
         } else {
-            let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default");
+            let oslog_layer = IosOsLogLayer {
+                logger: oslog::OsLog::new(env!("CARGO_PKG_NAME"), "default"),
+            };
             registry().with(filter_layer).with(oslog_layer).init();
         }
     }
@@ -592,7 +629,7 @@ impl DclGlobal {
     /// Emits test messages at various Rust tracing levels to verify Sentry integration.
     #[func]
     pub fn emit_sentry_rust_test_messages() {
-        use crate::tools::sentry_logger::emit_sentry_test_messages;
+        use crate::tools::godot_logger::emit_sentry_test_messages;
         emit_sentry_test_messages();
     }
 
