@@ -2,6 +2,8 @@ use tracing::{Level, Subscriber};
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
+use super::godot_logger::MessageVisitor;
+
 /// A tracing Layer that forwards logs to Godot's Sentry SDK as breadcrumbs
 pub struct SentryTracingLayer;
 
@@ -74,26 +76,6 @@ fn add_breadcrumb_to_godot(message: &str, level: &str) {
         breadcrumb.set("level", &level_int.to_variant());
         breadcrumb.set("type", &"default".to_variant());
         sentry_sdk.call("add_breadcrumb", &[breadcrumb.to_variant()]);
-    }
-}
-
-/// Visitor to extract the message field from a tracing event
-#[derive(Default)]
-struct MessageVisitor {
-    message: String,
-}
-
-impl tracing::field::Visit for MessageVisitor {
-    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        if field.name() == "message" || self.message.is_empty() {
-            self.message = format!("{:?}", value);
-        }
-    }
-
-    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
-        if field.name() == "message" || self.message.is_empty() {
-            self.message = value.to_string();
-        }
     }
 }
 

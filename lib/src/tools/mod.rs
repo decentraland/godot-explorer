@@ -1,3 +1,4 @@
+pub mod godot_logger;
 pub mod network_inspector;
 pub mod sentry_logger;
 
