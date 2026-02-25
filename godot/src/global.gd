@@ -282,7 +282,7 @@ func _ready():
 	# Initialize metrics with proper user_id and session_id (skip in asset server mode)
 	if not cli.asset_server:
 		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
-		self.metrics.set_debug_level(1)  # 0 off - 1 on
+		self.metrics.set_debug_level(0)  # 0 off - 1 on
 		self.metrics.set_name("metrics")
 
 	# Skip Sentry setup in asset server mode
