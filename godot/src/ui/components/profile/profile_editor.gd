@@ -144,6 +144,7 @@ func _populate_dropdown(dropdown: DropdownList, options: Array) -> void:
 	dropdown.add_item("Select", 0)
 	for i in range(options.size()):
 		dropdown.add_item(options[i], i + 1)
+	dropdown.placeholder_index = 0
 	dropdown.select(0)
 
 
