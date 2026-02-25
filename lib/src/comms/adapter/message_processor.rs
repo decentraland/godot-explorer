@@ -546,6 +546,95 @@ impl MessageProcessor {
         true
     }
 
+    /// Handle media messages (video/audio from streamers) that don't need peer lifecycle.
+    /// These use synthetic addresses (H160::zero()) and must bypass the player address check.
+    fn process_media_message(&mut self, message: IncomingMessage) {
+        match message.message {
+            MessageType::InitVideo(video_init) => {
+                tracing::debug!(
+                    "InitVideo from {:#x}: {}x{}",
+                    message.address,
+                    video_init.width,
+                    video_init.height
+                );
+
+                self.active_video_tracks.insert(
+                    message.address,
+                    VideoTrackInfo {
+                        width: video_init.width,
+                        height: video_init.height,
+                        last_frame_time: Instant::now(),
+                    },
+                );
+            }
+            MessageType::VideoFrame(video_frame) => {
+                // Filter blocked users
+                if self.cached_blocked.contains(&message.address) {
+                    return;
+                }
+
+                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
+                    track_info.last_frame_time = Instant::now();
+
+                    // Forward to all scenes (any video track goes to all livekit video players)
+                    use crate::godot_classes::dcl_global::DclGlobal;
+                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                    let mut scene_runner = scene_runner.bind_mut();
+
+                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                        scene.process_livekit_video_frame(
+                            video_frame.width,
+                            video_frame.height,
+                            &video_frame.data,
+                        );
+                    }
+                } else {
+                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
+                }
+            }
+            MessageType::InitStreamerAudio(audio_init) => {
+                tracing::debug!(
+                    "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
+                    audio_init.sample_rate,
+                    audio_init.num_channels,
+                    audio_init.samples_per_channel
+                );
+
+                // Forward to all scenes to initialize their video player audio
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.init_livekit_audio(
+                        audio_init.sample_rate,
+                        audio_init.num_channels,
+                        audio_init.samples_per_channel,
+                    );
+                }
+            }
+            MessageType::StreamerAudioFrame(audio_frame) => {
+                // Convert i16 audio data to PackedVector2Array (same as voice chat)
+                let frame = godot::prelude::PackedVector2Array::from_iter(
+                    audio_frame.data.iter().map(|c| {
+                        let val = (*c as f32) / (i16::MAX as f32);
+                        godot::prelude::Vector2 { x: val, y: val }
+                    }),
+                );
+
+                // Forward to all scenes
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.process_livekit_audio_frame(frame.clone());
+                }
+            }
+            _ => {} // Other message types are not media messages
+        }
+    }
+
     /// Handle non-player participant messages (e.g., "authoritative-server").
     /// Matching bevy's NonPlayerUpdate path: no avatar, no profile, only Scene messages.
     fn process_non_player_message(&mut self, message: IncomingMessage) {
@@ -589,6 +678,19 @@ impl MessageProcessor {
         // Skip messages from ourselves (can happen if local participant events leak through)
         if message.address == self.player_address {
             return;
+        }
+
+        // Media messages (video/audio from streamers) use synthetic addresses (H160::zero())
+        // and must bypass the player address check — they don't need peer lifecycle management.
+        match &message.message {
+            MessageType::InitVideo(_)
+            | MessageType::VideoFrame(_)
+            | MessageType::InitStreamerAudio(_)
+            | MessageType::StreamerAudioFrame(_) => {
+                self.process_media_message(message);
+                return;
+            }
+            _ => {}
         }
 
         // Non-player participants (like "authoritative-server" with synthetic address)
@@ -747,86 +849,14 @@ impl MessageProcessor {
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene.push_voice_frame(peer_alias, frame);
             }
-            MessageType::InitVideo(video_init) => {
-                tracing::debug!(
-                    "InitVideo from {:#x}: {}x{}",
-                    message.address,
-                    video_init.width,
-                    video_init.height
-                );
-
-                self.active_video_tracks.insert(
-                    message.address,
-                    VideoTrackInfo {
-                        width: video_init.width,
-                        height: video_init.height,
-                        last_frame_time: Instant::now(),
-                    },
-                );
-            }
-            MessageType::VideoFrame(video_frame) => {
-                // Filter blocked users
-                if self.cached_blocked.contains(&message.address) {
-                    return;
-                }
-
-                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
-                    track_info.last_frame_time = Instant::now();
-
-                    // Forward to all scenes (any video track goes to all livekit video players)
-                    use crate::godot_classes::dcl_global::DclGlobal;
-                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                    let mut scene_runner = scene_runner.bind_mut();
-
-                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                        scene.process_livekit_video_frame(
-                            video_frame.width,
-                            video_frame.height,
-                            &video_frame.data,
-                        );
-                    }
-                } else {
-                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
-                }
-            }
-            MessageType::InitStreamerAudio(audio_init) => {
-                tracing::debug!(
-                    "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
-                    audio_init.sample_rate,
-                    audio_init.num_channels,
-                    audio_init.samples_per_channel
-                );
-
-                // Forward to all scenes to initialize their video player audio
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.init_livekit_audio(
-                        audio_init.sample_rate,
-                        audio_init.num_channels,
-                        audio_init.samples_per_channel,
-                    );
-                }
-            }
-            MessageType::StreamerAudioFrame(audio_frame) => {
-                // Convert i16 audio data to PackedVector2Array (same as voice chat)
-                let frame = godot::prelude::PackedVector2Array::from_iter(
-                    audio_frame.data.iter().map(|c| {
-                        let val = (*c as f32) / (i16::MAX as f32);
-                        godot::prelude::Vector2 { x: val, y: val }
-                    }),
-                );
-
-                // Forward to all scenes
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.process_livekit_audio_frame(frame.clone());
-                }
+            // Media messages (InitVideo, VideoFrame, InitStreamerAudio, StreamerAudioFrame)
+            // are handled early in process_message() via process_media_message() before
+            // the peer lifecycle check, so they never reach this match block.
+            MessageType::InitVideo(_)
+            | MessageType::VideoFrame(_)
+            | MessageType::InitStreamerAudio(_)
+            | MessageType::StreamerAudioFrame(_) => {
+                unreachable!("Media messages are handled before peer lifecycle check");
             }
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
