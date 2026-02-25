@@ -36,6 +36,7 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
+    thread::JoinHandle,
     time::{Duration, Instant},
 };
 
@@ -118,6 +119,10 @@ pub struct SceneManager {
     // Loading session tracking
     current_loading_session: Option<LoadingSession>,
     next_session_id: u64,
+
+    // Non-blocking thread cleanup: stores join handles for threads that weren't finished
+    // when the scene was removed. These are periodically cleaned up without blocking.
+    pending_thread_cleanups: Vec<(SceneId, JoinHandle<()>)>,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -1010,6 +1015,9 @@ impl SceneManager {
         // Periodic pool health check and stats logging (handled by PoolManager)
         self.pool_manager.borrow_mut().tick();
 
+        // Non-blocking cleanup of deferred thread handles (iOS watchdog fix)
+        self.cleanup_pending_threads();
+
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
             let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
@@ -1039,6 +1047,8 @@ impl SceneManager {
                 }
             }
 
+            // Non-blocking thread cleanup: only join if thread is already finished,
+            // otherwise defer cleanup to avoid blocking the main thread (iOS watchdog fix)
             if scene.dcl_scene.thread_join_handle.is_finished() {
                 if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
                     let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
@@ -1050,6 +1060,14 @@ impl SceneManager {
                     };
                     tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
                 }
+            } else {
+                // Thread still running - defer cleanup to avoid blocking main thread
+                tracing::debug!(
+                    "scene {} thread still running, deferring cleanup",
+                    scene_id.0
+                );
+                self.pending_thread_cleanups
+                    .push((*scene_id, scene.dcl_scene.thread_join_handle));
             }
 
             self.base_mut().emit_signal(
@@ -1175,6 +1193,35 @@ impl SceneManager {
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                     panic!("render thread receiver exploded");
                 }
+            }
+        }
+    }
+
+    /// Non-blocking cleanup of deferred thread handles.
+    /// Called periodically to clean up threads that weren't finished when their scene was removed.
+    /// This prevents blocking the main thread (iOS watchdog fix).
+    fn cleanup_pending_threads(&mut self) {
+        // Find indices of finished threads
+        let mut finished_indices = Vec::new();
+        for (i, (_, handle)) in self.pending_thread_cleanups.iter().enumerate() {
+            if handle.is_finished() {
+                finished_indices.push(i);
+            }
+        }
+
+        // Remove and join finished threads in reverse order to maintain indices
+        for i in finished_indices.into_iter().rev() {
+            let (scene_id, handle) = self.pending_thread_cleanups.swap_remove(i);
+            tracing::debug!("deferred thread cleanup for scene {}", scene_id.0);
+            if let Err(err) = handle.join() {
+                let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
+                    format!("Thread panicked with: {}", panic_info)
+                } else if let Some(panic_info) = err.downcast_ref::<String>() {
+                    format!("Thread panicked with: {}", panic_info)
+                } else {
+                    "Thread panicked with an unknown payload".to_string()
+                };
+                tracing::error!("deferred scene {} thread result: {:?}", scene_id.0, msg);
             }
         }
     }
@@ -1660,6 +1707,7 @@ impl INode for SceneManager {
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
+            pending_thread_cleanups: Vec::new(),
         }
     }
 
