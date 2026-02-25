@@ -1,11 +1,21 @@
-[gd_scene load_steps=8 format=3 uid="uid://ddgiwkq38wjib"]
+[gd_scene load_steps=18 format=3 uid="uid://ddgiwkq38wjib"]
 
 [ext_resource type="Script" uid="uid://d1xg5skmioapy" path="res://src/ui/components/profile/profile_about.gd" id="1_about"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_font700"]
 [ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="3_desc_ls"]
 [ext_resource type="PackedScene" uid="uid://cwthmkhfqjqb2" path="res://src/ui/components/profile/about_data.tscn" id="4_about_data"]
+[ext_resource type="Texture2D" uid="uid://2sfb80lkd1ku" path="res://assets/ui/country-icon.svg" id="5_3dgdc"]
+[ext_resource type="Texture2D" uid="uid://cvoaqevx752jo" path="res://assets/ui/language-icon.svg" id="5_8teom"]
 [ext_resource type="PackedScene" uid="uid://d0hixhgq3pfdu" path="res://src/ui/components/settings/underlined_button.tscn" id="5_underlined"]
+[ext_resource type="Texture2D" uid="uid://m5b5ucxg1ojd" path="res://assets/ui/pronouns-icon.svg" id="6_72d1u"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="6_font_semi"]
+[ext_resource type="Texture2D" uid="uid://dq1faq3kbcjuq" path="res://assets/ui/relationship-icon.svg" id="7_7vv4g"]
+[ext_resource type="Texture2D" uid="uid://dybpbif7o8fwv" path="res://assets/ui/sexual-orientation-icon.svg" id="7_72d1u"]
+[ext_resource type="Texture2D" uid="uid://diqxkbpdndas" path="res://assets/ui/gender-icon.svg" id="8_w128x"]
+[ext_resource type="Texture2D" uid="uid://rj1u6kg1gwd1" path="res://assets/ui/profession-icon.svg" id="10_1kjum"]
+[ext_resource type="Texture2D" uid="uid://d02sq5beqvafj" path="res://assets/ui/employment-icon.svg" id="11_p128h"]
+[ext_resource type="Texture2D" uid="uid://dvt6fopad7mi" path="res://assets/ui/real-name-icon.svg" id="11_wv437"]
+[ext_resource type="Texture2D" uid="uid://dxov5ntoqp1tw" path="res://assets/ui/hobby-icon.svg" id="14_li7if"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_title"]
 font = ExtResource("2_font700")
@@ -66,51 +76,61 @@ columns = 3
 unique_name_in_owner = true
 layout_mode = 2
 title = "Country"
+icon = ExtResource("5_3dgdc")
 
 [node name="AboutData_Language" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Language"
+icon = ExtResource("5_8teom")
 
 [node name="AboutData_Pronouns" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Pronouns"
+icon = ExtResource("6_72d1u")
 
 [node name="AboutData_Gender" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Gender"
+icon = ExtResource("8_w128x")
 
 [node name="AboutData_RelationshipStatus" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Relationship Status"
+icon = ExtResource("7_7vv4g")
 
 [node name="AboutData_SexualOrientation" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Sexual Orientation"
+icon = ExtResource("7_72d1u")
 
 [node name="AboutData_EmploymentStatus" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Employment Status"
+icon = ExtResource("11_p128h")
 
 [node name="AboutData_Profession" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Profession"
+icon = ExtResource("10_1kjum")
 
 [node name="AboutData_RealName" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Real Name"
+icon = ExtResource("11_wv437")
 
 [node name="AboutData_Hobby" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "HOBBY"
+icon = ExtResource("14_li7if")
 
 [node name="MarginContainer_SeeMore" type="MarginContainer" parent="."]
 unique_name_in_owner = true
