@@ -2,7 +2,6 @@ extends Control
 
 signal request_debug_panel(enabled: bool)
 signal request_pause_scenes(enabled: bool)
-signal preview_hot_reload(scene_type: String, scene_id: String)
 
 enum SceneLogLevel {
 	LOG = 1,
@@ -11,11 +10,6 @@ enum SceneLogLevel {
 }
 
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
-
-var preview_ws = WebSocketPeer.new()
-var _preview_connect_to_url: String = ""
-var _dirty_closed: bool = false
-var _dirty_connected: bool = false
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -32,8 +26,6 @@ var _dirty_connected: bool = false
 @onready var progress_bar_current_cache_size: ProgressBar = %ProgressBar_CurrentCacheSize
 @onready var button_clear_cache: Button = %Button_ClearCache
 
-@onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
-@onready var label_skybox_time: Label = %Label_SkyboxTime
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
@@ -63,9 +55,8 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var dynamic_graphics_container: HBoxContainer = %DynamicGraphics
 @onready var check_button_dynamic_graphics: CheckButton = %CheckButton_DynamicGraphics
 
-# Dynamic graphics toggle
-@onready
-var dynamic_skybox: HBoxContainer = $ColorRect_Content/MarginContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox
+# Dynamic skybox toggle
+@onready var dynamic_skybox: HBoxContainer = %DynamicSkybox
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
 
 @onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
@@ -297,12 +288,12 @@ func _on_line_edit_preview_url_focus_entered() -> void:
 	var line_edit_h: float = line_edit_custom_preview_url.size.y
 	var padding: float = 20.0
 	if line_edit_y_in_content < scroll_y + padding:
-		content_scroll_container.scroll_vertical = maxf(0, line_edit_y_in_content - padding)
+		content_scroll_container.scroll_vertical = int(maxf(0, line_edit_y_in_content - padding))
 	elif line_edit_y_in_content + line_edit_h > scroll_y + view_h - padding:
 		var v_bar = content_scroll_container.get_v_scroll_bar()
 		var max_scroll: float = v_bar.max_value if v_bar else 0.0
-		content_scroll_container.scroll_vertical = minf(
-			max_scroll, line_edit_y_in_content + line_edit_h - view_h + padding
+		content_scroll_container.scroll_vertical = int(
+			minf(max_scroll, line_edit_y_in_content + line_edit_h - view_h + padding)
 		)
 
 
@@ -324,71 +315,9 @@ func refresh_values():
 		check_button_raycast_debugger.set_pressed_no_signal(true)
 
 
-func set_ws_state(connected: bool) -> void:
-	if connected:
-		line_edit_custom_preview_url.set_description_text_and_color("Connected", Color.FOREST_GREEN)
-	else:
-		line_edit_custom_preview_url.set_description_text_and_color("Disconnected", Color.RED)
-
-
-func _process(_delta):
-	preview_ws.poll()
-
-	var state = preview_ws.get_ready_state()
-	if state == WebSocketPeer.STATE_OPEN:
-		if not _preview_connect_to_url.is_empty():
-			preview_ws.close()
-
-		if _dirty_connected:
-			_dirty_connected = false
-			_dirty_closed = true
-			set_ws_state(true)
-
-		while preview_ws.get_available_packet_count():
-			var packet = preview_ws.get_packet().get_string_from_utf8()
-			var json = JSON.parse_string(packet)
-			if json != null and json is Dictionary:
-				var msg_type = json.get("type", "")
-				match msg_type:
-					"SCENE_UPDATE":
-						var scene_id = json.get("payload", {}).get("sceneId", "unknown")
-						var scene_type = json.get("payload", {}).get("sceneType", "scene")
-						print("preview-ws > update of ", scene_type, " with id '", scene_id, "'")
-						preview_hot_reload.emit(scene_type, scene_id)
-					_:
-						printerr("preview-ws > unknown message type ", msg_type)
-
-	elif state == WebSocketPeer.STATE_CLOSING:
-		_dirty_closed = true
-	elif state == WebSocketPeer.STATE_CLOSED:
-		if _dirty_closed:
-			set_ws_state(false)
-
-			var code = preview_ws.get_close_code()
-			var reason = preview_ws.get_close_reason()
-			print(
-				(
-					"preview-ws > closed with code: %d, reason %s. Clean: %s"
-					% [code, reason, code != -1]
-				)
-			)
-			_dirty_closed = false
-
-		if not _preview_connect_to_url.is_empty():
-			preview_ws.connect_to_url(_preview_connect_to_url)
-			print("preview-ws > connecting to ", _preview_connect_to_url)
-			_preview_connect_to_url = ""
-			_dirty_connected = true
-
-
 func _on_button_connect_preview_pressed():
-	set_preview_url(line_edit_custom_preview_url.get_text())
-
-
-func set_preview_url(url: String) -> void:
-	_preview_connect_to_url = url.to_lower().replace("http://", "ws://").replace(
-		"https://", "wss://"
-	)
+	var url = line_edit_custom_preview_url.get_text()
+	Global.scene_fetcher.set_preview_url(url)
 
 
 func refresh_zooms():
@@ -595,10 +524,6 @@ func _on_button_account_pressed() -> void:
 
 func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
-
-
-func _on_button_sign_out_pressed() -> void:
-	Global.sign_out()
 
 
 func _on_button_test_notification_pressed() -> void:
@@ -874,3 +799,7 @@ func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
 	Global.get_config().audio_avatar_and_emotes_volume = value
 	AudioSettings.apply_avatar_and_emotes_volume_settings()
 	Global.get_config().save_to_settings_file()
+
+
+func _on_custom_button_sign_out_pressed() -> void:
+	Global.sign_out()

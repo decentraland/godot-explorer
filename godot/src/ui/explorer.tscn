@@ -446,7 +446,6 @@ script = ExtResource("20_064cw")
 [connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
 [connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]
 [connection signal="open_profile" from="UI/Control_Menu" to="." method="_on_control_menu_open_profile"]
-[connection signal="preview_hot_reload" from="UI/Control_Menu" to="." method="_on_control_menu_preview_hot_reload"]
 [connection signal="request_debug_panel" from="UI/Control_Menu" to="." method="_on_control_menu_request_debug_panel"]
 [connection signal="request_pause_scenes" from="UI/Control_Menu" to="." method="_on_control_menu_request_pause_scenes"]
 [connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
