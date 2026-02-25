@@ -127,6 +127,8 @@ struct Peer {
     profile_fetch_failures: u8,              // Count consecutive failures
     profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
     peer_version: Option<String>,            // Client version for staging/dev builds
+    last_movement_timestamp: f32,            // Dedup: last movement timestamp received
+    last_emote_incremental_id: u32,          // Dedup: last emote incremental ID received
 }
 
 struct ProfileUpdate {
@@ -659,6 +661,8 @@ impl MessageProcessor {
                     profile_fetch_failures: 0,
                     profile_fetch_banned_until: None,
                     peer_version: None,
+                    last_movement_timestamp: f32::NEG_INFINITY,
+                    last_emote_incremental_id: 0,
                 },
             );
 
@@ -938,8 +942,22 @@ impl MessageProcessor {
                 avatar_scene.update_avatar_transform_with_rfc4_position(peer_alias, &position);
             }
             rfc4::packet::Message::Movement(movement) => {
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if movement.timestamp <= peer.last_movement_timestamp {
+                        tracing::debug!(
+                            "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
+                            address,
+                            movement.timestamp,
+                            peer.last_movement_timestamp
+                        );
+                        return;
+                    }
+                    peer.last_movement_timestamp = movement.timestamp;
+                }
+
                 tracing::debug!(
-                    "Received Movement from {:#x}: timestamp({}) pos({}, {}, {}), rot_y({}), vel({}, {}, {}) blend({}), slide_blend({})", 
+                    "Received Movement from {:#x}: timestamp({}) pos({}, {}, {}), rot_y({}), vel({}, {}, {}) blend({}), slide_blend({})",
                     address,
                     movement.timestamp,
                     movement.position_x, movement.position_y, movement.position_z,
@@ -960,11 +978,25 @@ impl MessageProcessor {
                 // Decompress movement data
                 let movement = MovementCompressed::from_proto(movement_compressed);
 
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
+                let timestamp = movement.temporal.timestamp_f32();
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if timestamp <= peer.last_movement_timestamp {
+                        tracing::debug!(
+                            "Discarding duplicate MovementCompressed from {:#x}: timestamp {} <= {}",
+                            address,
+                            timestamp,
+                            peer.last_movement_timestamp
+                        );
+                        return;
+                    }
+                    peer.last_movement_timestamp = timestamp;
+                }
+
                 // Get position from compressed movement with configured realm bounds
                 let pos = movement.position(self.realm_min, self.realm_max);
                 let velocity = movement.velocity();
                 let rotation_rad = -movement.temporal.rotation_f32();
-                let timestamp = movement.temporal.timestamp_f32();
 
                 tracing::debug!(
                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
@@ -1041,6 +1073,20 @@ impl MessageProcessor {
                 );
 
                 let announced_version = announce_profile_version.profile_version;
+
+                // Deduplicate: skip if same version already announced and fetch attempted (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get(&address) {
+                    if peer.announced_version == Some(announced_version)
+                        && peer.profile_fetch_attempted
+                    {
+                        tracing::debug!(
+                            "Discarding duplicate ProfileVersion from {:#x}: version {} already being processed",
+                            address,
+                            announced_version
+                        );
+                        return;
+                    }
+                }
 
                 // Get current version and update peer
                 let (current_version, peer_alias_for_async) = if let Some(peer) =
@@ -1372,6 +1418,20 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Voice(_voice) => {}
             rfc4::packet::Message::PlayerEmote(player_emote) => {
+                // Deduplicate: skip if incremental_id is not newer (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if player_emote.incremental_id <= peer.last_emote_incremental_id {
+                        tracing::debug!(
+                            "Discarding duplicate PlayerEmote from {:#x}: id {} <= {}",
+                            address,
+                            player_emote.incremental_id,
+                            peer.last_emote_incremental_id
+                        );
+                        return;
+                    }
+                    peer.last_emote_incremental_id = player_emote.incremental_id;
+                }
+
                 tracing::debug!(
                     "Received PlayerEmote from {:#x}: {:?}",
                     address,
@@ -1427,5 +1487,31 @@ impl MessageProcessor {
         // Clean up all avatars when disconnected
         let mut avatar_scene_ref = self.avatars.clone();
         avatar_scene_ref.bind_mut().clean();
+    }
+
+    /// Returns room connectivity info for each peer.
+    /// Each entry is (address, room_description) where room_description is
+    /// "Scene", "Archipelago", or "Both".
+    pub fn get_peer_room_info(&self) -> Vec<(H160, String)> {
+        let mut result = Vec::new();
+        for (address, peer) in &self.peer_identities {
+            let mut has_scene = false;
+            let mut has_archipelago = false;
+            for room_id in peer.room_activity.keys() {
+                if room_id.starts_with("scene-") {
+                    has_scene = true;
+                } else {
+                    has_archipelago = true;
+                }
+            }
+            let room_desc = match (has_scene, has_archipelago) {
+                (true, true) => "Both".to_string(),
+                (true, false) => "Scene".to_string(),
+                (false, true) => "Archipelago".to_string(),
+                (false, false) => "None".to_string(),
+            };
+            result.push((*address, room_desc));
+        }
+        result
     }
 }

@@ -126,18 +126,26 @@ impl LivekitRoom {
 
     fn _poll(&mut self) -> bool {
         if let Some(processor_sender) = &self.message_processor_sender {
-            // Forward all messages from the LiveKit thread to the message processor
-            while let Ok(message) = self.receiver_from_thread.try_recv() {
-                if let Err(err) = processor_sender.try_send(message) {
-                    tracing::warn!("Failed to forward message to processor: {}", err);
+            loop {
+                match self.receiver_from_thread.try_recv() {
+                    Ok(message) => {
+                        if let Err(err) = processor_sender.try_send(message) {
+                            tracing::warn!("Failed to forward message to processor: {}", err);
+                        }
+                    }
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => return true,
+                    Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => return false,
                 }
             }
         } else {
-            // If no processor is connected, just drain the messages to prevent backing up
-            while self.receiver_from_thread.try_recv().is_ok() {}
+            loop {
+                match self.receiver_from_thread.try_recv() {
+                    Ok(_) => {} // drain
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => return true,
+                    Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => return false,
+                }
+            }
         }
-
-        true
     }
 
     fn _send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
