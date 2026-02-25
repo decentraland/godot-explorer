@@ -124,17 +124,18 @@ func _on_close() -> void:
 func _populate_dropdown(dropdown: DropdownList, options: Array) -> void:
 	dropdown.clear()
 	dropdown.add_item("Select", 0)
-	for i in range(1, options.size()):
-		dropdown.add_item(options[i], i)
+	for i in range(options.size()):
+		dropdown.add_item(options[i], i + 1)
 	dropdown.select(0)
 
 
 func _find_option_index(options: Array, value: String) -> int:
 	if value.is_empty():
 		return 0
+	var lower_value := value.to_lower()
 	for i in range(options.size()):
-		if options[i] == value:
-			return i
+		if options[i].to_lower() == lower_value:
+			return i + 1
 	return 0
 
 
@@ -182,9 +183,10 @@ func _check_dirty() -> void:
 
 
 func _get_dropdown_value(options: Array, index: int) -> String:
-	if index <= 0 or index >= options.size():
+	var array_idx := index - 1
+	if array_idx < 0 or array_idx >= options.size():
 		return ""
-	return options[index]
+	return options[array_idx]
 
 
 func _async_save_profile() -> void:

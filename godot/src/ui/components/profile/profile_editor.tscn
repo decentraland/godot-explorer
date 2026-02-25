@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://b5wvxalrbrfpk"]
+[gd_scene load_steps=18 format=3 uid="uid://b5wvxalrbrfpk"]
 
 [ext_resource type="Texture2D" uid="uid://dftgrrlty2cp5" path="res://assets/ui/settings-background.png" id="1_bg"]
 [ext_resource type="Script" uid="uid://demhhqbnlvfhu" path="res://src/ui/components/profile/profile_editor.gd" id="2_script"]
@@ -12,6 +12,7 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_theme"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="11_semi"]
 [ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="12_title"]
+[ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_links.tscn" id="13_eu3qc"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="13_reg"]
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="14_desc"]
 
@@ -30,6 +31,7 @@ texture = ExtResource("1_bg")
 expand_mode = 1
 stretch_mode = 6
 script = ExtResource("2_script")
+metadata/mobile_preview_orientation = "portrait"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -174,6 +176,9 @@ allow_edge_spaces = true
 allow_special_characters = true
 is_optional = true
 hint = "Description"
+
+[node name="ProfileLinks" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("13_eu3qc")]
+unique_name_in_owner = true
 
 [node name="VBoxContainer3" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2

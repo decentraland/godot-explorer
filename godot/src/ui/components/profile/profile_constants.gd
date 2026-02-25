@@ -309,7 +309,6 @@ const GENDERS = [
 ]
 
 const SEXUAL_ORIENTATIONS = [
-	"- Select an option -",
 	"Heterosexual",
 	"Bisexual",
 	"Lesbian",
