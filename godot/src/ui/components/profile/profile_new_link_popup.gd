@@ -17,8 +17,8 @@ func _on_gui_input(event: InputEvent) -> void:
 
 
 func close() -> void:
-	dcl_text_edit_link_title.set_text()
-	dcl_text_edit_link_url.set_text()
+	dcl_text_edit_link_title.set_text_value()
+	dcl_text_edit_link_url.set_text_value()
 	hide()
 
 

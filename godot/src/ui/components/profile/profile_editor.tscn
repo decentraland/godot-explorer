@@ -8,7 +8,6 @@
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="6_menu"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="7_pic"]
 [ext_resource type="PackedScene" uid="uid://bhmbr0xh4h188" path="res://src/ui/components/dropdown_list/dropdown_list.tscn" id="8_dd"]
-[ext_resource type="PackedScene" uid="uid://fc5fxcmfp4pq" path="res://src/ui/components/dcl_line_edit.tscn" id="9_edit"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_theme"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="11_semi"]
 [ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="12_title"]
@@ -19,6 +18,11 @@
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="14_desc"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0s0um"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_7drl0"]
+font = ExtResource("13_reg")
+font_size = 24
+font_color = Color(0.687215, 0.687215, 0.687215, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xwcb6"]
 bg_color = Color(0.2784314, 0, 0.44313726, 1)
@@ -34,6 +38,7 @@ expand_mode = 1
 stretch_mode = 6
 script = ExtResource("2_script")
 metadata/mobile_preview_orientation = "portrait"
+metadata/_edit_horizontal_guides_ = [477.0]
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -79,50 +84,52 @@ theme_override_font_sizes/font_size = 28
 text = "Edit Profile"
 label_settings = ExtResource("6_menu")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+[node name="MarginContainer_Content" type="MarginContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_right = 48
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer_Content"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_top = 32
 theme_override_constants/margin_bottom = 32
 
-[node name="ProfilePicture" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer/MarginContainer" instance=ExtResource("7_pic")]
+[node name="ProfilePicture" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/HBoxContainer/MarginContainer" instance=ExtResource("7_pic")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(175, 175)
 layout_mode = 2
 picture_size = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 64
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -131,24 +138,57 @@ theme_override_font_sizes/font_size = 14
 text = "Username"
 label_settings = ExtResource("12_title")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="DclLineEdit_Username" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer" instance=ExtResource("9_edit")]
+[node name="Control" type="Control" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 113)
+layout_mode = 2
+
+[node name="DclTextEdit_Username" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer/Control" instance=ExtResource("13_1msoc")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+is_optional = false
+wrap_text = false
+validate_no_symbols = true
+validate_no_edge_spaces = true
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 38
+
+[node name="Label_Tag" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer/Control/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-is_optional = true
-hint = "Username"
-show_tag = true
+size_flags_horizontal = 8
+size_flags_vertical = 1
+text = "#####"
+label_settings = SubResource("LabelSettings_7drl0")
+horizontal_alignment = 2
+vertical_alignment = 1
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
@@ -156,12 +196,12 @@ theme_override_font_sizes/font_size = 14
 text = "Description"
 label_settings = ExtResource("12_title")
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
+[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("13_reg")
@@ -170,60 +210,23 @@ text = "Describe yourself in a few words."
 label_settings = ExtResource("14_desc")
 text_overrun_behavior = 4
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="DclTextEdit_Description" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2" instance=ExtResource("13_1msoc")]
+[node name="DclTextEdit_Description" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2" instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 216)
 layout_mode = 2
 max_length = 300
 
-[node name="VBoxContainer8" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="VBoxContainer_Links" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("11_semi")
-theme_override_font_sizes/font_size = 14
-text = "Description"
-label_settings = ExtResource("12_title")
-
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8"]
-layout_mode = 2
-theme_override_constants/separation = 10
-theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
-
-[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-theme_override_fonts/font = ExtResource("13_reg")
-theme_override_font_sizes/font_size = 12
-text = "Describe yourself in a few words."
-label_settings = ExtResource("14_desc")
-text_overrun_behavior = 4
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8"]
-layout_mode = 2
-theme_override_constants/separation = 20
-theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
-
-[node name="DclTextEdit_Description" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8" instance=ExtResource("13_1msoc")]
-custom_minimum_size = Vector2(100, 216)
-layout_mode = 2
-max_length = 300
-
-[node name="VBoxContainer_Links" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
@@ -231,7 +234,12 @@ theme_override_font_sizes/font_size = 14
 text = "Links"
 label_settings = ExtResource("12_title")
 
-[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
+
+[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("13_reg")
@@ -240,22 +248,23 @@ text = "Add up to 5 links to your website or social profiles."
 label_settings = ExtResource("14_desc")
 text_overrun_behavior = 4
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="HFlowContainer_Links" type="HFlowContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
+[node name="HFlowContainer_Links" type="HFlowContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/h_separation = 24
 theme_override_constants/v_separation = 24
 
-[node name="Button_AddLink" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links/HFlowContainer_Links"]
+[node name="Button_AddLink" type="Button" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links/HFlowContainer_Links"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
+focus_mode = 0
 theme = ExtResource("10_theme")
 theme_type_variation = &"SecondaryButton"
 theme_override_constants/h_separation = 7
@@ -264,12 +273,12 @@ theme_override_font_sizes/font_size = 20
 text = "ADD LINK"
 icon = ExtResource("14_7drl0")
 
-[node name="VBoxContainer3" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="VBoxContainer3" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer3"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer3"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
@@ -277,44 +286,46 @@ theme_override_font_sizes/font_size = 14
 text = "Country"
 label_settings = ExtResource("12_title")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer3"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer3"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="DclLineEdit_Country" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer3" instance=ExtResource("9_edit")]
+[node name="DclTextEdit_Country" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer3" instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-character_limit = 40
-is_optional = true
-hint = "Country"
+place_holder = "Country"
+max_length = 30
+wrap_text = false
+validate_no_symbols = true
+validate_no_edge_spaces = true
 
-[node name="DropdownList_Pronouns" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
+[node name="DropdownList_Pronouns" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Pronouns"
 
-[node name="DropdownList_Gender" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
+[node name="DropdownList_Gender" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Gender"
 
-[node name="DropdownList_SexualOrientation" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
+[node name="DropdownList_SexualOrientation" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Sexual Orientation"
 
-[node name="DropdownList_Relationship" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
+[node name="DropdownList_Relationship" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Relationship"
 
-[node name="VBoxContainer4" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="VBoxContainer4" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer4"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer4"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
@@ -322,24 +333,24 @@ theme_override_font_sizes/font_size = 14
 text = "Employment Status"
 label_settings = ExtResource("12_title")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer4"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer4"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="DclLineEdit_EmploymentStatus" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer4" instance=ExtResource("9_edit")]
+[node name="DclTextEdit_EmploymentStatus" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer4" instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-character_limit = 40
-is_optional = true
-hint = "Employment Status"
+place_holder = "Employment Status"
+max_length = 30
+wrap_text = false
 
-[node name="VBoxContainer5" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="VBoxContainer5" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer5"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer5"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
@@ -347,24 +358,24 @@ theme_override_font_sizes/font_size = 14
 text = "Profession"
 label_settings = ExtResource("12_title")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer5"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer5"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="DclLineEdit_Profession" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer5" instance=ExtResource("9_edit")]
+[node name="DclTextEdit_Profession" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer5" instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-character_limit = 40
-is_optional = true
-hint = "Profession"
+place_holder = "Profession"
+max_length = 30
+wrap_text = false
 
-[node name="VBoxContainer6" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="VBoxContainer6" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer6"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer6"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
@@ -372,24 +383,24 @@ theme_override_font_sizes/font_size = 14
 text = "Real Name"
 label_settings = ExtResource("12_title")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer6"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer6"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="DclLineEdit_RealName" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer6" instance=ExtResource("9_edit")]
+[node name="DclTextEdit_RealName" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer6" instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-character_limit = 40
-is_optional = true
-hint = "Real Name"
+place_holder = "Real Name"
+max_length = 30
+wrap_text = false
 
-[node name="VBoxContainer7" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+[node name="VBoxContainer7" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer7"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer7"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
@@ -397,17 +408,17 @@ theme_override_font_sizes/font_size = 14
 text = "Hobby"
 label_settings = ExtResource("12_title")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer7"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer7"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="DclLineEdit_Hobby" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer7" instance=ExtResource("9_edit")]
+[node name="DclTextEdit_Hobby" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer7" instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-character_limit = 40
-is_optional = true
-hint = "Hobby"
+place_holder = "Hobby"
+max_length = 30
+wrap_text = false
 
 [node name="PanelContainer_Footer" type="PanelContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
@@ -458,5 +469,5 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links/HFlowContainer_Links/Button_AddLink" to="." method="_on_add_link_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer_Links/HFlowContainer_Links/Button_AddLink" to="." method="_on_add_link_pressed"]
 [connection signal="add_link" from="ProfileNewLinkPopup" to="." method="_on_profile_new_link_popup_add_link"]

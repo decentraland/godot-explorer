@@ -6,27 +6,32 @@ signal save_failed
 const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
 const MAX_LINKS = 5
 
+const KEYBOARD_PADDING = 24.0
+
 var _original_values: Dictionary = {}
 var _current_links: Array = []
+var _keyboard_spacer: Control = null
 
 @onready var button_back: Button = %Button_BackToExplorer
 @onready var button_save: Button = %Button_Save
 @onready var button_cancel: Button = %Button_Cancel
-@onready var dcl_line_edit_username = %DclLineEdit_Username
+@onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var profile_picture: ProfilePicture = %ProfilePicture
-@onready var dcl_line_edit_country: DclLineEdit = %DclLineEdit_Country
+@onready var dcl_text_edit_country: DclTextEdit = %DclTextEdit_Country
 @onready var dropdown_list_pronouns: DropdownList = %DropdownList_Pronouns
 @onready var dropdown_list_gender: DropdownList = %DropdownList_Gender
 @onready var dropdown_list_sexual_orientation: DropdownList = %DropdownList_SexualOrientation
 @onready var dropdown_list_relationship: DropdownList = %DropdownList_Relationship
-@onready var dcl_line_edit_employment_status: DclLineEdit = %DclLineEdit_EmploymentStatus
-@onready var dcl_line_edit_profession: DclLineEdit = %DclLineEdit_Profession
-@onready var dcl_line_edit_real_name: DclLineEdit = %DclLineEdit_RealName
-@onready var dcl_line_edit_hobby: DclLineEdit = %DclLineEdit_Hobby
+@onready var dcl_text_edit_employment_status: DclTextEdit = %DclTextEdit_EmploymentStatus
+@onready var dcl_text_edit_profession: DclTextEdit = %DclTextEdit_Profession
+@onready var dcl_text_edit_real_name: DclTextEdit = %DclTextEdit_RealName
+@onready var dcl_text_edit_hobby: DclTextEdit = %DclTextEdit_Hobby
 @onready var h_flow_container_links: HFlowContainer = %HFlowContainer_Links
 @onready var button_add_link: Button = %Button_AddLink
 @onready var profile_new_link_popup = %ProfileNewLinkPopup
 @onready var dcl_text_edit_description: DclTextEdit = %DclTextEdit_Description
+@onready var dcl_text_edit_username: DclTextEdit = %DclTextEdit_Username
+@onready var label_tag: Label = %Label_Tag
 
 
 func _ready() -> void:
@@ -35,13 +40,13 @@ func _ready() -> void:
 	_populate_dropdown(dropdown_list_sexual_orientation, ProfileConstants.SEXUAL_ORIENTATIONS)
 	_populate_dropdown(dropdown_list_relationship, ProfileConstants.RELATIONSHIP_STATUS)
 
-	dcl_line_edit_username.dcl_line_edit_changed.connect(_on_field_changed)
+	dcl_text_edit_username.dcl_text_edit_changed.connect(_on_field_changed)
 	dcl_text_edit_description.dcl_text_edit_changed.connect(_on_field_changed)
-	dcl_line_edit_country.dcl_line_edit_changed.connect(_on_field_changed)
-	dcl_line_edit_employment_status.dcl_line_edit_changed.connect(_on_field_changed)
-	dcl_line_edit_profession.dcl_line_edit_changed.connect(_on_field_changed)
-	dcl_line_edit_real_name.dcl_line_edit_changed.connect(_on_field_changed)
-	dcl_line_edit_hobby.dcl_line_edit_changed.connect(_on_field_changed)
+	dcl_text_edit_country.dcl_text_edit_changed.connect(_on_field_changed)
+	dcl_text_edit_employment_status.dcl_text_edit_changed.connect(_on_field_changed)
+	dcl_text_edit_profession.dcl_text_edit_changed.connect(_on_field_changed)
+	dcl_text_edit_real_name.dcl_text_edit_changed.connect(_on_field_changed)
+	dcl_text_edit_hobby.dcl_text_edit_changed.connect(_on_field_changed)
 
 	dropdown_list_pronouns.item_selected.connect(_on_dropdown_changed)
 	dropdown_list_gender.item_selected.connect(_on_dropdown_changed)
@@ -51,6 +56,8 @@ func _ready() -> void:
 	button_back.pressed.connect(_on_close)
 	button_cancel.pressed.connect(_on_close)
 	button_save.pressed.connect(_async_save_profile)
+
+	Global.change_virtual_keyboard.connect(_on_virtual_keyboard_changed)
 
 	button_save.disabled = true
 
@@ -62,13 +69,13 @@ func populate(profile: DclUserProfile) -> void:
 	social_data.has_claimed_name = profile.has_claimed_name()
 	social_data.profile_picture_url = profile.get_avatar().get_snapshots_face_url()
 
-	dcl_line_edit_username.set_text_value(social_data.name)
+	dcl_text_edit_username.set_text_value(social_data.name)
 	if social_data.has_claimed_name:
-		dcl_line_edit_username.label_tag.text = ""
-		dcl_line_edit_username.label_tag.hide()
+		label_tag.text = ""
+		label_tag.hide()
 	else:
-		dcl_line_edit_username.label_tag.show()
-		dcl_line_edit_username.label_tag.text = (
+		label_tag.show()
+		label_tag.text = (
 			"#" + social_data.address.substr(social_data.address.length() - 4, 4)
 		)
 
@@ -81,12 +88,12 @@ func populate(profile: DclUserProfile) -> void:
 	var real_name_val := profile.get_real_name().strip_edges()
 	var hobby_val := profile.get_hobbies().strip_edges()
 
-	dcl_text_edit_description.set_text(description_val)
-	dcl_line_edit_country.set_text_value(country_val)
-	dcl_line_edit_employment_status.set_text_value(employment_status_val)
-	dcl_line_edit_profession.set_text_value(profession_val)
-	dcl_line_edit_real_name.set_text_value(real_name_val)
-	dcl_line_edit_hobby.set_text_value(hobby_val)
+	dcl_text_edit_description.set_text_value(description_val)
+	dcl_text_edit_country.set_text_value(country_val)
+	dcl_text_edit_employment_status.set_text_value(employment_status_val)
+	dcl_text_edit_profession.set_text_value(profession_val)
+	dcl_text_edit_real_name.set_text_value(real_name_val)
+	dcl_text_edit_hobby.set_text_value(hobby_val)
 
 	profile_new_link_popup.hide()
 
@@ -166,17 +173,33 @@ func _on_dropdown_changed(_index: int) -> void:
 	_check_dirty()
 
 
+func _has_any_error() -> bool:
+	return (
+		dcl_text_edit_username.error
+		or dcl_text_edit_description.error
+		or dcl_text_edit_country.error
+		or dcl_text_edit_employment_status.error
+		or dcl_text_edit_profession.error
+		or dcl_text_edit_real_name.error
+		or dcl_text_edit_hobby.error
+	)
+
+
 func _check_dirty() -> void:
 	if _original_values.is_empty():
 		return
 
+	if _has_any_error():
+		button_save.disabled = true
+		return
+
 	var is_dirty := false
 
-	if dcl_line_edit_username.get_text_value() != _original_values.get("username", ""):
+	if dcl_text_edit_username.get_text_value() != _original_values.get("username", ""):
 		is_dirty = true
 	elif dcl_text_edit_description.get_text_value() != _original_values.get("description", ""):
 		is_dirty = true
-	elif dcl_line_edit_country.get_text_value() != _original_values.get("country", ""):
+	elif dcl_text_edit_country.get_text_value() != _original_values.get("country", ""):
 		is_dirty = true
 	elif dropdown_list_pronouns.selected != _original_values.get("pronouns", 0):
 		is_dirty = true
@@ -187,15 +210,15 @@ func _check_dirty() -> void:
 	elif dropdown_list_relationship.selected != _original_values.get("relationship", 0):
 		is_dirty = true
 	elif (
-		dcl_line_edit_employment_status.get_text_value()
+		dcl_text_edit_employment_status.get_text_value()
 		!= _original_values.get("employment_status", "")
 	):
 		is_dirty = true
-	elif dcl_line_edit_profession.get_text_value() != _original_values.get("profession", ""):
+	elif dcl_text_edit_profession.get_text_value() != _original_values.get("profession", ""):
 		is_dirty = true
-	elif dcl_line_edit_real_name.get_text_value() != _original_values.get("real_name", ""):
+	elif dcl_text_edit_real_name.get_text_value() != _original_values.get("real_name", ""):
 		is_dirty = true
-	elif dcl_line_edit_hobby.get_text_value() != _original_values.get("hobby", ""):
+	elif dcl_text_edit_hobby.get_text_value() != _original_values.get("hobby", ""):
 		is_dirty = true
 	elif _are_links_dirty():
 		is_dirty = true
@@ -215,7 +238,7 @@ func _async_save_profile() -> void:
 	if mutable_profile == null:
 		return
 
-	var current_username = dcl_line_edit_username.get_text_value()
+	var current_username = dcl_text_edit_username.get_text_value()
 	if current_username != _original_values.get("username", ""):
 		mutable_profile.set_name(current_username)
 
@@ -223,7 +246,7 @@ func _async_save_profile() -> void:
 	if current_description != _original_values.get("description", ""):
 		mutable_profile.set_description(current_description)
 
-	var current_country = dcl_line_edit_country.get_text_value()
+	var current_country = dcl_text_edit_country.get_text_value()
 	if current_country != _original_values.get("country", ""):
 		mutable_profile.set_country(current_country)
 
@@ -253,19 +276,19 @@ func _async_save_profile() -> void:
 			_get_dropdown_value(ProfileConstants.RELATIONSHIP_STATUS, current_relationship_idx)
 		)
 
-	var current_employment = dcl_line_edit_employment_status.get_text_value()
+	var current_employment = dcl_text_edit_employment_status.get_text_value()
 	if current_employment != _original_values.get("employment_status", ""):
 		mutable_profile.set_employment_status(current_employment)
 
-	var current_profession = dcl_line_edit_profession.get_text_value()
+	var current_profession = dcl_text_edit_profession.get_text_value()
 	if current_profession != _original_values.get("profession", ""):
 		mutable_profile.set_profession(current_profession)
 
-	var current_real_name = dcl_line_edit_real_name.get_text_value()
+	var current_real_name = dcl_text_edit_real_name.get_text_value()
 	if current_real_name != _original_values.get("real_name", ""):
 		mutable_profile.set_real_name(current_real_name)
 
-	var current_hobby = dcl_line_edit_hobby.get_text_value()
+	var current_hobby = dcl_text_edit_hobby.get_text_value()
 	if current_hobby != _original_values.get("hobby", ""):
 		mutable_profile.set_hobbies(current_hobby)
 
@@ -338,3 +361,46 @@ func _on_profile_new_link_popup_add_link(link_title: String, link_url: String) -
 	_current_links.append({"title": link_title, "url": link_url})
 	_refresh_links_ui()
 	_check_dirty()
+
+
+func _get_parent_field(control: Control) -> Control:
+	var node := control
+	while node != null:
+		if node is DclTextEdit or node is DclLineEdit:
+			return node
+		node = node.get_parent() as Control
+	return control
+
+
+func _on_virtual_keyboard_changed(keyboard_height: int) -> void:
+	if keyboard_height == 0:
+		if _keyboard_spacer != null:
+			_keyboard_spacer.custom_minimum_size.y = 0
+		return
+
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused == null:
+		return
+
+	var field := _get_parent_field(focused)
+
+	var viewport_size := get_viewport().get_visible_rect().size
+	var window_size := Vector2(DisplayServer.window_get_size())
+	var y_factor: float = viewport_size.y / window_size.y
+	var kb_top: float = viewport_size.y - keyboard_height * y_factor
+
+	var field_rect := field.get_global_rect()
+	var field_bottom: float = field_rect.position.y + field_rect.size.y
+
+	var overlap: float = field_bottom + KEYBOARD_PADDING - kb_top
+	if overlap <= 0:
+		return
+
+	var scroll_content := scroll_container.get_child(0)
+	if _keyboard_spacer == null:
+		_keyboard_spacer = Control.new()
+		scroll_content.add_child(_keyboard_spacer)
+	_keyboard_spacer.custom_minimum_size.y = keyboard_height * y_factor
+
+	await get_tree().process_frame
+	scroll_container.scroll_vertical += int(overlap)

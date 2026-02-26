@@ -1,15 +1,21 @@
-[gd_scene load_steps=7 format=3 uid="uid://18n0y7iu0obv"]
+[gd_scene load_steps=9 format=3 uid="uid://18n0y7iu0obv"]
 
 [ext_resource type="Script" uid="uid://cu6sgdwwqisn6" path="res://src/ui/components/dcl_text_edit.gd" id="1_iibrq"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_tjywf"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_tjywf"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="3_v4hat"]
 [ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="4_nhry5"]
+[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/components/discover/icons/close.svg" id="5_nhry5"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_evgii"]
 font = ExtResource("3_tjywf")
 font_size = 20
 font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_nhry5"]
+font = ExtResource("3_tjywf")
+font_size = 20
+font_color = Color(1, 0.1764706, 0.33333334, 1)
 
 [node name="DclTextEdit" type="VBoxContainer"]
 custom_minimum_size = Vector2(100, 0)
@@ -20,10 +26,20 @@ size_flags_vertical = 0
 theme_override_constants/separation = 8
 script = ExtResource("1_iibrq")
 
-[node name="TextEdit" type="TextEdit" parent="."]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 68)
+[node name="TextEditContainer" type="Control" parent="."]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TextEdit" type="TextEdit" parent="TextEditContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_vertical = 3
 theme = ExtResource("2_tjywf")
 theme_override_styles/normal = ExtResource("3_v4hat")
@@ -32,11 +48,41 @@ placeholder_text = "Type text here..."
 wrap_mode = 1
 caret_blink = true
 
-[node name="Label_Length" type="Label" parent="."]
+[node name="ClearButton" type="TextureButton" parent="TextEditContainer"]
 unique_name_in_owner = true
 visible = false
+self_modulate = Color(0.9098039, 0.7254902, 1, 1)
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -48.0
+offset_top = 16.0
+offset_right = -8.0
+offset_bottom = 56.0
+grow_horizontal = 0
+texture_normal = ExtResource("5_nhry5")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Label_Length" type="Label" parent="HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "0/15"
 label_settings = SubResource("LabelSettings_evgii")
 
-[connection signal="text_changed" from="TextEdit" to="." method="_on_text_edit_text_changed"]
+[node name="Label_Error" type="Label" parent="HBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+text = ""
+label_settings = SubResource("LabelSettings_nhry5")
+horizontal_alignment = 2
+
+[connection signal="text_changed" from="TextEditContainer/TextEdit" to="." method="_on_text_edit_text_changed"]
+[connection signal="pressed" from="TextEditContainer/ClearButton" to="." method="_on_clear_button_pressed"]

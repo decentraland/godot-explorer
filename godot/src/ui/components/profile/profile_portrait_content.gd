@@ -10,6 +10,7 @@ var _address: String = ""
 @onready var custom_button_edit_profile: Button = %CustomButton_EditProfile
 @onready var label_nickname: Label = %Label_Nickname
 @onready var label_tag: Label = %Label_Tag
+@onready var margin_container_tag: MarginContainer = %MarginContainer_Tag
 @onready var label_address: Label = %Label_Address
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
 @onready var button_copy_name: TextureButton = %Button_CopyName
@@ -50,10 +51,10 @@ func _refresh_name_and_address(profile: DclUserProfile) -> void:
 	if profile.has_claimed_name():
 		texture_rect_claimed_checkmark.show()
 		label_tag.text = ""
-		label_tag.hide()
+		margin_container_tag.hide()
 	else:
 		texture_rect_claimed_checkmark.hide()
-		label_tag.show()
+		margin_container_tag.show()
 		label_tag.text = "#" + _address.substr(_address.length() - 4, 4)
 
 

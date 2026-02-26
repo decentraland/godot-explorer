@@ -81,12 +81,13 @@ text = "Maxcharacter"
 label_settings = SubResource("LabelSettings_lhp2a")
 vertical_alignment = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
+[node name="MarginContainer_Tag" type="MarginContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/margin_bottom = -10
 
-[node name="Label_Tag" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer/MarginContainer"]
+[node name="Label_Tag" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer/MarginContainer_Tag"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 8
@@ -223,3 +224,9 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
 
 [node name="ProfileLinks" parent="MarginContainer2/VBoxContainer" instance=ExtResource("3_links")]
 unique_name_in_owner = true
+
+[node name="HSeparator5" type="HSeparator" parent="MarginContainer2/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
