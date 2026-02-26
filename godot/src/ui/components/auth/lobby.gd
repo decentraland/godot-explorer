@@ -331,8 +331,13 @@ func _ready():
 	var session_account: Dictionary = Global.get_config().session_account
 
 	if Global.cli.guest_profile or not Global.deep_link_obj.preview.is_empty():
-		session_account.clear()
-		Global.get_config().save_to_settings_file()
+		# Mark session as ephemeral so guest data is never persisted to disk,
+		# preserving any previously saved wallet session.
+		Global.get_config().session_is_ephemeral = true
+		# Use assignment instead of clear() to avoid mutating the dictionary in-place.
+		# clear() would also corrupt the reference inside settings_file, causing the
+		# copy loop in save_to_settings_file() to lose the saved wallet session.
+		session_account = {}
 		Global.player_identity.create_guest_account()
 		Global.player_identity.set_random_profile()
 		var random_profile = Global.player_identity.get_profile_or_null()

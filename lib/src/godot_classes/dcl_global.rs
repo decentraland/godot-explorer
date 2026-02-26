@@ -36,106 +36,114 @@ use super::{
 
 #[cfg(target_os = "android")]
 mod android {
-    use crate::tools::sentry_logger::SentryTracingLayer;
-    use tracing_subscriber::filter::EnvFilter;
+    use crate::tools::godot_logger::{
+        create_reload_filter, should_pipe_to_godot, GodotTracingLayer,
+    };
     use tracing_subscriber::fmt::format::FmtSpan;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{self, registry};
 
     pub fn init_logger() {
-        // Configure logging filters for Android
-        // By default, filter everything to WARN level
-        // You can customize specific modules here:
-        // Examples:
-        //   "warn" - only warnings and errors (default)
-        //   "debug" - show debug logs from all modules
-        //   "dclgodot::scene_runner=debug,warn" - debug for scene_runner, warn for others
-        //   "dclgodot::scene_runner=debug,dclgodot::comms=info,warn" - multiple modules
+        let pipe_to_godot = should_pipe_to_godot();
+        let filter_layer = create_reload_filter("info");
 
-        let filter = EnvFilter::new(
-            // TODO: Modify this line to change logging levels
-            // "warn"  // Only warnings and errors
-            // "libwebrtc=error,debug" // Filter out libwebrtc noise, show debug for everything else
-            // "debug"  // Debug, info, warnings and errors (shows all debug logs)
-            // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
-            // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
-            "info",
-        );
-
-        let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
-            .with_span_events(FmtSpan::CLOSE)
-            .with_thread_names(true)
-            .with_ansi(false) // Disable ANSI color codes for cleaner logcat output
-            .with_filter(filter);
-
-        // Add Sentry layer to capture errors and warnings
-        let sentry_layer = SentryTracingLayer;
-
-        registry().with(android_layer).with(sentry_layer).init();
+        if pipe_to_godot {
+            registry().with(filter_layer).with(GodotTracingLayer).init();
+        } else {
+            let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
+                .with_span_events(FmtSpan::CLOSE)
+                .with_thread_names(true)
+                .with_ansi(false);
+            registry().with(filter_layer).with(android_layer).init();
+        }
     }
 }
 
 #[cfg(target_os = "ios")]
 mod ios {
-    use crate::tools::sentry_logger::SentryTracingLayer;
-    use tracing_oslog::OsLogger;
-    use tracing_subscriber::filter::EnvFilter;
+    use crate::tools::godot_logger::{
+        create_reload_filter, should_pipe_to_godot, GodotTracingLayer, MessageVisitor,
+    };
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
+    /// A tracing layer that uses the `oslog` crate to write to Apple's Unified Logging.
+    /// Unlike `tracing-oslog`, the `oslog` crate uses `%{public}s` in its C wrapper,
+    /// so messages are fully visible in Console.app instead of showing `<private>`.
+    struct IosOsLogLayer {
+        logger: oslog::OsLog,
+    }
+
+    impl<S: tracing::Subscriber> tracing_subscriber::layer::Layer<S> for IosOsLogLayer {
+        fn on_event(
+            &self,
+            event: &tracing::Event<'_>,
+            _ctx: tracing_subscriber::layer::Context<'_, S>,
+        ) {
+            let metadata = event.metadata();
+            let level = metadata.level();
+            let target = metadata.target();
+            let file = metadata.file().unwrap_or("unknown");
+            let line = metadata.line().unwrap_or(0);
+
+            let mut visitor = MessageVisitor::default();
+            event.record(&mut visitor);
+
+            let formatted = format!(
+                "[{}] [{}] {} ({}:{})",
+                level, target, visitor.message, file, line
+            );
+
+            let oslog_level = match *level {
+                tracing::Level::ERROR | tracing::Level::WARN => oslog::Level::Error,
+                tracing::Level::INFO => oslog::Level::Info,
+                tracing::Level::DEBUG | tracing::Level::TRACE => oslog::Level::Debug,
+            };
+            self.logger.with_level(oslog_level, &formatted);
+        }
+    }
+
     pub fn init_logger() {
-        // Configure logging filters for iOS
-        // By default, filter everything to INFO level
-        // You can customize specific modules here:
-        // Examples:
-        //   "warn" - only warnings and errors
-        //   "debug" - show debug logs from all modules
-        //   "dclgodot::scene_runner=debug,warn" - debug for scene_runner, warn for others
-        //   "dclgodot::scene_runner=debug,dclgodot::comms=info,warn" - multiple modules
+        let pipe_to_godot = should_pipe_to_godot();
+        let filter_layer = create_reload_filter("info");
 
-        let filter = EnvFilter::new(
-            // TODO: Modify this line to change logging levels
-            // "warn"  // Only warnings and errors
-            // "debug"  // Debug, info, warnings and errors (shows all debug logs)
-            // "dclgodot::scene_runner=trace,warn"  // Trace for scene_runner, warn for everything else
-            // "dclgodot::scene_runner=debug,dclgodot::comms=info,warn"  // Debug for scene_runner, info for comms, warn for everything else
-            "info",
-        );
-
-        // Use OSLog for iOS - writes to the system log instead of stderr
-        // This avoids crashes when stderr is not available (e.g., running without Xcode)
-        // Note: Level is shown in Console.app's "Type" column, target is not included in message
-        let oslog_layer = OsLogger::new(env!("CARGO_PKG_NAME"), "default").with_filter(filter);
-
-        // Add Sentry layer to capture errors and warnings
-        let sentry_layer = SentryTracingLayer;
-
-        registry().with(oslog_layer).with(sentry_layer).init();
+        if pipe_to_godot {
+            registry().with(filter_layer).with(GodotTracingLayer).init();
+        } else {
+            let oslog_layer = IosOsLogLayer {
+                logger: oslog::OsLog::new(env!("CARGO_PKG_NAME"), "default"),
+            };
+            registry().with(filter_layer).with(oslog_layer).init();
+        }
     }
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod desktop {
-    use crate::tools::sentry_logger::SentryTracingLayer;
-    use tracing_subscriber::filter::EnvFilter;
+    use crate::tools::godot_logger::{
+        create_reload_filter, should_pipe_to_godot, GodotTracingLayer,
+    };
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::registry;
 
     pub fn init_logger() {
-        // Respect RUST_LOG environment variable, default to "warn" if not set
-        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|e| {
-            eprintln!("RUST_LOG not set or invalid ({e}), defaulting to 'warn'");
-            EnvFilter::new("warn")
-        });
+        let pipe_to_godot = should_pipe_to_godot();
+        let filter_layer = create_reload_filter("warn");
 
-        let fmt_layer = tracing_subscriber::fmt::layer().with_filter(filter);
-        let sentry_layer = SentryTracingLayer;
-
-        registry()
-            .with(fmt_layer)
-            .with(sentry_layer)
-            .try_init()
-            .ok();
+        if pipe_to_godot {
+            registry()
+                .with(filter_layer)
+                .with(GodotTracingLayer)
+                .try_init()
+                .ok();
+        } else {
+            let fmt_layer = tracing_subscriber::fmt::layer();
+            registry()
+                .with(filter_layer)
+                .with(fmt_layer)
+                .try_init()
+                .ok();
+        }
     }
 }
 
@@ -621,7 +629,7 @@ impl DclGlobal {
     /// Emits test messages at various Rust tracing levels to verify Sentry integration.
     #[func]
     pub fn emit_sentry_rust_test_messages() {
-        use crate::tools::sentry_logger::emit_sentry_test_messages;
+        use crate::tools::godot_logger::emit_sentry_test_messages;
         emit_sentry_test_messages();
     }
 
@@ -641,5 +649,16 @@ impl DclGlobal {
     #[func]
     pub fn get_dcl_environment() -> GString {
         GString::from(crate::env::get_environment().suffix())
+    }
+
+    /// Change the Rust log filter at runtime.
+    /// Accepts any valid tracing EnvFilter string.
+    /// Examples: "debug", "info", "warn", "dclgodot::comms=debug,warn"
+    #[func]
+    pub fn set_rust_log_filter(filter: GString) {
+        match crate::tools::godot_logger::set_log_filter(&filter.to_string()) {
+            Ok(()) => godot_print!("Rust log filter updated to: {}", filter),
+            Err(e) => godot_error!("Failed to update Rust log filter: {}", e),
+        }
     }
 }
