@@ -11,6 +11,7 @@ const KEYBOARD_PADDING = 24.0
 var _original_values: Dictionary = {}
 var _current_links: Array = []
 var _keyboard_spacer: Control = null
+var _last_keyboard_height: int = 0
 
 @onready var button_back: Button = %Button_BackToExplorer
 @onready var button_save: Button = %Button_Save
@@ -58,6 +59,7 @@ func _ready() -> void:
 	button_save.pressed.connect(_async_save_profile)
 
 	Global.change_virtual_keyboard.connect(_on_virtual_keyboard_changed)
+	get_viewport().gui_focus_changed.connect(_on_focus_changed)
 
 	button_save.disabled = true
 
@@ -373,11 +375,20 @@ func _get_parent_field(control: Control) -> Control:
 
 
 func _on_virtual_keyboard_changed(keyboard_height: int) -> void:
+	_last_keyboard_height = keyboard_height
 	if keyboard_height == 0:
 		if _keyboard_spacer != null:
 			_keyboard_spacer.custom_minimum_size.y = 0
 		return
+	_ensure_field_visible()
 
+
+func _on_focus_changed(_control: Control) -> void:
+	if _last_keyboard_height > 0:
+		_ensure_field_visible()
+
+
+func _ensure_field_visible() -> void:
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused == null:
 		return
@@ -387,7 +398,7 @@ func _on_virtual_keyboard_changed(keyboard_height: int) -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	var window_size := Vector2(DisplayServer.window_get_size())
 	var y_factor: float = viewport_size.y / window_size.y
-	var kb_top: float = viewport_size.y - keyboard_height * y_factor
+	var kb_top: float = viewport_size.y - _last_keyboard_height * y_factor
 
 	var field_rect := field.get_global_rect()
 	var field_bottom: float = field_rect.position.y + field_rect.size.y
@@ -400,7 +411,7 @@ func _on_virtual_keyboard_changed(keyboard_height: int) -> void:
 	if _keyboard_spacer == null:
 		_keyboard_spacer = Control.new()
 		scroll_content.add_child(_keyboard_spacer)
-	_keyboard_spacer.custom_minimum_size.y = keyboard_height * y_factor
+	_keyboard_spacer.custom_minimum_size.y = _last_keyboard_height * y_factor
 
 	await get_tree().process_frame
 	scroll_container.scroll_vertical += int(overlap)

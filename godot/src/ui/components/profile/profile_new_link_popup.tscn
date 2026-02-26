@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://dklmxtp0xs5sv"]
+[gd_scene load_steps=7 format=3 uid="uid://dklmxtp0xs5sv"]
 
 [ext_resource type="Script" uid="uid://4h14keb667sl" path="res://src/ui/components/profile/profile_new_link_popup.gd" id="1_0jnsv"]
-[ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="3_snn6b"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_mo61r"]
+[ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="3_mo61r"]
 [ext_resource type="PackedScene" uid="uid://18n0y7iu0obv" path="res://src/ui/components/dcl_text_edit.tscn" id="4_e5d0b"]
-[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="6_5sklh"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_6715j"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qbeay"]
 bg_color = Color(0.298039, 0.0784314, 0.486275, 1)
@@ -20,84 +21,95 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.784314)
 script = ExtResource("1_0jnsv")
+metadata/mobile_preview_orientation = "portrait"
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="SafeMarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 559.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 50
+script = ExtResource("2_mo61r")
+default_margin = 50
+use_left = false
+use_right = false
+use_bottom = false
+min_margin_bottom = 80
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
+
+[node name="PanelContainer" type="PanelContainer" parent="SafeMarginContainer"]
 clip_children = 2
 custom_minimum_size = Vector2(450, 0)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -187.5
-offset_top = -140.0
-offset_right = 187.5
-offset_bottom = 71.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qbeay")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
-layout_mode = 2
-
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/PanelContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/PanelContainer/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 64
 
-[node name="Label_Title" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Add Link"
-label_settings = ExtResource("3_snn6b")
+label_settings = ExtResource("3_mo61r")
 
-[node name="DclTextEdit_LinkTitle" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]
+[node name="DclTextEdit_LinkTitle" parent="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Link Title (E.g. X)"
+place_holder = "Link Title"
+max_length = 35
 is_optional = false
+wrap_text = false
+validate_no_edge_spaces = true
 
-[node name="DclTextEdit_LinkUrl" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]
+[node name="DclTextEdit_LinkUrl" parent="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Link URL (start with \"https://\")"
+place_holder = "Link URL"
 has_max_length = false
-validate_url = true
 is_optional = false
+wrap_text = false
+validate_url = true
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 38)
+[node name="HBoxContainer2" type="HBoxContainer" parent="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 18
 alignment = 2
 
-[node name="Button_NewLinkCancel" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_NewLinkCancel" type="Button" parent="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_type_variation = &"DarkButton"
+theme = ExtResource("5_6715j")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 30
 text = "CANCEL"
 
-[node name="Button_NewLinkSave" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_NewLinkSave" type="Button" parent="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
-theme = ExtResource("6_5sklh")
+theme = ExtResource("5_6715j")
+theme_override_font_sizes/font_size = 30
 text = "SAVE"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="dcl_text_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkTitle" to="." method="_on_dcl_text_edit_link_title_dcl_text_edit_changed"]
-[connection signal="visibility_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkTitle" to="." method="_on_dcl_text_edit_link_title_visibility_changed"]
-[connection signal="dcl_text_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkUrl" to="." method="_on_dcl_text_edit_link_url_dcl_text_edit_changed"]
-[connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_NewLinkCancel" to="." method="_on_button_new_link_cancel_pressed"]
-[connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_NewLinkSave" to="." method="_on_button_new_link_save_pressed"]
+[connection signal="dcl_text_edit_changed" from="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkTitle" to="." method="_on_dcl_text_edit_link_title_dcl_text_edit_changed"]
+[connection signal="visibility_changed" from="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkTitle" to="." method="_on_dcl_text_edit_link_title_visibility_changed"]
+[connection signal="dcl_text_edit_changed" from="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkUrl" to="." method="_on_dcl_text_edit_link_url_dcl_text_edit_changed"]
+[connection signal="pressed" from="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_NewLinkCancel" to="." method="_on_button_new_link_cancel_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_NewLinkSave" to="." method="_on_button_new_link_save_pressed"]

@@ -197,4 +197,7 @@ func _set_card_corner_radius(top_left: int, top_right: int) -> void:
 		var style_box := current_style.duplicate() as StyleBoxFlat
 		style_box.corner_radius_top_left = top_left
 		style_box.corner_radius_top_right = top_right
+		var is_full := top_left == 0 and top_right == 0
+		style_box.anti_aliasing = not is_full
+		style_box.expand_margin_bottom = 4 if is_full else 0
 		panel_container_card.add_theme_stylebox_override("panel", style_box)

@@ -95,6 +95,7 @@ theme_override_constants/margin_right = 48
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+focus_mode = 2
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
@@ -303,21 +304,25 @@ validate_no_edge_spaces = true
 [node name="DropdownList_Pronouns" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
 unique_name_in_owner = true
 layout_mode = 2
+focus_mode = 2
 title = "Pronouns"
 
 [node name="DropdownList_Gender" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
 unique_name_in_owner = true
 layout_mode = 2
+focus_mode = 2
 title = "Gender"
 
 [node name="DropdownList_SexualOrientation" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
 unique_name_in_owner = true
 layout_mode = 2
+focus_mode = 2
 title = "Sexual Orientation"
 
 [node name="DropdownList_Relationship" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer" instance=ExtResource("8_dd")]
 unique_name_in_owner = true
 layout_mode = 2
+focus_mode = 2
 title = "Relationship"
 
 [node name="VBoxContainer4" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer"]
@@ -436,7 +441,7 @@ theme_override_constants/margin_bottom = 86
 [node name="HBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Footer/MarginContainer"]
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 18
 alignment = 2
 
 [node name="Button_Cancel" type="Button" parent="VBoxContainer/PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons"]
