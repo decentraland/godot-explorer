@@ -5,7 +5,7 @@ var _fallback_viewport: Viewport = null
 
 func _on_tree_exiting() -> void:
 	_fallback_viewport = get_viewport()
-	call_deferred("_deferred_safety_reparent")
+	_deferred_safety_reparent.call_deferred()
 
 
 func _deferred_safety_reparent() -> void:
