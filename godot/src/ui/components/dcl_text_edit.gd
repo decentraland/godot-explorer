@@ -8,8 +8,6 @@ const LINE_EDIT = preload("res://assets/themes/line_edit.tres")
 const LINE_EDIT_FOCUSED = preload("res://assets/themes/line_edit_focused.tres")
 const LINE_EDIT_ERROR = preload("res://assets/themes/line_edit_error.tres")
 
-
-
 @export var place_holder: String = "Type text here..."
 @export var has_max_length: bool = true
 @export var max_length: int = 15
@@ -116,7 +114,6 @@ func _check_error() -> void:
 		text_edit.add_theme_stylebox_override("normal", LINE_EDIT)
 		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_FOCUSED)
 		label_error.hide()
-	
 
 
 func _update_clear_button() -> void:

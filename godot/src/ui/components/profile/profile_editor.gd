@@ -77,9 +77,7 @@ func populate(profile: DclUserProfile) -> void:
 		label_tag.hide()
 	else:
 		label_tag.show()
-		label_tag.text = (
-			"#" + social_data.address.substr(social_data.address.length() - 4, 4)
-		)
+		label_tag.text = ("#" + social_data.address.substr(social_data.address.length() - 4, 4))
 
 	profile_picture.async_update_profile_picture(social_data)
 
@@ -380,15 +378,15 @@ func _on_virtual_keyboard_changed(keyboard_height: int) -> void:
 		if _keyboard_spacer != null:
 			_keyboard_spacer.custom_minimum_size.y = 0
 		return
-	_ensure_field_visible()
+	_async_ensure_field_visible()
 
 
 func _on_focus_changed(_control: Control) -> void:
 	if _last_keyboard_height > 0:
-		_ensure_field_visible()
+		_async_ensure_field_visible()
 
 
-func _ensure_field_visible() -> void:
+func _async_ensure_field_visible() -> void:
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused == null:
 		return
