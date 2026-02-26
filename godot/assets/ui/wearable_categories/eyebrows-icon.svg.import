@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/eyebrows-icon.svg-6ad00cd041383d8bca4ad027e33
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/eyes-icon.svg-4ca7cbe688df2c2a4b95268f93880af
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

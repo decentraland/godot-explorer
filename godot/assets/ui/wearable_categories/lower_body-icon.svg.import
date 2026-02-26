@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/lower_body-icon.svg-9a2c3f2704420ab9e7ec8d88d
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

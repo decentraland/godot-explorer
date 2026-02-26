@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/top_head-icon.svg-2ec936ed092562207da3d7bc662
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

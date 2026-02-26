@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/skin-icon.svg-d78b9cb2e592a4af3728594a842744c
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

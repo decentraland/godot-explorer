@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://drq5jh5xpenw1"]
+[gd_scene load_steps=9 format=3 uid="uid://drq5jh5xpenw1"]
 
 [ext_resource type="Script" uid="uid://dkt5n7cdnupm4" path="res://src/ui/components/item_preview/item_preview.gd" id="1_rugyg"]
 [ext_resource type="Texture2D" uid="uid://c0qx68m7rge52" path="res://assets/ui/MythicThumbnail.png" id="2_xicoh"]
@@ -7,13 +7,11 @@
 [ext_resource type="Texture2D" uid="uid://bygnpeber2qmc" path="res://assets/ui/wearable_categories/mask-icon.svg" id="6_g7el2"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="7_ph8vs"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_j1cet"]
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6655i"]
-content_margin_left = 3.0
-content_margin_top = 3.0
-content_margin_right = 3.0
-content_margin_bottom = 3.0
+content_margin_left = 1.0
+content_margin_top = 1.0
+content_margin_right = 1.0
+content_margin_bottom = 1.0
 bg_color = Color(1, 1, 1, 1)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
@@ -36,7 +34,6 @@ script = ExtResource("1_rugyg")
 
 [node name="PanelContainer_Border" type="PanelContainer" parent="."]
 unique_name_in_owner = true
-material = SubResource("ShaderMaterial_j1cet")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -71,12 +68,12 @@ stretch_mode = 5
 [node name="TextureRect_Triangle" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview"]
 unique_name_in_owner = true
 self_modulate = Color(0.28485, 0.28485, 0.28485, 1)
-custom_minimum_size = Vector2(42, 42)
+custom_minimum_size = Vector2(60, 60)
 layout_mode = 1
 offset_left = -1.5
-offset_top = -2.4
-offset_right = 40.5
-offset_bottom = 39.6
+offset_top = -1.4000001
+offset_right = 54.5
+offset_bottom = 54.6
 size_flags_horizontal = 0
 mouse_filter = 2
 texture = ExtResource("3_j1cet")
@@ -84,10 +81,11 @@ expand_mode = 1
 stretch_mode = 4
 
 [node name="TextureRect_Preview4" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview/TextureRect_Triangle"]
-custom_minimum_size = Vector2(42, 42)
+custom_minimum_size = Vector2(60, 60)
 layout_mode = 1
-offset_right = 42.0
-offset_bottom = 42.0
+offset_top = 1.0
+offset_right = 56.0
+offset_bottom = 57.0
 size_flags_horizontal = 0
 mouse_filter = 2
 texture = ExtResource("5_0rbuu")
@@ -96,17 +94,17 @@ stretch_mode = 4
 
 [node name="TextureRect_Category" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview/TextureRect_Triangle"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(10, 10)
+custom_minimum_size = Vector2(22, 22)
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.01
 anchor_top = 0.01
 anchor_right = 0.07
 anchor_bottom = 0.07
-offset_left = 1.58
-offset_top = 1.58
-offset_right = 17.06
-offset_bottom = 17.06
+offset_left = 4.5800004
+offset_top = 4.5800004
+offset_right = 22.98
+offset_bottom = 22.98
 size_flags_horizontal = 0
 mouse_filter = 2
 texture = ExtResource("6_g7el2")
