@@ -44,10 +44,10 @@ layout_mode = 2
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/margin_left = 120
-theme_override_constants/margin_top = 60
-theme_override_constants/margin_right = 120
-theme_override_constants/margin_bottom = 60
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer"]
 layout_mode = 2
@@ -61,7 +61,7 @@ label_settings = ExtResource("3_snn6b")
 [node name="DclTextEdit_LinkTitle" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Link Title (E.g. Instagram)"
+place_holder = "Link Title (E.g. X)"
 is_optional = false
 
 [node name="DclTextEdit_LinkUrl" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]

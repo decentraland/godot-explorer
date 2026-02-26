@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://b5wvxalrbrfpk"]
+[gd_scene load_steps=20 format=3 uid="uid://b5wvxalrbrfpk"]
 
 [ext_resource type="Texture2D" uid="uid://dftgrrlty2cp5" path="res://assets/ui/settings-background.png" id="1_bg"]
 [ext_resource type="Script" uid="uid://demhhqbnlvfhu" path="res://src/ui/components/profile/profile_editor.gd" id="2_script"]
@@ -12,6 +12,7 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_theme"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="11_semi"]
 [ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="12_title"]
+[ext_resource type="PackedScene" uid="uid://18n0y7iu0obv" path="res://src/ui/components/dcl_text_edit.tscn" id="13_1msoc"]
 [ext_resource type="PackedScene" uid="uid://dklmxtp0xs5sv" path="res://src/ui/components/profile/profile_new_link_popup.tscn" id="13_popup"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="13_reg"]
 [ext_resource type="Texture2D" uid="uid://dd5nwhl0n5lo5" path="res://assets/ui/add-icon.svg" id="14_7drl0"]
@@ -155,6 +156,11 @@ theme_override_font_sizes/font_size = 14
 text = "Description"
 label_settings = ExtResource("12_title")
 
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
+
 [node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
@@ -166,17 +172,51 @@ text_overrun_behavior = 4
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2"]
 layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
+
+[node name="DclTextEdit_Description" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2" instance=ExtResource("13_1msoc")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 216)
+layout_mode = 2
+max_length = 300
+
+[node name="VBoxContainer8" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("11_semi")
+theme_override_font_sizes/font_size = 14
+text = "Description"
+label_settings = ExtResource("12_title")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8"]
+layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="DclLineEdit_Description" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer2" instance=ExtResource("9_edit")]
-unique_name_in_owner = true
+[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8"]
 layout_mode = 2
-character_limit = 400
-allow_edge_spaces = true
-allow_special_characters = true
-is_optional = true
-hint = "Description"
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("13_reg")
+theme_override_font_sizes/font_size = 12
+text = "Describe yourself in a few words."
+label_settings = ExtResource("14_desc")
+text_overrun_behavior = 4
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8"]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
+
+[node name="DclTextEdit_Description" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer8" instance=ExtResource("13_1msoc")]
+custom_minimum_size = Vector2(100, 216)
+layout_mode = 2
+max_length = 300
 
 [node name="VBoxContainer_Links" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
@@ -383,7 +423,7 @@ theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 86
 
 [node name="HBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Footer/MarginContainer"]
-custom_minimum_size = Vector2(0, 66)
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 2

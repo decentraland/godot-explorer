@@ -1,4 +1,4 @@
-extends MarginContainer
+extends VBoxContainer
 
 signal link_clicked(url: String)
 signal emote_pressed(urn: String)

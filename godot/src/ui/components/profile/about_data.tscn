@@ -1,9 +1,7 @@
-[gd_scene load_steps=8 format=3 uid="uid://cwthmkhfqjqb2"]
+[gd_scene load_steps=6 format=3 uid="uid://cwthmkhfqjqb2"]
 
 [ext_resource type="Script" uid="uid://cvqeuw0ba6y81" path="res://src/ui/components/profile/about_data.gd" id="1_fdo2x"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_fdo2x"]
-[ext_resource type="Texture2D" uid="uid://dhx1e50lcj7n3" path="res://assets/ui/profile/birth_date.svg" id="2_rk0rh"]
-[ext_resource type="Texture2D" uid="uid://cre7w5guxn4ed" path="res://assets/ui/profile/gender.svg" id="3_6k0yl"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_rk0rh"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_ebo02"]
@@ -21,7 +19,6 @@ size_flags_horizontal = 3
 size_flags_vertical = 0
 script = ExtResource("1_fdo2x")
 title = "Title"
-icon = ExtResource("2_rk0rh")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 custom_minimum_size = Vector2(0, 24)
@@ -36,7 +33,6 @@ custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-texture = ExtResource("3_6k0yl")
 expand_mode = 5
 stretch_mode = 5
 

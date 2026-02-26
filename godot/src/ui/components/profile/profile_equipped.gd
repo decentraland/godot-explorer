@@ -18,7 +18,8 @@ func async_refresh(profile: DclUserProfile) -> void:
 	equipped_button_group.allow_unpress = true
 
 	for child in h_box_container_equipped_wearables.get_children():
-		child.queue_free()
+		if child.has_method("async_set_item"):
+			child.queue_free()
 
 	var profile_dictionary = profile.to_godot_dictionary()
 	var avatar_data = profile_dictionary.get("content", {}).get("avatar", {})

@@ -1,57 +1,42 @@
-[gd_scene load_steps=4 format=3 uid="uid://18n0y7iu0obv"]
+[gd_scene load_steps=7 format=3 uid="uid://18n0y7iu0obv"]
 
 [ext_resource type="Script" uid="uid://cu6sgdwwqisn6" path="res://src/ui/components/dcl_text_edit.gd" id="1_iibrq"]
-[ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="2_755oe"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_tjywf"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_tjywf"]
+[ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="3_v4hat"]
+[ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="4_nhry5"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_755oe"]
-bg_color = Color(0.6, 0.6, 0.6, 0)
-draw_center = false
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 0)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[sub_resource type="LabelSettings" id="LabelSettings_evgii"]
+font = ExtResource("3_tjywf")
+font_size = 20
+font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
 
 [node name="DclTextEdit" type="VBoxContainer"]
 custom_minimum_size = Vector2(100, 0)
-offset_right = 159.0
-offset_bottom = 70.0
+offset_right = 333.0
+offset_bottom = 97.0
 size_flags_horizontal = 3
 size_flags_vertical = 0
+theme_override_constants/separation = 8
 script = ExtResource("1_iibrq")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="TextEdit" type="TextEdit" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_755oe")
-
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = 3
-theme_override_constants/margin_top = 3
-theme_override_constants/margin_right = 3
-theme_override_constants/margin_bottom = 3
-
-[node name="TextEdit" type="TextEdit" parent="PanelContainer/MarginContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 38)
-layout_mode = 2
+theme = ExtResource("2_tjywf")
+theme_override_styles/normal = ExtResource("3_v4hat")
+theme_override_styles/focus = ExtResource("4_nhry5")
 placeholder_text = "Type text here..."
+wrap_mode = 1
 caret_blink = true
 
-[node name="MarginContainer2" type="MarginContainer" parent="."]
-layout_mode = 2
-theme_override_constants/margin_left = 5
-
-[node name="Label_Length" type="Label" parent="MarginContainer2"]
+[node name="Label_Length" type="Label" parent="."]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 text = "0/15"
-label_settings = ExtResource("2_755oe")
+label_settings = SubResource("LabelSettings_evgii")
 
-[connection signal="text_changed" from="PanelContainer/MarginContainer/TextEdit" to="." method="_on_text_edit_text_changed"]
+[connection signal="text_changed" from="TextEdit" to="." method="_on_text_edit_text_changed"]

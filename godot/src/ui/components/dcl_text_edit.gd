@@ -1,7 +1,14 @@
 @tool
+class_name DclTextEdit
 extends Control
 
 signal dcl_text_edit_changed
+
+const LINE_EDIT = preload("res://assets/themes/line_edit.tres")
+const LINE_EDIT_ERROR = preload("res://assets/themes/line_edit_error.tres")
+const LINE_EDIT_FOCUSED = preload("res://assets/themes/line_edit_focused.tres")
+
+
 
 @export var place_holder: String = "Type text here..."
 @export var has_max_length: bool = true
@@ -14,7 +21,6 @@ var error: bool = false
 
 @onready var label_length: Label = %Label_Length
 @onready var text_edit: TextEdit = %TextEdit
-@onready var panel_container: PanelContainer = $PanelContainer
 
 
 func _ready() -> void:
@@ -40,20 +46,19 @@ func is_valid_web_url(url: String) -> bool:
 
 
 func _check_error() -> void:
-	var original_stylebox := panel_container.get_theme_stylebox("panel")
-	var stylebox := original_stylebox.duplicate()
-	if stylebox is StyleBoxFlat:
-		if (
-			(validate_url and !is_valid_web_url(text_edit.text))
-			or length_error
-			or (!is_optional and text_edit.text.length() <= 0)
+	if (
+		(validate_url and !is_valid_web_url(text_edit.text))
+		or length_error
+		or (!is_optional and text_edit.text.length() <= 0)
 		):
-			stylebox.border_color = Color(0.8, 0, 0, 1.0)
-			error = true
-		else:
-			stylebox.border_color = Color.TRANSPARENT
-			error = false
-		panel_container.add_theme_stylebox_override("panel", stylebox)
+		error = true
+		text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
+		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
+	else:
+		error = false
+		text_edit.add_theme_stylebox_override("normal", LINE_EDIT)
+		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_FOCUSED)
+	
 
 
 func _on_text_edit_text_changed() -> void:

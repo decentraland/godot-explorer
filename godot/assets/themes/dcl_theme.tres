@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=108 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=109 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -28,6 +28,7 @@
 [ext_resource type="StyleBox" uid="uid://g3qbyl5ohgr" path="res://assets/themes/option_button_normal.tres" id="20_xeyyo"]
 [ext_resource type="StyleBox" uid="uid://corto87blbgdd" path="res://assets/themes/panel.tres" id="25_1x5yb"]
 [ext_resource type="StyleBox" uid="uid://bwtnv6ee45sva" path="res://assets/themes/primary_disabled.tres" id="26_1ib1f"]
+[ext_resource type="StyleBox" uid="uid://yqd0dh2lbxmt" path="res://assets/themes/line_edit_error.tres" id="26_4mmh5"]
 [ext_resource type="Texture2D" uid="uid://d1ly37tghjvec" path="res://assets/themes/icons/dcl_checkbox_s.png" id="26_kypl7"]
 [ext_resource type="Texture2D" uid="uid://bbldjv3u5vh3" path="res://assets/themes/icons/dcl_radiobutton_checked.png" id="27_gw08q"]
 [ext_resource type="StyleBox" uid="uid://dy12hpu2ygekh" path="res://assets/themes/primary.tres" id="28_fqvpv"]
@@ -430,7 +431,7 @@ LineEdit/colors/font_uneditable_color = Color(0.701961, 0.701961, 0.701961, 1)
 LineEdit/colors/selection_color = Color(0.745098, 0.737255, 0.768627, 1)
 LineEdit/font_sizes/font_size = 18
 LineEdit/fonts/font = ExtResource("16_k33ds")
-LineEdit/styles/focus = ExtResource("17_xiu8x")
+LineEdit/styles/focus = ExtResource("26_4mmh5")
 LineEdit/styles/normal = ExtResource("18_uv0rg")
 LineEdit/styles/read_only = ExtResource("18_uv0rg")
 MenuButton/colors/font_color = Color(0.960784, 0.152941, 0.345098, 1)
@@ -698,11 +699,13 @@ TabContainer/styles/panel = ExtResource("1_6dlaa")
 TabContainer/styles/tab_disabled = ExtResource("38_rijel")
 TabContainer/styles/tab_selected = ExtResource("39_g67sn")
 TabContainer/styles/tab_unselected = ExtResource("40_n8xxy")
-TextEdit/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-TextEdit/colors/font_placeholder_color = Color(0.192157, 0.188235, 0.207843, 1)
-TextEdit/colors/font_readonly_color = Color(0.0862745, 0.0823529, 0.0941176, 0.6)
-TextEdit/colors/font_selected_color = Color(1, 1, 1, 1)
-TextEdit/colors/selection_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+TextEdit/colors/current_line_color = Color(0.25, 0.25, 0.26, 0.8)
+TextEdit/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TextEdit/colors/font_placeholder_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+TextEdit/colors/font_readonly_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TextEdit/colors/font_selected_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+TextEdit/font_sizes/font_size = 30
+TextEdit/fonts/font = ExtResource("37_x5msw")
 TextEdit/styles/focus = ExtResource("17_xiu8x")
 TextEdit/styles/normal = ExtResource("18_uv0rg")
 TextEdit/styles/read_only = ExtResource("18_uv0rg")

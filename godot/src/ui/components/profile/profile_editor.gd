@@ -14,19 +14,19 @@ var _current_links: Array = []
 @onready var button_cancel: Button = %Button_Cancel
 @onready var dcl_line_edit_username = %DclLineEdit_Username
 @onready var profile_picture: ProfilePicture = %ProfilePicture
-@onready var dcl_line_edit_description = %DclLineEdit_Description
-@onready var dcl_line_edit_country = %DclLineEdit_Country
+@onready var dcl_line_edit_country: DclLineEdit = %DclLineEdit_Country
 @onready var dropdown_list_pronouns: DropdownList = %DropdownList_Pronouns
 @onready var dropdown_list_gender: DropdownList = %DropdownList_Gender
 @onready var dropdown_list_sexual_orientation: DropdownList = %DropdownList_SexualOrientation
 @onready var dropdown_list_relationship: DropdownList = %DropdownList_Relationship
-@onready var dcl_line_edit_employment_status = %DclLineEdit_EmploymentStatus
-@onready var dcl_line_edit_profession = %DclLineEdit_Profession
-@onready var dcl_line_edit_real_name = %DclLineEdit_RealName
-@onready var dcl_line_edit_hobby = %DclLineEdit_Hobby
+@onready var dcl_line_edit_employment_status: DclLineEdit = %DclLineEdit_EmploymentStatus
+@onready var dcl_line_edit_profession: DclLineEdit = %DclLineEdit_Profession
+@onready var dcl_line_edit_real_name: DclLineEdit = %DclLineEdit_RealName
+@onready var dcl_line_edit_hobby: DclLineEdit = %DclLineEdit_Hobby
 @onready var h_flow_container_links: HFlowContainer = %HFlowContainer_Links
 @onready var button_add_link: Button = %Button_AddLink
 @onready var profile_new_link_popup = %ProfileNewLinkPopup
+@onready var dcl_text_edit_description: DclTextEdit = %DclTextEdit_Description
 
 
 func _ready() -> void:
@@ -36,7 +36,7 @@ func _ready() -> void:
 	_populate_dropdown(dropdown_list_relationship, ProfileConstants.RELATIONSHIP_STATUS)
 
 	dcl_line_edit_username.dcl_line_edit_changed.connect(_on_field_changed)
-	dcl_line_edit_description.dcl_line_edit_changed.connect(_on_field_changed)
+	dcl_text_edit_description.dcl_text_edit_changed.connect(_on_field_changed)
 	dcl_line_edit_country.dcl_line_edit_changed.connect(_on_field_changed)
 	dcl_line_edit_employment_status.dcl_line_edit_changed.connect(_on_field_changed)
 	dcl_line_edit_profession.dcl_line_edit_changed.connect(_on_field_changed)
@@ -81,7 +81,7 @@ func populate(profile: DclUserProfile) -> void:
 	var real_name_val := profile.get_real_name().strip_edges()
 	var hobby_val := profile.get_hobbies().strip_edges()
 
-	dcl_line_edit_description.set_text_value(description_val)
+	dcl_text_edit_description.set_text(description_val)
 	dcl_line_edit_country.set_text_value(country_val)
 	dcl_line_edit_employment_status.set_text_value(employment_status_val)
 	dcl_line_edit_profession.set_text_value(profession_val)
@@ -174,7 +174,7 @@ func _check_dirty() -> void:
 
 	if dcl_line_edit_username.get_text_value() != _original_values.get("username", ""):
 		is_dirty = true
-	elif dcl_line_edit_description.get_text_value() != _original_values.get("description", ""):
+	elif dcl_text_edit_description.get_text_value() != _original_values.get("description", ""):
 		is_dirty = true
 	elif dcl_line_edit_country.get_text_value() != _original_values.get("country", ""):
 		is_dirty = true
@@ -219,7 +219,7 @@ func _async_save_profile() -> void:
 	if current_username != _original_values.get("username", ""):
 		mutable_profile.set_name(current_username)
 
-	var current_description = dcl_line_edit_description.get_text_value()
+	var current_description = dcl_text_edit_description.get_text_value()
 	if current_description != _original_values.get("description", ""):
 		mutable_profile.set_description(current_description)
 
