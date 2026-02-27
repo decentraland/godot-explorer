@@ -1359,6 +1359,21 @@ impl SceneManager {
         self.current_parcel_scene_id.0
     }
 
+    /// Simulates a scene crash for the current parcel scene.
+    /// Used by the /scenecrash chat command for testing.
+    #[func]
+    pub fn debug_force_crash_current_scene(&mut self) {
+        let scene_id = self.current_parcel_scene_id;
+        if let Some(scene) = self.scenes.get(&scene_id) {
+            let entity_id = scene.scene_entity_definition.id.clone();
+            tracing::info!("Forcing crash signal for scene {:?}", scene_id);
+            self.base_mut().emit_signal(
+                "scene_crashed",
+                &[scene_id.0.to_variant(), entity_id.to_variant()],
+            );
+        }
+    }
+
     fn on_current_parcel_scene_changed(&mut self) {
         // Reset input modifiers and skybox time when changing scenes
         // The new scene's components (if any) will be applied on the next update tick
