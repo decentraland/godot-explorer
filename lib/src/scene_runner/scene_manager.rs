@@ -97,6 +97,7 @@ pub struct SceneManager {
     begin_time: Instant,
     sorted_scene_ids: Vec<SceneId>,
     dying_scene_ids: Vec<SceneId>,
+    crashed_scene_ids: Vec<SceneId>,
     global_scene_ids: Vec<SceneId>,
 
     input_state: InputState,
@@ -134,6 +135,9 @@ impl SceneManager {
 
     #[signal]
     fn scene_killed(scene_id: i32, entity_id: GString);
+
+    #[signal]
+    fn scene_crashed(scene_id: i32, entity_id: GString);
 
     // Loading session signals
     #[signal]
@@ -905,6 +909,9 @@ impl SceneManager {
             if let SceneState::Alive = scene.state {
                 if scene.dcl_scene.thread_join_handle.is_finished() {
                     tracing::error!("scene closed without kill signal");
+                    if matches!(scene.scene_type, SceneType::Parcel) {
+                        self.crashed_scene_ids.push(*scene_id);
+                    }
                     scene_to_remove.insert(*scene_id);
                     continue;
                 }
@@ -1056,6 +1063,14 @@ impl SceneManager {
                 "scene_killed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
+
+            if self.crashed_scene_ids.contains(scene_id) {
+                self.crashed_scene_ids.retain(|x| x != scene_id);
+                self.base_mut().emit_signal(
+                    "scene_crashed",
+                    &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+                );
+            }
         }
     }
 
@@ -1108,6 +1123,9 @@ impl SceneManager {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             scene.state = SceneState::Dead;
                             if !self.dying_scene_ids.contains(&scene_id) {
+                                if matches!(scene.scene_type, SceneType::Parcel) {
+                                    self.crashed_scene_ids.push(scene_id);
+                                }
                                 self.dying_scene_ids.push(scene_id);
                             }
                         }
@@ -1339,6 +1357,21 @@ impl SceneManager {
     #[func]
     pub fn get_current_parcel_scene_id(&self) -> i32 {
         self.current_parcel_scene_id.0
+    }
+
+    /// Simulates a scene crash for the current parcel scene.
+    /// Used by the /scenecrash chat command for testing.
+    #[func]
+    pub fn debug_force_crash_current_scene(&mut self) {
+        let scene_id = self.current_parcel_scene_id;
+        if let Some(scene) = self.scenes.get(&scene_id) {
+            let entity_id = scene.scene_entity_definition.id.clone();
+            tracing::info!("Forcing crash signal for scene {:?}", scene_id);
+            self.base_mut().emit_signal(
+                "scene_crashed",
+                &[scene_id.0.to_variant(), entity_id.to_variant()],
+            );
+        }
     }
 
     fn on_current_parcel_scene_changed(&mut self) {
@@ -1627,6 +1660,7 @@ impl INode for SceneManager {
             pause: false,
             sorted_scene_ids: vec![],
             dying_scene_ids: vec![],
+            crashed_scene_ids: vec![],
             global_scene_ids: vec![],
             current_parcel_scene_id: SceneId(0),
             last_current_parcel_scene_id: SceneId::INVALID,
