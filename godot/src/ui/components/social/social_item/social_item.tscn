@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://d30nejywxmhpn"]
+[gd_scene load_steps=22 format=3 uid="uid://d30nejywxmhpn"]
 
 [ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/social/social_item/social_item.gd" id="1_qmekl"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="2_wvdds"]
@@ -8,17 +8,53 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="7_m2rwh"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_2kre2"]
 [ext_resource type="StyleBox" uid="uid://p7xigefabmi8" path="res://assets/themes/seconday_pressed_hover_little.tres" id="12_lm8sy"]
+[ext_resource type="Texture2D" uid="uid://0w50cay6b2b6" path="res://assets/ui/mute.svg" id="12_m2rwh"]
 [ext_resource type="Texture2D" uid="uid://cnainsx10j8v1" path="res://assets/ui/add.svg" id="13_5r2pa"]
-[ext_resource type="Texture2D" uid="uid://dolqfi671arf2" path="res://assets/ui/audio_on.svg" id="13_463mj"]
 [ext_resource type="StyleBox" uid="uid://cjr732avt4ugw" path="res://assets/themes/secondary_disabled_little.tres" id="13_pm4ta"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="14_h2dbk"]
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="14_lm8sy"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="14_pm4ta"]
 [ext_resource type="Texture2D" uid="uid://b1f8bhb2dkbx3" path="res://assets/themes/icons/check.svg" id="15_0guw6"]
+[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/components/discover/icons/close.svg" id="15_40r3o"]
 [ext_resource type="LabelSettings" uid="uid://bjq083uusq2di" path="res://assets/themes/social_tab_label.tres" id="15_463mj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66h5u"]
 bg_color = Color(1, 1, 1, 0.0823529)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fkduy"]
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o0a4w"]
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b4lym"]
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gaktv"]
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
@@ -75,7 +111,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
-picture_size = 1
 
 [node name="VBoxContainer_Nickname" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -167,6 +202,7 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
+theme_override_font_sizes/font_size = 16
 text = "JUMP"
 icon = ExtResource("14_pm4ta")
 expand_icon = true
@@ -190,6 +226,8 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"SecondaryLittle"
 theme_override_constants/icon_max_width = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_fkduy")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_o0a4w")
 theme_override_styles/pressed = ExtResource("12_lm8sy")
 theme_override_styles/pressed_mirrored = ExtResource("12_lm8sy")
 theme_override_styles/hover = ExtResource("12_lm8sy")
@@ -200,7 +238,7 @@ theme_override_styles/disabled = ExtResource("13_pm4ta")
 theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
 theme_override_styles/focus = ExtResource("12_lm8sy")
 toggle_mode = true
-icon = ExtResource("13_463mj")
+icon = ExtResource("12_m2rwh")
 icon_alignment = 1
 expand_icon = true
 
@@ -244,17 +282,9 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 20
-theme_override_styles/pressed = ExtResource("12_lm8sy")
-theme_override_styles/pressed_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/hover = ExtResource("12_lm8sy")
-theme_override_styles/hover_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/hover_pressed = ExtResource("12_lm8sy")
-theme_override_styles/hover_pressed_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/disabled = ExtResource("13_pm4ta")
-theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
-theme_override_styles/focus = ExtResource("12_lm8sy")
-icon = ExtResource("14_h2dbk")
+theme_override_styles/normal = SubResource("StyleBoxFlat_b4lym")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_gaktv")
+icon = ExtResource("15_40r3o")
 icon_alignment = 1
 expand_icon = true
 
@@ -269,6 +299,7 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
 theme_override_constants/icon_max_width = 20
+theme_override_font_sizes/font_size = 16
 text = "ACCEPT"
 icon = ExtResource("15_0guw6")
 
@@ -289,6 +320,7 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"SecondaryLittle"
+theme_override_font_sizes/font_size = 16
 text = "UNBLOCK"
 icon_alignment = 1
 expand_icon = true
