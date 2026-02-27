@@ -167,9 +167,9 @@ func async_show_own_profile():
 func async_show_profile_editor():
 	await control_profile_portrait._async_instantiate()
 	select_profile_screen(true, true)
+	_open()
 	if control_profile_portrait.instance:
 		control_profile_portrait.instance.show_editor(true)
-	_open()
 
 
 func _open():

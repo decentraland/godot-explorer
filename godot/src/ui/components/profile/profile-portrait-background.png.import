@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://esc8a5ho06no"
+path="res://.godot/imported/profile-portrait-background.png-7fe4d29d467384eb81a9373d3db937fb.image"
+
+[deps]
+
+source_file="res://src/ui/components/profile/profile-portrait-background.png"
+dest_files=["res://.godot/imported/profile-portrait-background.png-7fe4d29d467384eb81a9373d3db937fb.image"]
+
+[params]
+

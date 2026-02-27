@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://cuw8urbbfnias"
+path="res://.godot/imported/profile-background-corner24.png-7355d11f3fd6e1adfd5cd861416851d3.image"
+
+[deps]
+
+source_file="res://src/ui/components/profile/profile-background-corner24.png"
+dest_files=["res://.godot/imported/profile-background-corner24.png-7355d11f3fd6e1adfd5cd861416851d3.image"]
+
+[params]
+

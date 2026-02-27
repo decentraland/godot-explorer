@@ -52,6 +52,19 @@ func _ready() -> void:
 	panel_container_card.set_anchors_and_offsets_preset.call_deferred(Control.PRESET_FULL_RECT)
 	panel_container_card.set_position.call_deferred(Vector2(0, _get_hidden_position()))
 	_initialize_card_position.call_deferred()
+	resized.connect(_on_resized)
+
+
+func _on_resized() -> void:
+	_card_half_position = _get_half_position()
+	panel_container_card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	match drag_state:
+		DragState.PEEK:
+			panel_container_card.position.y = _get_peek_position()
+		DragState.HALF:
+			panel_container_card.position.y = _card_half_position
+		DragState.FULL:
+			panel_container_card.position.y = 0.0
 
 
 func _initialize_card_position() -> void:

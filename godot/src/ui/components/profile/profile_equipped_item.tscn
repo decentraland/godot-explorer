@@ -57,13 +57,13 @@ font = ExtResource("5_2saji")
 font_size = 12
 
 [node name="ProfileEquippedItem" type="Button"]
-custom_minimum_size = Vector2(150, 260)
+custom_minimum_size = Vector2(152, 265)
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -75.0
 offset_right = 75.0
-offset_bottom = 254.0
+offset_bottom = 266.0
 grow_horizontal = 2
 size_flags_vertical = 0
 mouse_filter = 1
@@ -150,9 +150,16 @@ label_settings = SubResource("LabelSettings_2saji")
 horizontal_alignment = 1
 uppercase = true
 
-[node name="Button_View" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="MarginContainer_ButtonView" type="MarginContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="Button_View" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ButtonView"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 1
@@ -161,4 +168,4 @@ text = "VIEW"
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]
 [connection signal="gui_input" from="MarginContainer/PanelContainer" to="MarginContainer/PanelContainer" method="_on_gui_input"]
-[connection signal="pressed" from="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/Button_View" to="." method="_on_button_view_pressed"]
+[connection signal="pressed" from="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ButtonView/Button_View" to="." method="_on_button_view_pressed"]
