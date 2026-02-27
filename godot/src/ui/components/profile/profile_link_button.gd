@@ -8,9 +8,8 @@ signal delete_link
 
 const EDITING_MARGIN_RIGHT = 60
 
-
 var url: String = ""
-var is_editing: bool= false
+var is_editing: bool = false
 
 @onready var texture_rect_remove: TextureRect = %TextureRect_Remove
 
@@ -41,7 +40,6 @@ func _on_change_editing(editing: bool) -> void:
 	else:
 		texture_rect_remove.hide()
 		_remove_editing_overrides()
-
 
 
 func _on_pressed() -> void:
