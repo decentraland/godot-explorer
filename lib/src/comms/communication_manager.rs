@@ -3,7 +3,7 @@ use godot::prelude::*;
 use http::Uri;
 #[cfg(feature = "use_livekit")]
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 #[cfg(feature = "use_livekit")]
 use crate::{
@@ -50,15 +50,14 @@ enum MainRoom {
 }
 
 impl MainRoom {
-    fn poll(&mut self) {
+    fn poll(&mut self) -> bool {
         match self {
             MainRoom::WebSocket(ws_room) => {
                 ws_room.poll();
+                true
             }
             #[cfg(feature = "use_livekit")]
-            MainRoom::LiveKit(livekit_room) => {
-                livekit_room.poll();
-            }
+            MainRoom::LiveKit(livekit_room) => livekit_room.poll(),
         }
     }
 
@@ -135,6 +134,10 @@ pub struct CommunicationManager {
     realm_min_bounds: Vector2i,
     realm_max_bounds: Vector2i,
 
+    // LiveKit debug mode
+    livekit_debug: bool,
+    livekit_debug_last_update: Instant,
+
     // Shared message processor for all adapters
     message_processor: Option<MessageProcessor>,
 
@@ -143,6 +146,10 @@ pub struct CommunicationManager {
     #[cfg(feature = "use_livekit")]
     scene_room: Option<LivekitRoom>,
     current_scene_id: Option<GString>,
+
+    // Reconnection timer for scene rooms
+    #[cfg(feature = "use_livekit")]
+    scene_room_reconnect_at: Option<Instant>,
 
     // Channel for scene room connection requests from async tasks
     #[cfg(feature = "use_livekit")]
@@ -170,11 +177,15 @@ impl INode for CommunicationManager {
             last_profile_version_broadcast: Instant::now(),
             archipelago_profile_announced: false,
             block_auto_reconnect: false,
+            livekit_debug: false,
+            livekit_debug_last_update: Instant::now(),
             message_processor: None,
             main_room: None,
             #[cfg(feature = "use_livekit")]
             scene_room: None,
             current_scene_id: None,
+            #[cfg(feature = "use_livekit")]
+            scene_room_reconnect_at: None,
             #[cfg(feature = "use_livekit")]
             scene_room_connection_receiver,
             #[cfg(feature = "use_livekit")]
@@ -321,47 +332,105 @@ impl INode for CommunicationManager {
         // Emit disconnected signal if needed (after borrowing is done)
         if let Some((reason, room_id)) = disconnect_info {
             use crate::comms::adapter::message_processor::DisconnectReason;
-            let reason_code: i32 = match reason {
-                DisconnectReason::DuplicateIdentity => 0,
-                DisconnectReason::RoomClosed => 1,
-                DisconnectReason::Kicked => 2,
-                DisconnectReason::Other => 3,
-            };
 
-            // For DuplicateIdentity, disconnect from ALL rooms immediately
-            // This prevents the infinite loop where one client stays connected and kicks the other back
             if reason == DisconnectReason::DuplicateIdentity {
+                // DuplicateIdentity from ANY room → full disconnect (existing behavior)
                 tracing::warn!("Disconnected from '{}': DuplicateIdentity - another client connected with same identity", room_id);
                 self.block_auto_reconnect = true;
-                // Save the connection string BEFORE clean() clears it - needed for reconnection
                 let saved_connection_str = self.current_connection_str.clone();
-                // Clean up all rooms to ensure we're fully disconnected
                 self.clean();
-                // Restore the connection string so user can reconnect via the RECONNECT button
                 self.current_connection_str = saved_connection_str;
-            } else {
-                tracing::warn!("Disconnected from '{}': {:?}", room_id, reason);
-            }
 
-            self.base_mut()
-                .emit_signal("disconnected", &[reason_code.to_variant()]);
+                self.base_mut()
+                    .emit_signal("disconnected", &[0i32.to_variant()]);
+            } else if room_id.starts_with("scene-") {
+                // Scene room disconnect → handled by reconnection timer, don't emit signal
+                tracing::debug!(
+                    "Scene room '{}' disconnected ({:?}) — reconnection scheduled",
+                    room_id,
+                    reason
+                );
+            } else if room_id.starts_with("archipelago-livekit-") {
+                // Archipelago LiveKit room disconnect → handled by ArchipelagoManager
+                tracing::debug!(
+                    "Archipelago room '{}' disconnected ({:?}) — reconnection handled internally",
+                    room_id,
+                    reason
+                );
+            } else {
+                // Main room disconnect → emit signal (DisconnectHandler handles)
+                let reason_code: i32 = match reason {
+                    DisconnectReason::DuplicateIdentity => 0,
+                    DisconnectReason::RoomClosed => 1,
+                    DisconnectReason::Kicked => 2,
+                    DisconnectReason::Other => 3,
+                };
+                tracing::warn!("Disconnected from '{}': {:?}", room_id, reason);
+                self.base_mut()
+                    .emit_signal("disconnected", &[reason_code.to_variant()]);
+            }
         }
 
         // Poll main room (if active)
-        if let Some(main_room) = &mut self.main_room {
-            main_room.poll();
+        {
+            let main_room_alive = if let Some(main_room) = &mut self.main_room {
+                main_room.poll()
+            } else {
+                true
+            };
+            if !main_room_alive {
+                tracing::warn!("🔌 Main room disconnected");
+                self.main_room = None;
+            }
         }
 
         // Poll scene room (if active)
         #[cfg(feature = "use_livekit")]
-        if let Some(scene_room) = &mut self.scene_room {
-            scene_room.poll();
+        {
+            let scene_room_alive = if let Some(scene_room) = &mut self.scene_room {
+                scene_room.poll()
+            } else {
+                true
+            };
+            if !scene_room_alive {
+                tracing::warn!("🔌 Scene room disconnected, scheduling reconnection in 5s");
+                self.scene_room = None; // Remove dead room, keep current_scene_id
+                self.scene_room_reconnect_at = Some(Instant::now() + Duration::from_secs(5));
+            }
+        }
+
+        // Attempt scene room reconnection if timer has expired
+        #[cfg(feature = "use_livekit")]
+        if self.scene_room.is_none()
+            && self.current_scene_id.is_some()
+            && self
+                .scene_room_reconnect_at
+                .is_some_and(|t| t <= Instant::now())
+        {
+            self.reconnect_scene_room();
+            // Schedule next retry in case this attempt fails
+            self.scene_room_reconnect_at = Some(Instant::now() + Duration::from_secs(5));
         }
 
         // Periodic ProfileVersion broadcasting (every 10 seconds)
         if self.last_profile_version_broadcast.elapsed().as_secs() >= 10 {
             self.broadcast_profile_version();
             self.last_profile_version_broadcast = Instant::now();
+        }
+
+        // LiveKit debug: update avatar room labels (~1/sec)
+        if self.livekit_debug && self.livekit_debug_last_update.elapsed().as_secs() >= 1 {
+            self.livekit_debug_last_update = Instant::now();
+            if let Some(processor) = &self.message_processor {
+                let avatar_scene = DclGlobal::singleton().bind().get_avatars();
+                for (address, rooms) in processor.get_peer_room_info() {
+                    let address_str = format!("{:#x}", address);
+                    let mut avatar_scene_ref = avatar_scene.clone();
+                    avatar_scene_ref
+                        .bind_mut()
+                        .set_avatar_room_debug_by_address(address_str.to_godot(), rooms.to_godot());
+                }
+            }
         }
     }
 }
@@ -412,6 +481,57 @@ impl CommunicationManager {
                 .unwrap()
                 .get_message_sender()
         }
+    }
+
+    #[cfg(feature = "use_livekit")]
+    fn reconnect_scene_room(&self) {
+        let Some(scene_entity_id) = &self.current_scene_id else {
+            return;
+        };
+        let scene_entity_id = scene_entity_id.to_string();
+
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+        let Some(ephemeral_auth_chain) = player_identity_bind.try_get_ephemeral_auth_chain() else {
+            tracing::error!("No ephemeral auth chain for scene room reconnection");
+            return;
+        };
+        let realm = DclGlobal::singleton().bind().get_realm();
+        let realm_name = realm.bind().get_realm_name().to_string();
+        let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
+            .bind()
+            .get_http_requester()
+            .bind()
+            .get_http_queue_requester();
+        let connection_sender = self.scene_room_connection_sender.clone();
+
+        TokioRuntime::spawn(async move {
+            tracing::debug!("🔄 Reconnecting scene room for scene: {}", scene_entity_id);
+            match get_scene_adapter(
+                http_requester,
+                &scene_entity_id,
+                &realm_name,
+                &ephemeral_auth_chain,
+            )
+            .await
+            {
+                Ok(adapter_url) => {
+                    if adapter_url.starts_with("livekit:") {
+                        let livekit_url =
+                            adapter_url.strip_prefix("livekit:").unwrap_or(&adapter_url);
+                        let _ = connection_sender
+                            .send(SceneRoomConnectionRequest {
+                                scene_id: scene_entity_id,
+                                livekit_url: livekit_url.to_string(),
+                            })
+                            .await;
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("🔄 Scene room reconnection failed (will retry): {}", e);
+                }
+            }
+        });
     }
 
     pub fn send_scene_message(
@@ -651,8 +771,6 @@ impl CommunicationManager {
             archipelago.update_position(position);
         }
 
-        let rotation_y = rotation_y.to_degrees();
-
         let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
 
         let get_packet = || {
@@ -678,11 +796,11 @@ impl CommunicationManager {
                     MoveKind::Idle
                 };
 
-                // For temporal data, we need to determine these values based on game state
+                // Temporal::with_rotation_f32 expects radians (quantizes over 0..TAU)
                 let temporal = Temporal::from_parts(
                     time,
                     false,
-                    rotation_y,
+                    rotation_y, // radians from Godot
                     movement.velocity_tier(),
                     move_kind,
                     !fall && !rise,
@@ -736,8 +854,6 @@ impl CommunicationManager {
                     is_instant: false,
                     is_emoting: self.is_emoting,
                 };
-
-                //tracing::info!("Movement packet: {:?}", movement_packet);
 
                 rfc4::Packet {
                     message: Some(rfc4::packet::Message::Movement(movement_packet)),
@@ -1278,6 +1394,7 @@ impl CommunicationManager {
         #[cfg(feature = "use_livekit")]
         {
             self.scene_room = None;
+            self.scene_room_reconnect_at = None;
         }
         self.current_scene_id = None;
         self.current_connection = CommsConnection::None;
@@ -1375,6 +1492,7 @@ impl CommunicationManager {
         scene_room.set_message_processor_sender(processor_sender);
 
         self.scene_room = Some(scene_room);
+        self.scene_room_reconnect_at = None;
 
         // Announce initial profile to the scene room
         self.announce_initial_profile();
@@ -1408,11 +1526,12 @@ impl CommunicationManager {
 
         tracing::debug!("Scene changed to: {}", scene_entity_id);
 
-        // Clean up existing scene room
+        // Clean up existing scene room and cancel any pending reconnection
         if let Some(scene_room) = &mut self.scene_room {
             scene_room.clean();
         }
         self.scene_room = None;
+        self.scene_room_reconnect_at = None;
         self.current_scene_id = Some(scene_entity_id.clone());
 
         // Check if scene rooms are disabled
@@ -1524,6 +1643,68 @@ impl CommunicationManager {
         } else {
             tracing::warn!("⚠️  Cannot set realm bounds: MessageProcessor not initialized");
         }
+    }
+
+    #[func]
+    pub fn set_livekit_debug(&mut self, enabled: bool) {
+        self.livekit_debug = enabled;
+        if !enabled {
+            // Clear all avatar room debug labels
+            let avatar_scene = DclGlobal::singleton().bind().get_avatars();
+            if let Some(processor) = &self.message_processor {
+                for (address, _) in processor.get_peer_room_info() {
+                    let address_str = format!("{:#x}", address);
+                    let mut avatar_scene_ref = avatar_scene.clone();
+                    avatar_scene_ref
+                        .bind_mut()
+                        .set_avatar_room_debug_by_address(
+                            address_str.to_godot(),
+                            GString::default(),
+                        );
+                }
+            }
+        }
+    }
+
+    #[func]
+    pub fn get_livekit_debug(&self) -> bool {
+        self.livekit_debug
+    }
+
+    #[func]
+    pub fn get_debug_room_info(&self) -> VarDictionary {
+        let mut dict = VarDictionary::new();
+        dict.set(
+            "adapter".to_variant(),
+            self.current_connection_str.to_variant(),
+        );
+        let scene_room_id = self.current_scene_id.clone().unwrap_or_default();
+        dict.set("scene_room".to_variant(), scene_room_id.to_variant());
+        #[cfg(feature = "use_livekit")]
+        {
+            let scene_connected = self.scene_room.is_some();
+            dict.set("scene_connected".to_variant(), scene_connected.to_variant());
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        {
+            dict.set("scene_connected".to_variant(), false.to_variant());
+        }
+        dict
+    }
+
+    #[func]
+    pub fn get_debug_peer_rooms(&self) -> VarArray {
+        let mut arr = VarArray::new();
+        if let Some(processor) = &self.message_processor {
+            for (address, rooms) in processor.get_peer_room_info() {
+                let mut dict = VarDictionary::new();
+                let address_str = format!("{:#x}", address);
+                dict.set("address".to_variant(), address_str.to_variant());
+                dict.set("rooms".to_variant(), rooms.to_variant());
+                arr.push(&dict.to_variant());
+            }
+        }
+        arr
     }
 }
 

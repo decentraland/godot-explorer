@@ -2,6 +2,7 @@ extends Control
 
 signal request_debug_panel(enabled: bool)
 signal request_pause_scenes(enabled: bool)
+signal request_livekit_debug(enabled: bool)
 
 enum SceneLogLevel {
 	LOG = 1,
@@ -770,6 +771,10 @@ func _on_visibility_changed() -> void:
 
 func _on_check_button_scene_processing_paused_toggled(toggled_on: bool) -> void:
 	emit_signal("request_pause_scenes", toggled_on)
+
+
+func _on_check_button_livekit_debug_toggled(toggled_on: bool) -> void:
+	request_livekit_debug.emit(toggled_on)
 
 
 func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
