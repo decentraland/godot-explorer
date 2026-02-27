@@ -549,7 +549,8 @@ func _on_button_next_pressed():
 		var error: PromiseError = promise.get_data()
 		printerr("[Lobby] Profile deploy failed: ", error.get_error())
 
-	show_control_ftue()
+	# Skip FTUE, go directly to discover
+	await async_close_sign_in()
 
 
 func _on_button_random_name_pressed():

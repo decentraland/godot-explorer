@@ -10,32 +10,40 @@ fn env() -> &'static str {
 
 // Auth
 pub fn auth_frontend() -> String {
-    if env() == "today" {
-        "http://localhost:5173/auth/requests".to_string()
-    } else {
-        format!("https://decentraland.{}/auth/requests", env())
-    }
+    // TESTING: hardcoded to zone
+    "https://decentraland.zone/auth/requests".to_string()
+    // if env() == "today" {
+    //     "http://localhost:5173/auth/requests".to_string()
+    // } else {
+    //     format!("https://decentraland.{}/auth/requests", env())
+    // }
 }
 pub fn auth_mobile_frontend() -> String {
-    if env() == "today" {
-        "http://localhost:5173/auth/mobile".to_string()
-    } else {
-        format!("https://decentraland.{}/auth/mobile", env())
-    }
+    // TESTING: hardcoded to zone
+    "https://decentraland.zone/auth/mobile".to_string()
+    // if env() == "today" {
+    //     "http://localhost:5173/auth/mobile".to_string()
+    // } else {
+    //     format!("https://decentraland.{}/auth/mobile", env())
+    // }
 }
 pub fn auth_api_base() -> String {
-    if env() == "today" {
-        "https://auth-api.decentraland.zone".to_string()
-    } else {
-        format!("https://auth-api.decentraland.{}", env())
-    }
+    // TESTING: hardcoded to zone
+    "https://auth-api.decentraland.zone".to_string()
+    // if env() == "today" {
+    //     "https://auth-api.decentraland.zone".to_string()
+    // } else {
+    //     format!("https://auth-api.decentraland.{}", env())
+    // }
 }
 pub fn auth_api_requests() -> String {
-    if env() == "today" {
-        "https://auth-api.decentraland.zone/requests".to_string()
-    } else {
-        format!("https://auth-api.decentraland.{}/requests", env())
-    }
+    // TESTING: hardcoded to zone
+    "https://auth-api.decentraland.zone/requests".to_string()
+    // if env() == "today" {
+    //     "https://auth-api.decentraland.zone/requests".to_string()
+    // } else {
+    //     format!("https://auth-api.decentraland.{}/requests", env())
+    // }
 }
 
 // Content
