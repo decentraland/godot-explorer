@@ -6,6 +6,7 @@ const LIKE = preload("res://assets/ui/like.svg")
 const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
 
 var place_id
+var _debounced: DebouncedAction
 
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
@@ -22,74 +23,81 @@ func update_data(id = null) -> void:
 
 
 func async_update_state() -> void:
+	disable_buttons()
 	await _async_update_status()
-	show()
 
 
-func _async_on_button_like_toggled(toggled_on: bool) -> void:
+func _get_debounced() -> DebouncedAction:
+	if _debounced == null:
+		_debounced = DebouncedAction.new(_async_patch_like, PlacesHelper.LIKE.UNKNOWN)
+		add_child(_debounced)
+	return _debounced
+
+
+func _async_patch_like(state: PlacesHelper.LIKE) -> void:
+	await PlacesHelper.async_patch_like(place_id, state)
+
+
+func _on_button_like_toggled(toggled_on: bool) -> void:
 	if place_id == null:
 		button_like.set_pressed_no_signal(!toggled_on)
 		return
 
-	disable_buttons()
-
-	var response = await PlacesHelper.async_patch_like(
-		place_id, PlacesHelper.LIKE.YES if toggled_on else PlacesHelper.LIKE.UNKNOWN
-	)
-
-	if response is PromiseError:
-		button_like.set_pressed_no_signal(!toggled_on)
-		printerr("Error patching likes: ", response.get_error())
-	elif response == null:
-		button_like.set_pressed_no_signal(!toggled_on)
-		printerr("Error patching likes")
-	else:
-		button_like.icon = LIKE_SOLID if toggled_on else LIKE
-		if toggled_on:
-			button_dislike.set_pressed_no_signal(false)
-			button_dislike.icon = DISLIKE
-
-	enable_buttons()
+	button_like.icon = LIKE_SOLID if toggled_on else LIKE
+	if toggled_on:
+		button_dislike.set_pressed_no_signal(false)
+		button_dislike.icon = DISLIKE
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"THUMBS_UP",
+				"PLACE_DETAIL_CLICK",
+				JSON.stringify({"place_id": place_id}),
+			)
+		)
+	_get_debounced().schedule(PlacesHelper.LIKE.YES if toggled_on else PlacesHelper.LIKE.UNKNOWN)
 
 
-func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
+func _on_button_dislike_toggled(toggled_on: bool) -> void:
 	if place_id == null:
 		button_dislike.set_pressed_no_signal(!toggled_on)
 		return
 
-	disable_buttons()
-
-	var response = await PlacesHelper.async_patch_like(
-		place_id, PlacesHelper.LIKE.NO if toggled_on else PlacesHelper.LIKE.UNKNOWN
-	)
-
-	if response is PromiseError:
-		button_dislike.set_pressed_no_signal(!toggled_on)
-		printerr("Error patching likes: ", response.get_error())
-	elif response == null:
-		button_dislike.set_pressed_no_signal(!toggled_on)
-		printerr("Error patching likes")
-	else:
-		button_dislike.icon = DISLIKE_SOLID if toggled_on else DISLIKE
-		if toggled_on:
-			button_like.set_pressed_no_signal(false)
-			button_like.icon = LIKE
-
-	enable_buttons()
+	button_dislike.icon = DISLIKE_SOLID if toggled_on else DISLIKE
+	if toggled_on:
+		button_like.set_pressed_no_signal(false)
+		button_like.icon = LIKE
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"THUMBS_DOWN",
+				"PLACE_DETAIL_CLICK",
+				JSON.stringify({"place_id": place_id}),
+			)
+		)
+	_get_debounced().schedule(PlacesHelper.LIKE.NO if toggled_on else PlacesHelper.LIKE.UNKNOWN)
 
 
 func _apply_button_state(data: Dictionary) -> void:
-	button_like.set_pressed_no_signal(data.get("user_like", false))
-	if button_like.is_pressed():
-		button_like.icon = LIKE_SOLID
-	else:
-		button_like.icon = LIKE
+	var user_like := data.get("user_like", false) as bool
+	var user_dislike := data.get("user_dislike", false) as bool
 
-	button_dislike.set_pressed_no_signal(data.get("user_dislike", false))
-	if button_dislike.is_pressed():
-		button_dislike.icon = DISLIKE_SOLID
+	button_like.set_pressed_no_signal(user_like)
+	button_like.icon = LIKE_SOLID if user_like else LIKE
+
+	button_dislike.set_pressed_no_signal(user_dislike)
+	button_dislike.icon = DISLIKE_SOLID if user_dislike else DISLIKE
+
+	var initial_state: PlacesHelper.LIKE
+	if user_like:
+		initial_state = PlacesHelper.LIKE.YES
+	elif user_dislike:
+		initial_state = PlacesHelper.LIKE.NO
 	else:
-		button_dislike.icon = DISLIKE
+		initial_state = PlacesHelper.LIKE.UNKNOWN
+	_get_debounced().set_state_no_send(initial_state)
 
 
 func _async_update_status() -> void:

@@ -8,7 +8,6 @@ signal toggle_fps
 signal toggle_ram
 signal request_pause_scenes(enabled: bool)
 signal request_debug_panel(enabled: bool)
-signal preview_hot_reload(scene_type: String, scene_id: String)
 #signals from advanced settings
 
 var is_in_game: bool = false  # when it is playing in the 3D Game or not
@@ -20,6 +19,9 @@ var selected_node: PlaceholderManager
 var current_screen_name: String = ""
 var fade_out_tween: Tween = null
 var fade_in_tween: Tween = null
+var _close_modulate_tween: Tween = null
+var _close_hide_tween: Tween = null
+var _close_node_to_free: PlaceholderManager = null
 
 @onready var group: ButtonGroup = ButtonGroup.new()
 
@@ -32,8 +34,6 @@ var fade_in_tween: Tween = null
 
 @onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
 
-@onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
-@onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
 @onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
 
 @onready var static_button_backpack: TextureButton = %StaticButton_Backpack
@@ -55,8 +55,6 @@ func _ready():
 	account_deletion_pop_up.hide()
 
 	is_in_game = self != get_tree().current_scene
-	get_window().size_changed.connect(self._on_size_changed)
-	_on_size_changed()
 
 	control_deploying_profile.hide()
 
@@ -98,14 +96,21 @@ func close():
 	GraphicSettings.apply_full_processor_mode()
 	if Global.player_identity.has_changes():
 		Global.player_identity.async_save_profile()
-	var tween_m = create_tween()
-	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
-	var tween_h = create_tween()
-	tween_h.tween_callback(hide).set_delay(0.3)
-	tween_h.tween_callback(
+	_close_modulate_tween = create_tween()
+	_close_modulate_tween.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(
+		Tween.EASE_IN_OUT
+	)
+	# Capture the node to free NOW, before the tween callback fires.
+	# If we reference `selected_node` directly in the lambda, it may have changed
+	# by the time the callback runs (e.g. user opened Settings while close tween is running).
+	_close_node_to_free = selected_node
+	_close_hide_tween = create_tween()
+	_close_hide_tween.tween_callback(hide).set_delay(0.3)
+	_close_hide_tween.tween_callback(
 		func():
-			if selected_node:
-				selected_node.queue_free_instance()
+			if _close_node_to_free:
+				_close_node_to_free.queue_free_instance()
+				_close_node_to_free = null
 	)
 
 
@@ -130,14 +135,14 @@ func async_show_backpack(on_emotes := false):
 func async_show_settings():
 	await control_settings._async_instantiate()
 
+	if not is_instance_valid(control_settings.instance):
+		return
+
 	control_settings.instance.request_pause_scenes.connect(
 		func(enabled): request_pause_scenes.emit(enabled)
 	)
 	control_settings.instance.request_debug_panel.connect(
 		func(enabled): request_debug_panel.emit(enabled)
-	)
-	control_settings.instance.preview_hot_reload.connect(
-		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
 	)
 
 	select_settings_screen()
@@ -154,6 +159,16 @@ func async_show_own_profile():
 func _open():
 	if is_open:
 		return
+	# Kill any pending close tweens so the old close() doesn't hide us again.
+	# But still free the node that close() intended to free (avoid memory leak).
+	if is_instance_valid(_close_modulate_tween) and _close_modulate_tween.is_running():
+		_close_modulate_tween.kill()
+	if is_instance_valid(_close_hide_tween) and _close_hide_tween.is_running():
+		_close_hide_tween.kill()
+		# The tween callback won't fire, so free the node manually
+		if _close_node_to_free:
+			_close_node_to_free.queue_free_instance()
+			_close_node_to_free = null
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if not selected_node:
@@ -217,6 +232,8 @@ func select_node(node: PlaceholderManager, play_sfx: bool = true):
 
 
 func fade_in(node: PlaceholderManager):
+	if not is_instance_valid(node.instance):
+		return
 	selected_node = node
 	node.instance.show()
 	if is_instance_valid(fade_in_tween):
@@ -229,6 +246,8 @@ func fade_in(node: PlaceholderManager):
 
 
 func fade_out(node: PlaceholderManager):
+	if not is_instance_valid(node.instance):
+		return
 	if is_instance_valid(fade_out_tween):
 		if fade_out_tween.is_running():
 			fade_out_tween.custom_step(100.0)
@@ -260,27 +279,6 @@ func _async_request_hide_menu():
 func _on_button_backpack_toggled(toggled_on):
 	if !toggled_on:
 		Global.player_identity.async_save_profile()
-
-
-func _on_size_changed() -> void:
-	var safe_area: Rect2i = Global.get_safe_area()
-	var window_size: Vector2i = DisplayServer.window_get_size()
-
-	var top: int = 0
-	var bottom: int = 0
-
-	if window_size.x >= safe_area.size.x and window_size.y >= safe_area.size.y:
-		var y_factor: float = size.y / window_size.y
-
-		top = max(top, safe_area.position.y * y_factor)
-		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
-
-	if (
-		is_instance_valid(color_rect_portrait_top_safe_area)
-		and is_instance_valid(color_rect_portrait_bottom_safe_area)
-	):
-		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
-		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
 
 
 func _on_notification_clicked(notification_dict: Dictionary) -> void:

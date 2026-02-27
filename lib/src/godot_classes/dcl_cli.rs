@@ -93,6 +93,8 @@ pub struct DclCli {
     #[var(get)]
     pub emulate_android: bool,
     #[var(get)]
+    pub landscape: bool,
+    #[var(get)]
     pub asset_server: bool,
     #[var(get)]
     pub fi_benchmark_size: i32,
@@ -114,6 +116,8 @@ pub struct DclCli {
     pub fake_deeplink: GString,
     #[var(get)]
     pub fi_benchmark_output: GString,
+    #[var(get)]
+    pub saved_profile: GString,
 }
 
 impl DclCli {
@@ -163,6 +167,14 @@ impl DclCli {
                 name: "--emulate-android".to_string(),
                 description: "Emulate Android safe area margins (status bar + gesture nav)"
                     .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--landscape".to_string(),
+                description:
+                    "Start in landscape orientation (used with --emulate-ios/--emulate-android)"
+                        .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
@@ -383,6 +395,26 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            // Authentication
+            ArgDefinition {
+                name: "--saved-profile".to_string(),
+                description: "Use a numbered profile slot for identity storage (e.g., 2 uses account_2/guest_profile_2)".to_string(),
+                arg_type: ArgType::Value("<number>".to_string()),
+                category: "Authentication".to_string(),
+            },
+            // Logging
+            ArgDefinition {
+                name: "--rust-log".to_string(),
+                description: "Set Rust log filter (e.g., debug, info, warn, dclgodot::comms=debug,info). Works via deeplink on all platforms".to_string(),
+                arg_type: ArgType::Value("<filter>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-pipe-logging".to_string(),
+                description: "Disable piping Rust logs to Godot console (use platform default: stdout/logcat/oslog)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
         ]
     }
 
@@ -520,6 +552,7 @@ impl INode for DclCli {
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
+        let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
@@ -577,6 +610,12 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
+        let saved_profile = args_map
+            .get("--saved-profile")
+            .and_then(|v| v.as_ref())
+            .and_then(|s| s.parse::<u32>().ok())
+            .map(|n| GString::from(&n.to_string()))
+            .unwrap_or_default();
 
         // Convert combined args back to PackedStringArray for storage
         let args: PackedStringArray = args_vec.iter().cloned().collect();
@@ -617,6 +656,7 @@ impl INode for DclCli {
             stress_test,
             emulate_ios,
             emulate_android,
+            landscape,
             asset_server,
             fi_benchmark_size,
             asset_server_port,
@@ -627,6 +667,7 @@ impl INode for DclCli {
             snapshot_folder,
             fake_deeplink,
             fi_benchmark_output,
+            saved_profile,
         }
     }
 }

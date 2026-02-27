@@ -41,7 +41,7 @@ func async_get_popular_keywords() -> void:
 	var fetch_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(url)
 	match fetch_result.status:
 		PlacesHelper.FetchResultStatus.ERROR:
-			printerr("Error request places ", url, " ", fetch_result.premise_error.get_error())
+			printerr("Error request places ", url, " ", fetch_result.promise_error.get_error())
 			return
 		PlacesHelper.FetchResultStatus.OK:
 			pass
@@ -100,7 +100,7 @@ func set_keyword_search_text(_search_text: String) -> void:
 			should_show_container.emit(false)
 			return
 		should_show_container.emit(true)
-		_build_suggestions_ui(keywords_result, true)
+		_build_suggestions_ui(keywords_result, true, trimmed_search_text)
 		return
 
 	if text_len >= 3:
@@ -134,14 +134,26 @@ func set_keyword_search_text(_search_text: String) -> void:
 				):
 					keywords_result.push_back(k)
 		should_show_container.emit(true)
-		_build_suggestions_ui(keywords_result, false)
+		_build_suggestions_ui(keywords_result, false, trimmed_search_text)
 		return
 
 	should_show_container.emit(false)
 
 
-func _build_suggestions_ui(keywords_result: Array[Keyword], show_recent_label: bool) -> void:
+func _build_suggestions_ui(
+	keywords_result: Array[Keyword], show_recent_label: bool, search_query: String = ""
+) -> void:
 	margin_container_recent_searches.visible = show_recent_label
+	(
+		Global
+		. metrics
+		. track_screen_viewed(
+			"SEARCH_SHOW_SUGGESTIONS",
+			JSON.stringify(
+				{"search_query": search_query, "suggestions_count": keywords_result.size()}
+			),
+		)
+	)
 	for c in search_sugestions.get_children():
 		c.queue_free()
 

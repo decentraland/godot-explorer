@@ -6,6 +6,7 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal jump_in_world(realm: String)
 signal close
+signal ftue_completed
 
 enum DragState { HIDDEN, HALF, FULL }
 enum DragGesture { IDLE, UP, DOWN }
@@ -23,7 +24,7 @@ const _TWEEN_DURATION := 0.2
 @export var onlines: int = 0
 @export var likes_percent: float = 0.0
 @export var metadata: Dictionary = {}
-@export var location: Vector2i = Vector2i(0, 0)
+@export var location: Vector2i = Vector2i(-7, -2)
 @export var realm: String = DclUrls.main_realm()
 @export var realm_title: String = "Genesis City"
 @export var categories: Array = []
@@ -59,7 +60,7 @@ func _ready():
 		set_title(title)
 		set_event_name(event_name)
 		set_description(description)
-		set_likes_percent(likes_percent)
+		set_likes_percent(0, 0)
 		set_location(location)
 		set_categories(categories)
 	else:
@@ -75,6 +76,13 @@ func _ready():
 	var description_container = _get_hide_from_here()
 	if description_container:
 		description_container.show()
+
+	# Set user name from player profile when used as FTUE
+	var label_nickname_ftue = _get_label_nickname_ftue()
+	if label_nickname_ftue:
+		var player_profile = Global.player_identity.get_profile_or_null()
+		if player_profile:
+			label_nickname_ftue.text = player_profile.get_name()
 
 	if is_draggable and card:
 		var header = _get_header()
@@ -311,6 +319,18 @@ func _get_fav_button() -> FavButton:
 	return _get_node_safe("FavButton")
 
 
+func _get_button_jump_in_ftue() -> Button:
+	return _get_node_safe("Button_JumpIn_FTUE")
+
+
+func _get_button_skip() -> Button:
+	return _get_node_safe("Button_Skip")
+
+
+func _get_label_nickname_ftue() -> Label:
+	return _get_node_safe("Label_NickNameFTUE")
+
+
 func _connect_signals():
 	var button_close = _get_button_close()
 	if button_close:
@@ -340,6 +360,16 @@ func _connect_signals():
 	if button_share:
 		if not button_share.pressed.is_connected(_on_button_share_pressed):
 			button_share.pressed.connect(_on_button_share_pressed)
+
+	var button_jump_in_ftue = _get_button_jump_in_ftue()
+	if button_jump_in_ftue:
+		if not button_jump_in_ftue.pressed.is_connected(_on_button_jump_in_ftue_pressed):
+			button_jump_in_ftue.pressed.connect(_on_button_jump_in_ftue_pressed)
+
+	var button_skip = _get_button_skip()
+	if button_skip:
+		if not button_skip.pressed.is_connected(_on_button_skip_pressed):
+			button_skip.pressed.connect(_on_button_skip_pressed)
 
 
 func set_server_or_location(unlimited: bool = false) -> void:
@@ -426,7 +456,10 @@ func set_title(_title: String):
 	if label:
 		label.text = _title
 	if rtl_title:
-		rtl_title.text = _title
+		if rtl_title.has_method("set_text_trimmed"):
+			rtl_title.set_text_trimmed(_title)
+		else:
+			rtl_title.text = _title
 
 
 func set_description(_description: String):
@@ -436,12 +469,16 @@ func set_description(_description: String):
 		label.text = _description
 
 
-func set_likes_percent(_likes: float):
+func set_likes_percent(likes: int, dislikes: int):
 	var label = _get_label_likes()
 	var container = _get_container_likes()
 	if label and container:
-		container.set_visible(_likes > 0.0)
-		label.text = str(int(round(_likes * 100))) + "%"
+		var total = likes + dislikes
+		if total > 0:
+			label.text = str(int(round(float(likes) / float(total) * 100))) + "%"
+		else:
+			label.text = ""
+		container.set_visible(true)
 		_update_separators()
 
 
@@ -465,9 +502,10 @@ func set_user_name(_user_name: String):
 func set_creator(_creator: String):
 	var label = _get_label_creator()
 	var container = _get_container_creator()
-	if label and container:
-		container.set_visible(not _creator.is_empty())
+	if label:
 		label.text = _creator
+	if container:
+		container.set_visible(not _creator.is_empty())
 
 
 func set_download_warning(item_data: Dictionary) -> void:
@@ -520,8 +558,9 @@ func set_data(item_data):
 		reminder_btn.set_data(_data)
 	_update_reminder_and_jump_buttons()
 	set_user_name(item_data.get("user_name", ""))
-	var like_score = item_data.get("like_score", 0.0)
-	set_likes_percent(like_score if like_score is float else 0.0)
+	var likes = item_data.get("likes", 0)
+	var dislikes = item_data.get("dislikes", 0)
+	set_likes_percent(likes, dislikes)
 	set_online(item_data.get("user_count", 0))
 	set_duration(item_data.get("duration", 0))
 	set_recurrent(_get_or_empty_string(item_data, "recurrent_frequency"))
@@ -554,7 +593,32 @@ func _async_download_image(url: String):
 	set_image(result.texture)
 
 
+func _on_button_jump_in_ftue_pressed() -> void:
+	Global.metrics.track_click_button("JUMP_IN", "DISCOVER_FTUE_CLICK", "")
+	_complete_discover_ftue()
+	_do_jump_in()
+
+
+func _on_button_skip_pressed() -> void:
+	Global.metrics.track_click_button("SKIP", "DISCOVER_FTUE_CLICK", "")
+	_complete_discover_ftue()
+
+
+func _complete_discover_ftue() -> void:
+	ftue_completed.emit()
+
+
 func _on_button_jump_in_pressed():
+	if _data is Dictionary and not _data.is_empty():
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"JUMP_IN",
+				"PLACE_DETAIL_CLICK",
+				JSON.stringify({"place_id": _data.get("id", "")}),
+			)
+		)
 	_do_jump_in()
 
 
@@ -893,6 +957,8 @@ func _share_place_or_event() -> void:
 		DclAndroidPlugin.share_text(msg)
 	elif Global.is_ios():
 		DclIosPlugin.share_text(msg)
+	else:
+		print("[Share] ", msg)
 
 
 func _on_button_share_pressed() -> void:
@@ -903,12 +969,41 @@ func _on_button_share_pressed() -> void:
 		_share_place_or_event()
 		return
 
+	if _is_place_item_event(_data):
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"SHARE",
+				"EVENT_DETAIL_CLICK",
+				JSON.stringify({"event_id": event_id, "event_status": event_status}),
+			)
+		)
+	else:
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"SHARE",
+				"PLACE_DETAIL_CLICK",
+				JSON.stringify({"place_id": _data.get("id", "")}),
+			)
+		)
 	_share_place_or_event()
 
 
 func _on_button_calendar_pressed() -> void:
 	var btn = _get_button_calendar()
 	if btn is CalendarButton:
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"ADD_CALENDAR",
+				"EVENT_DETAIL_CLICK",
+				JSON.stringify({"event_id": event_id, "event_status": event_status}),
+			)
+		)
 		btn.add_event_to_calendar()
 
 

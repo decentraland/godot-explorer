@@ -20,7 +20,6 @@ var _generator_statuses: Dictionary = {}
 @onready var button_back_to_explorer: Button = %Button_BackToExplorer
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
-@onready var discover_content: VBoxContainer = %DiscoverContent
 
 
 func _ready():
@@ -53,6 +52,9 @@ func _ready():
 		_on_report_loading_status.bind(places_most_active)
 	)
 	events.generator.report_loading_status.connect(_on_report_loading_status.bind(events))
+	places_favorites.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(places_favorites)
+	)
 
 
 func on_item_pressed(data):
@@ -78,10 +80,17 @@ func _on_jump_in_world(realm: String):
 	Global.join_world(realm)
 
 
+func _get_ui_location() -> String:
+	return "in_game" if Global.get_explorer() else "pre_game"
+
+
 func _on_visibility_changed():
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		last_visited.generator.async_request_last_places(0, 10)
 		Global.set_orientation_portrait()
+		Global.metrics.track_screen_viewed(
+			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
+		)
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
@@ -93,6 +102,7 @@ func _on_search_bar_opened() -> void:
 	search_container.show()
 	container_content.hide()
 	search_container.set_keyword_search_text("")
+	Global.metrics.track_click_button("SEARCH_SELECT_INPUT", "SEARCH_CLICK", "")
 
 
 func _on_search_bar_cleared() -> void:
@@ -101,6 +111,7 @@ func _on_search_bar_cleared() -> void:
 	timer_search_debounce.stop()
 	search_container.hide()
 	container_content.show()
+	Global.metrics.track_click_button("SEARCH_ERASE", "SEARCH_CLICK", "")
 
 
 func set_search_filter_text(new_text: String) -> void:
@@ -108,11 +119,15 @@ func set_search_filter_text(new_text: String) -> void:
 	if new_text.is_empty():
 		last_visited.visible = last_visited.has_items()
 		places_featured.show()
+		places_favorites.show()
 		places_my_places.visible = places_my_places.has_items()
+		places_most_active.title = "Most Actives"
 	else:
 		last_visited.hide()
 		places_featured.hide()
+		places_favorites.hide()
 		places_my_places.hide()
+		places_most_active.title = "Scenes"
 	places_most_active.set_search_param(new_text)
 	events.set_search_param(new_text)
 	_scroll_all_carousels_to_start()
@@ -248,7 +263,7 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, contain
 
 func _get_active_carousels() -> Array:
 	if search_text.is_empty():
-		return [last_visited, places_featured, places_most_active, events]
+		return [last_visited, places_featured, places_most_active, events, places_favorites]
 	return [places_most_active, events]
 
 
@@ -286,13 +301,91 @@ func _update_global_messages() -> void:
 	if not all_finished:
 		return
 
+	if not search_text.is_empty():
+		var results_count := 0
+		var carousels_count := 0
+		for container in active:
+			if container.has_items():
+				carousels_count += 1
+				results_count += container.item_container.get_children().size()
+		(
+			Global
+			. metrics
+			. track_screen_viewed(
+				"SEARCH_SHOW_RESULTS",
+				(
+					JSON
+					. stringify(
+						{
+							"search_query": search_text,
+							"results_count": results_count,
+							"carousels_count": carousels_count,
+						}
+					)
+				),
+			)
+		)
+	else:
+		# TODO: further define the carousel data format for the DISCOVER screen event
+		var carousels_data := _collect_carousel_data()
+		if not carousels_data.is_empty():
+			(
+				Global
+				. metrics
+				. track_screen_viewed(
+					"DISCOVER",
+					JSON.stringify({"location": _get_ui_location(), "carousels": carousels_data}),
+				)
+			)
+
 	if all_error:
 		%MessageError.show()
 	elif not any_has_items:
 		%MessageNoResultsFound.show()
 
 
+func _collect_carousel_data() -> Dictionary:
+	var result := {}
+	var carousel_map := {
+		"featured": places_featured,
+		"most_active": places_most_active,
+		"events": events,
+		"last_visited": last_visited,
+	}
+	for key in carousel_map:
+		var carousel = carousel_map[key]
+		if not carousel.visible:
+			continue
+		var items := []
+		var idx := 0
+		for child in carousel.item_container.get_children():
+			if child is PlaceItem:
+				(
+					items
+					. append(
+						{
+							"id": child._data.get("id", ""),
+							"type": "world" if child._data.get("world", false) else "scene",
+							"position": idx,
+						}
+					)
+				)
+				idx += 1
+		if not items.is_empty():
+			result[key] = items
+	return result
+
+
 func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
+	(
+		Global
+		. metrics
+		. track_click_button(
+			"SEARCH_TAP_SUGGESTION",
+			"SEARCH_CLICK",
+			JSON.stringify({"search_query": search_text, "suggestion_text": keyword.keyword}),
+		)
+	)
 	var search_keyword := keyword.keyword
 	if keyword.type == SearchSuggestions.KeywordType.COORDINATES:
 		search_keyword = await PlacesHelper.async_get_name_from_coordinates(keyword.coordinates)
@@ -305,6 +398,7 @@ func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 
 func _on_button_back_to_explorer_pressed() -> void:
 	if not search_bar.closed:
+		Global.metrics.track_click_button("SEARCH_GOBACK", "SEARCH_CLICK", "")
 		search_bar.close_searchbar()
 		search_text = ""
 		set_search_filter_text("")

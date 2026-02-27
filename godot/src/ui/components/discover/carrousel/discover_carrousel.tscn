@@ -43,7 +43,7 @@ layout_mode = 2
 
 [node name="Label_Error" type="Label" parent="VBoxContainer"]
 visible = false
-custom_minimum_size = Vector2(0, 185)
+custom_minimum_size = Vector2(0, 250)
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 24
@@ -53,7 +53,7 @@ vertical_alignment = 1
 
 [node name="Label_NotFound" type="Label" parent="VBoxContainer"]
 visible = false
-custom_minimum_size = Vector2(0, 185)
+custom_minimum_size = Vector2(0, 250)
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 24
@@ -115,7 +115,7 @@ theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
 
 [node name="HBoxContainer_Items" type="HBoxContainer" parent="VBoxContainer/ScrollContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 185)
+custom_minimum_size = Vector2(0, 250)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0

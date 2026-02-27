@@ -584,6 +584,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                     (result["extras"] as Dictionary)[key] = value.toString()
                 }
             }
+
+            // Clear intent data after reading to prevent re-processing the same
+            // deep link when the app resumes from background
+            if (data != null) {
+                intent?.data = null
+            }
         } ?: run {
             Log.e(pluginName, "Activity is null, cannot retrieve intent")
             result["error"] = "Activity is null"
@@ -1581,8 +1587,13 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         wcErrorMessage = ""
 
         try {
-            // For personal_sign, params are [message, address]
-            val params = listOf(message, wcConnectedAddress)
+            // personal_sign spec requires hex-encoded message: 0x + hex(utf8_bytes)
+            // MetaMask will decode the hex back to UTF-8 bytes before signing with EIP-191
+            val messageBytes = message.toByteArray(Charsets.UTF_8)
+            val hexMessage = "0x" + messageBytes.joinToString("") { "%02x".format(it) }
+
+            // For personal_sign, params are [hex_message, address]
+            val params = listOf(hexMessage, wcConnectedAddress)
             val paramsJson = org.json.JSONArray(params).toString()
 
             val requestParams = Sign.Params.Request(

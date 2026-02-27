@@ -12,9 +12,7 @@ use crate::dcl::{
         CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
     },
     crdt::{
-        message::{
-            append_gos_component, delete_entity, process_many_messages, put_or_delete_lww_component,
-        },
+        message::{append_gos_component, process_many_messages, put_or_delete_lww_component},
         SceneCrdtState,
     },
     scene_apis::{LocalCall, RpcCall},
@@ -107,8 +105,33 @@ async fn op_crdt_recv_from_renderer(
             let mut data_buf = Vec::new();
             let mut data_writter = DclWriter::new(&mut data_buf);
 
+            if !dirty_crdt_state.entities.died.is_empty() {
+                tracing::info!(
+                    "recv_from_renderer: {} entities died, {} born, {} lww dirty components, {} gos dirty components",
+                    dirty_crdt_state.entities.died.len(),
+                    dirty_crdt_state.entities.born.len(),
+                    dirty_crdt_state.lww.len(),
+                    dirty_crdt_state.gos.len(),
+                );
+                for entity_id in dirty_crdt_state.entities.died.iter() {
+                    tracing::debug!("  died entity: {:?}", entity_id);
+                }
+            }
+
+            let mut skipped_lww = 0u32;
+            let mut skipped_gos = 0u32;
+
+            // Skip component updates for entities that died — the renderer handles
+            // entity lifecycle on its own side. Sending component deletions for dead
+            // entities would corrupt the JS SDK's syncEntity state.
+            // This matches bevy-explorer, which never sends entity deaths or their
+            // component deletions back to JS.
             for (component_id, entities) in dirty_crdt_state.lww.iter() {
                 for entity_id in entities {
+                    if dirty_crdt_state.entities.died.contains(entity_id) {
+                        skipped_lww += 1;
+                        continue;
+                    }
                     if let Err(err) = put_or_delete_lww_component(
                         &scene_crdt_state,
                         entity_id,
@@ -122,6 +145,10 @@ async fn op_crdt_recv_from_renderer(
 
             for (component_id, entities) in dirty_crdt_state.gos.iter() {
                 for (entity_id, element_count) in entities {
+                    if dirty_crdt_state.entities.died.contains(entity_id) {
+                        skipped_gos += 1;
+                        continue;
+                    }
                     if let Err(err) = append_gos_component(
                         &scene_crdt_state,
                         entity_id,
@@ -134,8 +161,12 @@ async fn op_crdt_recv_from_renderer(
                 }
             }
 
-            for entity_id in dirty_crdt_state.entities.died.iter() {
-                delete_entity(entity_id, &mut data_writter);
+            if skipped_lww > 0 || skipped_gos > 0 {
+                tracing::debug!(
+                    "recv_from_renderer: skipped {} lww + {} gos updates for dead entities",
+                    skipped_lww,
+                    skipped_gos,
+                );
             }
 
             let (comms_binary, comms_string): (_, Vec<_>) = incoming_comms_message
