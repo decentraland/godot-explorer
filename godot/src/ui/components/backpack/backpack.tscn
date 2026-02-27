@@ -1,4 +1,4 @@
-[gd_scene load_steps=46 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=45 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -8,7 +8,6 @@
 [ext_resource type="Texture2D" uid="uid://b6ydwqk4yhhcb" path="res://assets/ui/outfits.svg" id="4_8xgft"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_saosw"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_18vfg"]
-[ext_resource type="Script" uid="uid://c8wv7cyh00l4o" path="res://src/ui/components/utils/clean_orientation.gd" id="6_cb3xs"]
 [ext_resource type="PackedScene" uid="uid://cyf8k77w3gdih" path="res://src/ui/color_picker/color_picker_button.tscn" id="7_i1fkq"]
 [ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="7_w8hgg"]
 [ext_resource type="PackedScene" uid="uid://wuyfsip50bwb" path="res://src/ui/components/wearable_button/wearable_filter_button.tscn" id="7_wautc"]
@@ -148,13 +147,24 @@ layout_mode = 2
 theme_override_constants/separation = 14
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="Button_BackToExplorer" type="Button" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+icon = ExtResource("19_t0yet")
+flat = true
+expand_icon = true
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer2"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m8ron")
 theme_override_font_sizes/font_size = 28
 text = "Backpack"
 label_settings = ExtResource("5_18vfg")
-script = ExtResource("6_cb3xs")
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
 layout_mode = 2
@@ -988,6 +998,7 @@ mouse_filter = 2
 texture = SubResource("GradientTexture2D_yjmsa")
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer2/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer2/Button_Wearables" to="." method="_on_button_wearables_pressed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/Button_Emotes" to="." method="_on_button_emotes_pressed"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles" to="." method="_on_check_box_only_collectibles_toggled"]

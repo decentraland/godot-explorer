@@ -370,7 +370,7 @@ class Categories:
 	const HANDS_WEAR: String = "hands_wear"
 	const LEGS: String = "legs"
 	const BODY: String = "body"
-	const TORSO: String = "torso"
+	const CHEST: String = "chest"
 	const FACE: String = "face"
 	const CLOTHING: String = "clothing"
 	const EXTRAS: String = "extras"
@@ -432,11 +432,10 @@ class Categories:
 			TIARA,
 			TOP_HEAD
 		],
-		TORSO: [UPPER_BODY, HANDS_WEAR],
-		LEGS: [LOWER_BODY, FEET],
+		CHEST: [UPPER_BODY, HANDS_WEAR],
 		ALL: [ALL],
 		FACE: [HAIR, FACIAL_HAIR, EYES, EYEBROWS, MOUTH],
-		CLOTHING: [UPPER_BODY, LEGS, FEET, HANDS],
+		CLOTHING: [CHEST, UPPER_BODY, HANDS_WEAR, LOWER_BODY, FEET],
 		EXTRAS: [ALL_EXTRAS, HAT, HELMET, TIARA, FACIAL, MASK, EARRING]
 	}
 
@@ -465,6 +464,7 @@ class Categories:
 	]
 
 	const ALL_EXTRAS_CATEGORIES: PackedStringArray = [HAT, HELMET, TIARA, FACIAL, MASK, EARRING]
+	const CHEST_CATEGORIES: PackedStringArray = [UPPER_BODY, HANDS_WEAR]
 
 
 static func is_texture(category: String) -> bool:
@@ -619,6 +619,7 @@ static func get_curated_wearable_list(
 			Categories.LOWER_BODY,
 			Categories.FEET,
 			Categories.HANDS,
+			Categories.HANDS_WEAR,
 			Categories.HEAD,
 			Categories.HAIR,
 			Categories.FACIAL_HAIR,

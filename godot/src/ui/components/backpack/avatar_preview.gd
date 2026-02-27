@@ -86,7 +86,7 @@ func focus_camera_on(type):
 func _input(event: InputEvent):
 	if not can_move:
 		return
-	if get_parent_control():
+	if get_parent_control() and event is InputEventMouseButton:
 		if not get_parent_control().get_global_rect().has_point(event.position):
 			return
 

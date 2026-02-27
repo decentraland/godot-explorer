@@ -12,11 +12,6 @@ const COLOR_BUTTON = preload("res://src/ui/components/color_carrousel/color_butt
 		_dirty = true
 		color_type = value
 
-@onready var color_carrousel := %ColorCarrousel
-@onready var color_slider := %ColorSlider
-@onready var saturation_slider := %SaturationSlider
-@onready var brightness_slider := %BrightnessSlider
-
 var skin_colors: Array[Color] = [
 	Color("ffe4c6"),
 	Color("ffddbc"),
@@ -48,6 +43,11 @@ var example_colors: Array[Color] = [
 var color_button_group: ButtonGroup = ButtonGroup.new()
 var _dirty := false
 
+@onready var color_carrousel := %ColorCarrousel
+@onready var color_slider := %ColorSlider
+@onready var saturation_slider := %SaturationSlider
+@onready var brightness_slider := %BrightnessSlider
+
 
 func _ready() -> void:
 	refresh_buttons()
@@ -66,7 +66,7 @@ func refresh_buttons() -> void:
 		for child in color_carrousel.get_children():
 			color_carrousel.remove_child(child)
 			child.queue_free()
-		
+
 		#Add color swatch button
 		var color_swatch := COLOR_BUTTON.instantiate()
 		color_swatch.color = Color.BLACK
@@ -74,7 +74,7 @@ func refresh_buttons() -> void:
 		color_swatch.toggled.connect(self._on_color_carrousel_toggle_color_picker)
 		color_swatch.is_color_palette = true
 		color_carrousel.add_child(color_swatch)
-			
+
 		for color in example_colors:
 			var color_square := COLOR_BUTTON.instantiate()
 			color_square.color = color
@@ -100,7 +100,7 @@ func _on_color_toggled(toggled: bool, color: Color):
 		brightness_slider.refresh_from_color(color.v * 100.0)
 		saturation_slider.color = Color.from_hsv(color.h, 1.0, 1.0, 1.0)
 		color_picked.emit(color)
-	
+
 
 func set_color(_color: Color) -> void:
 	pass

@@ -1,11 +1,11 @@
 extends CustomTouchButton
 
-@export var color: Color :
+@export var color: Color:
 	set(value):
 		_dirty = true
 		color = value
 
-@export var is_color_palette := false :
+@export var is_color_palette := false:
 	set(value):
 		_dirty = true
 		is_color_palette = value

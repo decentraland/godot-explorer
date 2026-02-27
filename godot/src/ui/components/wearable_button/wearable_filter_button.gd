@@ -8,7 +8,7 @@ enum WearableCategoryEnum {
 	ALL,
 	BODY,
 	HEAD,
-	TORSO,
+	CHEST,
 	LEGS,
 	HAIR,
 	EYEBROWS,
@@ -87,10 +87,10 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 			result = Wearables.Categories.BODY
 		WearableCategoryEnum.HEAD:
 			result = Wearables.Categories.HEAD
-		WearableCategoryEnum.TORSO:
-			result = Wearables.Categories.TORSO
-		WearableCategoryEnum.LEGS:
-			result = Wearables.Categories.LEGS
+		#WearableCategoryEnum.CHEST:
+		#	result = Wearables.Categories.CHEST
+		#WearableCategoryEnum.LEGS:
+		#	result = Wearables.Categories.LEGS
 		WearableCategoryEnum.HAIR:
 			result = Wearables.Categories.HAIR
 		WearableCategoryEnum.EYEBROWS:
@@ -149,10 +149,10 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 			text = "Body"
 		WearableCategoryEnum.HEAD:
 			text = "Head"
-		WearableCategoryEnum.TORSO:
-			text = "Torso"
-		WearableCategoryEnum.LEGS:
-			text = "Legs"
+		#WearableCategoryEnum.CHEST:
+		#	text = "Chest"
+		#WearableCategoryEnum.LEGS:
+		#	text = "Legs"
 		WearableCategoryEnum.HAIR:
 			text = "Hair"
 		WearableCategoryEnum.EYEBROWS:
@@ -164,13 +164,13 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 		WearableCategoryEnum.FACIAL_HAIR:
 			text = "Facial Hair"
 		WearableCategoryEnum.UPPER_BODY:
-			text = "Upper Body"
+			text = "Chest"  #"Upper Body"
 		WearableCategoryEnum.HANDWEAR:
 			text = "Hands"
 		WearableCategoryEnum.LOWER_BODY:
-			text = "Lower Body"
+			text = "Legs"  #"Lower Body"
 		WearableCategoryEnum.FEET:
-			text = "Footwear"
+			text = "Feet"  #"Footwear"
 		WearableCategoryEnum.HAT:
 			text = "Hats"
 		WearableCategoryEnum.EYEWEAR:

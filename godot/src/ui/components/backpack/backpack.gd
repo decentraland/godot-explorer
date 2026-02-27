@@ -45,6 +45,7 @@ var _avatar_update_retries: int = 0
 @onready var control_no_items = %Control_NoItems
 @onready var backpack_loading = %TextureProgressBar_BackpackLoading
 @onready var container_backpack = %HBoxContainer_Backpack
+@onready var button_back_to_explorer: Button = %Button_BackToExplorer
 
 @onready var wearable_editor = %WearableEditor
 @onready var emote_editor = %EmoteEditor
@@ -56,6 +57,7 @@ var _avatar_update_retries: int = 0
 @onready var texture_rect_background: TextureRect = %TextureRect_Background
 @onready var filter_menu := %FilterMenu
 @onready var filter_indicator := %FilterIndicator
+
 
 # gdlint:ignore = async-function-name
 func _ready():
@@ -78,6 +80,7 @@ func _ready():
 
 	container_backpack.hide()
 	backpack_loading.show()
+	button_back_to_explorer.hide()
 
 	skin_color_picker.hide()
 	color_carrousel.hide()
@@ -157,7 +160,7 @@ func _on_size_changed():
 
 
 func _update_visible_categories():
-	var showed_subcategories: int = 0
+	#var showed_subcategories: int = 0
 	var first_wearable_filter_button: WearableFilterButton = null
 	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
 		var category = wearable_filter_button.get_category_name()
@@ -167,13 +170,15 @@ func _update_visible_categories():
 		var category_is_visible: bool = (
 			filter_categories != null and filter_categories.has(category)
 		)
+		#prints("BUTTON: ", category, category_is_visible, main_category_selected, filter_categories)
 		wearable_filter_button.visible = category_is_visible
 		if category_is_visible:
-			showed_subcategories += 1
+			#showed_subcategories += 1
 			if first_wearable_filter_button == null:
 				first_wearable_filter_button = wearable_filter_button
 
-	container_sub_categories.set_visible(showed_subcategories >= 2)
+	#container_sub_categories.set_visible(showed_subcategories >= 2)
+	container_sub_categories.show()
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
 
@@ -250,11 +255,16 @@ func _load_filtered_data(filter: String):
 		if wearable != null:
 			var is_filter_all = filter == "all"
 			var is_filter_all_extras = filter == "all_extras"
+			var is_filter_chest = filter == "chest"
 			if (
 				(wearable.get_category() == filter or is_filter_all)
 				or (
 					is_filter_all_extras
 					and wearable.get_category() in Wearables.Categories.ALL_EXTRAS_CATEGORIES
+				)
+				or (
+					is_filter_chest
+					and wearable.get_category() in Wearables.Categories.CHEST_CATEGORIES
 				)
 			):
 				var is_body_shape = wearable.get_category() == "body_shape"
@@ -434,6 +444,7 @@ func _on_color_picker_panel_pick_color(color: Color):
 		Global.player_identity.get_mutable_avatar().get_skin_color(),
 		Global.player_identity.get_mutable_avatar().get_hair_color()
 	)
+	#request_update_avatar = true
 
 
 func _on_color_picker_button_toggle_color_panel(toggled, color_target):
@@ -558,3 +569,12 @@ func _on_color_picker_title_pressed() -> void:
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		Global.set_orientation_portrait()
+		if Global.get_explorer():
+			if button_back_to_explorer:
+				button_back_to_explorer.show()
+
+
+func _on_button_back_to_explorer_pressed() -> void:
+	if Global.get_explorer():
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()
