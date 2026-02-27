@@ -29,8 +29,6 @@ var is_loading_profile: bool = false
 
 var _avatar_update_retries: int = 0
 
-@onready var skin_color_picker = %Color_Picker_Button
-@onready var color_picker_panel = $Color_Picker_Panel
 @onready var color_carrousel = %ColorCarrousel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
@@ -57,6 +55,8 @@ var _avatar_update_retries: int = 0
 @onready var texture_rect_background: TextureRect = %TextureRect_Background
 @onready var filter_menu := %FilterMenu
 @onready var filter_indicator := %FilterIndicator
+@onready var subcategories_container := %SubcategoriesContainer
+@onready var maincategories_container := %MainCategoriesContainer
 
 
 # gdlint:ignore = async-function-name
@@ -82,12 +82,9 @@ func _ready():
 	backpack_loading.show()
 	button_back_to_explorer.hide()
 
-	skin_color_picker.hide()
 	color_carrousel.hide()
-	%ColorPickerTitle.hide()
-	#%ColorPicker.hide()
-	%SubcategoriesContainer.show()
-	%MainCategoriesContainer.show()
+	subcategories_container.show()
+	maincategories_container.show()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -326,7 +323,7 @@ func _on_wearable_filter_button_filter_type(type):
 	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
 	var color_name := "%s Color" % type.to_pascal_case()
-	%ColorPickerTitle.text = color_name
+	color_carrousel.set_title(color_name)
 
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()
 	if mutable_avatar == null:
@@ -334,28 +331,20 @@ func _on_wearable_filter_button_filter_type(type):
 
 	var should_hide = false
 	if type == Wearables.Categories.BODY_SHAPE:
-		skin_color_picker.color_target = skin_color_picker.ColorTarget.SKIN
-		skin_color_picker.set_color(mutable_avatar.get_skin_color())
 		color_carrousel.color_type = color_carrousel.ColorTargetType.SKIN
 		color_carrousel.set_color(mutable_avatar.get_skin_color())
 	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
-		skin_color_picker.color_target = skin_color_picker.ColorTarget.HAIR
-		skin_color_picker.set_color(mutable_avatar.get_hair_color())
-		color_carrousel.color_type = color_carrousel.ColorTargetType.OTHER
+		color_carrousel.color_type = color_carrousel.ColorTargetType.HAIR
 		color_carrousel.set_color(mutable_avatar.get_hair_color())
 	elif type == Wearables.Categories.EYES:
-		skin_color_picker.color_target = skin_color_picker.ColorTarget.EYE
-		skin_color_picker.set_color(mutable_avatar.get_eyes_color())
-		color_carrousel.color_type = color_carrousel.ColorTargetType.OTHER
+		color_carrousel.color_type = color_carrousel.ColorTargetType.EYES
 		color_carrousel.set_color(mutable_avatar.get_eyes_color())
 	else:
 		should_hide = true
 
 	if should_hide:
-		skin_color_picker.hide()
 		color_carrousel.hide()
 	else:
-		#skin_color_picker.show()
 		color_carrousel.show()
 
 
@@ -430,49 +419,26 @@ func _on_button_logout_pressed():
 
 
 func _on_color_picker_panel_pick_color(color: Color):
-	match skin_color_picker.color_target:
-		skin_color_picker.ColorTarget.EYE:
+	match color_carrousel.color_type:
+		color_carrousel.ColorTargetType.EYES:
 			Global.player_identity.get_mutable_avatar().set_eyes_color(color)
-		skin_color_picker.ColorTarget.SKIN:
+		color_carrousel.ColorTargetType.SKIN:
 			Global.player_identity.get_mutable_avatar().set_skin_color(color)
-		skin_color_picker.ColorTarget.HAIR:
+		color_carrousel.ColorTargetType.HAIR:
 			Global.player_identity.get_mutable_avatar().set_hair_color(color)
 
-	skin_color_picker.set_color(color)
 	avatar_preview.avatar.update_colors(
 		Global.player_identity.get_mutable_avatar().get_eyes_color(),
 		Global.player_identity.get_mutable_avatar().get_skin_color(),
 		Global.player_identity.get_mutable_avatar().get_hair_color()
 	)
+	# NOTE Don't use request_update_avatar here
+	# that would make the avatar flash during color picking
 	#request_update_avatar = true
 
 
-func _on_color_picker_button_toggle_color_panel(toggled, color_target):
-	if not toggled and color_picker_panel.visible:
-		hide()
-
-	if toggled:
-		var rect = skin_color_picker.get_global_rect()
-		rect.position.x += rect.size.x
-		rect.position.y += rect.size.y + 10
-
-		var current_color: Color
-		match skin_color_picker.color_target:
-			skin_color_picker.ColorTarget.EYE:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = Global.player_identity.get_mutable_avatar().get_eyes_color()
-			skin_color_picker.ColorTarget.SKIN:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.SKIN
-				current_color = Global.player_identity.get_mutable_avatar().get_skin_color()
-			skin_color_picker.ColorTarget.HAIR:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = Global.player_identity.get_mutable_avatar().get_hair_color()
-
-		color_picker_panel.custom_popup(rect, current_color)
-
-
-func _on_color_picker_panel_hided():
-	skin_color_picker.set_pressed(false)
+func _on_color_set() -> void:
+	request_update_avatar = true
 
 
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
@@ -551,19 +517,13 @@ func _on_blacklist_deploy_timer_timeout():
 
 func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 	if toggle:
-		%ColorPickerTitle.show()
 		%MarginItemsContainer.hide()
-		%SubcategoriesContainer.hide()
-		%MainCategoriesContainer.hide()
-
-
-func _on_color_picker_title_pressed() -> void:
-	%ColorPickerTitle.hide()
-
-	%MarginItemsContainer.show()
-	%SubcategoriesContainer.show()
-	%MainCategoriesContainer.show()
-	%ColorCarrousel.close_picker()
+		subcategories_container.hide()
+		maincategories_container.hide()
+	else:
+		%MarginItemsContainer.show()
+		subcategories_container.show()
+		maincategories_container.show()
 
 
 func _on_visibility_changed() -> void:

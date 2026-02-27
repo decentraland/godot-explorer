@@ -1,6 +1,7 @@
 extends Control
 
 signal value_change
+signal slider_released
 
 enum SliderType { COLOR, BRIGHTNESS, SATURATION }
 
@@ -122,6 +123,7 @@ func _on_texture_rect_background_gui_input(event):
 			selected = true
 		else:
 			selected = false
+			slider_released.emit()
 
 
 func refresh_from_color(color_value: int):
