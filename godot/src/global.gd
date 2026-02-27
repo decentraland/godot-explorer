@@ -54,7 +54,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
 const FORCE_DEEPLINK = ""
-#const FORCE_DEEPLINK = "decentraland://open?dclenv=today"
+#const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -187,6 +187,15 @@ func _ready():
 			" preview=",
 			deep_link_obj.preview
 		)
+		print("[DEEPLINK] All params: ", deep_link_obj.params)
+
+		# Apply rust-log from deeplink params
+		var rust_log_value = deep_link_obj.params.get("rust-log", "")
+		if not rust_log_value.is_empty():
+			print("[DEEPLINK] Found rust-log param: ", rust_log_value)
+			DclGlobal.set_rust_log_filter(rust_log_value)
+		else:
+			print("[DEEPLINK] No rust-log param in deeplink")
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -526,6 +535,16 @@ func get_explorer() -> Explorer:
 	if is_instance_valid(explorer):
 		return explorer
 	return null
+
+
+func sign_out() -> void:
+	NotificationsManager.stop_polling()
+	social_service.unsubscribe_from_block_updates()
+	social_blacklist.clear_blocked()
+	social_blacklist.clear_muted()
+	get_config().session_account = {}
+	get_config().save_to_settings_file()
+	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
 
 
 func explorer_has_focus() -> bool:
@@ -884,6 +903,13 @@ func _on_deeplink_received(url: String) -> void:
 
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
+		print("[DEEPLINK] _on_deeplink_received params: ", deep_link_obj.params)
+
+		# Apply rust-log from deeplink params
+		var rust_log_value = deep_link_obj.params.get("rust-log", "")
+		if not rust_log_value.is_empty():
+			print("[DEEPLINK] Found rust-log param: ", rust_log_value)
+			DclGlobal.set_rust_log_filter(rust_log_value)
 
 		# Ignore WalletConnect callbacks (decentraland://walletconnect)
 		if deep_link_obj.is_walletconnect_callback:
@@ -928,6 +954,13 @@ func _notification(what: int) -> void:
 
 			deep_link_url = new_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+			print("[DEEPLINK] _notification focus-in params: ", deep_link_obj.params)
+
+			# Apply rust-log from deeplink params
+			var rust_log_value = deep_link_obj.params.get("rust-log", "")
+			if not rust_log_value.is_empty():
+				print("[DEEPLINK] Found rust-log param: ", rust_log_value)
+				DclGlobal.set_rust_log_filter(rust_log_value)
 
 			# Ignore WalletConnect callbacks
 			if deep_link_obj.is_walletconnect_callback:

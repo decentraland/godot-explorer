@@ -7,6 +7,7 @@ var tools = [
 	preload("./dev_tools/renderdoc/tool.gd").new(self),
 	preload("./dev_tools/resource_counter/tool.gd").new(self),
 	preload("./dev_tools/debug_minimap/tool.gd").new(self),
+	preload("./dev_tools/rust_log_filter/tool.gd").new(self),
 ]
 
 var custom_menu_3d: MenuButton

@@ -112,6 +112,16 @@ theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 30
 horizontal_alignment = 1
 
+[node name="RoomDebugLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 0.3, 1)
+theme_override_fonts/font = ExtResource("4_wgh2x")
+theme_override_font_sizes/font_size = 42
+uppercase = true
+horizontal_alignment = 1
+
 [node name="MessageClip" type="Control" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 clip_contents = true

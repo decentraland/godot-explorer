@@ -215,9 +215,9 @@ func _async_open_popup() -> void:
 		_shadow_rect.size = shadow_size
 
 		# Update shader uniform with shadow rect size for correct corner radius calculation
-		var material := _shadow_rect.material as ShaderMaterial
-		if material:
-			material.set_shader_parameter("rect_size", shadow_size)
+		var shader_material := _shadow_rect.material as ShaderMaterial
+		if shader_material:
+			shader_material.set_shader_parameter("rect_size", shadow_size)
 
 	_popup_layer.visible = true
 	_button_panel.add_theme_stylebox_override("panel", _style_pressed)

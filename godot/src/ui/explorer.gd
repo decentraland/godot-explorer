@@ -10,6 +10,7 @@ var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
 var debug_panel = null
+var livekit_debug_panel = null
 var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
@@ -173,6 +174,10 @@ func _ready():
 	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
 		_on_control_menu_request_debug_panel(true)
 
+	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
+	if Global.deep_link_obj.livekit_debug:
+		_on_control_menu_request_livekit_debug(true)
+
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
 	Global._clear_deep_link()
 
@@ -225,8 +230,7 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
-		if control_menu.control_settings.instance != null:
-			control_menu.control_settings.instance.set_preview_url(cmd_realm)
+		Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
@@ -235,8 +239,6 @@ func _ready():
 		else:
 			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
-
-	control_menu.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
@@ -409,10 +411,6 @@ func _on_control_menu_hide_menu():
 
 func _on_control_menu_toggle_fps(visibility):
 	label_fps.visible = visibility
-
-
-func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
-	Global.scene_fetcher.reload_scene(scene_id)
 
 
 func _on_virtual_joystick_right_stick_position(stick_position: Vector2):
@@ -631,6 +629,21 @@ func _emit_pos_command_message() -> void:
 		]
 	)
 	Global.on_chat_message.emit("system", msg, Time.get_unix_time_from_system())
+
+
+func _on_control_menu_request_livekit_debug(enabled):
+	Global.comms.set_livekit_debug(enabled)
+	if enabled:
+		if not is_instance_valid(livekit_debug_panel):
+			livekit_debug_panel = (
+				load("res://src/ui/components/livekit_debug/livekit_debug_panel.tscn").instantiate()
+			)
+			ui_root.add_child(livekit_debug_panel)
+	else:
+		if is_instance_valid(livekit_debug_panel):
+			ui_root.remove_child(livekit_debug_panel)
+			livekit_debug_panel.queue_free()
+			livekit_debug_panel = null
 
 
 func _on_control_menu_request_pause_scenes(enabled):

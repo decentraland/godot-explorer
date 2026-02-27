@@ -116,6 +116,8 @@ pub struct DclCli {
     pub fake_deeplink: GString,
     #[var(get)]
     pub fi_benchmark_output: GString,
+    #[var(get)]
+    pub saved_profile: GString,
 }
 
 impl DclCli {
@@ -393,6 +395,26 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            // Authentication
+            ArgDefinition {
+                name: "--saved-profile".to_string(),
+                description: "Use a numbered profile slot for identity storage (e.g., 2 uses account_2/guest_profile_2)".to_string(),
+                arg_type: ArgType::Value("<number>".to_string()),
+                category: "Authentication".to_string(),
+            },
+            // Logging
+            ArgDefinition {
+                name: "--rust-log".to_string(),
+                description: "Set Rust log filter (e.g., debug, info, warn, dclgodot::comms=debug,info). Works via deeplink on all platforms".to_string(),
+                arg_type: ArgType::Value("<filter>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-pipe-logging".to_string(),
+                description: "Disable piping Rust logs to Godot console (use platform default: stdout/logcat/oslog)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
         ]
     }
 
@@ -588,6 +610,12 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
+        let saved_profile = args_map
+            .get("--saved-profile")
+            .and_then(|v| v.as_ref())
+            .and_then(|s| s.parse::<u32>().ok())
+            .map(|n| GString::from(&n.to_string()))
+            .unwrap_or_default();
 
         // Convert combined args back to PackedStringArray for storage
         let args: PackedStringArray = args_vec.iter().cloned().collect();
@@ -639,6 +667,7 @@ impl INode for DclCli {
             snapshot_folder,
             fake_deeplink,
             fi_benchmark_output,
+            saved_profile,
         }
     }
 }
