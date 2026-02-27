@@ -22,9 +22,6 @@ var player_profile = Global.player_identity.get_profile_or_null()
 var _deploy_loading_id: int = -1
 var _deploy_timeout_timer: Timer
 
-@onready var control_landscape_avatar: Control = %Control_landscape_avatar
-@onready var margin_container_portrait_avatar: MarginContainer = %MarginContainer_PortraitAvatar
-
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var profile_about: VBoxContainer = %ProfileAbout
@@ -43,7 +40,6 @@ var _deploy_timeout_timer: Timer
 @onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
 @onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 @onready var button_mute_user: Button = %Button_MuteUser
-@onready var control_avatar: Control = %Control_Avatar
 @onready var button_edit_profile: Button = %Button_EditProfile
 @onready var button_close_profile: Button = %Button_CloseProfile
 @onready var button_menu: Button = %Button_Menu
@@ -60,11 +56,8 @@ var _deploy_timeout_timer: Timer
 
 
 func _ready() -> void:
-	get_window().size_changed.connect(self._relocate_avatar_preview)
-	_relocate_avatar_preview()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
-	control_avatar.custom_minimum_size.y = get_viewport().get_visible_rect().size.y * .65
 	button_menu.button_pressed = false
 	menu.hide()
 
@@ -806,15 +799,6 @@ func _hide_friendship_buttons() -> void:
 	button_cancel_request.hide()
 	button_friend.hide()
 	button_unfriend.hide()
-
-
-func _relocate_avatar_preview():
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	var is_landscape: bool = window_size.x > window_size.y
-	if is_landscape:
-		avatar_preview.reparent(control_landscape_avatar)
-	else:
-		avatar_preview.reparent(margin_container_portrait_avatar)
 
 
 func _on_button_edit_profile_pressed() -> void:

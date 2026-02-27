@@ -52,6 +52,7 @@ content_scene = ExtResource("6_content")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 unique_name_in_owner = true
+visible = false
 
 [node name="ProfileEditor" parent="CanvasLayer" instance=ExtResource("7_editor")]
 unique_name_in_owner = true
