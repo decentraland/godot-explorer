@@ -313,7 +313,11 @@ pub fn apply_dcl_material_properties(
             godot_material.set_specular(0.0);
 
             godot_material.set_shading_mode(ShadingMode::UNSHADED);
-            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
+            let is_video_texture = unlit
+                .texture
+                .as_ref()
+                .is_some_and(|t| matches!(t.source, DclSourceTex::VideoTexture(_)));
+            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, !is_video_texture);
             // Unity ignores diffuse_color alpha for unlit materials, force alpha to 1.0
             // No color space conversion — matches Unity (SetColor with no conversion)
             let mut albedo_color = unlit.diffuse_color.0.to_godot();
@@ -389,7 +393,11 @@ pub fn apply_dcl_material_properties(
                 godot_material.set_emission_operator(EmissionOperator::ADD);
             }
 
-            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
+            let is_video_texture = pbr
+                .texture
+                .as_ref()
+                .is_some_and(|t| matches!(t.source, DclSourceTex::VideoTexture(_)));
+            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, !is_video_texture);
             // No color space conversion — matches Unity (SetColor with no conversion)
             godot_material.set_albedo(pbr.albedo_color.0.to_godot());
 
