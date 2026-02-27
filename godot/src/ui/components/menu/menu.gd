@@ -8,6 +8,7 @@ signal toggle_fps
 signal toggle_ram
 signal request_pause_scenes(enabled: bool)
 signal request_debug_panel(enabled: bool)
+signal request_livekit_debug(enabled: bool)
 #signals from advanced settings
 
 var is_in_game: bool = false  # when it is playing in the 3D Game or not
@@ -146,6 +147,9 @@ func async_show_settings():
 	)
 	control_settings.instance.request_debug_panel.connect(
 		func(enabled): request_debug_panel.emit(enabled)
+	)
+	control_settings.instance.request_livekit_debug.connect(
+		func(enabled): request_livekit_debug.emit(enabled)
 	)
 
 	select_settings_screen()

@@ -979,10 +979,27 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Scene Processing Paused"
+text = "Scene Paused"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_SceneProcessingPaused" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneProcessingPaused"]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="LiveKitDebug" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/LiveKitDebug"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "LiveKit Debug"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_LiveKitDebug" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/LiveKitDebug"]
 layout_mode = 2
 size_flags_vertical = 0
 
@@ -1320,6 +1337,7 @@ font = ExtResource("25_jf4mt")
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled/CheckButton_SceneLogsEnabled" to="." method="_on_check_button_scene_logs_enabled_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger/CheckButton_RaycastDebugger" to="." method="_on_check_button_raycast_debugger_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneProcessingPaused/CheckButton_SceneProcessingPaused" to="." method="_on_check_button_scene_processing_paused_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/LiveKitDebug/CheckButton_LiveKitDebug" to="." method="_on_check_button_livekit_debug_toggled"]
 [connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/DropdownList_Realm" to="." method="_on_dropdown_list_realm_item_selected"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]

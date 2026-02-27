@@ -127,6 +127,8 @@ struct Peer {
     profile_fetch_failures: u8,              // Count consecutive failures
     profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
     peer_version: Option<String>,            // Client version for staging/dev builds
+    last_movement_timestamp: f32,            // Dedup: last movement timestamp received
+    last_emote_incremental_id: u32,          // Dedup: last emote incremental ID received
 }
 
 struct ProfileUpdate {
@@ -544,6 +546,95 @@ impl MessageProcessor {
         true
     }
 
+    /// Handle media messages (video/audio from streamers) that don't need peer lifecycle.
+    /// These use synthetic addresses (H160::zero()) and must bypass the player address check.
+    fn process_media_message(&mut self, message: IncomingMessage) {
+        match message.message {
+            MessageType::InitVideo(video_init) => {
+                tracing::debug!(
+                    "InitVideo from {:#x}: {}x{}",
+                    message.address,
+                    video_init.width,
+                    video_init.height
+                );
+
+                self.active_video_tracks.insert(
+                    message.address,
+                    VideoTrackInfo {
+                        width: video_init.width,
+                        height: video_init.height,
+                        last_frame_time: Instant::now(),
+                    },
+                );
+            }
+            MessageType::VideoFrame(video_frame) => {
+                // Filter blocked users
+                if self.cached_blocked.contains(&message.address) {
+                    return;
+                }
+
+                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
+                    track_info.last_frame_time = Instant::now();
+
+                    // Forward to all scenes (any video track goes to all livekit video players)
+                    use crate::godot_classes::dcl_global::DclGlobal;
+                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                    let mut scene_runner = scene_runner.bind_mut();
+
+                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                        scene.process_livekit_video_frame(
+                            video_frame.width,
+                            video_frame.height,
+                            &video_frame.data,
+                        );
+                    }
+                } else {
+                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
+                }
+            }
+            MessageType::InitStreamerAudio(audio_init) => {
+                tracing::debug!(
+                    "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
+                    audio_init.sample_rate,
+                    audio_init.num_channels,
+                    audio_init.samples_per_channel
+                );
+
+                // Forward to all scenes to initialize their video player audio
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.init_livekit_audio(
+                        audio_init.sample_rate,
+                        audio_init.num_channels,
+                        audio_init.samples_per_channel,
+                    );
+                }
+            }
+            MessageType::StreamerAudioFrame(audio_frame) => {
+                // Convert i16 audio data to PackedVector2Array (same as voice chat)
+                let frame = godot::prelude::PackedVector2Array::from_iter(
+                    audio_frame.data.iter().map(|c| {
+                        let val = (*c as f32) / (i16::MAX as f32);
+                        godot::prelude::Vector2 { x: val, y: val }
+                    }),
+                );
+
+                // Forward to all scenes
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.process_livekit_audio_frame(frame.clone());
+                }
+            }
+            _ => {} // Other message types are not media messages
+        }
+    }
+
     /// Handle non-player participant messages (e.g., "authoritative-server").
     /// Matching bevy's NonPlayerUpdate path: no avatar, no profile, only Scene messages.
     fn process_non_player_message(&mut self, message: IncomingMessage) {
@@ -587,6 +678,19 @@ impl MessageProcessor {
         // Skip messages from ourselves (can happen if local participant events leak through)
         if message.address == self.player_address {
             return;
+        }
+
+        // Media messages (video/audio from streamers) use synthetic addresses (H160::zero())
+        // and must bypass the player address check — they don't need peer lifecycle management.
+        match &message.message {
+            MessageType::InitVideo(_)
+            | MessageType::VideoFrame(_)
+            | MessageType::InitStreamerAudio(_)
+            | MessageType::StreamerAudioFrame(_) => {
+                self.process_media_message(message);
+                return;
+            }
+            _ => {}
         }
 
         // Non-player participants (like "authoritative-server" with synthetic address)
@@ -659,6 +763,8 @@ impl MessageProcessor {
                     profile_fetch_failures: 0,
                     profile_fetch_banned_until: None,
                     peer_version: None,
+                    last_movement_timestamp: f32::NEG_INFINITY,
+                    last_emote_incremental_id: 0,
                 },
             );
 
@@ -743,86 +849,14 @@ impl MessageProcessor {
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene.push_voice_frame(peer_alias, frame);
             }
-            MessageType::InitVideo(video_init) => {
-                tracing::debug!(
-                    "InitVideo from {:#x}: {}x{}",
-                    message.address,
-                    video_init.width,
-                    video_init.height
-                );
-
-                self.active_video_tracks.insert(
-                    message.address,
-                    VideoTrackInfo {
-                        width: video_init.width,
-                        height: video_init.height,
-                        last_frame_time: Instant::now(),
-                    },
-                );
-            }
-            MessageType::VideoFrame(video_frame) => {
-                // Filter blocked users
-                if self.cached_blocked.contains(&message.address) {
-                    return;
-                }
-
-                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
-                    track_info.last_frame_time = Instant::now();
-
-                    // Forward to all scenes (any video track goes to all livekit video players)
-                    use crate::godot_classes::dcl_global::DclGlobal;
-                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                    let mut scene_runner = scene_runner.bind_mut();
-
-                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                        scene.process_livekit_video_frame(
-                            video_frame.width,
-                            video_frame.height,
-                            &video_frame.data,
-                        );
-                    }
-                } else {
-                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
-                }
-            }
-            MessageType::InitStreamerAudio(audio_init) => {
-                tracing::debug!(
-                    "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
-                    audio_init.sample_rate,
-                    audio_init.num_channels,
-                    audio_init.samples_per_channel
-                );
-
-                // Forward to all scenes to initialize their video player audio
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.init_livekit_audio(
-                        audio_init.sample_rate,
-                        audio_init.num_channels,
-                        audio_init.samples_per_channel,
-                    );
-                }
-            }
-            MessageType::StreamerAudioFrame(audio_frame) => {
-                // Convert i16 audio data to PackedVector2Array (same as voice chat)
-                let frame = godot::prelude::PackedVector2Array::from_iter(
-                    audio_frame.data.iter().map(|c| {
-                        let val = (*c as f32) / (i16::MAX as f32);
-                        godot::prelude::Vector2 { x: val, y: val }
-                    }),
-                );
-
-                // Forward to all scenes
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.process_livekit_audio_frame(frame.clone());
-                }
+            // Media messages (InitVideo, VideoFrame, InitStreamerAudio, StreamerAudioFrame)
+            // are handled early in process_message() via process_media_message() before
+            // the peer lifecycle check, so they never reach this match block.
+            MessageType::InitVideo(_)
+            | MessageType::VideoFrame(_)
+            | MessageType::InitStreamerAudio(_)
+            | MessageType::StreamerAudioFrame(_) => {
+                unreachable!("Media messages are handled before peer lifecycle check");
             }
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
@@ -938,8 +972,22 @@ impl MessageProcessor {
                 avatar_scene.update_avatar_transform_with_rfc4_position(peer_alias, &position);
             }
             rfc4::packet::Message::Movement(movement) => {
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if movement.timestamp <= peer.last_movement_timestamp {
+                        tracing::debug!(
+                            "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
+                            address,
+                            movement.timestamp,
+                            peer.last_movement_timestamp
+                        );
+                        return;
+                    }
+                    peer.last_movement_timestamp = movement.timestamp;
+                }
+
                 tracing::debug!(
-                    "Received Movement from {:#x}: timestamp({}) pos({}, {}, {}), rot_y({}), vel({}, {}, {}) blend({}), slide_blend({})", 
+                    "Received Movement from {:#x}: timestamp({}) pos({}, {}, {}), rot_y({}), vel({}, {}, {}) blend({}), slide_blend({})",
                     address,
                     movement.timestamp,
                     movement.position_x, movement.position_y, movement.position_z,
@@ -960,11 +1008,25 @@ impl MessageProcessor {
                 // Decompress movement data
                 let movement = MovementCompressed::from_proto(movement_compressed);
 
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
+                let timestamp = movement.temporal.timestamp_f32();
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if timestamp <= peer.last_movement_timestamp {
+                        tracing::debug!(
+                            "Discarding duplicate MovementCompressed from {:#x}: timestamp {} <= {}",
+                            address,
+                            timestamp,
+                            peer.last_movement_timestamp
+                        );
+                        return;
+                    }
+                    peer.last_movement_timestamp = timestamp;
+                }
+
                 // Get position from compressed movement with configured realm bounds
                 let pos = movement.position(self.realm_min, self.realm_max);
                 let velocity = movement.velocity();
                 let rotation_rad = -movement.temporal.rotation_f32();
-                let timestamp = movement.temporal.timestamp_f32();
 
                 tracing::debug!(
                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
@@ -1041,6 +1103,20 @@ impl MessageProcessor {
                 );
 
                 let announced_version = announce_profile_version.profile_version;
+
+                // Deduplicate: skip if same version already announced and fetch attempted (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get(&address) {
+                    if peer.announced_version == Some(announced_version)
+                        && peer.profile_fetch_attempted
+                    {
+                        tracing::debug!(
+                            "Discarding duplicate ProfileVersion from {:#x}: version {} already being processed",
+                            address,
+                            announced_version
+                        );
+                        return;
+                    }
+                }
 
                 // Get current version and update peer
                 let (current_version, peer_alias_for_async) = if let Some(peer) =
@@ -1372,6 +1448,20 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Voice(_voice) => {}
             rfc4::packet::Message::PlayerEmote(player_emote) => {
+                // Deduplicate: skip if incremental_id is not newer (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if player_emote.incremental_id <= peer.last_emote_incremental_id {
+                        tracing::debug!(
+                            "Discarding duplicate PlayerEmote from {:#x}: id {} <= {}",
+                            address,
+                            player_emote.incremental_id,
+                            peer.last_emote_incremental_id
+                        );
+                        return;
+                    }
+                    peer.last_emote_incremental_id = player_emote.incremental_id;
+                }
+
                 tracing::debug!(
                     "Received PlayerEmote from {:#x}: {:?}",
                     address,
@@ -1427,5 +1517,31 @@ impl MessageProcessor {
         // Clean up all avatars when disconnected
         let mut avatar_scene_ref = self.avatars.clone();
         avatar_scene_ref.bind_mut().clean();
+    }
+
+    /// Returns room connectivity info for each peer.
+    /// Each entry is (address, room_description) where room_description is
+    /// "Scene", "Archipelago", or "Both".
+    pub fn get_peer_room_info(&self) -> Vec<(H160, String)> {
+        let mut result = Vec::new();
+        for (address, peer) in &self.peer_identities {
+            let mut has_scene = false;
+            let mut has_archipelago = false;
+            for room_id in peer.room_activity.keys() {
+                if room_id.starts_with("scene-") {
+                    has_scene = true;
+                } else {
+                    has_archipelago = true;
+                }
+            }
+            let room_desc = match (has_scene, has_archipelago) {
+                (true, true) => "Both".to_string(),
+                (true, false) => "Scene".to_string(),
+                (false, true) => "Archipelago".to_string(),
+                (false, false) => "None".to_string(),
+            };
+            result.push((*address, room_desc));
+        }
+        result
     }
 }
