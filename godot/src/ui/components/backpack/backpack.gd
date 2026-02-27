@@ -54,7 +54,8 @@ var _avatar_update_retries: int = 0
 @onready var button_wearables = %Button_Wearables
 @onready var color_rect_background: ColorRect = %ColorRect_Background
 @onready var texture_rect_background: TextureRect = %TextureRect_Background
-
+@onready var filter_menu := %FilterMenu
+@onready var filter_indicator := %FilterIndicator
 
 # gdlint:ignore = async-function-name
 func _ready():
@@ -72,12 +73,18 @@ func _ready():
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
 	wearable_editor.show()
 	emote_editor.hide()
+	filter_menu.hide()
+	filter_indicator.hide()
 
 	container_backpack.hide()
 	backpack_loading.show()
 
 	skin_color_picker.hide()
 	color_carrousel.hide()
+	%ColorPickerTitle.hide()
+	#%ColorPicker.hide()
+	%SubcategoriesContainer.show()
+	%MainCategoriesContainer.show()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -308,6 +315,8 @@ func _on_main_category_filter_type(type: String):
 func _on_wearable_filter_button_filter_type(type):
 	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
+	var color_name := "%s Color" % type.to_pascal_case()
+	%ColorPickerTitle.text = color_name
 
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()
 	if mutable_avatar == null:
@@ -480,10 +489,22 @@ func press_button_emotes() -> void:
 	button_wearables.set_pressed_no_signal(false)
 
 
-func _on_check_box_only_collectibles_toggled(toggled_on):
-	emote_editor.async_set_only_collectibles(toggled_on)
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.pressed:
+			if not filter_menu.get_global_rect().has_point(event.position):
+				%CheckBox_OnlyCollectibles.set_pressed(false)
+
+
+func _on_check_box_only_collectibles_toggled(toggled_on: bool) -> void:
+	filter_menu.visible = toggled_on
+
+
+func _on_collectible_filter_button_toggled(toggled_on: bool) -> void:
 	only_collectibles = toggled_on
+	emote_editor.async_set_only_collectibles(toggled_on)
 	_load_filtered_data(current_filter)
+	filter_indicator.visible = toggled_on
 
 
 func _exit_tree():
@@ -515,3 +536,25 @@ func _on_blacklist_deploy_timer_timeout():
 	ProfileService.async_deploy_profile_with_version_control(
 		Global.player_identity.get_mutable_profile(), false
 	)
+
+
+func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
+	if toggle:
+		%ColorPickerTitle.show()
+		%MarginItemsContainer.hide()
+		%SubcategoriesContainer.hide()
+		%MainCategoriesContainer.hide()
+
+
+func _on_color_picker_title_pressed() -> void:
+	%ColorPickerTitle.hide()
+
+	%MarginItemsContainer.show()
+	%SubcategoriesContainer.show()
+	%MainCategoriesContainer.show()
+	%ColorCarrousel.close_picker()
+
+
+func _on_visibility_changed() -> void:
+	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
+		Global.set_orientation_portrait()

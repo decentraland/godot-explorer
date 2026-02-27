@@ -1,6 +1,7 @@
-[gd_scene load_steps=11 format=3 uid="uid://c23lk3g2cnolg"]
+[gd_scene load_steps=12 format=3 uid="uid://c23lk3g2cnolg"]
 
 [ext_resource type="Script" uid="uid://cu0ehwf1yo4r6" path="res://src/ui/components/color_carrousel/color_button.gd" id="1_v4hss"]
+[ext_resource type="Texture2D" uid="uid://c8hks8fuayh76" path="res://src/ui/components/color_carrousel/color-swatch.png" id="2_q408p"]
 [ext_resource type="Texture2D" uid="uid://das8hml42d71l" path="res://src/ui/components/color_carrousel/color_button_border.png" id="2_vwwex"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4exyl"]
@@ -76,6 +77,14 @@ layout_mode = 0
 offset_right = 70.0
 offset_bottom = 70.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_mgcx2")
+
+[node name="ColorSwatch" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 70.0
+offset_bottom = 70.0
+texture = ExtResource("2_q408p")
+expand_mode = 3
 
 [node name="ColorButtonBorder" type="TextureRect" parent="."]
 custom_minimum_size = Vector2(70, 70)

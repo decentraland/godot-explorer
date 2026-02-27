@@ -1,12 +1,77 @@
-[gd_scene load_steps=3 format=3 uid="uid://cf4f5teas815x"]
+[gd_scene load_steps=5 format=3 uid="uid://cf4f5teas815x"]
 
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_mfuy6"]
 [ext_resource type="Script" uid="uid://msvarpv6qbfo" path="res://src/ui/components/color_carrousel/color_carrousel.gd" id="1_wr7xx"]
 [ext_resource type="PackedScene" uid="uid://c23lk3g2cnolg" path="res://src/ui/components/color_carrousel/color_button.tscn" id="2_mgcx2"]
+[ext_resource type="PackedScene" uid="uid://c0wiiuanid2fw" path="res://src/ui/components/custom_slider/custom_background_slider.tscn" id="3_5kk7f"]
 
-[node name="ColorCarrousel" type="HBoxContainer"]
-theme_override_constants/separation = 30
+[node name="MarginContainer_Aligment" type="MarginContainer"]
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 0.2986111
+grow_horizontal = 2
+size_flags_horizontal = 3
+theme = ExtResource("1_mfuy6")
+theme_override_constants/margin_left = -5
+theme_override_constants/margin_bottom = 8
 script = ExtResource("1_wr7xx")
+metadata/_edit_use_anchors_ = true
 
-[node name="ColorButton" parent="." instance=ExtResource("2_mgcx2")]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_bottom = 40
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
+clip_contents = false
+layout_mode = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/MarginContainer"]
+layout_mode = 2
+
+[node name="ColorCarrousel" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="ColorButton" parent="VBoxContainer/MarginContainer/ScrollContainer/MarginContainer/VBoxContainer/ColorCarrousel" instance=ExtResource("2_mgcx2")]
 layout_mode = 2
 color = Color(1, 0, 1, 1)
+
+[node name="ColorPicker" type="VBoxContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 56
+
+[node name="ColorSlider" parent="VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+unique_name_in_owner = true
+layout_mode = 2
+slider_type = 0
+value = 50
+
+[node name="SaturationSlider" parent="VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+unique_name_in_owner = true
+layout_mode = 2
+value = 50
+
+[node name="BrightnessSlider" parent="VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+unique_name_in_owner = true
+layout_mode = 2
+slider_type = 1
+value = 50
+
+[connection signal="value_change" from="VBoxContainer/ColorPicker/ColorSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="value_change" from="VBoxContainer/ColorPicker/SaturationSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="value_change" from="VBoxContainer/ColorPicker/BrightnessSlider" to="." method="_on_color_slider_value_change"]

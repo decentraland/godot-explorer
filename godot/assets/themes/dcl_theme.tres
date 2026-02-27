@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=117 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=118 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -84,6 +84,21 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0wbub"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vyto1"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4mmh5"]
+bg_color = Color(0, 0, 0, 0.4)
+draw_center = false
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ume8b"]
 resource_name = "Selected_FBB"
 content_margin_left = 9.0
@@ -155,8 +170,6 @@ corner_radius_bottom_left = 2
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_kypl7"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_gw08q"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_uacby"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bn0tf"]
 bg_color = Color(1, 0.364706, 0.431373, 1)
@@ -471,6 +484,27 @@ CheckButton/styles/hover = SubResource("StyleBoxEmpty_7pwwu")
 CheckButton/styles/hover_pressed = SubResource("StyleBoxEmpty_ga84a")
 CheckButton/styles/normal = SubResource("StyleBoxEmpty_5vc47")
 CheckButton/styles/pressed = SubResource("StyleBoxEmpty_0wbub")
+CollectiblesFilterButton/base_type = &"Button"
+CollectiblesFilterButton/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+CollectiblesFilterButton/colors/font_focus_color = Color(0.9098039, 0.7254902, 1, 1)
+CollectiblesFilterButton/colors/font_hover_color = Color(0.9098039, 0.7254902, 1, 1)
+CollectiblesFilterButton/colors/font_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+CollectiblesFilterButton/colors/font_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+CollectiblesFilterButton/colors/icon_hover_color = Color(0, 0, 0, 0)
+CollectiblesFilterButton/colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+CollectiblesFilterButton/colors/icon_normal_color = Color(0, 0, 0, 0)
+CollectiblesFilterButton/colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+CollectiblesFilterButton/constants/align_to_largest_stylebox = 1
+CollectiblesFilterButton/font_sizes/font_size = 30
+CollectiblesFilterButton/fonts/font = ExtResource("42_qnq51")
+CollectiblesFilterButton/styles/focus = SubResource("StyleBoxFlat_vyto1")
+CollectiblesFilterButton/styles/hover = SubResource("StyleBoxFlat_vyto1")
+CollectiblesFilterButton/styles/hover_pressed = SubResource("StyleBoxFlat_vyto1")
+CollectiblesFilterButton/styles/normal = SubResource("StyleBoxFlat_4mmh5")
+CollectiblesFilterButton/styles/pressed = SubResource("StyleBoxFlat_vyto1")
+ColorSlider/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+ColorSlider/font_sizes/font_size = 20
+ColorSlider/fonts/font = ExtResource("52_kypl7")
 EngagementButton/base_type = &"Button"
 EngagementButton/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 EngagementButton/colors/font_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.47058824)
@@ -524,17 +558,18 @@ HiddenVSeparator/styles/separator = SubResource("StyleBoxEmpty_1x5yb")
 InvisibleScrollContainer/base_type = &"ScrollContainer"
 InvisibleScrollContainer/styles/focus = SubResource("StyleBoxEmpty_kypl7")
 InvisibleScrollContainer/styles/panel = SubResource("StyleBoxEmpty_gw08q")
-Label/colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-Label/colors/font_outline_color = Color(0.988235, 0.988235, 0.988235, 1)
-Label/colors/font_shadow_color = Color(0, 0, 0, 0)
-Label/constants/line_spacing = 3
+Label/colors/font_color = Color(0, 0, 0, 1)
+Label/colors/font_outline_color = Color(0, 0, 0, 1)
+Label/colors/font_shadow_color = Color(0, 0, 0, 1)
+Label/constants/line_spacing = 0
 Label/constants/outline_size = 0
-Label/constants/shadow_offset_x = 1
-Label/constants/shadow_offset_y = 1
-Label/constants/shadow_outline_size = 1
+Label/constants/shadow_offset_x = 0
+Label/constants/shadow_offset_y = 0
+Label/constants/shadow_outline_size = 0
 Label/font_sizes/font_size = 16
-Label/fonts/font = ExtResource("16_k33ds")
-Label/styles/normal = SubResource("StyleBoxEmpty_uacby")
+Label/fonts/font = null
+Label/styles/focus = null
+Label/styles/normal = null
 LineEdit/colors/caret_color = Color(0, 0, 0, 1)
 LineEdit/colors/clear_button_color = Color(0.241125, 0.233138, 0.257121, 1)
 LineEdit/colors/clear_button_color_pressed = Color(0.0862745, 0.0823529, 0.0941176, 1)

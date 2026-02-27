@@ -1,6 +1,7 @@
-extends HBoxContainer
+extends MarginContainer
 
-signal pick_color(color: Color)
+signal color_picked(color: Color)
+signal toggle_color_picker
 
 enum ColorTargetType { SKIN, OTHER }
 
@@ -10,6 +11,11 @@ const COLOR_BUTTON = preload("res://src/ui/components/color_carrousel/color_butt
 	set(value):
 		_dirty = true
 		color_type = value
+
+@onready var color_carrousel := %ColorCarrousel
+@onready var color_slider := %ColorSlider
+@onready var saturation_slider := %SaturationSlider
+@onready var brightness_slider := %BrightnessSlider
 
 var skin_colors: Array[Color] = [
 	Color("ffe4c6"),
@@ -45,6 +51,7 @@ var _dirty := false
 
 func _ready() -> void:
 	refresh_buttons()
+	close_picker()
 
 
 func _process(_delta: float) -> void:
@@ -56,36 +63,64 @@ func _process(_delta: float) -> void:
 
 func refresh_buttons() -> void:
 	if color_type == ColorTargetType.OTHER:
-		for child in get_children():
-			remove_child(child)
+		for child in color_carrousel.get_children():
+			color_carrousel.remove_child(child)
 			child.queue_free()
+		
+		#Add color swatch button
+		var color_swatch := COLOR_BUTTON.instantiate()
+		color_swatch.color = Color.BLACK
+		color_swatch.button_group = color_button_group
+		color_swatch.toggled.connect(self._on_color_carrousel_toggle_color_picker)
+		color_swatch.is_color_palette = true
+		color_carrousel.add_child(color_swatch)
+			
 		for color in example_colors:
-			var color_square = COLOR_BUTTON.instantiate()
+			var color_square := COLOR_BUTTON.instantiate()
 			color_square.color = color
 			color_square.button_group = color_button_group
 			color_square.toggled.connect(self._on_color_toggled.bind(color))
-			add_child(color_square)
+			color_carrousel.add_child(color_square)
 	if color_type == ColorTargetType.SKIN:
-		for child in get_children():
-			remove_child(child)
+		for child in color_carrousel.get_children():
+			color_carrousel.remove_child(child)
 			child.queue_free()
 		for color in skin_colors:
 			var color_square = COLOR_BUTTON.instantiate()
 			color_square.color = color
 			color_square.button_group = color_button_group
 			color_square.toggled.connect(self._on_color_toggled.bind(color))
-			add_child(color_square)
+			color_carrousel.add_child(color_square)
 
 
 func _on_color_toggled(toggled: bool, color: Color):
 	if toggled:
-		#var hsv_color = to_hsv(color)
-		#color_slider.refresh_from_color(hsv_color.x * 360.0)
-		#saturation_slider.refresh_from_color(hsv_color.y * 100.0)
-		#brightness_slider.refresh_from_color(hsv_color.z * 100.0)
-		#panel_preview.modulate = color
-		pick_color.emit(color)
-
+		color_slider.refresh_from_color(360.0 - (color.h * 360.0))
+		saturation_slider.refresh_from_color(color.s * 100.0)
+		brightness_slider.refresh_from_color(color.v * 100.0)
+		saturation_slider.color = Color.from_hsv(color.h, 1.0, 1.0, 1.0)
+		color_picked.emit(color)
+	
 
 func set_color(_color: Color) -> void:
 	pass
+
+
+func _on_color_slider_value_change() -> void:
+	var h: float = 360.0 - (color_slider.value / 360.0)
+	var s: float = saturation_slider.value / 100.0
+	var v: float = brightness_slider.value / 100.0
+	saturation_slider.color = Color.from_hsv(h, 1.0, 1.0, 1.0)
+	color_picked.emit(Color.from_hsv(h, s, v, 1.0))
+
+
+func _on_color_carrousel_toggle_color_picker(toggled: bool) -> void:
+	if toggled:
+		toggle_color_picker.emit(true)
+		%ColorPickerTitle.show()
+		%ColorPicker.show()
+
+
+func close_picker() -> void:
+	%ColorPicker.hide()
+	%ColorPickerTitle.hide()

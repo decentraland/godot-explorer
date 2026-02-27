@@ -1,13 +1,39 @@
-[gd_scene load_steps=4 format=3 uid="uid://c0wiiuanid2fw"]
+[gd_scene load_steps=6 format=3 uid="uid://c0wiiuanid2fw"]
 
 [ext_resource type="Script" uid="uid://3x4y22eud4aa" path="res://src/ui/components/custom_slider/custom_background_slider.gd" id="1_vic7d"]
-[ext_resource type="Texture2D" uid="uid://51ovf3ffkhmg" path="res://assets/ui/BackgroundHUE.png" id="2_8fq6a"]
-[ext_resource type="Texture2D" uid="uid://bki5u6balli2k" path="res://assets/ui/SliderHandle.png" id="3_yably"]
+[ext_resource type="Texture2D" uid="uid://cl0tw61opvjbt" path="res://src/ui/components/custom_slider/color_slider_texture.tres" id="2_n3xls"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8kj37"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_miwch"]
+texture = ExtResource("2_n3xls")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8nvjr"]
+bg_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+draw_center = false
+border_width_left = 8
+border_width_top = 8
+border_width_right = 8
+border_width_bottom = 8
+border_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.2)
+shadow_size = 2
 
 [node name="CustomBackgroundSlider" type="VBoxContainer"]
 custom_minimum_size = Vector2(0, 65)
 offset_right = 198.0
 offset_bottom = 65.0
+mouse_filter = 2
+theme_override_constants/separation = 8
 script = ExtResource("1_vic7d")
 slider_type = 2
 
@@ -17,27 +43,54 @@ theme_override_colors/font_color = Color(0.192157, 0.192157, 0.192157, 1)
 theme_override_font_sizes/font_size = 12
 text = "CUSTOM SLIDER NAME"
 
-[node name="TextureRect_Background" type="TextureRect" parent="."]
-custom_minimum_size = Vector2(0, 35)
+[node name="Control" type="Control" parent="."]
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
-texture = ExtResource("2_8fq6a")
-expand_mode = 1
 
-[node name="Control_Grabber" type="Control" parent="TextureRect_Background"]
-anchors_preset = 0
+[node name="Panel2" type="Panel" parent="Control"]
+clip_children = 1
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_8kj37")
+
+[node name="SliderTexturePanel" type="Panel" parent="Control/Panel2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxTexture_miwch")
+
+[node name="Control" type="Control" parent="Control"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -32.0
+offset_right = 64.0
+offset_bottom = 32.0
+grow_vertical = 2
 mouse_filter = 2
 
-[node name="TextureRect_Grabber" type="TextureRect" parent="TextureRect_Background/Control_Grabber"]
-custom_minimum_size = Vector2(20, 0)
+[node name="Panel" type="Panel" parent="Control/Control"]
+custom_minimum_size = Vector2(64, 64)
 layout_mode = 0
-offset_left = -11.0
-offset_top = -2.0
-offset_right = 11.0
-offset_bottom = 42.0
+offset_right = 64.0
+offset_bottom = 64.0
 mouse_filter = 2
-texture = ExtResource("3_yably")
-expand_mode = 5
-stretch_mode = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_8nvjr")
 
 [connection signal="resized" from="." to="." method="_on_resized"]
-[connection signal="gui_input" from="TextureRect_Background" to="." method="_on_texture_rect_background_gui_input"]
+[connection signal="gui_input" from="Control/Panel2" to="." method="_on_texture_rect_background_gui_input"]
