@@ -630,7 +630,7 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer"]
 handle_input_locally = false
-size = Vector2i(500, 351)
+size = Vector2i(624, 351)
 render_target_clear_mode = 2
 render_target_update_mode = 4
 

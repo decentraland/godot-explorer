@@ -1,40 +1,56 @@
-[gd_scene load_steps=8 format=3 uid="uid://blc0mna12dsxo"]
+[gd_scene load_steps=11 format=3 uid="uid://blc0mna12dsxo"]
 
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="1_hlkld"]
+[ext_resource type="Texture2D" uid="uid://drpjhk4w1jscd" path="res://assets/ui/CommonThumbnail.png" id="2_k7hq0"]
+[ext_resource type="Texture2D" uid="uid://oqs81qmhfows" path="res://assets/ui/backpack/Equiped.svg" id="3_oumy4"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ojwu4"]
 bg_color = Color(0.776471, 0.25098, 0.803922, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.984314, 0.054902, 0.333333, 1)
-border_blend = true
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-expand_margin_left = 4.0
-expand_margin_top = 4.0
-expand_margin_right = 4.0
-expand_margin_bottom = 4.0
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.1764706, 0.33333334, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+expand_margin_left = 6.0
+expand_margin_top = 6.0
+expand_margin_right = 6.0
+expand_margin_bottom = 6.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hpw41"]
-bg_color = Color(1, 0.501961, 0, 1)
+bg_color = Color(0.9098039, 0.7254902, 1, 1)
 draw_center = false
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 0.501961, 0, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+expand_margin_left = 6.0
+expand_margin_top = 6.0
+expand_margin_right = 6.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7fnr5"]
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8)
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
-expand_margin_left = 4.0
-expand_margin_top = 4.0
-expand_margin_right = 4.0
-expand_margin_bottom = 4.0
+
+[sub_resource type="Gradient" id="Gradient_mvm8j"]
+colors = PackedColorArray(1, 1, 1, 0.607843, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_oacma"]
+gradient = SubResource("Gradient_mvm8j")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.75, 0.25)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o5uwa"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -50,17 +66,8 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[sub_resource type="Gradient" id="Gradient_mvm8j"]
-colors = PackedColorArray(1, 1, 1, 0.607843, 1, 1, 1, 0)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_oacma"]
-gradient = SubResource("Gradient_mvm8j")
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-fill_to = Vector2(0.75, 0.25)
-
 [node name="EmoteSquareItem" type="TextureButton"]
-custom_minimum_size = Vector2(118, 118)
+custom_minimum_size = Vector2(192, 192)
 offset_right = 118.0
 offset_bottom = 118.0
 pivot_offset = Vector2(-38, 215)
@@ -104,7 +111,71 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_hpw41")
 
+[node name="TextureRect_Background" type="TextureRect" parent="Control_Inner"]
+unique_name_in_owner = true
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(32, 32)
+texture = ExtResource("2_k7hq0")
+expand_mode = 1
+
+[node name="TextureRect_Picture" type="TextureRect" parent="Control_Inner"]
+unique_name_in_owner = true
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(32, 32)
+expand_mode = 1
+
+[node name="TextureRect_Equiped" type="PanelContainer" parent="Control_Inner/TextureRect_Picture"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = -42.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_7fnr5")
+
+[node name="TextureRect_EquipedB" type="TextureRect" parent="Control_Inner/TextureRect_Picture/TextureRect_Equiped"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("3_oumy4")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="Glow" type="TextureRect" parent="Control_Inner"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_oacma")
+
 [node name="Background" type="Panel" parent="Control_Inner"]
+visible = false
 texture_filter = 4
 layout_mode = 1
 anchors_preset = 15
@@ -117,6 +188,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_o5uwa")
 
 [node name="Inner" type="Panel" parent="Control_Inner/Background"]
 unique_name_in_owner = true
+visible = false
 self_modulate = Color(0.92549, 0.92157, 0.92941, 1)
 texture_filter = 4
 layout_mode = 1
@@ -130,27 +202,5 @@ grow_vertical = 2
 pivot_offset = Vector2(-38, 215)
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_klstf")
-
-[node name="Glow" type="TextureRect" parent="Control_Inner/Background/Inner"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = SubResource("GradientTexture2D_oacma")
-
-[node name="TextureRect_Picture" type="TextureRect" parent="Control_Inner/Background/Inner"]
-unique_name_in_owner = true
-texture_filter = 2
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-pivot_offset = Vector2(32, 32)
-expand_mode = 1
 
 [connection signal="item_rect_changed" from="." to="." method="_on_item_rect_changed"]

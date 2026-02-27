@@ -1,0 +1,107 @@
+[gd_scene load_steps=8 format=3 uid="uid://cf4f5teas815x"]
+
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_mfuy6"]
+[ext_resource type="Script" uid="uid://msvarpv6qbfo" path="res://src/ui/components/color_carrousel/color_carrousel.gd" id="1_wr7xx"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_6c3l5"]
+[ext_resource type="PackedScene" uid="uid://c23lk3g2cnolg" path="res://src/ui/components/color_carrousel/color_button.tscn" id="2_mgcx2"]
+[ext_resource type="PackedScene" uid="uid://c0wiiuanid2fw" path="res://src/ui/components/custom_slider/custom_background_slider.tscn" id="3_5kk7f"]
+[ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/components/discover/icons/back.svg" id="3_8hv1p"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7s3ux"]
+draw_center = false
+
+[node name="VBoxContainer2" type="VBoxContainer"]
+offset_left = -5.0
+offset_right = 720.0
+offset_bottom = 499.0
+theme_override_constants/separation = 8
+script = ExtResource("1_wr7xx")
+
+[node name="ColorSwatchTitle" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/icon_max_width = 56
+theme_override_fonts/font = ExtResource("2_6c3l5")
+theme_override_font_sizes/font_size = 40
+theme_override_styles/normal = SubResource("StyleBoxFlat_7s3ux")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_7s3ux")
+theme_override_styles/hover = SubResource("StyleBoxFlat_7s3ux")
+theme_override_styles/focus = SubResource("StyleBoxFlat_7s3ux")
+text = "Hair Color"
+icon = ExtResource("3_8hv1p")
+flat = true
+alignment = 0
+
+[node name="MarginContainer_Aligment" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("1_mfuy6")
+theme_override_constants/margin_left = -5
+theme_override_constants/margin_bottom = 8
+metadata/_edit_use_anchors_ = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Aligment"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Aligment/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_bottom = 8
+
+[node name="ScrollSwatchContainer" type="ScrollContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer"]
+unique_name_in_owner = true
+clip_contents = false
+layout_mode = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer/ScrollSwatchContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer/ScrollSwatchContainer/MarginContainer"]
+layout_mode = 2
+
+[node name="ColorCarrousel" type="HBoxContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer/ScrollSwatchContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="ColorButton" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer/ScrollSwatchContainer/MarginContainer/VBoxContainer/ColorCarrousel" instance=ExtResource("2_mgcx2")]
+layout_mode = 2
+color = Color(1, 0, 1, 1)
+
+[node name="ColorPicker" type="VBoxContainer" parent="MarginContainer_Aligment/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 56
+
+[node name="ColorSlider" parent="MarginContainer_Aligment/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+unique_name_in_owner = true
+layout_mode = 2
+slider_type = 0
+value = 50
+
+[node name="SaturationSlider" parent="MarginContainer_Aligment/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+unique_name_in_owner = true
+layout_mode = 2
+value = 50
+
+[node name="BrightnessSlider" parent="MarginContainer_Aligment/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+unique_name_in_owner = true
+layout_mode = 2
+slider_type = 1
+value = 50
+
+[connection signal="pressed" from="ColorSwatchTitle" to="." method="_on_color_picker_title_pressed"]
+[connection signal="slider_released" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/ColorSlider" to="." method="_on_slider_released"]
+[connection signal="value_change" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/ColorSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="slider_released" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/SaturationSlider" to="." method="_on_slider_released"]
+[connection signal="value_change" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/SaturationSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="slider_released" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/BrightnessSlider" to="." method="_on_slider_released"]
+[connection signal="value_change" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/BrightnessSlider" to="." method="_on_color_slider_value_change"]

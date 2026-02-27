@@ -4,13 +4,13 @@ extends SubViewportContainer
 const MIN_CAMERA_Z = -3.5
 const MAX_CAMERA_Z = -1.25
 
-const MIN_CAMERA_Y = 0.8
-const MAX_CAMERA_Y = 2.3
+const MIN_CAMERA_Y = -0.05
+const MAX_CAMERA_Y = 0.05
 
-const DEFAULT_ROTATION = Vector3(-20, 180, 0)
-const BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.0)
+const DEFAULT_ROTATION = Vector3(-5, 180, 0)
+const BODY_CAMERA_POSITION = Vector3(0, 1.15, -3.0)
 const BODY_CAMERA_POSITION_WITH_PLATFORM = Vector3(0, 2.15, -3.3)
-const HEAD_CAMERA_POSITION = Vector3(0, 2.2, -1.15)
+const HEAD_CAMERA_POSITION = Vector3(0, 1.8, -1.15)
 
 @export var hide_name: bool = false
 @export var show_platform: bool = false
@@ -22,6 +22,7 @@ var start_camera_transform
 var start_angle
 var start_dragging_position
 var dirty_is_dragging
+var on_head := false
 
 @onready var avatar = %Avatar
 @onready var camera_3d: Camera3D = %Camera3D
@@ -51,8 +52,9 @@ func _ready():
 	if outline_system:
 		outline_system.setup(camera_3d)
 
-	if can_move:
-		gui_input.connect(self._on_gui_input)
+	#if can_move:
+	#	gui_input.connect(self._on_gui_input)
+	set_process_input(true)
 
 	if Global.standalone:
 		Global.player_identity.set_default_profile()
@@ -72,12 +74,22 @@ func focus_camera_on(type):
 	match type:
 		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
 			tween.tween_property(camera_3d, "position", HEAD_CAMERA_POSITION, 0.5)
+			tween.set_parallel().tween_property(camera_3d, "size", 1.0, 0.5)
+			on_head = true
 		_:
 			tween.tween_property(camera_3d, "position", get_body_camera_position(), 0.5)
+			tween.set_parallel().tween_property(camera_3d, "size", 4.25, 0.5)
+			on_head = false
 	tween.play()
 
 
-func _on_gui_input(event):
+func _input(event: InputEvent):
+	if not can_move:
+		return
+	if get_parent_control() and event is InputEventMouseButton:
+		if not get_parent_control().get_global_rect().has_point(event.position):
+			return
+
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
@@ -104,15 +116,25 @@ func _on_gui_input(event):
 		if dirty_is_dragging:
 			var diff = 0.005 * (get_global_mouse_position() - start_dragging_position)
 			var changed_transform = Transform3D(start_camera_transform)
-			var min_y = (
-				MAX_CAMERA_Y
-				- (
-					((camera_3d.transform.origin.z - MIN_CAMERA_Z) / (MAX_CAMERA_Z - MIN_CAMERA_Z))
-					* (MAX_CAMERA_Y - MIN_CAMERA_Y)
-				)
-			)
+			#var min_y = (
+			#MAX_CAMERA_Y
+			#- (
+			#((camera_3d.transform.origin.z - MIN_CAMERA_Z) / (MAX_CAMERA_Z - MIN_CAMERA_Z))
+			#* (MAX_CAMERA_Y - MIN_CAMERA_Y)
+			#)
+			#)
+
+			# TODO verify if platform is enabled
+			var min_y: float
+			var max_y: float
+			if on_head:
+				min_y = HEAD_CAMERA_POSITION.y + MIN_CAMERA_Y
+				max_y = HEAD_CAMERA_POSITION.y + MAX_CAMERA_Y
+			else:
+				min_y = BODY_CAMERA_POSITION.y + MIN_CAMERA_Y
+				max_y = BODY_CAMERA_POSITION.y + MAX_CAMERA_Y
 			changed_transform.origin.y = clampf(
-				start_camera_transform.origin.y + diff.y, min_y, MAX_CAMERA_Y
+				start_camera_transform.origin.y + diff.y, min_y, max_y
 			)
 			avatar.rotation.y = start_angle + diff.x
 			camera_3d.transform = changed_transform

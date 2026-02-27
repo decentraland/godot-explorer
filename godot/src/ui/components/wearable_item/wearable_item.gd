@@ -9,6 +9,7 @@ var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
 var rare_thumbnail = preload("res://assets/ui/RareThumbnail.png")
 var epic_thumbnail = preload("res://assets/ui/EpicThumbnail.png")
+var exotic_thumbnail = preload("res://assets/ui/ExoticThumbnail.png")
 var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
 var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
@@ -52,6 +53,8 @@ func async_set_wearable(wearable: DclItemEntityDefinition):
 			texture_rect_background.texture = epic_thumbnail
 		"legendary":
 			texture_rect_background.texture = legendary_thumbnail
+		"exotic":
+			texture_rect_background.texture = exotic_thumbnail
 		"mythic":
 			texture_rect_background.texture = mythic_thumbnail
 		"unique":
@@ -77,21 +80,20 @@ func async_set_wearable(wearable: DclItemEntityDefinition):
 func effect_toggle():
 	if button_pressed:
 		if was_pressed == false:
-			var new_size = panel_container_external_orig_rect.size * 0.9
-			var new_position = (panel_container_external_orig_rect.size - new_size) / 2
-			panel_container_external.set_position(new_position)
-			panel_container_external.set_size(new_size)
+			#var new_size = panel_container_external_orig_rect.size * 0.8
+			#var new_position = (panel_container_external_orig_rect.size - new_size) / 2
+			#panel_container_external.set_position(new_position)
+			#panel_container_external.set_size(new_size)
+			panel_container_external.scale = Vector2.ONE * 0.97
 
 			var tween = get_tree().create_tween().set_parallel(true)
-			tween.tween_property(
-				panel_container_external,
-				"position",
-				panel_container_external_orig_rect.position,
-				0.15
-			)
-			tween.tween_property(
-				panel_container_external, "size", panel_container_external_orig_rect.size, 0.15
-			)
+			#tween.tween_property(
+			#panel_container_external,
+			#"position",
+			#panel_container_external_orig_rect.position,
+			#0.15
+			#)
+			tween.tween_property(panel_container_external, "scale", Vector2.ONE, 0.15)
 
 			panel_container_external.show()
 	else:

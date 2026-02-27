@@ -29,8 +29,7 @@ var is_loading_profile: bool = false
 
 var _avatar_update_retries: int = 0
 
-@onready var skin_color_picker = %Color_Picker_Button
-@onready var color_picker_panel = $Color_Picker_Panel
+@onready var color_carrousel = %ColorCarrousel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
@@ -44,6 +43,7 @@ var _avatar_update_retries: int = 0
 @onready var control_no_items = %Control_NoItems
 @onready var backpack_loading = %TextureProgressBar_BackpackLoading
 @onready var container_backpack = %HBoxContainer_Backpack
+@onready var button_back_to_explorer: Button = %Button_BackToExplorer
 
 @onready var wearable_editor = %WearableEditor
 @onready var emote_editor = %EmoteEditor
@@ -53,6 +53,10 @@ var _avatar_update_retries: int = 0
 @onready var button_wearables = %Button_Wearables
 @onready var color_rect_background: ColorRect = %ColorRect_Background
 @onready var texture_rect_background: TextureRect = %TextureRect_Background
+@onready var filter_menu := %FilterMenu
+@onready var filter_indicator := %FilterIndicator
+@onready var subcategories_container := %SubcategoriesContainer
+@onready var maincategories_container := %MainCategoriesContainer
 
 
 # gdlint:ignore = async-function-name
@@ -71,11 +75,16 @@ func _ready():
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
 	wearable_editor.show()
 	emote_editor.hide()
+	filter_menu.hide()
+	filter_indicator.hide()
 
 	container_backpack.hide()
 	backpack_loading.show()
+	button_back_to_explorer.hide()
 
-	skin_color_picker.hide()
+	color_carrousel.hide()
+	subcategories_container.show()
+	maincategories_container.show()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -148,7 +157,7 @@ func _on_size_changed():
 
 
 func _update_visible_categories():
-	var showed_subcategories: int = 0
+	#var showed_subcategories: int = 0
 	var first_wearable_filter_button: WearableFilterButton = null
 	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
 		var category = wearable_filter_button.get_category_name()
@@ -158,13 +167,15 @@ func _update_visible_categories():
 		var category_is_visible: bool = (
 			filter_categories != null and filter_categories.has(category)
 		)
+		#prints("BUTTON: ", category, category_is_visible, main_category_selected, filter_categories)
 		wearable_filter_button.visible = category_is_visible
 		if category_is_visible:
-			showed_subcategories += 1
+			#showed_subcategories += 1
 			if first_wearable_filter_button == null:
 				first_wearable_filter_button = wearable_filter_button
 
-	container_sub_categories.set_visible(showed_subcategories >= 2)
+	#container_sub_categories.set_visible(showed_subcategories >= 2)
+	container_sub_categories.show()
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
 
@@ -240,7 +251,19 @@ func _load_filtered_data(filter: String):
 		var wearable = wearable_data[wearable_id]
 		if wearable != null:
 			var is_filter_all = filter == "all"
-			if wearable.get_category() == filter or is_filter_all:
+			var is_filter_all_extras = filter == "all_extras"
+			var is_filter_chest = filter == "chest"
+			if (
+				(wearable.get_category() == filter or is_filter_all)
+				or (
+					is_filter_all_extras
+					and wearable.get_category() in Wearables.Categories.ALL_EXTRAS_CATEGORIES
+				)
+				or (
+					is_filter_chest
+					and wearable.get_category() in Wearables.Categories.CHEST_CATEGORIES
+				)
+			):
 				var is_body_shape = wearable.get_category() == "body_shape"
 				var is_equipable = Wearables.can_equip(
 					wearable, Global.player_identity.get_mutable_avatar().get_body_shape()
@@ -299,6 +322,8 @@ func _on_main_category_filter_type(type: String):
 func _on_wearable_filter_button_filter_type(type):
 	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
+	var color_name := "%s Color" % type.to_pascal_case()
+	color_carrousel.set_title(color_name)
 
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()
 	if mutable_avatar == null:
@@ -306,21 +331,21 @@ func _on_wearable_filter_button_filter_type(type):
 
 	var should_hide = false
 	if type == Wearables.Categories.BODY_SHAPE:
-		skin_color_picker.color_target = skin_color_picker.ColorTarget.SKIN
-		skin_color_picker.set_color(mutable_avatar.get_skin_color())
+		color_carrousel.color_type = color_carrousel.ColorTargetType.SKIN
+		color_carrousel.set_color(mutable_avatar.get_skin_color())
 	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
-		skin_color_picker.color_target = skin_color_picker.ColorTarget.HAIR
-		skin_color_picker.set_color(mutable_avatar.get_hair_color())
+		color_carrousel.color_type = color_carrousel.ColorTargetType.HAIR
+		color_carrousel.set_color(mutable_avatar.get_hair_color())
 	elif type == Wearables.Categories.EYES:
-		skin_color_picker.color_target = skin_color_picker.ColorTarget.EYE
-		skin_color_picker.set_color(mutable_avatar.get_eyes_color())
+		color_carrousel.color_type = color_carrousel.ColorTargetType.EYES
+		color_carrousel.set_color(mutable_avatar.get_eyes_color())
 	else:
 		should_hide = true
 
 	if should_hide:
-		skin_color_picker.hide()
+		color_carrousel.hide()
 	else:
-		skin_color_picker.show()
+		color_carrousel.show()
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -394,48 +419,26 @@ func _on_button_logout_pressed():
 
 
 func _on_color_picker_panel_pick_color(color: Color):
-	match skin_color_picker.color_target:
-		skin_color_picker.ColorTarget.EYE:
+	match color_carrousel.color_type:
+		color_carrousel.ColorTargetType.EYES:
 			Global.player_identity.get_mutable_avatar().set_eyes_color(color)
-		skin_color_picker.ColorTarget.SKIN:
+		color_carrousel.ColorTargetType.SKIN:
 			Global.player_identity.get_mutable_avatar().set_skin_color(color)
-		skin_color_picker.ColorTarget.HAIR:
+		color_carrousel.ColorTargetType.HAIR:
 			Global.player_identity.get_mutable_avatar().set_hair_color(color)
 
-	skin_color_picker.set_color(color)
 	avatar_preview.avatar.update_colors(
 		Global.player_identity.get_mutable_avatar().get_eyes_color(),
 		Global.player_identity.get_mutable_avatar().get_skin_color(),
 		Global.player_identity.get_mutable_avatar().get_hair_color()
 	)
+	# NOTE Don't use request_update_avatar here
+	# that would make the avatar flash during color picking
+	#request_update_avatar = true
 
 
-func _on_color_picker_button_toggle_color_panel(toggled, color_target):
-	if not toggled and color_picker_panel.visible:
-		hide()
-
-	if toggled:
-		var rect = skin_color_picker.get_global_rect()
-		rect.position.x += rect.size.x
-		rect.position.y += rect.size.y + 10
-
-		var current_color: Color
-		match skin_color_picker.color_target:
-			skin_color_picker.ColorTarget.EYE:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = Global.player_identity.get_mutable_avatar().get_eyes_color()
-			skin_color_picker.ColorTarget.SKIN:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.SKIN
-				current_color = Global.player_identity.get_mutable_avatar().get_skin_color()
-			skin_color_picker.ColorTarget.HAIR:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = Global.player_identity.get_mutable_avatar().get_hair_color()
-
-		color_picker_panel.custom_popup(rect, current_color)
-
-
-func _on_color_picker_panel_hided():
-	skin_color_picker.set_pressed(false)
+func _on_color_set() -> void:
+	request_update_avatar = true
 
 
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
@@ -463,10 +466,22 @@ func press_button_emotes() -> void:
 	button_wearables.set_pressed_no_signal(false)
 
 
-func _on_check_box_only_collectibles_toggled(toggled_on):
-	emote_editor.async_set_only_collectibles(toggled_on)
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.pressed:
+			if not filter_menu.get_global_rect().has_point(event.position):
+				%CheckBox_OnlyCollectibles.set_pressed(false)
+
+
+func _on_check_box_only_collectibles_toggled(toggled_on: bool) -> void:
+	filter_menu.visible = toggled_on
+
+
+func _on_collectible_filter_button_toggled(toggled_on: bool) -> void:
 	only_collectibles = toggled_on
+	emote_editor.async_set_only_collectibles(toggled_on)
 	_load_filtered_data(current_filter)
+	filter_indicator.visible = toggled_on
 
 
 func _exit_tree():
@@ -498,3 +513,28 @@ func _on_blacklist_deploy_timer_timeout():
 	ProfileService.async_deploy_profile_with_version_control(
 		Global.player_identity.get_mutable_profile(), false
 	)
+
+
+func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
+	if toggle:
+		%MarginItemsContainer.hide()
+		subcategories_container.hide()
+		maincategories_container.hide()
+	else:
+		%MarginItemsContainer.show()
+		subcategories_container.show()
+		maincategories_container.show()
+
+
+func _on_visibility_changed() -> void:
+	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
+		Global.set_orientation_portrait()
+		if Global.get_explorer():
+			if button_back_to_explorer:
+				button_back_to_explorer.show()
+
+
+func _on_button_back_to_explorer_pressed() -> void:
+	if Global.get_explorer():
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()
