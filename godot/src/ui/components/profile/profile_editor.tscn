@@ -155,7 +155,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_right = 0.0
-offset_bottom = 0.0
+offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 2
 is_optional = false
@@ -168,10 +168,11 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_bottom = -1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_right = 50
+theme_override_constants/margin_right = 60
 theme_override_constants/margin_bottom = 38
 
 [node name="Label_Tag" type="Label" parent="VBoxContainer/MarginContainer_Content/ScrollContainer/VBoxContainer/VBoxContainer/VBoxContainer/Control/MarginContainer"]

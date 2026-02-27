@@ -1,8 +1,8 @@
-[gd_scene load_steps=18 format=3 uid="uid://ddgiwkq38wjib"]
+[gd_scene load_steps=19 format=3 uid="uid://ddgiwkq38wjib"]
 
 [ext_resource type="Script" uid="uid://d1xg5skmioapy" path="res://src/ui/components/profile/profile_about.gd" id="1_about"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_font700"]
-[ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="3_desc_ls"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_w128x"]
 [ext_resource type="PackedScene" uid="uid://cwthmkhfqjqb2" path="res://src/ui/components/profile/about_data.tscn" id="4_about_data"]
 [ext_resource type="Texture2D" uid="uid://2sfb80lkd1ku" path="res://assets/ui/country-icon.svg" id="5_3dgdc"]
 [ext_resource type="Texture2D" uid="uid://cvoaqevx752jo" path="res://assets/ui/language-icon.svg" id="5_8teom"]
@@ -22,12 +22,18 @@ font = ExtResource("2_font700")
 font_size = 22
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
+[sub_resource type="LabelSettings" id="LabelSettings_p128h"]
+font = ExtResource("3_w128x")
+font_size = 24
+outline_color = Color(0, 0, 0, 1)
+
 [node name="ProfileAbout" type="VBoxContainer"]
 offset_right = 773.0
 offset_bottom = 458.0
 size_flags_vertical = 0
 mouse_filter = 2
 script = ExtResource("1_about")
+is_portrait = true
 
 [node name="Label" type="Label" parent="."]
 layout_mode = 2
@@ -56,7 +62,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 20
 text = "Use this space to describe yourself in a few words."
-label_settings = ExtResource("3_desc_ls")
+label_settings = SubResource("LabelSettings_p128h")
 autowrap_mode = 2
 
 [node name="MarginContainer_DataAbout" type="MarginContainer" parent="."]
@@ -70,7 +76,7 @@ layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/h_separation = 32
 theme_override_constants/v_separation = 24
-columns = 3
+columns = 2
 
 [node name="AboutData_Country" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true

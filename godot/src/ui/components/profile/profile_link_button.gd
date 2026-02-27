@@ -6,11 +6,13 @@ signal change_editing(editing: bool)
 signal try_open_link(url: String)
 signal delete_link
 
-const EDITING_MARGIN_RIGHT = 52
+const EDITING_MARGIN_RIGHT = 60
+
 
 var url: String = ""
+var is_editing: bool= false
 
-@onready var button_remove: Button = %Button_Remove
+@onready var texture_rect_remove: TextureRect = %TextureRect_Remove
 
 
 func _ready() -> void:
@@ -32,18 +34,19 @@ func _remove_editing_overrides() -> void:
 
 
 func _on_change_editing(editing: bool) -> void:
+	is_editing = editing
 	if editing:
-		button_remove.show()
+		texture_rect_remove.show()
 		_apply_editing_overrides()
 	else:
-		button_remove.hide()
+		texture_rect_remove.hide()
 		_remove_editing_overrides()
 
 
-func _on_button_remove_pressed() -> void:
-	queue_free()
-	emit_signal("delete_link")
-
 
 func _on_pressed() -> void:
-	emit_signal("try_open_link", url)
+	if is_editing:
+		queue_free()
+		emit_signal("delete_link")
+	else:
+		emit_signal("try_open_link", url)

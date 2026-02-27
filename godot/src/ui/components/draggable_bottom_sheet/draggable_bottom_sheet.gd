@@ -88,9 +88,12 @@ func _input(event: InputEvent) -> void:
 		elif dragging:
 			dragging = false
 			var drag_distance: float = event.position.y - start_pos.y
+			var drag_distance_x: float = absf(event.position.x - start_pos.x)
 			var gesture := DragGesture.IDLE
 
-			if drag_distance > _DRAG_THRESHOLD:
+			if drag_distance_x > absf(drag_distance):
+				gesture = DragGesture.IDLE
+			elif drag_distance > _DRAG_THRESHOLD:
 				gesture = DragGesture.DOWN
 			elif drag_distance < -_DRAG_THRESHOLD:
 				gesture = DragGesture.UP

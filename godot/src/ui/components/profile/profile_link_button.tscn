@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://biapgh26sgkca"]
+[gd_scene load_steps=7 format=3 uid="uid://biapgh26sgkca"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_oyqjs"]
 [ext_resource type="Script" uid="uid://c7ktnujnnsko8" path="res://src/ui/components/profile/profile_link_button.gd" id="2_j0r87"]
 [ext_resource type="Texture2D" uid="uid://c22ghvgmgry8" path="res://assets/ui/link-icon.svg" id="2_oyqjs"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_r8w7o"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_3knha"]
-[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_r8w7o"]
+[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/components/discover/icons/close.svg" id="5_j0r87"]
 
 [node name="PofileLinkButton" type="Button"]
 custom_minimum_size = Vector2(0, 64)
@@ -24,7 +25,9 @@ theme_override_colors/icon_pressed_color = Color(0.627451, 0.67058825, 1, 1)
 theme_override_colors/icon_hover_color = Color(0.627451, 0.67058825, 1, 1)
 theme_override_colors/icon_hover_pressed_color = Color(0.627451, 0.67058825, 1, 1)
 theme_override_constants/h_separation = 6
-theme_override_constants/icon_max_width = 24
+theme_override_constants/icon_max_width = 26
+theme_override_fonts/font = ExtResource("2_r8w7o")
+theme_override_font_sizes/font_size = 24
 text = "LINK LABEL"
 icon = ExtResource("2_oyqjs")
 script = ExtResource("2_j0r87")
@@ -37,23 +40,22 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_right = 5
+theme_override_constants/margin_right = 8
 metadata/_edit_lock_ = true
 
-[node name="Button_Remove" type="Button" parent="MarginContainer"]
+[node name="TextureRect_Remove" type="TextureRect" parent="MarginContainer"]
 unique_name_in_owner = true
-visible = false
+modulate = Color(0.627451, 0.67058825, 1, 1)
 custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 4
+mouse_filter = 2
 theme = ExtResource("3_3knha")
 theme_type_variation = &"BlackButton"
-theme_override_constants/icon_max_width = 20
-icon = ExtResource("4_r8w7o")
-icon_alignment = 1
-expand_icon = true
+texture = ExtResource("5_j0r87")
+expand_mode = 1
+stretch_mode = 4
 
 [connection signal="change_editing" from="." to="." method="_on_change_editing"]
 [connection signal="pressed" from="." to="." method="_on_pressed"]
-[connection signal="pressed" from="MarginContainer/Button_Remove" to="." method="_on_button_remove_pressed"]

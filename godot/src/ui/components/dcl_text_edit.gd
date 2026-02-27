@@ -22,6 +22,10 @@ const LINE_EDIT_ERROR = preload("res://assets/themes/line_edit_error.tres")
 
 var length_error: bool = false
 var error: bool = false
+var _touched: bool = false
+var _dragging: bool = false
+var _drag_start_y: float = 0.0
+var _drag_start_scroll: float = 0.0
 
 @onready var label_length: Label = %Label_Length
 @onready var label_error: Label = %Label_Error
@@ -30,11 +34,17 @@ var error: bool = false
 
 
 func _ready() -> void:
+	text_edit.focus_entered.connect(_on_text_edit_focus_entered)
+	text_edit.focus_exited.connect(_on_text_edit_focus_exited)
+	text_edit.gui_input.connect(_on_text_edit_gui_input)
 	text_edit.placeholder_text = place_holder
 	if wrap_text:
 		text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	else:
 		text_edit.wrap_mode = TextEdit.LINE_WRAPPING_NONE
+	text_edit.get_v_scroll_bar().add_theme_constant_override("minimum_grab_thickness", 0)
+	text_edit.get_v_scroll_bar().custom_minimum_size = Vector2.ZERO
+	text_edit.get_v_scroll_bar().modulate = Color.TRANSPARENT
 	if has_max_length:
 		label_length.show()
 		label_length.text = "0/" + str(max_length)
@@ -102,7 +112,7 @@ func _check_error() -> void:
 
 	error = errors.size() > 0
 
-	if error:
+	if error and _touched:
 		text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
 		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
 		if errors.size() > 1:
@@ -116,8 +126,37 @@ func _check_error() -> void:
 		label_error.hide()
 
 
+func _on_text_edit_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_dragging = false
+			_drag_start_y = event.position.y
+			_drag_start_scroll = text_edit.scroll_vertical
+		else:
+			_dragging = false
+	elif event is InputEventScreenDrag:
+		if not _dragging and absf(event.position.y - _drag_start_y) > 8.0:
+			_dragging = true
+			text_edit.deselect()
+		if _dragging:
+			var line_height := text_edit.get_line_height()
+			if line_height > 0:
+				var delta_lines: float = (_drag_start_y - event.position.y) / float(line_height)
+				text_edit.scroll_vertical = int(_drag_start_scroll + delta_lines)
+			text_edit.get_viewport().set_input_as_handled()
+
+
+func _on_text_edit_focus_entered() -> void:
+	_touched = true
+	_update_clear_button()
+
+
+func _on_text_edit_focus_exited() -> void:
+	_update_clear_button()
+
+
 func _update_clear_button() -> void:
-	clear_button.visible = text_edit.text.length() > 0
+	clear_button.visible = text_edit.text.length() > 0 and text_edit.has_focus()
 
 
 func _on_clear_button_pressed() -> void:
@@ -143,6 +182,7 @@ func get_text_value() -> String:
 
 
 func set_text_value(new_text: String = "") -> void:
+	_touched = false
 	text_edit.text = new_text
 	_update_length()
 	_update_clear_button()

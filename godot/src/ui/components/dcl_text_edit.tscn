@@ -42,6 +42,7 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_vertical = 3
 theme = ExtResource("2_tjywf")
+theme_override_colors/selection_color = Color(0.9098039, 0.7254902, 1, 0.69803923)
 theme_override_styles/normal = ExtResource("3_v4hat")
 theme_override_styles/focus = ExtResource("4_nhry5")
 placeholder_text = "Type text here..."

@@ -51,6 +51,7 @@ func hide_editor() -> void:
 func _on_close_editor(saved: bool = false) -> void:
 	hide_editor()
 	if saved:
+		Global.player_identity.set_profile(Global.player_identity.get_mutable_profile())
 		_refresh_content_from_mutable()
 	if _opened_from_landscape:
 		_opened_from_landscape = false
