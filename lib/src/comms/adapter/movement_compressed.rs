@@ -218,7 +218,7 @@ impl Movement {
                     .with_velocity_z(quantize::<B3>(velocity.z.abs(), 0.0, 4.0))
                     .with_velocity_x_sign(velocity.x < 0.0)
                     .with_velocity_y_sign(velocity.y < 0.0)
-                    .with_velocity_z_sign(velocity.z < 0.0),
+                    .with_velocity_z_sign(velocity.z >= 0.0),
             )
         } else {
             let speed = if vel_max < 12.0 { 12.0 } else { 50.0 };
@@ -232,7 +232,7 @@ impl Movement {
                 .with_velocity_z(quantize::<B5>(velocity.z.abs(), 0.0, speed))
                 .with_velocity_x_sign(velocity.x < 0.0)
                 .with_velocity_y_sign(velocity.y < 0.0)
-                .with_velocity_z_sign(velocity.z < 0.0);
+                .with_velocity_z_sign(velocity.z >= 0.0);
             if vel_max < 12.0 {
                 Self::Med(inner)
             } else {
@@ -377,6 +377,7 @@ impl MovementCompressed {
     }
 
     pub fn velocity(&self) -> Vector3 {
-        self.movement.velocity()
+        let vel = self.movement.velocity();
+        Vector3::new(vel.x, vel.y, -vel.z)
     }
 }
