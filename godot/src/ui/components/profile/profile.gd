@@ -34,9 +34,7 @@ var _deploy_timeout_timer: Timer
 @onready var button_add_friend: CustomButton = %Button_AddFriend
 @onready var button_pending: CustomButton = %Button_Pending
 @onready var button_block_user: Button = %Button_BlockUser
-@onready var url_popup: ColorRect = %UrlPopup
-@onready var profile_new_link_popup: ColorRect = %ProfileNewLinkPopup
-@onready var change_nick_popup: ColorRect = %ChangeNickPopup
+
 @onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
 @onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 @onready var button_mute_user: Button = %Button_MuteUser
@@ -91,7 +89,6 @@ func _ready() -> void:
 
 	profile_equipped.emote_pressed.connect(_on_emote_pressed)
 	profile_equipped.stop_emote.connect(_on_stop_emote)
-	profile_links.link_clicked.connect(_open_go_to_link)
 	button_edit_profile.pressed.connect(_on_button_edit_profile_pressed)
 
 	# Connect friendship buttons
@@ -123,9 +120,6 @@ func _update_elements_visibility() -> void:
 	button_cancel_request.hide()
 	button_friend.hide()
 	button_unfriend.hide()
-	url_popup.close()
-	change_nick_popup.close()
-	profile_new_link_popup.close()
 	menu.hide()
 	if is_own_passport:
 		button_block_user.hide()
@@ -196,11 +190,6 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	profile_links.refresh(current_profile)
 	_refresh_name_and_address()
 	profile_equipped.async_refresh(current_profile)
-
-	change_nick_popup.close()
-	profile_new_link_popup.close()
-	url_popup.close()
-
 	_unset_avatar_loading(loading_id)
 
 	if not is_own_passport:
@@ -245,10 +234,6 @@ func close() -> void:
 		close_profile.emit()
 
 
-func _on_button_edit_nick_pressed() -> void:
-	change_nick_popup.open()
-
-
 func _refresh_name_and_address() -> void:
 	address = current_profile.get_ethereum_address()
 	label_address.text = Global.shorten_address(address)
@@ -256,10 +241,6 @@ func _refresh_name_and_address() -> void:
 	label_nickname.text = current_profile.get_name()
 	var nickname_color = DclAvatar.get_nickname_color(current_profile.get_name())
 	label_nickname.add_theme_color_override("font_color", nickname_color)
-
-
-func _open_go_to_link(link_url: String) -> void:
-	url_popup.open(link_url)
 
 
 func _async_on_change_nick_popup_update_name_on_profile(nickname: String) -> void:

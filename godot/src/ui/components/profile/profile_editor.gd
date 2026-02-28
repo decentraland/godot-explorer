@@ -241,6 +241,7 @@ func _async_save_profile() -> void:
 	var current_username = dcl_text_edit_username.get_text_value()
 	if current_username != _original_values.get("username", ""):
 		mutable_profile.set_name(current_username)
+		mutable_profile.set_has_claimed_name(false)
 
 	var current_description = dcl_text_edit_description.get_text_value()
 	if current_description != _original_values.get("description", ""):
@@ -306,8 +307,11 @@ func _async_save_profile() -> void:
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
-		printerr("Failed to save profile: ", PromiseUtils.get_error_message(promise))
+		var err_msg = PromiseUtils.get_error_message(promise)
+		printerr("ProfileEditor: deploy FAILED: ", err_msg)
 		save_failed.emit()
+	else:
+		print("ProfileEditor: deploy succeeded")
 
 
 func _are_links_dirty() -> bool:
