@@ -539,6 +539,8 @@ func get_explorer() -> Explorer:
 
 func sign_out() -> void:
 	NotificationsManager.stop_polling()
+	social_service.unsubscribe_from_updates()
+	social_service.unsubscribe_from_connectivity_updates()
 	social_service.unsubscribe_from_block_updates()
 	social_blacklist.clear_blocked()
 	social_blacklist.clear_muted()
