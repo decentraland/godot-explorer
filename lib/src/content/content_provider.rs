@@ -159,7 +159,7 @@ impl INode for ContentProvider {
             #[cfg(feature = "use_resource_tracking")]
             resource_download_tracking,
             http_queue_requester: Arc::new(HttpQueueRequester::new(
-                6,
+                12,
                 DclGlobal::get_network_inspector_sender(),
             )),
             content_folder,

@@ -246,12 +246,13 @@ impl LoadingSession {
         self.scene_last_progress.insert(scene_id, Instant::now());
     }
 
-    /// Report that an asset started loading (increments expected count)
+    /// Report that an asset started loading (increments expected count).
+    /// Does NOT reset the per-scene timeout — only actual completions
+    /// (`report_asset_loaded`) count as meaningful progress. This prevents
+    /// a stream of "started" events from keeping a stalled scene alive.
     pub fn report_asset_loading_started(&mut self, scene_id: SceneId) {
         *self.expected_assets.entry(scene_id).or_insert(0) += 1;
-        let now = Instant::now();
-        self.scene_last_progress.insert(scene_id, now);
-        self.last_asset_registered = Some(now);
+        self.last_asset_registered = Some(Instant::now());
     }
 
     /// Report that a scene is fully ready (tick >= 4 and GLTF done)
