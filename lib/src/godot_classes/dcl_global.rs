@@ -509,7 +509,11 @@ impl DclGlobal {
                 _ => GString::from(&version),
             }
         } else {
-            GString::from(&format!("{} - {}", version, config.to_string_repr().to_uppercase()))
+            GString::from(&format!(
+                "{} - {}",
+                version,
+                config.to_string_repr().to_uppercase()
+            ))
         }
     }
 

@@ -318,10 +318,7 @@ mod tests {
         assert_eq!(config.default, DclEnvironment::Org);
         assert_eq!(config.env_for(ServiceGroup::Auth), DclEnvironment::Zone);
         assert_eq!(config.env_for(ServiceGroup::Comms), DclEnvironment::Today);
-        assert_eq!(
-            config.env_for(ServiceGroup::Catalyst),
-            DclEnvironment::Org
-        );
+        assert_eq!(config.env_for(ServiceGroup::Catalyst), DclEnvironment::Org);
     }
 
     #[test]
@@ -348,7 +345,13 @@ mod tests {
 
     #[test]
     fn test_config_to_string_repr_roundtrip() {
-        let inputs = ["org", "zone", "today", "auth::zone,org", "auth::zone,comms::today,org"];
+        let inputs = [
+            "org",
+            "zone",
+            "today",
+            "auth::zone,org",
+            "auth::zone,comms::today,org",
+        ];
         for input in inputs {
             let config = DclEnvConfig::parse(input).unwrap();
             let repr = config.to_string_repr();
