@@ -503,7 +503,9 @@ func _on_button_different_account_pressed():
 	Global.metrics.track_click_button("use_another_account", current_screen_name, "")
 	Global.get_config().session_account = {}
 
-	# Unsubscribe from block updates before clearing
+	# Unsubscribe from all social service updates before clearing
+	Global.social_service.unsubscribe_from_updates()
+	Global.social_service.unsubscribe_from_connectivity_updates()
 	Global.social_service.unsubscribe_from_block_updates()
 
 	# Clear the current social blacklist when switching accounts
