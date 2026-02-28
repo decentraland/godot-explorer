@@ -497,23 +497,17 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").into()
     }
 
-    /// Get version string with environment suffix (e.g., "v1.0.0 - ZONE")
+    /// Get version string with environment suffix (e.g., "v1.0.0 - zone")
+    /// Hidden when environment is plain "org" (production default).
     #[func]
     pub fn get_version_with_env() -> GString {
         let version = format!("v{}", env!("GODOT_EXPLORER_VERSION"));
         let config = crate::env::get_config();
-        if config.is_uniform() {
-            match config.default.suffix() {
-                "zone" => GString::from(&format!("{} - ZONE", version)),
-                "today" => GString::from(&format!("{} - TODAY", version)),
-                _ => GString::from(&version),
-            }
+        let repr = config.to_string_repr();
+        if repr == "org" {
+            GString::from(&version)
         } else {
-            GString::from(&format!(
-                "{} - {}",
-                version,
-                config.to_string_repr().to_uppercase()
-            ))
+            GString::from(&format!("{} - {}", version, repr))
         }
     }
 
