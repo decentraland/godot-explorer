@@ -1,6 +1,11 @@
+@tool
 extends ScrollContainer
 
-@export var label_settings: LabelSettings
+@export var label_settings: LabelSettings:
+	set(value):
+		label_settings = value
+		if is_node_ready():
+			label.label_settings = value
 
 var is_marquee_active: bool = false
 var marquee_tween: Tween

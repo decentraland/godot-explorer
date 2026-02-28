@@ -1,0 +1,32 @@
+[gd_scene load_steps=4 format=4]
+
+[ext_resource type="Script" path="res://src/ui/components/profile/profile_links.gd" id="1_links"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_font700"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("2_font700")
+font_size = 22
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="ProfileLinks" type="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+script = ExtResource("1_links")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 13
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 24
+text = "LINKS"
+label_settings = SubResource("LabelSettings_title")
+uppercase = true
+
+[node name="HFlowContainer_Links" type="HFlowContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 24

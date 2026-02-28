@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/hair-icon.svg-5a919e2cf419e88e8436ec74a6bac6e
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

@@ -33,6 +33,9 @@ const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
 			_apply_disabled_state()
 
 var selected: int = -1
+
+## When >= 0, this index is treated as "no value" and shown with placeholder style.
+var placeholder_index: int = -1
 var _items: Array[Dictionary] = []
 var _is_open: bool = false
 var _style_normal: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
@@ -260,7 +263,8 @@ func _update_description():
 
 func _update_selected_text():
 	if _selected_label:
-		if selected >= 0 and selected < _items.size():
+		var is_placeholder := placeholder_index >= 0 and selected == placeholder_index
+		if not is_placeholder and selected >= 0 and selected < _items.size():
 			_selected_label.text = _items[selected].text
 			if disabled:
 				_selected_label.label_settings = load(
@@ -271,7 +275,10 @@ func _update_selected_text():
 					"res://assets/themes/selected_dropdown_settings.tres"
 				)
 		else:
-			_selected_label.text = "Select"
+			if selected >= 0 and selected < _items.size():
+				_selected_label.text = _items[selected].text
+			else:
+				_selected_label.text = "Select"
 			if disabled:
 				_selected_label.label_settings = load(
 					"res://assets/themes/unselected_dropdown_settings_disabled.tres"

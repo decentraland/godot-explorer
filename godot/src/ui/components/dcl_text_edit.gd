@@ -1,25 +1,56 @@
 @tool
+class_name DclTextEdit
 extends Control
 
 signal dcl_text_edit_changed
 
+const LINE_EDIT = preload("res://assets/themes/line_edit.tres")
+const LINE_EDIT_FOCUSED = preload("res://assets/themes/line_edit_focused.tres")
+const LINE_EDIT_ERROR = preload("res://assets/themes/line_edit_error.tres")
+
 @export var place_holder: String = "Type text here..."
 @export var has_max_length: bool = true
 @export var max_length: int = 15
-@export var validate_url: bool = false
 @export var is_optional: bool = true
+@export var wrap_text: bool = true
+
+@export_group("Validation")
+@export var validate_url: bool = false
+@export var validate_date: bool = false
+@export var validate_no_symbols: bool = false
+@export var validate_no_edge_spaces: bool = false
 
 var length_error: bool = false
 var error: bool = false
+var _touched: bool = false
+var _dragging: bool = false
+var _drag_start_y: float = 0.0
+var _drag_start_scroll: float = 0.0
 
 @onready var label_length: Label = %Label_Length
+@onready var label_error: Label = %Label_Error
 @onready var text_edit: TextEdit = %TextEdit
-@onready var panel_container: PanelContainer = $PanelContainer
+@onready var clear_button: TextureButton = %ClearButton
 
 
 func _ready() -> void:
+	text_edit.focus_entered.connect(_on_text_edit_focus_entered)
+	text_edit.focus_exited.connect(_on_text_edit_focus_exited)
+	text_edit.gui_input.connect(_on_text_edit_gui_input)
 	text_edit.placeholder_text = place_holder
-	label_length.hide()
+	if wrap_text:
+		text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	else:
+		text_edit.wrap_mode = TextEdit.LINE_WRAPPING_NONE
+	text_edit.get_v_scroll_bar().add_theme_constant_override("minimum_grab_thickness", 0)
+	text_edit.get_v_scroll_bar().custom_minimum_size = Vector2.ZERO
+	text_edit.get_v_scroll_bar().modulate = Color.TRANSPARENT
+	if has_max_length:
+		label_length.show()
+		label_length.text = "0/" + str(max_length)
+	else:
+		label_length.hide()
+	_update_clear_button()
 	_check_error()
 
 
@@ -33,31 +64,115 @@ func _update_length() -> void:
 			length_error = true
 
 
-func is_valid_web_url(url: String) -> bool:
+func _is_valid_url(value: String) -> bool:
 	var regex := RegEx.new()
-	regex.compile(r"^https:\/\/[^\s]+\.[^\s]+$")
-	return regex.search(url) != null
+	regex.compile(r"^https?:\/\/[^\s]+\.[^\s]+$")
+	return regex.search(value) != null
+
+
+func _is_valid_date(value: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(r"^\d{2}/\d{2}/\d{4}$")
+	return regex.search(value) != null
+
+
+func _has_symbols(value: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(r"[^A-Za-z0-9 ]")
+	return regex.search(value) != null
+
+
+func _has_edge_spaces(value: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(r"(^\s)|(\s$)")
+	return regex.search(value) != null
 
 
 func _check_error() -> void:
-	var original_stylebox := panel_container.get_theme_stylebox("panel")
-	var stylebox := original_stylebox.duplicate()
-	if stylebox is StyleBoxFlat:
-		if (
-			(validate_url and !is_valid_web_url(text_edit.text))
-			or length_error
-			or (!is_optional and text_edit.text.length() <= 0)
-		):
-			stylebox.border_color = Color(0.8, 0, 0, 1.0)
-			error = true
+	var errors: Array[String] = []
+	var text := text_edit.text
+
+	if !is_optional and text.length() <= 0:
+		errors.append("This field is required")
+
+	if length_error:
+		errors.append("Character limit exceeded")
+
+	if validate_url and text.length() > 0 and !_is_valid_url(text):
+		errors.append("Enter a valid URL")
+
+	if validate_date and text.length() > 0 and !_is_valid_date(text):
+		errors.append("Use MM/DD/YYYY format")
+
+	if validate_no_symbols and text.length() > 0 and _has_symbols(text):
+		errors.append("Use letters and numbers only")
+
+	if validate_no_edge_spaces and text.length() > 0 and _has_edge_spaces(text):
+		errors.append("No leading or trailing spaces")
+
+	error = errors.size() > 0
+
+	if error and _touched:
+		text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
+		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
+		if errors.size() > 1:
+			label_error.text = "Invalid format"
 		else:
-			stylebox.border_color = Color.TRANSPARENT
-			error = false
-		panel_container.add_theme_stylebox_override("panel", stylebox)
+			label_error.text = errors[0]
+		label_error.show()
+	else:
+		text_edit.add_theme_stylebox_override("normal", LINE_EDIT)
+		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_FOCUSED)
+		label_error.hide()
+
+
+func _on_text_edit_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_dragging = false
+			_drag_start_y = event.position.y
+			_drag_start_scroll = text_edit.scroll_vertical
+		else:
+			_dragging = false
+	elif event is InputEventScreenDrag:
+		if not _dragging and absf(event.position.y - _drag_start_y) > 8.0:
+			_dragging = true
+			text_edit.deselect()
+		if _dragging:
+			var line_height := text_edit.get_line_height()
+			if line_height > 0:
+				var delta_lines: float = (_drag_start_y - event.position.y) / float(line_height)
+				text_edit.scroll_vertical = int(_drag_start_scroll + delta_lines)
+			text_edit.get_viewport().set_input_as_handled()
+
+
+func _on_text_edit_focus_entered() -> void:
+	_touched = true
+	_update_clear_button()
+
+
+func _on_text_edit_focus_exited() -> void:
+	_update_clear_button()
+
+
+func _update_clear_button() -> void:
+	clear_button.visible = text_edit.text.length() > 0 and text_edit.has_focus()
+
+
+func _on_clear_button_pressed() -> void:
+	text_edit.text = ""
+	_update_length()
+	_update_clear_button()
+	_check_error()
+	emit_signal("dcl_text_edit_changed")
 
 
 func _on_text_edit_text_changed() -> void:
+	if has_max_length and text_edit.text.length() > max_length:
+		text_edit.text = text_edit.text.left(max_length)
+		text_edit.set_caret_column(text_edit.text.length())
 	_update_length()
+	_update_clear_button()
 	_check_error()
 	emit_signal("dcl_text_edit_changed")
 
@@ -66,6 +181,9 @@ func get_text_value() -> String:
 	return text_edit.text
 
 
-func set_text(new_text: String = "") -> void:
+func set_text_value(new_text: String = "") -> void:
+	_touched = false
 	text_edit.text = new_text
 	_update_length()
+	_update_clear_button()
+	_check_error()

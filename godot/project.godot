@@ -8,6 +8,14 @@
 
 config_version=5
 
+[_mobile_preview]
+
+active=true
+is_ios=false
+is_portrait=false
+viewport_width=1600
+viewport_height=720
+
 [animation]
 
 warnings/check_invalid_track_paths=false
@@ -42,7 +50,7 @@ gdscript/warnings/redundant_await=false
 
 [display]
 
-window/size/viewport_width=720
+window/size/viewport_width=1600
 window/size/viewport_height=720
 window/size/window_width_override=720
 window/size/window_height_override=1280
@@ -50,7 +58,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--emulate-ios"
+run/main_run_args="--emulate-android --landscape"
 
 [editor_plugins]
 

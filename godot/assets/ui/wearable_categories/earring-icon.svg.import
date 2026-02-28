@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/earring-icon.svg-49a1d0c4142713231a5d930bd007
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

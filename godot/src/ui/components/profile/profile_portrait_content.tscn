@@ -1,0 +1,237 @@
+[gd_scene load_steps=18 format=3 uid="uid://0icleo1x2y07"]
+
+[ext_resource type="Script" uid="uid://ry6j54iml4ww" path="res://src/ui/components/profile/profile_portrait_content.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_7gsml"]
+[ext_resource type="PackedScene" uid="uid://ddgiwkq38wjib" path="res://src/ui/components/profile/profile_about.tscn" id="2_about"]
+[ext_resource type="Texture2D" uid="uid://cxrkry4lwh1a4" path="res://assets/ui/edit-icon.svg" id="3_lhp2a"]
+[ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_links.tscn" id="3_links"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_xqjxo"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_5mqkx"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="6_ganaq"]
+[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="7_bktpr"]
+[ext_resource type="Texture2D" uid="uid://71yn28q2vqlq" path="res://assets/ui/copy-icon.svg" id="8_7le3q"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="9_ppjg4"]
+[ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/custom_button/custom_button.tscn" id="10_lhp2a"]
+[ext_resource type="PackedScene" uid="uid://b2ojldlluptgu" path="res://src/ui/components/profile/profile_equipped.tscn" id="12_xqjxo"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_lhp2a"]
+font = ExtResource("5_5mqkx")
+font_size = 42
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_xqjxo"]
+font = ExtResource("6_ganaq")
+font_size = 32
+font_color = Color(1, 1, 1, 0.69803923)
+
+[sub_resource type="LabelSettings" id="LabelSettings_5mqkx"]
+font = ExtResource("5_5mqkx")
+font_size = 30
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lhp2a"]
+
+[node name="ProfilePortraitContent" type="VBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "portrait"
+metadata/_edit_horizontal_guides_ = [48.0]
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="ProfileHeader" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 24
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label_Nickname" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("4_xqjxo")
+theme_override_font_sizes/font_size = 27
+text = "Maxcharacter"
+label_settings = SubResource("LabelSettings_lhp2a")
+vertical_alignment = 2
+
+[node name="MarginContainer_Tag" type="MarginContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/margin_bottom = -10
+
+[node name="Label_Tag" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer/MarginContainer_Tag"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 8
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.625597, 0.625597, 0.625597, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("4_xqjxo")
+theme_override_font_sizes/font_size = 27
+text = "#1234"
+label_settings = SubResource("LabelSettings_xqjxo")
+vertical_alignment = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_bottom = 3
+
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer/MarginContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("7_bktpr")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="Button_CopyName" type="TextureButton" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 8
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("2_7gsml")
+theme_type_variation = &"SecondaryLittle"
+texture_normal = ExtResource("8_7le3q")
+texture_pressed = ExtResource("8_7le3q")
+texture_hover = ExtResource("8_7le3q")
+texture_disabled = ExtResource("8_7le3q")
+texture_focused = ExtResource("8_7le3q")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Label_Address" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("9_ppjg4")
+theme_override_font_sizes/font_size = 18
+text = "0x4e1...1c13B"
+label_settings = SubResource("LabelSettings_5mqkx")
+
+[node name="Button_CopyAddress" type="TextureButton" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2/HBoxContainer"]
+unique_name_in_owner = true
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("2_7gsml")
+theme_type_variation = &"SecondaryLittle"
+texture_normal = ExtResource("8_7le3q")
+texture_pressed = ExtResource("8_7le3q")
+texture_hover = ExtResource("8_7le3q")
+texture_disabled = ExtResource("8_7le3q")
+texture_focused = ExtResource("8_7le3q")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
+
+[node name="CustomButton_EditProfile" parent="MarginContainer/VBoxContainer" instance=ExtResource("10_lhp2a")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(312, 92)
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_font_sizes/font_size = 32
+custom_icon = ExtResource("3_lhp2a")
+custom_icon_pressed = ExtResource("3_lhp2a")
+custom_text = "EDIT PROFILE"
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
+
+[node name="ProfileAbout" parent="MarginContainer/VBoxContainer" instance=ExtResource("2_about")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator3" type="HSeparator" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
+
+[node name="ProfileEquipped" parent="." instance=ExtResource("12_xqjxo")]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator4" type="HSeparator" parent="MarginContainer2/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
+
+[node name="ProfileLinks" parent="MarginContainer2/VBoxContainer" instance=ExtResource("3_links")]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="HSeparator5" type="HSeparator" parent="MarginContainer2/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")

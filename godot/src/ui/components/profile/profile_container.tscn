@@ -13,6 +13,7 @@ grow_vertical = 2
 mouse_force_pass_scroll_events = false
 color = Color(0, 0, 0, 0.784314)
 script = ExtResource("1_d5ewq")
+metadata/mobile_preview_orientation = "landscape"
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -23,28 +24,20 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_6mjwx")
-default_margin = 50
 metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
-[node name="Control" type="Control" parent="SafeMarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer"]
 layout_mode = 2
-mouse_filter = 2
+theme_override_constants/margin_left = 104
+theme_override_constants/margin_top = 52
+theme_override_constants/margin_right = 160
+theme_override_constants/margin_bottom = 52
 
-[node name="ProfileClipContainer" type="Control" parent="SafeMarginContainer/Control"]
-clip_contents = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Profile" parent="SafeMarginContainer/Control/ProfileClipContainer" instance=ExtResource("2_d5ewq")]
+[node name="Profile" parent="SafeMarginContainer/MarginContainer" instance=ExtResource("2_d5ewq")]
 unique_name_in_owner = true
-layout_mode = 1
-offset_right = 0.0
+layout_mode = 2
 rounded = true
 closable = true
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
-[connection signal="close_profile" from="SafeMarginContainer/Control/ProfileClipContainer/Profile" to="." method="_on_profile_close_profile"]
+[connection signal="close_profile" from="SafeMarginContainer/MarginContainer/Profile" to="." method="_on_profile_close_profile"]
