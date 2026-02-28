@@ -501,11 +501,15 @@ impl DclGlobal {
     #[func]
     pub fn get_version_with_env() -> GString {
         let version = format!("v{}", env!("GODOT_EXPLORER_VERSION"));
-        let env = crate::env::get_environment();
-        match env.suffix() {
-            "zone" => GString::from(&format!("{} - ZONE", version)),
-            "today" => GString::from(&format!("{} - TODAY", version)),
-            _ => GString::from(&version),
+        let config = crate::env::get_config();
+        if config.is_uniform() {
+            match config.default.suffix() {
+                "zone" => GString::from(&format!("{} - ZONE", version)),
+                "today" => GString::from(&format!("{} - TODAY", version)),
+                _ => GString::from(&version),
+            }
+        } else {
+            GString::from(&format!("{} - {}", version, config.to_string_repr().to_uppercase()))
         }
     }
 
@@ -634,21 +638,21 @@ impl DclGlobal {
     }
 
     /// Set the Decentraland environment for URL transformation.
-    /// Valid values: "org", "zone", "today"
+    /// Supports per-group overrides: "zone", "auth::zone,org", "auth::zone,comms::today,org"
     #[func]
     pub fn set_dcl_environment(env: GString) {
-        if let Some(dcl_env) = crate::env::DclEnvironment::parse(&env.to_string()) {
-            crate::env::set_environment(dcl_env);
+        if let Some(config) = crate::env::DclEnvConfig::parse(&env.to_string()) {
+            crate::env::set_environment_config(config);
         } else {
             tracing::warn!("Invalid environment value: {}", env);
         }
     }
 
-    /// Get the current Decentraland environment suffix.
-    /// Returns: "org", "zone", or "today"
+    /// Get the current Decentraland environment string.
+    /// Returns the full config string if overrides are present, otherwise just the suffix.
     #[func]
     pub fn get_dcl_environment() -> GString {
-        GString::from(crate::env::get_environment().suffix())
+        GString::from(&crate::env::get_config().to_string_repr())
     }
 
     /// Change the Rust log filter at runtime.

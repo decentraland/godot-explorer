@@ -916,6 +916,10 @@ func _on_deeplink_received(url: String) -> void:
 			print("[DEEPLINK] Ignoring WalletConnect callback")
 			return
 
+		# Check for environment change — requires restart
+		if _check_dclenv_change():
+			return
+
 		# Handle signin deep link for mobile auth flow
 		if deep_link_obj.is_signin_request():
 			_handle_signin_deep_link(deep_link_obj.signin_identity_id)
@@ -935,6 +939,24 @@ func _clear_deep_link() -> void:
 	# deep_link_obj is still needed by scene_fetcher (preview mode)
 	# and other systems that check deep link parameters.
 	deep_link_url = ""
+
+
+## Check if the deep link contains a dclenv change. If it does, apply the new
+## environment and restart back to the lobby (sign out). Returns true if a
+## restart was triggered so the caller can skip further deep-link processing.
+func _check_dclenv_change() -> bool:
+	var new_env := deep_link_obj.dclenv as String
+	if new_env.is_empty():
+		return false
+
+	var current_env := DclGlobal.get_dcl_environment() as String
+	if new_env == current_env:
+		return false
+
+	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
+	DclGlobal.set_dcl_environment(new_env)
+	sign_out()
+	return true
 
 
 func _notification(what: int) -> void:
@@ -964,6 +986,10 @@ func _notification(what: int) -> void:
 
 			# Ignore WalletConnect callbacks
 			if deep_link_obj.is_walletconnect_callback:
+				return
+
+			# Check for environment change — requires restart
+			if _check_dclenv_change():
 				return
 
 			# Handle signin deep link for mobile auth flow
