@@ -21,6 +21,7 @@ func _ready():
 func enable_loading_screen():
 	# Show loading screen immediately - the LoadingSession will update progress later
 	Global.content_provider.set_max_concurrent_downloads(12)
+	Global.content_provider.set_max_low_priority_downloads(2)
 
 	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
@@ -39,6 +40,7 @@ func hide_loading_screen():
 
 func _on_loading_started(_session_id: int, _expected_count: int):
 	Global.content_provider.set_max_concurrent_downloads(12)
+	Global.content_provider.set_max_low_priority_downloads(2)
 
 	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
@@ -77,6 +79,7 @@ func _on_loading_cancelled(_session_id: int):
 
 func _hide_loading_screen():
 	Global.content_provider.set_max_concurrent_downloads(12)
+	Global.content_provider.set_max_low_priority_downloads(12)
 
 	# Restore voice chat and scene volume
 	AudioSettings.apply_scene_volume_settings()
