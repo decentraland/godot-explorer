@@ -1,5 +1,9 @@
 extends Control
 
+## Hard maximum loading time in seconds. If loading takes longer than this,
+## the "RUN ANYWAY" modal is shown regardless of download activity.
+const MAX_LOADING_TIME_SECONDS := 90.0
+
 var bg_colors: Array[Color] = [
 	Color(0.5, 0.25, 0.0, 1.0),
 	Color(0.0, 0.0, 0.5, 1.0),
@@ -14,6 +18,7 @@ var item_index = 0
 var item_count = 0
 var progress: float = 0.0
 var last_activity_time := Time.get_ticks_msec()
+var loading_start_time := 0
 var popup_warning_pos_y: int = 0
 
 var last_hide_click := 0.0
@@ -154,29 +159,41 @@ func _on_timer_check_progress_timeout_timeout():
 	)
 	var download_speed_mbs: float = Global.content_provider.get_download_speed_mbs()
 
-	# Update activity time if downloads are happening (resources being loaded)
-	# This prevents timeout from triggering while actual work is in progress
-	var is_actively_downloading = download_speed_mbs > 0.01 or loading_resources > loaded_resources
-	if is_actively_downloading:
+	# Update activity time only if there is actual network throughput.
+	# Previously `loading_resources > loaded_resources` kept the timer alive
+	# as long as ANY asset was pending, defeating the timeout on heavy scenes.
+	# Progress value changes already reset last_activity_time via set_progress().
+	if download_speed_mbs > 0.01:
 		last_activity_time = Time.get_ticks_msec()
 
+	var opt_suffix = " - Opt" if Global.content_provider.get_optimized_scene_count() > 0 else ""
 	label_loading_state.text = (
-		"(%d/%d resources at %.2fmb/s)" % [loaded_resources, loading_resources, download_speed_mbs]
+		"(%d/%d resources at %.2fmb/s)%s"
+		% [loaded_resources, loading_resources, download_speed_mbs, opt_suffix]
 	)
 
+	# Absolute maximum loading time — never wait longer than this
+	var total_elapsed_seconds = (Time.get_ticks_msec() - loading_start_time) / 1000.0
 	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_activity_time) / 1000.0))
-	if inactive_seconds > 20:
+	var should_timeout = inactive_seconds > 20 or total_elapsed_seconds > MAX_LOADING_TIME_SECONDS
+
+	if should_timeout:
 		# Skip showing modal during tests to avoid affecting screenshots
 		if Global.testing_scene_mode or Global.cli.scene_test_mode:
 			return
 		Global.modal_manager.async_show_scene_timeout_modal()
 		# LOADING_TIMEOUT metric
+		var timeout_reason = (
+			"max_time" if total_elapsed_seconds > MAX_LOADING_TIME_SECONDS else "inactivity"
+		)
 		var timeout_data = {
 			"loaded_resources": loaded_resources,
 			"loading_resources": loading_resources,
 			"download_speed_mbs": download_speed_mbs,
 			"scene_id": str(Global.scene_fetcher.current_scene_entity_id),
-			"inactive_seconds": inactive_seconds
+			"inactive_seconds": inactive_seconds,
+			"total_elapsed_seconds": int(total_elapsed_seconds),
+			"timeout_reason": timeout_reason
 		}
 		Global.metrics.track_screen_viewed("LOADING_TIMEOUT", JSON.stringify(timeout_data))
 
@@ -184,7 +201,9 @@ func _on_timer_check_progress_timeout_timeout():
 
 
 func _on_loading_screen_progress_logic_loading_show_requested():
-	last_activity_time = Time.get_ticks_msec()
+	var now = Time.get_ticks_msec()
+	last_activity_time = now
+	loading_start_time = now
 	timer_check_progress_timeout.start()
 	loaded_resources_offset = Global.content_provider.count_loaded_resources()
 

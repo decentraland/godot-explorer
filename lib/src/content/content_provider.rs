@@ -159,7 +159,7 @@ impl INode for ContentProvider {
             #[cfg(feature = "use_resource_tracking")]
             resource_download_tracking,
             http_queue_requester: Arc::new(HttpQueueRequester::new(
-                6,
+                12,
                 DclGlobal::get_network_inspector_sender(),
             )),
             content_folder,
@@ -1829,6 +1829,12 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn set_max_low_priority_downloads(&mut self, number: i32) {
+        self.resource_provider
+            .set_max_low_priority_downloads(number as usize)
+    }
+
+    #[func]
     pub fn get_optimized_base_url(&self) -> GString {
         ASSET_OPTIMIZED_BASE_URL.to_godot()
     }
@@ -2252,7 +2258,11 @@ impl ContentProvider {
             let future = async move {
                 let result = ctx_clone
                     .resource_provider
-                    .fetch_resource(asset_url, hash_dependency_zip.clone(), absolute_file_path)
+                    .fetch_resource_low_priority(
+                        asset_url,
+                        hash_dependency_zip.clone(),
+                        absolute_file_path,
+                    )
                     .await;
 
                 match &result {
@@ -2393,7 +2403,7 @@ impl ContentProvider {
                         );
                         match ctx
                             .resource_provider
-                            .fetch_resource(
+                            .fetch_resource_low_priority(
                                 zip_url.clone(),
                                 zip_name.clone(),
                                 local_zip_path.clone(),

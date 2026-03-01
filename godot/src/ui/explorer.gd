@@ -1051,10 +1051,18 @@ func _on_loading_started() -> void:
 
 func _on_loading_finished() -> void:
 	_is_loading = false
+	_update_version_label()
 	# Show pending notification if there was one queued during loading
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+
+
+func _update_version_label() -> void:
+	var version_text = DclGlobal.get_version_with_env()
+	if Global.content_provider.get_optimized_scene_count() > 0:
+		version_text += " - Opt"
+	label_version.set_text(version_text)
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
