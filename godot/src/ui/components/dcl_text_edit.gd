@@ -37,6 +37,7 @@ func _ready() -> void:
 	text_edit.focus_entered.connect(_on_text_edit_focus_entered)
 	text_edit.focus_exited.connect(_on_text_edit_focus_exited)
 	text_edit.gui_input.connect(_on_text_edit_gui_input)
+	clear_button.button_down.connect(_on_clear_button_pressed)
 	text_edit.placeholder_text = place_holder
 	if wrap_text:
 		text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
@@ -152,7 +153,7 @@ func _on_text_edit_focus_entered() -> void:
 
 
 func _on_text_edit_focus_exited() -> void:
-	_update_clear_button()
+	call_deferred("_update_clear_button")
 
 
 func _update_clear_button() -> void:

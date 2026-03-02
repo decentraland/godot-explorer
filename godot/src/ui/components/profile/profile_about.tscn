@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://ddgiwkq38wjib"]
+[gd_scene load_steps=20 format=3 uid="uid://ddgiwkq38wjib"]
 
 [ext_resource type="Script" uid="uid://d1xg5skmioapy" path="res://src/ui/components/profile/profile_about.gd" id="1_about"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_font700"]
@@ -22,6 +22,8 @@ font = ExtResource("2_font700")
 font_size = 22
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w128x"]
+
 [sub_resource type="LabelSettings" id="LabelSettings_p128h"]
 font = ExtResource("3_w128x")
 font_size = 24
@@ -32,6 +34,7 @@ offset_right = 773.0
 offset_bottom = 458.0
 size_flags_vertical = 0
 mouse_filter = 2
+theme_override_constants/separation = 0
 script = ExtResource("1_about")
 
 [node name="Label" type="Label" parent="."]
@@ -46,10 +49,16 @@ text = "About me"
 label_settings = SubResource("LabelSettings_title")
 uppercase = true
 
+[node name="HSeparator2" type="HSeparator" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_w128x")
+
 [node name="MarginContainer_Description" type="MarginContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/margin_top = 8
+theme_override_constants/margin_top = 0
 
 [node name="Label_InfoDescription" type="Label" parent="MarginContainer_Description"]
 unique_name_in_owner = true
@@ -64,10 +73,15 @@ text = "Use this space to describe yourself in a few words."
 label_settings = SubResource("LabelSettings_p128h")
 autowrap_mode = 2
 
+[node name="HSeparator" type="HSeparator" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 40
+theme_override_styles/separator = SubResource("StyleBoxEmpty_w128x")
+
 [node name="MarginContainer_DataAbout" type="MarginContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/margin_top = 40
 
 [node name="GridContainer_About" type="GridContainer" parent="MarginContainer_DataAbout"]
 unique_name_in_owner = true

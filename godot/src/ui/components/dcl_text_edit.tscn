@@ -85,4 +85,3 @@ label_settings = SubResource("LabelSettings_nhry5")
 horizontal_alignment = 2
 
 [connection signal="text_changed" from="TextEditContainer/TextEdit" to="." method="_on_text_edit_text_changed"]
-[connection signal="pressed" from="TextEditContainer/ClearButton" to="." method="_on_clear_button_pressed"]

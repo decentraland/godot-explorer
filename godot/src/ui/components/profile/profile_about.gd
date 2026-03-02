@@ -28,6 +28,7 @@ var _description_truncated: bool = false
 @onready var about_data_profession: AboutData = %AboutData_Profession
 @onready var about_data_real_name: AboutData = %AboutData_RealName
 @onready var about_data_hobby: AboutData = %AboutData_Hobby
+@onready var separator_description_data: HSeparator = %HSeparator
 @onready var margin_container_see_more: MarginContainer = %MarginContainer_SeeMore
 @onready var underlined_button_see_more: UnderlinedButton = %UnderlinedButton_SeeMore
 
@@ -113,6 +114,7 @@ func _set_portrait_view() -> void:
 			_expand_description()
 			margin_container_data_about.show()
 			_show_all_about_data()
+	_update_separator()
 
 
 func _set_compact_view() -> void:
@@ -140,6 +142,7 @@ func _set_compact_view() -> void:
 			margin_container_data_about.hide()
 			margin_container_see_more.show()
 			underlined_button_see_more.underlined_text = "SEE MORE"
+	_update_separator()
 
 
 func _set_expand_view() -> void:
@@ -156,6 +159,13 @@ func _set_expand_view() -> void:
 			margin_container_data_about.show()
 			_show_all_about_data()
 			underlined_button_see_more.underlined_text = "SEE LESS"
+	_update_separator()
+
+
+func _update_separator() -> void:
+	separator_description_data.visible = (
+		margin_container_description.visible and margin_container_data_about.visible
+	)
 
 
 func _compact_description() -> void:
