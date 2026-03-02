@@ -116,5 +116,3 @@ func _on_stop_emote() -> void:
 	if _avatar_preview == null:
 		return
 	_avatar_preview.avatar.emote_controller.stop_emote()
-
-
