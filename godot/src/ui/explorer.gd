@@ -54,7 +54,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
 @onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
-@onready var control_safe_bottom_area: Control = %Control_SafeBottomArea
 @onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
 @onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
 @onready var notifications: Control = %Notifications
