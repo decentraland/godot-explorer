@@ -1,6 +1,5 @@
 extends VBoxContainer
 
-signal link_clicked(url: String)
 signal emote_pressed(urn: String)
 signal stop_emote
 signal edit_profile_pressed
@@ -24,7 +23,6 @@ var _address: String = ""
 
 func _ready() -> void:
 	call_deferred("_set_about_portrait_mode")
-	profile_links.link_clicked.connect(func(url): link_clicked.emit(url))
 	profile_equipped.emote_pressed.connect(func(urn): emote_pressed.emit(urn))
 	profile_equipped.stop_emote.connect(func(): stop_emote.emit())
 	button_copy_name.pressed.connect(_copy_name_and_tag)

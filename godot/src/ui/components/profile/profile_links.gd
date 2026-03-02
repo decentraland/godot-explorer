@@ -1,8 +1,6 @@
 @tool
 extends VBoxContainer
 
-signal link_clicked(url: String)
-
 const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
 
 @onready var h_flow_container_links: HFlowContainer = %HFlowContainer_Links
@@ -29,7 +27,6 @@ func refresh(profile: DclUserProfile) -> void:
 func _instantiate_link_button(title: String, url: String) -> void:
 	var new_link_button = PROFILE_LINK_BUTTON.instantiate()
 	h_flow_container_links.add_child(new_link_button)
-	new_link_button.try_open_link.connect(func(link_url): link_clicked.emit(link_url))
 	new_link_button.text = title
 	new_link_button.url = url
 	new_link_button.emit_signal("change_editing", false)

@@ -16,7 +16,6 @@ var _opened_from_landscape: bool = false
 func _ready() -> void:
 	var content = draggable_bottom_sheet.get_content_instance()
 	if content:
-		content.link_clicked.connect(_on_link_clicked)
 		content.emote_pressed.connect(_on_emote_pressed)
 		content.stop_emote.connect(_on_stop_emote)
 		content.edit_profile_pressed.connect(show_editor)
@@ -119,5 +118,3 @@ func _on_stop_emote() -> void:
 	_avatar_preview.avatar.emote_controller.stop_emote()
 
 
-func _on_link_clicked(url: String) -> void:
-	OS.shell_open(url)

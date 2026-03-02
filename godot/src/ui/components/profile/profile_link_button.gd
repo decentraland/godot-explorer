@@ -3,7 +3,6 @@ class_name ProfileLinkButton
 extends Button
 
 signal change_editing(editing: bool)
-signal try_open_link(url: String)
 signal delete_link
 
 const EDITING_MARGIN_RIGHT = 60
@@ -47,4 +46,4 @@ func _on_pressed() -> void:
 		queue_free()
 		emit_signal("delete_link")
 	else:
-		emit_signal("try_open_link", url)
+		OS.shell_open(url)
