@@ -363,7 +363,7 @@ custom_minimum_size = Vector2(0, 51)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 12
 
 [node name="Label_Nickname" type="Label" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -377,7 +377,12 @@ theme_override_font_sizes/font_size = 27
 text = "Namemaxcharacte"
 label_settings = SubResource("LabelSettings_awuqu")
 
-[node name="Label_Tag" type="Label" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
+[node name="MarginContainer_Tag" type="MarginContainer" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 6
+
+[node name="Label_Tag" type="Label" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer/MarginContainer_Tag"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -391,11 +396,7 @@ text = "#1234"
 label_settings = SubResource("LabelSettings_pa1ft")
 vertical_alignment = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = 5
-
-[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer/MarginContainer"]
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
@@ -404,9 +405,14 @@ texture = ExtResource("8_wxsqs")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Button_EditProfile" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer" instance=ExtResource("12_7xla3")]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3"]
+custom_minimum_size = Vector2(84, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 2
+
+[node name="Button_EditProfile" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(220, 60)
 layout_mode = 2
 size_flags_horizontal = 1
@@ -415,12 +421,6 @@ theme_override_font_sizes/font_size = 20
 custom_icon = ExtResource("9_ybu4s")
 custom_icon_pressed = ExtResource("9_ybu4s")
 custom_text = "EDIT PROFILE"
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3"]
-custom_minimum_size = Vector2(84, 0)
-layout_mode = 2
-theme_override_constants/separation = 16
-alignment = 2
 
 [node name="Button_Friend" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true

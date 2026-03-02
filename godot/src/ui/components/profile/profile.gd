@@ -51,9 +51,11 @@ var _deploy_timeout_timer: Timer
 @onready var profile_header: VBoxContainer = %ProfileHeader
 @onready var control_own_and_landscape: Control = %Control_OwnAndLandscape
 @onready var control_own_and_landscape_menu: VBoxContainer = %Control_OwnAndLandscapeMenu
+@onready var margin_container_tag: MarginContainer = %MarginContainer_Tag
 
 
 func _ready() -> void:
+	call_deferred("_set_about_compact_mode")
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	button_menu.button_pressed = false
@@ -140,10 +142,10 @@ func _update_elements_visibility() -> void:
 		if current_profile.has_claimed_name():
 			texture_rect_claimed_checkmark.show()
 			label_tag.text = ""
-			label_tag.hide()
+			margin_container_tag.hide()
 		else:
 			texture_rect_claimed_checkmark.hide()
-			label_tag.show()
+			margin_container_tag.show()
 			label_tag.text = "#" + address.substr(address.length() - 4, 4)
 
 
@@ -232,6 +234,10 @@ func close() -> void:
 	_disconnect_friendship_signals()
 	if closable:
 		close_profile.emit()
+
+
+func _set_about_compact_mode() -> void:
+	profile_about.is_portrait = false
 
 
 func _refresh_name_and_address() -> void:

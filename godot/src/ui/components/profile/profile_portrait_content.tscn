@@ -196,6 +196,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
 [node name="ProfileAbout" parent="MarginContainer/VBoxContainer" instance=ExtResource("2_about")]
 unique_name_in_owner = true
 layout_mode = 2
+is_portrait = true
 
 [node name="HSeparator3" type="HSeparator" parent="."]
 unique_name_in_owner = true

@@ -33,7 +33,6 @@ offset_bottom = 458.0
 size_flags_vertical = 0
 mouse_filter = 2
 script = ExtResource("1_about")
-is_portrait = true
 
 [node name="Label" type="Label" parent="."]
 layout_mode = 2
@@ -76,7 +75,7 @@ layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/h_separation = 32
 theme_override_constants/v_separation = 24
-columns = 2
+columns = 3
 
 [node name="AboutData_Country" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
 unique_name_in_owner = true

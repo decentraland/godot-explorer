@@ -23,6 +23,7 @@ var _address: String = ""
 
 
 func _ready() -> void:
+	call_deferred("_set_about_portrait_mode")
 	profile_links.link_clicked.connect(func(url): link_clicked.emit(url))
 	profile_equipped.emote_pressed.connect(func(urn): emote_pressed.emit(urn))
 	profile_equipped.stop_emote.connect(func(): stop_emote.emit())
@@ -56,6 +57,10 @@ func _refresh_name_and_address(profile: DclUserProfile) -> void:
 		texture_rect_claimed_checkmark.hide()
 		margin_container_tag.show()
 		label_tag.text = "#" + _address.substr(_address.length() - 4, 4)
+
+
+func _set_about_portrait_mode() -> void:
+	profile_about.is_portrait = true
 
 
 func _copy_name_and_tag() -> void:
