@@ -2258,11 +2258,7 @@ impl ContentProvider {
             let future = async move {
                 let result = ctx_clone
                     .resource_provider
-                    .fetch_resource_low_priority(
-                        asset_url,
-                        hash_dependency_zip.clone(),
-                        absolute_file_path,
-                    )
+                    .fetch_resource(asset_url, hash_dependency_zip.clone(), absolute_file_path)
                     .await;
 
                 match &result {
