@@ -1170,12 +1170,6 @@ impl CommunicationManager {
             return;
         }
 
-        // Don't reconnect during loading — release_comms will handle it
-        if self.comms_on_hold {
-            tracing::info!("Realm changed while comms on hold, deferring reconnection");
-            return;
-        }
-
         self.clean();
 
         let comms = self._internal_get_comms_from_realm();
@@ -1208,6 +1202,14 @@ impl CommunicationManager {
         }
 
         let comms_fixed_adapter_str = comms_fixed_adapter.unwrap().to_string();
+
+        // If loading, save the adapter for reconnection after loading finishes
+        if self.comms_on_hold {
+            self.saved_adapter_for_resume = comms_fixed_adapter_str.to_godot();
+            tracing::info!("Realm changed while comms on hold, saved adapter for resume");
+            return;
+        }
+
         self.change_adapter(comms_fixed_adapter_str.to_godot());
     }
 
