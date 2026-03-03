@@ -8,7 +8,7 @@ const MIN_CAMERA_Y = -0.05
 const MAX_CAMERA_Y = 0.05
 
 const DEFAULT_ROTATION = Vector3(-5, 180, 0)
-const BODY_CAMERA_POSITION = Vector3(0, 1.15, -3.0)
+const BODY_CAMERA_POSITION = Vector3(0, 1.3, -3.0)
 const BODY_CAMERA_POSITION_WITH_PLATFORM = Vector3(0, 2.15, -3.3)
 const HEAD_CAMERA_POSITION = Vector3(0, 1.8, -1.15)
 
@@ -74,7 +74,7 @@ func focus_camera_on(type):
 	match type:
 		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
 			tween.tween_property(camera_3d, "position", HEAD_CAMERA_POSITION, 0.5)
-			tween.set_parallel().tween_property(camera_3d, "size", 1.0, 0.5)
+			tween.set_parallel().tween_property(camera_3d, "size", 1.3, 0.5)
 			on_head = true
 		_:
 			tween.tween_property(camera_3d, "position", get_body_camera_position(), 0.5)

@@ -57,6 +57,7 @@ var _avatar_update_retries: int = 0
 @onready var filter_indicator := %FilterIndicator
 @onready var subcategories_container := %SubcategoriesContainer
 @onready var maincategories_container := %MainCategoriesContainer
+@onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
 
 
 # gdlint:ignore = async-function-name
@@ -468,9 +469,10 @@ func press_button_emotes() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
-		if event.pressed:
+		if !event.pressed and filter_menu.visible:
 			if not filter_menu.get_global_rect().has_point(event.position):
-				%CheckBox_OnlyCollectibles.set_pressed(false)
+				if not filters_menu_checkbox.get_global_rect().has_point(event.position):
+					filters_menu_checkbox.set_pressed(false)
 
 
 func _on_check_box_only_collectibles_toggled(toggled_on: bool) -> void:

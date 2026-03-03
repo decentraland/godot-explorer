@@ -295,6 +295,8 @@ corner_radius_top_left = 100
 corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
+expand_margin_left = 4.0
+expand_margin_right = 4.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mcvo5"]
 bg_color = Color(0.960784, 0.152941, 0.345098, 1)
@@ -385,10 +387,9 @@ expand_margin_right = 7.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_s5chg"]
 resource_name = "Normal_WCB"
-content_margin_bottom = 9.0
 bg_color = Color(0.60038817, 0.60038817, 0.60038817, 1)
 draw_center = false
-border_width_bottom = 6
+border_width_bottom = 8
 border_color = Color(0.8001019, 0.8001019, 0.8001019, 0)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p3sh4"]
@@ -396,8 +397,9 @@ resource_name = "Selected_WCB"
 content_margin_bottom = 9.0
 bg_color = Color(0.60038817, 0.60038817, 0.60038817, 1)
 draw_center = false
-border_width_bottom = 6
+border_width_bottom = 8
 border_color = Color(1, 0.1764706, 0.33333334, 1)
+expand_margin_bottom = 3.0
 
 [resource]
 AcceptDialog/styles/panel = ExtResource("1_6dlaa")
@@ -785,6 +787,7 @@ SubcategoryButton/colors/font_color = Color(1, 1, 1, 0.70000005)
 SubcategoryButton/colors/font_hover_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
 SubcategoryButton/colors/font_hover_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
 SubcategoryButton/colors/font_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SubcategoryButton/font_sizes/font_size = 24
 SubcategoryButton/fonts/font = ExtResource("52_kypl7")
 SubcategoryButton/styles/hover = SubResource("StyleBoxFlat_x5msw")
 SubcategoryButton/styles/hover_pressed = SubResource("StyleBoxFlat_x5msw")
@@ -883,6 +886,7 @@ WearableButton/styles/normal_mirrored = ExtResource("43_xl2gf")
 WearableButton/styles/pressed = ExtResource("44_xl2gf")
 WearableCategoryBackpack/base_type = &"Button"
 WearableCategoryBackpack/colors/font_color = Color(0.8117647, 0.8039216, 0.83137256, 1)
+WearableCategoryBackpack/font_sizes/font_size = 28
 WearableCategoryBackpack/styles/hover = SubResource("StyleBoxFlat_s5chg")
 WearableCategoryBackpack/styles/hover_pressed = SubResource("StyleBoxFlat_p3sh4")
 WearableCategoryBackpack/styles/normal = SubResource("StyleBoxFlat_s5chg")
