@@ -1746,7 +1746,11 @@ impl CommunicationManager {
         );
 
         // Main room / archipelago status
-        let main_connected = self.main_room.is_some();
+        let main_connected = self.main_room.is_some()
+            || matches!(
+                &self.current_connection,
+                CommsConnection::Archipelago(_) | CommsConnection::Connected(_)
+            );
         dict.set("main_connected".to_variant(), main_connected.to_variant());
 
         // Scene room status
