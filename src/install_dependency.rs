@@ -30,7 +30,7 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-21650527315.commit-b658867.tgz");
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-22578236808.commit-b829b38.tgz");
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
     match PROTOCOL_FIXED_VERSION_URL {
