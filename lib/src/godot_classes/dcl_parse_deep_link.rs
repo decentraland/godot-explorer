@@ -44,6 +44,10 @@ pub struct DclParseDeepLink {
     /// Enable LiveKit debug panel from deep link (livekit_debug=true)
     #[var]
     livekit_debug: bool,
+
+    /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
+    #[var]
+    path: GString,
 }
 
 #[godot_api]
@@ -62,6 +66,7 @@ impl IRefCounted for DclParseDeepLink {
             dclenv: GString::new(),
             saved_profile: GString::new(),
             livekit_debug: false,
+            path: GString::new(),
         }
     }
 }
@@ -81,6 +86,7 @@ impl DclParseDeepLink {
             is_walletconnect_callback: false,
             saved_profile: GString::new(),
             livekit_debug: false,
+            path: GString::new(),
         };
 
         if url_str.is_empty() {
@@ -96,27 +102,41 @@ impl DclParseDeepLink {
             }
         };
 
-        // Handle both decentraland:// scheme and https://mobile.dclexplorer.com URLs
-        // For https URLs from mobile.dclexplorer.com, convert to decentraland:// format
+        // Handle decentraland:// scheme and https URLs from known hosts
+        // Known hosts: mobile.dclexplorer.com, decentraland.org, decentraland.zone
         let url = if url.scheme() == "https" || url.scheme() == "http" {
             if let Some(host) = url.host_str() {
-                if host == "mobile.dclexplorer.com" {
-                    // Convert https://mobile.dclexplorer.com/open?params to decentraland://open?params
-                    let path = url.path();
-                    let query = url.query().map(|q| format!("?{}", q)).unwrap_or_default();
-                    let decentraland_url = format!("decentraland:/{}{}", path, query);
-                    match Url::parse(&decentraland_url) {
-                        Ok(converted) => converted,
-                        Err(_) => {
-                            godot_error!(
-                                "Failed to convert URL to decentraland scheme - {url_str}"
-                            );
-                            return Gd::from_object(return_object);
+                match host {
+                    "mobile.dclexplorer.com" | "decentraland.org" | "decentraland.zone" => {
+                        // Infer dclenv from domain when not explicitly set in query params
+                        if host == "decentraland.zone"
+                            && !url.query_pairs().any(|(k, _)| k == "dclenv")
+                        {
+                            return_object.dclenv = GString::from("zone");
+                        }
+
+                        // Capture the URL path before scheme conversion (the conversion
+                        // turns the path into the host of the decentraland:// URL,
+                        // losing the original path information).
+                        let path = url.path();
+                        return_object.path = GString::from(path);
+
+                        let query = url.query().map(|q| format!("?{}", q)).unwrap_or_default();
+                        let decentraland_url = format!("decentraland:/{}{}", path, query);
+                        match Url::parse(&decentraland_url) {
+                            Ok(converted) => converted,
+                            Err(_) => {
+                                godot_error!(
+                                    "Failed to convert URL to decentraland scheme - {url_str}"
+                                );
+                                return Gd::from_object(return_object);
+                            }
                         }
                     }
-                } else {
-                    godot_error!("Invalid host: expected 'mobile.dclexplorer.com' - {url_str}");
-                    return Gd::from_object(return_object);
+                    _ => {
+                        godot_error!("Unknown host: {host} - {url_str}");
+                        return Gd::from_object(return_object);
+                    }
                 }
             } else {
                 godot_error!("No host in URL - {url_str}");
@@ -135,6 +155,15 @@ impl DclParseDeepLink {
             if host == "walletconnect" {
                 return_object.is_walletconnect_callback = true;
                 return Gd::from_object(return_object);
+            }
+        }
+
+        // For native decentraland:// URLs (e.g., decentraland://jump, decentraland://events?id=X),
+        // the route name ends up in the host field. Map it to the path field so that
+        // GDScript routing logic can use a single `path` field for both URL formats.
+        if return_object.path.is_empty() {
+            if let Some(host) = url.host_str() {
+                return_object.path = GString::from(&format!("/{}", host));
             }
         }
 
