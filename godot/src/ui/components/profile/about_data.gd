@@ -21,8 +21,9 @@ func _ready():
 
 
 func set_value(text: String) -> void:
-	visible = not text.is_empty()
-	%Label_Value.text = text
+	var stripped := text.strip_edges()
+	visible = not stripped.is_empty()
+	%Label_Value.text = stripped
 
 
 func has_value() -> bool:
