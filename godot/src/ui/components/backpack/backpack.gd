@@ -43,7 +43,7 @@ var _avatar_update_retries: int = 0
 @onready var control_no_items = %Control_NoItems
 @onready var backpack_loading = %TextureProgressBar_BackpackLoading
 @onready var container_backpack = %HBoxContainer_Backpack
-@onready var button_back_to_explorer: Button = %Button_BackToExplorer
+@onready var button_back_to_explorer: HBoxContainer = %HBoxContainer_Title
 
 @onready var wearable_editor = %WearableEditor
 @onready var emote_editor = %EmoteEditor
