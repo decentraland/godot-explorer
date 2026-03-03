@@ -1407,6 +1407,7 @@ impl CommunicationManager {
         self.current_connection = CommsConnection::None;
         self.current_connection_str = GString::default();
         self.archipelago_profile_announced = false;
+        self.scene_room_on_hold = false;
     }
 
     /// Defer scene room creation while a scene is loading.
@@ -1439,6 +1440,10 @@ impl CommunicationManager {
         }
         self.scene_room_on_hold = false;
         tracing::info!("Scene room released (loading done)");
+
+        // Discard stale connection requests that queued during the hold
+        #[cfg(feature = "use_livekit")]
+        while self.scene_room_connection_receiver.try_recv().is_ok() {}
 
         // Connect the scene room that was deferred during loading.
         // Use reconnect_scene_room directly — _on_change_scene_id would
@@ -1734,8 +1739,18 @@ impl CommunicationManager {
             "adapter".to_variant(),
             self.current_connection_str.to_variant(),
         );
+
+        // Main room / archipelago status
+        let main_connected = self.main_room.is_some();
+        dict.set("main_connected".to_variant(), main_connected.to_variant());
+
+        // Scene room status
         let scene_room_id = self.current_scene_id.clone().unwrap_or_default();
         dict.set("scene_room".to_variant(), scene_room_id.to_variant());
+        dict.set(
+            "scene_room_on_hold".to_variant(),
+            self.scene_room_on_hold.to_variant(),
+        );
         #[cfg(feature = "use_livekit")]
         {
             let scene_connected = self.scene_room.is_some();
