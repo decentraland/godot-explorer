@@ -169,6 +169,10 @@ func _on_clear_button_pressed() -> void:
 
 
 func _on_text_edit_text_changed() -> void:
+	if text_edit.text.contains("\n"):
+		text_edit.text = text_edit.text.replace("\n", "")
+		text_edit.set_caret_column(text_edit.text.length())
+		text_edit.release_focus()
 	if has_max_length and text_edit.text.length() > max_length:
 		text_edit.text = text_edit.text.left(max_length)
 		text_edit.set_caret_column(text_edit.text.length())
