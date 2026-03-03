@@ -744,10 +744,9 @@ fn main() -> Result<(), anyhow::Error> {
         ("update-libgodot-android", sm) => {
             android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
-        ("update-docker-snapshots", sm) => update_snapshots::update_docker_snapshots(
-            sm.value_of("run-id"),
-            sm.value_of("branch"),
-        ),
+        ("update-docker-snapshots", sm) => {
+            update_snapshots::update_docker_snapshots(sm.value_of("run-id"), sm.value_of("branch"))
+        }
         ("update-coverage-snapshots", sm) => update_snapshots::update_coverage_snapshots(
             sm.value_of("run-id"),
             sm.value_of("branch"),
