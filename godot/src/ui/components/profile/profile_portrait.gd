@@ -29,6 +29,7 @@ func _on_visibility_changed() -> void:
 		hide_editor()
 		_show_avatar()
 		_refresh_content()
+		draggable_bottom_sheet.reset_to_half()
 	else:
 		hide_editor()
 		_free_avatar()
@@ -52,6 +53,7 @@ func _on_close_editor(saved: bool = false) -> void:
 	if saved:
 		Global.player_identity.set_profile(Global.player_identity.get_mutable_profile())
 		_refresh_content_from_mutable()
+	draggable_bottom_sheet.reset_to_half()
 	if _opened_from_landscape:
 		_opened_from_landscape = false
 		Global.set_orientation_landscape()

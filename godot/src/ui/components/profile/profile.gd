@@ -174,6 +174,7 @@ func _unset_avatar_loading(current: int):
 
 
 func async_show_profile(profile: DclUserProfile) -> void:
+	scroll_container.scroll_vertical = 0
 	_hide_all_social_buttons()
 	profile_about.hide()
 	current_profile = profile
