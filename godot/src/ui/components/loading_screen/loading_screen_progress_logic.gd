@@ -24,7 +24,7 @@ func enable_loading_screen():
 	Global.content_provider.set_max_low_priority_downloads(2)
 
 	# Defer scene room connection until loading finishes
-	Global.comms.hold_scene_room()
+	Global.comms.hold_comms()
 
 	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
@@ -46,7 +46,7 @@ func _on_loading_started(_session_id: int, _expected_count: int):
 	Global.content_provider.set_max_low_priority_downloads(2)
 
 	# Defer scene room connection until loading finishes
-	Global.comms.hold_scene_room()
+	Global.comms.hold_comms()
 
 	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
@@ -88,7 +88,7 @@ func _hide_loading_screen():
 	Global.content_provider.set_max_low_priority_downloads(12)
 
 	# Connect the scene room now that loading is done
-	Global.comms.release_scene_room()
+	Global.comms.release_comms()
 
 	# Restore voice chat and scene volume
 	AudioSettings.apply_scene_volume_settings()

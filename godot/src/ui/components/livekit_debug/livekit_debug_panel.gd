@@ -23,16 +23,22 @@ func _on_timer_timeout():
 	var main_connected: bool = info.get("main_connected", false)
 	var scene_room: String = info.get("scene_room", "")
 	var scene_connected: bool = info.get("scene_connected", false)
-	var scene_on_hold: bool = info.get("scene_room_on_hold", false)
+	var on_hold: bool = info.get("comms_on_hold", false)
 
 	var text := "[b]LiveKit Debug[/b]\n"
 	text += "Adapter: " + adapter + "\n"
 
-	var main_label := "CONNECTED" if main_connected else "DISCONNECTED"
-	text += ("Archipelago: [color=%s]%s[/color]\n" % [_status_color(main_connected), main_label])
+	var main_label := ""
+	if on_hold:
+		main_label = "[color=yellow]PAUSED[/color]"
+	elif main_connected:
+		main_label = "[color=green]CONNECTED[/color]"
+	else:
+		main_label = "[color=red]DISCONNECTED[/color]"
+	text += "Archipelago: " + main_label + "\n"
 
 	var scene_label := ""
-	if scene_on_hold:
+	if on_hold:
 		scene_label = "[color=yellow]PAUSED[/color]"
 	elif scene_connected:
 		scene_label = "[color=green]CONNECTED[/color]"
