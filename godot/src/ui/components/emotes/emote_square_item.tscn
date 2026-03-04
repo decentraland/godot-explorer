@@ -1,10 +1,12 @@
-[gd_scene load_steps=7 format=3 uid="uid://blc0mna12dsxo"]
+[gd_scene load_steps=9 format=3 uid="uid://blc0mna12dsxo"]
 
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="1_hlkld"]
 [ext_resource type="Texture2D" uid="uid://drpjhk4w1jscd" path="res://assets/ui/CommonThumbnail.png" id="2_k7hq0"]
 [ext_resource type="Texture2D" uid="uid://cj7jhsid3p00o" path="res://src/ui/components/emote_editor/emote_pressed.png" id="2_oumy4"]
 [ext_resource type="Texture2D" uid="uid://tsgv1rfn02iw" path="res://src/ui/components/emote_editor/emote_selected.png" id="3_7fnr5"]
 [ext_resource type="Texture2D" uid="uid://oqs81qmhfows" path="res://assets/ui/backpack/Equiped.svg" id="3_oumy4"]
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="6_bfs1b"]
+[ext_resource type="Texture2D" uid="uid://26cu08uuhtoy" path="res://assets/ui/ItemsSkeleton.png" id="7_lu2c6"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7fnr5"]
 bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8)
@@ -115,5 +117,15 @@ mouse_filter = 2
 texture = ExtResource("3_oumy4")
 expand_mode = 1
 stretch_mode = 4
+
+[node name="TextureRect_Skeleton" type="TextureRect" parent="Control_Inner"]
+unique_name_in_owner = true
+material = ExtResource("6_bfs1b")
+layout_mode = 0
+size_flags_stretch_ratio = 0.0
+mouse_filter = 2
+texture = ExtResource("7_lu2c6")
+expand_mode = 3
+stretch_mode = 5
 
 [connection signal="item_rect_changed" from="." to="." method="_on_item_rect_changed"]

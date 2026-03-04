@@ -29,7 +29,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Selected" type="TextureRect" parent="Control_Inner"]
+[node name="Equiped" type="TextureRect" parent="Control_Inner"]
 unique_name_in_owner = true
 visible = false
 modulate = Color(1, 0.501961, 0, 1)
@@ -115,7 +115,14 @@ grow_vertical = 2
 pivot_offset = Vector2(40, 40)
 expand_mode = 1
 
-[node name="TextureRect_Background" type="TextureRect" parent="."]
+[node name="ControlsWithoutFunction" type="Control" parent="."]
+editor_description = "This nodes are only to satisfy the script. And don't have any function here."
+visible = false
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TextureRect_Background" type="TextureRect" parent="ControlsWithoutFunction"]
 unique_name_in_owner = true
 visible = false
 texture_filter = 2
@@ -129,7 +136,7 @@ pivot_offset = Vector2(32, 32)
 texture = ExtResource("3_ap2cx")
 expand_mode = 1
 
-[node name="TextureRect_Equiped" type="TextureRect" parent="."]
+[node name="TextureRect_Equiped" type="TextureRect" parent="ControlsWithoutFunction"]
 unique_name_in_owner = true
 visible = false
 texture_filter = 2

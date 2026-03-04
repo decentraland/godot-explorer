@@ -25,13 +25,15 @@ var was_pressed = false
 @onready var texture_rect_category = %TextureRect_Category
 @onready var texture_rect_background = %TextureRect_Background
 @onready var texture_rect_preview = %TextureRect_Preview
-@onready var texture_progress_bar_loading = %TextureProgressBar_Loading
+@onready var texture_progress_bar_loading = %TextureRect_Skeleton
 
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	panel_container_external_orig_rect = panel_container_external.get_rect()
 	panel_container_external.hide()
+	texture_rect_background.hide()
+	texture_progress_bar_loading.show()
 
 
 func async_set_wearable(wearable: DclItemEntityDefinition):
@@ -74,6 +76,7 @@ func async_set_wearable(wearable: DclItemEntityDefinition):
 			texture_rect_preview.texture = res.texture
 			texture_rect_preview.size = current_size
 
+	texture_rect_background.show()
 	texture_progress_bar_loading.hide()
 
 

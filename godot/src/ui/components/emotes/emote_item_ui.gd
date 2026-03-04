@@ -8,13 +8,12 @@ signal select_emote(selected: bool, emote_urn: String)
 @export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
 		rarity = new_value
-		if is_node_ready():
-			set_rarity_background()
+		_is_dirty = true
 
 @export var picture: Texture2D = null:
 	set(new_value):
-		%TextureRect_Picture.texture = new_value
 		picture = new_value
+		_is_dirty = true
 
 # The default emotes are not urns
 @export var emote_urn: String = "wave"
@@ -33,12 +32,15 @@ var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 var empty_thumbnail = preload("res://assets/ui/EmptyThumbnail.png")
 var inside = false
 var _is_equipped: bool = false
+var _is_dirty := false
 
-@onready var control_inner = %Control_Inner
-@onready var texture_rect_background = %TextureRect_Background
-@onready var texture_rect_selected = %Pressed
-@onready var texture_rect_equiped = %Equiped
-@onready var texture_rect_equiped_mark = %TextureRect_Equiped
+@onready var control_inner := %Control_Inner
+@onready var texture_rect_background := %TextureRect_Background
+@onready var texture_rect_selected := %Pressed
+@onready var texture_rect_equiped := %Equiped
+@onready var texture_rect_equiped_mark := %TextureRect_Equiped
+@onready var texture_rect_skeleton: TextureRect = %TextureRect_Skeleton
+@onready var texture_rect_picture: TextureRect = %TextureRect_Picture
 
 
 func async_load_from_urn(_emote_urn: String, _index: int = -1):
@@ -79,7 +81,17 @@ func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
 		self.picture = res.texture
 
 
+func _process(_delta: float) -> void:
+	if not is_node_ready(): return
+	set_rarity_background()
+	texture_rect_picture.texture = picture
+	texture_rect_skeleton.hide()
+	texture_rect_background.show()
+
+
 func _ready():
+	texture_rect_background.hide()
+	texture_rect_skeleton.show()
 	if not Engine.is_editor_hint():
 		set_meta("attenuated_sound", true)
 		UiSounds.install_audio_recusirve(self)
