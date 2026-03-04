@@ -87,10 +87,6 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 			result = Wearables.Categories.BODY
 		WearableCategoryEnum.HEAD:
 			result = Wearables.Categories.HEAD
-		#WearableCategoryEnum.CHEST:
-		#	result = Wearables.Categories.CHEST
-		#WearableCategoryEnum.LEGS:
-		#	result = Wearables.Categories.LEGS
 		WearableCategoryEnum.HAIR:
 			result = Wearables.Categories.HAIR
 		WearableCategoryEnum.EYEBROWS:
@@ -188,7 +184,7 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 		WearableCategoryEnum.SKIN:
 			text = "Skin"
 		WearableCategoryEnum.BODY_SHAPE:
-			text = "Body Shape"
+			text = "Shape"
 
 		WearableCategoryEnum.FACE:
 			text = "Face"

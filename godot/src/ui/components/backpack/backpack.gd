@@ -30,6 +30,7 @@ var is_loading_profile: bool = false
 var _avatar_update_retries: int = 0
 
 @onready var color_carrousel = %ColorCarrousel
+@onready var carrousel_separator = %CarrouselSeparator
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
@@ -84,6 +85,7 @@ func _ready():
 	button_back_to_explorer.hide()
 
 	color_carrousel.hide()
+	carrousel_separator.hide()
 	subcategories_container.show()
 	maincategories_container.show()
 
@@ -345,8 +347,10 @@ func _on_wearable_filter_button_filter_type(type):
 
 	if should_hide:
 		color_carrousel.hide()
+		carrousel_separator.hide()
 	else:
 		color_carrousel.show()
+		carrousel_separator.hide()
 
 
 func _on_wearable_equip(wearable_id: String):
