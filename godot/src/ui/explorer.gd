@@ -124,6 +124,7 @@ func _ready():
 
 	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
+	friends_panel.reload_requested.connect(_async_reload_friends)
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
@@ -390,6 +391,12 @@ func _async_on_subscription_dropped() -> void:
 		return
 	print("[Explorer] Subscription dropped - reconnecting...")
 	await get_tree().create_timer(2.0).timeout
+	_async_subscribe_to_friendship_updates()
+	_async_subscribe_to_connectivity_updates()
+
+
+func _async_reload_friends() -> void:
+	print("[Explorer] Manual friends reload requested - re-subscribing...")
 	_async_subscribe_to_friendship_updates()
 	_async_subscribe_to_connectivity_updates()
 
