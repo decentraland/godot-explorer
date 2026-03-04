@@ -7,6 +7,7 @@ signal dcl_text_edit_changed
 const LINE_EDIT = preload("res://assets/themes/line_edit.tres")
 const LINE_EDIT_FOCUSED = preload("res://assets/themes/line_edit_focused.tres")
 const LINE_EDIT_ERROR = preload("res://assets/themes/line_edit_error.tres")
+const LONG_PRESS_DURATION := 0.5
 
 @export var place_holder: String = "Type text here..."
 @export var has_max_length: bool = true
@@ -19,8 +20,6 @@ const LINE_EDIT_ERROR = preload("res://assets/themes/line_edit_error.tres")
 @export var validate_date: bool = false
 @export var validate_no_symbols: bool = false
 @export var validate_no_edge_spaces: bool = false
-
-const LONG_PRESS_DURATION := 0.5
 
 var length_error: bool = false
 var error: bool = false
@@ -164,11 +163,7 @@ func _on_text_edit_gui_input(event: InputEvent) -> void:
 func _on_long_press() -> void:
 	text_edit.select_all()
 	var menu := text_edit.get_menu()
-	var allowed_ids: Array[int] = [
-		TextEdit.MENU_COPY,
-		TextEdit.MENU_PASTE,
-		TextEdit.MENU_CLEAR
-	]
+	var allowed_ids: Array[int] = [TextEdit.MENU_COPY, TextEdit.MENU_PASTE, TextEdit.MENU_CLEAR]
 	for i in range(menu.item_count - 1, -1, -1):
 		if menu.get_item_id(i) not in allowed_ids:
 			menu.remove_item(i)
