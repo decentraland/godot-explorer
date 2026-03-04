@@ -1,6 +1,6 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://cq1dvbbcpt82c"]
 
-[ext_resource type="Shader" path="res://src/ui/components/button_profile/texture_rect_rounded.gdshader" id="1_shader"]
+[ext_resource type="Shader" uid="uid://bhdykb7qseu40" path="res://src/ui/components/button_profile/texture_rect_rounded.gdshader" id="1_shader"]
 
 [resource]
 shader = ExtResource("1_shader")

@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/upper_body-icon.svg-b1b6503e6c0f7c4ca9d2d5694
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
