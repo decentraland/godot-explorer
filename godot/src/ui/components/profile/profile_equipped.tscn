@@ -1,0 +1,57 @@
+[gd_scene load_steps=5 format=3 uid="uid://b2ojldlluptgu"]
+
+[ext_resource type="Script" uid="uid://p6gqmejlupfp" path="res://src/ui/components/profile/profile_equipped.gd" id="1_equipped"]
+[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="2_5op85"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_font700"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("2_font700")
+font_size = 22
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="ProfileEquipped" type="VBoxContainer"]
+theme_override_constants/separation = 16
+script = ExtResource("1_equipped")
+
+[node name="MarginContainer_Title" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="MarginContainer_Title"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+script = ExtResource("2_5op85")
+
+[node name="Label" type="Label" parent="MarginContainer_Title"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 13
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 24
+text = "equipped"
+label_settings = SubResource("LabelSettings_title")
+uppercase = true
+
+[node name="ScrollContainer_EquippedWearables" type="ScrollContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="MarginContainer_Items" type="MarginContainer" parent="ScrollContainer_EquippedWearables"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_right = 48
+
+[node name="HBoxContainer_EquippedWearables" type="HBoxContainer" parent="ScrollContainer_EquippedWearables/MarginContainer_Items"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Control" type="Control" parent="ScrollContainer_EquippedWearables/MarginContainer_Items/HBoxContainer_EquippedWearables"]
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+script = ExtResource("2_5op85")

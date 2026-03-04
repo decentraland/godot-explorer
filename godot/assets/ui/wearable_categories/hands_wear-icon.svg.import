@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/hands_wear-icon.svg-2389aef688eae314a3c6825a5
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
