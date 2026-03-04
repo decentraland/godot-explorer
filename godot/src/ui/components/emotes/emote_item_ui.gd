@@ -115,6 +115,8 @@ func set_rarity_background() -> void:
 		_:
 			texture_rect_background.texture = base_thumbnail
 
+	if emote_urn == "":
+		texture_rect_background.texture = empty_thumbnail
 
 # Executed with @tool
 func _on_item_rect_changed():
@@ -160,6 +162,6 @@ func set_equipped(equipped: bool) -> void:
 func set_empty() -> void:
 	emote_urn = ""
 	emote_name = ""
-	picture = empty_thumbnail
+	picture = null
 	rarity = Wearables.ItemRarity.COMMON
 	set_rarity_background()
