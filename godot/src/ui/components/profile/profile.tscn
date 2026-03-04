@@ -1,4 +1,4 @@
-[gd_scene load_steps=52 format=3 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=53 format=3 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="Material" uid="uid://bv7vw2bdrp1mm" path="res://src/ui/components/button_profile/texture_rect_rounded_px_material.tres" id="2_odsw2"]
@@ -223,6 +223,17 @@ corner_radius_bottom_left = 10
 font = ExtResource("18_fhbaj")
 font_size = 26
 font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[sub_resource type="DPITexture" id="DPITexture_odsw2"]
+_source = "<svg width=\"50\" height=\"50\" viewBox=\"0 0 50 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
+<path d=\"M36.6363 34.7917H38.1667C41.4804 34.7917 44.1667 32.1054 44.1667 28.7917V11.625C44.1667 8.31129 41.4804 5.625 38.1667 5.625H21C17.6863 5.625 15 8.31129 15 11.625V13.7109\" stroke=\"#FFFFFF\" stroke-width=\"3\" stroke-linejoin=\"round\"/>
+<rect x=\"6.6665\" y=\"13.9583\" width=\"29.1667\" height=\"29.1667\" rx=\"6\" stroke=\"#FFFFFF\" stroke-width=\"5\" stroke-linejoin=\"round\"/>
+</svg>
+"
+base_scale = 2.0
+color_map = {
+Color(1, 1, 1, 1): Color(0.9098039, 0.7254902, 1, 1)
+}
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8iwyo"]
 
@@ -499,6 +510,10 @@ layout_mode = 2
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"SecondaryLittle"
+theme_override_colors/icon_focus_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_ancl8")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_gsgit")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_dd43y")
@@ -521,6 +536,10 @@ layout_mode = 2
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"SecondaryLittle"
+theme_override_colors/icon_focus_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
 theme_override_constants/icon_max_width = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_ancl8")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_gsgit")
@@ -568,7 +587,7 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"SecondaryLittle"
 texture_normal = ExtResource("19_awuqu")
-texture_pressed = ExtResource("19_awuqu")
+texture_pressed = SubResource("DPITexture_odsw2")
 texture_hover = ExtResource("19_awuqu")
 texture_disabled = ExtResource("19_awuqu")
 texture_focused = ExtResource("19_awuqu")
@@ -620,7 +639,6 @@ hide_on_portrait = true
 
 [node name="Menu" type="ColorRect" parent="."]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0)
