@@ -9,6 +9,8 @@
 #ifdef __OBJC__
 @class ASWebAuthenticationSession;
 @class WebKitAuthenticationDelegate;
+@class SafariAuthDelegate;
+@class SFSafariViewController;
 @class CalendarEventDelegate;
 @class UNUserNotificationCenter;
 @class NotificationDatabase;
@@ -16,6 +18,8 @@
 #else
 typedef void ASWebAuthenticationSession;
 typedef void WebKitAuthenticationDelegate;
+typedef void SafariAuthDelegate;
+typedef void SFSafariViewController;
 typedef void CalendarEventDelegate;
 typedef void UNUserNotificationCenter;
 typedef void NotificationDatabase;
@@ -30,8 +34,7 @@ class DclGodotiOS : public Object {
     static DclGodotiOS *instance;
     static void _bind_methods();
 
-    ASWebAuthenticationSession *authSession;
-    WebKitAuthenticationDelegate *authDelegate;
+    SafariAuthDelegate *safariAuthDelegate;
     CalendarEventDelegate *calendarDelegate;
     NotificationDatabase *notificationDatabase;
 
