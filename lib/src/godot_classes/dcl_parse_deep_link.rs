@@ -172,10 +172,10 @@ impl DclParseDeepLink {
                         value.eq_ignore_ascii_case("true") || value == "1";
                 }
                 "dclenv" => {
-                    // Environment parameter - valid values: org, zone, today
-                    let env_lower = value.to_lowercase();
-                    if ["org", "zone", "today"].contains(&env_lower.as_str()) {
-                        return_object.dclenv = GString::from(env_lower.as_str());
+                    // Environment parameter - supports per-group overrides:
+                    // "zone", "auth::zone,org", "auth::zone,comms::today,org"
+                    if crate::env::DclEnvConfig::parse(&value).is_some() {
+                        return_object.dclenv = GString::from(value.as_ref());
                     }
                 }
                 "saved-profile" => {

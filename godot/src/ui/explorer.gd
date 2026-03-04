@@ -511,6 +511,8 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
+		elif command_str == "/scenecrash":
+			Global.scene_runner.debug_force_crash_current_scene()
 		elif command_str == "/godotcrash":
 			OS.crash("User crashed on purpose")
 		elif command_str == "/instantcrash":
