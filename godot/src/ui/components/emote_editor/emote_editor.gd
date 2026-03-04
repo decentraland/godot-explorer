@@ -114,16 +114,10 @@ func _normalize_emote_urn(urn: String) -> String:
 
 
 func _on_emote_editor_item_select_emote(_emote_urn: String, index: int):
-	if is_instance_valid(avatar):
+	if is_instance_valid(avatar) and not _emote_urn.is_empty():
 		avatar.async_play_emote(_emote_urn)
 	current_selected_index = index
-
-	var normalized = _normalize_emote_urn(_emote_urn)
-	for emote_item in all_emote_items:
-		if emote_item is EmoteItemUi:
-			if _normalize_emote_urn(emote_item.emote_urn) == normalized:
-				emote_item.set_pressed(true)
-				break
+	_sync_grid_selection()
 
 
 func _on_emote_item_play_emote(_emote_urn: String):
@@ -180,10 +174,10 @@ func _sync_grid_selection():
 		return
 	var selected_urn = _normalize_emote_urn(_equipped_emote_urns[current_selected_index])
 	if selected_urn.is_empty():
-		# Empty slot — unpress all grid items
+		# Empty slot — unpress the currently pressed grid item (if any)
 		for emote_item in all_emote_items:
-			if emote_item is EmoteItemUi:
-				emote_item.set_pressed_no_signal(false)
+			if emote_item is EmoteItemUi and emote_item.button_pressed:
+				emote_item.set_pressed(false)
 		return
 	for emote_item in all_emote_items:
 		if emote_item is EmoteItemUi:
