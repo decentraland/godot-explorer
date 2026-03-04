@@ -1749,10 +1749,17 @@ impl CommunicationManager {
 
         // Main room / archipelago status
         let main_connected = self.main_room.is_some()
-            || matches!(
-                &self.current_connection,
-                CommsConnection::Archipelago(_) | CommsConnection::Connected(_)
-            );
+            || matches!(&self.current_connection, CommsConnection::Connected(_))
+            || {
+                #[cfg(feature = "use_livekit")]
+                {
+                    matches!(&self.current_connection, CommsConnection::Archipelago(_))
+                }
+                #[cfg(not(feature = "use_livekit"))]
+                {
+                    false
+                }
+            };
         dict.set("main_connected".to_variant(), main_connected.to_variant());
 
         // Scene room status
