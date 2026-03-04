@@ -366,6 +366,7 @@ func _async_subscribe_to_friendship_updates() -> void:
 			_async_subscribe_to_friendship_updates()
 	else:
 		friends_panel.set_streaming_subscription_failed(false)
+		friends_panel.async_initial_friends_load()
 
 
 func _async_subscribe_to_connectivity_updates() -> void:

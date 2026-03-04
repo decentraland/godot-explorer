@@ -140,7 +140,6 @@ func show_panel_on_friends_tab() -> void:
 	if not Global.player_identity.is_guest:
 		v_box_container_friends_tab.show()
 		button_friends.button_pressed = true
-		_async_refresh_friends_data()
 	else:
 		v_box_container_friends_tab.hide()
 		button_nearby.button_pressed = true
@@ -156,7 +155,8 @@ func set_streaming_subscription_failed(failed: bool) -> void:
 	_update_dropdown_visibility()
 
 
-func _async_refresh_friends_data() -> void:
+## Fetches all friend lists from the server (called once at login by explorer.gd).
+func async_initial_friends_load() -> void:
 	_is_loading = true
 	_update_dropdown_visibility()
 	await _async_update_all_lists()
