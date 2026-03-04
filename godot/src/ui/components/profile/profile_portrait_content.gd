@@ -63,7 +63,9 @@ func _set_about_portrait_mode() -> void:
 
 func _copy_name_and_tag() -> void:
 	DisplayServer.clipboard_set(label_nickname.text + label_tag.text)
+	NotificationsManager.show_system_toast("Copied", "Name copied to clipboard")
 
 
 func _copy_address() -> void:
 	DisplayServer.clipboard_set(_address)
+	NotificationsManager.show_system_toast("Copied", "Address copied to clipboard")

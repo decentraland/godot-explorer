@@ -7,6 +7,7 @@ signal dcl_text_edit_changed
 const LINE_EDIT = preload("res://assets/themes/line_edit.tres")
 const LINE_EDIT_FOCUSED = preload("res://assets/themes/line_edit_focused.tres")
 const LINE_EDIT_ERROR = preload("res://assets/themes/line_edit_error.tres")
+const LONG_PRESS_DURATION := 0.5
 
 @export var place_holder: String = "Type text here..."
 @export var has_max_length: bool = true
@@ -26,6 +27,8 @@ var _touched: bool = false
 var _dragging: bool = false
 var _drag_start_y: float = 0.0
 var _drag_start_scroll: float = 0.0
+var _long_press_timer: Timer
+var _long_press_position: Vector2
 
 @onready var label_length: Label = %Label_Length
 @onready var label_error: Label = %Label_Error
@@ -46,6 +49,9 @@ func _ready() -> void:
 	text_edit.get_v_scroll_bar().add_theme_constant_override("minimum_grab_thickness", 0)
 	text_edit.get_v_scroll_bar().custom_minimum_size = Vector2.ZERO
 	text_edit.get_v_scroll_bar().modulate = Color.TRANSPARENT
+	text_edit.get_h_scroll_bar().add_theme_constant_override("minimum_grab_thickness", 0)
+	text_edit.get_h_scroll_bar().custom_minimum_size = Vector2.ZERO
+	text_edit.get_h_scroll_bar().modulate = Color.TRANSPARENT
 	if has_max_length:
 		label_length.show()
 		label_length.text = "0/" + str(max_length)
@@ -53,6 +59,12 @@ func _ready() -> void:
 		label_length.hide()
 	_update_clear_button()
 	_check_error()
+
+	_long_press_timer = Timer.new()
+	_long_press_timer.wait_time = LONG_PRESS_DURATION
+	_long_press_timer.one_shot = true
+	_long_press_timer.timeout.connect(_on_long_press)
+	add_child(_long_press_timer)
 
 
 func _update_length() -> void:
@@ -133,18 +145,44 @@ func _on_text_edit_gui_input(event: InputEvent) -> void:
 			_dragging = false
 			_drag_start_y = event.position.y
 			_drag_start_scroll = text_edit.scroll_vertical
+			_long_press_position = text_edit.get_global_transform() * event.position
+			_long_press_timer.start()
 		else:
 			_dragging = false
+			_long_press_timer.stop()
 	elif event is InputEventScreenDrag:
 		if not _dragging and absf(event.position.y - _drag_start_y) > 8.0:
 			_dragging = true
 			text_edit.deselect()
+			_long_press_timer.stop()
 		if _dragging:
 			var line_height := text_edit.get_line_height()
 			if line_height > 0:
 				var delta_lines: float = (_drag_start_y - event.position.y) / float(line_height)
 				text_edit.scroll_vertical = int(_drag_start_scroll + delta_lines)
 			text_edit.get_viewport().set_input_as_handled()
+
+
+func _on_long_press() -> void:
+	text_edit.select_all()
+	var menu := text_edit.get_menu()
+	var allowed_ids: Array[int] = [TextEdit.MENU_COPY, TextEdit.MENU_PASTE, TextEdit.MENU_CLEAR]
+	for i in range(menu.item_count - 1, -1, -1):
+		if menu.get_item_id(i) not in allowed_ids:
+			menu.remove_item(i)
+	menu.reset_size()
+	var menu_size := menu.size
+	var viewport_size := text_edit.get_viewport().get_visible_rect().size
+	var kb_height := DisplayServer.virtual_keyboard_get_height()
+	var y_factor := viewport_size.y / float(DisplayServer.window_get_size().y)
+	var available_bottom := viewport_size.y - kb_height * y_factor
+	var pos := Vector2i(_long_press_position)
+
+	if pos.y + menu_size.y > int(available_bottom):
+		pos.y = maxi(0, pos.y - menu_size.y)
+
+	menu.position = pos
+	menu.popup()
 
 
 func _on_text_edit_focus_entered() -> void:
@@ -169,6 +207,10 @@ func _on_clear_button_pressed() -> void:
 
 
 func _on_text_edit_text_changed() -> void:
+	if text_edit.text.contains("\n"):
+		text_edit.text = text_edit.text.replace("\n", "")
+		text_edit.set_caret_column(text_edit.text.length())
+		text_edit.release_focus()
 	if has_max_length and text_edit.text.length() > max_length:
 		text_edit.text = text_edit.text.left(max_length)
 		text_edit.set_caret_column(text_edit.text.length())

@@ -174,6 +174,7 @@ func _unset_avatar_loading(current: int):
 
 
 func async_show_profile(profile: DclUserProfile) -> void:
+	scroll_container.scroll_vertical = 0
 	_hide_all_social_buttons()
 	profile_about.hide()
 	current_profile = profile
@@ -257,10 +258,12 @@ func _async_on_change_nick_popup_update_name_on_profile(nickname: String) -> voi
 
 func _copy_name_and_tag() -> void:
 	DisplayServer.clipboard_set(label_nickname.text + label_tag.text)
+	NotificationsManager.show_system_toast("Copied", "Name copied to clipboard")
 
 
 func _copy_address() -> void:
 	DisplayServer.clipboard_set(address)
+	NotificationsManager.show_system_toast("Copied", "Address copied to clipboard")
 
 
 func _on_label_nickname_gui_input(event: InputEvent) -> void:

@@ -65,6 +65,8 @@ func _ready() -> void:
 
 
 func populate(profile: DclUserProfile) -> void:
+	scroll_container.scroll_vertical = 0
+
 	var social_data := SocialItemData.new()
 	social_data.name = profile.get_name()
 	social_data.address = profile.get_ethereum_address()

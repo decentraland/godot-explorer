@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://0icleo1x2y07"]
+[gd_scene load_steps=20 format=3 uid="uid://0icleo1x2y07"]
 
 [ext_resource type="Script" uid="uid://ry6j54iml4ww" path="res://src/ui/components/profile/profile_portrait_content.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_7gsml"]
@@ -24,10 +24,32 @@ font = ExtResource("6_ganaq")
 font_size = 32
 font_color = Color(1, 1, 1, 0.69803923)
 
+[sub_resource type="DPITexture" id="DPITexture_xqjxo"]
+_source = "<svg width=\"50\" height=\"50\" viewBox=\"0 0 50 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
+<path d=\"M36.6363 34.7917H38.1667C41.4804 34.7917 44.1667 32.1054 44.1667 28.7917V11.625C44.1667 8.31129 41.4804 5.625 38.1667 5.625H21C17.6863 5.625 15 8.31129 15 11.625V13.7109\" stroke=\"#FFFFFF\" stroke-width=\"3\" stroke-linejoin=\"round\"/>
+<rect x=\"6.6665\" y=\"13.9583\" width=\"29.1667\" height=\"29.1667\" rx=\"6\" stroke=\"#FFFFFF\" stroke-width=\"5\" stroke-linejoin=\"round\"/>
+</svg>
+"
+base_scale = 2.0
+color_map = {
+Color(1, 1, 1, 1): Color(0.9098039, 0.7254902, 1, 1)
+}
+
 [sub_resource type="LabelSettings" id="LabelSettings_5mqkx"]
 font = ExtResource("5_5mqkx")
 font_size = 30
 font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[sub_resource type="DPITexture" id="DPITexture_5mqkx"]
+_source = "<svg width=\"50\" height=\"50\" viewBox=\"0 0 50 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
+<path d=\"M36.6363 34.7917H38.1667C41.4804 34.7917 44.1667 32.1054 44.1667 28.7917V11.625C44.1667 8.31129 41.4804 5.625 38.1667 5.625H21C17.6863 5.625 15 8.31129 15 11.625V13.7109\" stroke=\"#FFFFFF\" stroke-width=\"3\" stroke-linejoin=\"round\"/>
+<rect x=\"6.6665\" y=\"13.9583\" width=\"29.1667\" height=\"29.1667\" rx=\"6\" stroke=\"#FFFFFF\" stroke-width=\"5\" stroke-linejoin=\"round\"/>
+</svg>
+"
+base_scale = 2.0
+color_map = {
+Color(1, 1, 1, 1): Color(0.9098039, 0.7254902, 1, 1)
+}
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lhp2a"]
 
@@ -125,7 +147,7 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("2_7gsml")
 theme_type_variation = &"SecondaryLittle"
 texture_normal = ExtResource("8_7le3q")
-texture_pressed = ExtResource("8_7le3q")
+texture_pressed = SubResource("DPITexture_xqjxo")
 texture_hover = ExtResource("8_7le3q")
 texture_disabled = ExtResource("8_7le3q")
 texture_focused = ExtResource("8_7le3q")
@@ -164,7 +186,7 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("2_7gsml")
 theme_type_variation = &"SecondaryLittle"
 texture_normal = ExtResource("8_7le3q")
-texture_pressed = ExtResource("8_7le3q")
+texture_pressed = SubResource("DPITexture_5mqkx")
 texture_hover = ExtResource("8_7le3q")
 texture_disabled = ExtResource("8_7le3q")
 texture_focused = ExtResource("8_7le3q")

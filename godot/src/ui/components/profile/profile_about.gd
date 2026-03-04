@@ -30,13 +30,14 @@ var _description_truncated: bool = false
 @onready var about_data_hobby: AboutData = %AboutData_Hobby
 @onready var separator_description_data: HSeparator = %HSeparator
 @onready var margin_container_see_more: MarginContainer = %MarginContainer_SeeMore
-@onready var underlined_button_see_more: UnderlinedButton = %UnderlinedButton_SeeMore
+@onready var button_big_see_more: Button = %Button_BigSeeMore
+@onready var label_see_more: Label = %Label_SeeMore
 
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
-	underlined_button_see_more.toggled.connect(_on_underlined_button_toggled)
+	button_big_see_more.toggled.connect(_on_underlined_button_toggled)
 
 
 func refresh(profile: DclUserProfile) -> void:
@@ -89,7 +90,7 @@ func refresh(profile: DclUserProfile) -> void:
 		grid_container_about.columns = 2
 		_set_portrait_view()
 	else:
-		underlined_button_see_more.set_pressed_no_signal(false)
+		button_big_see_more.set_pressed_no_signal(false)
 		_set_compact_view()
 
 
@@ -127,21 +128,21 @@ func _set_compact_view() -> void:
 			_compact_description()
 			margin_container_data_about.hide()
 			margin_container_see_more.visible = _description_truncated
-			underlined_button_see_more.underlined_text = "SEE MORE"
+			label_see_more.text = "SEE MORE"
 		AboutMode.ABOUT_DATA_ONLY:
 			show()
 			margin_container_description.hide()
 			margin_container_data_about.show()
 			_show_about_data_limited(3)
 			margin_container_see_more.visible = _about_data_count > 3
-			underlined_button_see_more.underlined_text = "SEE MORE"
+			label_see_more.text = "SEE MORE"
 		AboutMode.BOTH:
 			show()
 			margin_container_description.show()
 			_compact_description()
 			margin_container_data_about.hide()
 			margin_container_see_more.show()
-			underlined_button_see_more.underlined_text = "SEE MORE"
+			label_see_more.text = "SEE MORE"
 	_update_separator()
 
 
@@ -149,16 +150,16 @@ func _set_expand_view() -> void:
 	match _about_mode:
 		AboutMode.DESCRIPTION_ONLY:
 			_expand_description()
-			underlined_button_see_more.underlined_text = "SEE LESS"
+			label_see_more.text = "SEE LESS"
 		AboutMode.ABOUT_DATA_ONLY:
 			margin_container_data_about.show()
 			_show_all_about_data()
-			underlined_button_see_more.underlined_text = "SEE LESS"
+			label_see_more.text = "SEE LESS"
 		AboutMode.BOTH:
 			_expand_description()
 			margin_container_data_about.show()
 			_show_all_about_data()
-			underlined_button_see_more.underlined_text = "SEE LESS"
+			label_see_more.text = "SEE LESS"
 	_update_separator()
 
 

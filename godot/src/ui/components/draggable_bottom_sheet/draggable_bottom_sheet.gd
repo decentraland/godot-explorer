@@ -77,6 +77,15 @@ func get_content_instance() -> Node:
 	return _content_instance
 
 
+func reset_to_half() -> void:
+	drag_state = DragState.HALF
+	panel_container_header.hide()
+	_set_card_corner_radius(24, 24)
+	_card_half_position = _get_half_position()
+	scroll_content.scroll_vertical = 0
+	tween_to(_card_half_position)
+
+
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
