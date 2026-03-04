@@ -120,6 +120,7 @@ stretch_mode = 4
 
 [node name="TextureRect_Skeleton" type="TextureRect" parent="Control_Inner"]
 unique_name_in_owner = true
+visible = false
 material = ExtResource("6_bfs1b")
 layout_mode = 0
 size_flags_stretch_ratio = 0.0

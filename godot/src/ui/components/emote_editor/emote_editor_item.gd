@@ -2,7 +2,7 @@ class_name EmoteEditorItem
 extends BaseButton
 
 signal select_emote(emote_urn: String)
-signal clear_emote()
+signal clear_emote
 
 var _emote_urn: String = ""
 
@@ -39,15 +39,15 @@ func _on_toggled(toggled_on):
 		select_emote.emit(_emote_urn)
 
 
-func async_load_from_urn(new_emote_urn: String, index: int):
+func async_load_from_urn(new_emote_urn: String, _index: int):
+	if new_emote_urn.is_empty():
+		emote_square_item.set_empty()
+		return
+
 	if _emote_urn == new_emote_urn:  # No need to reload
 		return
 
 	_emote_urn = new_emote_urn
-
-	if new_emote_urn.is_empty():
-		emote_square_item.set_empty()
-		return
 
 	#texture_rect_wheel.rotation_degrees = (36.0 * index) - 36.0
 	await emote_square_item.async_load_from_urn(new_emote_urn)

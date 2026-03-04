@@ -463,7 +463,9 @@ class Categories:
 		HANDS_WEAR
 	]
 
-	const ALL_EXTRAS_CATEGORIES: PackedStringArray = [HAT, HELMET, TIARA, FACIAL, MASK, EARRING, EYEWEAR]
+	const ALL_EXTRAS_CATEGORIES: PackedStringArray = [
+		HAT, HELMET, TIARA, FACIAL, MASK, EARRING, EYEWEAR
+	]
 	const CHEST_CATEGORIES: PackedStringArray = [UPPER_BODY, HANDS_WEAR]
 
 

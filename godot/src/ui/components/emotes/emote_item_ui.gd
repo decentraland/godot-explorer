@@ -82,11 +82,15 @@ func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
 
 
 func _process(_delta: float) -> void:
-	if not is_node_ready(): return
+	if not _is_dirty:
+		return
+	if not is_node_ready():
+		return
 	set_rarity_background()
 	texture_rect_picture.texture = picture
 	texture_rect_skeleton.hide()
 	texture_rect_background.show()
+	_is_dirty = false
 
 
 func _ready():
@@ -129,6 +133,7 @@ func set_rarity_background() -> void:
 
 	if emote_urn == "":
 		texture_rect_background.texture = empty_thumbnail
+
 
 # Executed with @tool
 func _on_item_rect_changed():
@@ -176,4 +181,4 @@ func set_empty() -> void:
 	emote_name = ""
 	picture = null
 	rarity = Wearables.ItemRarity.COMMON
-	set_rarity_background()
+	_is_dirty = true

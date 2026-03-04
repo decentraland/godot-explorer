@@ -125,7 +125,10 @@ func _on_emote_item_play_emote(_emote_urn: String):
 	if (
 		current_selected_index >= 0
 		and current_selected_index < _equipped_emote_urns.size()
-		and _normalize_emote_urn(_equipped_emote_urns[current_selected_index]) == _normalize_emote_urn(_emote_urn)
+		and (
+			_normalize_emote_urn(_equipped_emote_urns[current_selected_index])
+			== _normalize_emote_urn(_emote_urn)
+		)
 	):
 		_clear_slot(current_selected_index)
 		return
