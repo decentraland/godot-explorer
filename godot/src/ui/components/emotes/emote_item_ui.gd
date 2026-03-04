@@ -30,13 +30,15 @@ var exotic_thumbnail = preload("res://assets/ui/ExoticThumbnail.png")
 var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
 var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
+var empty_thumbnail = preload("res://assets/ui/EmptyThumbnail.png")
 var inside = false
+var _is_equipped: bool = false
 
 @onready var control_inner = %Control_Inner
 @onready var texture_rect_background = %TextureRect_Background
-@onready var texture_rect_selected = %Selected
-@onready var texture_rect_pressed = %Pressed
-@onready var texture_rect_equiped = %TextureRect_Equiped
+@onready var texture_rect_selected = %Pressed
+@onready var texture_rect_equiped = %Equiped
+@onready var texture_rect_equiped_mark = %TextureRect_Equiped
 
 
 func async_load_from_urn(_emote_urn: String, _index: int = -1):
@@ -120,7 +122,7 @@ func _on_item_rect_changed():
 
 
 func _on_mouse_exited():
-	texture_rect_selected.hide()
+	texture_rect_selected.set_visible(button_pressed)
 	inside = false
 	select_emote.emit(false, emote_urn)
 
@@ -136,17 +138,28 @@ func _on_pressed():
 
 
 func _on_toggled(new_toggled: bool):
-	texture_rect_pressed.set_visible(new_toggled)
-	texture_rect_equiped.set_visible(new_toggled)
+	texture_rect_selected.set_visible(new_toggled)
 
 
 func _on_button_down():
 	if !toggle_mode:
-		texture_rect_pressed.set_visible(true)
-		texture_rect_equiped.set_visible(true)
+		texture_rect_selected.set_visible(true)
 
 
 func _on_button_up():
 	if !toggle_mode:
-		texture_rect_pressed.set_visible(false)
-		texture_rect_equiped.set_visible(false)
+		texture_rect_selected.set_visible(inside)
+
+
+func set_equipped(equipped: bool) -> void:
+	_is_equipped = equipped
+	texture_rect_equiped.set_visible(_is_equipped)
+	texture_rect_equiped_mark.set_visible(_is_equipped)
+
+
+func set_empty() -> void:
+	emote_urn = ""
+	emote_name = ""
+	picture = empty_thumbnail
+	rarity = Wearables.ItemRarity.COMMON
+	set_rarity_background()
