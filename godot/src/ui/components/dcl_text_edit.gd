@@ -49,6 +49,9 @@ func _ready() -> void:
 	text_edit.get_v_scroll_bar().add_theme_constant_override("minimum_grab_thickness", 0)
 	text_edit.get_v_scroll_bar().custom_minimum_size = Vector2.ZERO
 	text_edit.get_v_scroll_bar().modulate = Color.TRANSPARENT
+	text_edit.get_h_scroll_bar().add_theme_constant_override("minimum_grab_thickness", 0)
+	text_edit.get_h_scroll_bar().custom_minimum_size = Vector2.ZERO
+	text_edit.get_h_scroll_bar().modulate = Color.TRANSPARENT
 	if has_max_length:
 		label_length.show()
 		label_length.text = "0/" + str(max_length)

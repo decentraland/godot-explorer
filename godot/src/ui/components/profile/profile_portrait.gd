@@ -25,6 +25,8 @@ func _ready() -> void:
 
 
 func _on_visibility_changed() -> void:
+	if not is_node_ready():
+		return
 	if visible:
 		hide_editor()
 		_show_avatar()

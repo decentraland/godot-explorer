@@ -128,6 +128,7 @@ func _ready():
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
+	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
@@ -857,6 +858,11 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 	panel_chat.exit_chat()
 	profile_container.open(dcl_user_profile)
 	release_mouse()
+
+
+func _on_profile_container_visibility_changed() -> void:
+	if not profile_container.visible:
+		joypad.show()
 
 
 func _open_friends_panel() -> void:
