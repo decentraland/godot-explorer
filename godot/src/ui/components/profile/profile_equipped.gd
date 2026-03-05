@@ -26,6 +26,7 @@ func async_refresh(profile: DclUserProfile) -> void:
 	var wearables_urns = avatar_data.get("wearables", [])
 
 	if not wearables_urns.is_empty():
+		scroll_container_equipped_wearables.show()
 		var equipped_wearables_promises = Global.content_provider.fetch_wearables(
 			wearables_urns, Global.realm.get_profile_content_url()
 		)
