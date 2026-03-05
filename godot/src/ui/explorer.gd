@@ -66,6 +66,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
 @onready var chatbar: Control = %Chatbar
+@onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
 
 
 func _process(_dt):
@@ -984,6 +985,7 @@ func _show_friends_panel() -> void:
 	friends_panel.show_panel_on_friends_tab()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1002,6 +1004,7 @@ func _show_notifications_panel() -> void:
 	notifications_panel.show_panel()
 	if friends_panel.visible:
 		friends_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1090,6 +1093,7 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 			# Close notifications panel if open
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()
+			h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
 			if Global.is_mobile():
@@ -1127,6 +1131,7 @@ func _close_all_panels():
 	control_menu.close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	joypad.show()
 
 
@@ -1135,6 +1140,7 @@ func _on_discover_open():
 	joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
@@ -1207,3 +1213,10 @@ func _on_change_scene_id(scene_id: int):
 
 func _on_change_parcel(_position: Vector2i):
 	parcel_position = _position
+
+
+func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
+	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
+		_close_all_panels()
+		navbar.collapse()
+		capture_mouse()
