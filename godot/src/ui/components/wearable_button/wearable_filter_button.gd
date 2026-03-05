@@ -41,8 +41,6 @@ enum WearableCategoryEnum {
 		filter_category = new_value
 @export var uppercase := false
 
-var press_time: int = 0
-
 
 func _update_category_icon():
 	var texture_path = (
@@ -202,14 +200,3 @@ func _on_toggled(_button_pressed):
 		filter_type.emit(type_to_category(filter_category))
 	else:
 		clear_filter.emit()
-
-
-func _on_button_down() -> void:
-	press_time = Time.get_ticks_msec()
-
-
-func _on_button_up() -> void:
-	var release_time = Time.get_ticks_msec()
-	var duration = release_time - press_time
-	if duration <= 50:
-		button_pressed = !button_pressed
