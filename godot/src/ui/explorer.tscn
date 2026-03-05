@@ -250,7 +250,6 @@ custom_minimum_size = Vector2(0, 400)
 layout_mode = 2
 
 [node name="Control_SafeBottomArea" type="PanelContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide"]
-unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 mouse_filter = 2
