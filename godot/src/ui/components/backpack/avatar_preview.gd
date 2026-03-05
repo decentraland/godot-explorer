@@ -8,7 +8,7 @@ const MIN_CAMERA_Y = -0.05
 const MAX_CAMERA_Y = 0.05
 
 const DEFAULT_ROTATION = Vector3(-5, 180, 0)
-const BODY_CAMERA_POSITION = Vector3(0, 1.3, -3.0)
+const BODY_CAMERA_POSITION = Vector3(0, 1.25, -3.0)
 const BODY_CAMERA_POSITION_WITH_PLATFORM = Vector3(0, 2.15, -3.3)
 const HEAD_CAMERA_POSITION = Vector3(0, 1.8, -1.15)
 

@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=107 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" load_steps=120 format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -169,22 +169,6 @@ corner_radius_bottom_left = 2
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_kypl7"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_gw08q"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vyto1"]
-content_margin_left = 24.0
-content_margin_top = 16.0
-content_margin_right = 24.0
-content_margin_bottom = 16.0
-bg_color = Color(0.105882354, 0, 0.1764706, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.9098039, 0.7254902, 1, 0.69803923)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
 
 [sub_resource type="DPITexture" id="DPITexture_13bqh"]
 _source = "<svg width=\"22\" height=\"22\" viewBox=\"0 0 22 22\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
@@ -820,6 +804,20 @@ SecondaryOutlinedSmall/fonts/font = ExtResource("51_adyvx")
 SecondaryOutlinedSmall/styles/disabled = ExtResource("45_s5chg")
 SecondaryOutlinedSmall/styles/normal = ExtResource("46_s5chg")
 SecondaryOutlinedSmall/styles/pressed = ExtResource("47_s5chg")
+SectionsButtonBackpack/base_type = &"Button"
+SectionsButtonBackpack/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SectionsButtonBackpack/colors/font_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SectionsButtonBackpack/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SectionsButtonBackpack/colors/icon_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
+SectionsButtonBackpack/constants/h_separation = 4
+SectionsButtonBackpack/constants/icon_max_width = 32
+SectionsButtonBackpack/font_sizes/font_size = 26
+SectionsButtonBackpack/fonts/font = ExtResource("42_qnq51")
+SectionsButtonBackpack/styles/focus = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/hover = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/hover_pressed = SubResource("StyleBoxFlat_1x5yb")
+SectionsButtonBackpack/styles/normal = SubResource("StyleBoxFlat_kypl7")
+SectionsButtonBackpack/styles/pressed = SubResource("StyleBoxFlat_1x5yb")
 SettingsButton/base_type = &"Button"
 SettingsButton/colors/font_color = Color(1, 1, 1, 0.69803923)
 SettingsButton/colors/font_hover_color = Color(1, 1, 1, 0.69803923)
@@ -837,20 +835,6 @@ SettingsButton/styles/hover = ExtResource("41_f0x44")
 SettingsButton/styles/hover_pressed = ExtResource("42_3kpjx")
 SettingsButton/styles/normal = ExtResource("41_f0x44")
 SettingsButton/styles/pressed = ExtResource("42_3kpjx")
-SectionsButtonBackpack/base_type = &"Button"
-SectionsButtonBackpack/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-SectionsButtonBackpack/colors/font_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
-SectionsButtonBackpack/colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-SectionsButtonBackpack/colors/icon_pressed_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
-SectionsButtonBackpack/constants/h_separation = 4
-SectionsButtonBackpack/constants/icon_max_width = 32
-SectionsButtonBackpack/font_sizes/font_size = 26
-SectionsButtonBackpack/fonts/font = ExtResource("42_qnq51")
-SectionsButtonBackpack/styles/focus = SubResource("StyleBoxFlat_1x5yb")
-SectionsButtonBackpack/styles/hover = SubResource("StyleBoxFlat_1x5yb")
-SectionsButtonBackpack/styles/hover_pressed = SubResource("StyleBoxFlat_1x5yb")
-SectionsButtonBackpack/styles/normal = SubResource("StyleBoxFlat_kypl7")
-SectionsButtonBackpack/styles/pressed = SubResource("StyleBoxFlat_1x5yb")
 SnowButton/base_type = &"Button"
 SnowButton/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 SnowButton/colors/font_disabled_color = Color(0.0862745, 0.0823529, 0.0941176, 0.501961)
