@@ -67,6 +67,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
 @onready var chatbar: Control = %Chatbar
+@onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
 
 
 func _process(_dt):
@@ -128,6 +129,7 @@ func _ready():
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
+	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
@@ -264,6 +266,7 @@ func _ready():
 
 	Global.open_profile_by_address.connect(_async_open_profile_by_address)
 	Global.open_profile_by_avatar.connect(_async_open_profile_by_avatar)
+	Global.open_own_profile.connect(_on_global_open_own_profile)
 
 	ui_root.grab_focus.call_deferred()
 
@@ -858,6 +861,11 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 	release_mouse()
 
 
+func _on_profile_container_visibility_changed() -> void:
+	if not profile_container.visible:
+		joypad.show()
+
+
 func _open_friends_panel() -> void:
 	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
@@ -908,9 +916,21 @@ func _on_control_menu_open_profile() -> void:
 	_open_own_profile()
 
 
+func _on_global_open_own_profile() -> void:
+	if Global.is_orientation_portrait():
+		return
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	navbar.collapse()
+	_open_own_profile()
+
+
 func _open_own_profile() -> void:
-	control_menu.async_show_own_profile()
-	release_mouse()
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
+		_open_profile(profile)
 
 
 func _get_viewport_scale_factors() -> Vector2:
@@ -966,6 +986,7 @@ func _show_friends_panel() -> void:
 	friends_panel.show_panel_on_friends_tab()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -984,6 +1005,7 @@ func _show_notifications_panel() -> void:
 	notifications_panel.show_panel()
 	if friends_panel.visible:
 		friends_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1072,6 +1094,7 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 			# Close notifications panel if open
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()
+			h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
 			if Global.is_mobile():
@@ -1109,14 +1132,16 @@ func _close_all_panels():
 	control_menu.close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	joypad.show()
 
 
 func _on_discover_open():
-	navbar.close_from_discover_button()
+	navbar.collapse()
 	joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
@@ -1189,3 +1214,10 @@ func _on_change_scene_id(scene_id: int):
 
 func _on_change_parcel(_position: Vector2i):
 	parcel_position = _position
+
+
+func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
+	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
+		_close_all_panels()
+		navbar.collapse()
+		capture_mouse()
