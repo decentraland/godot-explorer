@@ -11,7 +11,7 @@ class AvatarRendererSpecs:
 	var face_dest_path := ""
 	var face_width := 256
 	var face_height := 256
-	var face_zoom := 0.8
+	var face_zoom := 0.55
 
 	var avatar: DclAvatarWireFormat
 
@@ -25,7 +25,7 @@ class AvatarRendererSpecs:
 		ret.face_dest_path = value.get("faceDestPath", "")  # optional
 		ret.face_width = value.get("faceWidth", 256)
 		ret.face_height = value.get("faceHeight", 256)
-		ret.face_zoom = value.get("faceZoom", 0.8)
+		ret.face_zoom = value.get("faceZoom", 0.55)
 		ret.avatar = DclAvatarWireFormat.from_godot_dictionary(value.get("avatar", {}))
 
 		if ret.dest_path is String and ret.avatar != null:
