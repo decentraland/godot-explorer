@@ -90,6 +90,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	button_back_to_explorer.hide()
 	button_developer.visible = !Global.is_production()
 	button_graphics.set_pressed_no_signal(true)
