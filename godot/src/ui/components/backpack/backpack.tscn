@@ -85,10 +85,10 @@ shadow_size = 4
 [sub_resource type="ButtonGroup" id="ButtonGroup_30sbq"]
 resource_local_to_scene = false
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yjmsa"]
+
 [sub_resource type="ButtonGroup" id="ButtonGroup_meiko"]
 resource_local_to_scene = false
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yjmsa"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_et6he"]
 
