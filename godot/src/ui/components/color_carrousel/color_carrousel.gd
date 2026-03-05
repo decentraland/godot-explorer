@@ -69,38 +69,31 @@ func _process(_delta: float) -> void:
 	refresh_buttons()
 
 
+func _add_color_picker_button() -> void:
+	color_picker_button = COLOR_BUTTON.instantiate()
+	color_picker_button.toggle_mode = true
+	color_picker_button.color = Color.BLACK
+	color_picker_button.button_group = color_button_group
+	color_picker_button.toggled.connect(self._on_color_carrousel_toggle_color_picker)
+	color_picker_button.is_color_palette = true
+	color_carrousel.add_child(color_picker_button)
+
+
 func refresh_buttons() -> void:
-	if color_type != ColorTargetType.SKIN:
-		for child in color_carrousel.get_children():
-			color_carrousel.remove_child(child)
-			child.queue_free()
+	for child in color_carrousel.get_children():
+		color_carrousel.remove_child(child)
+		child.queue_free()
 
-		#Add color picker button
-		color_picker_button = COLOR_BUTTON.instantiate()
-		color_picker_button.toggle_mode = true
-		color_picker_button.color = Color.BLACK
-		color_picker_button.button_group = color_button_group
-		color_picker_button.toggled.connect(self._on_color_carrousel_toggle_color_picker)
-		color_picker_button.is_color_palette = true
-		color_carrousel.add_child(color_picker_button)
+	_add_color_picker_button()
 
-		for color in example_colors:
-			var color_square := COLOR_BUTTON.instantiate()
-			color_square.toggle_mode = true
-			color_square.color = color
-			color_square.button_group = color_button_group
-			color_square.toggled.connect(self._on_color_toggled.bind(color))
-			color_carrousel.add_child(color_square)
-	if color_type == ColorTargetType.SKIN:
-		for child in color_carrousel.get_children():
-			color_carrousel.remove_child(child)
-			child.queue_free()
-		for color in skin_colors:
-			var color_square = COLOR_BUTTON.instantiate()
-			color_square.color = color
-			color_square.button_group = color_button_group
-			color_square.toggled.connect(self._on_color_toggled.bind(color))
-			color_carrousel.add_child(color_square)
+	var colors := skin_colors if color_type == ColorTargetType.SKIN else example_colors
+	for color in colors:
+		var color_square := COLOR_BUTTON.instantiate()
+		color_square.toggle_mode = true
+		color_square.color = color
+		color_square.button_group = color_button_group
+		color_square.toggled.connect(self._on_color_toggled.bind(color))
+		color_carrousel.add_child(color_square)
 	scroll_swatch_container.scroll_horizontal = 0.0
 
 
