@@ -238,10 +238,12 @@ offset_bottom = 16.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_b2yhx")
 
 [node name="Control" type="Control" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles"]
-anchors_preset = 0
-offset_left = 51.0
-offset_right = 51.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
 offset_bottom = 49.0
+grow_horizontal = 0
 
 [node name="FilterMenu" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control"]
 unique_name_in_owner = true
@@ -451,7 +453,6 @@ size_flags_vertical = 3
 [node name="MainCategoriesContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/margin_bottom = 30
 
 [node name="MainCategoriesContainerb" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer"]
 layout_mode = 2
@@ -466,8 +467,6 @@ theme_override_constants/separation = 10
 
 [node name="wearable_button_all" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
-theme_type_variation = &"WearableCategoryBackpack"
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
 text = "ALL"
@@ -484,8 +483,6 @@ theme_type_variation = &"HiddenVSeparator"
 
 [node name="wearable_button_body_shape" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
-theme_type_variation = &"WearableCategoryBackpack"
 button_pressed = true
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
@@ -502,8 +499,6 @@ theme_type_variation = &"HiddenVSeparator"
 
 [node name="wearable_button_face" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
-theme_type_variation = &"WearableCategoryBackpack"
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
 text = "FACE"
@@ -520,8 +515,6 @@ theme_type_variation = &"HiddenVSeparator"
 
 [node name="wearable_button_clothing" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
-theme_type_variation = &"WearableCategoryBackpack"
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
 text = "CLOTHING"
@@ -538,8 +531,6 @@ theme_type_variation = &"HiddenVSeparator"
 
 [node name="wearable_button_extras" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
-theme_type_variation = &"WearableCategoryBackpack"
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
 text = "EXTRAS"
@@ -547,6 +538,12 @@ icon = null
 alignment = 0
 filter_category = 25
 uppercase = true
+
+[node name="SubcategoriesSeparator" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 30
+theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 
 [node name="SubcategoriesContainer" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
 unique_name_in_owner = true
@@ -571,7 +568,6 @@ theme_override_constants/separation = 24
 
 [node name="wearable_button_all" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 button_pressed = true
 action_mode = 1
@@ -581,7 +577,6 @@ filter_category = 0
 
 [node name="wearable_button_all_extras" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -591,7 +586,6 @@ filter_category = 26
 
 [node name="wearable_button_body" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -599,7 +593,6 @@ icon = null
 
 [node name="wearable_button_head" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -608,7 +601,6 @@ filter_category = 2
 
 [node name="wearable_button_upperbody" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -617,7 +609,6 @@ filter_category = 10
 
 [node name="wearable_button_lowerbody" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -626,7 +617,6 @@ filter_category = 12
 
 [node name="wearable_button_feet" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -635,7 +625,6 @@ filter_category = 13
 
 [node name="wearable_button_handwear" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -644,7 +633,6 @@ filter_category = 11
 
 [node name="wearable_button_hair" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -653,7 +641,6 @@ filter_category = 5
 
 [node name="wearable_button_facial_hair" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -662,7 +649,6 @@ filter_category = 9
 
 [node name="wearable_button_eyes" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -671,7 +657,6 @@ filter_category = 7
 
 [node name="wearable_button_eyebrows" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -680,7 +665,6 @@ filter_category = 6
 
 [node name="wearable_button_mouth" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -689,7 +673,6 @@ filter_category = 8
 
 [node name="wearable_button_hat" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -698,7 +681,6 @@ filter_category = 14
 
 [node name="wearable_button_helmet" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -707,7 +689,6 @@ filter_category = 20
 
 [node name="wearable_button_tiara" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -716,7 +697,6 @@ filter_category = 18
 
 [node name="wearable_button_eyewear" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -725,7 +705,6 @@ filter_category = 15
 
 [node name="wearable_button_mask" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -734,7 +713,6 @@ filter_category = 17
 
 [node name="wearable_button_earring" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -743,7 +721,6 @@ filter_category = 16
 
 [node name="wearable_button_body_shape" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
@@ -752,7 +729,6 @@ filter_category = 22
 
 [node name="wearable_button_skin" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
-theme = ExtResource("12_2iqy8")
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")

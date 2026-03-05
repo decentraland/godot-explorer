@@ -57,6 +57,7 @@ var _avatar_update_retries: int = 0
 @onready var filter_menu := %FilterMenu
 @onready var filter_indicator := %FilterIndicator
 @onready var subcategories_container := %SubcategoriesContainer
+@onready var subcategories_separator := %SubcategoriesSeparator
 @onready var maincategories_container := %MainCategoriesContainer
 @onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
 
@@ -87,6 +88,7 @@ func _ready():
 	color_carrousel.hide()
 	carrousel_separator.hide()
 	subcategories_container.show()
+	subcategories_separator.show()
 	maincategories_container.show()
 
 	# Setup blacklist change timer
@@ -168,7 +170,12 @@ func _update_visible_categories():
 			main_category_selected
 		)
 		var category_is_visible: bool = (
-			filter_categories != null and filter_categories.has(category)
+			filter_categories != null
+			and filter_categories.has(category)
+			and not (
+				main_category_selected == Wearables.Categories.ALL
+				and category == Wearables.Categories.ALL
+			)
 		)
 		#prints("BUTTON: ", category, category_is_visible, main_category_selected, filter_categories)
 		wearable_filter_button.visible = category_is_visible
@@ -177,8 +184,9 @@ func _update_visible_categories():
 			if first_wearable_filter_button == null:
 				first_wearable_filter_button = wearable_filter_button
 
-	#container_sub_categories.set_visible(showed_subcategories >= 2)
-	container_sub_categories.show()
+	var has_visible := first_wearable_filter_button != null
+	subcategories_container.visible = has_visible
+	subcategories_separator.visible = has_visible
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
 
@@ -529,10 +537,12 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 	if toggle:
 		%MarginItemsContainer.hide()
 		subcategories_container.hide()
+		subcategories_separator.hide()
 		maincategories_container.hide()
 	else:
 		%MarginItemsContainer.show()
 		subcategories_container.show()
+		subcategories_separator.show()
 		maincategories_container.show()
 
 
