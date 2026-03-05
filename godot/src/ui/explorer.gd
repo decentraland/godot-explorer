@@ -403,11 +403,11 @@ func _on_control_minimap_request_open_map():
 
 func _on_control_menu_jump_to(parcel: Vector2i):
 	teleport_to(parcel)
-	control_menu.close()
+	control_menu.async_close()
 
 
 func _on_control_menu_hide_menu():
-	control_menu.close()
+	control_menu.async_close()
 	ui_root.grab_focus()
 
 
@@ -793,7 +793,7 @@ func _on_timer_fps_label_timeout():
 
 
 func hide_menu():
-	control_menu.close()
+	control_menu.async_close()
 	release_mouse()
 
 
@@ -1128,7 +1128,7 @@ func _on_backpack_emote_opened(on_emotes := false) -> void:
 
 
 func _close_all_panels():
-	control_menu.close()
+	control_menu.async_close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE

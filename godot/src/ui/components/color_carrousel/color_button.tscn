@@ -61,6 +61,7 @@ corner_radius_bottom_left = 100
 custom_minimum_size = Vector2(70, 70)
 offset_right = 70.0
 offset_bottom = 70.0
+focus_mode = 0
 theme_override_styles/normal = SubResource("StyleBoxFlat_4exyl")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_hux04")
 theme_override_styles/hover = SubResource("StyleBoxFlat_snwt5")

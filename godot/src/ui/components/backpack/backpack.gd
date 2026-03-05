@@ -336,7 +336,11 @@ func _on_wearable_filter_button_filter_type(type):
 	if type == Wearables.Categories.BODY_SHAPE:
 		color_carrousel.color_type = color_carrousel.ColorTargetType.SKIN
 		color_carrousel.set_color(mutable_avatar.get_skin_color())
-	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
+	elif (
+		type == Wearables.Categories.HAIR
+		or type == Wearables.Categories.FACIAL_HAIR
+		or type == Wearables.Categories.EYEBROWS
+	):
 		color_carrousel.color_type = color_carrousel.ColorTargetType.HAIR
 		color_carrousel.set_color(mutable_avatar.get_hair_color())
 	elif type == Wearables.Categories.EYES:

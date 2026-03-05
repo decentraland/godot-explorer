@@ -115,7 +115,6 @@ func set_color(color: Color) -> void:
 	if color_type == ColorTargetType.SKIN:
 		for color_button in color_carrousel.get_children():
 			if color.is_equal_approx(color_button.color):
-				scroll_swatch_container.ensure_control_visible.call_deferred(color_button)
 				color_button.button_pressed = true
 				return
 

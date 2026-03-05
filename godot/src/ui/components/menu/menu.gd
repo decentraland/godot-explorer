@@ -81,7 +81,7 @@ func _ready():
 	Global.open_discover.connect(async_show_discover)
 	Global.open_own_profile.connect(async_show_own_profile)
 	Global.open_profile_editor.connect(async_show_profile_editor)
-	Global.close_menu.connect(close)
+	Global.close_menu.connect(async_close)
 	Global.delete_account.connect(_on_account_delete)
 
 	if not is_in_game:
@@ -92,7 +92,7 @@ func open():
 	_open()
 
 
-func close():
+func async_close():
 	if not is_open:
 		return
 	is_open = false
@@ -216,26 +216,26 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 func select_settings_screen(play_sfx: bool = true):
 	current_screen_name = ("SETTINGS" if Global.is_orientation_portrait() else "SETTINGS_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_settings, play_sfx)
+	async_select_node(control_settings, play_sfx)
 
 
 func select_discover_screen(play_sfx: bool = true):
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_discover, play_sfx)
+	async_select_node(control_discover, play_sfx)
 
 
 func select_backpack_screen(play_sfx: bool = true):
 	current_screen_name = ("BACKPACK" if Global.is_orientation_portrait() else "BACKPACK_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_backpack, play_sfx)
+	async_select_node(control_backpack, play_sfx)
 
 
 func select_profile_screen(play_sfx: bool = true, portrait: bool = false):
 	current_screen_name = ("PROFILE" if portrait else "PROFILE_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
 	var node = control_profile_portrait if portrait else control_profile_settings
-	select_node(node, play_sfx)
+	async_select_node(node, play_sfx)
 
 
 func _needs_save_on_leave(node: PlaceholderManager) -> bool:
@@ -246,7 +246,7 @@ func _needs_save_on_leave(node: PlaceholderManager) -> bool:
 	)
 
 
-func select_node(node: PlaceholderManager, play_sfx: bool = true):
+func async_select_node(node: PlaceholderManager, play_sfx: bool = true):
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if selected_node != node:
