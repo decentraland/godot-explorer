@@ -48,7 +48,6 @@ func async_refresh(profile: DclUserProfile) -> void:
 	var emotes = avatar_data.get("emotes", [])
 
 	if not emotes.is_empty():
-		scroll_container_equipped_wearables.show()
 		for emote in emotes:
 			var emote_urn = emote.urn
 			if not emote_urn.begins_with("urn") and Emotes.is_emote_default(emote_urn):
@@ -65,5 +64,3 @@ func async_refresh(profile: DclUserProfile) -> void:
 				emote_item.set_as_emote(emote.urn)
 				emote_item.emote_pressed.connect(func(urn): emote_pressed.emit(urn))
 				emote_item.stop_emote.connect(func(): stop_emote.emit())
-	else:
-		scroll_container_equipped_wearables.hide()
