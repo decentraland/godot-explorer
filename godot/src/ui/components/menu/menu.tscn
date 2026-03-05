@@ -240,4 +240,3 @@ grow_vertical = 2
 mouse_filter = 2
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="toggled" from="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel/StaticButton_Backpack" to="." method="_on_button_backpack_toggled"]

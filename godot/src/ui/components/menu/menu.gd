@@ -92,14 +92,15 @@ func open():
 	_open()
 
 
-# gdlint:ignore = async-function-name
 func close():
 	if not is_open:
 		return
 	is_open = false
 	GraphicSettings.apply_full_processor_mode()
-	if Global.player_identity.has_changes():
-		Global.player_identity.async_save_profile()
+	if selected_node and _needs_save_on_leave(selected_node) and Global.player_identity.has_changes():
+		control_deploying_profile.show()
+		await Global.player_identity.async_save_profile()
+		control_deploying_profile.hide()
 	_close_modulate_tween = create_tween()
 	_close_modulate_tween.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(
 		Tween.EASE_IN_OUT
@@ -233,12 +234,26 @@ func select_profile_screen(play_sfx: bool = true, portrait: bool = false):
 	select_node(node, play_sfx)
 
 
+func _needs_save_on_leave(node: PlaceholderManager) -> bool:
+	return node == control_backpack or node == control_profile_portrait or node == control_profile_settings
+
+
 func select_node(node: PlaceholderManager, play_sfx: bool = true):
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if selected_node != node:
-		if selected_node and selected_node.instance:
-			fade_out(selected_node)
+		var previous_node = selected_node
+		# Set selected_node early so rapid re-selection is detected
+		selected_node = node
+		if previous_node and previous_node.instance:
+			if _needs_save_on_leave(previous_node) and Global.player_identity.has_changes():
+				control_deploying_profile.show()
+				await Global.player_identity.async_save_profile()
+				control_deploying_profile.hide()
+				# User may have navigated elsewhere during the await
+				if selected_node != node:
+					return
+			fade_out(previous_node)
 		fade_in(node)
 
 		if play_sfx:
@@ -252,10 +267,12 @@ func fade_in(node: PlaceholderManager):
 	if not is_instance_valid(node.instance):
 		return
 	selected_node = node
+	# Cancel any pending sleep for this node (from a previous fade_out)
+	if node.status == PlaceholderManager.STATUS.SLEEPING:
+		node.status = PlaceholderManager.STATUS.LOADED
 	node.instance.show()
 	if is_instance_valid(fade_in_tween):
 		if fade_in_tween.is_running():
-			fade_out_tween.custom_step(100.0)
 			fade_in_tween.kill()
 	node.instance.modulate.a = 0.0
 	fade_in_tween = create_tween()
@@ -267,7 +284,6 @@ func fade_out(node: PlaceholderManager):
 		return
 	if is_instance_valid(fade_out_tween):
 		if fade_out_tween.is_running():
-			fade_out_tween.custom_step(100.0)
 			fade_out_tween.kill()
 
 	node.instance.modulate.a = 1.0
@@ -293,10 +309,6 @@ func _async_request_hide_menu():
 	hide_menu.emit()
 
 
-func _on_button_backpack_toggled(toggled_on):
-	if !toggled_on:
-		Global.player_identity.async_save_profile()
-
 
 func _on_notification_clicked(notification_dict: Dictionary) -> void:
 	# Handle notification clicks - open backpack for reward notifications
@@ -312,17 +324,6 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 func _on_deep_link_received() -> void:
 	Global.check_deep_link_teleport_to()
 
-
-func _on_portrait_button_discover_pressed() -> void:
-	async_show_discover()
-
-
-func _on_portrait_button_backpack_pressed() -> void:
-	async_show_backpack()
-
-
-func _on_portrait_button_settings_pressed() -> void:
-	async_show_settings()
 
 
 func _on_account_delete() -> void:
