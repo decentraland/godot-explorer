@@ -97,7 +97,11 @@ func close():
 		return
 	is_open = false
 	GraphicSettings.apply_full_processor_mode()
-	if selected_node and _needs_save_on_leave(selected_node) and Global.player_identity.has_changes():
+	if (
+		selected_node
+		and _needs_save_on_leave(selected_node)
+		and Global.player_identity.has_changes()
+	):
 		control_deploying_profile.show()
 		await Global.player_identity.async_save_profile()
 		control_deploying_profile.hide()
@@ -235,7 +239,11 @@ func select_profile_screen(play_sfx: bool = true, portrait: bool = false):
 
 
 func _needs_save_on_leave(node: PlaceholderManager) -> bool:
-	return node == control_backpack or node == control_profile_portrait or node == control_profile_settings
+	return (
+		node == control_backpack
+		or node == control_profile_portrait
+		or node == control_profile_settings
+	)
 
 
 func select_node(node: PlaceholderManager, play_sfx: bool = true):
@@ -309,7 +317,6 @@ func _async_request_hide_menu():
 	hide_menu.emit()
 
 
-
 func _on_notification_clicked(notification_dict: Dictionary) -> void:
 	# Handle notification clicks - open backpack for reward notifications
 	var notif_type = notification_dict.get("type", "")
@@ -323,7 +330,6 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 
 func _on_deep_link_received() -> void:
 	Global.check_deep_link_teleport_to()
-
 
 
 func _on_account_delete() -> void:
