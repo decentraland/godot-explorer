@@ -150,39 +150,28 @@ layout_mode = 2
 theme_override_constants/separation = 14
 alignment = 1
 
-[node name="HBoxContainer_Title" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer"]
-unique_name_in_owner = true
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer"]
 layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
 
-[node name="Button_BackToExplorer" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer_Title"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 2
+
+[node name="Button_BackToExplorer" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
+size_flags_horizontal = 2
 focus_mode = 0
 icon = ExtResource("19_t0yet")
 flat = true
 expand_icon = true
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer_Title"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("2_m8ron")
-theme_override_font_sizes/font_size = 28
-text = "Backpack"
-label_settings = ExtResource("5_18vfg")
-
-[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer"]
-layout_mode = 2
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3"]
-layout_mode = 2
-size_flags_horizontal = 3
-alignment = 1
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-alignment = 2
-
-[node name="Button_Wearables" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer2"]
+[node name="Button_Wearables" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
@@ -194,20 +183,20 @@ button_group = SubResource("ButtonGroup_wyk6q")
 text = "Wearables"
 icon = ExtResource("12_6wpew")
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2"]
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
 
-[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer"]
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_k780d")
 
-[node name="Button_Emotes" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer"]
+[node name="Button_Emotes" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
@@ -220,13 +209,13 @@ button_group = SubResource("ButtonGroup_wyk6q")
 text = "Emotes"
 icon = ExtResource("9_jb6ap")
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer"]
 layout_mode = 2
 theme = ExtResource("12_2iqy8")
 theme_type_variation = &"HiddenVSeparator"
 theme_override_constants/separation = 68
 
-[node name="CheckBox_OnlyCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer"]
+[node name="CheckBox_OnlyCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -238,7 +227,7 @@ toggle_mode = true
 icon = ExtResource("10_jb6ap")
 icon_alignment = 1
 
-[node name="FilterIndicator" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles"]
+[node name="FilterIndicator" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 0
@@ -248,13 +237,13 @@ offset_right = 66.0
 offset_bottom = 16.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_b2yhx")
 
-[node name="Control" type="Control" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles"]
+[node name="Control" type="Control" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles"]
 anchors_preset = 0
 offset_left = 51.0
 offset_right = 51.0
 offset_bottom = 49.0
 
-[node name="FilterMenu" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control"]
+[node name="FilterMenu" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(330, 186)
 layout_mode = 1
@@ -267,7 +256,7 @@ offset_bottom = 256.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_ghn4u")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -279,11 +268,11 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 26
 
-[node name="ButtonAll" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer"]
+[node name="ButtonAll" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
@@ -298,7 +287,7 @@ alignment = 0
 icon_alignment = 2
 expand_icon = true
 
-[node name="ButtonCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer"]
+[node name="ButtonCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
@@ -931,11 +920,11 @@ mouse_filter = 2
 texture = SubResource("GradientTexture2D_yjmsa")
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer_Title/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
-[connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer2/Button_Wearables" to="." method="_on_button_wearables_pressed"]
-[connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/Button_Emotes" to="." method="_on_button_emotes_pressed"]
-[connection signal="toggled" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles" to="." method="_on_check_box_only_collectibles_toggled"]
-[connection signal="toggled" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer3/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer/ButtonCollectibles" to="." method="_on_collectible_filter_button_toggled"]
+[connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
+[connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2/Button_Wearables" to="." method="_on_button_wearables_pressed"]
+[connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/Button_Emotes" to="." method="_on_button_emotes_pressed"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles" to="." method="_on_check_box_only_collectibles_toggled"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer/ButtonCollectibles" to="." method="_on_collectible_filter_button_toggled"]
 [connection signal="color_picked" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_picker_panel_pick_color"]
 [connection signal="color_set" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_set"]
 [connection signal="toggle_color_picker" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_carrousel_toggle_color_picker"]
