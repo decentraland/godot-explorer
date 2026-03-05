@@ -37,7 +37,7 @@ func _input(event):
 		else:
 			_two_fingers = false
 
-		if event is InputEventScreenDrag and !_two_fingers:
+		if event is InputEventScreenDrag and !_two_fingers and input_dir == Vector2.ZERO:
 			_touch_position = event.relative
 			# Only rotate the player on Y-axis, camera mount Y offset is preserved in local space
 			_player.rotate_y(deg_to_rad(-_touch_position.x) * HORIZONTAL_SENS)
