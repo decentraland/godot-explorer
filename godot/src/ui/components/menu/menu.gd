@@ -142,8 +142,6 @@ func async_show_settings():
 	if not is_instance_valid(control_settings.instance):
 		return
 
-	UiSounds.install_audio_recusirve(control_settings.instance)
-
 	control_settings.instance.request_pause_scenes.connect(
 		func(enabled): request_pause_scenes.emit(enabled)
 	)
@@ -162,14 +160,12 @@ func async_show_own_profile():
 	if not Global.is_orientation_portrait():
 		return
 	await control_profile_portrait._async_instantiate()
-	UiSounds.install_audio_recusirve(control_profile_portrait.instance)
 	select_profile_screen(true, true)
 	_open()
 
 
 func async_show_profile_editor():
 	await control_profile_portrait._async_instantiate()
-	UiSounds.install_audio_recusirve(control_profile_portrait.instance)
 	select_profile_screen(true, true)
 	_open()
 	if control_profile_portrait.instance:
