@@ -31,9 +31,13 @@ func set_pointer_data(interacts_array: Array):
 			break
 		var tooltip_scene_instance = tooltip_scene.instantiate()
 		var radius = -90 if interacts_array.size() > 1 else -36
-		tooltip_scene_instance.set_position(Vector2(0, radius - (4 * count)).rotated(deg_to_rad(used_angles[i])))
+		tooltip_scene_instance.set_position(
+			Vector2(0, radius - (4 * count)).rotated(deg_to_rad(used_angles[i]))
+		)
 		var tooltip_position = tooltip_scene_instance.get_position()
-		tooltip_scene_instance.set_position(Vector2(tooltip_position.x, tooltip_position.y - tooltip_scene_instance.size.y / 2))
+		tooltip_scene_instance.set_position(
+			Vector2(tooltip_position.x, tooltip_position.y - tooltip_scene_instance.size.y / 2)
+		)
 		control_center.add_child(tooltip_scene_instance)
 		tooltip_scene_instance.set_tooltip_data(
 			interact.get("text_pet_down", ""),
