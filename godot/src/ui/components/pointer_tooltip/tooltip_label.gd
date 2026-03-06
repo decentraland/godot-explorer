@@ -20,8 +20,8 @@ var stylebox: StyleBox
 
 @onready var label_text = %Label_Text
 
-@onready var icon_left_click = preload("res://assets/themes/icons/LeftClickIcn.png")
-@onready var icon_interactive_pointer = preload("res://assets/themes/icons/InteractiveIcon.svg")
+const ICON_LEFT_CLICK = preload("res://assets/themes/icons/LeftClickIcn.png")
+const ICON_INTERACTIVE_POINTER = preload("res://assets/themes/icons/InteractiveIcon.svg")
 
 const A_FILLED_GREEN = preload("uid://dpl8fdyynmjq")
 const B_FILLED_RED = preload("uid://qgrxrpohsm5r")
@@ -32,7 +32,18 @@ const LEFT_JOYSTICK_DOWN = preload("uid://d1wqs4mgg6jq4")
 const LEFT_JOYSTICK_LEFT = preload("uid://cer2ugmqggxyc")
 const LEFT_JOYSTICK_RIGHT = preload("uid://c84msmtv8uyk")
 const LEFT_JOYSTICK_UP = preload("uid://bnrqef3he5s1")
+const ICON_JUMP = preload("uid://ck3atqpytstpo")
 
+const MOBILE_ACTION_MAP := {
+	"ia_pointer": [ICON_INTERACTIVE_POINTER, "Tap"],
+	"ia_jump": [ICON_JUMP, "Jump"],
+	"ia_primary": ["E", "Primary"],
+	"ia_secondary": ["F", "Secondary"],
+	"ia_action_3": ["1", "Action 1"],
+	"ia_action_4": ["2", "Action 2"],
+	"ia_action_5": ["3", "Action 3"],
+	"ia_action_6": ["4", "Action 4"],
+}
 
 const GAMEPAD_BUTTON_MAP := {
 	"ia_jump": [false, A_FILLED_GREEN, "Press Jump"],
@@ -81,6 +92,17 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 		text_down = gamepad_label
 		text_up = gamepad_label
 		label_text.text = text_down
+	elif Global.is_mobile() and action_lower in MOBILE_ACTION_MAP:
+		var mapping: Array = MOBILE_ACTION_MAP[action_lower]
+		var mobile_label: String = mapping[1]
+		if mapping[0] is Texture2D:
+			_show_keyboard_icon(mapping[0])
+		else:
+			_show_keyboard(mapping[0])
+		action_to_trigger = action_lower
+		text_down = mobile_label
+		text_up = mobile_label
+		label_text.text = text_down
 	elif action_lower == "ia_any":
 		_show_keyboard("Any")
 		action_to_trigger = action_lower
@@ -103,9 +125,9 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 				key = char(event.unicode).to_upper()
 			elif event is InputEventMouseButton:
 				if event.button_index == 1:
-					key = icon_interactive_pointer if Global.is_mobile() else icon_left_click
+					key = ICON_INTERACTIVE_POINTER if Global.is_mobile() else ICON_LEFT_CLICK
 		else:
-			key = icon_interactive_pointer
+			key = ICON_INTERACTIVE_POINTER
 
 		if key != null:
 			if key is String:
