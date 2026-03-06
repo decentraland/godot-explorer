@@ -3,6 +3,7 @@ class_name DropdownList
 extends Control
 
 signal item_selected(index: int)
+signal toggled(is_open: bool)
 
 const ITEM_HEIGHT: float = 68.0
 const ITEM_GAP: float = 8.0
@@ -224,12 +225,15 @@ func _async_open_popup() -> void:
 
 	_popup_layer.visible = true
 	_button_panel.add_theme_stylebox_override("panel", _style_pressed)
+	toggled.emit(true)
 
 
-func _close_popup():
+func _close_popup(silent: bool = false):
 	_is_open = false
 	_popup_layer.visible = false
 	_button_panel.add_theme_stylebox_override("panel", _style_normal)
+	if not silent:
+		toggled.emit(false)
 
 
 func _sync_popup_items():
@@ -339,4 +343,4 @@ func _on_popup_layer_gui_input(event: InputEvent):
 func _on_item_pressed(index: int):
 	select(index)
 	item_selected.emit(index)
-	_close_popup()
+	_close_popup(true)

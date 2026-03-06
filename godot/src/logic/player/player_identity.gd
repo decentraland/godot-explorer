@@ -98,6 +98,9 @@ func async_save_profile() -> void:
 	# Deploy profile to server (ADR-290: no snapshots in deployment)
 	await ProfileService.async_deploy_profile(_mutable_profile)
 
+	# Update the immutable profile so other screens (e.g. profile portrait) see the latest data
+	set_profile(_mutable_profile)
+
 
 ## Check both profile changes AND avatar changes
 ## Avatar is a clone, so changes to mutable_avatar don't affect mutable_profile directly

@@ -8,6 +8,7 @@ const JOYSTICK_CAMERA_DEADZONE: float = 0.15
 
 var _player: Player = null
 var _lb_held: bool = false
+var _virtual_joystick: VirtualJoystick = null
 
 var _touch_position = Vector2(0.0, 0.0)
 var _positions: Array = [Vector2(), Vector2()]
@@ -18,6 +19,17 @@ var _two_fingers = false
 func _init(player: Player):
 	_player = player
 	Global.camera_mode_set.connect(_on_camera_mode_set)
+	_resolve_joystick.call_deferred()
+
+
+func _resolve_joystick() -> void:
+	var explorer = Global.get_explorer()
+	if explorer:
+		_virtual_joystick = explorer.virtual_joystick
+
+
+func _is_joystick_finger(index: int) -> bool:
+	return _virtual_joystick and _virtual_joystick.touch_index == index
 
 	# Erase gamepad button events so face buttons are handled manually with LB as modifier
 	for action in ["ia_jump", "ia_primary", "ia_secondary", "ia_action_3", "ia_action_4"]:
@@ -39,6 +51,9 @@ func _input(event):
 
 	# Receives touchscreen motion
 	if Global.is_mobile() and (event is InputEventScreenTouch or event is InputEventScreenDrag):
+		if _is_joystick_finger(event.index):
+			return
+
 		var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 		if input_dir == Vector2.ZERO and event.index < 2 and Global.explorer_has_focus():  # Not walking
 			if event is InputEventScreenTouch:
