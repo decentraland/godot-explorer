@@ -2,27 +2,8 @@ extends PanelContainer
 
 const BG_COLOR_NORMAL: String = "#00000080"
 const BG_COLOR_PRESSED: String = "#44444480"
-
-var action_to_trigger: String = ""
-
-var text_down := ""
-var text_up := ""
-var last_state_pressed := false
-
-var stylebox: StyleBox
-
-@onready var label_action = %Label_Action
-@onready var texture_rect_action_icon = %TextureRect_ActionIcon
-@onready var h_box_container_gamepad: HBoxContainer = %HBoxContainer_Gamepad
-@onready var panel_container_inputs: PanelContainer = %PanelContainer_Inputs
-@onready var h_box_container_modifier: HBoxContainer = %HBoxContainer_Modifier
-@onready var texture_rect_gamepad_button: TextureRect = %TextureRect_GamepadButton
-
-@onready var label_text = %Label_Text
-
-const ICON_LEFT_CLICK = preload("res://assets/themes/icons/LeftClickIcn.png")
-const ICON_INTERACTIVE_POINTER = preload("res://assets/themes/icons/InteractiveIcon.svg")
-
+const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
+const ICON_INTERACTIVE_POINTER = preload("uid://72xpjysoxgwo")
 const A_FILLED_GREEN = preload("uid://dpl8fdyynmjq")
 const B_FILLED_RED = preload("uid://qgrxrpohsm5r")
 const LEFT_BUMPER = preload("uid://bkkwupihke6dx")
@@ -59,6 +40,20 @@ const GAMEPAD_BUTTON_MAP := {
 	"ia_left": [false, LEFT_JOYSTICK_LEFT, "Move the stick to the Left"],
 	"ia_right": [false, LEFT_JOYSTICK_RIGHT, "Move the stick to the Right"],
 }
+
+var action_to_trigger: String = ""
+var text_down := ""
+var text_up := ""
+var last_state_pressed := false
+var stylebox: StyleBox
+
+@onready var label_action = %Label_Action
+@onready var texture_rect_action_icon = %TextureRect_ActionIcon
+@onready var h_box_container_gamepad: HBoxContainer = %HBoxContainer_Gamepad
+@onready var panel_container_inputs: PanelContainer = %PanelContainer_Inputs
+@onready var h_box_container_modifier: HBoxContainer = %HBoxContainer_Modifier
+@onready var texture_rect_gamepad_button: TextureRect = %TextureRect_GamepadButton
+@onready var label_text = %Label_Text
 
 
 func _ready():
