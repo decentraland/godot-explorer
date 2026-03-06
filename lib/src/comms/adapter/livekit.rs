@@ -338,6 +338,9 @@ fn spawn_livekit_task(
             });
         }
 
+        // Track the current streamer audio task so we can abort it when a new one arrives
+        let mut streamer_audio_task: Option<tokio::task::JoinHandle<()>> = None;
+
         'stream: loop {
             tokio::select!(
                 incoming = network_rx.recv() => {
@@ -444,6 +447,12 @@ fn spawn_livekit_task(
                             match track {
                                 livekit::track::RemoteTrack::Audio(audio) => {
                                     if is_streamer {
+                                        // Abort previous streamer audio task if any
+                                        if let Some(prev_task) = streamer_audio_task.take() {
+                                            tracing::debug!("Aborting previous streamer audio task before starting new one");
+                                            prev_task.abort();
+                                        }
+
                                         // Streamer audio -> video player audio
                                         let sender = sender.clone();
                                         let room_id_clone = room_id.clone();
@@ -451,7 +460,7 @@ fn spawn_livekit_task(
                                         // Use zero address for streamers
                                         let address = address.unwrap_or_default();
 
-                                        rt2.spawn(async move {
+                                        streamer_audio_task = Some(rt2.spawn(async move {
                                             let mut stream = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track(), 48000, 1);
 
                                             tracing::debug!("streamer audio track from {:?}", identity_owned);
@@ -504,7 +513,7 @@ fn spawn_livekit_task(
                                             }
 
                                             tracing::debug!("streamer audio track ended, exiting task");
-                                        });
+                                        }));
                                     } else if let Some(address) = address {
                                         // Regular participant audio -> voice chat
                                         let sender = sender.clone();

@@ -41,6 +41,9 @@ var _last_effective_volume: float = -1.0  # -1 means uninitialized
 var _last_play_pause_time: float = 0.0
 var _pending_play_state: int = -1  # -1=none, 0=pause, 1=play
 
+# Track if we ever received a valid frame (to distinguish garbage from last frame)
+var _has_received_frame: bool = false
+
 
 # Called from Rust DclVideoPlayer::init_backend
 func _init_backend_impl(backend_type: int, source: String, playing: bool, looping: bool):
@@ -349,7 +352,7 @@ func _update_av_player_volume():
 ## LiveKit uses Godot's AudioStreamPlayer which goes through audio buses
 ## Godot buses handle master/scene volume, we only apply video's own volume
 func _update_livekit_volume():
-	var effective_volume: float = 0.0 if dcl_muted else dcl_volume
+	var effective_volume: float = 0.0 if (dcl_muted or not _is_playing) else dcl_volume
 
 	if absf(effective_volume - _last_effective_volume) < 0.001:
 		return
@@ -371,6 +374,9 @@ func _update_video_state():
 			_update_livekit_state()
 		_:
 			pass
+
+	if video_state == VIDEO_STATE_PLAYING:
+		_has_received_frame = true
 
 
 ## Poll ExoPlayer state and update video_state/position/length
@@ -432,6 +438,10 @@ func _update_av_player_state():
 func _update_livekit_state():
 	# LiveKit state is set to PLAYING by Rust when frames arrive
 	# Here we detect buffering/stopped when frames haven't arrived for a while
+	# Skip if user manually paused (state managed by _apply_pause/_apply_play)
+	if not _is_playing:
+		return
+
 	# Only check if we've received at least one frame
 	if last_frame_time <= 0:
 		return
@@ -444,9 +454,10 @@ func _update_livekit_state():
 		if time_since_last_frame > LIVEKIT_BUFFERING_THRESHOLD:
 			video_state = VIDEO_STATE_BUFFERING
 	elif video_state == VIDEO_STATE_BUFFERING:
-		# If no frames for a long time, stream is likely stopped
+		# If no frames for a long time, stream is likely stopped - show black
 		if time_since_last_frame > LIVEKIT_STOPPED_THRESHOLD:
 			video_state = VIDEO_STATE_PAUSED
+			_has_received_frame = false
 
 
 # Backend control methods called from Rust
@@ -465,6 +476,7 @@ func _backend_play():
 
 func _apply_play():
 	_is_playing = true
+	_last_effective_volume = -1.0  # Force volume recalculation
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			if exo_player:
@@ -473,7 +485,7 @@ func _apply_play():
 			if av_player:
 				av_player.play()
 		BackendType.LIVEKIT:
-			pass  # LiveKit is always "playing" when receiving frames
+			pass  # Rust will resume updating texture when _is_playing is true
 		_:
 			pass
 
@@ -493,6 +505,7 @@ func _backend_pause():
 
 func _apply_pause():
 	_is_playing = false
+	_last_effective_volume = -1.0  # Force volume recalculation (mutes LiveKit audio)
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			if exo_player:
@@ -501,7 +514,8 @@ func _apply_pause():
 			if av_player:
 				av_player.pause()
 		BackendType.LIVEKIT:
-			pass  # LiveKit doesn't support pause
+			# Freeze last frame - Rust will stop updating texture while _is_playing is false
+			video_state = VIDEO_STATE_PAUSED
 		_:
 			pass
 
@@ -562,6 +576,7 @@ func _backend_dispose():
 
 	current_backend = BackendType.NOOP
 	_source = ""
+	_has_received_frame = false
 	# Reset state when disposing - will trigger state change event on next source
 	video_state = VIDEO_STATE_NONE
 	video_position = 0.0
@@ -570,6 +585,13 @@ func _backend_dispose():
 
 
 func _get_backend_texture() -> Texture2D:
+	# Before receiving the first valid frame, ExternalTexture (ExoPlayer/AVPlayer)
+	# may contain GPU garbage. Return null to let Rust use the black placeholder.
+	# After the first frame, always return the backend texture so that pause/buffering
+	# keeps showing the last valid frame instead of going black.
+	if not _has_received_frame:
+		return null
+
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			if exo_player:
@@ -582,7 +604,7 @@ func _get_backend_texture() -> Texture2D:
 			return dcl_texture
 		_:
 			pass
-	return dcl_texture
+	return null
 
 
 # LiveKit audio streaming methods
@@ -592,8 +614,17 @@ func init_livekit_audio(sample_rate: int, _num_channels: int, _samples_per_chann
 
 	var stream = self.get_stream() as AudioStreamGenerator
 	if stream:
-		print("VideoPlayer: Setting LiveKit audio sample_rate=", sample_rate)
 		stream.mix_rate = sample_rate
+		# Clear buffer on re-init to avoid stale data
+		clear_audio_buffer()
+
+
+func clear_audio_buffer():
+	if current_backend != BackendType.LIVEKIT:
+		return
+	var playback = self.get_stream_playback() as AudioStreamGeneratorPlayback
+	if playback:
+		playback.clear_buffer()
 
 
 func stream_buffer(data: PackedVector2Array):
@@ -605,7 +636,8 @@ func stream_buffer(data: PackedVector2Array):
 
 	var playback = self.get_stream_playback() as AudioStreamGeneratorPlayback
 	if playback:
-		playback.push_buffer(data)
+		if playback.get_frames_available() >= data.size():
+			playback.push_buffer(data)
 
 
 # Legacy methods for backward compatibility with existing code

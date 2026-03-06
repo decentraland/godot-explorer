@@ -4,11 +4,7 @@ use std::{
     time::Instant,
 };
 
-use godot::{
-    obj::{NewAlloc, Singleton},
-    prelude::Gd,
-    prelude::ToGodot,
-};
+use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -490,23 +486,42 @@ impl Scene {
         use crate::godot_classes::dcl_video_player::VIDEO_STATE_PLAYING;
         use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
         use godot::classes::Time;
+        use godot::prelude::*;
 
         let current_time = Time::singleton().get_ticks_msec() as f64 / 1000.0;
 
         // Send video frames to all registered livekit video players
         for entity_id in self.livekit_video_player_entities.clone() {
-            // Update the texture
-            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
-                if let Some(vp_data) = &mut node.video_player_data {
-                    update_video_texture_from_livekit(vp_data, width, height, data);
-                }
-            }
-
-            // Update video player state to PLAYING when receiving frames
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
-                video_player.set("video_state", &VIDEO_STATE_PLAYING.to_variant());
-                video_player.set("video_length", &(-1.0_f64).to_variant());
+                // Always update last_frame_time so timeout detection works
                 video_player.set("last_frame_time", &current_time.to_variant());
+
+                // Check if the scene SDK has paused this player
+                let is_playing: bool = video_player
+                    .get("_is_playing")
+                    .try_to::<bool>()
+                    .unwrap_or(true);
+
+                if is_playing {
+                    // Detect stream resuming after a gap — clear stale audio buffer
+                    let prev_state: i32 =
+                        video_player.get("video_state").try_to::<i32>().unwrap_or(0);
+                    if prev_state != VIDEO_STATE_PLAYING {
+                        video_player.call("clear_audio_buffer", &[]);
+                    }
+
+                    // Update the texture only when playing
+                    if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
+                        if let Some(vp_data) = &mut node.video_player_data {
+                            update_video_texture_from_livekit(vp_data, width, height, data);
+                        }
+                    }
+
+                    // Update state to PLAYING
+                    video_player.set("video_state", &VIDEO_STATE_PLAYING.to_variant());
+                    video_player.set("video_length", &(-1.0_f64).to_variant());
+                }
+                // When paused: texture keeps the last frame, state stays as-is
             }
         }
     }
@@ -540,11 +555,20 @@ impl Scene {
     }
 
     pub fn process_livekit_audio_frame(&mut self, frame: godot::prelude::PackedVector2Array) {
+        use godot::prelude::*;
+
         // Send audio frames to all registered livekit video players
         for entity_id in self.livekit_video_player_entities.clone() {
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
-                // Call the stream_buffer method on the video player (GDScript)
-                video_player.call("stream_buffer", &[frame.to_variant()]);
+                // Skip audio when paused to avoid buffer accumulation
+                let is_playing: bool = video_player
+                    .get("_is_playing")
+                    .try_to::<bool>()
+                    .unwrap_or(true);
+
+                if is_playing {
+                    video_player.call("stream_buffer", &[frame.to_variant()]);
+                }
             }
         }
     }
