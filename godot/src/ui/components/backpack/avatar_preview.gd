@@ -125,11 +125,11 @@ func disable_outline():
 		outline_system.set_outlined_avatar(null)
 
 
-func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float = 4.25) -> Image:
+func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float = 2.5) -> Image:
 	avatar.emote_controller.freeze_on_idle()
 	avatar.rotation.y = 0.0
-	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.5)
-	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.7, -1.25)
+	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 1.25, -3.5)
+	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.70, -1.25)
 	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION
 	camera_3d.rotation_degrees = DEFAULT_ROTATION if not face else Vector3(0.0, 180.0, 0.0)
 	camera_3d.size = ortho_size
