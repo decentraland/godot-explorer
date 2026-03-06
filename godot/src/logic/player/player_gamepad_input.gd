@@ -1,7 +1,6 @@
 class_name PlayerGamepadInput
 extends Node
 
-const JOYSTICK_CAMERA_SENS: float = 3.0
 const JOYSTICK_CAMERA_DEADZONE: float = 0.15
 
 var _player: Player = null
@@ -40,9 +39,10 @@ func _physics_process(_dt: float) -> void:
 		right_y = 0.0
 
 	if right_x != 0.0 or right_y != 0.0:
-		_player.rotate_y(deg_to_rad(-right_x) * JOYSTICK_CAMERA_SENS)
-		_player.avatar.rotate_y(deg_to_rad(right_x) * JOYSTICK_CAMERA_SENS)
-		_player.mount_camera.rotate_x(deg_to_rad(-right_y) * JOYSTICK_CAMERA_SENS)
+		var sens: float = Global.get_config().gamepad_camera_sensitivity * 0.06
+		_player.rotate_y(deg_to_rad(-right_x) * sens)
+		_player.avatar.rotate_y(deg_to_rad(right_x) * sens)
+		_player.mount_camera.rotate_x(deg_to_rad(-right_y) * sens)
 		_player.clamp_camera_rotation()
 
 
