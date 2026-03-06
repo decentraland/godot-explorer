@@ -28,17 +28,25 @@ const B_FILLED_RED = preload("uid://qgrxrpohsm5r")
 const LEFT_BUMPER = preload("uid://bkkwupihke6dx")
 const X_FILLED_BLUE = preload("uid://ctet7pl62d4nr")
 const Y_FILLED_YELLOW = preload("uid://bb0lffkog0tpr")
+const LEFT_JOYSTICK_DOWN = preload("uid://d1wqs4mgg6jq4")
+const LEFT_JOYSTICK_LEFT = preload("uid://cer2ugmqggxyc")
+const LEFT_JOYSTICK_RIGHT = preload("uid://c84msmtv8uyk")
+const LEFT_JOYSTICK_UP = preload("uid://bnrqef3he5s1")
 
 
 const GAMEPAD_BUTTON_MAP := {
-	"ia_jump": [false, A_FILLED_GREEN],
-	"ia_primary": [false, B_FILLED_RED],
-	"ia_pointer": [false, X_FILLED_BLUE],
-	"ia_secondary": [false, Y_FILLED_YELLOW],
-	"ia_action_3": [true, A_FILLED_GREEN],
-	"ia_action_4": [true, B_FILLED_RED],
-	"ia_action_5": [true, X_FILLED_BLUE],
-	"ia_action_6": [true, Y_FILLED_YELLOW],
+	"ia_jump": [false, A_FILLED_GREEN, "Press Jump"],
+	"ia_primary": [false, B_FILLED_RED, "Press Primary"],
+	"ia_pointer": [false, X_FILLED_BLUE, "Press Interact"],
+	"ia_secondary": [false, Y_FILLED_YELLOW, "Press Secondary"],
+	"ia_action_3": [true, A_FILLED_GREEN, "Press Action 1"],
+	"ia_action_4": [true, B_FILLED_RED, "Press Action 2"],
+	"ia_action_5": [true, X_FILLED_BLUE, "Press Action 3"],
+	"ia_action_6": [true, Y_FILLED_YELLOW, "Press Action 4"],
+	"ia_forward": [false, LEFT_JOYSTICK_UP, "Move the stick to the Forward"],
+	"ia_backward": [false, LEFT_JOYSTICK_DOWN, "Move the stick to the Backward"],
+	"ia_left": [false, LEFT_JOYSTICK_LEFT, "Move the stick to the Left"],
+	"ia_right": [false, LEFT_JOYSTICK_RIGHT, "Move the stick to the Right"],
 }
 
 
@@ -69,6 +77,9 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 		var mapping: Array = GAMEPAD_BUTTON_MAP[action_lower]
 		_show_gamepad(mapping[0], mapping[1])
 		action_to_trigger = action_lower
+		var gamepad_label: String = mapping[2]
+		text_down = gamepad_label
+		text_up = gamepad_label
 		label_text.text = text_down
 	elif action_lower == "ia_any":
 		_show_keyboard("Any")
