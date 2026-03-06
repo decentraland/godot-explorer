@@ -48,7 +48,7 @@ func _input(event):
 		_player.clamp_camera_rotation()
 
 
-func _physics_process(dt: float) -> void:
+func _physics_process(_dt: float) -> void:
 	if not Global.explorer_has_focus():
 		return
 

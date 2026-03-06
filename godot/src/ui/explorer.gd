@@ -1137,7 +1137,9 @@ func _update_virtual_controls_visibility() -> void:
 		virtual_joystick.hide()
 	else:
 		# Only restore if no panel is covering them
-		var panel_open := friends_panel.visible or notifications_panel.visible or profile_container.visible
+		var panel_open := (
+			friends_panel.visible or notifications_panel.visible or profile_container.visible
+		)
 		if not panel_open:
 			joypad.show()
 		virtual_joystick.show()

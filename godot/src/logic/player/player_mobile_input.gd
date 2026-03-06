@@ -74,7 +74,7 @@ func _input(event):
 			_player.clamp_camera_rotation()
 
 
-func _physics_process(dt: float) -> void:
+func _physics_process(_dt: float) -> void:
 	if not Global.explorer_has_focus():
 		return
 
@@ -94,7 +94,6 @@ func _physics_process(dt: float) -> void:
 		_player.clamp_camera_rotation()
 
 
-
 ## Handles gamepad buttons with LB as modifier for combo actions.
 ## Without LB: A=jump, B=primary(E), X=interact, Y=secondary(F)
 ## With LB held: A=combo1, B=combo2, X=combo3, Y=combo4
@@ -108,16 +107,24 @@ func _handle_gamepad_button(event: InputEventJoypadButton) -> void:
 	var action := ""
 	if _lb_held:
 		match event.button_index:
-			JOY_BUTTON_A: action = "ia_action_3"
-			JOY_BUTTON_B: action = "ia_action_4"
-			JOY_BUTTON_X: action = "ia_action_5"
-			JOY_BUTTON_Y: action = "ia_action_6"
+			JOY_BUTTON_A:
+				action = "ia_action_3"
+			JOY_BUTTON_B:
+				action = "ia_action_4"
+			JOY_BUTTON_X:
+				action = "ia_action_5"
+			JOY_BUTTON_Y:
+				action = "ia_action_6"
 	else:
 		match event.button_index:
-			JOY_BUTTON_A: action = "ia_jump"
-			JOY_BUTTON_B: action = "ia_primary"
-			JOY_BUTTON_X: action = "ia_pointer"
-			JOY_BUTTON_Y: action = "ia_secondary"
+			JOY_BUTTON_A:
+				action = "ia_jump"
+			JOY_BUTTON_B:
+				action = "ia_primary"
+			JOY_BUTTON_X:
+				action = "ia_pointer"
+			JOY_BUTTON_Y:
+				action = "ia_secondary"
 
 	if action.is_empty():
 		return
