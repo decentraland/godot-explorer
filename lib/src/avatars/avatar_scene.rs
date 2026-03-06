@@ -584,8 +584,8 @@ impl AvatarScene {
             }
         }
 
-        // Convert rotation_y from degrees to radians and create quaternion
-        let rotation_rad = movement.rotation_y * std::f32::consts::PI / 180.0;
+        // rotation_y is already in radians (negated by the sender)
+        let rotation_rad = movement.rotation_y;
         let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
             x: 0.0,
             y: rotation_rad,
