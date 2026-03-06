@@ -22,6 +22,7 @@ var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
+var _gamepad_connected: bool = false
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -193,6 +194,10 @@ func _ready():
 		label_crosshair.show()
 		reset_cursor_position()
 		ui_root.gui_input.connect(self._on_ui_root_gui_input)
+		# Detect physical gamepad to hide virtual controls
+		Input.joy_connection_changed.connect(_on_joy_connection_changed)
+		_gamepad_connected = Input.get_connected_joypads().size() > 0
+		_update_virtual_controls_visibility()
 	else:
 		mobile_ui.hide()
 
@@ -861,7 +866,7 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 
 
 func _on_profile_container_visibility_changed() -> void:
-	if not profile_container.visible:
+	if not profile_container.visible and not _gamepad_connected:
 		joypad.show()
 
 
@@ -1113,11 +1118,31 @@ func _notification(what: int) -> void:
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	virtual_joystick.show()
+	if not _gamepad_connected:
+		virtual_joystick.show()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
+
+
+func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
+	_gamepad_connected = Input.get_connected_joypads().size() > 0
+	_update_virtual_controls_visibility()
+
+
+func _update_virtual_controls_visibility() -> void:
+	if _gamepad_connected:
+		joypad.hide()
+		virtual_joystick.hide()
+	else:
+		# Only restore if no panel is covering them
+		var panel_open := (
+			friends_panel.visible or notifications_panel.visible or profile_container.visible
+		)
+		if not panel_open:
+			joypad.show()
+		virtual_joystick.show()
 
 
 func _on_backpack_emote_opened(on_emotes := false) -> void:
@@ -1132,12 +1157,14 @@ func _close_all_panels():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	joypad.show()
+	if not _gamepad_connected:
+		joypad.show()
 
 
 func _on_discover_open():
 	navbar.collapse()
-	joypad.show()
+	if not _gamepad_connected:
+		joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
