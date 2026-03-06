@@ -3,8 +3,6 @@ extends Node
 
 const VERTICAL_SENS: float = 0.5
 const HORIZONTAL_SENS: float = 0.5
-const JOYSTICK_CAMERA_SENS: float = 3.0
-const JOYSTICK_CAMERA_DEADZONE: float = 0.15
 
 # macOS trackpad specific sensitivity
 const MACOS_VERTICAL_SENS: float = 0.3
@@ -45,26 +43,6 @@ func _input(event):
 		_player.rotate_y(deg_to_rad(-_mouse_position.x) * h_sens)
 		_player.avatar.rotate_y(deg_to_rad(_mouse_position.x) * h_sens)
 		_player.mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * v_sens)
-		_player.clamp_camera_rotation()
-
-
-func _physics_process(_dt: float) -> void:
-	if not Global.explorer_has_focus():
-		return
-
-	# Right stick camera control (gamepad)
-	var right_x := Input.get_joy_axis(0, JOY_AXIS_RIGHT_X)
-	var right_y := Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)
-
-	if absf(right_x) < JOYSTICK_CAMERA_DEADZONE:
-		right_x = 0.0
-	if absf(right_y) < JOYSTICK_CAMERA_DEADZONE:
-		right_y = 0.0
-
-	if right_x != 0.0 or right_y != 0.0:
-		_player.rotate_y(deg_to_rad(-right_x) * JOYSTICK_CAMERA_SENS)
-		_player.avatar.rotate_y(deg_to_rad(right_x) * JOYSTICK_CAMERA_SENS)
-		_player.mount_camera.rotate_x(deg_to_rad(-right_y) * JOYSTICK_CAMERA_SENS)
 		_player.clamp_camera_rotation()
 
 
