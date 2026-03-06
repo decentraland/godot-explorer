@@ -23,6 +23,19 @@ func _ready():
 #  virtuals can change between scenes or in the same scene, computed as desired_target
 #  desired_target can be removed from the scene tree, so global_virtual_camera could be orphan at this point
 func _process(delta: float) -> void:
+	# If the virtual camera was freed (e.g. scene exited while reparented to an entity node), reinitialize it
+	if not is_instance_valid(global_virtual_camera):
+		global_virtual_camera = load("res://src/helpers_components/persistant_camera.tscn").instantiate()
+		add_child(global_virtual_camera)
+		global_virtual_camera.clear_current()
+		global_virtual_camera.cull_mask = 0x7fff
+		last_virtual_camera_entity_node = null
+		last_camera_reached = true
+
+	# If the last tracked entity was freed, reset so the comparison below doesn't misfire
+	if not is_instance_valid(last_virtual_camera_entity_node):
+		last_virtual_camera_entity_node = null
+
 	var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
 	var scene_virtual_camera = Global.scene_runner.get_scene_virtual_camera(current_scene_id)
 
