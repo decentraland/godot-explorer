@@ -69,6 +69,9 @@ func _process(delta: float) -> void:
 			# Going back to player camera - reparent to self conserving global transform
 			if global_virtual_camera.get_parent() != self:
 				global_virtual_camera.reparent(self)
+			Global.camera_mode_set.emit(
+				Global.player_camera_node.get_camera_mode() as Global.CameraMode
+			)
 		else:
 			# Switching to virtual camera - start from current viewport camera position
 			var current_camera = get_viewport().get_camera_3d()
@@ -77,6 +80,7 @@ func _process(delta: float) -> void:
 
 			# Make the global virtual camera current
 			global_virtual_camera.make_current()
+			Global.camera_mode_set.emit(Global.CameraMode.CINEMATIC)
 
 			# When virtual camera is active we always show the primary avatar and hide outlines
 			var explorer = Global.get_explorer()

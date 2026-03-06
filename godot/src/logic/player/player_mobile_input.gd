@@ -62,4 +62,5 @@ func _input(event):
 
 
 func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
-	_player.set_camera_mode(camera_mode)
+	if camera_mode != Global.CameraMode.CINEMATIC:
+		_player.set_camera_mode(camera_mode)
