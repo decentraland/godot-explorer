@@ -1,9 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://d0rqfy34immue"]
+[gd_scene load_steps=10 format=3 uid="uid://d0rqfy34immue"]
 
 [ext_resource type="FontFile" uid="uid://cmc7ku5u0efdy" path="res://assets/themes/fonts/lato_family/Lato-Bold.ttf" id="1_1lcoh"]
 [ext_resource type="Script" uid="uid://5u25dqo7og70" path="res://src/ui/components/pointer_tooltip/tooltip_label.gd" id="1_ut63f"]
 [ext_resource type="Texture2D" uid="uid://bkkwupihke6dx" path="res://assets/themes/icons/gamepad/left-bumper.svg" id="2_qd4xu"]
 [ext_resource type="Texture2D" uid="uid://dpl8fdyynmjq" path="res://assets/themes/icons/gamepad/a-filled-green.svg" id="4_i6l11"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_sk4cq"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_sk4cq"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_473nw"]
 bg_color = Color(0, 0, 0, 0.501961)
@@ -12,9 +14,26 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="LabelSettings" id="LabelSettings_i8mwd"]
+font = ExtResource("4_sk4cq")
+font_size = 28
+
+[sub_resource type="LabelSettings" id="LabelSettings_r3qmc"]
+font = ExtResource("6_sk4cq")
+font_size = 24
+font_color = Color(0, 0, 0, 1)
+
 [node name="PanelContainer" type="PanelContainer"]
-offset_right = 85.0
-offset_bottom = 40.0
+custom_minimum_size = Vector2(0, 52)
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -25.5
+offset_right = 205.0
+offset_bottom = 25.5
+grow_vertical = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_473nw")
 script = ExtResource("1_ut63f")
 
@@ -53,11 +72,12 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("1_1lcoh")
 text = "+"
+label_settings = SubResource("LabelSettings_i8mwd")
 vertical_alignment = 1
 
 [node name="TextureRect_GamepadButton" type="TextureRect" parent="MarginContainer/HBoxContainer/HBoxContainer_Gamepad"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 texture = ExtResource("4_i6l11")
 expand_mode = 3
@@ -65,8 +85,7 @@ stretch_mode = 5
 
 [node name="PanelContainer_Inputs" type="PanelContainer" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(24, 24)
+custom_minimum_size = Vector2(36, 24)
 layout_mode = 2
 mouse_filter = 2
 
@@ -79,12 +98,12 @@ theme_override_constants/margin_bottom = 3
 
 [node name="Label_Action" type="Label" parent="MarginContainer/HBoxContainer/PanelContainer_Inputs/MarginContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 12
-text = "RB + A"
+text = "E"
+label_settings = SubResource("LabelSettings_r3qmc")
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -102,4 +121,5 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("1_1lcoh")
 text = "Text"
+label_settings = SubResource("LabelSettings_i8mwd")
 vertical_alignment = 1

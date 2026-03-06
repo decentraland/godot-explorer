@@ -84,8 +84,10 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 		_show_gamepad(mapping[0], mapping[1])
 		action_to_trigger = action_lower
 		var gamepad_label: String = mapping[2]
-		text_down = gamepad_label
-		text_up = gamepad_label
+		if text_down.is_empty():
+			text_down = gamepad_label
+		if text_up.is_empty():
+			text_up = gamepad_label
 		label_text.text = text_down
 	elif Global.is_mobile() and action_lower in MOBILE_ACTION_MAP:
 		var mapping: Array = MOBILE_ACTION_MAP[action_lower]
@@ -95,8 +97,10 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 		else:
 			_show_keyboard(mapping[0])
 		action_to_trigger = action_lower
-		text_down = mobile_label
-		text_up = mobile_label
+		if text_down.is_empty():
+			text_down = mobile_label
+		if text_up.is_empty():
+			text_up = mobile_label
 		label_text.text = text_down
 	elif action_lower == "ia_any":
 		_show_keyboard("Any")
