@@ -569,8 +569,16 @@ func change_gltf(
 	dcl_invisible_cmask = invisible_meshes_collision_mask
 
 	if gltf_changed:
+		# Clean up previous loading state before starting new load
+		timer.stop()
+		pending_load_queue.erase(self)
+		if not dcl_gltf_hash.is_empty():
+			currently_loading_assets.erase(dcl_gltf_hash)
+		dcl_gltf_loading_state = GltfContainerLoadingState.UNKNOWN
+
 		# New GLTF source - reload everything
 		dcl_gltf_src = new_gltf
+		dcl_gltf_hash = ""
 		optimized = false
 
 		if gltf_node != null:
@@ -581,6 +589,8 @@ func change_gltf(
 			dcl_pending_node.queue_free()
 			dcl_pending_node = null
 
+		# Process queue since we freed a loading slot
+		_process_next_in_queue()
 		async_load_gltf.call_deferred()
 
 	elif masks_changed and gltf_node != null:
