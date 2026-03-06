@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=43 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -58,12 +58,6 @@ shadow_offset = Vector2(0, 4)
 resource_name = "CollectiblesFilter"
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yj6kw"]
-
-[sub_resource type="Gradient" id="Gradient_yjmsa"]
-colors = PackedColorArray(0.27450982, 0.05882353, 0.43529412, 1, 0.20784314, 0.03137255, 0.32941177, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_k780d"]
-gradient = SubResource("Gradient_yjmsa")
 
 [sub_resource type="Gradient" id="Gradient_k780d"]
 colors = PackedColorArray(0.27450982, 0.05882353, 0.43529412, 1, 0.20784314, 0.03137255, 0.32941177, 1)
@@ -409,13 +403,6 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 10
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer"]
-visible = false
-layout_mode = 2
-texture = SubResource("GradientTexture2D_k780d")
-expand_mode = 2
-stretch_mode = 5
-
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer"]
 layout_mode = 2
 
@@ -425,11 +412,6 @@ material = SubResource("ShaderMaterial_k780d")
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_cq6cy")
-
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor"]
-visible = false
-layout_mode = 2
-texture = SubResource("GradientTexture2D_k780d")
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor"]
 layout_mode = 2
@@ -735,7 +717,10 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 21
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="HSeparator_SizeMaintainer" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
+Otherwise the Editor shrinks if there is less than 3 wearables."
+custom_minimum_size = Vector2(630, 0)
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
