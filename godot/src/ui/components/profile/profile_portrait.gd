@@ -14,6 +14,7 @@ var _opened_from_landscape: bool = false
 
 
 func _ready() -> void:
+	UiSounds.install_audio_recusirve(self)
 	var content = draggable_bottom_sheet.get_content_instance()
 	if content:
 		content.emote_pressed.connect(_on_emote_pressed)
