@@ -1,6 +1,7 @@
 extends Node
 
 const DEFAULT_TRANSITION_TIME = 0.35  # in seconds
+const PERSISTANT_CAMERA := preload("res://src/helpers_components/persistant_camera.tscn")
 
 var global_virtual_camera_transform: Transform3D
 var last_virtual_camera_entity_node = null
@@ -8,9 +9,7 @@ var last_camera_reached = true
 var transition_start_transform: Transform3D
 var transition_time_counter: float = 0.0
 
-@onready var global_virtual_camera = (
-	load("res://src/helpers_components/persistant_camera.tscn").instantiate()
-)
+@onready var global_virtual_camera = PERSISTANT_CAMERA.instantiate()
 
 
 func _ready():
@@ -25,7 +24,7 @@ func _ready():
 func _process(delta: float) -> void:
 	# If the virtual camera was freed (e.g. scene exited while reparented to an entity node), reinitialize it
 	if not is_instance_valid(global_virtual_camera):
-		global_virtual_camera = load("res://src/helpers_components/persistant_camera.tscn").instantiate()
+		global_virtual_camera = (PERSISTANT_CAMERA.instantiate())
 		add_child(global_virtual_camera)
 		global_virtual_camera.clear_current()
 		global_virtual_camera.cull_mask = 0x7fff

@@ -7,8 +7,8 @@ func _ready() -> void:
 	Global.change_parcel.connect(_on_change_parcel)
 
 
-func _on_change_parcel(position: Vector2i) -> void:
-	%Label_Coordinates.text = "%d,%d" % [position.x, position.y]
+func _on_change_parcel(coordinates: Vector2i) -> void:
+	%Label_Coordinates.text = "%d,%d" % [coordinates.x, coordinates.y]
 
 
 func _on_hud_button_discover_pressed() -> void:

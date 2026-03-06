@@ -122,7 +122,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="HSeparator" type="HSeparator" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons"]
-custom_minimum_size = Vector2(20, 0)
+custom_minimum_size = Vector2(24, 0)
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_2fmgn")
 
