@@ -633,8 +633,16 @@ impl SceneManager {
             // We wait for tick 10 instead of 4 to give GLTFs time to start loading
             if !scene.loading_reported_ready
                 && scene.tick_number >= 10
-                && scene.gltf_loading.is_empty()
+                && (scene.gltf_loading.is_empty() || scene.tick_number >= 50)
             {
+                if !scene.gltf_loading.is_empty() {
+                    tracing::warn!(
+                        "[LOADING] Scene {:?} force-ready after {} ticks with {} pending GLTFs",
+                        scene_id,
+                        scene.tick_number,
+                        scene.gltf_loading.len()
+                    );
+                }
                 tracing::debug!(
                     "[LOADING] Scene {:?} marked ready - tick={}, gltf_loading_count={}",
                     scene_id,
