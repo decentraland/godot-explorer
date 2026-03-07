@@ -11,7 +11,6 @@ signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
-signal deep_link_received
 signal open_chat
 signal open_friends_panel
 signal open_notifications_panel
@@ -95,6 +94,7 @@ var previous_height_2: int = -1
 
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
+var deep_link_router := DeepLinkRouter.new()
 
 var player_camera_node: DclCamera3D
 var session_id: String
@@ -202,7 +202,7 @@ func _ready():
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
 		if dcl_ios_singleton:
-			dcl_ios_singleton.deeplink_received.connect(_on_deeplink_received)
+			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	# Setup
 	nft_frame_loader = NftFrameStyleLoader.new()
@@ -860,88 +860,6 @@ func _emit_sentry_godot_test_messages() -> void:
 	)
 
 
-func check_deep_link_teleport_to():
-	# Only process deep links on real mobile devices (not emulation/desktop)
-	# This prevents re-teleporting on every focus change with --fake-deeplink
-	if not Global.is_mobile() or Global.is_virtual_mobile():
-		return
-
-	# Skip if no pending deep link (already consumed or none received)
-	if deep_link_url.is_empty():
-		return
-
-	# Ignore WalletConnect callbacks
-	if Global.deep_link_obj.is_walletconnect_callback:
-		_clear_deep_link()
-		return
-
-	if Global.deep_link_obj.is_location_defined():
-		# Use preview URL as realm if specified, otherwise use realm, otherwise main
-		var realm = Global.deep_link_obj.preview
-		if realm.is_empty():
-			realm = Global.deep_link_obj.realm
-		if realm.is_empty():
-			realm = DclUrls.main_realm()
-
-		Global.teleport_to(Global.deep_link_obj.location, realm)
-	elif not Global.deep_link_obj.preview.is_empty():
-		# Preview without location - just set realm, don't teleport
-		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
-	elif not Global.deep_link_obj.realm.is_empty():
-		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
-
-	# Clear deep link after processing to prevent re-teleporting on app resume
-	_clear_deep_link()
-
-
-func _on_deeplink_received(url: String) -> void:
-	if not url.is_empty():
-		# Consume receivedUrl from the iOS plugin so that _notification(FOCUS_IN)
-		# doesn't re-read the same URL via get_deeplink_url() on the next resume.
-		# This signal already provides the URL, so the polling fallback isn't needed.
-		if DclIosPlugin.is_available():
-			DclIosPlugin.get_deeplink_args()
-
-		deep_link_url = url
-		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
-		print("[DEEPLINK] _on_deeplink_received params: ", deep_link_obj.params)
-
-		# Apply rust-log from deeplink params
-		var rust_log_value = deep_link_obj.params.get("rust-log", "")
-		if not rust_log_value.is_empty():
-			print("[DEEPLINK] Found rust-log param: ", rust_log_value)
-			DclGlobal.set_rust_log_filter(rust_log_value)
-
-		# Ignore WalletConnect callbacks (decentraland://walletconnect)
-		if deep_link_obj.is_walletconnect_callback:
-			print("[DEEPLINK] Ignoring WalletConnect callback")
-			return
-
-		# Check for environment change — requires restart
-		if _check_dclenv_change():
-			return
-
-		# Handle signin deep link for mobile auth flow
-		if deep_link_obj.is_signin_request():
-			_handle_signin_deep_link(deep_link_obj.signin_identity_id)
-		else:
-			deep_link_received.emit.call_deferred()
-
-
-func _handle_signin_deep_link(identity_id: String) -> void:
-	if Global.player_identity.has_pending_mobile_auth():
-		Global.player_identity.complete_mobile_connect_account(identity_id)
-	else:
-		printerr("[DEEPLINK] Received signin deep link but no pending mobile auth")
-
-
-func _clear_deep_link() -> void:
-	# Only clear the URL flag, not deep_link_obj.
-	# deep_link_obj is still needed by scene_fetcher (preview mode)
-	# and other systems that check deep link parameters.
-	deep_link_url = ""
-
-
 ## Check if the deep link contains a dclenv change. If it does, apply the new
 ## environment and restart back to the lobby (sign out). Returns true if a
 ## restart was triggered so the caller can skip further deep-link processing.
@@ -971,33 +889,11 @@ func _notification(what: int) -> void:
 
 			# Only process if a new deep link URL was received.
 			# Don't overwrite deep_link_url with empty to avoid clobbering
-			# data set by the iOS signal path (_on_deeplink_received).
+			# data set by the iOS signal path (process_deep_link).
 			if new_url.is_empty():
 				return
 
-			deep_link_url = new_url
-			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
-			print("[DEEPLINK] _notification focus-in params: ", deep_link_obj.params)
-
-			# Apply rust-log from deeplink params
-			var rust_log_value = deep_link_obj.params.get("rust-log", "")
-			if not rust_log_value.is_empty():
-				print("[DEEPLINK] Found rust-log param: ", rust_log_value)
-				DclGlobal.set_rust_log_filter(rust_log_value)
-
-			# Ignore WalletConnect callbacks
-			if deep_link_obj.is_walletconnect_callback:
-				return
-
-			# Check for environment change — requires restart
-			if _check_dclenv_change():
-				return
-
-			# Handle signin deep link for mobile auth flow
-			if deep_link_obj.is_signin_request():
-				_handle_signin_deep_link(deep_link_obj.signin_identity_id)
-			else:
-				deep_link_received.emit.call_deferred()
+			deep_link_router.process_deep_link(new_url)
 
 
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:

@@ -292,7 +292,7 @@ func _ready():
 	var login = %Login
 
 	ready_for_redirect_by_deep_link = false
-	Global.deep_link_received.connect(_on_deep_link_received)
+	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 
 	login.set_lobby(self)
 	login.show()
