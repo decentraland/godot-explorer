@@ -125,6 +125,7 @@ func _ready():
 
 	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
+	friends_panel.reload_requested.connect(_async_reload_friends)
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
@@ -314,18 +315,25 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 
 func _async_initialize_social_service() -> void:
 	# Initialize the social service with player identity
-	# Note: Friendship subscriptions are handled by FriendsPanel when it opens/closes
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 	# Connect to block update signal for real-time sync
 	if not Global.social_service.block_update_received.is_connected(_on_block_update_received):
 		Global.social_service.block_update_received.connect(_on_block_update_received)
 
+	# Connect subscription_dropped for auto-reconnect
+	if not Global.social_service.subscription_dropped.is_connected(_async_on_subscription_dropped):
+		Global.social_service.subscription_dropped.connect(_async_on_subscription_dropped)
+
 	# Fetch blocked users from server and initialize local cache (fire-and-forget)
 	_async_fetch_blocking_status()
 
 	# Subscribe to block updates for real-time sync across devices
 	Global.social_service.subscribe_to_block_updates()
+
+	# Subscribe to friendship and connectivity updates persistently
+	_async_subscribe_to_friendship_updates()
+	_async_subscribe_to_connectivity_updates()
 
 
 func _async_fetch_blocking_status() -> void:
@@ -347,6 +355,57 @@ func _on_block_update_received(address: String, is_blocked: bool) -> void:
 		Global.social_blacklist.add_blocked(address)
 	else:
 		Global.social_blacklist.remove_blocked(address)
+
+
+func _async_subscribe_to_friendship_updates() -> void:
+	var promise = Global.social_service.subscribe_to_updates()
+	await PromiseUtils.async_awaiter(promise)
+	if promise.is_rejected():
+		push_error(
+			(
+				"[Explorer] Failed to subscribe to friendship updates: "
+				+ str(PromiseUtils.get_error_message(promise))
+			)
+		)
+		friends_panel.set_streaming_subscription_failed(true)
+		# Retry after delay (subscription_dropped won't fire for initial failure)
+		await get_tree().create_timer(5.0).timeout
+		if not Global.player_identity.is_guest:
+			_async_subscribe_to_friendship_updates()
+	else:
+		friends_panel.set_streaming_subscription_failed(false)
+		friends_panel.async_initial_friends_load()
+
+
+func _async_subscribe_to_connectivity_updates() -> void:
+	var promise = Global.social_service.subscribe_to_connectivity_updates()
+	await PromiseUtils.async_awaiter(promise)
+	if promise.is_rejected():
+		push_error(
+			(
+				"[Explorer] Failed to subscribe to connectivity updates: "
+				+ str(PromiseUtils.get_error_message(promise))
+			)
+		)
+		# Retry after delay
+		await get_tree().create_timer(5.0).timeout
+		if not Global.player_identity.is_guest:
+			_async_subscribe_to_connectivity_updates()
+
+
+func _async_on_subscription_dropped() -> void:
+	if Global.player_identity.is_guest:
+		return
+	print("[Explorer] Subscription dropped - reconnecting...")
+	await get_tree().create_timer(2.0).timeout
+	_async_subscribe_to_friendship_updates()
+	_async_subscribe_to_connectivity_updates()
+
+
+func _async_reload_friends() -> void:
+	print("[Explorer] Manual friends reload requested - re-subscribing...")
+	_async_subscribe_to_friendship_updates()
+	_async_subscribe_to_connectivity_updates()
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
