@@ -34,6 +34,8 @@ class DclGodotiOS : public Object {
     static DclGodotiOS *instance;
     static void _bind_methods();
 
+    ASWebAuthenticationSession *authSession;
+    WebKitAuthenticationDelegate *authDelegate;
     SafariAuthDelegate *safariAuthDelegate;
     CalendarEventDelegate *calendarDelegate;
     NotificationDatabase *notificationDatabase;
@@ -47,6 +49,7 @@ public:
 
     void print_version();
     void open_auth_url(String url);
+    void open_safari_auth_url(String url);
     void open_webview_url(String url);
     String get_deeplink_url();
     Dictionary get_mobile_device_info();

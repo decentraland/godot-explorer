@@ -21,50 +21,45 @@ fn default_suffix() -> &'static str {
 }
 
 // Auth
-// TESTING: hardcoded to zone
 pub fn auth_frontend() -> String {
-    // if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
-    //     "http://localhost:5173/auth/requests".to_string()
-    // } else {
-    //     format!(
-    //         "https://decentraland.{}/auth/requests",
-    //         suffix(ServiceGroup::Auth)
-    //     )
-    // }
-    "https://decentraland.zone/auth/requests".to_string()
+    if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
+        "http://localhost:5173/auth/requests".to_string()
+    } else {
+        format!(
+            "https://decentraland.{}/auth/requests",
+            suffix(ServiceGroup::Auth)
+        )
+    }
 }
 pub fn auth_mobile_frontend() -> String {
-    // if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
-    //     "http://localhost:5173/auth/mobile".to_string()
-    // } else {
-    //     format!(
-    //         "https://decentraland.{}/auth/mobile",
-    //         suffix(ServiceGroup::Auth)
-    //     )
-    // }
-    "https://decentraland.zone/auth/mobile".to_string()
+    if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
+        "http://localhost:5173/auth/mobile".to_string()
+    } else {
+        format!(
+            "https://decentraland.{}/auth/mobile",
+            suffix(ServiceGroup::Auth)
+        )
+    }
 }
 pub fn auth_api_base() -> String {
-    // if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
-    //     "https://auth-api.decentraland.zone".to_string()
-    // } else {
-    //     format!(
-    //         "https://auth-api.decentraland.{}",
-    //         suffix(ServiceGroup::Auth)
-    //     )
-    // }
-    "https://auth-api.decentraland.zone".to_string()
+    if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
+        "https://auth-api.decentraland.zone".to_string()
+    } else {
+        format!(
+            "https://auth-api.decentraland.{}",
+            suffix(ServiceGroup::Auth)
+        )
+    }
 }
 pub fn auth_api_requests() -> String {
-    // if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
-    //     "https://auth-api.decentraland.zone/requests".to_string()
-    // } else {
-    //     format!(
-    //         "https://auth-api.decentraland.{}/requests",
-    //         suffix(ServiceGroup::Auth)
-    //     )
-    // }
-    "https://auth-api.decentraland.zone/requests".to_string()
+    if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
+        "https://auth-api.decentraland.zone/requests".to_string()
+    } else {
+        format!(
+            "https://auth-api.decentraland.{}/requests",
+            suffix(ServiceGroup::Auth)
+        )
+    }
 }
 
 // Catalyst
