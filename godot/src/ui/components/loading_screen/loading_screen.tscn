@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://bmjwqm6jgri7c"]
+[gd_scene load_steps=17 format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
 [ext_resource type="Script" uid="uid://cm08lp37agj2o" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
@@ -14,17 +14,6 @@
 [ext_resource type="Texture2D" uid="uid://msi357rn4mni" path="res://assets/ui/loading/RightArrow.svg" id="11_hsax5"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_bl8r0"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6sxfq"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0.262745, 0.25098, 0.290196, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4qnpv"]
 
@@ -86,8 +75,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_right = 30
 script = ExtResource("3_6uwlu")
 default_margin = 30
 use_top = false
@@ -122,22 +109,6 @@ theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_uxxaw")
 theme_override_font_sizes/font_size = 18
 text = "Decentraland"
-vertical_alignment = 1
-
-[node name="PanelContainer" type="PanelContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_6sxfq")
-
-[node name="Label2" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/VBoxContainer/PanelContainer"]
-layout_mode = 2
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("4_uxxaw")
-theme_override_font_sizes/font_size = 12
-text = "MOBILE ALPHA"
-horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="HSeparator" type="HSeparator" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer"]
