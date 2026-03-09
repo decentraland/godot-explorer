@@ -22,6 +22,8 @@ var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
+var _subscription_reconnecting: bool = false  # Debounce for subscription_dropped
+var _resubscribe_timer: Timer = null
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -286,6 +288,12 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 
 
 func _on_player_logout():
+	# Stop re-subscribe timer
+	if _resubscribe_timer != null:
+		_resubscribe_timer.stop()
+		_resubscribe_timer.queue_free()
+		_resubscribe_timer = null
+
 	# Stop notifications polling
 	NotificationsManager.stop_polling()
 
@@ -327,6 +335,14 @@ func _async_initialize_social_service() -> void:
 	# Subscribe to friendship and connectivity updates persistently
 	_async_subscribe_to_friendship_updates()
 	_async_subscribe_to_connectivity_updates()
+
+	# Start proactive re-subscribe timer (every 30s)
+	if _resubscribe_timer == null:
+		_resubscribe_timer = Timer.new()
+		_resubscribe_timer.wait_time = 30.0
+		_resubscribe_timer.autostart = true
+		_resubscribe_timer.timeout.connect(_async_proactive_resubscribe)
+		add_child(_resubscribe_timer)
 
 
 func _async_fetch_blocking_status() -> void:
@@ -386,17 +402,59 @@ func _async_subscribe_to_connectivity_updates() -> void:
 			_async_subscribe_to_connectivity_updates()
 
 
+func _async_proactive_resubscribe() -> void:
+	if Global.player_identity.is_guest:
+		return
+	# Re-subscribe silently (cancels old subscription, creates new one)
+	var promise = Global.social_service.subscribe_to_updates()
+	await PromiseUtils.async_awaiter(promise)
+	if promise.is_rejected():
+		return  # Silent failure — subscription_dropped will handle recovery
+	# Diff-based refresh (no full rebuild)
+	friends_panel.async_refresh_friends()
+
+	# Also re-subscribe connectivity
+	Global.social_service.subscribe_to_connectivity_updates()
+	Global.social_service.subscribe_to_block_updates()
+
+
 func _async_on_subscription_dropped() -> void:
 	if Global.player_identity.is_guest:
 		return
-	print("[Explorer] Subscription dropped - reconnecting...")
+	# Debounce: multiple streams may drop at once when connection dies
+	if _subscription_reconnecting:
+		return
+	_subscription_reconnecting = true
+	print("[Explorer] Subscription dropped - reconnecting in 2s...")
 	await get_tree().create_timer(2.0).timeout
-	_async_subscribe_to_friendship_updates()
+	_subscription_reconnecting = false
+	Global.social_service.subscribe_to_block_updates()
+	_async_subscribe_to_friendship_updates_refresh()
 	_async_subscribe_to_connectivity_updates()
+
+
+func _async_subscribe_to_friendship_updates_refresh() -> void:
+	var promise = Global.social_service.subscribe_to_updates()
+	await PromiseUtils.async_awaiter(promise)
+	if promise.is_rejected():
+		push_error(
+			(
+				"[Explorer] Failed to re-subscribe to friendship updates: "
+				+ str(PromiseUtils.get_error_message(promise))
+			)
+		)
+		friends_panel.set_streaming_subscription_failed(true)
+		await get_tree().create_timer(5.0).timeout
+		if not Global.player_identity.is_guest:
+			_async_subscribe_to_friendship_updates_refresh()
+	else:
+		friends_panel.set_streaming_subscription_failed(false)
+		friends_panel.async_refresh_friends()
 
 
 func _async_reload_friends() -> void:
 	print("[Explorer] Manual friends reload requested - re-subscribing...")
+	Global.social_service.subscribe_to_block_updates()
 	_async_subscribe_to_friendship_updates()
 	_async_subscribe_to_connectivity_updates()
 

@@ -169,10 +169,58 @@ func set_streaming_subscription_failed(failed: bool) -> void:
 
 ## Fetches all friend lists from the server (called once at login by explorer.gd).
 func async_initial_friends_load() -> void:
+	if _is_loading:
+		return
 	_is_loading = true
 	_update_dropdown_visibility()
 	await _async_update_all_lists()
 	_is_loading = false
+	_update_dropdown_visibility()
+
+
+## Diff-based refresh: fetches fresh friends data and syncs lists without full rebuild.
+## Used by the proactive re-subscribe timer to avoid UI disruption.
+func async_refresh_friends() -> void:
+	# Fetch all friends (reusing the same RPC as initial load)
+	var promise = Global.social_service.get_friends(100, 0, -1)
+	await PromiseUtils.async_awaiter(promise)
+	if promise.is_rejected():
+		return  # Silent failure — keep showing current data
+
+	var friends = promise.get_data()
+	var online_items: Array = []
+	var offline_items: Array = []
+
+	for friend_data in friends:
+		var item = SocialItemData.new()
+		item.address = friend_data["address"]
+		item.name = friend_data["name"]
+		item.has_claimed_name = friend_data["has_claimed_name"]
+		item.profile_picture_url = friend_data["profile_picture_url"]
+		if is_friend_online(item.address):
+			online_items.append(item)
+		else:
+			offline_items.append(item)
+
+	online_list.sync_items(online_items)
+	offline_list.sync_items(offline_items)
+
+	# Also refresh pending requests
+	var req_promise = Global.social_service.get_pending_requests(100, 0)
+	await PromiseUtils.async_awaiter(req_promise)
+	if not req_promise.is_rejected():
+		var requests = req_promise.get_data()
+		var request_items: Array = []
+		for req in requests:
+			var item = SocialItemData.new()
+			item.address = req["address"]
+			item.name = req["name"]
+			item.has_claimed_name = req["has_claimed_name"]
+			item.profile_picture_url = req["profile_picture_url"]
+			item.friendship_id = req.get("friendship_id", "")
+			request_items.append(item)
+		request_list.sync_items(request_items)
+
 	_update_dropdown_visibility()
 
 
