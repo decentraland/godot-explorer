@@ -4,15 +4,14 @@ const BG_COLOR_NORMAL: String = "#00000080"
 const BG_COLOR_PRESSED: String = "#44444480"
 const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
 const ICON_INTERACTIVE_POINTER = preload("uid://72xpjysoxgwo")
-const A_FILLED_GREEN = preload("uid://dpl8fdyynmjq")
-const B_FILLED_RED = preload("uid://qgrxrpohsm5r")
-const LEFT_BUMPER = preload("uid://bkkwupihke6dx")
-const X_FILLED_BLUE = preload("uid://ctet7pl62d4nr")
-const Y_FILLED_YELLOW = preload("uid://bb0lffkog0tpr")
-const LEFT_JOYSTICK_DOWN = preload("uid://d1wqs4mgg6jq4")
-const LEFT_JOYSTICK_LEFT = preload("uid://cer2ugmqggxyc")
-const LEFT_JOYSTICK_RIGHT = preload("uid://c84msmtv8uyk")
-const LEFT_JOYSTICK_UP = preload("uid://bnrqef3he5s1")
+const A_FILLED = preload("uid://bjppxn35ls1rc")
+const B_FILLED = preload("uid://c4f72aulqlr71")
+const X_FILLED = preload("uid://c6ee63ym35sw5")
+const Y_FILLED = preload("uid://c57fjtwt0mnfd")
+const LEFT_JOYSTICK_DOWN = preload("uid://pys3tuxq441v")
+const LEFT_JOYSTICK_LEFT = preload("uid://dhbpp6aai8mus")
+const LEFT_JOYSTICK_RIGHT = preload("uid://ckmdvpdo4eye6")
+const LEFT_JOYSTICK_UP = preload("uid://dhsdl8kfl4xmu")
 const ICON_JUMP = preload("uid://ck3atqpytstpo")
 
 const MOBILE_ACTION_MAP := {
@@ -27,14 +26,14 @@ const MOBILE_ACTION_MAP := {
 }
 
 const GAMEPAD_BUTTON_MAP := {
-	"ia_jump": [false, A_FILLED_GREEN, "Press Jump"],
-	"ia_primary": [false, B_FILLED_RED, "Press Primary"],
-	"ia_pointer": [false, X_FILLED_BLUE, "Press Interact"],
-	"ia_secondary": [false, Y_FILLED_YELLOW, "Press Secondary"],
-	"ia_action_3": [true, A_FILLED_GREEN, "Press Action 1"],
-	"ia_action_4": [true, B_FILLED_RED, "Press Action 2"],
-	"ia_action_5": [true, X_FILLED_BLUE, "Press Action 3"],
-	"ia_action_6": [true, Y_FILLED_YELLOW, "Press Action 4"],
+	"ia_jump": [false, A_FILLED, "Press Jump"],
+	"ia_primary": [false, B_FILLED, "Press Primary"],
+	"ia_pointer": [false, X_FILLED, "Press Interact"],
+	"ia_secondary": [false, Y_FILLED, "Press Secondary"],
+	"ia_action_3": [true, A_FILLED, "Press Action 1"],
+	"ia_action_4": [true, B_FILLED, "Press Action 2"],
+	"ia_action_5": [true, X_FILLED, "Press Action 3"],
+	"ia_action_6": [true, Y_FILLED, "Press Action 4"],
 	"ia_forward": [false, LEFT_JOYSTICK_UP, "Move the stick to the Forward"],
 	"ia_backward": [false, LEFT_JOYSTICK_DOWN, "Move the stick to the Backward"],
 	"ia_left": [false, LEFT_JOYSTICK_LEFT, "Move the stick to the Left"],
