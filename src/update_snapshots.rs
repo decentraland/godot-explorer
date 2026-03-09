@@ -195,7 +195,12 @@ fn copy_snapshot_files(temp_dir: &Path, mappings: &[(&str, &str)]) -> Result<usi
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("png") {
+            let is_png = path.extension().and_then(|e| e.to_str()) == Some("png");
+            let is_diff = path
+                .file_name()
+                .and_then(|f| f.to_str())
+                .map_or(false, |f| f.ends_with(".diff.png"));
+            if is_png && !is_diff {
                 let file_name = path.file_name().unwrap();
                 let dest_path = dest_dir.join(file_name);
                 std::fs::copy(&path, &dest_path).with_context(|| {
