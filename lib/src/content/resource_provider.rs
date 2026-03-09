@@ -6,12 +6,12 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::fs;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
-use tokio::sync::{Notify, OnceCell, RwLock, Semaphore};
+use tokio::sync::{Notify, OnceCell, RwLock};
 use tokio::time::Instant;
 
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
-use crate::content::semaphore_ext::SemaphoreExt;
+use crate::content::semaphore_ext::CappedSemaphore;
 
 pub struct FileMetadata {
     file_size: i64,
@@ -26,7 +26,8 @@ pub struct ResourceProvider {
     pending_downloads: RwLock<HashMap<String, Arc<Notify>>>,
     client: Client,
     initialized: OnceCell<()>,
-    semaphore: Arc<Semaphore>,
+    semaphore: Arc<CappedSemaphore>,
+    low_priority_semaphore: Arc<CappedSemaphore>,
     #[cfg(feature = "use_resource_tracking")]
     download_tracking: Arc<ResourceDownloadTracking>,
 }
@@ -48,7 +49,8 @@ impl ResourceProvider {
             pending_downloads: RwLock::new(HashMap::new()),
             client: Client::new(),
             initialized: OnceCell::new(),
-            semaphore: Arc::new(Semaphore::new(max_concurrent_downloads)),
+            semaphore: Arc::new(CappedSemaphore::new(max_concurrent_downloads)),
+            low_priority_semaphore: Arc::new(CappedSemaphore::new(max_concurrent_downloads)),
             downloaded_size: AtomicU64::new(0),
             #[cfg(feature = "use_resource_tracking")]
             download_tracking,
@@ -481,7 +483,57 @@ impl ResourceProvider {
         self.handle_pending_download(&file_hash, &absolute_file_path)
             .await?;
 
-        let permit = self.semaphore.acquire().await.unwrap();
+        let permit = self.semaphore.acquire().await;
+
+        if tokio::fs::metadata(&absolute_file_path).await.is_err() {
+            self.download_file(
+                &url,
+                Path::new(&absolute_file_path),
+                #[cfg(feature = "use_resource_tracking")]
+                file_hash.clone(),
+            )
+            .await?;
+
+            let metadata = tokio::fs::metadata(&absolute_file_path)
+                .await
+                .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
+            let file_size = metadata.len() as i64;
+
+            let mut existing_files = self.existing_files.write().await;
+            self.ensure_space_for(&mut existing_files, file_size).await;
+            self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
+                .await;
+        } else {
+            tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
+            self.handle_existing_file(&absolute_file_path).await?;
+        }
+
+        let mut pending_downloads = self.pending_downloads.write().await;
+        if let Some(notify) = pending_downloads.remove(&file_hash) {
+            notify.notify_waiters();
+        }
+
+        drop(permit);
+
+        Ok(())
+    }
+
+    /// Fetch a resource with low priority. Low-priority downloads must acquire both
+    /// the main semaphore and the low-priority semaphore, allowing the system to
+    /// throttle them independently (e.g., limit wearable downloads during scene loading).
+    pub async fn fetch_resource_low_priority(
+        &self,
+        url: String,
+        file_hash: String,
+        absolute_file_path: String,
+    ) -> Result<(), String> {
+        self.ensure_initialized().await?;
+
+        self.handle_pending_download(&file_hash, &absolute_file_path)
+            .await?;
+
+        let _low_priority_permit = self.low_priority_semaphore.acquire().await;
+        let permit = self.semaphore.acquire().await;
 
         if tokio::fs::metadata(&absolute_file_path).await.is_err() {
             self.download_file(
@@ -528,7 +580,7 @@ impl ResourceProvider {
         self.handle_pending_download(file_hash, absolute_file_path)
             .await?;
 
-        let permit = self.semaphore.acquire().await.unwrap();
+        let permit = self.semaphore.acquire().await;
         let data = if tokio::fs::metadata(&absolute_file_path).await.is_err() {
             let data = self
                 .download_file_with_buffer(
@@ -582,6 +634,11 @@ impl ResourceProvider {
     // Method to change the number of concurrent downloads
     pub fn set_max_concurrent_downloads(&self, max: usize) {
         self.semaphore.set_permits(max)
+    }
+
+    // Method to change the number of concurrent low-priority downloads
+    pub fn set_max_low_priority_downloads(&self, max: usize) {
+        self.low_priority_semaphore.set_permits(max)
     }
 
     // Method to change the max cache size
