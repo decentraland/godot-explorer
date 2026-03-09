@@ -237,18 +237,12 @@ pub fn update_coverage_snapshots(
         download_artifact(&resolved_run_id, "coverage-snapshots", &temp_dir)?;
 
         let mappings = [
+            ("scenes/comparison", "tests/snapshots/scenes"),
             (
-                "tests/snapshots/scenes/comparison",
-                "tests/snapshots/scenes",
-            ),
-            (
-                "tests/snapshots/avatar-image-generation/comparison",
+                "avatar-image-generation/comparison",
                 "tests/snapshots/avatar-image-generation",
             ),
-            (
-                "tests/snapshots/client/comparison",
-                "tests/snapshots/client",
-            ),
+            ("client/comparison", "tests/snapshots/client"),
         ];
 
         let total = copy_snapshot_files(&temp_dir, &mappings)?;
