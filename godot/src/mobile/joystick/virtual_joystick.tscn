@@ -52,14 +52,13 @@ deadzone_size = 10.0
 _joystick_default_position = Vector2(160, 165)
 joystick_mode = 1
 visibility_mode = 1
+metadata/mobile_preview_orientation = "landscape"
 
 [node name="ActiveArea" type="Control" parent="."]
 layout_mode = 1
-anchor_top = 1.0
 anchor_right = 0.352
 anchor_bottom = 1.0
-offset_top = -425.0
-offset_right = 171.458
+offset_right = 171.45801
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
