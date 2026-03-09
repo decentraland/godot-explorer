@@ -7,6 +7,7 @@ use dcl_rpc::transports::{
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
+use tokio_util::sync::CancellationToken;
 
 #[allow(unused_imports)]
 use futures_util::StreamExt;
@@ -49,6 +50,8 @@ struct SocialServiceState {
     connecting: bool,
     /// Last connection error message (if any)
     last_error: Option<String>,
+    /// Token cancelled when connection is cleared — signals stream tasks to exit
+    connection_cancel_token: CancellationToken,
 }
 
 impl SocialServiceState {
@@ -60,6 +63,7 @@ impl SocialServiceState {
             connection_generation: 0,
             connecting: false,
             last_error: None,
+            connection_cancel_token: CancellationToken::new(),
         }
     }
 }
@@ -257,6 +261,10 @@ impl SocialServiceManager {
         if state.connection_generation == expected_generation && state.connection.is_some() {
             state.connection = None;
             state.connection_generation += 1;
+            // Cancel the token so active stream tasks know the transport is dead
+            state.connection_cancel_token.cancel();
+            // Create a fresh token for the next connection
+            state.connection_cancel_token = CancellationToken::new();
             true
         } else {
             false
@@ -273,19 +281,27 @@ impl SocialServiceManager {
             pagination: pagination.clone(),
         };
 
-        // First attempt - capture generation before call
-        let (result, generation) = self.call_get_friends(payload.clone()).await;
+        // First attempt
+        let (result, _generation) = self.call_get_friends(payload.clone()).await;
 
         match result {
             Ok(response) => Ok(response),
             Err(e) => {
-                tracing::warn!("get_friends RPC failed, retrying: {:?}", e);
-                {
-                    let mut state = self.state.write().await;
-                    Self::try_clear_connection(&mut state, generation);
+                tracing::warn!(
+                    "get_friends RPC failed, retrying on existing connection: {:?}",
+                    e
+                );
+                // Retry using existing connection first — don't kill healthy streams
+                let (retry_result, retry_generation) = self.call_get_friends(payload).await;
+                match retry_result {
+                    Ok(response) => Ok(response),
+                    Err(e) => {
+                        // Both attempts failed — connection is truly dead
+                        let mut state = self.state.write().await;
+                        Self::try_clear_connection(&mut state, retry_generation);
+                        Err(anyhow!("Failed to get friends: {:?}", e))
+                    }
                 }
-                let (retry_result, _) = self.call_get_friends(payload).await;
-                retry_result.map_err(|e| anyhow!("Failed to get friends: {:?}", e))
             }
         }
     }
@@ -371,18 +387,25 @@ impl SocialServiceManager {
         };
 
         // First attempt
-        let (result, generation) = self.call_get_pending_requests(payload.clone()).await;
+        let (result, _generation) = self.call_get_pending_requests(payload.clone()).await;
 
         match result {
             Ok(response) => Ok(response),
             Err(e) => {
-                tracing::warn!("get_pending_requests RPC failed, retrying: {:?}", e);
-                {
-                    let mut state = self.state.write().await;
-                    Self::try_clear_connection(&mut state, generation);
+                tracing::warn!(
+                    "get_pending_requests RPC failed, retrying on existing connection: {:?}",
+                    e
+                );
+                let (retry_result, retry_generation) =
+                    self.call_get_pending_requests(payload).await;
+                match retry_result {
+                    Ok(response) => Ok(response),
+                    Err(e) => {
+                        let mut state = self.state.write().await;
+                        Self::try_clear_connection(&mut state, retry_generation);
+                        Err(anyhow!("Failed to get pending requests: {:?}", e))
+                    }
                 }
-                let (retry_result, _) = self.call_get_pending_requests(payload).await;
-                retry_result.map_err(|e| anyhow!("Failed to get pending requests: {:?}", e))
             }
         }
     }
@@ -461,18 +484,24 @@ impl SocialServiceManager {
             )),
         };
 
-        let (result, generation) = self.call_upsert_friendship(payload.clone()).await;
+        let (result, _generation) = self.call_upsert_friendship(payload.clone()).await;
 
         match result {
             Ok(response) => Ok(response),
             Err(e) => {
-                tracing::warn!("send_friend_request RPC failed, retrying: {:?}", e);
-                {
-                    let mut state = self.state.write().await;
-                    Self::try_clear_connection(&mut state, generation);
+                tracing::warn!(
+                    "send_friend_request RPC failed, retrying on existing connection: {:?}",
+                    e
+                );
+                let (retry_result, retry_generation) = self.call_upsert_friendship(payload).await;
+                match retry_result {
+                    Ok(response) => Ok(response),
+                    Err(e) => {
+                        let mut state = self.state.write().await;
+                        Self::try_clear_connection(&mut state, retry_generation);
+                        Err(anyhow!("Failed to send friend request: {:?}", e))
+                    }
                 }
-                let (retry_result, _) = self.call_upsert_friendship(payload).await;
-                retry_result.map_err(|e| anyhow!("Failed to send friend request: {:?}", e))
             }
         }
     }
@@ -492,18 +521,24 @@ impl SocialServiceManager {
             )),
         };
 
-        let (result, generation) = self.call_upsert_friendship(payload.clone()).await;
+        let (result, _generation) = self.call_upsert_friendship(payload.clone()).await;
 
         match result {
             Ok(response) => Ok(response),
             Err(e) => {
-                tracing::warn!("accept_friend_request RPC failed, retrying: {:?}", e);
-                {
-                    let mut state = self.state.write().await;
-                    Self::try_clear_connection(&mut state, generation);
+                tracing::warn!(
+                    "accept_friend_request RPC failed, retrying on existing connection: {:?}",
+                    e
+                );
+                let (retry_result, retry_generation) = self.call_upsert_friendship(payload).await;
+                match retry_result {
+                    Ok(response) => Ok(response),
+                    Err(e) => {
+                        let mut state = self.state.write().await;
+                        Self::try_clear_connection(&mut state, retry_generation);
+                        Err(anyhow!("Failed to accept friend request: {:?}", e))
+                    }
                 }
-                let (retry_result, _) = self.call_upsert_friendship(payload).await;
-                retry_result.map_err(|e| anyhow!("Failed to accept friend request: {:?}", e))
             }
         }
     }
@@ -523,18 +558,24 @@ impl SocialServiceManager {
             )),
         };
 
-        let (result, generation) = self.call_upsert_friendship(payload.clone()).await;
+        let (result, _generation) = self.call_upsert_friendship(payload.clone()).await;
 
         match result {
             Ok(response) => Ok(response),
             Err(e) => {
-                tracing::warn!("reject_friend_request RPC failed, retrying: {:?}", e);
-                {
-                    let mut state = self.state.write().await;
-                    Self::try_clear_connection(&mut state, generation);
+                tracing::warn!(
+                    "reject_friend_request RPC failed, retrying on existing connection: {:?}",
+                    e
+                );
+                let (retry_result, retry_generation) = self.call_upsert_friendship(payload).await;
+                match retry_result {
+                    Ok(response) => Ok(response),
+                    Err(e) => {
+                        let mut state = self.state.write().await;
+                        Self::try_clear_connection(&mut state, retry_generation);
+                        Err(anyhow!("Failed to reject friend request: {:?}", e))
+                    }
                 }
-                let (retry_result, _) = self.call_upsert_friendship(payload).await;
-                retry_result.map_err(|e| anyhow!("Failed to reject friend request: {:?}", e))
             }
         }
     }
@@ -656,6 +697,7 @@ impl SocialServiceManager {
         self.ensure_connected().await?;
 
         let mut state = self.state.write().await;
+        let cancel_token = state.connection_cancel_token.clone();
         let service = self.ensure_connection(&mut state).await?;
 
         let mut stream = service
@@ -669,10 +711,23 @@ impl SocialServiceManager {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
-            while let Some(update) = stream.next().await {
-                if tx.send(update).is_err() {
-                    tracing::warn!("Friendship updates receiver dropped");
-                    break;
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        tracing::warn!("Friendship stream: connection cleared, exiting");
+                        break;
+                    }
+                    item = stream.next() => {
+                        match item {
+                            Some(update) => {
+                                if tx.send(update).is_err() {
+                                    tracing::warn!("Friendship updates receiver dropped");
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
                 }
             }
         });
@@ -691,6 +746,7 @@ impl SocialServiceManager {
         &self,
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityUpdate>> {
         let mut state = self.state.write().await;
+        let cancel_token = state.connection_cancel_token.clone();
         let service = self.ensure_connection(&mut state).await?;
 
         let mut stream = service
@@ -704,10 +760,23 @@ impl SocialServiceManager {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
-            while let Some(update) = stream.next().await {
-                if tx.send(update).is_err() {
-                    tracing::warn!("Connectivity updates receiver dropped");
-                    break;
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        tracing::warn!("Connectivity stream: connection cleared, exiting");
+                        break;
+                    }
+                    item = stream.next() => {
+                        match item {
+                            Some(update) => {
+                                if tx.send(update).is_err() {
+                                    tracing::warn!("Connectivity updates receiver dropped");
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
                 }
             }
         });
@@ -787,6 +856,7 @@ impl SocialServiceManager {
         &self,
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<BlockUpdate>> {
         let mut state = self.state.write().await;
+        let cancel_token = state.connection_cancel_token.clone();
         let service = self.ensure_connection(&mut state).await?;
 
         let mut stream = service.subscribe_to_block_updates().await.map_err(|e| {
@@ -797,10 +867,23 @@ impl SocialServiceManager {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
-            while let Some(update) = stream.next().await {
-                if tx.send(update).is_err() {
-                    tracing::warn!("Block updates receiver dropped");
-                    break;
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        tracing::warn!("Block updates stream: connection cleared, exiting");
+                        break;
+                    }
+                    item = stream.next() => {
+                        match item {
+                            Some(update) => {
+                                if tx.send(update).is_err() {
+                                    tracing::warn!("Block updates receiver dropped");
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
                 }
             }
         });
@@ -875,6 +958,7 @@ impl SocialServiceManager {
         &self,
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<CommunityMemberConnectivityUpdate>> {
         let mut state = self.state.write().await;
+        let cancel_token = state.connection_cancel_token.clone();
         let service = self.ensure_connection(&mut state).await?;
 
         let mut stream = service
@@ -894,10 +978,23 @@ impl SocialServiceManager {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
-            while let Some(update) = stream.next().await {
-                if tx.send(update).is_err() {
-                    tracing::warn!("Community member connectivity updates receiver dropped");
-                    break;
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        tracing::warn!("Community connectivity stream: connection cleared, exiting");
+                        break;
+                    }
+                    item = stream.next() => {
+                        match item {
+                            Some(update) => {
+                                if tx.send(update).is_err() {
+                                    tracing::warn!("Community member connectivity updates receiver dropped");
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
                 }
             }
         });
@@ -997,6 +1094,7 @@ impl SocialServiceManager {
         &self,
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<PrivateVoiceChatUpdate>> {
         let mut state = self.state.write().await;
+        let cancel_token = state.connection_cancel_token.clone();
         let service = self.ensure_connection(&mut state).await?;
 
         let mut stream = service
@@ -1010,10 +1108,23 @@ impl SocialServiceManager {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
-            while let Some(update) = stream.next().await {
-                if tx.send(update).is_err() {
-                    tracing::warn!("Private voice chat updates receiver dropped");
-                    break;
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        tracing::warn!("Private voice chat stream: connection cleared, exiting");
+                        break;
+                    }
+                    item = stream.next() => {
+                        match item {
+                            Some(update) => {
+                                if tx.send(update).is_err() {
+                                    tracing::warn!("Private voice chat updates receiver dropped");
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
                 }
             }
         });
@@ -1212,6 +1323,7 @@ impl SocialServiceManager {
         &self,
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<CommunityVoiceChatUpdate>> {
         let mut state = self.state.write().await;
+        let cancel_token = state.connection_cancel_token.clone();
         let service = self.ensure_connection(&mut state).await?;
 
         let mut stream = service
@@ -1231,10 +1343,23 @@ impl SocialServiceManager {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
-            while let Some(update) = stream.next().await {
-                if tx.send(update).is_err() {
-                    tracing::warn!("Community voice chat updates receiver dropped");
-                    break;
+            loop {
+                tokio::select! {
+                    _ = cancel_token.cancelled() => {
+                        tracing::warn!("Community voice chat stream: connection cleared, exiting");
+                        break;
+                    }
+                    item = stream.next() => {
+                        match item {
+                            Some(update) => {
+                                if tx.send(update).is_err() {
+                                    tracing::warn!("Community voice chat updates receiver dropped");
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
                 }
             }
         });
