@@ -37,6 +37,9 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 
 
 func _on_toggled(toggled_on: bool) -> void:
+	if not stylebox:
+		printerr("No stylebox on navbar_profile_button")
+		return
 	if toggled_on:
 		stylebox.border_width_bottom = 4
 		stylebox.border_width_left = 4

@@ -15,6 +15,7 @@ var marketplace_link: String = ""
 @onready var margin_container: MarginContainer = $MarginContainer
 @onready var panel_container_rarity: PanelContainer = %PanelContainer_Rarity
 @onready var marquee_label_name: ScrollContainer = %MarqueeLabel_Name
+@onready var margin_container_button_view: MarginContainer = %MarginContainer_ButtonView
 
 
 func _ready():
@@ -51,9 +52,9 @@ func _update_view() -> void:
 		marquee_label_name.check_and_start_marquee()
 		# iOS Marketplace Links Removal - https://github.com/decentraland/godot-explorer/issues/1124
 		if !Global.is_ios() and is_buyable:
-			button_view.show()
+			margin_container_button_view.show()
 	else:
-		button_view.hide()
+		margin_container_button_view.hide()
 		marquee_label_name.stop_marquee_effect()
 
 

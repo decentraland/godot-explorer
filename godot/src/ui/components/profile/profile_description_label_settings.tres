@@ -4,4 +4,5 @@
 
 [resource]
 font = ExtResource("1_50aw1")
+font_size = 24
 outline_color = Color(0, 0, 0, 1)

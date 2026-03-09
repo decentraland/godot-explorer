@@ -1,11 +1,11 @@
-[gd_scene load_steps=22 format=3 uid="uid://cc14rtphm0sjh"]
+[gd_scene load_steps=23 format=3 uid="uid://cc14rtphm0sjh"]
 
 [ext_resource type="Script" uid="uid://cha42k205r6lq" path="res://src/ui/components/profile/profile_equipped_item.gd" id="1_2saji"]
 [ext_resource type="ButtonGroup" uid="uid://c1dh04f5u2ojq" path="res://src/ui/components/profile/equipped_button_group.tres" id="1_mktc3"]
 [ext_resource type="PackedScene" uid="uid://drq5jh5xpenw1" path="res://src/ui/components/item_preview/item_preview.tscn" id="2_7lhdd"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_mktc3"]
 [ext_resource type="PackedScene" uid="uid://cqsb3na8hoq06" path="res://src/ui/components/marquee_label/marquee_label.tscn" id="4_uq8ip"]
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_2saji"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_2saji"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="5_ykumo"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_avwi3"]
@@ -31,7 +31,7 @@
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2saji"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7lhdd"]
-bg_color = Color(0, 0, 0, 0.513726)
+bg_color = Color(0, 0, 0, 0.5019608)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
@@ -39,30 +39,33 @@ corner_radius_bottom_left = 12
 
 [sub_resource type="LabelSettings" id="LabelSettings_3nubj"]
 font = ExtResource("5_2saji")
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4co5n"]
-content_margin_left = 8.0
-content_margin_top = 5.0
-content_margin_right = 8.0
-content_margin_bottom = 5.0
+content_margin_left = 6.0
+content_margin_top = 3.0
+content_margin_right = 6.0
+content_margin_bottom = 3.0
+bg_color = Color(1, 1, 1, 0.2)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
+[sub_resource type="LabelSettings" id="LabelSettings_2saji"]
+font = ExtResource("5_2saji")
+font_size = 12
+
 [node name="ProfileEquippedItem" type="Button"]
-custom_minimum_size = Vector2(140, 254)
-anchors_preset = 8
+custom_minimum_size = Vector2(152, 265)
+anchors_preset = 5
 anchor_left = 0.5
-anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 0.5
 offset_left = -75.0
-offset_top = -107.0
 offset_right = 75.0
-offset_bottom = 108.0
+offset_bottom = 266.0
 grow_horizontal = 2
-grow_vertical = 2
+size_flags_vertical = 0
 mouse_filter = 1
 theme_override_styles/normal = SubResource("StyleBoxEmpty_avwi3")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxEmpty_w001v")
@@ -91,7 +94,7 @@ grow_vertical = 2
 [node name="PanelContainer" type="PanelContainer" parent="MarginContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 4
+size_flags_vertical = 0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_7lhdd")
 
@@ -99,30 +102,28 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_7lhdd")
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 7
+theme_override_constants/separation = 0
 
 [node name="ItemPreview" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer" instance=ExtResource("2_7lhdd")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(140, 140)
+custom_minimum_size = Vector2(150, 150)
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 20.0
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_constants/margin_left = 11
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 11
+theme_override_constants/margin_bottom = 12
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer"]
 layout_mode = 2
+theme_override_constants/separation = 8
 
 [node name="MarqueeLabel_Name" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_uq8ip")]
 unique_name_in_owner = true
@@ -145,10 +146,19 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("4_mktc3")
 theme_override_font_sizes/font_size = 12
 text = "Rarity"
+label_settings = SubResource("LabelSettings_2saji")
 horizontal_alignment = 1
 uppercase = true
 
-[node name="Button_View" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="MarginContainer_ButtonView" type="MarginContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="Button_View" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ButtonView"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -158,4 +168,4 @@ text = "VIEW"
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]
 [connection signal="gui_input" from="MarginContainer/PanelContainer" to="MarginContainer/PanelContainer" method="_on_gui_input"]
-[connection signal="pressed" from="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/Button_View" to="." method="_on_button_view_pressed"]
+[connection signal="pressed" from="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ButtonView/Button_View" to="." method="_on_button_view_pressed"]
