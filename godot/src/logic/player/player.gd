@@ -122,6 +122,7 @@ func _ready():
 		add_child(PlayerMobileInput.new(self))
 	else:
 		add_child(PlayerDesktopInput.new(self))
+	add_child(PlayerGamepadInput.new(self))
 
 	# Setup the outline system with the main camera
 	if outline_system:
