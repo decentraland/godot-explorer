@@ -1,0 +1,8 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="16" cy="16" r="12" fill="#FCFCFC"/>
+<mask id="path-2-inside-1_2_58" fill="white">
+<rect x="13.5" y="14.5" width="10" height="8" rx="0.5"/>
+</mask>
+<rect x="13.5" y="14.5" width="10" height="8" rx="0.5" fill="#FCFCFC" stroke="black" stroke-width="3" mask="url(#path-2-inside-1_2_58)"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M10.5 16.5V11.5H17.5V13.5H19V10.5C19 10.2239 18.7761 10 18.5 10H9.5C9.22386 10 9 10.2239 9 10.5V17.5C9 17.7761 9.22386 18 9.5 18H12.5V16.5H10.5Z" fill="black"/>
+</svg>
