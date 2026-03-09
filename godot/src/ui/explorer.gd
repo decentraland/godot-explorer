@@ -893,6 +893,9 @@ func _async_open_profile_by_avatar(avatar: DclAvatar):
 		var avatar_instance = avatar as Avatar
 		var avatar_id = avatar_instance.avatar_id
 		if not avatar_id.is_empty():
+			# Don't open profile for blocked users
+			if Global.social_blacklist.is_blocked(avatar_id):
+				return
 			await _async_open_profile_by_address(avatar_id)
 		else:
 			printerr(
