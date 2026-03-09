@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://iot0yhkloep2" path="res://src/ui/components/chatbar/chatbar.gd" id="1_8wxvk"]
 [ext_resource type="Texture2D" uid="uid://u3i0iq64assb" path="res://assets/chathud.svg" id="2_8wxvk"]
-[ext_resource type="Texture2D" uid="uid://cwpaml0fpf1uk" path="res://assets/maphud.svg" id="3_2fmgn"]
+[ext_resource type="Texture2D" uid="uid://cytpdlax4ble0" path="res://src/ui/components/menu/icons/discover-outlined.svg" id="3_2fmgn"]
 [ext_resource type="Texture2D" uid="uid://bhiwoh5dwudbo" path="res://assets/sharehud.svg" id="4_o1l3x"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_coord"]
 
@@ -41,13 +41,11 @@ offset_bottom = 66.0
 theme_override_constants/separation = 12
 
 [node name="PanelContainer" type="PanelContainer" parent="HBoxContainer"]
-unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
 
 [node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer"]
-unique_name_in_owner = true
 layout_mode = 2
 alignment = 1
 
@@ -67,18 +65,16 @@ icon = ExtResource("2_8wxvk")
 flat = true
 icon_alignment = 1
 
-[node name="PanelContainer2" type="PanelContainer" parent="HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 0)
+[node name="PanelContainer3" type="PanelContainer" parent="HBoxContainer"]
+custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
 
-[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer2"]
+[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer3"]
 layout_mode = 2
-theme_override_constants/separation = 0
 alignment = 1
 
-[node name="HudButton_Discover" type="Button" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons"]
+[node name="HudButton_Discover" type="Button" parent="HBoxContainer/PanelContainer3/VBoxContainer_Buttons"]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -92,7 +88,22 @@ toggle_mode = true
 button_group = SubResource("ButtonGroup_grvqo")
 icon = ExtResource("3_2fmgn")
 flat = true
-icon_alignment = 2
+icon_alignment = 1
+
+[node name="PanelContainer2" type="PanelContainer" parent="HBoxContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
+
+[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HSeparator2" type="HSeparator" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons"]
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_2fmgn")
 
 [node name="HudButton_Share" type="Button" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons"]
 custom_minimum_size = Vector2(66, 66)
@@ -127,5 +138,5 @@ layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_2fmgn")
 
 [connection signal="pressed" from="HBoxContainer/PanelContainer/VBoxContainer_Buttons/Button_Chat" to="." method="_on_button_chat_pressed"]
-[connection signal="pressed" from="HBoxContainer/PanelContainer2/VBoxContainer_Buttons/HudButton_Discover" to="." method="_on_hud_button_discover_pressed"]
+[connection signal="pressed" from="HBoxContainer/PanelContainer3/VBoxContainer_Buttons/HudButton_Discover" to="." method="_on_hud_button_discover_pressed"]
 [connection signal="pressed" from="HBoxContainer/PanelContainer2/VBoxContainer_Buttons/HudButton_Share" to="." method="_on_hud_button_share_pressed"]
