@@ -46,7 +46,7 @@ const char* DCLGODOTIOS_VERSION = "1.0";
         self.authWindow.rootViewController = [[PortraitViewController alloc] init];
         self.authWindow.windowLevel = UIWindowLevelAlert + 1;
         [self.authWindow makeKeyAndVisible];
-
+        
         // Force the orientation to portrait using UIWindowScene API if available on iOS 16 or later
         [self setWindowOrientation:UIInterfaceOrientationPortrait];
     }
@@ -57,10 +57,10 @@ const char* DCLGODOTIOS_VERSION = "1.0";
     UIWindowScene *windowScene = (UIWindowScene *)self.authWindow.windowScene;
     if (windowScene) {
         UIInterfaceOrientationMask orientationMask = (orientation == UIInterfaceOrientationPortrait) ? UIInterfaceOrientationMaskPortrait : UIInterfaceOrientationMaskLandscape;
-
+        
         UIWindowSceneGeometryPreferencesIOS *geometryPreferences = [[UIWindowSceneGeometryPreferencesIOS alloc] init];
         geometryPreferences.interfaceOrientations = orientationMask;
-
+        
         [windowScene requestGeometryUpdateWithPreferences:geometryPreferences errorHandler:^(NSError *error) {
             NSLog(@"Error setting window orientation: %@", error.localizedDescription);
         }];
