@@ -49,13 +49,15 @@ func _ready() -> void:
 	panel_container_header.self_modulate = Color.TRANSPARENT
 	panel_container_header.hide()
 
-	panel_container_card.set_anchors_and_offsets_preset.call_deferred(Control.PRESET_FULL_RECT)
 	panel_container_card.set_position.call_deferred(Vector2(0, _get_hidden_position()))
 	_initialize_card_position.call_deferred()
 	resized.connect(_on_resized)
 
 
 func _on_resized() -> void:
+	if drag_tween and drag_tween.is_running():
+		drag_tween.stop()
+		drag_tween = null
 	_card_half_position = _get_half_position()
 	panel_container_card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	match drag_state:
@@ -68,8 +70,12 @@ func _on_resized() -> void:
 
 
 func _initialize_card_position() -> void:
-	panel_container_card.position.y = _get_hidden_position()
 	_card_half_position = _get_half_position()
+	if not is_visible_in_tree():
+		# Skip tween when hidden; reset_to_half() will handle positioning when shown.
+		panel_container_card.position.y = _card_half_position
+		return
+	panel_container_card.position.y = _get_hidden_position()
 	tween_to(_card_half_position)
 
 
@@ -81,6 +87,7 @@ func reset_to_half() -> void:
 	drag_state = DragState.HALF
 	panel_container_header.hide()
 	_set_card_corner_radius(24, 24)
+	panel_container_card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_card_half_position = _get_half_position()
 	scroll_content.scroll_vertical = 0
 	tween_to(_card_half_position)
