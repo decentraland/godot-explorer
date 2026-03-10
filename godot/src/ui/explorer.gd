@@ -111,6 +111,11 @@ func _ready():
 	Global.change_parcel.connect(_on_change_parcel)
 
 	label_version.set_text(DclGlobal.get_version_with_env())
+
+	if DclGlobal.is_production():
+		label_fps.visible = false
+		label_ram.visible = false
+
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
@@ -417,6 +422,8 @@ func _on_control_menu_hide_menu():
 
 
 func _on_control_menu_toggle_fps(visibility):
+	if DclGlobal.is_production():
+		return
 	label_fps.visible = visibility
 
 
