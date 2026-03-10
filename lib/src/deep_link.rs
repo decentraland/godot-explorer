@@ -4,7 +4,7 @@ use crate::env::DclEnvConfig;
 
 /// Pure-Rust result of parsing a Decentraland deep link.
 /// Free of any Godot types so it can be unit-tested without the engine.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct DeepLinkResult {
     /// Parcel location (None when not specified)
     pub location: Option<(i32, i32)>,
@@ -27,24 +27,6 @@ pub struct DeepLinkResult {
     pub livekit_debug: bool,
     /// Routable path (e.g. "/jump", "/events", "/places", "/mobile")
     pub path: String,
-}
-
-impl Default for DeepLinkResult {
-    fn default() -> Self {
-        Self {
-            location: None,
-            realm: String::new(),
-            preview: String::new(),
-            dynamic_scene_loading: false,
-            params: Vec::new(),
-            signin_identity_id: String::new(),
-            dclenv: String::new(),
-            is_walletconnect_callback: false,
-            saved_profile: String::new(),
-            livekit_debug: false,
-            path: String::new(),
-        }
-    }
 }
 
 impl DeepLinkResult {
@@ -132,17 +114,13 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
 
     // --- Query parameters -------------------------------------------------------
     for (key, value) in url.query_pairs() {
-        result
-            .params
-            .push((key.to_string(), value.to_string()));
+        result.params.push((key.to_string(), value.to_string()));
 
         match key.as_ref() {
             "location" | "position" => {
                 let coords: Vec<&str> = value.split(',').collect();
                 if coords.len() == 2 {
-                    if let (Ok(x), Ok(y)) =
-                        (coords[0].parse::<i32>(), coords[1].parse::<i32>())
-                    {
+                    if let (Ok(x), Ok(y)) = (coords[0].parse::<i32>(), coords[1].parse::<i32>()) {
                         result.location = Some((x, y));
                     }
                 }
@@ -151,8 +129,7 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             "signin" => result.signin_identity_id = value.to_string(),
             "preview" => result.preview = value.to_string(),
             "dynamic-scene-loading" => {
-                result.dynamic_scene_loading =
-                    value.eq_ignore_ascii_case("true") || value == "1";
+                result.dynamic_scene_loading = value.eq_ignore_ascii_case("true") || value == "1";
             }
             "dclenv" => {
                 if DclEnvConfig::parse(&value).is_some() {
@@ -165,8 +142,7 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
                 }
             }
             "livekit_debug" => {
-                result.livekit_debug =
-                    value.eq_ignore_ascii_case("true") || value == "1";
+                result.livekit_debug = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
@@ -314,7 +290,10 @@ mod tests {
     #[test]
     fn https_zone_explicit_dclenv_overrides() {
         let r = parse("https://decentraland.zone/open?dclenv=org");
-        assert_eq!(r.dclenv, "org", "explicit dclenv should win over zone inference");
+        assert_eq!(
+            r.dclenv, "org",
+            "explicit dclenv should win over zone inference"
+        );
     }
 
     #[test]

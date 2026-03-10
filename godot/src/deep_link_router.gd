@@ -73,7 +73,11 @@ func route() -> void:
 	match path:
 		"/jump", "/open":
 			# If location or realm is provided, teleport; otherwise open jump panel
-			if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty() or not Global.deep_link_obj.preview.is_empty():
+			if (
+				Global.deep_link_obj.is_location_defined()
+				or not Global.deep_link_obj.realm.is_empty()
+				or not Global.deep_link_obj.preview.is_empty()
+			):
 				_route_teleport()
 			else:
 				deep_link_jump.emit()
