@@ -228,7 +228,7 @@ func _compute_image_similarity(image_a: Image, image_b: Image, diff_path: String
 func async_bloom_unlit_test() -> Dictionary:
 	print("Testing bloom_unlit_no_halo...")
 
-	# Create an isolated SubViewport with bloom enabled
+	# Create an isolated SubViewport
 	var sub_viewport = SubViewport.new()
 	sub_viewport.own_world_3d = true
 	sub_viewport.transparent_bg = false
@@ -236,26 +236,20 @@ func async_bloom_unlit_test() -> Dictionary:
 	sub_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(sub_viewport)
 
-	# Set up environment with bloom (matching High quality preset)
-	var env = Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color.BLACK
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color.WHITE
-	env.ambient_light_energy = 1.0
-	env.glow_enabled = true
-	env.glow_normalized = true
-	env.glow_intensity = 1.5
-	env.glow_strength = 1.25
-	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
-	env.glow_hdr_threshold = 1.0
-	env.glow_hdr_scale = 2.0
-	env.set("glow_levels/1", 0.4)
-	env.set("glow_levels/2", 0.3)
+	# Use the real sky_high scene so the test stays in sync with the game environment
+	var sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
+	sub_viewport.add_child(sky)
 
-	var world_env = WorldEnvironment.new()
-	world_env.environment = env
-	sub_viewport.add_child(world_env)
+	# Apply High bloom quality preset (same logic as EnvironmentSelector.set_bloom)
+	var environment = sky.world_environment.environment
+	environment.glow_enabled = true
+	environment.glow_intensity = 1.5
+	environment.glow_hdr_threshold = 1.0
+	environment.glow_hdr_scale = 2.0
+	environment.set("glow_levels/1", 0.4)
+	environment.set("glow_levels/2", 0.3)
+	environment.set("glow_levels/3", 0.0)
+	environment.set("glow_levels/5", 0.0)
 
 	# Camera looking at the plane
 	var camera = Camera3D.new()
