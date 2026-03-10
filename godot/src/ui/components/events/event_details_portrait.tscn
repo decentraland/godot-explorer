@@ -15,7 +15,7 @@
 [ext_resource type="LabelSettings" uid="uid://3jaxrloree20" path="res://src/ui/components/discover/jump_in/jump_in_stats.tres" id="14_dl51y"]
 [ext_resource type="Texture2D" uid="uid://dxry1i0smofqa" path="res://assets/ui/clock.svg" id="15_wcxms"]
 [ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="16_nrpgh"]
-[ext_resource type="Texture2D" uid="uid://cl6wfontbtg2d" path="res://assets/ui/profile/country.svg" id="16_wcxms"]
+[ext_resource type="Texture2D" uid="uid://2sfb80lkd1ku" path="res://assets/ui/country-icon.svg" id="16_wcxms"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="17_lrnxc"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="18_w1sx5"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="19_gpni3"]

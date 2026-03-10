@@ -8,7 +8,7 @@ signal toggle_fps
 signal toggle_ram
 signal request_pause_scenes(enabled: bool)
 signal request_debug_panel(enabled: bool)
-signal preview_hot_reload(scene_type: String, scene_id: String)
+signal request_livekit_debug(enabled: bool)
 #signals from advanced settings
 
 var is_in_game: bool = false  # when it is playing in the 3D Game or not
@@ -20,6 +20,9 @@ var selected_node: PlaceholderManager
 var current_screen_name: String = ""
 var fade_out_tween: Tween = null
 var fade_in_tween: Tween = null
+var _close_modulate_tween: Tween = null
+var _close_hide_tween: Tween = null
+var _close_node_to_free: PlaceholderManager = null
 
 @onready var group: ButtonGroup = ButtonGroup.new()
 
@@ -27,6 +30,7 @@ var fade_in_tween: Tween = null
 @onready var control_settings := PlaceholderManager.new(%Control_Settings)
 @onready var control_backpack := PlaceholderManager.new(%Control_Backpack)
 @onready var control_profile_settings := PlaceholderManager.new(%Control_ProfileSettings)
+@onready var control_profile_portrait := PlaceholderManager.new(%Control_ProfilePortrait)
 
 @onready var control_deploying_profile := %Control_DeployingProfile
 
@@ -66,6 +70,7 @@ func _ready():
 	control_discover.placeholder.visible = false
 	control_backpack.placeholder.visible = false
 	control_profile_settings.placeholder.visible = false
+	control_profile_portrait.placeholder.visible = false
 
 	# Connect to notification clicked signal for reward notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
@@ -75,7 +80,8 @@ func _ready():
 	Global.open_backpack.connect(async_show_backpack)
 	Global.open_discover.connect(async_show_discover)
 	Global.open_own_profile.connect(async_show_own_profile)
-	Global.close_menu.connect(close)
+	Global.open_profile_editor.connect(async_show_profile_editor)
+	Global.close_menu.connect(async_close)
 	Global.delete_account.connect(_on_account_delete)
 
 	if not is_in_game:
@@ -86,22 +92,34 @@ func open():
 	_open()
 
 
-# gdlint:ignore = async-function-name
-func close():
+func async_close():
 	if not is_open:
 		return
 	is_open = false
 	GraphicSettings.apply_full_processor_mode()
-	if Global.player_identity.has_changes():
-		Global.player_identity.async_save_profile()
-	var tween_m = create_tween()
-	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
-	var tween_h = create_tween()
-	tween_h.tween_callback(hide).set_delay(0.3)
-	tween_h.tween_callback(
+	if (
+		selected_node
+		and _needs_save_on_leave(selected_node)
+		and Global.player_identity.has_changes()
+	):
+		control_deploying_profile.show()
+		await Global.player_identity.async_save_profile()
+		control_deploying_profile.hide()
+	_close_modulate_tween = create_tween()
+	_close_modulate_tween.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(
+		Tween.EASE_IN_OUT
+	)
+	# Capture the node to free NOW, before the tween callback fires.
+	# If we reference `selected_node` directly in the lambda, it may have changed
+	# by the time the callback runs (e.g. user opened Settings while close tween is running).
+	_close_node_to_free = selected_node
+	_close_hide_tween = create_tween()
+	_close_hide_tween.tween_callback(hide).set_delay(0.3)
+	_close_hide_tween.tween_callback(
 		func():
-			if selected_node:
-				selected_node.queue_free_instance()
+			if _close_node_to_free:
+				_close_node_to_free.queue_free_instance()
+				_close_node_to_free = null
 	)
 
 
@@ -126,14 +144,17 @@ func async_show_backpack(on_emotes := false):
 func async_show_settings():
 	await control_settings._async_instantiate()
 
+	if not is_instance_valid(control_settings.instance):
+		return
+
 	control_settings.instance.request_pause_scenes.connect(
 		func(enabled): request_pause_scenes.emit(enabled)
 	)
 	control_settings.instance.request_debug_panel.connect(
 		func(enabled): request_debug_panel.emit(enabled)
 	)
-	control_settings.instance.preview_hot_reload.connect(
-		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
+	control_settings.instance.request_livekit_debug.connect(
+		func(enabled): request_livekit_debug.emit(enabled)
 	)
 
 	select_settings_screen()
@@ -141,15 +162,34 @@ func async_show_settings():
 
 
 func async_show_own_profile():
-	await control_profile_settings._async_instantiate()
-
-	select_profile_screen()
+	if not Global.is_orientation_portrait():
+		return
+	await control_profile_portrait._async_instantiate()
+	select_profile_screen(true, true)
 	_open()
+
+
+func async_show_profile_editor():
+	await control_profile_portrait._async_instantiate()
+	select_profile_screen(true, true)
+	_open()
+	if control_profile_portrait.instance:
+		control_profile_portrait.instance.show_editor(true)
 
 
 func _open():
 	if is_open:
 		return
+	# Kill any pending close tweens so the old close() doesn't hide us again.
+	# But still free the node that close() intended to free (avoid memory leak).
+	if is_instance_valid(_close_modulate_tween) and _close_modulate_tween.is_running():
+		_close_modulate_tween.kill()
+	if is_instance_valid(_close_hide_tween) and _close_hide_tween.is_running():
+		_close_hide_tween.kill()
+		# The tween callback won't fire, so free the node manually
+		if _close_node_to_free:
+			_close_node_to_free.queue_free_instance()
+			_close_node_to_free = null
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if not selected_node:
@@ -176,33 +216,52 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 func select_settings_screen(play_sfx: bool = true):
 	current_screen_name = ("SETTINGS" if Global.is_orientation_portrait() else "SETTINGS_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_settings, play_sfx)
+	async_select_node(control_settings, play_sfx)
 
 
 func select_discover_screen(play_sfx: bool = true):
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_discover, play_sfx)
+	async_select_node(control_discover, play_sfx)
 
 
 func select_backpack_screen(play_sfx: bool = true):
 	current_screen_name = ("BACKPACK" if Global.is_orientation_portrait() else "BACKPACK_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_backpack, play_sfx)
+	async_select_node(control_backpack, play_sfx)
 
 
-func select_profile_screen(play_sfx: bool = true):
-	current_screen_name = ("PROFILE" if Global.is_orientation_portrait() else "PROFILE_IN_GAME")
+func select_profile_screen(play_sfx: bool = true, portrait: bool = false):
+	current_screen_name = ("PROFILE" if portrait else "PROFILE_IN_GAME")
 	Global.metrics.track_screen_viewed(current_screen_name, "")
-	select_node(control_profile_settings, play_sfx)
+	var node = control_profile_portrait if portrait else control_profile_settings
+	async_select_node(node, play_sfx)
 
 
-func select_node(node: PlaceholderManager, play_sfx: bool = true):
+func _needs_save_on_leave(node: PlaceholderManager) -> bool:
+	return (
+		node == control_backpack
+		or node == control_profile_portrait
+		or node == control_profile_settings
+	)
+
+
+func async_select_node(node: PlaceholderManager, play_sfx: bool = true):
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if selected_node != node:
-		if selected_node and selected_node.instance:
-			fade_out(selected_node)
+		var previous_node = selected_node
+		# Set selected_node early so rapid re-selection is detected
+		selected_node = node
+		if previous_node and previous_node.instance:
+			if _needs_save_on_leave(previous_node) and Global.player_identity.has_changes():
+				control_deploying_profile.show()
+				await Global.player_identity.async_save_profile()
+				control_deploying_profile.hide()
+				# User may have navigated elsewhere during the await
+				if selected_node != node:
+					return
+			fade_out(previous_node)
 		fade_in(node)
 
 		if play_sfx:
@@ -213,11 +272,15 @@ func select_node(node: PlaceholderManager, play_sfx: bool = true):
 
 
 func fade_in(node: PlaceholderManager):
+	if not is_instance_valid(node.instance):
+		return
 	selected_node = node
+	# Cancel any pending sleep for this node (from a previous fade_out)
+	if node.status == PlaceholderManager.STATUS.SLEEPING:
+		node.status = PlaceholderManager.STATUS.LOADED
 	node.instance.show()
 	if is_instance_valid(fade_in_tween):
 		if fade_in_tween.is_running():
-			fade_out_tween.custom_step(100.0)
 			fade_in_tween.kill()
 	node.instance.modulate.a = 0.0
 	fade_in_tween = create_tween()
@@ -225,9 +288,10 @@ func fade_in(node: PlaceholderManager):
 
 
 func fade_out(node: PlaceholderManager):
+	if not is_instance_valid(node.instance):
+		return
 	if is_instance_valid(fade_out_tween):
 		if fade_out_tween.is_running():
-			fade_out_tween.custom_step(100.0)
 			fade_out_tween.kill()
 
 	node.instance.modulate.a = 1.0
@@ -253,11 +317,6 @@ func _async_request_hide_menu():
 	hide_menu.emit()
 
 
-func _on_button_backpack_toggled(toggled_on):
-	if !toggled_on:
-		Global.player_identity.async_save_profile()
-
-
 func _on_notification_clicked(notification_dict: Dictionary) -> void:
 	# Handle notification clicks - open backpack for reward notifications
 	var notif_type = notification_dict.get("type", "")
@@ -271,18 +330,6 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 
 func _on_deep_link_received() -> void:
 	Global.check_deep_link_teleport_to()
-
-
-func _on_portrait_button_discover_pressed() -> void:
-	async_show_discover()
-
-
-func _on_portrait_button_backpack_pressed() -> void:
-	async_show_backpack()
-
-
-func _on_portrait_button_settings_pressed() -> void:
-	async_show_settings()
 
 
 func _on_account_delete() -> void:

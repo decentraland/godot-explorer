@@ -86,21 +86,8 @@ func _start():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
 		print("Running in regular mode")
-		var current_terms_and_conditions_version: int = (
-			Global.get_config().terms_and_conditions_version
-		)
-		# Force show Terms when benchmarking (even if already accepted)
-		if (
-			Global.cli.benchmark_report
-			or current_terms_and_conditions_version != Global.TERMS_AND_CONDITIONS_VERSION
-		):
-			if Global.cli.benchmark_report:
-				print("✓ Forcing Terms and Conditions for benchmark flow")
-			get_tree().change_scene_to_file(
-				"res://src/ui/components/terms_and_conditions/terms_and_conditions.tscn"
-			)
-		else:
-			get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+		# EULA check is handled inside lobby.gd — always go to lobby
+		get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
 
 
 func _start_asset_server():

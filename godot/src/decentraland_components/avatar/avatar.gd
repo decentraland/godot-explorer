@@ -840,6 +840,10 @@ func set_client_version(version: String):
 	nickname_ui.client_version = version
 
 
+func set_room_debug(info: String):
+	nickname_ui.room_debug = info
+
+
 func _play_emote_audio(file_hash: String):
 	emote_controller.play_emote_audio(file_hash)
 

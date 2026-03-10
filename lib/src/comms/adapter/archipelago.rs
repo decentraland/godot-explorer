@@ -43,11 +43,16 @@ pub struct ArchipelagoManager {
     adapter: Option<Box<dyn Adapter>>,
     shared_processor_sender:
         Option<tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>>,
+
+    // Reconnection state for LiveKit island rooms
+    last_island_conn_str: Option<String>,
+    last_island_id: Option<String>,
+    island_reconnect_at: Option<Instant>,
 }
 
 // Constants
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(3);
-const RECONNECT_INTERVAL_SECS: u64 = 1;
+const RECONNECT_INTERVAL_SECS: u64 = 5;
 const DCL_CHALLENGE_PREFIX: &str = "dcl-";
 
 impl ArchipelagoManager {
@@ -79,6 +84,9 @@ impl ArchipelagoManager {
             shared_processor_sender: None,
             player_position: Vector3::new(0.0, 0.0, 0.0),
             last_send_heartbeat: Instant::now(),
+            last_island_conn_str: None,
+            last_island_id: None,
+            island_reconnect_at: None,
         }
     }
 
@@ -269,7 +277,44 @@ impl ArchipelagoManager {
         };
 
         if !adapter_ok {
+            tracing::warn!(
+                "🔌 Archipelago LiveKit room disconnected, scheduling reconnection in 1s"
+            );
             self.adapter = None;
+            self.island_reconnect_at = Some(Instant::now() + Duration::from_secs(1));
+        }
+
+        // Attempt to reconnect to the island LiveKit room
+        if self.adapter.is_none()
+            && self
+                .island_reconnect_at
+                .is_some_and(|t| t <= Instant::now())
+        {
+            if let Some(conn_str) = &self.last_island_conn_str.clone() {
+                if let Some((protocol, comms_address)) = conn_str.as_str().split_once(':') {
+                    if protocol == "livekit" {
+                        if let Some(shared_sender) = &self.shared_processor_sender {
+                            let island_id = self.last_island_id.as_deref().unwrap_or("unknown");
+                            tracing::debug!(
+                                "🔄 Reconnecting to island '{}' LiveKit room",
+                                island_id
+                            );
+
+                            let mut livekit_room = LivekitRoom::new(
+                                comms_address.to_string(),
+                                format!("archipelago-livekit-{}", island_id),
+                            );
+                            livekit_room.set_message_processor_sender(shared_sender.clone());
+                            self.adapter = Some(Box::new(livekit_room));
+                            self.island_reconnect_at = None;
+                        }
+                    }
+                }
+            }
+            // If we couldn't reconnect, schedule next attempt with longer backoff
+            if self.adapter.is_none() {
+                self.island_reconnect_at = Some(Instant::now() + Duration::from_secs(5));
+            }
         }
     }
 
@@ -283,6 +328,9 @@ impl ArchipelagoManager {
             }
             _ => {}
         }
+        self.last_island_conn_str = None;
+        self.last_island_id = None;
+        self.island_reconnect_at = None;
     }
 
     fn _handle_messages(&mut self) {
@@ -303,6 +351,11 @@ impl ArchipelagoManager {
                     };
                     match protocol {
                         "livekit" => {
+                            // Store connection info for reconnection
+                            self.last_island_conn_str = Some(msg.conn_str.clone());
+                            self.last_island_id = Some(msg.island_id.clone());
+                            self.island_reconnect_at = None;
+
                             if let Some(shared_sender) = &self.shared_processor_sender {
                                 tracing::debug!(
                                     "Using shared MessageProcessor for archipelago LiveKit room"

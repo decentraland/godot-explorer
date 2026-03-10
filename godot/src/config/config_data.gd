@@ -168,6 +168,10 @@ var guest_profile: Dictionary = {}:
 		guest_profile = value
 		param_changed.emit(ConfigParams.GUEST_PROFILE)
 
+# When true, session data (account/guest_profile) is not persisted to disk.
+# Used for guest/preview sessions to avoid overwriting saved wallet sessions.
+var session_is_ephemeral: bool = false
+
 var audio_general_volume: float = 100.0:
 	set(value):
 		audio_general_volume = value
@@ -287,6 +291,15 @@ func load_from_default():
 	self.analytics_user_id = DclConfig.generate_uuid_v4()
 
 
+static func _get_profile_suffix() -> String:
+	var saved_profile: String = Global.cli.saved_profile
+	if saved_profile.is_empty():
+		saved_profile = Global.deep_link_obj.saved_profile
+	if saved_profile.is_empty():
+		return ""
+	return "_" + saved_profile
+
+
 func load_from_settings_file():
 	var data_default := ConfigData.new()
 	data_default.load_from_default()
@@ -372,12 +385,13 @@ func load_from_settings_file():
 		"config", "audio_mic_amplification", data_default.audio_mic_amplification
 	)
 
+	var profile_suffix := _get_profile_suffix()
 	self.session_account = settings_file.get_value(
-		"session", "account", data_default.session_account
+		"session", "account" + profile_suffix, data_default.session_account
 	)
 
 	self.guest_profile = settings_file.get_value(
-		"session", "guest_profile", data_default.guest_profile
+		"session", "guest_profile" + profile_suffix, data_default.guest_profile
 	)
 
 	self.last_parcel_position = settings_file.get_value(
@@ -448,8 +462,18 @@ func save_to_settings_file():
 	)
 	new_settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
 	new_settings_file.set_value("config", "texture_quality", self.get_texture_quality())
-	new_settings_file.set_value("session", "account", self.session_account)
-	new_settings_file.set_value("session", "guest_profile", self.guest_profile)
+
+	# Preserve all existing session keys (other profile slots)
+	if settings_file.has_section("session"):
+		for key in settings_file.get_section_keys("session"):
+			new_settings_file.set_value("session", key, settings_file.get_value("session", key))
+
+	# When session is ephemeral (guest/preview), preserve existing session data on disk
+	# and don't overwrite with the in-memory guest session values.
+	if not session_is_ephemeral:
+		var profile_suffix := _get_profile_suffix()
+		new_settings_file.set_value("session", "account" + profile_suffix, self.session_account)
+		new_settings_file.set_value("session", "guest_profile" + profile_suffix, self.guest_profile)
 	new_settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	new_settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	new_settings_file.set_value("user", "last_places", self.last_places)

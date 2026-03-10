@@ -31,6 +31,11 @@ const CONNECTION_LOST_BODY = "We can't connect to Decentraland right now. Please
 const CONNECTION_LOST_PRIMARY = "RETRY"
 const CONNECTION_LOST_SECONDARY = "EXIT APP"
 
+const SCENE_CRASH_TITLE = "Scene error"
+const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back to discover."
+const SCENE_CRASH_PRIMARY = "RELOAD"
+const SCENE_CRASH_SECONDARY = "BACK"
+
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
 
@@ -169,6 +174,28 @@ func async_show_change_realm_modal(realm_name: String, message: String = "") -> 
 	current_modal.button_secondary.pressed.connect(close_current_modal)
 
 
+## Shows a SCENE_CRASH type modal
+## @param entity_id: The entity ID of the crashed scene
+func async_show_scene_crash_modal(entity_id: String) -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.dismissable = false
+	current_modal.set_title(SCENE_CRASH_TITLE)
+	current_modal.set_body(SCENE_CRASH_BODY)
+	current_modal.set_primary_button_text(SCENE_CRASH_PRIMARY)
+	current_modal.set_secondary_button_text(SCENE_CRASH_SECONDARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.show()
+
+	# Disconnect previous connections and connect button actions
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_scene_crash_reload.bind(entity_id))
+	current_modal.button_secondary.pressed.connect(_on_scene_crash_back)
+
+
 ## Closes the current modal if it exists
 func close_current_modal() -> void:
 	if current_modal:
@@ -297,6 +324,16 @@ func _on_teleport_primary(location: Vector2i, realm: String) -> void:
 func _on_change_realm_primary(realm_name: String) -> void:
 	# Default behavior: call Global.realm.async_set_realm
 	Global.realm.async_set_realm(realm_name)
+	close_current_modal()
+
+
+func _on_scene_crash_reload(entity_id: String) -> void:
+	Global.scene_fetcher.reload_scene(entity_id)
+	close_current_modal()
+
+
+func _on_scene_crash_back() -> void:
+	Global.open_discover.emit()
 	close_current_modal()
 
 

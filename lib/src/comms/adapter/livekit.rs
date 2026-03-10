@@ -126,18 +126,26 @@ impl LivekitRoom {
 
     fn _poll(&mut self) -> bool {
         if let Some(processor_sender) = &self.message_processor_sender {
-            // Forward all messages from the LiveKit thread to the message processor
-            while let Ok(message) = self.receiver_from_thread.try_recv() {
-                if let Err(err) = processor_sender.try_send(message) {
-                    tracing::warn!("Failed to forward message to processor: {}", err);
+            loop {
+                match self.receiver_from_thread.try_recv() {
+                    Ok(message) => {
+                        if let Err(err) = processor_sender.try_send(message) {
+                            tracing::warn!("Failed to forward message to processor: {}", err);
+                        }
+                    }
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => return true,
+                    Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => return false,
                 }
             }
         } else {
-            // If no processor is connected, just drain the messages to prevent backing up
-            while self.receiver_from_thread.try_recv().is_ok() {}
+            loop {
+                match self.receiver_from_thread.try_recv() {
+                    Ok(_) => {} // drain
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => return true,
+                    Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => return false,
+                }
+            }
         }
-
-        true
     }
 
     fn _send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
@@ -330,6 +338,9 @@ fn spawn_livekit_task(
             });
         }
 
+        // Track the current streamer audio task so we can abort it when a new one arrives
+        let mut streamer_audio_task: Option<tokio::task::JoinHandle<()>> = None;
+
         'stream: loop {
             tokio::select!(
                 incoming = network_rx.recv() => {
@@ -436,6 +447,12 @@ fn spawn_livekit_task(
                             match track {
                                 livekit::track::RemoteTrack::Audio(audio) => {
                                     if is_streamer {
+                                        // Abort previous streamer audio task if any
+                                        if let Some(prev_task) = streamer_audio_task.take() {
+                                            tracing::debug!("Aborting previous streamer audio task before starting new one");
+                                            prev_task.abort();
+                                        }
+
                                         // Streamer audio -> video player audio
                                         let sender = sender.clone();
                                         let room_id_clone = room_id.clone();
@@ -443,7 +460,7 @@ fn spawn_livekit_task(
                                         // Use zero address for streamers
                                         let address = address.unwrap_or_default();
 
-                                        rt2.spawn(async move {
+                                        streamer_audio_task = Some(rt2.spawn(async move {
                                             let mut stream = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track(), 48000, 1);
 
                                             tracing::debug!("streamer audio track from {:?}", identity_owned);
@@ -496,7 +513,7 @@ fn spawn_livekit_task(
                                             }
 
                                             tracing::debug!("streamer audio track ended, exiting task");
-                                        });
+                                        }));
                                     } else if let Some(address) = address {
                                         // Regular participant audio -> voice chat
                                         let sender = sender.clone();

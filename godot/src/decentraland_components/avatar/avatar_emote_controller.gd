@@ -165,6 +165,9 @@ func stop_emote():
 
 ## Play an emote by ID or URN (supports both wearable and scene emotes).
 func play_emote(id: String):
+	# Return if its an empty emote
+	if id == "":
+		return
 	# If animation system is being modified, queue this request
 	if _is_modifying_animations:
 		_queued_emote_urn = id
@@ -366,6 +369,9 @@ func _reset_skeleton_to_rest_pose():
 ## Load and play an emote (supports both wearable and scene emotes).
 ## Scene emotes are detected by URN pattern and loaded via unified path.
 func async_play_emote(emote_id_or_urn: String) -> void:
+	# Return if empty emote
+	if emote_id_or_urn == "":
+		return
 	# Cooldown check to prevent rapid emote spam
 	var current_time = Time.get_ticks_msec() / 1000.0
 	if current_time - _last_emote_time < EMOTE_COOLDOWN_SECONDS:
