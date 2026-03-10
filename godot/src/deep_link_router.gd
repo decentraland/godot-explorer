@@ -71,8 +71,12 @@ func route() -> void:
 	path = path.rstrip("/")
 
 	match path:
-		"/jump":
-			deep_link_jump.emit()
+		"/jump", "/open":
+			# If location or realm is provided, teleport; otherwise open jump panel
+			if Global.deep_link_obj.is_location_defined() or not Global.deep_link_obj.realm.is_empty() or not Global.deep_link_obj.preview.is_empty():
+				_route_teleport()
+			else:
+				deep_link_jump.emit()
 		"/events":
 			var event_id: String = Global.deep_link_obj.params.get("id", "")
 			if not event_id.is_empty():

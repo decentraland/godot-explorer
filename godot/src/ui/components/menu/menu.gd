@@ -90,6 +90,12 @@ func _ready():
 	if not is_in_game:
 		open.call_deferred()
 
+	# If the app was cold-started via a deep link, the deep_link_received signal
+	# was already emitted before menu connected its signals. Route the pending
+	# deep link now that we are ready.
+	if not Global.deep_link_url.is_empty():
+		Global.deep_link_router.route.call_deferred()
+
 
 func open():
 	_open()
@@ -130,7 +136,7 @@ func async_show_discover(open_menu := true):
 	await control_discover._async_instantiate()
 	select_discover_screen()
 	if is_instance_valid(static_button_discover):
-		static_button_discover.toggled.emit(true)
+		static_button_discover.button_pressed = true
 	if open_menu:
 		_open()
 
