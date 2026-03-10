@@ -103,6 +103,11 @@ visible = false
 layout_mode = 1
 backpack = NodePath("../Control_Backpack")
 
+[node name="Control_ProfilePortrait" parent="VBoxContainer/ColorRect_Background/Menus" instance_placeholder="res://src/ui/components/profile/profile_portrait.tscn"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
 [node name="BottomBar_Portrait" type="PanelContainer" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2tihm")

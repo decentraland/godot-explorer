@@ -285,7 +285,7 @@ func async_close_sign_in():
 func _ready():
 	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
 	label_version.set_text(DclGlobal.get_version_with_env())
-	button_enter_as_guest.visible = false
+	button_enter_as_guest.visible = DclGlobal.is_dev()
 
 	Global.music_player.play.call_deferred("music_builder")
 
@@ -522,7 +522,7 @@ func _on_button_continue_pressed():
 
 func _on_button_start_pressed():
 	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	button_enter_as_guest.visible = false
+	button_enter_as_guest.visible = DclGlobal.is_dev()
 	sign_in_title.text = "Create your account"
 	is_creating_account = true
 	show_auth_home_screen()
@@ -549,7 +549,8 @@ func _on_button_next_pressed():
 		var error: PromiseError = promise.get_data()
 		printerr("[Lobby] Profile deploy failed: ", error.get_error())
 
-	show_control_ftue()
+	# Skip FTUE, go directly to discover
+	await async_close_sign_in()
 
 
 func _on_button_random_name_pressed():
@@ -558,7 +559,7 @@ func _on_button_random_name_pressed():
 
 func _on_button_go_to_sign_in_pressed():
 	Global.metrics.track_click_button("sign_in", current_screen_name, "")
-	button_enter_as_guest.hide()
+	button_enter_as_guest.visible = DclGlobal.is_dev()
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
 	show_auth_home_screen()
@@ -642,11 +643,16 @@ func profile_has_name():
 	return profile != null and not profile.get_name().is_empty()
 
 
-# gdlint:ignore = async-function-name
 func _on_button_enter_as_guest_pressed():
 	Global.metrics.track_click_button("enter_as_guest", current_screen_name, "")
-	create_guest_account_if_needed()
-	await async_close_sign_in()
+	Global.get_config().guest_profile = {}
+	Global.get_config().save_to_settings_file()
+	guest_account_created = false
+	Global.player_identity.create_guest_account()
+	Global.player_identity.set_default_profile()
+	guest_account_created = true
+	_show_avatar_preview()
+	show_avatar_create_screen()
 
 
 func _show_avatar_preview():

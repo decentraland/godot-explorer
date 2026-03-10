@@ -1,0 +1,58 @@
+[gd_scene load_steps=7 format=3 uid="uid://cwthmkhfqjqb2"]
+
+[ext_resource type="Script" uid="uid://cvqeuw0ba6y81" path="res://src/ui/components/profile/about_data.gd" id="1_fdo2x"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_fdo2x"]
+[ext_resource type="Texture2D" uid="uid://diqxkbpdndas" path="res://assets/ui/gender-icon.svg" id="2_rk0rh"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_rk0rh"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_ebo02"]
+font = ExtResource("2_fdo2x")
+font_size = 18
+font_color = Color(0.9098039, 0.7254902, 1, 0.69803923)
+
+[sub_resource type="LabelSettings" id="LabelSettings_foi8g"]
+font = ExtResource("3_rk0rh")
+font_size = 24
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="AboutData" type="VBoxContainer"]
+size_flags_horizontal = 3
+size_flags_vertical = 0
+script = ExtResource("1_fdo2x")
+title = "Title"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="TextureRect_Icon" type="TextureRect" parent="HBoxContainer"]
+unique_name_in_owner = true
+self_modulate = Color(0.9098039, 0.7254902, 1, 0.8627451)
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("2_rk0rh")
+expand_mode = 5
+stretch_mode = 5
+
+[node name="Label_Title" type="Label" parent="HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 20
+text = "Title"
+label_settings = SubResource("LabelSettings_ebo02")
+uppercase = true
+
+[node name="Label_Value" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Value"
+label_settings = SubResource("LabelSettings_foi8g")

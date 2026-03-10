@@ -32,7 +32,9 @@ func _process(_delta):
 
 	# Sync depth camera with main camera
 	depth_camera.global_transform = main_camera.global_transform
+	depth_camera.projection = main_camera.projection
 	depth_camera.fov = main_camera.fov
+	depth_camera.size = main_camera.size
 	depth_camera.near = main_camera.near
 	depth_camera.far = main_camera.far
 

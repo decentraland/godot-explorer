@@ -1,4 +1,5 @@
 @tool
+class_name DclLineEdit
 extends VBoxContainer
 
 signal dcl_line_edit_changed

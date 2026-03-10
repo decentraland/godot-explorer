@@ -131,6 +131,11 @@ pub struct CommunicationManager {
     /// Flag to prevent automatic reconnection after DuplicateIdentity disconnect
     block_auto_reconnect: bool,
 
+    /// When true, all comms are disconnected/deferred until loading finishes
+    comms_on_hold: bool,
+    /// Saved adapter string so we can reconnect after loading finishes
+    saved_adapter_for_resume: GString,
+
     realm_min_bounds: Vector2i,
     realm_max_bounds: Vector2i,
 
@@ -177,6 +182,8 @@ impl INode for CommunicationManager {
             last_profile_version_broadcast: Instant::now(),
             archipelago_profile_announced: false,
             block_auto_reconnect: false,
+            comms_on_hold: false,
+            saved_adapter_for_resume: GString::default(),
             livekit_debug: false,
             livekit_debug_last_update: Instant::now(),
             message_processor: None,
@@ -203,8 +210,10 @@ impl INode for CommunicationManager {
     fn process(&mut self, _dt: f64) {
         // Handle scene room connection requests from async tasks
         #[cfg(feature = "use_livekit")]
-        while let Ok(request) = self.scene_room_connection_receiver.try_recv() {
-            self.handle_scene_room_connection_request(request);
+        if !self.comms_on_hold {
+            while let Ok(request) = self.scene_room_connection_receiver.try_recv() {
+                self.handle_scene_room_connection_request(request);
+            }
         }
 
         // Check if we need to announce profile for archipelago (before borrowing)
@@ -401,7 +410,8 @@ impl INode for CommunicationManager {
 
         // Attempt scene room reconnection if timer has expired
         #[cfg(feature = "use_livekit")]
-        if self.scene_room.is_none()
+        if !self.comms_on_hold
+            && self.scene_room.is_none()
             && self.current_scene_id.is_some()
             && self
                 .scene_room_reconnect_at
@@ -1192,6 +1202,14 @@ impl CommunicationManager {
         }
 
         let comms_fixed_adapter_str = comms_fixed_adapter.unwrap().to_string();
+
+        // If loading, save the adapter for reconnection after loading finishes
+        if self.comms_on_hold {
+            self.saved_adapter_for_resume = comms_fixed_adapter_str.to_godot();
+            tracing::info!("Realm changed while comms on hold, saved adapter for resume");
+            return;
+        }
+
         self.change_adapter(comms_fixed_adapter_str.to_godot());
     }
 
@@ -1402,6 +1420,47 @@ impl CommunicationManager {
         self.archipelago_profile_announced = false;
     }
 
+    /// Disconnect all comms while a scene is loading.
+    /// Saves the current adapter so we can reconnect after loading finishes.
+    #[func]
+    pub fn hold_comms(&mut self) {
+        // Always save adapter if comms are connected, even if already on hold.
+        // Handles the case where hold is called at startup (comms not ready)
+        // and then again from _on_loading_started (comms now connected).
+        if !self.current_connection_str.is_empty() {
+            self.saved_adapter_for_resume = self.current_connection_str.clone();
+            self.clean();
+        }
+        self.comms_on_hold = true;
+        tracing::info!("Comms on hold (loading)");
+    }
+
+    /// Reconnect all comms after loading finishes.
+    #[func]
+    pub fn release_comms(&mut self) {
+        if !self.comms_on_hold {
+            return;
+        }
+        self.comms_on_hold = false;
+
+        // Discard stale scene room connection requests that queued during the hold
+        #[cfg(feature = "use_livekit")]
+        while self.scene_room_connection_receiver.try_recv().is_ok() {}
+
+        let adapter = std::mem::take(&mut self.saved_adapter_for_resume);
+        if !adapter.is_empty() {
+            tracing::info!("Comms resuming after loading");
+            self.change_adapter(adapter);
+        }
+
+        // Reconnect the scene room — _on_change_scene_id saved current_scene_id
+        // during the hold but deferred the actual connection.
+        #[cfg(feature = "use_livekit")]
+        if self.current_scene_id.is_some() {
+            self.reconnect_scene_room();
+        }
+    }
+
     #[func]
     fn _on_update_profile(&mut self) {
         let dcl_player_identity = DclGlobal::singleton().bind().get_player_identity();
@@ -1533,6 +1592,15 @@ impl CommunicationManager {
         self.scene_room = None;
         self.scene_room_reconnect_at = None;
         self.current_scene_id = Some(scene_entity_id.clone());
+
+        // If loading is in progress, defer scene room creation until release
+        if self.comms_on_hold {
+            tracing::debug!(
+                "Scene room on hold, deferring connection for: {}",
+                scene_entity_id
+            );
+            return;
+        }
 
         // Check if scene rooms are disabled
         if DISABLE_SCENE_ROOM {
@@ -1678,8 +1746,29 @@ impl CommunicationManager {
             "adapter".to_variant(),
             self.current_connection_str.to_variant(),
         );
+
+        // Main room / archipelago status
+        let main_connected = self.main_room.is_some()
+            || matches!(&self.current_connection, CommsConnection::Connected(_))
+            || {
+                #[cfg(feature = "use_livekit")]
+                {
+                    matches!(&self.current_connection, CommsConnection::Archipelago(_))
+                }
+                #[cfg(not(feature = "use_livekit"))]
+                {
+                    false
+                }
+            };
+        dict.set("main_connected".to_variant(), main_connected.to_variant());
+
+        // Scene room status
         let scene_room_id = self.current_scene_id.clone().unwrap_or_default();
         dict.set("scene_room".to_variant(), scene_room_id.to_variant());
+        dict.set(
+            "comms_on_hold".to_variant(),
+            self.comms_on_hold.to_variant(),
+        );
         #[cfg(feature = "use_livekit")]
         {
             let scene_connected = self.scene_room.is_some();

@@ -118,13 +118,23 @@ impl DclIosPlugin {
         true
     }
 
-    /// Open a URL for authentication
+    /// Open a URL for authentication (uses ASWebAuthenticationSession)
     #[func]
     pub fn open_auth_url(url: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
         singleton.call("open_auth_url", &[url.to_variant()]);
+        true
+    }
+
+    /// Open a URL for authentication using SFSafariViewController (for Apple Sign In)
+    #[func]
+    pub fn open_safari_auth_url(url: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.call("open_safari_auth_url", &[url.to_variant()]);
         true
     }
 

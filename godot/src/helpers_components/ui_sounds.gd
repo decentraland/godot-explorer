@@ -84,8 +84,27 @@ func install_audio(node: Node):
 				func(toggled_on):
 					play_sound(&"toggle_enable" if toggled_on else &"toggle_disable", attenuated)
 			)
+	elif node is TextureButton:
+		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover", attenuated))
+		node.button_down.connect(self.play_sound.bind(&"generic_button_press", attenuated))
+		node.button_up.connect(self.play_sound.bind(&"generic_button_release", attenuated))
+		if node.toggle_mode:
+			node.toggled.connect(
+				func(toggled_on):
+					play_sound(&"toggle_enable" if toggled_on else &"toggle_disable", attenuated)
+			)
+	elif node is DropdownList:
+		node.item_selected.connect(func(_index): play_sound(&"generic_button_press", attenuated))
+		node.toggled.connect(
+			func(is_open):
+				play_sound(&"toggle_enable" if is_open else &"toggle_disable", attenuated)
+		)
+	elif node is Slider:
+		node.value_changed.connect(func(_value): play_sound(&"inputfield_entertext", attenuated))
 	elif node is LineEdit:
 		node.text_changed.connect(func(_new_text): play_sound(&"inputfield_entertext", attenuated))
+	elif node is TextEdit:
+		node.text_changed.connect(func(): play_sound(&"inputfield_entertext", attenuated))
 	else:
 		sound_added = false
 

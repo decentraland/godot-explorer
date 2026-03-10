@@ -22,7 +22,7 @@
 [ext_resource type="Texture2D" uid="uid://bhx6cquf7bji4" path="res://assets/ui/sign-in/dice2.svg" id="18_3tlbd"]
 [ext_resource type="LabelSettings" uid="uid://ipxcah14n2ng" path="res://assets/themes/lobby_title.tres" id="18_ypsmd"]
 [ext_resource type="FontFile" uid="uid://djqf2btwqrioo" path="res://assets/themes/fonts/inter/Inter-Italic.ttf" id="20_3tlbd"]
-[ext_resource type="LabelSettings" path="res://assets/themes/lobby_subtitle_2.tres" id="21_3tlbd"]
+[ext_resource type="LabelSettings" uid="uid://dj2kx7bnruytv" path="res://assets/themes/lobby_subtitle_2.tres" id="21_3tlbd"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="21_ypsmd"]
 [ext_resource type="LabelSettings" uid="uid://btf4wblw0y5bf" path="res://assets/themes/lobby_subtitle.tres" id="22_eula"]
 [ext_resource type="Texture2D" uid="uid://c55bxhde80ljl" path="res://assets/ui/sign-in/back-chevron.svg" id="back_chevron"]
@@ -502,7 +502,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="ChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/ChooseName"]
@@ -734,6 +733,7 @@ text = "USE ANOTHER ACCOUNT"
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/SignIn"]
@@ -796,7 +796,6 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="HSeparator6" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1"]
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")

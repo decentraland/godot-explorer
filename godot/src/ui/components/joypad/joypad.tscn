@@ -431,9 +431,9 @@ grow_vertical = 0
 mouse_force_pass_scroll_events = false
 theme_override_constants/icon_max_width = 50
 text = ""
-icon = ExtResource("2_6enwl")
+icon = ExtResource("3_6enwl")
 expand_icon = true
-trigger_action = "ia_pointer"
+trigger_action = "ia_jump"
 
 [node name="Control" type="Control" parent="Button_Press"]
 layout_mode = 1
@@ -480,8 +480,8 @@ pivot_offset = Vector2(32.5, 32.5)
 mouse_force_pass_scroll_events = false
 theme_override_constants/icon_max_width = 25
 text = ""
-icon = ExtResource("3_6enwl")
-trigger_action = "ia_jump"
+icon = ExtResource("2_6enwl")
+trigger_action = "ia_pointer"
 
 [node name="HBoxContainer2" type="Control" parent="Button_Press/Control"]
 custom_minimum_size = Vector2(465, 0)

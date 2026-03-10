@@ -1,4 +1,4 @@
-[gd_scene load_steps=46 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=47 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -64,6 +64,8 @@ Label/font_sizes/font_size = 14
 
 [sub_resource type="Theme" id="Theme_n3110"]
 Label/font_sizes/font_size = 14
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_47ptg"]
 
 [sub_resource type="Theme" id="Theme_3h20j"]
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
@@ -456,6 +458,7 @@ text_overrun_behavior = 4
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 20
@@ -630,9 +633,9 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer"]
 handle_input_locally = false
-size = Vector2i(500, 351)
+size = Vector2i(624, 351)
 render_target_clear_mode = 2
-render_target_update_mode = 4
+render_target_update_mode = 0
 
 [node name="PreviewCamera3D" type="Camera3D" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
@@ -853,7 +856,6 @@ items = Array[String](["LOW", "MEDIUM", "HIGH", "SOURCE"])
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -895,6 +897,11 @@ unique_name_in_owner = true
 layout_mode = 2
 title = "Avatar & Emote"
 is_percentage = true
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 0
+theme_override_styles/separator = SubResource("StyleBoxEmpty_47ptg")
 
 [node name="VoiceChatVolume" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer" instance=ExtResource("21_xewta")]
 unique_name_in_owner = true

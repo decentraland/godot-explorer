@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/down_arrow.svg-2d54882cd22b3135fad48794cc63b9
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
