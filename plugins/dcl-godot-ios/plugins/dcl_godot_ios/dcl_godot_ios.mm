@@ -111,6 +111,21 @@ const char* DCLGODOTIOS_VERSION = "1.0";
 
 @end
 
+// Helper delegate for SFSafariViewController used in Apple Sign In auth flow.
+// SFSafariViewController shares cookies/localStorage with Safari, which is required
+// for auth flows that depend on sessionStorage/localStorage across redirects
+// (e.g. Apple Sign In via webapp).
+@interface SafariAuthDelegate : NSObject <SFSafariViewControllerDelegate>
+@end
+
+@implementation SafariAuthDelegate
+
+- (void)safariViewControllerDidFinish:(SFSafariViewController *)controller {
+    NSLog(@"[AUTH] SFSafariViewController dismissed by user");
+}
+
+@end
+
 // Helper class to handle calendar event edit view controller delegate
 @interface CalendarEventDelegate : NSObject <EKEventEditViewDelegate>
 @end
@@ -138,6 +153,7 @@ String DclGodotiOS::receivedUrl = "";
 void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
     ClassDB::bind_method(D_METHOD("open_auth_url", "url"), &DclGodotiOS::open_auth_url);
+    ClassDB::bind_method(D_METHOD("open_safari_auth_url", "url"), &DclGodotiOS::open_safari_auth_url);
     ClassDB::bind_method(D_METHOD("open_webview_url", "url"), &DclGodotiOS::open_webview_url);
     ClassDB::bind_method(D_METHOD("get_deeplink_url"), &DclGodotiOS::get_deeplink_url);
     ClassDB::bind_method(D_METHOD("get_mobile_device_info"), &DclGodotiOS::get_mobile_device_info);
@@ -246,6 +262,34 @@ void DclGodotiOS::open_auth_url(String url) {
     #endif
 }
 
+void DclGodotiOS::open_safari_auth_url(String url) {
+    #if TARGET_OS_IOS
+    NSString *ns_url = [NSString stringWithUTF8String:url.utf8().get_data()];
+    NSURL *ns_nsurl = [NSURL URLWithString:ns_url];
+
+    // Use SFSafariViewController for Apple Sign In.
+    // SFSafariViewController shares cookies and localStorage/sessionStorage with Safari,
+    // which is required for Apple Sign In flows that depend on storage persistence
+    // across redirects.
+    // The deeplink callback (decentraland://) will be captured by DeeplinkService
+    // via the AppDelegate's openURL handler.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        safariAuthDelegate = [[SafariAuthDelegate alloc] init];
+
+        SFSafariViewController *safariVC = [[SFSafariViewController alloc] initWithURL:ns_nsurl];
+        safariVC.delegate = safariAuthDelegate;
+        safariVC.modalPresentationStyle = UIModalPresentationFormSheet;
+
+        UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+        while (rootVC.presentedViewController) {
+            rootVC = rootVC.presentedViewController;
+        }
+
+        [rootVC presentViewController:safariVC animated:YES completion:nil];
+    });
+    #endif
+}
+
 void DclGodotiOS::open_webview_url(String url) {
     #if TARGET_OS_IOS
     NSString *ns_url = [NSString stringWithUTF8String:url.utf8().get_data()];
@@ -286,6 +330,17 @@ void DclGodotiOS::emit_deeplink_received(String url) {
     // This ensures it's available even if the singleton isn't initialized yet
     receivedUrl = url;
     NSLog(@"[DEEPLINK] URL stored in static receivedUrl");
+
+    // Dismiss any presented SFSafariViewController (from open_auth_url) when a deeplink arrives.
+    // This ensures the auth Safari view is closed automatically after the auth flow completes.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+        if (rootVC.presentedViewController &&
+            [rootVC.presentedViewController isKindOfClass:[SFSafariViewController class]]) {
+            [rootVC dismissViewControllerAnimated:YES completion:nil];
+            NSLog(@"[DEEPLINK] Dismissed SFSafariViewController after auth deeplink");
+        }
+    });
 
     // Try to emit signal if singleton is available
     DclGodotiOS *singleton = get_singleton();
@@ -1358,6 +1413,7 @@ DclGodotiOS::DclGodotiOS() {
     instance = this;
     authSession = nullptr;
     authDelegate = nullptr;
+    safariAuthDelegate = nullptr;
     calendarDelegate = nullptr;
     nextAvPlayerId = 1;
 
@@ -1375,6 +1431,7 @@ DclGodotiOS::~DclGodotiOS() {
     instance = NULL;
     authSession = nullptr;
     authDelegate = nullptr;
+    safariAuthDelegate = nullptr;
     calendarDelegate = nullptr;
 
     #if TARGET_OS_IOS

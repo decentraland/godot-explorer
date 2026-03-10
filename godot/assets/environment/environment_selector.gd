@@ -73,6 +73,8 @@ func set_bloom(bloom_quality: int):
 		1:  # Low quality
 			environment.glow_enabled = true
 			environment.glow_intensity = 0.7
+			environment.glow_hdr_threshold = 1.0
+			environment.glow_hdr_scale = 2.0
 			environment.set("glow_levels/1", 0.2)
 			environment.set("glow_levels/2", 0.15)
 			environment.set("glow_levels/3", 0.0)
@@ -80,6 +82,8 @@ func set_bloom(bloom_quality: int):
 		2:  # High quality
 			environment.glow_enabled = true
 			environment.glow_intensity = 1.5
+			environment.glow_hdr_threshold = 1.0
+			environment.glow_hdr_scale = 2.0
 			environment.set("glow_levels/1", 0.4)
 			environment.set("glow_levels/2", 0.3)
 			environment.set("glow_levels/3", 0.0)

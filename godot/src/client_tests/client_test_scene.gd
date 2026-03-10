@@ -123,6 +123,10 @@ func async_load_test_avatar():
 	var result_with_outline = await async_capture_and_compare_avatar("avatar_with_outline")
 	test_results.push_back(result_with_outline)
 
+	# Run bloom test
+	var result_bloom = await async_bloom_unlit_test()
+	test_results.push_back(result_bloom)
+
 	# Report results and exit gracefully like scene tests
 	flush_logs()
 	if dump_test_result_and_get_ok():
@@ -219,6 +223,101 @@ func _compute_image_similarity(image_a: Image, image_b: Image, diff_path: String
 	diff_image.save_png(diff_path)
 
 	return float(matching_pixels) / float(total_pixels)
+
+
+func async_bloom_unlit_test() -> Dictionary:
+	print("Testing bloom_unlit_no_halo...")
+
+	# Create an isolated SubViewport
+	var sub_viewport = SubViewport.new()
+	sub_viewport.own_world_3d = true
+	sub_viewport.transparent_bg = false
+	sub_viewport.size = Vector2i(256, 256)
+	sub_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(sub_viewport)
+
+	# Use the real sky_high scene so the test stays in sync with the game environment
+	var sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
+	sub_viewport.add_child(sky)
+
+	# Apply High bloom quality preset (same logic as EnvironmentSelector.set_bloom)
+	var environment = sky.world_environment.environment
+	environment.glow_enabled = true
+	environment.glow_intensity = 1.5
+	environment.glow_hdr_threshold = 1.0
+	environment.glow_hdr_scale = 2.0
+	environment.set("glow_levels/1", 0.4)
+	environment.set("glow_levels/2", 0.3)
+	environment.set("glow_levels/3", 0.0)
+	environment.set("glow_levels/5", 0.0)
+
+	# Camera looking at the plane
+	var camera = Camera3D.new()
+	camera.position = Vector3(0, 0, 2)
+	camera.look_at(Vector3.ZERO)
+	sub_viewport.add_child(camera)
+
+	# White unlit plane (simulates SDK billboard / avatar nickname)
+	var mesh_instance = MeshInstance3D.new()
+	var quad = QuadMesh.new()
+	quad.size = Vector2(1.0, 1.0)
+	mesh_instance.mesh = quad
+
+	var mat = StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color.WHITE
+	mesh_instance.material_override = mat
+	sub_viewport.add_child(mesh_instance)
+
+	# Wait for rendering to settle
+	await get_tree().create_timer(0.5).timeout
+	await RenderingServer.frame_post_draw
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var captured_image = sub_viewport.get_texture().get_image()
+
+	# Clean up
+	sub_viewport.queue_free()
+
+	# Save and compare snapshot
+	var test_name = "bloom_unlit_no_halo"
+	return await async_capture_and_compare_image(test_name, captured_image)
+
+
+func async_capture_and_compare_image(test_name: String, captured_image: Image) -> Dictionary:
+	var base_path = test_name + ".png"
+	var current_snapshot_path = snapshot_comparison_folder + base_path
+	var existing_snapshot_path = snapshot_folder + base_path
+	var diff_path = snapshot_comparison_folder + test_name + ".diff.png"
+
+	captured_image.save_png(current_snapshot_path)
+	print("Current snapshot saved to: ", current_snapshot_path)
+
+	var result = {
+		"test_name": test_name, "stored_snapshot_found": false, "similarity": 0.0, "passed": false
+	}
+
+	if FileAccess.file_exists(existing_snapshot_path):
+		result.stored_snapshot_found = true
+		var existing_snapshot = Image.load_from_file(existing_snapshot_path)
+		var similarity = _compute_image_similarity(existing_snapshot, captured_image, diff_path)
+		result.similarity = similarity
+		result.passed = similarity > 0.99
+
+		if result.passed:
+			logs.push_back("🟢 %s: PASSED (similarity: %.2f%%)" % [test_name, similarity * 100])
+		else:
+			logs.push_back("🔴 %s: FAILED (similarity: %.2f%%)" % [test_name, similarity * 100])
+			logs.push_back("   Diff saved to: %s" % diff_path)
+	else:
+		logs.push_back(
+			"⚠️ %s: No reference snapshot found at %s" % [test_name, existing_snapshot_path]
+		)
+		logs.push_back("   Creating initial snapshot...")
+		captured_image.save_png(existing_snapshot_path)
+
+	return result
 
 
 func flush_logs():

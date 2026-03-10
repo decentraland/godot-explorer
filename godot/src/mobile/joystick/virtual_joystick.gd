@@ -86,6 +86,7 @@ func _ready() -> void:
 	_active_area.connect("input_received", _on_input)
 
 	Global.loading_started.connect(_on_loading_scene)
+	Global.camera_mode_set.connect(_on_camera_mode_set)
 	var connect_explorer_signals := func():
 		Global.get_explorer().navbar.navbar_opened.connect(_on_navbar_opened)
 		Global.get_explorer().navbar.navbar_closed.connect(_on_navbar_closed)
@@ -103,6 +104,11 @@ func _on_navbar_opened() -> void:
 
 func _on_navbar_closed() -> void:
 	_button_camera.show()
+
+
+func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
+	prints(camera_mode, Global.CameraMode.CINEMATIC, camera_mode != Global.CameraMode.CINEMATIC)
+	_button_camera.visible = camera_mode != Global.CameraMode.CINEMATIC
 
 
 func _on_input(event: InputEvent) -> void:
