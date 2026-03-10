@@ -53,6 +53,7 @@ var stylebox: StyleBox
 @onready var h_box_container_modifier: HBoxContainer = %HBoxContainer_Modifier
 @onready var texture_rect_gamepad_button: TextureRect = %TextureRect_GamepadButton
 @onready var label_text = %Label_Text
+@onready var margin_container_icons: MarginContainer = %MarginContainer_Icons
 
 
 func _ready():
@@ -173,7 +174,7 @@ func _physics_process(_delta):
 	var new_pressed = Input.is_action_pressed(action_to_trigger)
 	if last_state_pressed != new_pressed:
 		set_bg_color(BG_COLOR_PRESSED if new_pressed else BG_COLOR_NORMAL)
-		panel_container_inputs.position = Vector2i(-1, -1) if new_pressed else Vector2i.ZERO
+		margin_container_icons.add_theme_constant_override("margin_top", 2 if new_pressed else 0)
 		label_text.text = text_up if new_pressed else text_down
 		last_state_pressed = new_pressed
 
