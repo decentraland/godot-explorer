@@ -195,7 +195,12 @@ fn copy_snapshot_files(temp_dir: &Path, mappings: &[(&str, &str)]) -> Result<usi
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("png") {
+            let is_png = path.extension().and_then(|e| e.to_str()) == Some("png");
+            let is_diff = path
+                .file_name()
+                .and_then(|f| f.to_str())
+                .map_or(false, |f| f.ends_with(".diff.png"));
+            if is_png && !is_diff {
                 let file_name = path.file_name().unwrap();
                 let dest_path = dest_dir.join(file_name);
                 std::fs::copy(&path, &dest_path).with_context(|| {
@@ -237,18 +242,12 @@ pub fn update_coverage_snapshots(
         download_artifact(&resolved_run_id, "coverage-snapshots", &temp_dir)?;
 
         let mappings = [
+            ("scenes/comparison", "tests/snapshots/scenes"),
             (
-                "tests/snapshots/scenes/comparison",
-                "tests/snapshots/scenes",
-            ),
-            (
-                "tests/snapshots/avatar-image-generation/comparison",
+                "avatar-image-generation/comparison",
                 "tests/snapshots/avatar-image-generation",
             ),
-            (
-                "tests/snapshots/client/comparison",
-                "tests/snapshots/client",
-            ),
+            ("client/comparison", "tests/snapshots/client"),
         ];
 
         let total = copy_snapshot_files(&temp_dir, &mappings)?;
