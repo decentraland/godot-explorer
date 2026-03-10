@@ -1,6 +1,7 @@
 extends Node
 
 const DEFAULT_TRANSITION_TIME = 0.35  # in seconds
+const PERSISTANT_CAMERA := preload("res://src/helpers_components/persistant_camera.tscn")
 
 var global_virtual_camera_transform: Transform3D
 var last_virtual_camera_entity_node = null
@@ -8,9 +9,7 @@ var last_camera_reached = true
 var transition_start_transform: Transform3D
 var transition_time_counter: float = 0.0
 
-@onready var global_virtual_camera = (
-	load("res://src/helpers_components/persistant_camera.tscn").instantiate()
-)
+@onready var global_virtual_camera = PERSISTANT_CAMERA.instantiate()
 
 
 func _ready():
@@ -23,6 +22,19 @@ func _ready():
 #  virtuals can change between scenes or in the same scene, computed as desired_target
 #  desired_target can be removed from the scene tree, so global_virtual_camera could be orphan at this point
 func _process(delta: float) -> void:
+	# If the virtual camera was freed (e.g. scene exited while reparented to an entity node), reinitialize it
+	if not is_instance_valid(global_virtual_camera):
+		global_virtual_camera = (PERSISTANT_CAMERA.instantiate())
+		add_child(global_virtual_camera)
+		global_virtual_camera.clear_current()
+		global_virtual_camera.cull_mask = 0x7fff
+		last_virtual_camera_entity_node = null
+		last_camera_reached = true
+
+	# If the last tracked entity was freed, reset so the comparison below doesn't misfire
+	if not is_instance_valid(last_virtual_camera_entity_node):
+		last_virtual_camera_entity_node = null
+
 	var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
 	var scene_virtual_camera = Global.scene_runner.get_scene_virtual_camera(current_scene_id)
 
@@ -69,6 +81,9 @@ func _process(delta: float) -> void:
 			# Going back to player camera - reparent to self conserving global transform
 			if global_virtual_camera.get_parent() != self:
 				global_virtual_camera.reparent(self)
+			Global.camera_mode_set.emit(
+				Global.player_camera_node.get_camera_mode() as Global.CameraMode
+			)
 		else:
 			# Switching to virtual camera - start from current viewport camera position
 			var current_camera = get_viewport().get_camera_3d()
@@ -77,6 +92,7 @@ func _process(delta: float) -> void:
 
 			# Make the global virtual camera current
 			global_virtual_camera.make_current()
+			Global.camera_mode_set.emit(Global.CameraMode.CINEMATIC)
 
 			# When virtual camera is active we always show the primary avatar and hide outlines
 			var explorer = Global.get_explorer()
