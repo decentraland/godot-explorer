@@ -46,7 +46,5 @@ func _on_timeout():
 		avatar.land
 	)
 
-	var rotation: Quaternion = Quaternion.from_euler(Vector3(0, rotation_y, 0))
-	Global.comms.broadcast_position_and_rotation(position, rotation)
 	last_position_sent = position
 	last_rotation_sent = rotation_y

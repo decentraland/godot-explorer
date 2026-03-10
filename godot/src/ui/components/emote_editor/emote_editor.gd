@@ -14,6 +14,7 @@ var avatar_emote_items: Array[EmoteEditorItem] = []
 var all_emote_items: Array[EmoteItemUi] = []
 var current_selected_index: int = -1
 var vscroll_bar: VScrollBar = null
+var _equipped_emote_urns: PackedStringArray = []
 
 var _only_collectibles: bool = false
 var _can_load_more = false
@@ -37,10 +38,13 @@ func _ready():
 			child.button_group = button_group_avatar_emotes
 			var index = avatar_emote_items.size()
 			child.select_emote.connect(self._on_emote_editor_item_select_emote.bind(index))
+			child.clear_emote.connect(self._on_emote_editor_item_clear_emote.bind(index))
 			avatar_emote_items.push_back(child)
 
 	first_button.set_pressed(true)
 	current_selected_index = 0
+
+	button_group_all_emotes.allow_unpress = true
 
 	_async_load_emotes()
 
@@ -61,6 +65,7 @@ func _async_add_remote_emotes(page_number: int):
 			emote_item.play_emote.connect(self._on_emote_item_play_emote)
 			container_all_emotes.add_child(emote_item)
 			all_emote_items.push_back(emote_item)
+	_update_grid_equipped_state()
 
 
 func _async_load_emotes():
@@ -83,34 +88,51 @@ func _async_load_emotes():
 
 	_last_loaded_page = 1
 	await _async_add_remote_emotes(_last_loaded_page)
+	_sync_grid_selection()
 
 
 func _on_avatar_loaded():
-	var emote_urns = avatar.avatar_data.get_emotes()
+	_equipped_emote_urns = avatar.avatar_data.get_emotes()
 
 	for i in range(avatar_emote_items.size()):
 		# get_emotes() always returns 10 emotes, but just in case
-		if i >= emote_urns.size():
+		if i >= _equipped_emote_urns.size():
 			# Set default or
 			continue
 
 		var emote_editor_item: EmoteEditorItem = avatar_emote_items[i]
-		emote_editor_item.async_load_from_urn(emote_urns[i], i)  # Forget await
+		emote_editor_item.async_load_from_urn(_equipped_emote_urns[i], i)  # Forget await
+
+	_update_grid_equipped_state()
+	_sync_grid_selection()
+
+
+func _normalize_emote_urn(urn: String) -> String:
+	if Emotes.is_base_emote_urn(urn):
+		return Emotes.get_base_emote_id_from_urn(urn)
+	return urn
 
 
 func _on_emote_editor_item_select_emote(_emote_urn: String, index: int):
-	if is_instance_valid(avatar):
+	if is_instance_valid(avatar) and not _emote_urn.is_empty():
 		avatar.async_play_emote(_emote_urn)
 	current_selected_index = index
-
-	for emote_item in all_emote_items:
-		if emote_item is EmoteItemUi:
-			if emote_item.emote_urn == _emote_urn:
-				emote_item.set_pressed(true)
-				break
+	_sync_grid_selection()
 
 
 func _on_emote_item_play_emote(_emote_urn: String):
+	# Tapping the already-equipped emote in the current slot clears it
+	if (
+		current_selected_index >= 0
+		and current_selected_index < _equipped_emote_urns.size()
+		and (
+			_normalize_emote_urn(_equipped_emote_urns[current_selected_index])
+			== _normalize_emote_urn(_emote_urn)
+		)
+	):
+		_clear_slot(current_selected_index)
+		return
+
 	avatar.async_play_emote(_emote_urn)
 	var emote_urns = avatar.avatar_data.get_emotes()
 	emote_urns[current_selected_index] = _emote_urn
@@ -118,6 +140,53 @@ func _on_emote_item_play_emote(_emote_urn: String):
 	avatar.avatar_data.set_emotes(emote_urns)
 	set_new_emotes.emit(emote_urns)
 	_on_avatar_loaded()
+
+
+func _on_emote_editor_item_clear_emote(index: int):
+	_clear_slot(index)
+
+
+func _clear_slot(index: int) -> void:
+	if index < 0 or index >= _equipped_emote_urns.size():
+		return
+	_equipped_emote_urns[index] = ""
+	var emote_urns = avatar.avatar_data.get_emotes()
+	emote_urns[index] = ""
+	avatar.avatar_data.set_emotes(emote_urns)
+	set_new_emotes.emit(emote_urns)
+	# Update the VBox slot display without re-emitting clear_emote
+	avatar_emote_items[index].set_empty()
+	_update_grid_equipped_state()
+	_sync_grid_selection()
+
+
+func _update_grid_equipped_state():
+	var normalized_equipped: Array[String] = []
+	for urn in _equipped_emote_urns:
+		var normalized := _normalize_emote_urn(urn)
+		if not normalized.is_empty():
+			normalized_equipped.append(normalized)
+	for emote_item in all_emote_items:
+		if emote_item is EmoteItemUi:
+			var item_urn := _normalize_emote_urn(emote_item.emote_urn)
+			emote_item.set_equipped(not item_urn.is_empty() and item_urn in normalized_equipped)
+
+
+func _sync_grid_selection():
+	if current_selected_index < 0 or current_selected_index >= _equipped_emote_urns.size():
+		return
+	var selected_urn = _normalize_emote_urn(_equipped_emote_urns[current_selected_index])
+	if selected_urn.is_empty():
+		# Empty slot — unpress the currently pressed grid item (if any)
+		for emote_item in all_emote_items:
+			if emote_item is EmoteItemUi and emote_item.button_pressed:
+				emote_item.set_pressed(false)
+		return
+	for emote_item in all_emote_items:
+		if emote_item is EmoteItemUi:
+			if _normalize_emote_urn(emote_item.emote_urn) == selected_urn:
+				emote_item.set_pressed(true)
+				break
 
 
 func _async_on_scrollbar_value_changed(new_value):

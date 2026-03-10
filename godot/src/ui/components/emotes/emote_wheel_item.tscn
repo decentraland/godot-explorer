@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://c7bnh6p6qygxu"]
+[gd_scene load_steps=6 format=3 uid="uid://c7bnh6p6qygxu"]
 
 [ext_resource type="Texture2D" uid="uid://c3tpoj72yuxp4" path="res://src/ui/components/emotes/emote_item.svg" id="1_qctv4"]
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="2_jdnf4"]
+[ext_resource type="Texture2D" uid="uid://drpjhk4w1jscd" path="res://assets/ui/CommonThumbnail.png" id="3_ap2cx"]
 
 [sub_resource type="Gradient" id="Gradient_mvm8j"]
 colors = PackedColorArray(1, 1, 1, 0.607843, 1, 1, 1, 0)
@@ -28,7 +29,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Selected" type="TextureRect" parent="Control_Inner"]
+[node name="Equiped" type="TextureRect" parent="Control_Inner"]
 unique_name_in_owner = true
 visible = false
 modulate = Color(1, 0.501961, 0, 1)
@@ -112,6 +113,54 @@ offset_bottom = 40.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(40, 40)
+expand_mode = 1
+
+[node name="ControlsWithoutFunction" type="Control" parent="."]
+editor_description = "This nodes are only to satisfy the script. And don't have any function here."
+visible = false
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TextureRect_Background" type="TextureRect" parent="ControlsWithoutFunction"]
+unique_name_in_owner = true
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(32, 32)
+texture = ExtResource("3_ap2cx")
+expand_mode = 1
+
+[node name="TextureRect_Equiped" type="TextureRect" parent="ControlsWithoutFunction"]
+unique_name_in_owner = true
+visible = false
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(32, 32)
+texture = ExtResource("3_ap2cx")
+expand_mode = 1
+
+[node name="TextureRect_Skeleton" type="TextureRect" parent="ControlsWithoutFunction"]
+unique_name_in_owner = true
+visible = false
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(32, 32)
+texture = ExtResource("3_ap2cx")
 expand_mode = 1
 
 [connection signal="item_rect_changed" from="." to="." method="_on_item_rect_changed"]

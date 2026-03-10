@@ -10,8 +10,6 @@ const LOAD_TIMEOUT_SECONDS: float = 5.0
 
 var is_guest = false
 var trim_value = 20
-var mute_icon = load("res://assets/ui/audio_off.svg")
-var unmute_icon = load("res://assets/ui/audio_on.svg")
 var social_data: SocialItemData
 var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var load_state: LoadState = LoadState.UNLOADED
@@ -31,7 +29,6 @@ var _load_start_time: float = 0.0
 @onready var v_box_container_nickname: VBoxContainer = %VBoxContainer_Nickname
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
 @onready var button_add_friend: Button = %Button_AddFriend
-@onready var button_mute: Button = %Button_Mute
 @onready var button_accept: Button = %Button_Accept
 @onready var button_reject: Button = %Button_Reject
 @onready var label_pending_request: Label = %Label_PendingRequest
@@ -47,8 +44,6 @@ func _ready():
 	# Connect to locations signal to update jump button visibility
 	if Global.locations:
 		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
-	# Connect to blacklist changes to update button states
-	Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed_for_buttons)
 
 
 func set_data(data: SocialItemData, should_load: bool = true) -> void:
@@ -119,7 +114,6 @@ func _async_load_item() -> void:
 
 	# If type is NEARBY, check if already a friend
 	if item_type == SOCIAL_TYPE.NEARBY and not social_data.address.is_empty():
-		_update_buttons()
 		_check_and_update_friend_status()
 
 
@@ -201,24 +195,6 @@ func _on_mouse_exited() -> void:
 	panel_nearby_player_item.self_modulate = "#ffffff00"
 
 
-func _on_button_mute_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		Global.social_blacklist.add_muted(social_data.address)
-	else:
-		Global.social_blacklist.remove_muted(social_data.address)
-	_update_buttons()
-	_notify_other_components_of_change()
-
-
-func _update_buttons() -> void:
-	var is_muted = Global.social_blacklist.is_muted(social_data.address)
-	button_mute.set_pressed_no_signal(is_muted)
-	if is_muted:
-		button_mute.icon = mute_icon
-	else:
-		button_mute.icon = unmute_icon
-
-
 func _notify_other_components_of_change() -> void:
 	if social_data.address:
 		Global.get_tree().call_group("blacklist_ui_sync", "_sync_blacklist_ui", social_data.address)
@@ -240,7 +216,6 @@ func _update_elements_visibility() -> void:
 			# Guest users cannot add friends
 			# Check if already a friend and hide/show ADD FRIEND button accordingly
 			if social_data and not social_data.address.is_empty():
-				_update_buttons()
 				# If status is already known (pre-checked), use it directly
 				if current_friendship_status != Global.FriendshipStatus.UNKNOWN:
 					_update_button_visibility_from_status()
@@ -311,8 +286,8 @@ func _async_on_button_add_friend_pressed() -> void:
 		button_add_friend.disabled = false
 		return
 
-	# friend_request_sent metric
-	Global.metrics.track_click_button("friend_request_sent", "SOCIAL_PANEL", "")
+	# Request Friend metric
+	Global.metrics.track_request_friend(social_data.address)
 
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
@@ -341,8 +316,8 @@ func _async_on_button_accept_pressed() -> void:
 	button_add_friend.hide()
 	label_pending_request.hide()
 
-	# friend_request_accept metric
-	Global.metrics.track_click_button("friend_request_accept", "SOCIAL_PANEL", "")
+	# Accept Friend metric
+	Global.metrics.track_accept_friend(social_data.address, social_data.friendship_id)
 
 	# Emit signal locally since the service doesn't stream back our own actions
 	Global.social_service.friendship_request_accepted.emit(social_data.address)
@@ -591,11 +566,6 @@ func shorten_tittle(title: String, max_length: int) -> String:
 func _on_blacklist_changed() -> void:
 	# Handle blacklist changes for NEARBY and REQUEST items
 	_update_blocked_visibility_for_type()
-
-
-func _on_blacklist_changed_for_buttons() -> void:
-	# Update buttons state when blacklist changes
-	_update_buttons()
 
 
 func _update_blocked_visibility_for_type() -> void:

@@ -75,9 +75,6 @@ func _ready():
 	_h_slider.value = value
 	_h_slider.editable = editable
 
-	_h_slider.value_changed.connect(_on_h_slider_value_changed)
-	_h_slider.drag_ended.connect(_on_h_slider_drag_ended)
-
 
 func _update_title():
 	if _title_label:

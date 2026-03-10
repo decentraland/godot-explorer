@@ -3,6 +3,7 @@ class_name DropdownList
 extends Control
 
 signal item_selected(index: int)
+signal toggled(is_open: bool)
 
 const ITEM_HEIGHT: float = 68.0
 const ITEM_GAP: float = 8.0
@@ -33,6 +34,9 @@ const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
 			_apply_disabled_state()
 
 var selected: int = -1
+
+## When >= 0, this index is treated as "no value" and shown with placeholder style.
+var placeholder_index: int = -1
 var _items: Array[Dictionary] = []
 var _is_open: bool = false
 var _style_normal: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
@@ -215,18 +219,21 @@ func _async_open_popup() -> void:
 		_shadow_rect.size = shadow_size
 
 		# Update shader uniform with shadow rect size for correct corner radius calculation
-		var material := _shadow_rect.material as ShaderMaterial
-		if material:
-			material.set_shader_parameter("rect_size", shadow_size)
+		var shader_material := _shadow_rect.material as ShaderMaterial
+		if shader_material:
+			shader_material.set_shader_parameter("rect_size", shadow_size)
 
 	_popup_layer.visible = true
 	_button_panel.add_theme_stylebox_override("panel", _style_pressed)
+	toggled.emit(true)
 
 
-func _close_popup():
+func _close_popup(silent: bool = false):
 	_is_open = false
 	_popup_layer.visible = false
 	_button_panel.add_theme_stylebox_override("panel", _style_normal)
+	if not silent:
+		toggled.emit(false)
 
 
 func _sync_popup_items():
@@ -260,7 +267,8 @@ func _update_description():
 
 func _update_selected_text():
 	if _selected_label:
-		if selected >= 0 and selected < _items.size():
+		var is_placeholder := placeholder_index >= 0 and selected == placeholder_index
+		if not is_placeholder and selected >= 0 and selected < _items.size():
 			_selected_label.text = _items[selected].text
 			if disabled:
 				_selected_label.label_settings = load(
@@ -271,7 +279,10 @@ func _update_selected_text():
 					"res://assets/themes/selected_dropdown_settings.tres"
 				)
 		else:
-			_selected_label.text = "Select"
+			if selected >= 0 and selected < _items.size():
+				_selected_label.text = _items[selected].text
+			else:
+				_selected_label.text = "Select"
 			if disabled:
 				_selected_label.label_settings = load(
 					"res://assets/themes/unselected_dropdown_settings_disabled.tres"
@@ -332,4 +343,4 @@ func _on_popup_layer_gui_input(event: InputEvent):
 func _on_item_pressed(index: int):
 	select(index)
 	item_selected.emit(index)
-	_close_popup()
+	_close_popup(true)

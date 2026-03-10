@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/mouth-icon.svg-7fc2bace11db1cde47e292c629894a
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

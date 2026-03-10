@@ -1,6 +1,32 @@
-[gd_scene load_steps=2 format=3 uid="uid://b0jonmd2rfupn"]
+[gd_scene load_steps=3 format=3 uid="uid://b0jonmd2rfupn"]
 
 [ext_resource type="Script" uid="uid://b17n1qqifgain" path="res://src/main.gd" id="1_2a1rx"]
+[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="2_logo"]
 
 [node name="main" type="Node"]
 script = ExtResource("1_2a1rx")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.411765, 0.121569, 0.662745, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TextureRect" type="TextureRect" parent="CanvasLayer/CenterContainer"]
+custom_minimum_size = Vector2(154, 154)
+layout_mode = 2
+texture = ExtResource("2_logo")
+expand_mode = 1
+stretch_mode = 5

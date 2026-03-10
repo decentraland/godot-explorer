@@ -234,6 +234,39 @@ The build system now enforces proper command order:
 3. Create corresponding GDScript class in `godot/src/decentraland_components/`
 4. Register in the scene runner
 
+### Rust Log Filtering
+
+All Rust `tracing` output is routed through Godot's print functions. Errors and warnings include real source file/line metadata for Sentry and the Godot debugger.
+
+**Setting the log filter:**
+
+```bash
+# Via environment variable (desktop only)
+RUST_LOG=debug cargo run -- run
+RUST_LOG="dclgodot::comms=debug,warn" cargo run -- run
+
+# Via command-line argument (all platforms)
+cargo run -- run -- --rust-log=debug
+cargo run -- run -- --rust-log="dclgodot::scene_runner=trace,dclgodot::comms=debug,warn"
+
+# Via deeplink (mobile/desktop)
+# decentraland://open?rust-log=dclgodot::analytics=debug,warn
+```
+
+Priority: `--rust-log` > `RUST_LOG` env var > default (`warn` on desktop, `info` on mobile).
+
+The filter can also be changed at runtime from GDScript: `DclGlobal.set_rust_log_filter("dclgodot::comms=debug,warn")`.
+
+**Rust Log Filter editor tool:**
+
+In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual tool that:
+- Shows the full module tree scanned from `lib/src/`
+- Lets you toggle per-module log levels (ERROR/WARN/INFO/DEBUG/TRACE)
+- Previews the generated filter string
+- "Apply to Run Args" injects `--rust-log=...` into the editor's run arguments
+- "Copy --rust-log" / "Copy RUST_LOG" copies the filter for use in terminal or deeplinks
+- Settings persist across editor restarts via EditorSettings
+
 ### Debugging scene loading:
 1. Enable verbose logging: `RUST_LOG=debug cargo run -- run`
 2. Check the scene runner logs in `lib/src/dcl/scene_runner.rs`

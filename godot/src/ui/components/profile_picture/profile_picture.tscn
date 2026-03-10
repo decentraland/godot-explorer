@@ -38,6 +38,7 @@ offset_bottom = 32.0
 size_flags_horizontal = 4
 size_flags_vertical = 4
 script = ExtResource("1_xkyte")
+picture_size = 2
 
 [node name="ProfilePicture" type="PanelContainer" parent="."]
 clip_children = 2

@@ -1,0 +1,114 @@
+[gd_scene load_steps=6 format=3 uid="uid://bmmj6rsmuc0rq"]
+
+[ext_resource type="Script" uid="uid://csd03lrkrqety" path="res://src/ui/components/draggable_bottom_sheet/draggable_bottom_sheet.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_exit"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_d6lng"]
+bg_color = Color(0.9882353, 0.9882353, 0.9882353, 0.3019608)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="DraggableBottomSheet" type="VBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+script = ExtResource("1_script")
+
+[node name="PanelContainer_Header" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_header")
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Header"]
+layout_mode = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer_Header/MarginContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Header/MarginContainer/HBoxContainer"]
+layout_mode = 2
+alignment = 2
+
+[node name="TextureButton_Close" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(55, 55)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture_normal = ExtResource("2_exit")
+texture_pressed = ExtResource("2_exit")
+texture_hover = ExtResource("2_exit")
+ignore_texture_size = true
+stretch_mode = 6
+flip_h = true
+
+[node name="Control_Card" type="Control" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="PanelContainer_Card" type="PanelContainer" parent="Control_Card"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="MarginContainer_ShowMore" type="MarginContainer" parent="Control_Card/PanelContainer_Card/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_bottom = 40
+
+[node name="Button_ShowMore" type="Button" parent="Control_Card/PanelContainer_Card/VBoxContainer/MarginContainer_ShowMore"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 8)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/normal = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/hover = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_d6lng")
+theme_override_styles/focus = SubResource("StyleBoxFlat_d6lng")
+toggle_mode = true
+
+[node name="ScrollContent" type="ScrollContainer" parent="Control_Card/PanelContainer_Card/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[connection signal="pressed" from="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer/TextureButton_Close" to="." method="_on_button_close_pressed"]

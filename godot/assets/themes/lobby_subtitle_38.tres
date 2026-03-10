@@ -1,0 +1,8 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://cfetemr2rr0am"]
+
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="1_aokci"]
+
+[resource]
+line_spacing = 0.0
+font = ExtResource("1_aokci")
+font_size = 38

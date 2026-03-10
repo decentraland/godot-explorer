@@ -372,6 +372,20 @@ impl AvatarScene {
             }
         }
     }
+
+    #[func]
+    pub fn set_avatar_room_debug_by_address(&mut self, address: GString, room_info: GString) {
+        let address_str = address.to_string();
+        if let Some(h160) = address_str.as_h160() {
+            if let Some(alias) = self.avatar_address.get(&h160) {
+                if let Some(entity_id) = self.avatar_entity.get(alias) {
+                    if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
+                        avatar.call("set_room_debug", &[room_info.to_variant()]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl AvatarScene {
@@ -570,8 +584,8 @@ impl AvatarScene {
             }
         }
 
-        // Convert rotation_y from degrees to radians and create quaternion
-        let rotation_rad = movement.rotation_y * std::f32::consts::PI / 180.0;
+        // rotation_y is already in radians (negated by the sender)
+        let rotation_rad = movement.rotation_y;
         let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
             x: 0.0,
             y: rotation_rad,

@@ -375,6 +375,7 @@ func _async_reload_request_list(request_id: int) -> void:
 		item.name = req["name"]
 		item.has_claimed_name = req["has_claimed_name"]
 		item.profile_picture_url = req["profile_picture_url"]
+		item.friendship_id = req.get("friendship_id", "")
 		request_items.append(item)
 
 	var should_load = _is_panel_visible()

@@ -19,6 +19,7 @@ signal open_settings
 signal open_backpack
 signal open_discover
 signal open_own_profile
+signal open_profile_editor
 signal open_navbar_silently
 signal close_menu
 signal close_navbar
@@ -54,7 +55,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
 const FORCE_DEEPLINK = ""
-#const FORCE_DEEPLINK = "decentraland://open?dclenv=today"
+#const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -187,6 +188,15 @@ func _ready():
 			" preview=",
 			deep_link_obj.preview
 		)
+		print("[DEEPLINK] All params: ", deep_link_obj.params)
+
+		# Apply rust-log from deeplink params
+		var rust_log_value = deep_link_obj.params.get("rust-log", "")
+		if not rust_log_value.is_empty():
+			print("[DEEPLINK] Found rust-log param: ", rust_log_value)
+			DclGlobal.set_rust_log_filter(rust_log_value)
+		else:
+			print("[DEEPLINK] No rust-log param in deeplink")
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -528,6 +538,16 @@ func get_explorer() -> Explorer:
 	return null
 
 
+func sign_out() -> void:
+	NotificationsManager.stop_polling()
+	social_service.unsubscribe_from_block_updates()
+	social_blacklist.clear_blocked()
+	social_blacklist.clear_muted()
+	get_config().session_account = {}
+	get_config().save_to_settings_file()
+	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+
+
 func explorer_has_focus() -> bool:
 	var explorer = get_explorer()
 	if explorer == null:
@@ -580,7 +600,10 @@ func open_webview_url(url):
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
 		if DclIosPlugin.is_available():
-			DclIosPlugin.open_auth_url(url)
+			if "provider=apple" in url:
+				DclIosPlugin.open_safari_auth_url(url)
+			else:
+				DclIosPlugin.open_auth_url(url)
 		elif DclAndroidPlugin.is_available():
 			if "provider=wallet-connect" in url:
 				DclAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
@@ -884,10 +907,21 @@ func _on_deeplink_received(url: String) -> void:
 
 		deep_link_url = url
 		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
+		print("[DEEPLINK] _on_deeplink_received params: ", deep_link_obj.params)
+
+		# Apply rust-log from deeplink params
+		var rust_log_value = deep_link_obj.params.get("rust-log", "")
+		if not rust_log_value.is_empty():
+			print("[DEEPLINK] Found rust-log param: ", rust_log_value)
+			DclGlobal.set_rust_log_filter(rust_log_value)
 
 		# Ignore WalletConnect callbacks (decentraland://walletconnect)
 		if deep_link_obj.is_walletconnect_callback:
 			print("[DEEPLINK] Ignoring WalletConnect callback")
+			return
+
+		# Check for environment change — requires restart
+		if _check_dclenv_change():
 			return
 
 		# Handle signin deep link for mobile auth flow
@@ -911,6 +945,24 @@ func _clear_deep_link() -> void:
 	deep_link_url = ""
 
 
+## Check if the deep link contains a dclenv change. If it does, apply the new
+## environment and restart back to the lobby (sign out). Returns true if a
+## restart was triggered so the caller can skip further deep-link processing.
+func _check_dclenv_change() -> bool:
+	var new_env := deep_link_obj.dclenv as String
+	if new_env.is_empty():
+		return false
+
+	var current_env := DclGlobal.get_dcl_environment() as String
+	if new_env == current_env:
+		return false
+
+	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
+	DclGlobal.set_dcl_environment(new_env)
+	sign_out()
+	return true
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile() and !Global.is_virtual_mobile():
@@ -928,9 +980,20 @@ func _notification(what: int) -> void:
 
 			deep_link_url = new_url
 			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
+			print("[DEEPLINK] _notification focus-in params: ", deep_link_obj.params)
+
+			# Apply rust-log from deeplink params
+			var rust_log_value = deep_link_obj.params.get("rust-log", "")
+			if not rust_log_value.is_empty():
+				print("[DEEPLINK] Found rust-log param: ", rust_log_value)
+				DclGlobal.set_rust_log_filter(rust_log_value)
 
 			# Ignore WalletConnect callbacks
 			if deep_link_obj.is_walletconnect_callback:
+				return
+
+			# Check for environment change — requires restart
+			if _check_dclenv_change():
 				return
 
 			# Handle signin deep link for mobile auth flow

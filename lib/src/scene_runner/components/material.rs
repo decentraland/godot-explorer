@@ -18,8 +18,9 @@ use crate::{
 use godot::{
     classes::{
         base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode, Transparency},
-        Material, MeshInstance3D, ResourceLoader, Shader, ShaderMaterial, StandardMaterial3D,
-        Texture2D,
+        image::Format,
+        Image, ImageTexture, Material, MeshInstance3D, ResourceLoader, Shader, ShaderMaterial,
+        StandardMaterial3D, Texture2D,
     },
     global::weakref,
     prelude::*,
@@ -313,7 +314,11 @@ pub fn apply_dcl_material_properties(
             godot_material.set_specular(0.0);
 
             godot_material.set_shading_mode(ShadingMode::UNSHADED);
-            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
+            let is_video_texture = unlit
+                .texture
+                .as_ref()
+                .is_some_and(|t| matches!(t.source, DclSourceTex::VideoTexture(_)));
+            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, !is_video_texture);
             // Unity ignores diffuse_color alpha for unlit materials, force alpha to 1.0
             // No color space conversion — matches Unity (SetColor with no conversion)
             let mut albedo_color = unlit.diffuse_color.0.to_godot();
@@ -389,7 +394,11 @@ pub fn apply_dcl_material_properties(
                 godot_material.set_emission_operator(EmissionOperator::ADD);
             }
 
-            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
+            let is_video_texture = pbr
+                .texture
+                .as_ref()
+                .is_some_and(|t| matches!(t.source, DclSourceTex::VideoTexture(_)));
+            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, !is_video_texture);
             // No color space conversion — matches Unity (SetColor with no conversion)
             godot_material.set_albedo(pbr.albedo_color.0.to_godot());
 
@@ -530,6 +539,27 @@ fn clear_removed_textures(material: &mut Gd<StandardMaterial3D>, dcl_material: &
 /// Empty textures can cause crashes on Android due to invalid descriptor sets.
 fn is_valid_texture(texture: &Gd<Texture2D>) -> bool {
     texture.get_width() > 0 && texture.get_height() > 0
+}
+
+/// Returns a cached 2x2 black opaque texture for use as a placeholder when no video is playing.
+fn get_black_placeholder_texture() -> Gd<ImageTexture> {
+    thread_local! {
+        static BLACK_TEXTURE: std::cell::RefCell<Option<Gd<ImageTexture>>> = const { std::cell::RefCell::new(None) };
+    }
+    BLACK_TEXTURE.with(|cell| {
+        let mut borrow = cell.borrow_mut();
+        if let Some(tex) = borrow.as_ref() {
+            tex.clone()
+        } else {
+            let mut image = Image::create(2, 2, false, Format::RGBA8)
+                .expect("couldn't create black placeholder image");
+            image.fill(Color::BLACK);
+            let tex = ImageTexture::create_from_image(&image)
+                .expect("couldn't create black placeholder texture");
+            *borrow = Some(tex.clone());
+            tex
+        }
+    })
 }
 
 fn check_texture(
@@ -710,44 +740,55 @@ pub fn update_video_material_textures(scene: &mut Scene) {
         }
     }
 
+    if !video_texture_updates.is_empty() {
+        tracing::debug!(
+            "update_video_material_textures: {} video texture bindings to process",
+            video_texture_updates.len()
+        );
+    }
+
     // Now apply the video textures (we can mutably borrow video_players here)
     for (material_ref, param, video_entity_id) in video_texture_updates {
         if let Some(video_player) = scene.video_players.get_mut(&video_entity_id) {
+            let video_state: i32 = video_player.bind().get_video_state();
             let mut material = material_ref.to::<Gd<StandardMaterial3D>>();
 
             // Get current texture to check if update is needed
-            // This prevents calling set_texture every frame which exhausts descriptor pools
             let current_texture = material.get_texture(param);
 
-            // Try get_backend_texture first (works for ExoPlayer's ExternalTexture)
+            // get_backend_texture returns null before the first valid frame (GDScript guard).
             let backend_texture = video_player.bind_mut().get_backend_texture();
-            if let Some(texture) = backend_texture {
-                // Validate texture has actual data before using to prevent GPU crashes
-                if is_valid_texture(&texture) {
-                    // Only set texture if it's different (compare by instance ID)
-                    let needs_update = current_texture
-                        .as_ref()
-                        .is_none_or(|current| current.instance_id() != texture.instance_id());
-                    if needs_update {
-                        material.set_texture(param, &texture.upcast::<Texture2D>());
-                    }
-                }
-            } else {
-                // Fallback to dcl_texture (works for LiveKit's ImageTexture)
-                if let Some(texture) = video_player.bind().get_dcl_texture() {
-                    let texture_2d = texture.upcast::<Texture2D>();
-                    // Validate texture has actual data before using to prevent GPU crashes
-                    if is_valid_texture(&texture_2d) {
-                        // Only set texture if it's different (compare by instance ID)
-                        let needs_update = current_texture.as_ref().is_none_or(|current| {
-                            current.instance_id() != texture_2d.instance_id()
-                        });
-                        if needs_update {
-                            material.set_texture(param, &texture_2d);
-                        }
-                    }
-                }
+            let has_backend = backend_texture.is_some();
+            let resolved_texture: Option<Gd<Texture2D>> = backend_texture
+                .filter(is_valid_texture)
+                .map(|t| t.upcast::<Texture2D>());
+
+            let using_placeholder = resolved_texture.is_none();
+
+            // Use resolved texture or fall back to a black placeholder
+            let texture_to_set = resolved_texture
+                .unwrap_or_else(|| get_black_placeholder_texture().upcast::<Texture2D>());
+
+            // Only set texture if it's different (compare by instance ID)
+            let needs_update = current_texture
+                .as_ref()
+                .is_none_or(|current| current.instance_id() != texture_to_set.instance_id());
+            if needs_update {
+                tracing::debug!(
+                    "update_video_material_textures: entity {:?} video_state={} has_backend={} using_placeholder={} param={:?}",
+                    video_entity_id,
+                    video_state,
+                    has_backend,
+                    using_placeholder,
+                    param
+                );
+                material.set_texture(param, &texture_to_set);
             }
+        } else {
+            tracing::warn!(
+                "update_video_material_textures: video_player not found for entity {:?}",
+                video_entity_id
+            );
         }
     }
 }

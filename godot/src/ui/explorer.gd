@@ -10,6 +10,7 @@ var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
 var debug_panel = null
+var livekit_debug_panel = null
 var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
@@ -21,6 +22,7 @@ var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
+var _gamepad_connected: bool = false
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -53,7 +55,6 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
 @onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
-@onready var control_safe_bottom_area: Control = %Control_SafeBottomArea
 @onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
 @onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
 @onready var notifications: Control = %Notifications
@@ -66,6 +67,7 @@ var _pending_notification_toast: Dictionary = {}  # Store notification waiting t
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
 @onready var chatbar: Control = %Chatbar
+@onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
 
 
 func _process(_dt):
@@ -127,6 +129,7 @@ func _ready():
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
+	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
@@ -173,6 +176,10 @@ func _ready():
 	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
 		_on_control_menu_request_debug_panel(true)
 
+	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
+	if Global.deep_link_obj.livekit_debug:
+		_on_control_menu_request_livekit_debug(true)
+
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
 	Global._clear_deep_link()
 
@@ -187,6 +194,10 @@ func _ready():
 		label_crosshair.show()
 		reset_cursor_position()
 		ui_root.gui_input.connect(self._on_ui_root_gui_input)
+		# Detect physical gamepad to hide virtual controls
+		Input.joy_connection_changed.connect(_on_joy_connection_changed)
+		_gamepad_connected = Input.get_connected_joypads().size() > 0
+		_update_virtual_controls_visibility()
 	else:
 		mobile_ui.hide()
 
@@ -225,8 +236,7 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
-		if control_menu.control_settings.instance != null:
-			control_menu.control_settings.instance.set_preview_url(cmd_realm)
+		Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
@@ -235,8 +245,6 @@ func _ready():
 		else:
 			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
-
-	control_menu.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
@@ -262,6 +270,7 @@ func _ready():
 
 	Global.open_profile_by_address.connect(_async_open_profile_by_address)
 	Global.open_profile_by_avatar.connect(_async_open_profile_by_avatar)
+	Global.open_own_profile.connect(_on_global_open_own_profile)
 
 	ui_root.grab_focus.call_deferred()
 
@@ -399,20 +408,16 @@ func _on_control_minimap_request_open_map():
 
 func _on_control_menu_jump_to(parcel: Vector2i):
 	teleport_to(parcel)
-	control_menu.close()
+	control_menu.async_close()
 
 
 func _on_control_menu_hide_menu():
-	control_menu.close()
+	control_menu.async_close()
 	ui_root.grab_focus()
 
 
 func _on_control_menu_toggle_fps(visibility):
 	label_fps.visible = visibility
-
-
-func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
-	Global.scene_fetcher.reload_scene(scene_id)
 
 
 func _on_virtual_joystick_right_stick_position(stick_position: Vector2):
@@ -513,6 +518,8 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
+		elif command_str == "/scenecrash":
+			Global.scene_runner.debug_force_crash_current_scene()
 		elif command_str == "/godotcrash":
 			OS.crash("User crashed on purpose")
 		elif command_str == "/instantcrash":
@@ -631,6 +638,21 @@ func _emit_pos_command_message() -> void:
 		]
 	)
 	Global.on_chat_message.emit("system", msg, Time.get_unix_time_from_system())
+
+
+func _on_control_menu_request_livekit_debug(enabled):
+	Global.comms.set_livekit_debug(enabled)
+	if enabled:
+		if not is_instance_valid(livekit_debug_panel):
+			livekit_debug_panel = (
+				load("res://src/ui/components/livekit_debug/livekit_debug_panel.tscn").instantiate()
+			)
+			ui_root.add_child(livekit_debug_panel)
+	else:
+		if is_instance_valid(livekit_debug_panel):
+			ui_root.remove_child(livekit_debug_panel)
+			livekit_debug_panel.queue_free()
+			livekit_debug_panel = null
 
 
 func _on_control_menu_request_pause_scenes(enabled):
@@ -776,7 +798,7 @@ func _on_timer_fps_label_timeout():
 
 
 func hide_menu():
-	control_menu.close()
+	control_menu.async_close()
 	release_mouse()
 
 
@@ -843,6 +865,11 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 	release_mouse()
 
 
+func _on_profile_container_visibility_changed() -> void:
+	if not profile_container.visible and not _gamepad_connected:
+		joypad.show()
+
+
 func _open_friends_panel() -> void:
 	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
@@ -893,9 +920,21 @@ func _on_control_menu_open_profile() -> void:
 	_open_own_profile()
 
 
+func _on_global_open_own_profile() -> void:
+	if Global.is_orientation_portrait():
+		return
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	navbar.collapse()
+	_open_own_profile()
+
+
 func _open_own_profile() -> void:
-	control_menu.async_show_own_profile()
-	release_mouse()
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
+		_open_profile(profile)
 
 
 func _get_viewport_scale_factors() -> Vector2:
@@ -951,6 +990,7 @@ func _show_friends_panel() -> void:
 	friends_panel.show_panel_on_friends_tab()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -969,6 +1009,7 @@ func _show_notifications_panel() -> void:
 	notifications_panel.show_panel()
 	if friends_panel.visible:
 		friends_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1038,10 +1079,18 @@ func _on_loading_started() -> void:
 
 func _on_loading_finished() -> void:
 	_is_loading = false
+	_update_version_label()
 	# Show pending notification if there was one queued during loading
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+
+
+func _update_version_label() -> void:
+	var version_text = DclGlobal.get_version_with_env()
+	if Global.content_provider.get_optimized_scene_count() > 0:
+		version_text += " - Opt"
+	label_version.set_text(version_text)
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
@@ -1057,6 +1106,7 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 			# Close notifications panel if open
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()
+			h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
 			if Global.is_mobile():
@@ -1076,11 +1126,31 @@ func _notification(what: int) -> void:
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	virtual_joystick.show()
+	if not _gamepad_connected:
+		virtual_joystick.show()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
+
+
+func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
+	_gamepad_connected = Input.get_connected_joypads().size() > 0
+	_update_virtual_controls_visibility()
+
+
+func _update_virtual_controls_visibility() -> void:
+	if _gamepad_connected:
+		joypad.hide()
+		virtual_joystick.hide()
+	else:
+		# Only restore if no panel is covering them
+		var panel_open := (
+			friends_panel.visible or notifications_panel.visible or profile_container.visible
+		)
+		if not panel_open:
+			joypad.show()
+		virtual_joystick.show()
 
 
 func _on_backpack_emote_opened(on_emotes := false) -> void:
@@ -1091,17 +1161,21 @@ func _on_backpack_emote_opened(on_emotes := false) -> void:
 
 
 func _close_all_panels():
-	control_menu.close()
+	control_menu.async_close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
-	joypad.show()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if not _gamepad_connected:
+		joypad.show()
 
 
 func _on_discover_open():
-	navbar.close_from_discover_button()
-	joypad.show()
+	navbar.collapse()
+	if not _gamepad_connected:
+		joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
@@ -1174,3 +1248,10 @@ func _on_change_scene_id(scene_id: int):
 
 func _on_change_parcel(_position: Vector2i):
 	parcel_position = _position
+
+
+func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
+	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
+		_close_all_panels()
+		navbar.collapse()
+		capture_mouse()

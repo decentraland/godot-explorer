@@ -36,6 +36,14 @@ pub struct DclParseDeepLink {
     /// True if this is a WalletConnect callback that should be ignored
     #[var]
     is_walletconnect_callback: bool,
+
+    /// Numbered profile slot for identity storage (e.g., "2" uses account_2/guest_profile_2)
+    #[var]
+    saved_profile: GString,
+
+    /// Enable LiveKit debug panel from deep link (livekit_debug=true)
+    #[var]
+    livekit_debug: bool,
 }
 
 #[godot_api]
@@ -52,6 +60,8 @@ impl IRefCounted for DclParseDeepLink {
             signin_identity_id: GString::new(),
             is_walletconnect_callback: false,
             dclenv: GString::new(),
+            saved_profile: GString::new(),
+            livekit_debug: false,
         }
     }
 }
@@ -69,6 +79,8 @@ impl DclParseDeepLink {
             signin_identity_id: GString::new(),
             dclenv: GString::new(),
             is_walletconnect_callback: false,
+            saved_profile: GString::new(),
+            livekit_debug: false,
         };
 
         if url_str.is_empty() {
@@ -160,11 +172,21 @@ impl DclParseDeepLink {
                         value.eq_ignore_ascii_case("true") || value == "1";
                 }
                 "dclenv" => {
-                    // Environment parameter - valid values: org, zone, today
-                    let env_lower = value.to_lowercase();
-                    if ["org", "zone", "today"].contains(&env_lower.as_str()) {
-                        return_object.dclenv = GString::from(env_lower.as_str());
+                    // Environment parameter - supports per-group overrides:
+                    // "zone", "auth::zone,org", "auth::zone,comms::today,org"
+                    if crate::env::DclEnvConfig::parse(&value).is_some() {
+                        return_object.dclenv = GString::from(value.as_ref());
                     }
+                }
+                "saved-profile" => {
+                    // Numbered profile slot for identity storage
+                    if let Ok(n) = value.parse::<u32>() {
+                        return_object.saved_profile = GString::from(&n.to_string());
+                    }
+                }
+                "livekit_debug" => {
+                    return_object.livekit_debug =
+                        value.eq_ignore_ascii_case("true") || value == "1";
                 }
                 _ => {}
             }

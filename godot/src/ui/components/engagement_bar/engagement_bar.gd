@@ -47,6 +47,15 @@ func _on_button_like_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		button_dislike.set_pressed_no_signal(false)
 		button_dislike.icon = DISLIKE
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"THUMBS_UP",
+				"PLACE_DETAIL_CLICK",
+				JSON.stringify({"place_id": place_id}),
+			)
+		)
 	_get_debounced().schedule(PlacesHelper.LIKE.YES if toggled_on else PlacesHelper.LIKE.UNKNOWN)
 
 
@@ -59,6 +68,15 @@ func _on_button_dislike_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		button_like.set_pressed_no_signal(false)
 		button_like.icon = LIKE
+		(
+			Global
+			. metrics
+			. track_click_button(
+				"THUMBS_DOWN",
+				"PLACE_DETAIL_CLICK",
+				JSON.stringify({"place_id": place_id}),
+			)
+		)
 	_get_debounced().schedule(PlacesHelper.LIKE.NO if toggled_on else PlacesHelper.LIKE.UNKNOWN)
 
 

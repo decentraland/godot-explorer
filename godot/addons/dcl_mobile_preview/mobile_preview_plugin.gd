@@ -6,6 +6,7 @@ const DEVICES := [
 	["Default", 720, 720, 720, 720, false, Color(0.5, 0.5, 0.5)],
 	["iPhone 14 Pro", 590, 1280, 1561, 720, true, Color(0.35, 0.6, 1.0)],
 	["Moto Edge 60 Pro", 576, 1280, 1600, 720, false, Color(0.35, 0.85, 0.45)],
+	["Figma Base", 720, 1600, 1600, 720, false, Color(0.35, 0.85, 0.45)],
 ]
 
 const SCENE_META_KEY := "mobile_preview_orientation"
@@ -37,6 +38,7 @@ var _bezel: int = 0  # bezel thickness in game pixels
 var _confirm_dialog: ConfirmationDialog
 var _error_dialog: AcceptDialog
 var _pending_apply: bool = false
+var _tab_switch_pending: bool = false
 
 # State
 var _is_portrait: bool = true
@@ -251,7 +253,8 @@ func _on_scene_orient_selected(id: int) -> void:
 	if not scene_path.is_empty():
 		EditorInterface.save_scene()
 		_apply_current()
-		_record_clean_version()
+		# Erase so the post-reload scene_changed records a fresh baseline
+		_clean_versions.erase(scene_path)
 		EditorInterface.reload_scene_from_path(scene_path)
 	else:
 		_apply_current()
@@ -579,22 +582,36 @@ func _on_scene_changed_deferred() -> void:
 	var old_orient := _scene_orient
 	_sync_orient_from_scene()
 	_apply_current()
-	_record_clean_version()
+
+	# Only record the clean baseline for scenes we haven't tracked yet (first open).
+	# Re-recording on every tab switch would overwrite the original baseline and
+	# hide unsaved modifications from the _is_scene_modified() check below.
+	var root = EditorInterface.get_edited_scene_root()
+	var scene_path: String = root.scene_file_path if root else ""
+	if not scene_path.is_empty() and not _clean_versions.has(scene_path):
+		_record_clean_version()
+
 	# Reload when resolution changed: portrait flipped, or transitioning to/from NONE
 	var needs_reload := (
 		_is_portrait != old_portrait
 		or (_scene_orient == ORIENT_NONE) != (old_orient == ORIENT_NONE)
 	)
-	if needs_reload:
-		var root = EditorInterface.get_edited_scene_root()
-		if root and not root.scene_file_path.is_empty():
+	if needs_reload and root and not scene_path.is_empty():
+		if _is_scene_modified():
+			_pending_apply = true
+			_tab_switch_pending = true
+			_confirm_dialog.popup_centered()
+		else:
 			_reload_current_scene.call_deferred()
 
 
 func _reload_current_scene() -> void:
 	var root = EditorInterface.get_edited_scene_root()
 	if root and not root.scene_file_path.is_empty():
-		EditorInterface.reload_scene_from_path(root.scene_file_path)
+		var path: String = root.scene_file_path
+		# Erase so the post-reload scene_changed records a fresh baseline
+		_clean_versions.erase(path)
+		EditorInterface.reload_scene_from_path(path)
 
 
 # --- Scene change detection ---
@@ -634,6 +651,8 @@ func _request_apply_with_reload() -> void:
 		else:
 			var scene_path: String = root.scene_file_path
 			_apply_current()
+			# Erase so the post-reload scene_changed records a fresh baseline
+			_clean_versions.erase(scene_path)
 			EditorInterface.reload_scene_from_path(scene_path)
 	else:
 		_apply_current()
@@ -643,6 +662,7 @@ func _on_confirm_save_reload() -> void:
 	if not _pending_apply:
 		return
 	_pending_apply = false
+	_tab_switch_pending = false
 
 	var root = EditorInterface.get_edited_scene_root()
 	var scene_path: String = root.scene_file_path if root else ""
@@ -651,12 +671,20 @@ func _on_confirm_save_reload() -> void:
 
 	if not scene_path.is_empty():
 		EditorInterface.save_scene()
+		# Erase so the post-reload scene_changed records a fresh baseline
+		_clean_versions.erase(scene_path)
 		EditorInterface.reload_scene_from_path(scene_path)
 
 
 func _on_confirm_canceled() -> void:
 	if _pending_apply:
 		_pending_apply = false
+		# Tab-switch cancels: settings are already correct for the current scene,
+		# so don't revert device/orientation. The user keeps their unsaved changes
+		# and can save manually later.
+		if _tab_switch_pending:
+			_tab_switch_pending = false
+			return
 		var es := EditorInterface.get_editor_settings()
 		var prev: int = (
 			es.get_setting(SETTINGS_DEVICE_KEY) if es.has_setting(SETTINGS_DEVICE_KEY) else 0
