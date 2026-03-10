@@ -293,8 +293,9 @@ fn get_or_create_video_player_node(parent: &mut Gd<Node3D>, scene_id: i32) -> Gd
     video_player_node.bind_mut().set_dcl_scene_id(scene_id);
     video_player_node.set_name("VideoPlayer");
 
-    // Create initial placeholder texture for LiveKit (will be updated by video frames)
-    let image = Image::create(8, 8, false, Format::RGBA8).expect("couldn't create video image");
+    // Create initial black placeholder texture (will be updated when video frames arrive)
+    let mut image = Image::create(2, 2, false, Format::RGBA8).expect("couldn't create video image");
+    image.fill(Color::BLACK);
     let texture = ImageTexture::create_from_image(&image).expect("couldn't create video texture");
     video_player_node.bind_mut().set_dcl_texture(Some(texture));
 
@@ -485,19 +486,17 @@ pub fn update_video_texture_from_livekit(
 
     let data_arr = PackedByteArray::from_vec(data);
 
+    let image =
+        Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, &data_arr)
+            .unwrap();
+
     // Check if resize needed
     let current_size = texture.get_size();
     if current_size.x != width as f32 || current_size.y != height as f32 {
-        // Create new image with new dimensions
-        let image =
-            Image::create_from_data(width as i32, height as i32, false, Format::RGBA8, &data_arr)
-                .unwrap();
+        // Resize: set_image replaces internal image and uploads to GPU
         texture.set_image(&image);
-        texture.update(&image);
     } else {
-        // Update existing texture in-place
-        let mut image = texture.get_image().unwrap();
-        image.set_data(width as i32, height as i32, false, Format::RGBA8, &data_arr);
+        // Same size: update in-place (avoids GPU reallocation)
         texture.update(&image);
     }
 }
