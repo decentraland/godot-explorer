@@ -1,0 +1,43 @@
+# TEMPORARY: This workflow is temporary and will be replaced by a proper monitoring solution.
+name: 📊 Sentry Daily Digest
+
+on:
+  schedule:
+    # 7:00 AM UTC every day
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date to report (YYYY-MM-DD). Defaults to yesterday.'
+        required: false
+        type: string
+
+jobs:
+  daily-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build xtask
+        run: cargo build
+
+      - name: Determine date
+        id: date
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            echo "report_date=${{ inputs.date }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "report_date=$(date -u -d 'yesterday' '+%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push metrics to Slack
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          DATE="${{ steps.date.outputs.report_date }}"
+          cargo run -- push-metrics "$DATE" "$DATE"
