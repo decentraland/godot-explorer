@@ -46,6 +46,7 @@ func process_deep_link(url: String) -> void:
 	# Handle signin deep link for mobile auth flow
 	if Global.deep_link_obj.is_signin_request():
 		_handle_signin_deep_link(Global.deep_link_obj.signin_identity_id)
+		_clear_deep_link()
 	else:
 		deep_link_received.emit.call_deferred()
 
