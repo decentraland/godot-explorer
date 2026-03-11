@@ -21,6 +21,7 @@ pub mod avatars;
 pub mod comms;
 pub mod content;
 pub mod dcl;
+pub mod deep_link;
 pub mod env;
 pub mod godot_classes;
 pub mod http_request;

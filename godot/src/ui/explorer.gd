@@ -145,6 +145,11 @@ func _ready():
 	# Connect on open emotes backpack
 	Global.open_backpack.connect(_on_backpack_emote_opened)
 
+	# Connect deep link router signals for path-based actions
+	Global.deep_link_router.deep_link_jump.connect(_on_deep_link_jump)
+	Global.deep_link_router.deep_link_open_event.connect(_on_deep_link_open_event)
+	Global.deep_link_router.deep_link_open_place.connect(_on_deep_link_open_place)
+
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
@@ -186,7 +191,7 @@ func _ready():
 		_on_control_menu_request_livekit_debug(true)
 
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
-	Global._clear_deep_link()
+	Global.deep_link_router._clear_deep_link()
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
@@ -900,6 +905,9 @@ func _async_open_profile_by_avatar(avatar: DclAvatar):
 		var avatar_instance = avatar as Avatar
 		var avatar_id = avatar_instance.avatar_id
 		if not avatar_id.is_empty():
+			# Don't open profile for blocked users
+			if Global.social_blacklist.is_blocked(avatar_id):
+				return
 			await _async_open_profile_by_address(avatar_id)
 		else:
 			printerr(
@@ -1129,7 +1137,25 @@ func _notification(what: int) -> void:
 		# Resync notification queue to clean up fired notifications and reschedule next batch
 		NotificationsManager.force_queue_sync()
 
-		Global.check_deep_link_teleport_to()
+		Global.deep_link_router.route()
+
+
+func _on_deep_link_jump() -> void:
+	control_menu.async_show_discover()
+	if is_instance_valid(control_menu.control_discover.instance):
+		control_menu.control_discover.instance.jump_in.open_panel()
+
+
+func _on_deep_link_open_event(event_id: String) -> void:
+	control_menu.async_show_discover()
+	if is_instance_valid(control_menu.control_discover.instance):
+		control_menu.control_discover.instance.async_open_event_by_id(event_id)
+
+
+func _on_deep_link_open_place(place_id: String) -> void:
+	control_menu.async_show_discover()
+	if is_instance_valid(control_menu.control_discover.instance):
+		control_menu.control_discover.instance.async_open_place_by_id(place_id)
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:

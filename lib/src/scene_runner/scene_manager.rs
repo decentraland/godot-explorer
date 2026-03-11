@@ -1295,6 +1295,10 @@ impl SceneManager {
                         loop {
                             // Try to cast to DclAvatar
                             if let Ok(avatar) = current_node.clone().try_cast::<DclAvatar>() {
+                                // Skip blocked avatars - they should not be interactable
+                                if avatar.bind().blocked {
+                                    return None;
+                                }
                                 return Some(RaycastResult::Avatar(avatar));
                             }
 
