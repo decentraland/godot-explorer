@@ -37,7 +37,7 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SENTRY_METRICS_SLACK_WEBHOOK_URL: ${{ secrets.SENTRY_METRICS_SLACK_WEBHOOK_URL }}
         run: |
           DATE="${{ steps.date.outputs.report_date }}"
           cargo run -- push-metrics "$DATE" "$DATE"
