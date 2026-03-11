@@ -36,6 +36,7 @@ func _ready():
 			if first_button == null:
 				first_button = child
 			child.button_group = button_group_avatar_emotes
+			child.use_equipped_border = true
 			var index = avatar_emote_items.size()
 			child.select_emote.connect(self._on_emote_editor_item_select_emote.bind(index))
 			child.clear_emote.connect(self._on_emote_editor_item_clear_emote.bind(index))

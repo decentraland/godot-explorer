@@ -176,6 +176,11 @@ func set_equipped(equipped: bool) -> void:
 	texture_rect_equiped_mark.set_visible(_is_equipped)
 
 
+func set_slot_selected(toggled_on: bool) -> void:
+	texture_rect_equiped.set_visible(toggled_on)
+	texture_rect_selected.hide()
+
+
 func set_empty() -> void:
 	emote_urn = ""
 	emote_name = ""
