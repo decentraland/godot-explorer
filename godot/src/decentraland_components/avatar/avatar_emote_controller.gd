@@ -835,5 +835,4 @@ func _track_emote(id: String) -> void:
 	var is_base := Emotes.is_emote_default(id) or Emotes.is_base_emote_urn(id)
 	var source := "scene" if id.contains("scene-emote") else "user"
 	var payload = JSON.stringify({"emote_urn": id, "is_base": is_base, "source": source})
-	print(payload)
 	Global.metrics.track_screen_viewed("USED EMOTE", payload)
