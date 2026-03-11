@@ -292,13 +292,6 @@ func _ready():
 		sentry_user.id = self.config.analytics_user_id
 		SentrySDK.set_tag("dcl_session_id", session_id)
 
-		# Emit test messages to verify Sentry integration (all builds except production)
-		# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
-		# and we want Rust breadcrumbs to be included in that event
-		if not DclGlobal.is_production():
-			DclGlobal.emit_sentry_rust_test_messages()
-			_emit_sentry_godot_test_messages()
-
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
@@ -844,23 +837,6 @@ func _process(_delta: float) -> void:
 		):
 			last_emitted_height = current_height
 			change_virtual_keyboard.emit(last_emitted_height)
-
-
-func _emit_sentry_godot_test_messages() -> void:
-	print("[Sentry Test] GDScript: print() - breadcrumb")
-	print_rich("[Sentry Test] GDScript: print_rich() - breadcrumb")
-	push_warning("[Sentry Test] GDScript: push_warning() - breadcrumb")
-	push_error("[Sentry Test] GDScript: push_error() - event")
-	# Also test SentrySDK.capture_message directly
-	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: capture_message INFO - breadcrumb", SentrySDK.LEVEL_INFO
-	)
-	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: capture_message WARNING - breadcrumb", SentrySDK.LEVEL_WARNING
-	)
-	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: capture_message ERROR - event", SentrySDK.LEVEL_ERROR
-	)
 
 
 ## Check if the deep link contains a dclenv change. If it does, apply the new
