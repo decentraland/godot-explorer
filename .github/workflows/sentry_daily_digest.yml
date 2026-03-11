@@ -3,12 +3,8 @@ name: 📊 Sentry Daily Digest
 
 on:
   schedule:
-    # 7:00 AM UTC every day
-    - cron: '0 7 * * *'
-  # TODO: remove push trigger after testing
-  push:
-    branches:
-      - temp-sentry-slack
+    # 7:00 AM UTC-3 (10:00 UTC) every day
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       date:
