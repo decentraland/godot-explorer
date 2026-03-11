@@ -1,4 +1,4 @@
-# TEMPORARY: This workflow is temporary and will be replaced by a proper monitoring solution.
+# TODO: TEMPORARY - Remove this workflow once a proper monitoring solution is in place.
 name: 📊 Sentry Daily Digest
 
 on:

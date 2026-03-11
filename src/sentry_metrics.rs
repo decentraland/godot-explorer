@@ -1,4 +1,4 @@
-// TEMPORARY: This module is temporary and will be replaced by a proper monitoring solution.
+// TODO: TEMPORARY - Remove this module once a proper monitoring solution is in place.
 // It fetches Sentry metrics for godot-explorer and auth-mobile projects and optionally
 // pushes a summary to Slack.
 
