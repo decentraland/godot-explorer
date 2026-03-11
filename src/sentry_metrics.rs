@@ -362,7 +362,7 @@ pub fn get_metrics(from: &str, to: &str) -> anyhow::Result<()> {
 
 pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
     let slack_webhook =
-        env::var("SLACK_WEBHOOK_URL").map_err(|_| anyhow::anyhow!("SLACK_WEBHOOK_URL not set"))?;
+        env::var("SENTRY_METRICS_SLACK_WEBHOOK_URL").map_err(|_| anyhow::anyhow!("SENTRY_METRICS_SLACK_WEBHOOK_URL not set"))?;
 
     let config = SentryConfig::from_env()?;
 
