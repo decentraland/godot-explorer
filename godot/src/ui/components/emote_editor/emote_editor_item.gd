@@ -9,10 +9,7 @@ var use_equipped_border: bool = false
 var _emote_urn: String = ""
 var _size_tween: Tween = null
 
-#@onready var panel_pressed = %Pressed
 @onready var emote_square_item = %EmoteSquareItem
-#@onready var label_emote_name = %Label_EmoteName
-#@onready var texture_rect_wheel = %TextureRect_Wheel
 
 
 func _on_gui_input(event: InputEvent) -> void:
