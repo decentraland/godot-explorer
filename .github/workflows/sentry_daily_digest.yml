@@ -39,8 +39,8 @@ jobs:
 
       - name: Push metrics to Slack
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_METRICS_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_METRICS_ORG }}
           SENTRY_METRICS_SLACK_WEBHOOK_URL: ${{ secrets.SENTRY_METRICS_SLACK_WEBHOOK_URL }}
         run: |
           DATE="${{ steps.date.outputs.report_date }}"
