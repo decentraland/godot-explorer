@@ -60,10 +60,12 @@ var _avatar_update_retries: int = 0
 @onready var subcategories_separator := %SubcategoriesSeparator
 @onready var maincategories_container := %MainCategoriesContainer
 @onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
+@onready var open_marketplace_label := %RichTextBox_OpenMarketplace
 
 
 # gdlint:ignore = async-function-name
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	color_rect_background.visible = !hide_background
 	texture_rect_background.visible = !hide_background
 	for category in Wearables.Categories.ALL_CATEGORIES:
@@ -90,6 +92,10 @@ func _ready():
 	subcategories_container.show()
 	subcategories_separator.show()
 	maincategories_container.show()
+
+	open_marketplace_label.show()
+	if Global.is_ios():
+		open_marketplace_label.hide()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()

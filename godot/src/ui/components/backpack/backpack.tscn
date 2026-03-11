@@ -397,7 +397,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-size_flags_stretch_ratio = 1.6
+size_flags_stretch_ratio = 1.45
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 20
@@ -814,6 +814,7 @@ label_settings = SubResource("LabelSettings_t0yet")
 horizontal_alignment = 1
 
 [node name="RichTextBox_OpenMarketplace" type="RichTextLabel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
+unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_fonts/normal_font = ExtResource("22_et6he")
