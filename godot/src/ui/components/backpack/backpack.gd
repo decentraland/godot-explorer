@@ -195,6 +195,8 @@ func _update_visible_categories():
 	subcategories_separator.visible = has_visible
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
+	elif main_category_selected == Wearables.Categories.ALL:
+		_on_wearable_filter_button_filter_type(Wearables.Categories.ALL)
 
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
