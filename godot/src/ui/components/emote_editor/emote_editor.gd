@@ -201,5 +201,6 @@ func _async_on_scrollbar_value_changed(new_value):
 
 
 func _on_visibility_changed() -> void:
-	if not is_node_ready(): return
+	if not is_node_ready():
+		return
 	scroll_container.scroll_vertical = 0

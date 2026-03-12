@@ -41,7 +41,6 @@ func _on_toggled(toggled_on):
 		select_emote.emit(_emote_urn)
 
 
-
 func async_load_from_urn(new_emote_urn: String, _index: int):
 	if new_emote_urn.is_empty():
 		emote_square_item.set_empty()
