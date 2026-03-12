@@ -61,6 +61,8 @@ var _avatar_update_retries: int = 0
 @onready var maincategories_container := %MainCategoriesContainer
 @onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
 @onready var open_marketplace_label := %RichTextBox_OpenMarketplace
+@onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
+@onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
 
 
 # gdlint:ignore = async-function-name
@@ -307,6 +309,7 @@ func _can_unequip(category: String) -> bool:
 
 
 func _show_wearables():
+	scroll_container_items.scroll_vertical = 0
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
 
@@ -368,9 +371,11 @@ func _on_wearable_filter_button_filter_type(type):
 	if should_hide:
 		color_carrousel.hide()
 		carrousel_separator.hide()
+		hseparator_extra_space.hide()
 	else:
 		color_carrousel.show()
 		carrousel_separator.hide()
+		hseparator_extra_space.show()
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -547,11 +552,13 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 		subcategories_container.hide()
 		subcategories_separator.hide()
 		maincategories_container.hide()
+		hseparator_extra_space.hide()
 	else:
 		%MarginItemsContainer.show()
 		subcategories_container.show()
 		subcategories_separator.show()
 		maincategories_container.show()
+		hseparator_extra_space.show()
 
 
 func _on_visibility_changed() -> void:

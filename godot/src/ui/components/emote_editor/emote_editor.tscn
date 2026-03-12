@@ -175,3 +175,5 @@ layout_mode = 2
 theme_override_constants/h_separation = 30
 theme_override_constants/v_separation = 28
 columns = 3
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

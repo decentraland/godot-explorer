@@ -198,3 +198,8 @@ func _async_on_scrollbar_value_changed(new_value):
 			_can_load_more = false  # avoid processing until the add finishes
 			_last_loaded_page += 1
 			await _async_add_remote_emotes(_last_loaded_page)
+
+
+func _on_visibility_changed() -> void:
+	if not is_node_ready(): return
+	scroll_container.scroll_vertical = 0
