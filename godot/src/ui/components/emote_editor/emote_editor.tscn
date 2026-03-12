@@ -165,6 +165,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 38
 
