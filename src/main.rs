@@ -30,6 +30,7 @@ mod tests;
 mod ui;
 mod update_snapshots;
 mod version;
+mod sentry_metrics;
 mod version_check;
 
 fn ensure_project_root() -> Result<(), anyhow::Error> {
@@ -312,6 +313,36 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Port for asset optimization server (default: 8080)")
                         .takes_value(true)
                         .default_value("8080"),
+                ),
+        ).subcommand(
+            Command::new("get-metrics")
+                .about("(TEMPORARY) Get Sentry metrics for godot-explorer and auth-mobile")
+                .arg(
+                    Arg::new("from")
+                        .help("Start date (YYYY-MM-DD)")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::new("to")
+                        .help("End date (YYYY-MM-DD, inclusive)")
+                        .required(true)
+                        .index(2),
+                ),
+        ).subcommand(
+            Command::new("push-metrics")
+                .about("(TEMPORARY) Push Sentry metrics to Slack")
+                .arg(
+                    Arg::new("from")
+                        .help("Start date (YYYY-MM-DD)")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::new("to")
+                        .help("End date (YYYY-MM-DD, inclusive)")
+                        .required(true)
+                        .index(2),
                 ),
         ).subcommand(
             Command::new("update-ios-xcode")
@@ -753,6 +784,16 @@ fn main() -> Result<(), anyhow::Error> {
         ),
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
+        ("get-metrics", sm) => {
+            let from = sm.value_of("from").unwrap();
+            let to = sm.value_of("to").unwrap();
+            sentry_metrics::get_metrics(from, to)
+        }
+        ("push-metrics", sm) => {
+            let from = sm.value_of("from").unwrap();
+            let to = sm.value_of("to").unwrap();
+            sentry_metrics::push_metrics(from, to)
+        }
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
         _ => unreachable!("unreachable branch"),
     };
