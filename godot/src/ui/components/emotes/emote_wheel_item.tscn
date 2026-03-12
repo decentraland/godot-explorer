@@ -124,6 +124,7 @@ offset_bottom = 40.0
 
 [node name="TextureRect_Background" type="TextureRect" parent="ControlsWithoutFunction"]
 unique_name_in_owner = true
+visible = false
 texture_filter = 2
 layout_mode = 1
 anchors_preset = 15
@@ -151,7 +152,19 @@ expand_mode = 1
 
 [node name="TextureRect_Skeleton" type="TextureRect" parent="ControlsWithoutFunction"]
 unique_name_in_owner = true
-visible = false
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(32, 32)
+texture = ExtResource("3_ap2cx")
+expand_mode = 1
+
+[node name="Pressed_bold" type="TextureRect" parent="ControlsWithoutFunction"]
+unique_name_in_owner = true
 texture_filter = 2
 layout_mode = 1
 anchors_preset = 15
