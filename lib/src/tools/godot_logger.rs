@@ -255,12 +255,3 @@ pub fn set_log_filter(filter_str: &str) -> Result<(), String> {
     );
     Ok(())
 }
-
-/// Emits test messages at various log levels to verify Sentry integration.
-pub fn emit_sentry_test_messages() {
-    tracing::trace!("[Sentry Test] Rust: tracing::trace() - ignored");
-    tracing::debug!("[Sentry Test] Rust: tracing::debug() - ignored");
-    tracing::info!("[Sentry Test] Rust: tracing::info() - breadcrumb");
-    tracing::warn!("[Sentry Test] Rust: tracing::warn() - breadcrumb");
-    tracing::error!("[Sentry Test] Rust: tracing::error() - breadcrumb");
-}

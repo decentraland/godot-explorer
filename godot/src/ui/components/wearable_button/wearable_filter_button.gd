@@ -1,5 +1,5 @@
 class_name WearableFilterButton
-extends Button
+extends CustomTouchButton
 
 signal filter_type(type: String)
 signal clear_filter

@@ -304,7 +304,6 @@ layout_mode = 2
 theme_override_constants/separation = 15
 
 [node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer"]
-visible = false
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m8ron")
 theme_override_font_sizes/font_size = 28
@@ -334,7 +333,6 @@ size_flags_horizontal = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yj6kw")
 
 [node name="VSeparator2" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer"]
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 90
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yj6kw")
@@ -355,7 +353,6 @@ layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
-vertical = true
 script = ExtResource("7_w8hgg")
 
 [node name="Control_LeftBar" type="Control" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack"]
@@ -397,7 +394,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-size_flags_stretch_ratio = 1.6
+size_flags_stretch_ratio = 1.45
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 20
@@ -722,7 +719,16 @@ editor_description = "This node keeps the right size of the WearableEditor (min 
 Otherwise the Editor shrinks if there is less than 3 wearables."
 custom_minimum_size = Vector2(630, 0)
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
+
+[node name="HSeparator_ExtraSpace" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+unique_name_in_owner = true
+editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
+Otherwise the Editor shrinks if there is less than 3 wearables."
+custom_minimum_size = Vector2(630, 0)
+layout_mode = 2
+theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 
 [node name="ColorCarrousel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" instance=ExtResource("19_k780d")]
@@ -748,6 +754,7 @@ clip_contents = true
 layout_mode = 2
 
 [node name="ScrollContainer_Items" type="ScrollContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer"]
+unique_name_in_owner = true
 clip_contents = false
 layout_mode = 2
 size_flags_vertical = 3
@@ -759,7 +766,7 @@ vertical_scroll_mode = 3
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
+theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 0
 
@@ -814,6 +821,7 @@ label_settings = SubResource("LabelSettings_t0yet")
 horizontal_alignment = 1
 
 [node name="RichTextBox_OpenMarketplace" type="RichTextLabel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
+unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_fonts/normal_font = ExtResource("22_et6he")
@@ -833,7 +841,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="VSeparator" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer"]
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 95
 theme_override_styles/separator = SubResource("StyleBoxEmpty_18vfg")

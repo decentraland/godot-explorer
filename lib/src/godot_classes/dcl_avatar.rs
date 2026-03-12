@@ -37,7 +37,7 @@ pub struct DclAvatar {
     avatar_name: GString,
 
     #[var]
-    blocked: bool,
+    pub blocked: bool,
 
     #[export]
     movement_type: AvatarMovementType,
