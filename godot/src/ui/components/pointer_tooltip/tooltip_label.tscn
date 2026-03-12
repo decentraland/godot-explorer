@@ -39,9 +39,9 @@ custom_minimum_size = Vector2(0, 52)
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_top = -25.5
-offset_right = 205.0
-offset_bottom = 25.5
+offset_top = -26.0
+offset_right = 130.0
+offset_bottom = 26.0
 grow_vertical = 2
 size_flags_horizontal = 0
 size_flags_vertical = 4
@@ -57,20 +57,32 @@ theme_override_constants/margin_right = 10
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 10
+
+[node name="MarginContainer_Icons" type="MarginContainer" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_bottom = 0
+
+[node name="HBoxContainer_Icons" type="HBoxContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons"]
+layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="HBoxContainer_Gamepad" type="HBoxContainer" parent="MarginContainer/HBoxContainer"]
+[node name="HBoxContainer_Gamepad" type="HBoxContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_constants/separation = -3
 
-[node name="HBoxContainer_Modifier" type="HBoxContainer" parent="MarginContainer/HBoxContainer/HBoxContainer_Gamepad"]
+[node name="HBoxContainer_Modifier" type="HBoxContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 3
 
-[node name="TextureRect_GamepadIModifier" type="TextureRect" parent="MarginContainer/HBoxContainer/HBoxContainer_Gamepad/HBoxContainer_Modifier"]
+[node name="TextureRect_GamepadIModifier" type="TextureRect" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad/HBoxContainer_Modifier"]
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 size_flags_vertical = 4
@@ -78,7 +90,7 @@ texture = ExtResource("2_qd4xu")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Label_Text2" type="Label" parent="MarginContainer/HBoxContainer/HBoxContainer_Gamepad/HBoxContainer_Modifier"]
+[node name="Label_Text2" type="Label" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad/HBoxContainer_Modifier"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("1_1lcoh")
@@ -86,7 +98,7 @@ text = "+"
 label_settings = SubResource("LabelSettings_i8mwd")
 vertical_alignment = 1
 
-[node name="TextureRect_GamepadButton" type="TextureRect" parent="MarginContainer/HBoxContainer/HBoxContainer_Gamepad"]
+[node name="TextureRect_GamepadButton" type="TextureRect" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
@@ -95,19 +107,20 @@ texture = ExtResource("5_sk4cq")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/margin_right = 6
 
-[node name="PanelContainer_Inputs" type="PanelContainer" parent="MarginContainer/HBoxContainer/HBoxContainer"]
+[node name="PanelContainer_Inputs" type="PanelContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 24)
 layout_mode = 2
+size_flags_horizontal = 4
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_sk4cq")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/HBoxContainer/PanelContainer_Inputs"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer/PanelContainer_Inputs"]
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 size_flags_vertical = 4
@@ -116,7 +129,7 @@ theme_override_constants/margin_top = 3
 theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 3
 
-[node name="Label_Action" type="Label" parent="MarginContainer/HBoxContainer/HBoxContainer/PanelContainer_Inputs/MarginContainer"]
+[node name="Label_Action" type="Label" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer/PanelContainer_Inputs/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -127,7 +140,7 @@ label_settings = SubResource("LabelSettings_r3qmc")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TextureRect_ActionIcon" type="TextureRect" parent="MarginContainer/HBoxContainer/HBoxContainer/PanelContainer_Inputs/MarginContainer"]
+[node name="TextureRect_ActionIcon" type="TextureRect" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer/PanelContainer_Inputs/MarginContainer"]
 unique_name_in_owner = true
 visible = false
 self_modulate = Color(0, 0, 0, 1)
@@ -135,7 +148,11 @@ layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer/HBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)

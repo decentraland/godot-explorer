@@ -192,6 +192,8 @@ func play_emote(id: String):
 		triggered = _play_loaded_emote(id)
 
 	if triggered:
+		if avatar != null and avatar.is_local_player:
+			_track_emote(id)
 		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop)
 
 
@@ -827,3 +829,11 @@ func process(idle: bool):
 						playing_mixed = false
 						# Hide props when emote ends
 						_hide_all_props()
+
+
+func _track_emote(id: String) -> void:
+	var is_base := Emotes.is_emote_default(id) or Emotes.is_base_emote_urn(id)
+	var source := "scene" if id.contains("scene-emote") else "user"
+	var screen_name := "SCENE" if source == "scene" else "EMOTE_WHEEL"
+	var payload = JSON.stringify({"emote_urn": id, "is_base": is_base, "source": source})
+	Global.metrics.track_click_button("USED EMOTE", screen_name, payload)

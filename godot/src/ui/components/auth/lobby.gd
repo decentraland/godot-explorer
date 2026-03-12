@@ -292,7 +292,7 @@ func _ready():
 	var login = %Login
 
 	ready_for_redirect_by_deep_link = false
-	Global.deep_link_received.connect(_on_deep_link_received)
+	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 
 	login.set_lobby(self)
 	login.show()
@@ -549,7 +549,8 @@ func _on_button_next_pressed():
 		var error: PromiseError = promise.get_data()
 		printerr("[Lobby] Profile deploy failed: ", error.get_error())
 
-	show_control_ftue()
+	# Skip FTUE, go directly to discover
+	await async_close_sign_in()
 
 
 func _on_button_random_name_pressed():
