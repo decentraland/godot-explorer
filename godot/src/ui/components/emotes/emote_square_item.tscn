@@ -47,7 +47,7 @@ offset_right = 5.0
 offset_bottom = 5.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("3_7fnr5")
+texture = ExtResource("2_oumy4")
 expand_mode = 1
 
 [node name="Pressed" type="TextureRect" parent="Control_Inner"]
@@ -64,7 +64,7 @@ offset_right = 5.0
 offset_bottom = 5.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("2_oumy4")
+texture = ExtResource("3_7fnr5")
 expand_mode = 1
 
 [node name="Pressed_bold" type="TextureRect" parent="Control_Inner"]
