@@ -148,9 +148,9 @@ func on_chat_message(address: String, message: String, _timestamp: float):
 
 func _input(event):
 	if event.is_action_pressed("ia_pointer"):
-		# Only handle input if this avatar is currently selected
+		# Only handle input if this avatar is currently selected and not blocked/hidden
 		var selected = Global.get_selected_avatar()
-		if selected and selected == self and avatar_id:
+		if selected and selected == self and avatar_id and not hidden:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				Global.open_profile_by_avatar.emit(self)
 

@@ -71,6 +71,23 @@ func on_event_pressed(data):
 	event_details.open_panel()
 
 
+func async_open_event_by_id(event_id: String) -> void:
+	_async_handle_event_notification(event_id)
+
+
+func async_open_place_by_id(place_id: String) -> void:
+	var response = await PlacesHelper.async_get_place_by_id(place_id)
+	if response is PromiseError:
+		printerr("[Discover] Failed to fetch place data: ", response.get_error())
+		return
+	var json: Dictionary = response.get_string_response_as_json()
+	var place_data: Dictionary = json.get("data", json)
+	if place_data.is_empty():
+		printerr("[Discover] Empty place data for id: ", place_id)
+		return
+	on_item_pressed(place_data)
+
+
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 	jump_in.hide()
 	Global.teleport_to(parcel_position, realm)

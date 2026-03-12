@@ -628,13 +628,6 @@ impl DclGlobal {
         self.input_modifier_disable_all
     }
 
-    /// Emits test messages at various Rust tracing levels to verify Sentry integration.
-    #[func]
-    pub fn emit_sentry_rust_test_messages() {
-        use crate::tools::godot_logger::emit_sentry_test_messages;
-        emit_sentry_test_messages();
-    }
-
     /// Set the Decentraland environment for URL transformation.
     /// Supports per-group overrides: "zone", "auth::zone,org", "auth::zone,comms::today,org"
     #[func]

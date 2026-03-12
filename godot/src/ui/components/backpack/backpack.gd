@@ -5,6 +5,13 @@ const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
 
+const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
+	"reward_assignment",
+	"reward_in_progress",
+	"item_sold",
+	"bid_accepted",
+]
+
 @export var hide_background: bool = false
 @export var hide_navbar: bool = false
 
@@ -146,6 +153,9 @@ func _ready():
 	backpack_loading.hide()
 
 	request_show_wearables = true
+
+	# Listen for notifications that may indicate new wearables (e.g. rewards)
+	NotificationsManager.new_notifications.connect(self._on_new_notifications)
 
 	# responsive
 	if get_window() != null:
@@ -515,11 +525,52 @@ func _on_collectible_filter_button_toggled(toggled_on: bool) -> void:
 	filter_indicator.visible = toggled_on
 
 
+func _on_new_notifications(notifications: Array) -> void:
+	for notif in notifications:
+		var notif_type: String = notif.get("type", "")
+		if notif_type in WEARABLE_REFRESH_NOTIFICATION_TYPES:
+			_async_refresh_owned_wearables()
+			return
+
+
+func _async_refresh_owned_wearables() -> void:
+	var remote_wearables = await WearableRequest.async_request_all_wearables()
+	if remote_wearables == null:
+		return
+
+	var new_keys: Array[String] = []
+	for wearable_item in remote_wearables.elements:
+		if not wearable_data.has(wearable_item.urn):
+			wearable_data[wearable_item.urn] = null
+			new_keys.append(wearable_item.urn)
+
+	if new_keys.is_empty():
+		return
+
+	var promise = Global.content_provider.fetch_wearables(
+		new_keys, Global.realm.get_profile_content_url()
+	)
+	await PromiseUtils.async_all(promise)
+
+	for wearable_id in new_keys:
+		var wearable = Global.content_provider.get_wearable(wearable_id)
+		wearable_data[wearable_id] = wearable
+		if wearable == null:
+			printerr("Error loading new wearable_id ", wearable_id)
+
+	# Refresh the current view to show newly available wearables
+	if not current_filter.is_empty():
+		_load_filtered_data(current_filter)
+
+
 func _exit_tree():
 	# Clean up timer and disconnect signals
 	if blacklist_deploy_timer:
 		blacklist_deploy_timer.stop()
 		blacklist_deploy_timer.queue_free()
+
+	if NotificationsManager.new_notifications.is_connected(self._on_new_notifications):
+		NotificationsManager.new_notifications.disconnect(self._on_new_notifications)
 
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)

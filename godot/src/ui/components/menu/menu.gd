@@ -75,7 +75,10 @@ func _ready():
 	# Connect to notification clicked signal for reward notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
-	Global.deep_link_received.connect(_on_deep_link_received)
+	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
+	Global.deep_link_router.deep_link_jump.connect(_async_on_deep_link_jump)
+	Global.deep_link_router.deep_link_open_event.connect(_async_on_deep_link_open_event)
+	Global.deep_link_router.deep_link_open_place.connect(_async_on_deep_link_open_place)
 	Global.open_settings.connect(async_show_settings)
 	Global.open_backpack.connect(async_show_backpack)
 	Global.open_discover.connect(async_show_discover)
@@ -86,6 +89,12 @@ func _ready():
 
 	if not is_in_game:
 		open.call_deferred()
+
+	# If the app was cold-started via a deep link, the deep_link_received signal
+	# was already emitted before menu connected its signals. Route the pending
+	# deep link now that we are ready.
+	if not Global.deep_link_url.is_empty():
+		Global.deep_link_router.route.call_deferred()
 
 
 func open():
@@ -127,7 +136,7 @@ func async_show_discover(open_menu := true):
 	await control_discover._async_instantiate()
 	select_discover_screen()
 	if is_instance_valid(static_button_discover):
-		static_button_discover.toggled.emit(true)
+		static_button_discover.button_pressed = true
 	if open_menu:
 		_open()
 
@@ -329,7 +338,25 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 
 
 func _on_deep_link_received() -> void:
-	Global.check_deep_link_teleport_to()
+	Global.deep_link_router.route()
+
+
+func _async_on_deep_link_jump() -> void:
+	await async_show_discover()
+	if is_instance_valid(control_discover.instance):
+		control_discover.instance.jump_in.open_panel()
+
+
+func _async_on_deep_link_open_event(event_id: String) -> void:
+	await async_show_discover()
+	if is_instance_valid(control_discover.instance):
+		control_discover.instance.async_open_event_by_id(event_id)
+
+
+func _async_on_deep_link_open_place(place_id: String) -> void:
+	await async_show_discover()
+	if is_instance_valid(control_discover.instance):
+		control_discover.instance.async_open_place_by_id(place_id)
 
 
 func _on_account_delete() -> void:
