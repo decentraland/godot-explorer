@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3 uid="uid://blc0mna12dsxo"]
+[gd_scene load_steps=10 format=3 uid="uid://blc0mna12dsxo"]
 
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="1_hlkld"]
 [ext_resource type="Texture2D" uid="uid://drpjhk4w1jscd" path="res://assets/ui/CommonThumbnail.png" id="2_k7hq0"]
 [ext_resource type="Texture2D" uid="uid://cj7jhsid3p00o" path="res://src/ui/components/emote_editor/emote_pressed.png" id="2_oumy4"]
 [ext_resource type="Texture2D" uid="uid://tsgv1rfn02iw" path="res://src/ui/components/emote_editor/emote_selected.png" id="3_7fnr5"]
 [ext_resource type="Texture2D" uid="uid://oqs81qmhfows" path="res://assets/ui/backpack/Equiped.svg" id="3_oumy4"]
+[ext_resource type="Texture2D" uid="uid://ypx772qd06da" path="res://src/ui/components/emote_editor/emote_pressed_bold.png" id="4_lu2c6"]
 [ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="6_bfs1b"]
 [ext_resource type="Texture2D" uid="uid://26cu08uuhtoy" path="res://assets/ui/ItemsSkeleton.png" id="7_lu2c6"]
 
@@ -66,9 +67,25 @@ grow_vertical = 2
 texture = ExtResource("2_oumy4")
 expand_mode = 1
 
+[node name="Pressed_bold" type="TextureRect" parent="Control_Inner"]
+unique_name_in_owner = true
+editor_description = "Using a texture because it properly scales (Panels dont, the border radius remains)"
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -11.0
+offset_top = -10.0
+offset_right = 12.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("4_lu2c6")
+expand_mode = 1
+
 [node name="TextureRect_Background" type="TextureRect" parent="Control_Inner"]
 unique_name_in_owner = true
-visible = false
 texture_filter = 2
 layout_mode = 1
 anchors_preset = 15

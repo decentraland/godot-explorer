@@ -37,6 +37,7 @@ var _is_dirty := false
 @onready var control_inner := %Control_Inner
 @onready var texture_rect_background := %TextureRect_Background
 @onready var texture_rect_selected := %Pressed
+@onready var texture_rect_selected_bold := %Pressed_bold
 @onready var texture_rect_equiped := %Equiped
 @onready var texture_rect_equiped_mark := %TextureRect_Equiped
 @onready var texture_rect_skeleton: TextureRect = %TextureRect_Skeleton
@@ -177,7 +178,7 @@ func set_equipped(equipped: bool) -> void:
 
 
 func set_slot_selected(toggled_on: bool) -> void:
-	texture_rect_equiped.set_visible(toggled_on)
+	texture_rect_selected_bold.set_visible(toggled_on)
 	texture_rect_selected.hide()
 
 
