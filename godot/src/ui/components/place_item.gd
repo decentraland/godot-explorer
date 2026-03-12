@@ -531,17 +531,15 @@ func set_download_warning(item_data: Dictionary) -> void:
 func set_data(item_data):
 	_data = item_data
 
-
 	var scene_title = _get_or_empty_string(item_data, "title")
-	var _event_name = _get_or_empty_string(item_data, "name")
+	var event_name_value = _get_or_empty_string(item_data, "name")
 	if scene_title != "":
 		set_title(scene_title)
 	elif event_name != "":
-		set_event_name(_event_name)
+		set_event_name(event_name_value)
 	else:
 		self.hide()
 		return
-		
 
 	var event_scene_name = _get_or_empty_string(item_data, "scene_name")
 	set_scene_event_name(event_scene_name)
