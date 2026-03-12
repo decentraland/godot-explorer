@@ -65,7 +65,6 @@ func _on_size_changed():
 
 func _on_navbar_close() -> void:
 	collapse()
-	navbar_closed.emit()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
@@ -99,6 +98,7 @@ func capture_mouse():
 func collapse():
 	button.set_pressed_no_signal(false)
 	animation_player.play("close")
+	navbar_closed.emit()
 
 
 func _on_navbar_open_silently_on_backpack() -> void:
