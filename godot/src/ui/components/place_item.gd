@@ -531,14 +531,20 @@ func set_download_warning(item_data: Dictionary) -> void:
 func set_data(item_data):
 	_data = item_data
 
-	set_title(item_data.get("title", "Unknown place"))
+	var scene_title = _get_or_empty_string(item_data, "title")
+	var event_name_value = _get_or_empty_string(item_data, "name")
+	if scene_title != "":
+		set_title(scene_title)
+	elif event_name != "":
+		set_event_name(event_name_value, _get_or_empty_string(item_data, "user_name"))
+	else:
+		self.hide()
+		return
 
 	var event_scene_name = _get_or_empty_string(item_data, "scene_name")
 	set_scene_event_name(event_scene_name)
 	set_description(_get_or_empty_string(item_data, "description"))
-
 	event_id = item_data.get("id", "id")
-	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
 	set_event_pills(item_data)
 	set_categories(item_data.get("categories", []))
 	set_fav_button_data(item_data.get("id", "-"))

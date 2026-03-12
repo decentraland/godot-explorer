@@ -97,6 +97,7 @@ var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
 
 var player_camera_node: DclCamera3D
+var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var session_id: String
 
 var _is_portrait: bool = true
@@ -881,4 +882,5 @@ func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
+	current_camera_mode = camera_mode
 	camera_mode_set.emit(camera_mode)
