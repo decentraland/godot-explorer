@@ -103,7 +103,8 @@ func _on_navbar_opened() -> void:
 
 
 func _on_navbar_closed() -> void:
-	_button_camera.show()
+	if Global.current_camera_mode != Global.CameraMode.CINEMATIC:
+		_button_camera.show()
 
 
 func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
