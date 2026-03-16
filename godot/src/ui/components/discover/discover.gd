@@ -192,6 +192,7 @@ func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	new_text = new_text.rstrip(" .")
 	search_text = new_text
 	set_search_filter_text(search_text)
+	search_container.stop_suggestions()
 	search_container.hide()
 	container_content.show()
 

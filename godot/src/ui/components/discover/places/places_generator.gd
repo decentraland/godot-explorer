@@ -180,6 +180,7 @@ func async_request_from_api(offset: int, limit: int) -> void:
 		PlacesHelper.get_sign_api_url() if only_favorites else PlacesHelper.get_api_url()
 	)
 	var url := base_url + query
+	print(url)
 	_async_fetch_places(url, limit)
 
 
