@@ -6,6 +6,14 @@ signal should_show_container(show: bool)
 
 enum KeywordType { HISTORY, POPULAR, CATEGORY, COORDINATES }
 
+const FIELD_WEIGHTS: Dictionary = {
+	"title": 1.0,
+	"description": 0.4,
+	"contact_name": 0.3,
+	"world_name": 1.0,
+	"world_id": 0.3,
+}
+
 var popular_keywords: Array[Keyword]
 var coordinates_destinations: Dictionary[int, Dictionary]
 # Trigram TF-IDF index: { "abc": { item_index: tfidf_score, ... }, ... }
@@ -14,15 +22,6 @@ var trigram_index: Dictionary = {}
 @onready var search_sugestions := %SearchSugestions
 @onready var margin_container_recent_searches: MarginContainer = %MarginContainer_RecentSearchs
 @onready var button_clear_history: Button = %Button_ClearHistory
-
-
-const FIELD_WEIGHTS: Dictionary = {
-	"title": 1.0,
-	"description": 0.4,
-	"contact_name": 0.3,
-	"world_name": 1.0,
-	"world_id": 0.3,
-}
 
 
 class Keyword:
@@ -52,7 +51,9 @@ func async_get_popular_keywords() -> void:
 
 	var all_results: Array = []
 	for page in range(float(TOTAL) / LIMIT):
-		var url := PlacesHelper.get_api_url() + "?offset=%d&limit=%d" % [page * LIMIT, LIMIT] + base_params
+		var url := (
+			PlacesHelper.get_api_url() + "?offset=%d&limit=%d" % [page * LIMIT, LIMIT] + base_params
+		)
 		prints("SEARCH", url)
 		var fetch_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(url)
 		match fetch_result.status:
@@ -67,11 +68,11 @@ func async_get_popular_keywords() -> void:
 		prints("SEARCH", destination)
 		# destination.id = url
 		# destination.world_name
-		
+
 		# destination.title
 		# destination.description
 		# destination.contact_name
-		
+
 		var destination_name: String = NotificationUtils.sanitize_notification_text(
 			trim_string(destination.title.to_lower())
 		)
