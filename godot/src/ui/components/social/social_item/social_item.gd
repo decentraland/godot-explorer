@@ -35,6 +35,7 @@ var _load_start_time: float = 0.0
 @onready var data_container: HBoxContainer = %Data
 @onready var skeleton_container: HBoxContainer = %Skeleton
 @onready var panel_container_request: PanelContainer = %PanelContainer_Request
+@onready var button_unblock: Button = %Button_Unblock
 
 
 func _ready():
@@ -43,8 +44,10 @@ func _ready():
 	_update_elements_visibility()
 	# Connect accept/reject buttons for friend requests
 	button_accept.pressed.connect(_async_on_button_accept_pressed)
+	button_add_friend.pressed.connect(_on_button_add_friend_pressed)
 	button_reject.pressed.connect(_async_on_button_reject_pressed)
 	button_jump.pressed.connect(_on_button_jump_in_pressed)
+	button_unblock.pressed.connect(_on_button_unblock_pressed)
 	# Connect to locations signal to update jump button visibility
 	if Global.locations:
 		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)

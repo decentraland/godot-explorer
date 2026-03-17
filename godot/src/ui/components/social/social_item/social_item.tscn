@@ -363,6 +363,7 @@ theme_override_constants/separation = 10
 alignment = 1
 
 [node name="Button_Unblock" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Blocked"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(139, 36)
 layout_mode = 2
 size_flags_horizontal = 4
