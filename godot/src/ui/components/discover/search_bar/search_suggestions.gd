@@ -7,13 +7,15 @@ signal should_show_container(show: bool)
 enum KeywordType { HISTORY, POPULAR, CATEGORY, COORDINATES, EVENT }
 
 const SEARCH_DEBOUNCE_SEC := 0.4
-const SEARCH_LIMIT := 15
+const SEARCH_LIMIT := 8
 
 var _pending_search_text: String = ""
 var _pending_coordinates: Vector2i = Vector2i.ZERO
 var _pending_is_coordinates: bool = false
 var _has_api_results: bool = false
 var _search_timer: Timer
+var _search_request_id: int = 0
+var _last_query_time_ms: int = 0
 
 @onready var search_sugestions := %SearchSugestions
 @onready var margin_container_recent_searches: MarginContainer = %MarginContainer_RecentSearchs
@@ -65,12 +67,19 @@ func set_keyword_search_text(_search_text: String) -> void:
 			for k in Global.get_config().search_history:
 				if count_history >= 4:
 					break
-				keywords_result.push_back(Keyword.new(k, KeywordType.HISTORY))
-				count_history += 1
-			should_show_container.emit(true)
-			_build_suggestions_ui(
-				keywords_result, not keywords_result.is_empty(), trimmed_search_text
-			)
+				var hist_keyword := Keyword.new(k, KeywordType.HISTORY)
+				if (
+					trimmed_search_text.is_empty()
+					or hist_keyword.keyword.contains(trimmed_search_text)
+					or hist_keyword.keyword.similarity(trimmed_search_text) > 0.2
+				):
+					keywords_result.push_back(hist_keyword)
+					count_history += 1
+			if keywords_result.is_empty():
+				async_search_places("")
+			else:
+				should_show_container.emit(true)
+				_build_suggestions_ui(keywords_result, true, trimmed_search_text)
 		return
 
 	if text_len >= 3:
@@ -82,7 +91,11 @@ func set_keyword_search_text(_search_text: String) -> void:
 			_pending_search_text = trimmed_search_text
 			_pending_is_coordinates = false
 		should_show_container.emit(true)
-		_search_timer.start()
+		var elapsed_ms := Time.get_ticks_msec() - _last_query_time_ms
+		if elapsed_ms >= SEARCH_DEBOUNCE_SEC * 1000:
+			_on_search_timer_timeout()
+		else:
+			_search_timer.start()
 		return
 
 
@@ -91,9 +104,14 @@ func stop_suggestions() -> void:
 	_pending_search_text = ""
 	_pending_is_coordinates = false
 	_has_api_results = false
+	_search_request_id += 1
+	for c in search_sugestions.get_children():
+		c.queue_free()
+	margin_container_recent_searches.hide()
 
 
 func _on_search_timer_timeout() -> void:
+	_last_query_time_ms = Time.get_ticks_msec()
 	if _pending_is_coordinates:
 		async_search_coordinates(_pending_search_text, _pending_coordinates)
 	else:
@@ -101,12 +119,16 @@ func _on_search_timer_timeout() -> void:
 
 
 func async_search_coordinates(search_text: String, coordinates: Vector2i) -> void:
-	var name := await PlacesHelper.async_get_name_from_coordinates(coordinates)
-	if search_text != _pending_search_text:
+	_search_request_id += 1
+	var my_id := _search_request_id
+	var place_name := await PlacesHelper.async_get_name_from_coordinates(coordinates)
+	if not is_instance_valid(self):
+		return
+	if my_id != _search_request_id or search_text != _pending_search_text:
 		return
 	var keywords_result: Array[Keyword] = []
-	if not name.is_empty():
-		var kw := Keyword.new(name, KeywordType.COORDINATES)
+	if not place_name.is_empty():
+		var kw := Keyword.new(place_name, KeywordType.COORDINATES)
 		kw.coordinates = coordinates
 		keywords_result.push_back(kw)
 	_has_api_results = true
@@ -115,6 +137,8 @@ func async_search_coordinates(search_text: String, coordinates: Vector2i) -> voi
 
 
 func async_search_places(search_text: String) -> void:
+	_search_request_id += 1
+	var my_id := _search_request_id
 	var encoded := search_text.uri_encode()
 	var ios_tag := "&tag=allowed_ios" if Global.is_ios_or_emulating() else ""
 
@@ -122,13 +146,21 @@ func async_search_places(search_text: String) -> void:
 		PlacesHelper.get_api_url()
 		+ "?search=%s&limit=%d&sdk=7%s" % [encoded, SEARCH_LIMIT, ios_tag]
 	)
-	var events_url := DclUrls.mobile_events_api() + "/?sdk=7&search=%s%s" % [encoded, ios_tag]
+	var events_url := DclUrls.mobile_events_api() + "/?sdk=7&search=%s&limit=%d%s" % [encoded, SEARCH_LIMIT, ios_tag]
 
-	var places_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(places_url)
-	var events_response = await Global.async_signed_fetch(events_url, HTTPClient.METHOD_GET, "")
+	var results := await PromiseUtils.async_all(
+		[
+			func(): return PromiseUtils.resolved(await PlacesHelper.async_fetch_places(places_url)),
+			func(): return PromiseUtils.resolved(await Global.async_signed_fetch(events_url, HTTPClient.METHOD_GET, ""))
+		]
+	)
+	var places_result: PlacesHelper.FetchResult = results[0]
+	var events_response = results[1]
 
-	# Discard if the user has already typed something different
-	if search_text != _pending_search_text:
+	if not is_instance_valid(self):
+		return
+	# Discard if a newer request has been started or the user typed something different
+	if my_id != _search_request_id or search_text != _pending_search_text:
 		return
 
 	var places_keywords: Array[Keyword] = []
@@ -149,8 +181,8 @@ func async_search_places(search_text: String) -> void:
 	if events_response is PromiseError:
 		printerr("Error searching events ", events_url, " ", events_response.get_error())
 	else:
-		var json: Dictionary = events_response.get_string_response_as_json()
-		if json.has("data"):
+		var json = events_response.get_string_response_as_json()
+		if json is Dictionary and json.has("data") and json.data is Array:
 			for event_data in json.data:
 				if not event_data.get("approved", false):
 					continue
