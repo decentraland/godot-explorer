@@ -5,6 +5,7 @@
 
 [node name="main" type="Node"]
 script = ExtResource("1_2a1rx")
+metadata/mobile_preview_orientation = "portrait"
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 

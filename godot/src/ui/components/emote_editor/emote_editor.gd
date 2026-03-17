@@ -36,6 +36,7 @@ func _ready():
 			if first_button == null:
 				first_button = child
 			child.button_group = button_group_avatar_emotes
+			child.use_equipped_border = true
 			var index = avatar_emote_items.size()
 			child.select_emote.connect(self._on_emote_editor_item_select_emote.bind(index))
 			child.clear_emote.connect(self._on_emote_editor_item_clear_emote.bind(index))
@@ -197,3 +198,9 @@ func _async_on_scrollbar_value_changed(new_value):
 			_can_load_more = false  # avoid processing until the add finishes
 			_last_loaded_page += 1
 			await _async_add_remote_emotes(_last_loaded_page)
+
+
+func _on_visibility_changed() -> void:
+	if not is_node_ready():
+		return
+	scroll_container.scroll_vertical = 0
