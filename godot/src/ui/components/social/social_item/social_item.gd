@@ -31,16 +31,20 @@ var _load_start_time: float = 0.0
 @onready var button_add_friend: Button = %Button_AddFriend
 @onready var button_accept: Button = %Button_Accept
 @onready var button_reject: Button = %Button_Reject
-@onready var label_pending_request: Label = %Label_PendingRequest
 @onready var button_jump: Button = %Button_JumpIn
+@onready var data_container: HBoxContainer = %Data
+@onready var skeleton_container: HBoxContainer = %Skeleton
+@onready var panel_container_request: PanelContainer = %PanelContainer_Request
 
 
 func _ready():
 	add_to_group("blacklist_ui_sync")
+	_set_loading(true)
 	_update_elements_visibility()
 	# Connect accept/reject buttons for friend requests
 	button_accept.pressed.connect(_async_on_button_accept_pressed)
 	button_reject.pressed.connect(_async_on_button_reject_pressed)
+	button_jump.pressed.connect(_on_button_jump_in_pressed)
 	# Connect to locations signal to update jump button visibility
 	if Global.locations:
 		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
@@ -95,6 +99,7 @@ func load_item() -> void:
 
 	load_state = LoadState.LOADING
 	_load_start_time = Time.get_unix_time_from_system()
+	_set_loading(true)
 	_async_load_item()
 
 
@@ -110,19 +115,25 @@ func mark_as_failed() -> void:
 
 func _async_load_item() -> void:
 	await profile_picture.async_update_profile_picture(social_data)
-	load_state = LoadState.LOADED
+	if load_state == LoadState.FAILED:
+		_set_loading(false)
+		return
 
-	# If type is NEARBY, check if already a friend
+	# If type is NEARBY, check if already a friend (async) while still loading
 	if item_type == SOCIAL_TYPE.NEARBY and not social_data.address.is_empty():
-		_check_and_update_friend_status()
+		await _async_check_friend_status()
+
+	load_state = LoadState.LOADED
+	_set_loading(false)
 
 
 func set_data_from_avatar(avatar_param: Avatar) -> void:
 	_avatar_ref = weakref(avatar_param)
 
-	# Hide self while loading
+	# Show self with skeleton while loading
 	_is_loading = true
-	visible = false
+	visible = true
+	_set_loading(true)
 
 	# If avatar is not ready, wait for it
 	if not avatar_param.avatar_ready:
@@ -138,6 +149,8 @@ func _on_avatar_loaded() -> void:
 	if avatar == null or not is_instance_valid(avatar):
 		# Avatar was freed, mark as failed
 		load_state = LoadState.FAILED
+		_is_loading = false
+		_set_loading(false)
 		return
 
 	_load_data_from_avatar(avatar)
@@ -148,6 +161,8 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 	if avatar_param.avatar_id.is_empty():
 		# Still no avatar_id, mark as failed
 		load_state = LoadState.FAILED
+		_is_loading = false
+		_set_loading(false)
 		return
 
 	# Check for duplicates - another item with same address may already exist
@@ -156,12 +171,16 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 		if parent_list.has_item_with_address(avatar_param.avatar_id):
 			# Duplicate found, mark as failed (will be cleaned up by sync)
 			load_state = LoadState.FAILED
+			_is_loading = false
+			_set_loading(false)
 			return
 
 	# Check if avatar has valid data
 	var avatar_data = avatar_param.get_avatar_data()
 	if avatar_data == null:
 		load_state = LoadState.FAILED
+		_is_loading = false
+		_set_loading(false)
 		return
 
 	social_data = SocialItemData.new()
@@ -172,6 +191,8 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 	# Validate we got a name (profile might have failed to load)
 	if social_data.name.is_empty():
 		load_state = LoadState.FAILED
+		_is_loading = false
+		_set_loading(false)
 		return
 
 	social_data.has_claimed_name = false if social_data.name.contains("#") else true
@@ -249,7 +270,7 @@ func _hide_all_buttons() -> void:
 	profile_picture.hide_status()
 	label_place.hide()
 	button_add_friend.hide()
-	label_pending_request.hide()
+	panel_container_request.hide()
 
 
 func _notify_parent_size_changed() -> void:
@@ -291,7 +312,7 @@ func _async_on_button_add_friend_pressed() -> void:
 
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
-	label_pending_request.show()
+	panel_container_request.show()
 
 
 func _async_on_button_accept_pressed() -> void:
@@ -314,7 +335,7 @@ func _async_on_button_accept_pressed() -> void:
 
 	current_friendship_status = Global.FriendshipStatus.ACCEPTED
 	button_add_friend.hide()
-	label_pending_request.hide()
+	panel_container_request.hide()
 
 	# Accept Friend metric
 	Global.metrics.track_accept_friend(social_data.address, social_data.friendship_id)
@@ -438,7 +459,22 @@ func _check_and_update_friend_status() -> void:
 		return
 
 	# Fetch from server
-	_async_check_friend_status()
+	_async_check_friend_status_with_loading()
+
+
+func _async_check_friend_status_with_loading() -> void:
+	# While determining button visibility (pending/add friend/friend badge), show skeleton to
+	# avoid intermediate UI flicker.
+	if Global.player_identity.is_guest or is_guest:
+		return
+	_set_loading(true)
+	_async_check_friend_status_finish_loading()
+
+
+func _async_check_friend_status_finish_loading() -> void:
+	await _async_check_friend_status()
+	if load_state != LoadState.FAILED:
+		_set_loading(false)
 
 
 func _update_button_visibility_from_status() -> void:
@@ -452,18 +488,18 @@ func _update_button_visibility_from_status() -> void:
 	):
 		# REQUEST_SENT or REQUEST_RECEIVED - Show pending label, hide button
 		button_add_friend.hide()
-		label_pending_request.show()
+		panel_container_request.show()
 
 	elif current_friendship_status == Global.FriendshipStatus.ACCEPTED:
 		# ACCEPTED - Hide both button and label
 		button_add_friend.hide()
-		label_pending_request.hide()
+		panel_container_request.hide()
 		profile_picture.set_friend()
 	else:
 		# NONE, CANCELED, REJECTED, DELETED, or UNKNOWN
 		# Show button, hide label (can send new request)
 		button_add_friend.show()
-		label_pending_request.hide()
+		panel_container_request.hide()
 
 
 func _async_check_friend_status() -> void:
@@ -476,7 +512,7 @@ func _async_check_friend_status() -> void:
 		# On error, show the button (default behavior)
 		current_friendship_status = Global.FriendshipStatus.UNKNOWN
 		button_add_friend.show()
-		label_pending_request.hide()
+		panel_container_request.hide()
 		_notify_parent_reorder()
 		return
 
@@ -590,3 +626,20 @@ func _update_blocked_visibility_for_type() -> void:
 
 	# Notify parent to update list size
 	_notify_parent_size_changed()
+
+
+func _set_loading(loading: bool) -> void:
+	if not data_container or not skeleton_container:
+		return
+	data_container.visible = not loading
+	skeleton_container.visible = loading
+	disabled = loading
+
+	# For NEARBY items, ensure the row is actually visible while loading.
+	# The base panel uses self_modulate alpha 0 by default and becomes visible only on hover.
+	# During loading we want the skeleton to be seen without requiring hover.
+	if item_type == SOCIAL_TYPE.NEARBY and is_instance_valid(panel_nearby_player_item):
+		if loading:
+			panel_nearby_player_item.self_modulate = Color(1, 1, 1, 1)
+		else:
+			panel_nearby_player_item.self_modulate = Color(1, 1, 1, 0)

@@ -67,6 +67,9 @@ func _sync_nearby_list() -> void:
 		# Skip avatars without valid address (not ready yet)
 		if avatar.avatar_id.is_empty():
 			continue
+		# Skip blocked users (don't show skeletons/items for them)
+		if Global.social_blacklist and Global.social_blacklist.is_blocked(avatar.avatar_id):
+			continue
 		current_avatar_addresses[avatar.avatar_id] = avatar
 
 	# Get existing item addresses and check for removals
@@ -123,6 +126,7 @@ func _sync_nearby_list() -> void:
 func _add_item_for_avatar(avatar: Avatar) -> void:
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 	add_child(social_item)
+	social_item.visible = true
 	social_item.set_type(player_list_type)
 	social_item.set_data_from_avatar(avatar)
 
@@ -236,19 +240,24 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 	# Increment request ID to invalidate any in-flight requests
 	_update_request_id += 1
 	var current_request_id = _update_request_id
-
-	remove_items()
 	match player_list_type:
 		SOCIAL_TYPE.NEARBY:
-			# For NEARBY, use sync-based approach
+			# For NEARBY, use sync-based approach without clearing first.
+			# Clearing causes a visible "blank gap" when reopening the panel: the tab can still show
+			# a stale count while the list is empty until avatars are ready again.
 			_sync_nearby_list()
+			_update_list_size()
 		SOCIAL_TYPE.BLOCKED:
+			remove_items()
 			await _async_reload_blocked_list(current_request_id)
 		SOCIAL_TYPE.ONLINE:
+			remove_items()
 			await _async_reload_online_list(current_request_id)
 		SOCIAL_TYPE.OFFLINE:
+			remove_items()
 			await _async_reload_offline_list(current_request_id)
 		SOCIAL_TYPE.REQUEST:
+			remove_items()
 			await _async_reload_request_list(current_request_id)
 
 
@@ -476,6 +485,7 @@ func add_item_by_social_item_data(item: SocialItemData, should_load: bool = true
 	# Add a single item to the list without clearing existing items
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 	self.add_child(social_item)
+	social_item.visible = true
 	social_item.set_type(player_list_type)
 	social_item.set_data(item, should_load)
 	_update_list_size()
@@ -498,6 +508,7 @@ func add_items_by_social_item_data(item_list, should_load: bool = true) -> void:
 	for item in item_list:
 		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 		self.add_child(social_item)
+		social_item.visible = true
 		social_item.set_type(player_list_type)
 		social_item.set_data(item as SocialItemData, should_load)
 

@@ -44,6 +44,7 @@ var _is_loading: bool = false
 @onready var offline_list: VBoxContainer = %OfflineList
 @onready var nearby_list: SocialList = %NearbyList
 @onready var blocked_list: SocialList = %BlockedList
+@onready var v_box_container_no_nearby_players: VBoxContainer = %VBoxContainer_NoNearbyPlayers
 
 @onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
 @onready var v_box_container_no_friends: VBoxContainer = %VBoxContainer_NoFriends
@@ -92,6 +93,7 @@ func _ready() -> void:
 	v_box_container_no_service.hide()
 	v_box_container_loading.hide()
 	friends_list.hide()
+	_on_nearby_list_size_changed()
 
 
 func _connect_social_service_signals() -> void:
@@ -230,6 +232,7 @@ func toggle_nearby() -> void:
 	_hide_all()
 	color_rect_nearby.self_modulate = Color.WHITE
 	scroll_container_nearby.show()
+	_on_nearby_list_size_changed()
 
 
 func _on_button_blocked_toggled(toggled_on: bool) -> void:
@@ -585,6 +588,14 @@ func _on_nearby_list_size_changed() -> void:
 	elif nearby_list.list_size > 0:
 		nearby_text = "%s (%d)" % [nearby_text, nearby_list.list_size]
 	button_nearby.text = nearby_text
+
+	# Empty state vs list (Nearby tab)
+	if nearby_list.list_size == 0:
+		nearby_list.hide()
+		v_box_container_no_nearby_players.show()
+	else:
+		v_box_container_no_nearby_players.hide()
+		nearby_list.show()
 
 
 func _on_timer_timeout() -> void:
