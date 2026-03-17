@@ -54,11 +54,7 @@ func _async_patch_fav(toggled_on: bool) -> void:
 
 
 func _async_update_status() -> void:
-	var url: String
-	if _is_world:
-		url = DclUrls.places_api() + "/worlds?names=" + _place_id.uri_encode()
-	else:
-		url = DclUrls.places_api() + "/places/" + _place_id
+	var url := PlacesHelper.get_status_url(_place_id, _is_world)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
 
 	if response == null:

@@ -109,11 +109,7 @@ func _async_update_status() -> void:
 
 	disable_buttons()
 
-	var url: String
-	if _is_world:
-		url = DclUrls.places_api() + "/worlds?names=" + str(place_id).uri_encode()
-	else:
-		url = DclUrls.places_api() + "/places/" + str(place_id)
+	var url := PlacesHelper.get_status_url(str(place_id), _is_world)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
 
 	if response == null:

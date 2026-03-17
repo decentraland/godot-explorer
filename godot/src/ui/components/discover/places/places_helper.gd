@@ -31,6 +31,12 @@ static func get_sign_api_url() -> String:
 	return DclUrls.places_api() + "/destinations/"
 
 
+static func get_status_url(place_id: String, is_world: bool) -> String:
+	if is_world:
+		return DclUrls.places_api() + "/worlds?names=" + place_id.uri_encode()
+	return DclUrls.places_api() + "/places/" + place_id
+
+
 static func async_patch_like(place_id: String, like: LIKE, is_world: bool = false) -> Variant:
 	var endpoint := "/worlds/" if is_world else "/places/"
 	var url := DclUrls.places_api() + endpoint + place_id + "/likes"
