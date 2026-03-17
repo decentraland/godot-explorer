@@ -31,8 +31,9 @@ static func get_sign_api_url() -> String:
 	return DclUrls.places_api() + "/destinations/"
 
 
-static func async_patch_like(place_id: String, like: LIKE) -> Variant:
-	var url := DclUrls.places_api() + "/places/" + place_id + "/likes"
+static func async_patch_like(place_id: String, like: LIKE, is_world: bool = false) -> Variant:
+	var endpoint := "/worlds/" if is_world else "/places/"
+	var url := DclUrls.places_api() + endpoint + place_id + "/likes"
 	var body: String
 	match like:
 		LIKE.UNKNOWN:
@@ -45,8 +46,11 @@ static func async_patch_like(place_id: String, like: LIKE) -> Variant:
 	return await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 
 
-static func async_patch_favorite(place_id: String, toggled_on: bool) -> Variant:
-	var url := DclUrls.places_api() + "/places/" + place_id + "/favorites"
+static func async_patch_favorite(
+	place_id: String, toggled_on: bool, is_world: bool = false
+) -> Variant:
+	var endpoint := "/worlds/" if is_world else "/places/"
+	var url := DclUrls.places_api() + endpoint + place_id + "/favorites"
 
 	var body: String
 	if toggled_on:

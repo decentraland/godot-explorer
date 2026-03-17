@@ -6,6 +6,7 @@ const LIKE = preload("res://assets/ui/like.svg")
 const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
 
 var place_id
+var _is_world: bool = false
 var _debounced: DebouncedAction
 
 @onready var button_like: Button = %Button_Like
@@ -14,8 +15,9 @@ var _debounced: DebouncedAction
 @onready var button_dislike_pressed: Button = %Button_Dislike_Pressed
 
 
-func update_data(id = null) -> void:
+func update_data(id = null, is_world: bool = false) -> void:
 	place_id = id
+	_is_world = is_world
 	if place_id != null and place_id != "-":
 		async_update_state()
 	else:
@@ -35,7 +37,7 @@ func _get_debounced() -> DebouncedAction:
 
 
 func _async_patch_like(state: PlacesHelper.LIKE) -> void:
-	await PlacesHelper.async_patch_like(place_id, state)
+	await PlacesHelper.async_patch_like(place_id, state, _is_world)
 
 
 func _on_button_like_toggled(toggled_on: bool) -> void:
@@ -107,7 +109,11 @@ func _async_update_status() -> void:
 
 	disable_buttons()
 
-	var url = DclUrls.places_api() + "/places/" + str(place_id)
+	var url: String
+	if _is_world:
+		url = DclUrls.places_api() + "/worlds?names=" + str(place_id).uri_encode()
+	else:
+		url = DclUrls.places_api() + "/places/" + str(place_id)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
 
 	if response == null:
@@ -119,7 +125,15 @@ func _async_update_status() -> void:
 		return
 
 	var json: Dictionary = response.get_string_response_as_json()
-	var place_data = json.get("data", json)
+	var place_data: Dictionary
+	if _is_world:
+		var data_array: Array = json.get("data", [])
+		if data_array.is_empty():
+			enable_buttons()
+			return
+		place_data = data_array[0]
+	else:
+		place_data = json.get("data", json)
 	_apply_button_state(place_data)
 	enable_buttons()
 
