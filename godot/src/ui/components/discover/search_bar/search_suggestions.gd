@@ -146,12 +146,18 @@ func async_search_places(search_text: String) -> void:
 		PlacesHelper.get_api_url()
 		+ "?search=%s&limit=%d&sdk=7%s" % [encoded, SEARCH_LIMIT, ios_tag]
 	)
-	var events_url := DclUrls.mobile_events_api() + "/?sdk=7&search=%s&limit=%d%s" % [encoded, SEARCH_LIMIT, ios_tag]
+	var events_url := (
+		DclUrls.mobile_events_api()
+		+ "/?sdk=7&search=%s&limit=%d%s" % [encoded, SEARCH_LIMIT, ios_tag]
+	)
 
 	var results := await PromiseUtils.async_all(
 		[
 			func(): return PromiseUtils.resolved(await PlacesHelper.async_fetch_places(places_url)),
-			func(): return PromiseUtils.resolved(await Global.async_signed_fetch(events_url, HTTPClient.METHOD_GET, ""))
+			func():
+				return PromiseUtils.resolved(
+					await Global.async_signed_fetch(events_url, HTTPClient.METHOD_GET, "")
+				)
 		]
 	)
 	var places_result: PlacesHelper.FetchResult = results[0]
