@@ -1940,11 +1940,7 @@ fn parse_comms_adapter_value(
     };
 
     // Strip "fixed-adapter:" prefix if present
-    raw.map(|s| {
-        s.strip_prefix("fixed-adapter:")
-            .unwrap_or(&s)
-            .to_string()
-    })
+    raw.map(|s| s.strip_prefix("fixed-adapter:").unwrap_or(&s).to_string())
 }
 
 #[cfg(test)]
@@ -2010,9 +2006,7 @@ mod tests {
         );
         assert_eq!(
             result,
-            Some(
-                "archipelago:wss://archipelago-ws-connector.decentraland.org/ws".to_string()
-            )
+            Some("archipelago:wss://archipelago-ws-connector.decentraland.org/ws".to_string())
         );
     }
 
@@ -2084,8 +2078,7 @@ mod tests {
     #[test]
     fn test_adapter_unknown_protocol_ignored() {
         // Unknown adapter values (not archipelago, not fixed-adapter) should be None
-        let result =
-            parse_comms_adapter_value(None, Some("unknown:something"), false, true);
+        let result = parse_comms_adapter_value(None, Some("unknown:something"), false, true);
         assert_eq!(result, None);
     }
 }
