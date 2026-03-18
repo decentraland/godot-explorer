@@ -124,9 +124,22 @@ func load_item() -> void:
 
 
 func is_load_timed_out() -> bool:
-	if load_state != LoadState.LOADING:
+	# Timeout while either:
+	# 1) loading the profile picture (load_state == LOADING)
+	# 2) waiting for the avatar to become ready (avatar_ready not yet set).
+	# In the second case, load_state can still be UNLOADED while `_is_loading` is true.
+	if load_state == LoadState.LOADED or load_state == LoadState.FAILED:
 		return false
-	return Time.get_unix_time_from_system() - _load_start_time > LOAD_TIMEOUT_SECONDS
+
+	# Waiting for avatar readiness
+	if load_state == LoadState.UNLOADED and _is_loading:
+		return Time.get_unix_time_from_system() - _load_start_time > LOAD_TIMEOUT_SECONDS
+
+	# Loading profile picture
+	if load_state == LoadState.LOADING:
+		return Time.get_unix_time_from_system() - _load_start_time > LOAD_TIMEOUT_SECONDS
+
+	return false
 
 
 func mark_as_failed() -> void:
@@ -161,6 +174,7 @@ func set_data_from_avatar(avatar_param: Avatar) -> void:
 	# Show self with skeleton while loading
 	_is_loading = true
 	visible = true
+	_load_start_time = Time.get_unix_time_from_system()
 	_set_loading(true)
 
 	# If avatar is not ready, wait for it
