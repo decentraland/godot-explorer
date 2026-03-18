@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=25 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -13,6 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://dp6cvwbfawfsa" path="res://src/ui/components/menu/icons/settings.svg" id="12_7v87b"]
 [ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/components/discover/discover_button.gd" id="13_2fqoa"]
 [ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/components/backpack/backpack_button.gd" id="16_p7nyr"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="17_rdch8"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="17_tc0me"]
 [ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/components/settings/settings_button.gd" id="18_3id7u"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
@@ -34,12 +35,7 @@ shadow_offset = Vector2(0, -4)
 resource_local_to_scene = false
 resource_name = "Tabs"
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4hsmp"]
-bg_color = Color(0.988235, 0.988235, 0.988235, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7v87b"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_odvpn"]
 
@@ -174,7 +170,6 @@ button_group = SubResource("ButtonGroup_udswp")
 
 [node name="Control_DeployingProfile" type="ColorRect" parent="."]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -196,7 +191,7 @@ offset_right = 128.0
 offset_bottom = 128.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_4hsmp")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_7v87b")
 
 [node name="MarginContainer" type="MarginContainer" parent="Control_DeployingProfile/PanelContainer"]
 layout_mode = 2
@@ -210,19 +205,22 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 
-[node name="Label" type="Label" parent="Control_DeployingProfile/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="TextureProgressBar" parent="Control_DeployingProfile/PanelContainer/MarginContainer/VBoxContainer" instance=ExtResource("17_tc0me")]
 layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-text = "Deploying profile..."
+size_flags_horizontal = 4
+show_background = true
 
 [node name="HSeparator" type="HSeparator" parent="Control_DeployingProfile/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_odvpn")
 
-[node name="TextureProgressBar" parent="Control_DeployingProfile/PanelContainer/MarginContainer/VBoxContainer" instance=ExtResource("17_tc0me")]
+[node name="Label" type="Label" parent="Control_DeployingProfile/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("17_rdch8")
+theme_override_font_sizes/font_size = 40
+text = "Updating profile..."
 
 [node name="AccountDeletionPopUp" parent="." instance=ExtResource("31_kkhkt")]
 visible = false
