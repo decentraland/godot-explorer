@@ -1106,52 +1106,24 @@ impl CommunicationManager {
         let comms = VarDictionary::from_variant(&realm_about.get(StringName::from("comms"))?);
         let comms_protocol = String::from_variant(&comms.get(StringName::from("protocol"))?);
 
-        let comms_fixed_adapter = if comms.contains_key("fixedAdapter") {
-            comms
-                .get(StringName::from("fixedAdapter"))
-                .map(|v| GString::from_variant(&v))
-        } else if comms.contains_key("adapter") {
-            if let Some(temp) = comms
-                .get(StringName::from("adapter"))
-                .map(|v| GString::from_variant(&v).to_string())
-            {
-                if temp.starts_with("archipelago:") {
-                    #[cfg(feature = "use_livekit")]
-                    {
-                        if DISABLE_ARCHIPELAGO {
-                            tracing::debug!("⚠️  Archipelago URL detected but ignored due to DISABLE_ARCHIPELAGO flag: {}", temp);
-                            None
-                        } else {
-                            Some(temp.to_string()[12..].into())
-                        }
-                    }
-                    #[cfg(not(feature = "use_livekit"))]
-                    {
-                        tracing::debug!(
-                            "⚠️  Archipelago URL detected but LiveKit feature is not enabled: {}",
-                            temp
-                        );
-                        None
-                    }
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        let fixed_adapter_raw = comms
+            .get(StringName::from("fixedAdapter"))
+            .map(|v| GString::from_variant(&v).to_string());
+        let adapter_raw = comms
+            .get(StringName::from("adapter"))
+            .map(|v| GString::from_variant(&v).to_string());
 
-        // if starts with fixed-adapter: remove it
-        let comms_fixed_adapter = comms_fixed_adapter.map(|s| {
-            let s = s.to_string();
-            if let Some(stripped) = s.strip_prefix("fixed-adapter:") {
-                stripped.to_string().to_godot()
-            } else {
-                s.to_godot()
-            }
-        });
+        #[cfg(feature = "use_livekit")]
+        let disable_archipelago = DISABLE_ARCHIPELAGO;
+        #[cfg(not(feature = "use_livekit"))]
+        let disable_archipelago = false;
+
+        let comms_fixed_adapter = parse_comms_adapter_value(
+            fixed_adapter_raw.as_deref(),
+            adapter_raw.as_deref(),
+            disable_archipelago,
+            cfg!(feature = "use_livekit"),
+        );
 
         tracing::debug!(
             "Comms protocol: {}, fixedAdapter: {:?}",
@@ -1159,7 +1131,7 @@ impl CommunicationManager {
             comms_fixed_adapter
         );
 
-        Some((comms_protocol, comms_fixed_adapter))
+        Some((comms_protocol, comms_fixed_adapter.map(|s| s.to_godot())))
     }
 
     #[func]
@@ -1918,4 +1890,202 @@ fn get_chat_array(chats: Vec<(H160, rfc4::Chat)>) -> VarArray {
         chats_variant_array.push(&chat_arr.to_variant());
     }
     chats_variant_array
+}
+
+/// Parse the comms adapter from realm about data.
+///
+/// Takes the raw `adapter` or `fixedAdapter` value from the about endpoint's comms section
+/// and resolves it to the final adapter string that should be passed to `change_adapter`.
+///
+/// Returns `None` if the adapter value is not recognized.
+///
+/// The `fixed_adapter` parameter corresponds to the `fixedAdapter` key.
+/// The `adapter` parameter corresponds to the `adapter` key.
+/// `fixed_adapter` takes priority over `adapter` when both are present.
+fn parse_comms_adapter_value(
+    fixed_adapter: Option<&str>,
+    adapter: Option<&str>,
+    disable_archipelago: bool,
+    livekit_enabled: bool,
+) -> Option<String> {
+    // fixedAdapter takes priority
+    let raw = if let Some(fa) = fixed_adapter {
+        Some(fa.to_string())
+    } else if let Some(a) = adapter {
+        if let Some(archipelago_url) = a.strip_prefix("archipelago:") {
+            if !livekit_enabled {
+                tracing::debug!(
+                    "⚠️  Archipelago URL detected but LiveKit feature is not enabled: {}",
+                    a
+                );
+                return None;
+            }
+            if disable_archipelago {
+                tracing::debug!(
+                    "⚠️  Archipelago URL detected but ignored due to DISABLE_ARCHIPELAGO flag: {}",
+                    a
+                );
+                return None;
+            }
+            // Strip "archipelago:" prefix, keep the rest as the adapter value
+            Some(archipelago_url.to_string())
+        } else if a.starts_with("fixed-adapter:") {
+            // World about endpoints return adapter = "fixed-adapter:signed-login:..."
+            Some(a.to_string())
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // Strip "fixed-adapter:" prefix if present
+    raw.map(|s| {
+        s.strip_prefix("fixed-adapter:")
+            .unwrap_or(&s)
+            .to_string()
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==========================================
+    // Tests for parse_comms_adapter_value
+    // ==========================================
+
+    #[test]
+    fn test_fixed_adapter_direct_livekit() {
+        // Preview scenes use fixedAdapter directly
+        let result = parse_comms_adapter_value(
+            Some("livekit:wss://preview.decentraland.org/rooms/test"),
+            None,
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("livekit:wss://preview.decentraland.org/rooms/test".to_string())
+        );
+    }
+
+    #[test]
+    fn test_fixed_adapter_with_prefix() {
+        // fixedAdapter with "fixed-adapter:" prefix should be stripped
+        let result = parse_comms_adapter_value(
+            Some("fixed-adapter:signed-login:https://worlds.decentraland.org/comms"),
+            None,
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("signed-login:https://worlds.decentraland.org/comms".to_string())
+        );
+    }
+
+    #[test]
+    fn test_fixed_adapter_takes_priority_over_adapter() {
+        let result = parse_comms_adapter_value(
+            Some("livekit:wss://preview.decentraland.org/rooms/test"),
+            Some("archipelago:archipelago:wss://archipelago.decentraland.org/ws"),
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("livekit:wss://preview.decentraland.org/rooms/test".to_string())
+        );
+    }
+
+    #[test]
+    fn test_adapter_archipelago_genesis_city() {
+        // Genesis City: adapter = "archipelago:archipelago:wss://..."
+        let result = parse_comms_adapter_value(
+            None,
+            Some("archipelago:archipelago:wss://archipelago-ws-connector.decentraland.org/ws"),
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some(
+                "archipelago:wss://archipelago-ws-connector.decentraland.org/ws".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn test_adapter_archipelago_disabled() {
+        let result = parse_comms_adapter_value(
+            None,
+            Some("archipelago:archipelago:wss://archipelago.decentraland.org/ws"),
+            true, // disable_archipelago
+            true,
+        );
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_adapter_archipelago_no_livekit() {
+        let result = parse_comms_adapter_value(
+            None,
+            Some("archipelago:archipelago:wss://archipelago.decentraland.org/ws"),
+            false,
+            false, // livekit not enabled
+        );
+        assert_eq!(result, None);
+    }
+
+    // ==========================================
+    // BUG REPRODUCTION: Issue #1719
+    // World adapter "fixed-adapter:signed-login:..." in the `adapter` field
+    // is not recognized, causing commsAdapter to remain empty.
+    // ==========================================
+
+    #[test]
+    fn test_world_adapter_fixed_adapter_signed_login() {
+        // World about returns: adapter = "fixed-adapter:signed-login:https://worlds-content-server..."
+        // This MUST be recognized and stripped to "signed-login:https://..."
+        let result = parse_comms_adapter_value(
+            None,
+            Some("fixed-adapter:signed-login:https://worlds-content-server.decentraland.org/worlds/aesironline.dcl.eth/comms"),
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("signed-login:https://worlds-content-server.decentraland.org/worlds/aesironline.dcl.eth/comms".to_string())
+        );
+    }
+
+    #[test]
+    fn test_world_adapter_fixed_adapter_livekit() {
+        // Some worlds might return: adapter = "fixed-adapter:livekit:wss://..."
+        let result = parse_comms_adapter_value(
+            None,
+            Some("fixed-adapter:livekit:wss://livekit.decentraland.org/rooms/world-room"),
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("livekit:wss://livekit.decentraland.org/rooms/world-room".to_string())
+        );
+    }
+
+    #[test]
+    fn test_no_comms_data() {
+        let result = parse_comms_adapter_value(None, None, false, true);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_adapter_unknown_protocol_ignored() {
+        // Unknown adapter values (not archipelago, not fixed-adapter) should be None
+        let result =
+            parse_comms_adapter_value(None, Some("unknown:something"), false, true);
+        assert_eq!(result, None);
+    }
 }
