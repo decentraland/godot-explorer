@@ -1203,7 +1203,7 @@ func async_schedule_day1_notification() -> void:
 	var trigger_timestamp := int(Time.get_unix_time_from_system()) + 86400
 	var scheduled := await async_queue_local_notification(
 		"day1_welcome",
-		"Come and say hi \u{1F44B}",
+		"Come and say hi 👋",
 		"People are hanging out in Decentraland.",
 		trigger_timestamp,
 		"",
