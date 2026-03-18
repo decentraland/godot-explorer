@@ -523,6 +523,7 @@ func _on_collectible_filter_button_toggled(toggled_on: bool) -> void:
 	emote_editor.async_set_only_collectibles(toggled_on)
 	_load_filtered_data(current_filter)
 	filter_indicator.visible = toggled_on
+	filters_menu_checkbox.set_pressed(false)
 
 
 func _on_new_notifications(notifications: Array) -> void:
