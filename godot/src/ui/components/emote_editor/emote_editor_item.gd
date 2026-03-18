@@ -4,12 +4,11 @@ extends BaseButton
 signal select_emote(emote_urn: String)
 signal clear_emote
 
+var use_equipped_border: bool = false
+
 var _emote_urn: String = ""
 
-#@onready var panel_pressed = %Pressed
 @onready var emote_square_item = %EmoteSquareItem
-#@onready var label_emote_name = %Label_EmoteName
-#@onready var texture_rect_wheel = %TextureRect_Wheel
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -34,7 +33,10 @@ func clear_slot() -> void:
 
 func _on_toggled(toggled_on):
 	#panel_pressed.visible = toggled_on
-	emote_square_item.set_pressed(toggled_on)
+	if use_equipped_border:
+		emote_square_item.set_slot_selected(toggled_on)
+	else:
+		emote_square_item.set_pressed(toggled_on)
 	if toggled_on:
 		select_emote.emit(_emote_urn)
 

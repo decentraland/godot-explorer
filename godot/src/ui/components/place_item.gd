@@ -476,9 +476,10 @@ func set_likes_percent(likes: int, dislikes: int):
 		var total = likes + dislikes
 		if total > 0:
 			label.text = str(int(round(float(likes) / float(total) * 100))) + "%"
+			container.set_visible(true)
 		else:
 			label.text = ""
-		container.set_visible(true)
+			container.set_visible(false)
 		_update_separators()
 
 
@@ -531,18 +532,25 @@ func set_download_warning(item_data: Dictionary) -> void:
 func set_data(item_data):
 	_data = item_data
 
-	set_title(item_data.get("title", "Unknown place"))
+	var scene_title = _get_or_empty_string(item_data, "title")
+	var event_name_value = _get_or_empty_string(item_data, "name")
+	if scene_title != "":
+		set_title(scene_title)
+	elif event_name != "":
+		set_event_name(event_name_value, _get_or_empty_string(item_data, "user_name"))
+	else:
+		self.hide()
+		return
 
 	var event_scene_name = _get_or_empty_string(item_data, "scene_name")
 	set_scene_event_name(event_scene_name)
 	set_description(_get_or_empty_string(item_data, "description"))
-
 	event_id = item_data.get("id", "id")
-	set_event_name(item_data.get("name", "Event Name"), item_data.get("user_name", ""))
 	set_event_pills(item_data)
 	set_categories(item_data.get("categories", []))
-	set_fav_button_data(item_data.get("id", "-"))
-	set_engagement_bar_data(item_data.get("id", "-"))
+	var is_world: bool = item_data.get("world", false)
+	set_fav_button_data(item_data.get("id", "-"), is_world)
+	set_engagement_bar_data(item_data.get("id", "-"), is_world)
 	var next_start_at = item_data.get("next_start_at", "")
 	var live = item_data.get("live", false)
 	event_status = "live" if live else "upcoming"
@@ -1050,16 +1058,16 @@ func show_image_container(toggle: bool) -> void:
 			no_image_container.show()
 
 
-func set_fav_button_data(_id: String) -> void:
+func set_fav_button_data(_id: String, is_world: bool = false) -> void:
 	var fav_button = _get_fav_button()
 	if fav_button:
-		fav_button.update_data(_id)
+		fav_button.update_data(_id, is_world)
 
 
-func set_engagement_bar_data(_id: String) -> void:
+func set_engagement_bar_data(_id: String, is_world: bool = false) -> void:
 	var engagement_bar = _get_engagement_bar()
 	if engagement_bar:
-		engagement_bar.update_data(_id)
+		engagement_bar.update_data(_id, is_world)
 
 
 func _update_separators() -> void:

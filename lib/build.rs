@@ -508,17 +508,14 @@ fn set_godot_explorer_version() {
     let mode_suffix = if is_debug { "-debug" } else { "" };
 
     let full_version = match short_hash {
-        // With git hash: {version}-{short_hash}-alpha{-debug}-{dev|prod}
-        Some(hash) => format!("{}-{}-alpha{}-{}", version, hash, mode_suffix, env_suffix),
+        // With git hash: {version}-{short_hash}{-debug}-{dev|prod}
+        Some(hash) => format!("{}-{}{}-{}", version, hash, mode_suffix, env_suffix),
         // Fallback if no git hash available
         _ => {
             let timestamp = Utc::now()
                 .to_rfc3339()
                 .replace(|c: char| !c.is_ascii_digit(), "");
-            format!(
-                "{}-t{}-alpha{}-{}",
-                version, timestamp, mode_suffix, env_suffix
-            )
+            format!("{}-t{}{}-{}", version, timestamp, mode_suffix, env_suffix)
         }
     };
 

@@ -5,6 +5,13 @@ const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
 
+const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
+	"reward_assignment",
+	"reward_in_progress",
+	"item_sold",
+	"bid_accepted",
+]
+
 @export var hide_background: bool = false
 @export var hide_navbar: bool = false
 
@@ -60,10 +67,14 @@ var _avatar_update_retries: int = 0
 @onready var subcategories_separator := %SubcategoriesSeparator
 @onready var maincategories_container := %MainCategoriesContainer
 @onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
+@onready var open_marketplace_label := %RichTextBox_OpenMarketplace
+@onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
+@onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
 
 
 # gdlint:ignore = async-function-name
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	color_rect_background.visible = !hide_background
 	texture_rect_background.visible = !hide_background
 	for category in Wearables.Categories.ALL_CATEGORIES:
@@ -90,6 +101,10 @@ func _ready():
 	subcategories_container.show()
 	subcategories_separator.show()
 	maincategories_container.show()
+
+	open_marketplace_label.show()
+	if Global.is_ios():
+		open_marketplace_label.hide()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -138,6 +153,9 @@ func _ready():
 	backpack_loading.hide()
 
 	request_show_wearables = true
+
+	# Listen for notifications that may indicate new wearables (e.g. rewards)
+	NotificationsManager.new_notifications.connect(self._on_new_notifications)
 
 	# responsive
 	if get_window() != null:
@@ -189,6 +207,8 @@ func _update_visible_categories():
 	subcategories_separator.visible = has_visible
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
+	elif main_category_selected == Wearables.Categories.ALL:
+		_on_wearable_filter_button_filter_type(Wearables.Categories.ALL)
 
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
@@ -299,6 +319,7 @@ func _can_unequip(category: String) -> bool:
 
 
 func _show_wearables():
+	scroll_container_items.scroll_vertical = 0
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
 
@@ -360,9 +381,11 @@ func _on_wearable_filter_button_filter_type(type):
 	if should_hide:
 		color_carrousel.hide()
 		carrousel_separator.hide()
+		hseparator_extra_space.hide()
 	else:
 		color_carrousel.show()
 		carrousel_separator.hide()
+		hseparator_extra_space.show()
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -502,11 +525,52 @@ func _on_collectible_filter_button_toggled(toggled_on: bool) -> void:
 	filter_indicator.visible = toggled_on
 
 
+func _on_new_notifications(notifications: Array) -> void:
+	for notif in notifications:
+		var notif_type: String = notif.get("type", "")
+		if notif_type in WEARABLE_REFRESH_NOTIFICATION_TYPES:
+			_async_refresh_owned_wearables()
+			return
+
+
+func _async_refresh_owned_wearables() -> void:
+	var remote_wearables = await WearableRequest.async_request_all_wearables()
+	if remote_wearables == null:
+		return
+
+	var new_keys: Array[String] = []
+	for wearable_item in remote_wearables.elements:
+		if not wearable_data.has(wearable_item.urn):
+			wearable_data[wearable_item.urn] = null
+			new_keys.append(wearable_item.urn)
+
+	if new_keys.is_empty():
+		return
+
+	var promise = Global.content_provider.fetch_wearables(
+		new_keys, Global.realm.get_profile_content_url()
+	)
+	await PromiseUtils.async_all(promise)
+
+	for wearable_id in new_keys:
+		var wearable = Global.content_provider.get_wearable(wearable_id)
+		wearable_data[wearable_id] = wearable
+		if wearable == null:
+			printerr("Error loading new wearable_id ", wearable_id)
+
+	# Refresh the current view to show newly available wearables
+	if not current_filter.is_empty():
+		_load_filtered_data(current_filter)
+
+
 func _exit_tree():
 	# Clean up timer and disconnect signals
 	if blacklist_deploy_timer:
 		blacklist_deploy_timer.stop()
 		blacklist_deploy_timer.queue_free()
+
+	if NotificationsManager.new_notifications.is_connected(self._on_new_notifications):
+		NotificationsManager.new_notifications.disconnect(self._on_new_notifications)
 
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
@@ -539,11 +603,13 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 		subcategories_container.hide()
 		subcategories_separator.hide()
 		maincategories_container.hide()
+		hseparator_extra_space.hide()
 	else:
 		%MarginItemsContainer.show()
 		subcategories_container.show()
 		subcategories_separator.show()
 		maincategories_container.show()
+		hseparator_extra_space.show()
 
 
 func _on_visibility_changed() -> void:

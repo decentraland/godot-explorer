@@ -327,8 +327,8 @@ func _on_change_realm_primary(realm_name: String) -> void:
 	close_current_modal()
 
 
-func _on_scene_crash_reload(entity_id: String) -> void:
-	Global.scene_fetcher.reload_scene(entity_id)
+func _on_scene_crash_reload(_entity_id: String) -> void:
+	Global.realm.async_set_realm(Global.realm.get_realm_string())
 	close_current_modal()
 
 
