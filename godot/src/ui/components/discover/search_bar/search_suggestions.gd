@@ -151,15 +151,15 @@ func async_search_places(search_text: String) -> void:
 		+ "/?sdk=7&search=%s&limit=%d%s" % [encoded, SEARCH_LIMIT, ios_tag]
 	)
 
-	var results := await PromiseUtils.async_all(
-		[
-			func(): return PromiseUtils.resolved(await PlacesHelper.async_fetch_places(places_url)),
-			func():
-				return PromiseUtils.resolved(
-					await Global.async_signed_fetch(events_url, HTTPClient.METHOD_GET, "")
-				)
-		]
-	)
+	var places_promise = func():
+		return PromiseUtils.resolved(await PlacesHelper.async_fetch_places(places_url))
+
+	var events_promise = func():
+		return PromiseUtils.resolved(
+			await Global.async_signed_fetch(events_url, HTTPClient.METHOD_GET, "")
+		)
+
+	var results := await PromiseUtils.async_all([places_promise, events_promise])
 	var places_result: PlacesHelper.FetchResult = results[0]
 	var events_response = results[1]
 
