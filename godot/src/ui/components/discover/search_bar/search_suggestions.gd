@@ -11,7 +11,7 @@ var coordinates_destinations: Dictionary[int, Dictionary]
 
 @onready var search_sugestions := %SearchSugestions
 @onready var margin_container_recent_searches: MarginContainer = %MarginContainer_RecentSearchs
-@onready var button_clear_history: Button = %Button_ClearHistory
+@onready var button_clear_history := %Button_ClearHistory
 
 
 class Keyword:
