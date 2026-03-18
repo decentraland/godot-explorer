@@ -196,10 +196,10 @@ theme_override_constants/outline_size = 3
 theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("5_iy8au")
 theme_override_font_sizes/font_size = 18
-text = "NickWith15Chars"
 
 [node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 2
 size_flags_vertical = 4
@@ -219,7 +219,6 @@ theme_override_constants/outline_size = 3
 theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("7_m2rwh")
 theme_override_font_sizes/font_size = 16
-text = "Somewhere"
 
 [node name="HBoxContainer_Online" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data"]
 unique_name_in_owner = true

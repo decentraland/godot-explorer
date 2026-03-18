@@ -5,6 +5,7 @@ enum LoadState { UNLOADED, LOADING, LOADED, FAILED }
 const SOCIAL_TYPE = SocialItemData.SocialType
 const MAX_DISPLAY_NAME_LENGTH: int = 15
 const LOAD_TIMEOUT_SECONDS: float = 5.0
+const MIN_SKELETON_VISIBLE_SECONDS: float = 0.3
 
 @export var item_type: SocialItemData.SocialType
 
@@ -17,6 +18,8 @@ var parcel: Array = []  # Parcel coordinates [x, y] when user is in genesis city
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
 var _load_start_time: float = 0.0
+var _nearby_panel_stylebox_default: StyleBox = null
+var _nearby_panel_stylebox_loading: StyleBox = null
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
@@ -40,6 +43,7 @@ var _load_start_time: float = 0.0
 
 func _ready():
 	add_to_group("blacklist_ui_sync")
+	_cache_nearby_panel_styleboxes()
 	_set_loading(true)
 	_update_elements_visibility()
 	# Connect accept/reject buttons for friend requests
@@ -51,6 +55,19 @@ func _ready():
 	# Connect to locations signal to update jump button visibility
 	if Global.locations:
 		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
+
+
+func _cache_nearby_panel_styleboxes() -> void:
+	if not is_instance_valid(panel_nearby_player_item):
+		return
+	var sb := panel_nearby_player_item.get_theme_stylebox("panel")
+	if sb == null:
+		return
+	_nearby_panel_stylebox_default = sb.duplicate()
+	var loading_sb := sb.duplicate()
+	if loading_sb is StyleBoxFlat:
+		loading_sb.bg_color.a = 0.0
+	_nearby_panel_stylebox_loading = loading_sb
 
 
 func set_data(data: SocialItemData, should_load: bool = true) -> void:
@@ -114,6 +131,8 @@ func is_load_timed_out() -> bool:
 
 func mark_as_failed() -> void:
 	load_state = LoadState.FAILED
+	_is_loading = false
+	_set_loading(false)
 
 
 func _async_load_item() -> void:
@@ -121,6 +140,12 @@ func _async_load_item() -> void:
 	if load_state == LoadState.FAILED:
 		_set_loading(false)
 		return
+
+	# If the profile picture loads from cache, the skeleton can disappear too quickly
+	# to be perceived. Keep it visible for a minimum duration for UX consistency.
+	var elapsed := Time.get_unix_time_from_system() - _load_start_time
+	if elapsed < MIN_SKELETON_VISIBLE_SECONDS:
+		await get_tree().create_timer(MIN_SKELETON_VISIBLE_SECONDS - elapsed).timeout
 
 	# If type is NEARBY, check if already a friend (async) while still loading
 	if item_type == SOCIAL_TYPE.NEARBY and not social_data.address.is_empty():
@@ -151,9 +176,7 @@ func _on_avatar_loaded() -> void:
 	var avatar = _avatar_ref.get_ref() as Avatar if _avatar_ref else null
 	if avatar == null or not is_instance_valid(avatar):
 		# Avatar was freed, mark as failed
-		load_state = LoadState.FAILED
-		_is_loading = false
-		_set_loading(false)
+		mark_as_failed()
 		return
 
 	_load_data_from_avatar(avatar)
@@ -163,9 +186,7 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 	# Check if avatar_id is set (it should be after avatar_ready)
 	if avatar_param.avatar_id.is_empty():
 		# Still no avatar_id, mark as failed
-		load_state = LoadState.FAILED
-		_is_loading = false
-		_set_loading(false)
+		mark_as_failed()
 		return
 
 	# Check for duplicates - another item with same address may already exist
@@ -173,17 +194,13 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 	if parent_list and parent_list.has_method("has_item_with_address"):
 		if parent_list.has_item_with_address(avatar_param.avatar_id):
 			# Duplicate found, mark as failed (will be cleaned up by sync)
-			load_state = LoadState.FAILED
-			_is_loading = false
-			_set_loading(false)
+			mark_as_failed()
 			return
 
 	# Check if avatar has valid data
 	var avatar_data = avatar_param.get_avatar_data()
 	if avatar_data == null:
-		load_state = LoadState.FAILED
-		_is_loading = false
-		_set_loading(false)
+		mark_as_failed()
 		return
 
 	social_data = SocialItemData.new()
@@ -193,9 +210,7 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 
 	# Validate we got a name (profile might have failed to load)
 	if social_data.name.is_empty():
-		load_state = LoadState.FAILED
-		_is_loading = false
-		_set_loading(false)
+		mark_as_failed()
 		return
 
 	social_data.has_claimed_name = false if social_data.name.contains("#") else true
@@ -212,10 +227,16 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 
 
 func _on_mouse_entered() -> void:
+	# Don't show hover background while skeleton/loading is visible.
+	if skeleton_container and skeleton_container.visible:
+		return
 	panel_nearby_player_item.self_modulate = "#ffffff"
 
 
 func _on_mouse_exited() -> void:
+	# Don't change background while skeleton/loading is visible.
+	if skeleton_container and skeleton_container.visible:
+		return
 	panel_nearby_player_item.self_modulate = "#ffffff00"
 
 
@@ -471,10 +492,6 @@ func _async_check_friend_status_with_loading() -> void:
 	if Global.player_identity.is_guest or is_guest:
 		return
 	_set_loading(true)
-	_async_check_friend_status_finish_loading()
-
-
-func _async_check_friend_status_finish_loading() -> void:
 	await _async_check_friend_status()
 	if load_state != LoadState.FAILED:
 		_set_loading(false)
@@ -640,9 +657,18 @@ func _set_loading(loading: bool) -> void:
 
 	# For NEARBY items, ensure the row is actually visible while loading.
 	# The base panel uses self_modulate alpha 0 by default and becomes visible only on hover.
-	# During loading we want the skeleton to be seen without requiring hover.
+	# During loading we want the skeleton to be seen without requiring hover, but without
+	# showing the hover background panel.
 	if item_type == SOCIAL_TYPE.NEARBY and is_instance_valid(panel_nearby_player_item):
 		if loading:
+			if _nearby_panel_stylebox_loading != null:
+				panel_nearby_player_item.add_theme_stylebox_override(
+					"panel", _nearby_panel_stylebox_loading
+				)
 			panel_nearby_player_item.self_modulate = Color(1, 1, 1, 1)
 		else:
+			if _nearby_panel_stylebox_default != null:
+				panel_nearby_player_item.add_theme_stylebox_override(
+					"panel", _nearby_panel_stylebox_default
+				)
 			panel_nearby_player_item.self_modulate = Color(1, 1, 1, 0)

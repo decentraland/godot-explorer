@@ -261,10 +261,17 @@ func _update_dropdown_visibility() -> void:
 
 	# Show loading state if currently loading
 	if _is_loading:
-		v_box_container_loading.show()
+		# While loading, show the three sections (Requests/Online/Offline) from the start
+		# so `social_item` skeletons are visible while each avatar finishes loading.
+		v_box_container_loading.hide()
 		v_box_container_no_service.hide()
 		v_box_container_no_friends.hide()
-		friends_list.hide()
+		friends_list.show()
+		# Requests should be shown only if there are elements (even if they are skeletons).
+		# Avoid the "flash" when `list_size` is still 0.
+		v_box_container_request.visible = request_list.list_size > 0
+		v_box_container_online.show()
+		v_box_container_offline.show()
 		return
 
 	# Hide loading container when not loading
@@ -483,7 +490,8 @@ func update_all_lists():
 
 
 func _async_update_all_lists() -> void:
-	# Update all lists and wait for them to complete
+	# Update lists sequentially.
+	# Skeleton placeholders are handled in `_update_dropdown_visibility()` to keep UX responsive.
 	await request_list.async_update_list()
 	await online_list.async_update_list()
 	await offline_list.async_update_list()
