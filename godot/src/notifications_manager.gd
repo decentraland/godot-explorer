@@ -121,7 +121,7 @@ func _ready() -> void:
 	_sync_notification_queue.call_deferred()
 
 	# Schedule day 1 notification (24h after first launch)
-	_schedule_day1_notification.call_deferred()
+	async_schedule_day1_notification.call_deferred()
 
 
 ## Start polling for new notifications
@@ -1189,7 +1189,7 @@ func _sync_notification_queue() -> void:
 
 ## Schedule a one-time "Day 1" notification 24h after first app launch.
 ## Only runs on mobile, only once per install (persisted via config flag).
-func _schedule_day1_notification() -> void:
+func async_schedule_day1_notification() -> void:
 	if not Global.is_android() and not Global.is_ios():
 		return
 
