@@ -125,15 +125,18 @@ func _ready():
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
-	for wearable_id in Wearables.BASE_WEARABLES:
-		var key = Wearables.get_base_avatar_urn(wearable_id)
-		wearable_data[key] = null
-
 	# Load all remote wearables that you own...
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
 	if remote_wearables != null:
+		remote_wearables.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
 		for wearable_item in remote_wearables.elements:
 			wearable_data[wearable_item.urn] = null
+
+	# Add base wearables last
+	for wearable_id in Wearables.BASE_WEARABLES:
+		var key = Wearables.get_base_avatar_urn(wearable_id)
+		if not wearable_data.has(key):
+			wearable_data[key] = null
 
 	var promise = Global.content_provider.fetch_wearables(
 		wearable_data.keys(), Global.realm.get_profile_content_url()
