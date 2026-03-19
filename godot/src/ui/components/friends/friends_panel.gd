@@ -44,6 +44,7 @@ var _is_loading: bool = false
 @onready var offline_list: VBoxContainer = %OfflineList
 @onready var nearby_list: SocialList = %NearbyList
 @onready var blocked_list: SocialList = %BlockedList
+@onready var v_box_container_no_nearby_players: VBoxContainer = %VBoxContainer_NoNearbyPlayers
 
 @onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
 @onready var v_box_container_no_friends: VBoxContainer = %VBoxContainer_NoFriends
@@ -92,6 +93,7 @@ func _ready() -> void:
 	v_box_container_no_service.hide()
 	v_box_container_loading.hide()
 	friends_list.hide()
+	_on_nearby_list_size_changed()
 
 
 func _connect_social_service_signals() -> void:
@@ -230,6 +232,7 @@ func toggle_nearby() -> void:
 	_hide_all()
 	color_rect_nearby.self_modulate = Color.WHITE
 	scroll_container_nearby.show()
+	_on_nearby_list_size_changed()
 
 
 func _on_button_blocked_toggled(toggled_on: bool) -> void:
@@ -258,10 +261,17 @@ func _update_dropdown_visibility() -> void:
 
 	# Show loading state if currently loading
 	if _is_loading:
-		v_box_container_loading.show()
+		# While loading, show the three sections (Requests/Online/Offline) from the start
+		# so `social_item` skeletons are visible while each avatar finishes loading.
+		v_box_container_loading.hide()
 		v_box_container_no_service.hide()
 		v_box_container_no_friends.hide()
-		friends_list.hide()
+		friends_list.show()
+		# Requests should be shown only if there are elements (even if they are skeletons).
+		# Avoid the "flash" when `list_size` is still 0.
+		v_box_container_request.visible = request_list.list_size > 0
+		v_box_container_online.show()
+		v_box_container_offline.show()
 		return
 
 	# Hide loading container when not loading
@@ -415,18 +425,23 @@ func _on_friend_connectivity_updated(address: String, status: int) -> void:
 	# Move the friend between online/offline lists without full reload
 	if was_online and not is_now_online:
 		# Friend went offline - move from online to offline list
-		var item_data = online_list.get_item_data_by_address(address)
-		if item_data != null:
-			online_list.remove_item_by_address(address)
-			offline_list.add_item_by_social_item_data(item_data)
+		var item_node = online_list.pop_item_by_address(address)
+		if item_node != null:
+			offline_list.add_child(item_node)
+			item_node.set_type(SocialItemData.SocialType.OFFLINE)
+			offline_list._update_list_size()
+			online_list._update_list_size()
 	elif not was_online and is_now_online:
 		# Friend came online - move from offline to online list
-		var item_data = offline_list.get_item_data_by_address(address)
-		if item_data != null:
-			offline_list.remove_item_by_address(address)
-			online_list.add_item_by_social_item_data(item_data)
+		var item_node = offline_list.pop_item_by_address(address)
+		if item_node != null:
+			online_list.add_child(item_node)
+			item_node.set_type(SocialItemData.SocialType.ONLINE)
+			online_list._update_list_size()
+			offline_list._update_list_size()
 			# Send chat notification that friend came online
-			_send_friend_online_chat_message(item_data.name)
+			if item_node.social_data != null:
+				_send_friend_online_chat_message(item_node.social_data.name)
 
 	_update_dropdown_visibility()
 
@@ -480,7 +495,8 @@ func update_all_lists():
 
 
 func _async_update_all_lists() -> void:
-	# Update all lists and wait for them to complete
+	# Update lists sequentially.
+	# Skeleton placeholders are handled in `_update_dropdown_visibility()` to keep UX responsive.
 	await request_list.async_update_list()
 	await online_list.async_update_list()
 	await offline_list.async_update_list()
@@ -585,6 +601,14 @@ func _on_nearby_list_size_changed() -> void:
 	elif nearby_list.list_size > 0:
 		nearby_text = "%s (%d)" % [nearby_text, nearby_list.list_size]
 	button_nearby.text = nearby_text
+
+	# Empty state vs list (Nearby tab)
+	if nearby_list.list_size == 0:
+		nearby_list.hide()
+		v_box_container_no_nearby_players.show()
+	else:
+		v_box_container_no_nearby_players.hide()
+		nearby_list.show()
 
 
 func _on_timer_timeout() -> void:
