@@ -8,7 +8,6 @@ var _generator_statuses: Dictionary = {}
 @onready var event_details: SidePanelWrapper = %EventDetails
 
 @onready var search_bar: SearchBar = %SearchBar
-@onready var timer_search_debounce: Timer = %Timer_SearchDebounce
 
 @onready var last_visited: VBoxContainer = %LastVisited
 @onready var places_featured: VBoxContainer = %PlacesFeatured
@@ -126,9 +125,9 @@ func _on_search_bar_opened() -> void:
 func _on_search_bar_cleared() -> void:
 	search_text = ""
 	set_search_filter_text("")
-	timer_search_debounce.stop()
-	search_container.hide()
-	container_content.show()
+	search_container.stop_suggestions()
+	search_container.show()
+	search_container.set_keyword_search_text("")
 	Global.metrics.track_click_button("SEARCH_ERASE", "SEARCH_CLICK", "")
 
 
@@ -192,12 +191,9 @@ func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	new_text = new_text.rstrip(" .")
 	search_text = new_text
 	set_search_filter_text(search_text)
+	search_container.stop_suggestions()
 	search_container.hide()
 	container_content.show()
-
-
-func _on_timer_search_debounce_timeout() -> void:
-	search_container.set_keyword_search_text(search_text)
 
 
 func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
@@ -410,6 +406,7 @@ func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 	search_bar.text = search_keyword
 	search_text = search_keyword
 	set_search_filter_text(search_keyword)
+	search_container.stop_suggestions()
 	search_container.hide()
 	container_content.show()
 
@@ -420,6 +417,7 @@ func _on_button_back_to_explorer_pressed() -> void:
 		search_bar.close_searchbar()
 		search_text = ""
 		set_search_filter_text("")
+		search_container.stop_suggestions()
 		search_container.hide()
 		container_content.show()
 		label_title.show()
