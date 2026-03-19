@@ -425,18 +425,23 @@ func _on_friend_connectivity_updated(address: String, status: int) -> void:
 	# Move the friend between online/offline lists without full reload
 	if was_online and not is_now_online:
 		# Friend went offline - move from online to offline list
-		var item_data = online_list.get_item_data_by_address(address)
-		if item_data != null:
-			online_list.remove_item_by_address(address)
-			offline_list.add_item_by_social_item_data(item_data)
+		var item_node = online_list.pop_item_by_address(address)
+		if item_node != null:
+			offline_list.add_child(item_node)
+			item_node.set_type(SocialItemData.SocialType.OFFLINE)
+			offline_list._update_list_size()
+			online_list._update_list_size()
 	elif not was_online and is_now_online:
 		# Friend came online - move from offline to online list
-		var item_data = offline_list.get_item_data_by_address(address)
-		if item_data != null:
-			offline_list.remove_item_by_address(address)
-			online_list.add_item_by_social_item_data(item_data)
+		var item_node = offline_list.pop_item_by_address(address)
+		if item_node != null:
+			online_list.add_child(item_node)
+			item_node.set_type(SocialItemData.SocialType.ONLINE)
+			online_list._update_list_size()
+			offline_list._update_list_size()
 			# Send chat notification that friend came online
-			_send_friend_online_chat_message(item_data.name)
+			if item_node.social_data != null:
+				_send_friend_online_chat_message(item_node.social_data.name)
 
 	_update_dropdown_visibility()
 
