@@ -30,6 +30,9 @@ const ENABLE_DEBUG_RANDOM_NOTIFICATIONS = false
 ## DEBUG: Set to true to schedule a test notification 2 minutes from now using real event data
 const DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION = false
 
+## DEBUG: Set to true to schedule the Day 1 notification 30 seconds from now instead of 24h
+const DEBUG_DAY1_SHORT_DELAY = false
+
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
@@ -490,6 +493,8 @@ func _on_poll_timeout() -> void:
 func _on_permission_changed(granted: bool) -> void:
 	if granted:
 		Global.metrics.track_click_button("accept", "NOTIF_PROMPT", "")
+		# Permission just granted — try scheduling Day 1 notification now
+		async_schedule_day1_notification.call_deferred()
 	else:
 		Global.metrics.track_click_button("reject", "NOTIF_PROMPT", "")
 	Global.metrics.flush.call_deferred()
@@ -1200,7 +1205,8 @@ func async_schedule_day1_notification() -> void:
 	if not _os_wrapper or not _os_wrapper.has_permission():
 		return
 
-	var trigger_timestamp := int(Time.get_unix_time_from_system()) + 86400
+	var delay_seconds := 30 if DEBUG_DAY1_SHORT_DELAY else 86400
+	var trigger_timestamp := int(Time.get_unix_time_from_system()) + delay_seconds
 	var scheduled := await async_queue_local_notification(
 		"day1_welcome",
 		"Come and say hi 👋",
