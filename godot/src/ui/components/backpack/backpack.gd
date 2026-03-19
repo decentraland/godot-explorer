@@ -101,6 +101,7 @@ func _ready():
 	subcategories_container.show()
 	subcategories_separator.show()
 	maincategories_container.show()
+	hseparator_extra_space.hide()
 
 	open_marketplace_label.show()
 	if Global.is_ios():
@@ -208,6 +209,9 @@ func _update_visible_categories():
 	var has_visible := first_wearable_filter_button != null
 	subcategories_container.visible = has_visible
 	subcategories_separator.visible = has_visible
+	hseparator_extra_space.visible = !has_visible
+	if main_category_selected == Wearables.Categories.ALL:
+		hseparator_extra_space.hide()
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
 	elif main_category_selected == Wearables.Categories.ALL:
@@ -384,11 +388,9 @@ func _on_wearable_filter_button_filter_type(type):
 	if should_hide:
 		color_carrousel.hide()
 		carrousel_separator.hide()
-		hseparator_extra_space.hide()
 	else:
 		color_carrousel.show()
 		carrousel_separator.hide()
-		hseparator_extra_space.show()
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -607,13 +609,13 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 		subcategories_container.hide()
 		subcategories_separator.hide()
 		maincategories_container.hide()
-		hseparator_extra_space.hide()
+		hseparator_extra_space.show()
 	else:
 		%MarginItemsContainer.show()
 		subcategories_container.show()
 		subcategories_separator.show()
 		maincategories_container.show()
-		hseparator_extra_space.show()
+		hseparator_extra_space.hide()
 
 
 func _on_visibility_changed() -> void:
