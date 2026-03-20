@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=26 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -12,6 +12,7 @@
 [ext_resource type="Texture2D" uid="uid://cvxfoyvj0kqtw" path="res://src/ui/components/menu/icons/settings-outlined.svg" id="11_rdch8"]
 [ext_resource type="Texture2D" uid="uid://dp6cvwbfawfsa" path="res://src/ui/components/menu/icons/settings.svg" id="12_7v87b"]
 [ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/components/discover/discover_button.gd" id="13_2fqoa"]
+[ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/blur_background/quick_blur.tres" id="16_7v87b"]
 [ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/components/backpack/backpack_button.gd" id="16_p7nyr"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="17_rdch8"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="17_tc0me"]
@@ -177,6 +178,15 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
+
+[node name="BackgrundBlur" type="ColorRect" parent="Control_DeployingProfile"]
+material = ExtResource("16_7v87b")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="Control_DeployingProfile"]
 layout_mode = 1

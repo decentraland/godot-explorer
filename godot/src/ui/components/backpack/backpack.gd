@@ -70,6 +70,7 @@ var _avatar_update_retries: int = 0
 @onready var open_marketplace_label := %RichTextBox_OpenMarketplace
 @onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
 @onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
+@onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
 
 
 # gdlint:ignore = async-function-name
@@ -102,6 +103,7 @@ func _ready():
 	subcategories_separator.show()
 	maincategories_container.show()
 	hseparator_extra_space.hide()
+	hseparator_extra_space_b.hide()
 
 	open_marketplace_label.show()
 	if Global.is_ios():
@@ -609,13 +611,15 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 		subcategories_container.hide()
 		subcategories_separator.hide()
 		maincategories_container.hide()
-		hseparator_extra_space.show()
+		hseparator_extra_space.hide()
+		hseparator_extra_space_b.hide()
 	else:
 		%MarginItemsContainer.show()
 		subcategories_container.show()
 		subcategories_separator.show()
 		maincategories_container.show()
 		hseparator_extra_space.hide()
+		hseparator_extra_space_b.show()
 
 
 func _on_visibility_changed() -> void:
