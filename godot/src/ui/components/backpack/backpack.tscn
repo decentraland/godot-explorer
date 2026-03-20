@@ -674,6 +674,14 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 18
 
+[node name="wearable_button_top_head" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+layout_mode = 2
+theme_type_variation = &"SubcategoryButton"
+action_mode = 1
+button_group = SubResource("ButtonGroup_meiko")
+icon = null
+filter_category = 19
+
 [node name="wearable_button_eyewear" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
@@ -715,6 +723,15 @@ icon = null
 filter_category = 21
 
 [node name="HSeparator_SizeMaintainer" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
+Otherwise the Editor shrinks if there is less than 3 wearables."
+custom_minimum_size = Vector2(630, 0)
+layout_mode = 2
+theme_override_constants/separation = 0
+theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
+
+[node name="HSeparator_ExtraSpaceB" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+unique_name_in_owner = true
 editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
 Otherwise the Editor shrinks if there is less than 3 wearables."
 custom_minimum_size = Vector2(630, 0)
