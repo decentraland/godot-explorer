@@ -43,7 +43,7 @@ func _ready():
 	await Global.loading_finished
 	Global.on_chat_message.emit(
 		"system",
-		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b]",
+		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b][/color]",
 		Time.get_unix_time_from_system()
 	)
 
@@ -108,7 +108,6 @@ func exit_chat() -> void:
 
 func async_start_chat():
 	show()
-	panel_container_navbar.show()
 
 	Global.get_explorer().release_mouse()
 	DisplayServer.virtual_keyboard_show("")
@@ -124,7 +123,6 @@ func async_start_chat():
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
 	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
-	new_chat.compact_view = true
 	new_chat.reduce_text = false
 	new_chat.max_panel_width = 550
 	new_chat.set_chat(address, message, timestamp)

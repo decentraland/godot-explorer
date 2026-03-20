@@ -1,9 +1,8 @@
-[gd_scene load_steps=12 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=11 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
 [ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
-[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
 [ext_resource type="FontVariation" uid="uid://buop40k3e4u13" path="res://assets/themes/fonts/multilanguage/multilanguage_font-SemiBold.tres" id="6_mb7k1"]
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="8_0pohw"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_5a8fu"]
@@ -14,9 +13,6 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8g52q"]
-bg_color = Color(0, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5a8fu"]
 bg_color = Color(0.276861, 0.698933, 0.396718, 1)
@@ -31,6 +27,9 @@ font = ExtResource("9_5a8fu")
 font_size = 10
 outline_size = 2
 outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8g52q"]
+bg_color = Color(0, 0, 0, 1)
 
 [node name="Panel_Chat" type="PanelContainer"]
 custom_minimum_size = Vector2(370, 0)
@@ -48,39 +47,7 @@ script = ExtResource("1_llfi5")
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="HBoxContainer_Content" type="HBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 0
-
-[node name="PanelContainer_Navbar" type="PanelContainer" parent="VBoxContainer/HBoxContainer_Content"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_8g52q")
-
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar"]
-custom_minimum_size = Vector2(70, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 8
-
-[node name="HBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 11
-
-[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/HBoxContainer_Content/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 2
-texture = ExtResource("4_euk1h")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer/HBoxContainer_Content"]
+[node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -91,30 +58,31 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Chat"]
 layout_mode = 2
 
-[node name="ScrollContainer_ChatsList" type="ScrollContainer" parent="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/VBoxContainer"]
+[node name="ScrollContainer_ChatsList" type="ScrollContainer" parent="VBoxContainer/MarginContainer_Chat/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 2
 
-[node name="VBoxContainerChat" type="VBoxContainer" parent="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList"]
+[node name="VBoxContainerChat" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 8
 
-[node name="MarginContainer_GoToNewMessages" type="MarginContainer" parent="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat"]
+[node name="MarginContainer_GoToNewMessages" type="MarginContainer" parent="VBoxContainer/MarginContainer_Chat"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_right = 0
 theme_override_constants/margin_bottom = 60
 
-[node name="Button_GoToLast" type="Button" parent="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages"]
+[node name="Button_GoToLast" type="Button" parent="VBoxContainer/MarginContainer_Chat/MarginContainer_GoToNewMessages"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
@@ -125,7 +93,7 @@ icon = ExtResource("8_0pohw")
 icon_alignment = 1
 expand_icon = true
 
-[node name="PanelContainer_NewMessages" type="PanelContainer" parent="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast"]
+[node name="PanelContainer_NewMessages" type="PanelContainer" parent="VBoxContainer/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -142,14 +110,14 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_5a8fu")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages"]
 layout_mode = 2
 theme_override_constants/margin_left = 3
 theme_override_constants/margin_top = 3
 theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 3
 
-[node name="Label_NewMessages" type="Label" parent="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages/MarginContainer"]
+[node name="Label_NewMessages" type="Label" parent="VBoxContainer/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -195,9 +163,9 @@ text = "SEND"
 icon = ExtResource("3_umu3q")
 icon_alignment = 2
 
-[connection signal="gui_input" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_gui_input"]
-[connection signal="scroll_ended" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_scroll_ended"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer_Content/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_go_to_last_pressed"]
+[connection signal="gui_input" from="VBoxContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_gui_input"]
+[connection signal="scroll_ended" from="VBoxContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" to="." method="_on_scroll_container_chats_list_scroll_ended"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_Chat/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_go_to_last_pressed"]
 [connection signal="focus_exited" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
 [connection signal="text_submitted" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
 [connection signal="pressed" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]
