@@ -84,7 +84,6 @@ func set_chat(address: String, message: String, _timestamp: float) -> void:
 	else:
 		set_avatar(Global.avatars.get_avatar_by_address(address))
 
-	_layout_message_row()
 	_apply_message_background()
 
 	var processed_message = make_urls_clickable(new_text)
@@ -142,19 +141,6 @@ func _set_system_sender() -> void:
 	tag = ""
 	nickname_color_hex = "00ff00"
 	has_claimed_name = false
-
-
-func _layout_message_row() -> void:
-	if is_own_message and _address != "system":
-		message_row.alignment = BoxContainer.ALIGNMENT_END
-		if message_row.get_child(0) != row_spacer:
-			message_row.move_child(row_spacer, 0)
-			message_row.move_child(message_panel, 1)
-	else:
-		message_row.alignment = BoxContainer.ALIGNMENT_BEGIN
-		if message_row.get_child(0) != message_panel:
-			message_row.move_child(message_panel, 0)
-			message_row.move_child(row_spacer, 1)
 
 
 func _apply_message_background() -> void:

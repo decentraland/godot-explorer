@@ -36,7 +36,6 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 5
-alignment = 2
 
 [node name="PanelContainer_Message" type="PanelContainer" parent="MarginContainer/HBoxContainer_MessageRow"]
 unique_name_in_owner = true
