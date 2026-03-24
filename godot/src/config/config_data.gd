@@ -31,6 +31,7 @@ enum ConfigParams {
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
+	GAMEPAD_CAMERA_SENSITIVITY,
 }
 
 # Graphics profile index for Custom (manual settings)
@@ -205,7 +206,8 @@ var audio_mic_amplification: float = 100.0:
 
 var gamepad_camera_sensitivity: float = 50.0:
 	set(value):
-		gamepad_camera_sensitivity = value
+		gamepad_camera_sensitivity = maxf(value, 1.0)
+		param_changed.emit(ConfigParams.GAMEPAD_CAMERA_SENSITIVITY)
 
 var analytics_user_id: String = "":
 	set(value):

@@ -5,10 +5,13 @@ const JOYSTICK_CAMERA_DEADZONE: float = 0.15
 
 var _player: Player = null
 var _lb_held: bool = false
+var _camera_sensitivity_multiplier: float = 0.0
 
 
 func _init(player: Player):
 	_player = player
+	_refresh_camera_sensitivity_multiplier()
+	Global.get_config().param_changed.connect(_on_config_param_changed)
 
 	# Erase gamepad button events so face buttons are handled manually with LB as modifier
 	for action in ["ia_jump", "ia_primary", "ia_secondary", "ia_action_3", "ia_action_4"]:
@@ -39,10 +42,9 @@ func _physics_process(_dt: float) -> void:
 		right_y = 0.0
 
 	if right_x != 0.0 or right_y != 0.0:
-		var sens: float = Global.get_config().gamepad_camera_sensitivity * 0.06
-		_player.rotate_y(deg_to_rad(-right_x) * sens)
-		_player.avatar.rotate_y(deg_to_rad(right_x) * sens)
-		_player.mount_camera.rotate_x(deg_to_rad(-right_y) * sens)
+		_player.rotate_y(deg_to_rad(-right_x) * _camera_sensitivity_multiplier)
+		_player.avatar.rotate_y(deg_to_rad(right_x) * _camera_sensitivity_multiplier)
+		_player.mount_camera.rotate_x(deg_to_rad(-right_y) * _camera_sensitivity_multiplier)
 		_player.clamp_camera_rotation()
 
 
@@ -85,3 +87,12 @@ func _handle_gamepad_button(event: InputEventJoypadButton) -> void:
 		Input.action_press(action)
 	else:
 		Input.action_release(action)
+
+
+func _on_config_param_changed(param: int) -> void:
+	if param == ConfigData.ConfigParams.GAMEPAD_CAMERA_SENSITIVITY:
+		_refresh_camera_sensitivity_multiplier()
+
+
+func _refresh_camera_sensitivity_multiplier() -> void:
+	_camera_sensitivity_multiplier = Global.get_config().gamepad_camera_sensitivity * 0.06

@@ -11,6 +11,7 @@ enum SceneLogLevel {
 }
 
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
+const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -815,11 +816,18 @@ func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
 
 
 func _init_gamepad_sensitivity() -> void:
-	gamepad_camera_sensitivity.value = Global.get_config().gamepad_camera_sensitivity
+	gamepad_camera_sensitivity.min_value = MIN_GAMEPAD_CAMERA_SENSITIVITY
+	var clamped_sensitivity := maxf(
+		Global.get_config().gamepad_camera_sensitivity, MIN_GAMEPAD_CAMERA_SENSITIVITY
+	)
+	gamepad_camera_sensitivity.value = clamped_sensitivity
+	if clamped_sensitivity != Global.get_config().gamepad_camera_sensitivity:
+		Global.get_config().gamepad_camera_sensitivity = clamped_sensitivity
+		Global.get_config().save_to_settings_file()
 
 
 func _on_gamepad_camera_sensitivity_value_changed(value: float) -> void:
-	Global.get_config().gamepad_camera_sensitivity = value
+	Global.get_config().gamepad_camera_sensitivity = maxf(value, MIN_GAMEPAD_CAMERA_SENSITIVITY)
 	Global.get_config().save_to_settings_file()
 
 
