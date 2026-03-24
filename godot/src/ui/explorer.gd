@@ -246,7 +246,8 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
-		Global.scene_fetcher.set_preview_url(cmd_realm)
+		if not Global.deep_link_obj.preview.is_empty():
+			Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
