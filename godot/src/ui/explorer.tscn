@@ -450,6 +450,7 @@ script = ExtResource("20_064cw")
 [connection signal="on_exit_chat" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_exit_chat"]
 [connection signal="on_open_chat" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_open_chat"]
 [connection signal="submit_message" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
+[connection signal="gui_input" from="UI/ChatContainer" to="." method="_on_chat_container_gui_input"]
 [connection signal="pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Panel/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="gui_input" from="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels" to="." method="_on_h_box_container_right_panels_gui_input"]
 [connection signal="emote_wheel_closed" from="UI/SafeMarginContainerHUD/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]

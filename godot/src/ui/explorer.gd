@@ -844,6 +844,20 @@ func _on_ui_root_gui_input(event: InputEvent):
 				Input.action_release("ia_pointer")
 
 
+func _on_chat_container_gui_input(event: InputEvent) -> void:
+	if not chat_container.visible:
+		return
+
+	var should_close := false
+	if event is InputEventScreenTouch:
+		should_close = event.pressed
+	elif event is InputEventMouseButton:
+		should_close = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+
+	if should_close:
+		panel_chat.exit_chat()
+
+
 func _on_panel_profile_open_profile():
 	_open_own_profile()
 
