@@ -34,6 +34,15 @@ radial_fill_degrees = 60.0
 texture_progress = ExtResource("1_roup2")
 script = ExtResource("2_rds4p")
 
+[node name="BackgroundCircle" type="TextureRect" parent="."]
+unique_name_in_owner = true
+modulate = Color(0, 0, 0, 0.4)
+show_behind_parent = true
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("1_roup2")
+
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
 &"": SubResource("AnimationLibrary_rrpsh")

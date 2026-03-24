@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://dd2w2ysk3akdj"]
+[gd_scene load_steps=24 format=3 uid="uid://dd2w2ysk3akdj"]
 
 [ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
 [ext_resource type="StyleBox" uid="uid://c1jov5bbl6rpn" path="res://src/ui/components/friends/friends_separator.tres" id="2_ifioe"]
@@ -6,10 +6,10 @@
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_wese4"]
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="2_x48bx"]
 [ext_resource type="Texture2D" uid="uid://diaawk0cbxw0j" path="res://assets/ui/up_arrow.svg" id="5_h1uhn"]
-[ext_resource type="Texture2D" uid="uid://bogcegqbgujx4" path="res://assets/ui/warning-color.svg" id="7_wenh7"]
+[ext_resource type="Texture2D" uid="uid://bldchilj3kjhx" path="res://assets/ui/warning-triangle.svg" id="7_ekuv1"]
 [ext_resource type="Texture2D" uid="uid://dkp2m2ov71fv5" path="res://assets/ui/friends-color.svg" id="8_nlw6c"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="9_2vk4g"]
-[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="10_spinner"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="11_ekuv1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wese4"]
 bg_color = Color(0, 0, 0, 0.8)
@@ -38,19 +38,27 @@ bg_color = Color(1, 1, 1, 0.09803922)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nlw6c"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vy1pd"]
+
 [sub_resource type="LabelSettings" id="LabelSettings_2vk4g"]
 font = ExtResource("2_wese4")
-font_size = 14
+font_size = 21
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_7cbs5"]
+font = ExtResource("11_ekuv1")
+font_size = 19
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="Gradient" id="Gradient_l4o08"]
 colors = PackedColorArray(0.086275, 0.0823529, 0.0941176, 0, 0.086275, 0.0823529, 0.0941176, 1)
@@ -338,14 +346,15 @@ player_list_type = 1
 
 [node name="VBoxContainer_NoService" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 0
 alignment = 1
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
-custom_minimum_size = Vector2(60, 60)
+custom_minimum_size = Vector2(90, 60)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -360,23 +369,35 @@ theme_override_constants/margin_bottom = 12
 
 [node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService/PanelContainer/MarginContainer"]
 layout_mode = 2
-texture = ExtResource("7_wenh7")
+texture = ExtResource("7_ekuv1")
 expand_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
 layout_mode = 2
-text = "Whoops..Friends System is Down!"
+text = "Whoops...
+Friends System is Down!"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
+
 [node name="Label_OutOfService" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 0)
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "No Friends System Message"
+text = "Something went wrong and we couldn’t retrieve your friends."
+label_settings = SubResource("LabelSettings_7cbs5")
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -428,25 +449,11 @@ autowrap_mode = 3
 
 [node name="VBoxContainer_Loading" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 alignment = 1
-
-[node name="LoadingSpinner" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_Loading" instance=ExtResource("10_spinner")]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 2
-size_flags_horizontal = 4
-
-[node name="Label_Loading" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_Loading"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Loading friends..."
-label_settings = SubResource("LabelSettings_2vk4g")
-horizontal_alignment = 1
 
 [node name="ScrollContainer_Nearby" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
 unique_name_in_owner = true
@@ -456,13 +463,75 @@ size_flags_vertical = 3
 horizontal_scroll_mode = 0
 scroll_deadzone = 10
 
-[node name="NearbyList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="NearbyList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("2_l4o08")
 player_list_type = 3
+
+[node name="VBoxContainer_NoNearbyPlayers" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers/PanelContainer/MarginContainer"]
+layout_mode = 2
+texture = ExtResource("8_nlw6c")
+expand_mode = 4
+stretch_mode = 3
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+layout_mode = 2
+text = "No One Nearby"
+label_settings = SubResource("LabelSettings_2vk4g")
+horizontal_alignment = 1
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
+
+[node name="Label_NoNearby" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 14
+text = "Try traveling somewhere else to meet new people."
+label_settings = SubResource("LabelSettings_7cbs5")
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="ScrollContainer_Blocked" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
 unique_name_in_owner = true
@@ -486,15 +555,14 @@ player_list_type = 4
 
 [node name="VBoxContainer_NoBlockeds" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 15
+theme_override_constants/separation = 0
 alignment = 1
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
-custom_minimum_size = Vector2(60, 60)
+custom_minimum_size = Vector2(90, 90)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -512,20 +580,31 @@ layout_mode = 2
 texture = ExtResource("9_2vk4g")
 expand_mode = 4
 
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
+
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
 layout_mode = 2
 text = "No Blocked Accounts Yet"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
+
 [node name="Label_NoBlockeds" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(250, 0)
+custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
 text = "No Blocked Accounts Message"
+label_settings = SubResource("LabelSettings_7cbs5")
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3

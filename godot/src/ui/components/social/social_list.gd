@@ -7,6 +7,7 @@ signal load_error(error_message: String)
 const SOCIAL_TYPE = SocialItemData.SocialType
 const BLOCKED_AVATAR_ALIAS_BASE: int = 20000
 const NEARBY_SYNC_INTERVAL: float = 5.0
+const FRIENDS_ONLINE_OFFLINE_RECONCILE_INTERVAL: float = 15.0
 
 @export var player_list_type: SocialItemData.SocialType
 
@@ -14,6 +15,8 @@ var list_size: int = 0
 var has_error: bool = false
 var _update_request_id: int = 0
 var _nearby_sync_timer: Timer = null
+var _friends_reconcile_timer: Timer = null
+var _friends_reconcile_in_progress: bool = false
 
 
 func _ready():
@@ -45,6 +48,26 @@ func _ready():
 		# Reload request list when blacklist changes to pick up previously hidden requests
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 
+	# Periodic reconciliation for ONLINE/OFFLINE lists.
+	# This corrects missed connectivity events by reconciling desired online/offline sets.
+	if player_list_type == SOCIAL_TYPE.ONLINE or player_list_type == SOCIAL_TYPE.OFFLINE:
+		_friends_reconcile_timer = Timer.new()
+		_friends_reconcile_timer.wait_time = FRIENDS_ONLINE_OFFLINE_RECONCILE_INTERVAL
+		_friends_reconcile_timer.timeout.connect(_async_on_friends_reconcile_timeout)
+		add_child(_friends_reconcile_timer)
+		_friends_reconcile_timer.start()
+
+
+func _async_on_friends_reconcile_timeout() -> void:
+	if not _is_panel_visible():
+		return
+	if _friends_reconcile_in_progress:
+		return
+	_friends_reconcile_in_progress = true
+	# Run reconciliation using the existing ONLINE/OFFLINE reconcile logic.
+	await async_update_list()
+	_friends_reconcile_in_progress = false
+
 
 func _on_avatar_changed(_arg = null) -> void:
 	# Trigger sync when avatars change (for immediate response)
@@ -66,6 +89,9 @@ func _sync_nearby_list() -> void:
 			continue
 		# Skip avatars without valid address (not ready yet)
 		if avatar.avatar_id.is_empty():
+			continue
+		# Skip blocked users (don't show skeletons/items for them)
+		if Global.social_blacklist and Global.social_blacklist.is_blocked(avatar.avatar_id):
 			continue
 		current_avatar_addresses[avatar.avatar_id] = avatar
 
@@ -123,6 +149,7 @@ func _sync_nearby_list() -> void:
 func _add_item_for_avatar(avatar: Avatar) -> void:
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 	add_child(social_item)
+	social_item.visible = true
 	social_item.set_type(player_list_type)
 	social_item.set_data_from_avatar(avatar)
 
@@ -236,19 +263,22 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 	# Increment request ID to invalidate any in-flight requests
 	_update_request_id += 1
 	var current_request_id = _update_request_id
-
-	remove_items()
 	match player_list_type:
 		SOCIAL_TYPE.NEARBY:
-			# For NEARBY, use sync-based approach
+			# For NEARBY, use sync-based approach without clearing first.
+			# Clearing causes a visible "blank gap" when reopening the panel: the tab can still show
+			# a stale count while the list is empty until avatars are ready again.
 			_sync_nearby_list()
+			_update_list_size()
 		SOCIAL_TYPE.BLOCKED:
+			remove_items()
 			await _async_reload_blocked_list(current_request_id)
 		SOCIAL_TYPE.ONLINE:
 			await _async_reload_online_list(current_request_id)
 		SOCIAL_TYPE.OFFLINE:
 			await _async_reload_offline_list(current_request_id)
 		SOCIAL_TYPE.REQUEST:
+			remove_items()
 			await _async_reload_request_list(current_request_id)
 
 
@@ -287,26 +317,73 @@ func _async_reload_online_list(request_id: int) -> void:
 		list_size = 0
 		load_error.emit("Friends service unavailable")
 		size_changed.emit()
+		remove_items()
 		return
 
 	has_error = false
 
-	# Filter to only show friends that are ONLINE
-	var online_friends = []
 	var friends_panel = _get_friends_panel()
+	var offline_list = null
+	if friends_panel != null:
+		offline_list = friends_panel.offline_list
+
+	# Desired ONLINE set: address_lower -> SocialItemData
+	var desired_online := {}
 	for friend in all_friends:
-		var is_online = friends_panel and friends_panel.is_friend_online(friend.address)
-		if is_online:
-			online_friends.append(friend)
+		if friends_panel and friends_panel.is_friend_online(friend.address):
+			desired_online[friend.address.to_lower()] = friend
 
-	if online_friends.is_empty():
-		list_size = 0
-		size_changed.emit()
-		return
+	var should_load := _is_panel_visible()
 
-	var should_load = _is_panel_visible()
-	add_items_by_social_item_data(online_friends, should_load)
+	# 1) Move any existing items that are no longer desired ONLINE to OFFLINE.
+	# Copy children array because we'll move/remove during iteration.
+	var children := get_children()
+	for child in children:
+		if not child is Control:
+			continue
+		if not ("social_data" in child and child.social_data != null):
+			continue
+		var key = child.social_data.address.to_lower()
+		if not desired_online.has(key):
+			# Move node to offline list if possible (no reload).
+			if offline_list != null:
+				remove_child(child)
+				offline_list.add_child(child)
+				child.set_type(SOCIAL_TYPE.OFFLINE)
+			else:
+				child.queue_free()
+
+	# 2) Add missing ONLINE items (move from OFFLINE if already present).
+	var existing := {}
+	for child in get_children():
+		if not child is Control:
+			continue
+		if not ("social_data" in child and child.social_data != null):
+			continue
+		existing[child.social_data.address.to_lower()] = true
+
+	var to_add := []
+	for key in desired_online.keys():
+		if existing.has(key):
+			continue
+		var friend_data: SocialItemData = desired_online[key]
+		var moved := false
+		if offline_list != null and offline_list.has_item_with_address(friend_data.address):
+			var node = offline_list.pop_item_by_address(friend_data.address)
+			if node != null:
+				add_child(node)
+				node.set_type(SOCIAL_TYPE.ONLINE)
+				moved = true
+		if not moved:
+			to_add.append(friend_data)
+
+	if not to_add.is_empty():
+		add_items_by_social_item_data(to_add, should_load)
+
+	# Update sizes for both lists.
 	_update_list_size()
+	if offline_list != null:
+		offline_list._update_list_size()
 
 
 func _async_reload_offline_list(request_id: int) -> void:
@@ -320,23 +397,68 @@ func _async_reload_offline_list(request_id: int) -> void:
 		# null means error occurred - don't show error for offline list, online list handles it
 		list_size = 0
 		size_changed.emit()
+		remove_items()
 		return
 
-	# Filter to only show friends that are OFFLINE (not in online tracking)
-	var offline_friends = []
 	var friends_panel = _get_friends_panel()
+	var online_list = null
+	if friends_panel != null:
+		online_list = friends_panel.online_list
+
+	# Desired OFFLINE set: address_lower -> SocialItemData
+	var desired_offline := {}
 	for friend in all_friends:
 		if not friends_panel or not friends_panel.is_friend_online(friend.address):
-			offline_friends.append(friend)
+			desired_offline[friend.address.to_lower()] = friend
 
-	if offline_friends.is_empty():
-		list_size = 0
-		size_changed.emit()
-		return
+	var should_load := _is_panel_visible()
 
-	var should_load = _is_panel_visible()
-	add_items_by_social_item_data(offline_friends, should_load)
+	# 1) Move any existing items that are no longer desired OFFLINE to ONLINE.
+	var children := get_children()
+	for child in children:
+		if not child is Control:
+			continue
+		if not ("social_data" in child and child.social_data != null):
+			continue
+		var key = child.social_data.address.to_lower()
+		if not desired_offline.has(key):
+			if online_list != null:
+				remove_child(child)
+				online_list.add_child(child)
+				child.set_type(SOCIAL_TYPE.ONLINE)
+			else:
+				child.queue_free()
+
+	# 2) Add missing OFFLINE items (move from ONLINE if already present).
+	var existing := {}
+	for child in get_children():
+		if not child is Control:
+			continue
+		if not ("social_data" in child and child.social_data != null):
+			continue
+		existing[child.social_data.address.to_lower()] = true
+
+	var to_add := []
+	for key in desired_offline.keys():
+		if existing.has(key):
+			continue
+		var friend_data: SocialItemData = desired_offline[key]
+		var moved := false
+		if online_list != null and online_list.has_item_with_address(friend_data.address):
+			var node = online_list.pop_item_by_address(friend_data.address)
+			if node != null:
+				add_child(node)
+				node.set_type(SOCIAL_TYPE.OFFLINE)
+				moved = true
+		if not moved:
+			to_add.append(friend_data)
+
+	if not to_add.is_empty():
+		add_items_by_social_item_data(to_add, should_load)
+
 	_update_list_size()
+	if online_list != null:
+		online_list._update_list_size()
 
 
 func _get_friends_panel():
@@ -443,9 +565,10 @@ func remove_items() -> void:
 func remove_item_by_address(address: String) -> bool:
 	# Remove a specific item by address without reloading the list
 	# Returns true if item was found and removed
+	var address_lower = address.to_lower()
 	for child in get_children():
 		if "social_data" in child and child.social_data != null:
-			if child.social_data.address == address:
+			if child.social_data.address.to_lower() == address_lower:
 				child.queue_free()
 				# Update list size immediately (decrement since queue_free is deferred)
 				list_size = maxi(0, list_size - 1)
@@ -454,20 +577,35 @@ func remove_item_by_address(address: String) -> bool:
 	return false
 
 
+func pop_item_by_address(address: String) -> Control:
+	# Remove and return a specific SocialItem node by address without freeing it.
+	# Used to move items between ONLINE/OFFLINE lists without triggering skeleton/load.
+	for child in get_children():
+		if not child is Control:
+			continue
+		if "social_data" in child and child.social_data != null:
+			if child.social_data.address.to_lower() == address.to_lower():
+				remove_child(child)
+				return child
+	return null
+
+
 func has_item_with_address(address: String) -> bool:
 	# Check if an item with the given address exists in the list
+	var address_lower = address.to_lower()
 	for child in get_children():
 		if "social_data" in child and child.social_data != null:
-			if child.social_data.address == address:
+			if child.social_data.address.to_lower() == address_lower:
 				return true
 	return false
 
 
 func get_item_data_by_address(address: String) -> SocialItemData:
 	# Get the SocialItemData for an item by address (returns null if not found)
+	var address_lower = address.to_lower()
 	for child in get_children():
 		if "social_data" in child and child.social_data != null:
-			if child.social_data.address == address:
+			if child.social_data.address.to_lower() == address_lower:
 				return child.social_data
 	return null
 
@@ -476,6 +614,7 @@ func add_item_by_social_item_data(item: SocialItemData, should_load: bool = true
 	# Add a single item to the list without clearing existing items
 	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 	self.add_child(social_item)
+	social_item.visible = true
 	social_item.set_type(player_list_type)
 	social_item.set_data(item, should_load)
 	_update_list_size()
@@ -498,6 +637,7 @@ func add_items_by_social_item_data(item_list, should_load: bool = true) -> void:
 	for item in item_list:
 		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 		self.add_child(social_item)
+		social_item.visible = true
 		social_item.set_type(player_list_type)
 		social_item.set_data(item as SocialItemData, should_load)
 

@@ -55,9 +55,20 @@ func async_set_only_collectibles(new_state: bool):
 	await _async_load_emotes()
 
 
+func _add_default_emotes():
+	for emote_urn in Emotes.DEFAULT_EMOTE_NAMES.keys():
+		var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
+		emote_item.button_group = button_group_all_emotes
+		emote_item.async_load_from_urn(emote_urn)
+		emote_item.play_emote.connect(self._on_emote_item_play_emote)
+		container_all_emotes.add_child(emote_item)
+		all_emote_items.push_back(emote_item)
+
+
 func _async_add_remote_emotes(page_number: int):
 	var remote_emotes = await WearableRequest.async_request_emotes(page_number, PAGE_SIZE)
 	if remote_emotes != null:
+		remote_emotes.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
 		_can_load_more = remote_emotes.elements.size() == PAGE_SIZE
 		for emotes in remote_emotes.elements:
 			var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
@@ -66,6 +77,11 @@ func _async_add_remote_emotes(page_number: int):
 			emote_item.play_emote.connect(self._on_emote_item_play_emote)
 			container_all_emotes.add_child(emote_item)
 			all_emote_items.push_back(emote_item)
+	else:
+		_can_load_more = false
+
+	if not _can_load_more and not _only_collectibles:
+		_add_default_emotes()
 	_update_grid_equipped_state()
 
 
@@ -76,16 +92,6 @@ func _async_load_emotes():
 		child.queue_free()
 
 	all_emote_items.clear()
-
-	if not _only_collectibles:
-		# Load default emotes
-		for emote_urn in Emotes.DEFAULT_EMOTE_NAMES.keys():
-			var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
-			emote_item.button_group = button_group_all_emotes
-			emote_item.async_load_from_urn(emote_urn)
-			emote_item.play_emote.connect(self._on_emote_item_play_emote)
-			container_all_emotes.add_child(emote_item)
-			all_emote_items.push_back(emote_item)
 
 	_last_loaded_page = 1
 	await _async_add_remote_emotes(_last_loaded_page)

@@ -4,14 +4,22 @@ extends Control
 signal keyword_selected(keyword: Keyword)
 signal should_show_container(show: bool)
 
-enum KeywordType { HISTORY, POPULAR, CATEGORY, COORDINATES }
+enum KeywordType { HISTORY, POPULAR, CATEGORY, COORDINATES, EVENT }
 
-var popular_keywords: Array[Keyword]
-var coordinates_destinations: Dictionary[int, Dictionary]
+const SEARCH_DEBOUNCE_SEC := 0.4
+const SEARCH_LIMIT := 8
+
+var _pending_search_text: String = ""
+var _pending_coordinates: Vector2i = Vector2i.ZERO
+var _pending_is_coordinates: bool = false
+var _has_api_results: bool = false
+var _search_timer: Timer
+var _search_request_id: int = 0
+var _last_query_time_ms: int = 0
 
 @onready var search_sugestions := %SearchSugestions
 @onready var margin_container_recent_searches: MarginContainer = %MarginContainer_RecentSearchs
-@onready var button_clear_history: Button = %Button_ClearHistory
+@onready var button_clear_history := %Button_ClearHistory
 
 
 class Keyword:
@@ -27,46 +35,11 @@ class Keyword:
 func _ready() -> void:
 	margin_container_recent_searches.hide()
 	button_clear_history.pressed.connect(_on_button_clear_history_pressed)
-	async_get_popular_keywords()
-
-
-func async_get_popular_keywords() -> void:
-	var url := PlacesHelper.get_api_url()
-	url += "?offset=0&limit=100"
-	url += "&order_by=most_active"
-	url += "&sdk=7"
-	if Global.is_ios_or_emulating():
-		url += "&tag=allowed_ios"
-
-	var fetch_result: PlacesHelper.FetchResult = await PlacesHelper.async_fetch_places(url)
-	match fetch_result.status:
-		PlacesHelper.FetchResultStatus.ERROR:
-			printerr("Error request places ", url, " ", fetch_result.promise_error.get_error())
-			return
-		PlacesHelper.FetchResultStatus.OK:
-			pass
-
-	for destination in fetch_result.result:
-		if destination.world:
-			continue
-		var destination_name: String = NotificationUtils.sanitize_notification_text(
-			trim_string(destination.title.to_lower())
-		)
-
-		if destination_name.length() >= 3:
-			popular_keywords.push_back(Keyword.new(destination_name, KeywordType.POPULAR))
-
-		for p: String in destination.positions:
-			var p_split := p.split(",")
-			var px := p_split[0].to_int()
-			var py := p_split[1].to_int()
-			if not coordinates_destinations.has(px):
-				coordinates_destinations[px] = {}
-			coordinates_destinations[px][py] = {
-				"title": destination.title,
-				"id": destination.id,
-				"first_position": destination.positions[0]
-			}
+	_search_timer = Timer.new()
+	_search_timer.wait_time = SEARCH_DEBOUNCE_SEC
+	_search_timer.one_shot = true
+	_search_timer.timeout.connect(_on_search_timer_timeout)
+	add_child(_search_timer)
 
 
 func set_keyword_search_text(_search_text: String) -> void:
@@ -84,60 +57,159 @@ func set_keyword_search_text(_search_text: String) -> void:
 			coordinates.y = int(INF)
 
 	if text_len <= 2:
-		var count_history := 0
-		for k in Global.get_config().search_history:
-			if count_history >= 4:
-				break
-			var hist_keyword := Keyword.new(k, KeywordType.HISTORY)
-			if (
-				trimmed_search_text.is_empty()
-				or hist_keyword.keyword.contains(trimmed_search_text)
-				or hist_keyword.keyword.similarity(trimmed_search_text) > 0.2
-			):
-				keywords_result.push_back(hist_keyword)
-				count_history += 1
-		if keywords_result.is_empty():
-			should_show_container.emit(false)
-			return
-		should_show_container.emit(true)
-		_build_suggestions_ui(keywords_result, true, trimmed_search_text)
+		_search_timer.stop()
+		_pending_search_text = ""
+		_pending_is_coordinates = false
+		# Keep API results visible while the user edits; only show recent searches
+		# when no API results are currently displayed.
+		if not _has_api_results:
+			var count_history := 0
+			for k in Global.get_config().search_history:
+				if count_history >= 4:
+					break
+				var hist_keyword := Keyword.new(k, KeywordType.HISTORY)
+				if (
+					trimmed_search_text.is_empty()
+					or hist_keyword.keyword.contains(trimmed_search_text)
+					or hist_keyword.keyword.similarity(trimmed_search_text) > 0.2
+				):
+					keywords_result.push_back(hist_keyword)
+					count_history += 1
+			if keywords_result.is_empty():
+				async_search_places("")
+			else:
+				should_show_container.emit(true)
+				_build_suggestions_ui(keywords_result, true, trimmed_search_text)
 		return
 
 	if text_len >= 3:
 		if is_coordinates:
-			if coordinates_destinations.has(coordinates.x):
-				if coordinates_destinations[coordinates.x].has(coordinates.y):
-					var title: String = coordinates_destinations[coordinates.x][coordinates.y].title
-					var coordinate_keyword := Keyword.new(title, KeywordType.COORDINATES)
-					coordinate_keyword.coordinates = Vector2i(coordinates.x, coordinates.y)
-					keywords_result.push_back(coordinate_keyword)
-				else:
-					var shown_destinations: Array[String]
-					for d in coordinates_destinations[coordinates.x]:
-						var dd: Dictionary = coordinates_destinations[coordinates.x][d]
-						if shown_destinations.has(dd.id):
-							continue
-						var title: String = trim_string(dd.title)
-						title = NotificationUtils.sanitize_notification_text(title, true, false)
-						var p_split: Array = dd.first_position.split(",")
-						var px: int = p_split[0].to_int()
-						var py: int = p_split[1].to_int()
-						var coordinate_keyword := Keyword.new(title, KeywordType.COORDINATES)
-						coordinate_keyword.coordinates = Vector2i(px, py)
-						keywords_result.push_back(coordinate_keyword)
-						shown_destinations.append(dd.id)
+			_pending_search_text = trimmed_search_text
+			_pending_coordinates = Vector2i(coordinates.x, coordinates.y)
+			_pending_is_coordinates = true
 		else:
-			for k in popular_keywords:
-				if (
-					k.keyword.contains(trimmed_search_text)
-					or k.keyword.similarity(trimmed_search_text) > 0.2
-				):
-					keywords_result.push_back(k)
+			_pending_search_text = trimmed_search_text
+			_pending_is_coordinates = false
 		should_show_container.emit(true)
-		_build_suggestions_ui(keywords_result, false, trimmed_search_text)
+		var elapsed_ms := Time.get_ticks_msec() - _last_query_time_ms
+		if elapsed_ms >= SEARCH_DEBOUNCE_SEC * 1000:
+			_on_search_timer_timeout()
+		else:
+			_search_timer.start()
 		return
 
-	should_show_container.emit(false)
+
+func stop_suggestions() -> void:
+	_search_timer.stop()
+	_pending_search_text = ""
+	_pending_is_coordinates = false
+	_has_api_results = false
+	_search_request_id += 1
+	for c in search_sugestions.get_children():
+		c.queue_free()
+	margin_container_recent_searches.hide()
+
+
+func _on_search_timer_timeout() -> void:
+	_last_query_time_ms = Time.get_ticks_msec()
+	if _pending_is_coordinates:
+		async_search_coordinates(_pending_search_text, _pending_coordinates)
+	else:
+		async_search_places(_pending_search_text)
+
+
+func async_search_coordinates(search_text: String, coordinates: Vector2i) -> void:
+	_search_request_id += 1
+	var my_id := _search_request_id
+	var place_name := await PlacesHelper.async_get_name_from_coordinates(coordinates)
+	if not is_instance_valid(self):
+		return
+	if my_id != _search_request_id or search_text != _pending_search_text:
+		return
+	var keywords_result: Array[Keyword] = []
+	if not place_name.is_empty():
+		var kw := Keyword.new(place_name, KeywordType.COORDINATES)
+		kw.coordinates = coordinates
+		keywords_result.push_back(kw)
+	_has_api_results = true
+	should_show_container.emit(true)
+	_build_suggestions_ui(keywords_result, false, search_text)
+
+
+func async_search_places(search_text: String) -> void:
+	_search_request_id += 1
+	var my_id := _search_request_id
+	var encoded := search_text.uri_encode()
+	var ios_tag := "&tag=allowed_ios" if Global.is_ios_or_emulating() else ""
+
+	var places_url := (
+		PlacesHelper.get_api_url()
+		+ "?search=%s&limit=%d&sdk=7%s" % [encoded, SEARCH_LIMIT, ios_tag]
+	)
+	var events_url := (
+		DclUrls.mobile_events_api()
+		+ "/?sdk=7&search=%s&limit=%d%s" % [encoded, SEARCH_LIMIT, ios_tag]
+	)
+
+	var places_promise = func():
+		return PromiseUtils.resolved(await PlacesHelper.async_fetch_places(places_url))
+
+	var events_promise = func():
+		return PromiseUtils.resolved(
+			await Global.async_signed_fetch(events_url, HTTPClient.METHOD_GET, "")
+		)
+
+	var results := await PromiseUtils.async_all([places_promise, events_promise])
+	var places_result: PlacesHelper.FetchResult = results[0]
+	var events_response = results[1]
+
+	if not is_instance_valid(self):
+		return
+	# Discard if a newer request has been started or the user typed something different
+	if my_id != _search_request_id or search_text != _pending_search_text:
+		return
+
+	var places_keywords: Array[Keyword] = []
+	var events_keywords: Array[Keyword] = []
+
+	if places_result.status == PlacesHelper.FetchResultStatus.ERROR:
+		printerr(
+			"Error searching places ", places_url, " ", places_result.promise_error.get_error()
+		)
+	else:
+		for destination in places_result.result:
+			var destination_name: String = NotificationUtils.sanitize_notification_text(
+				trim_string(destination.title.to_lower())
+			)
+			if destination_name.length() >= 3:
+				places_keywords.push_back(Keyword.new(destination_name, KeywordType.POPULAR))
+
+	if events_response is PromiseError:
+		printerr("Error searching events ", events_url, " ", events_response.get_error())
+	else:
+		var json = events_response.get_string_response_as_json()
+		if json is Dictionary and json.has("data") and json.data is Array:
+			for event_data in json.data:
+				if not event_data.get("approved", false):
+					continue
+				var event_name: String = NotificationUtils.sanitize_notification_text(
+					trim_string(str(event_data.get("name", "")).to_lower())
+				)
+				if event_name.length() >= 3:
+					events_keywords.push_back(Keyword.new(event_name, KeywordType.EVENT))
+
+	# Interleave places and events: place, event, place, event, ...
+	var keywords_result: Array[Keyword] = []
+	var max_len := maxi(places_keywords.size(), events_keywords.size())
+	for i in range(max_len):
+		if i < places_keywords.size():
+			keywords_result.push_back(places_keywords[i])
+		if i < events_keywords.size():
+			keywords_result.push_back(events_keywords[i])
+
+	_has_api_results = true
+	should_show_container.emit(true)
+	_build_suggestions_ui(keywords_result, false, search_text)
 
 
 func _build_suggestions_ui(
@@ -160,6 +232,7 @@ func _build_suggestions_ui(
 	const SEARCH = preload("res://src/ui/components/discover/icons/search-outlined.svg")
 	const CLOCK = preload("res://src/ui/components/discover/icons/clock.svg")
 	const MAP = preload("res://src/ui/components/discover/icons/world-outlined.svg")
+	const CALENDAR = preload("res://src/ui/components/discover/icons/calendar-outlined.svg")
 	const KEYWORD = preload("res://src/ui/components/discover/search_keyword.tscn")
 
 	for k in keywords_result:
@@ -172,6 +245,8 @@ func _build_suggestions_ui(
 				keyword.icon = SEARCH
 			KeywordType.COORDINATES:
 				keyword.icon = MAP
+			KeywordType.EVENT:
+				keyword.icon = CALENDAR
 		keyword.text = k.keyword.capitalize()
 		search_sugestions.add_child(keyword)
 
