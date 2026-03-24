@@ -89,6 +89,8 @@ func _apply_margins(top: int, left: int, bottom: int, right: int) -> void:
 
 
 func _on_size_changed():
+	if not is_inside_tree() or get_viewport() == null:
+		return
 	var safe_area: Rect2i = Global.get_safe_area()
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var viewport_size = get_viewport().get_visible_rect().size
