@@ -279,20 +279,6 @@ corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x5msw"]
-resource_name = "Selected_SB"
-content_margin_left = 17.0
-content_margin_top = 8.0
-content_margin_right = 19.0
-content_margin_bottom = 8.0
-bg_color = Color(0.9098039, 0.7254902, 1, 1)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
-expand_margin_left = 2.0
-expand_margin_right = 2.0
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b70k2"]
 resource_name = "Default_SB"
 content_margin_left = 17.0
@@ -300,6 +286,20 @@ content_margin_top = 8.0
 content_margin_right = 19.0
 content_margin_bottom = 8.0
 bg_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+expand_margin_left = 2.0
+expand_margin_right = 2.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x5msw"]
+resource_name = "Selected_SB"
+content_margin_left = 17.0
+content_margin_top = 8.0
+content_margin_right = 19.0
+content_margin_bottom = 8.0
+bg_color = Color(0.9098039, 0.7254902, 1, 1)
 corner_radius_top_left = 100
 corner_radius_top_right = 100
 corner_radius_bottom_right = 100
@@ -879,12 +879,12 @@ SnowOutlinedToggleButton/styles/pressed = ExtResource("41_hiyy2")
 SnowOutlinedToggleButton/styles/pressed_mirrored = ExtResource("41_hiyy2")
 SubcategoryButton/base_type = &"Button"
 SubcategoryButton/colors/font_color = Color(1, 1, 1, 0.70000005)
-SubcategoryButton/colors/font_hover_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+SubcategoryButton/colors/font_hover_color = Color(1, 1, 1, 0.7019608)
 SubcategoryButton/colors/font_hover_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
 SubcategoryButton/colors/font_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
 SubcategoryButton/font_sizes/font_size = 24
 SubcategoryButton/fonts/font = ExtResource("52_kypl7")
-SubcategoryButton/styles/hover = SubResource("StyleBoxFlat_x5msw")
+SubcategoryButton/styles/hover = SubResource("StyleBoxFlat_b70k2")
 SubcategoryButton/styles/hover_pressed = SubResource("StyleBoxFlat_x5msw")
 SubcategoryButton/styles/normal = SubResource("StyleBoxFlat_b70k2")
 SubcategoryButton/styles/pressed = SubResource("StyleBoxFlat_x5msw")

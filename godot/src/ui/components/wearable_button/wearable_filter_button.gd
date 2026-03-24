@@ -1,5 +1,5 @@
 class_name WearableFilterButton
-extends Button
+extends CustomTouchButton
 
 signal filter_type(type: String)
 signal clear_filter
@@ -176,7 +176,7 @@ func type_to_text(category_enum: WearableCategoryEnum) -> String:
 		WearableCategoryEnum.TIARA:
 			text = "Tiaras"
 		WearableCategoryEnum.TOP_HEAD:
-			text = "Accessories"
+			text = "Top Head"
 		WearableCategoryEnum.HELMET:
 			text = "Helmets"
 		WearableCategoryEnum.SKIN:

@@ -150,6 +150,8 @@ var local_assets_cache_version: int = 0
 
 var local_notifications_version: int = 0
 
+var day1_notification_scheduled: bool = false
+
 var last_places: Array[Dictionary] = []:
 	set(value):
 		last_places = value
@@ -432,6 +434,10 @@ func load_from_settings_file():
 		"user", "local_notifications_version", data_default.local_notifications_version
 	)
 
+	self.day1_notification_scheduled = settings_file.get_value(
+		"config", "day1_notification_scheduled", data_default.day1_notification_scheduled
+	)
+
 
 func save_to_settings_file():
 	if Global.testing_scene_mode:
@@ -497,6 +503,9 @@ func save_to_settings_file():
 	)
 	new_settings_file.set_value(
 		"user", "local_notifications_version", self.local_notifications_version
+	)
+	new_settings_file.set_value(
+		"config", "day1_notification_scheduled", self.day1_notification_scheduled
 	)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

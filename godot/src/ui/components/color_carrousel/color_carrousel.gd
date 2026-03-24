@@ -52,12 +52,14 @@ var _dirty := false
 @onready var saturation_slider := %SaturationSlider
 @onready var brightness_slider := %BrightnessSlider
 @onready var scroll_swatch_container := %ScrollSwatchContainer
-@onready var colo_swatch_title := %ColorSwatchTitle
+@onready var color_swatch_title := %ColorSwatchTitle
+@onready var title_separator := %TitleSeparator
 @onready var color_picker := %ColorPicker
 
 
 func _ready() -> void:
-	colo_swatch_title.hide()
+	color_swatch_title.hide()
+	title_separator.hide()
 	refresh_buttons()
 	close_picker()
 
@@ -120,7 +122,7 @@ func set_color(color: Color) -> void:
 
 
 func set_title(color_name: String) -> void:
-	colo_swatch_title.text = color_name
+	color_swatch_title.text = color_name
 
 
 func _on_color_slider_value_change() -> void:
@@ -139,15 +141,20 @@ func _on_slider_released() -> void:
 func _on_color_carrousel_toggle_color_picker(toggled: bool) -> void:
 	if toggled:
 		toggle_color_picker.emit(true)
-		colo_swatch_title.show()
+		color_swatch_title.show()
+		title_separator.show()
 		color_picker.show()
+		if color_picker_button:
+			color_picker_button.hide()
 
 
 func close_picker() -> void:
 	color_picker.hide()
-	colo_swatch_title.hide()
+	color_swatch_title.hide()
+	title_separator.hide()
 	if color_picker_button:
 		color_picker_button.button_pressed = false
+		color_picker_button.show()
 
 
 func _on_color_picker_title_pressed() -> void:

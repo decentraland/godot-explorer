@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=25 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -106,11 +106,6 @@ label_settings = ExtResource("5_q2sj0")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
-wait_time = 0.5
-one_shot = true
 
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer"]
 layout_mode = 2
@@ -324,4 +319,3 @@ visible = false
 [connection signal="focus_entered" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_search_bar_opened"]
 [connection signal="text_changed" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
 [connection signal="text_submitted" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
-[connection signal="timeout" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]

@@ -68,6 +68,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_snwt5")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_su4bc")
 theme_override_styles/focus = SubResource("StyleBoxFlat_31n2r")
 toggle_mode = true
+flat = true
 script = ExtResource("1_v4hss")
 metadata/_custom_type_script = "uid://dq2es2bh7xr7j"
 

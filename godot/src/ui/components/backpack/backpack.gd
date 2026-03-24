@@ -67,10 +67,15 @@ var _avatar_update_retries: int = 0
 @onready var subcategories_separator := %SubcategoriesSeparator
 @onready var maincategories_container := %MainCategoriesContainer
 @onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
+@onready var open_marketplace_label := %RichTextBox_OpenMarketplace
+@onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
+@onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
+@onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
 
 
 # gdlint:ignore = async-function-name
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	color_rect_background.visible = !hide_background
 	texture_rect_background.visible = !hide_background
 	for category in Wearables.Categories.ALL_CATEGORIES:
@@ -97,6 +102,12 @@ func _ready():
 	subcategories_container.show()
 	subcategories_separator.show()
 	maincategories_container.show()
+	hseparator_extra_space.hide()
+	hseparator_extra_space_b.hide()
+
+	open_marketplace_label.show()
+	if Global.is_ios():
+		open_marketplace_label.hide()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -117,15 +128,18 @@ func _ready():
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
-	for wearable_id in Wearables.BASE_WEARABLES:
-		var key = Wearables.get_base_avatar_urn(wearable_id)
-		wearable_data[key] = null
-
 	# Load all remote wearables that you own...
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
 	if remote_wearables != null:
+		remote_wearables.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
 		for wearable_item in remote_wearables.elements:
 			wearable_data[wearable_item.urn] = null
+
+	# Add base wearables last
+	for wearable_id in Wearables.BASE_WEARABLES:
+		var key = Wearables.get_base_avatar_urn(wearable_id)
+		if not wearable_data.has(key):
+			wearable_data[key] = null
 
 	var promise = Global.content_provider.fetch_wearables(
 		wearable_data.keys(), Global.realm.get_profile_content_url()
@@ -197,8 +211,13 @@ func _update_visible_categories():
 	var has_visible := first_wearable_filter_button != null
 	subcategories_container.visible = has_visible
 	subcategories_separator.visible = has_visible
+	hseparator_extra_space.visible = !has_visible
+	if main_category_selected == Wearables.Categories.ALL:
+		hseparator_extra_space.hide()
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
+	elif main_category_selected == Wearables.Categories.ALL:
+		_on_wearable_filter_button_filter_type(Wearables.Categories.ALL)
 
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
@@ -309,6 +328,7 @@ func _can_unequip(category: String) -> bool:
 
 
 func _show_wearables():
+	scroll_container_items.scroll_vertical = 0
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
 
@@ -510,6 +530,7 @@ func _on_collectible_filter_button_toggled(toggled_on: bool) -> void:
 	emote_editor.async_set_only_collectibles(toggled_on)
 	_load_filtered_data(current_filter)
 	filter_indicator.visible = toggled_on
+	filters_menu_checkbox.set_pressed(false)
 
 
 func _on_new_notifications(notifications: Array) -> void:
@@ -590,11 +611,15 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 		subcategories_container.hide()
 		subcategories_separator.hide()
 		maincategories_container.hide()
+		hseparator_extra_space.hide()
+		hseparator_extra_space_b.hide()
 	else:
 		%MarginItemsContainer.show()
 		subcategories_container.show()
 		subcategories_separator.show()
 		maincategories_container.show()
+		hseparator_extra_space.hide()
+		hseparator_extra_space_b.show()
 
 
 func _on_visibility_changed() -> void:
