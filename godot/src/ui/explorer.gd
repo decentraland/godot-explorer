@@ -977,6 +977,8 @@ func _on_panel_chat_on_open_chat() -> void:
 	# Hide navbar when chat opens to prevent it from showing when virtual keyboard appears
 	if Global.is_mobile():
 		navbar.set_manually_hidden(true)
+		if chat_safe_margin != null:
+			chat_safe_margin.refresh_margins()
 
 
 func _on_panel_chat_on_exit_chat() -> void:
@@ -997,13 +999,10 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int):
 	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
 
 	if Global.is_mobile() and chat_safe_margin != null:
-		# El teclado virtual suele ocupar todo el ancho de la ventana; alinear el chat quitando
-		# márgenes horizontales del safe area mientras el teclado está visible.
+		# Keep margin_left (notch); when keyboard is open, align width with keyboard by removing only right inset.
 		if virtual_keyboard_height > 0:
-			chat_safe_margin.add_theme_constant_override("margin_left", 0)
 			chat_safe_margin.add_theme_constant_override("margin_right", 0)
 		else:
-			chat_safe_margin.remove_theme_constant_override("margin_left")
 			chat_safe_margin.remove_theme_constant_override("margin_right")
 			chat_safe_margin.refresh_margins()
 

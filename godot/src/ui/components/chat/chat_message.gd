@@ -1,6 +1,6 @@
 extends Control
 
-## Cuando es true (p. ej. notificaciones con el chat cerrado), el cuerpo del mensaje se acorta.
+## When true (e.g., notifications with closed chat), the message body is shortened.
 const MAX_CHARS_REDUCED: int = 80
 const TAG_COLOR := "#716B7C"
 const MESSAGE_SIZE := 18
@@ -8,9 +8,9 @@ const MESSAGE_COLOR := "#CFCDD4"
 const TAG_SIZE := 22
 const NICK_SIZE := 22
 
-## Cabecera en negrita ~22pt (theme). Pequeño: nick↔tag, tag↔icon, nick↔icon (~4px).
+## Bold header ~22pt (theme). Small separator: nick<->tag, tag<->icon, nick<->icon (~4px).
 const SEP_HEADER_SMALL := "[font_size=22]\u200a\u200a[/font_size]"
-## Grande: siempre entre el bloque cabecera (nick / nick+tag / nick+icon / …) y el mensaje (~8px).
+## Large separator: always between the header block (nick / nick+tag / nick+icon / ...) and the message (~8px).
 const SEP_HEADER_TO_MESSAGE := "[font_size=22]\u2004\u200a[/font_size]"
 
 const MY_MENTION_COLOR = "#FC03EC"
@@ -92,12 +92,9 @@ func set_chat(address: String, message: String, _timestamp: float) -> void:
 
 
 func _build_chat_rich_text(processed_message: String) -> String:
-	# Cabecera: Nick (sep pequeño) Tag? (sep pequeño) Icono?  →  (sep grande)  Mensaje
+	# Header: Nick (small sep) Tag? (small sep) Icon?  ->  (large sep)  Message
 	var chunks: PackedStringArray = []
-	chunks.append(
-		"[b][color=#%s]%s[/color][/b]"
-		% [nickname_color_hex, nickname]
-	)
+	chunks.append("[b][color=#%s]%s[/color][/b]" % [nickname_color_hex, nickname])
 	if not tag.is_empty():
 		chunks.append(SEP_HEADER_SMALL)
 		chunks.append("[color=%s]%s[/color]" % [TAG_COLOR, tag])
@@ -105,7 +102,7 @@ func _build_chat_rich_text(processed_message: String) -> String:
 		chunks.append(SEP_HEADER_SMALL)
 		chunks.append("[img=22]res://assets/check-mark.svg[/img]")
 	chunks.append(SEP_HEADER_TO_MESSAGE)
-	# System ya trae BBCode propio ([color], [b], …); no envolver en [b] o se rompe el anidado.
+	# System already includes its own BBCode ([color], [b], ...); don't wrap in [b] or nesting breaks.
 	if _address == "system":
 		chunks.append(processed_message)
 	else:
@@ -192,7 +189,9 @@ func make_urls_clickable(text: String) -> String:
 		if _is_mentioning_me(unique_name):
 			var mention_colored = "[color=%s]%s[/color]" % [MY_MENTION_COLOR, full_mention]
 			processed_text = (
-				processed_text.substr(0, start_pos) + mention_colored + processed_text.substr(end_pos)
+				processed_text.substr(0, start_pos)
+				+ mention_colored
+				+ processed_text.substr(end_pos)
 			)
 			_apply_mention_style()
 

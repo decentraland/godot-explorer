@@ -271,7 +271,7 @@ icon_alignment = 2
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 7
+theme_override_constants/separation = 4
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ttgy1")
 
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_go_to_last_pressed"]

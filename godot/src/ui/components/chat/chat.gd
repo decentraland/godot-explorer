@@ -5,6 +5,9 @@ signal on_exit_chat
 signal on_open_chat
 signal release_mouse
 
+## Fixed width for the messages list column (scroll), aligned with `chat.tscn` PanelContainer.
+const MESSAGES_COLUMN_WIDTH_PX: int = 709
+
 var hide_tween = null
 var open_tween = null
 var close_tween = null
@@ -26,15 +29,16 @@ var new_messages_count: int = 0
 @onready var label_new_messages: Label = %Label_NewMessages
 @onready var button_send: Button = %Button_Send
 @onready var panel_messages: PanelContainer = $VBoxContainer/HBoxContainer/PanelContainer
+@onready var column_go_to_last: Control = $VBoxContainer/HBoxContainer/VSeparator
 
 
-# gdlint:ignore = async-function-name
 func _ready():
 	if Global.is_mobile():
-		# Anchos mínimos de escritorio; en móvil el chat debe poder ocupar todo el ancho del viewport
-		# (misma anchura efectiva que el teclado virtual a ancho completo).
+		# Full chat panel stretches with parent; scroll column keeps fixed width; VSeparator fills remaining X space.
 		custom_minimum_size.x = 0
-		panel_messages.custom_minimum_size.x = 0
+		panel_messages.custom_minimum_size.x = MESSAGES_COLUMN_WIDTH_PX
+		panel_messages.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		column_go_to_last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	Global.on_chat_message.connect(self._on_chat_message_arrived)
 	Global.change_virtual_keyboard.connect(self._async_on_change_virtual_keyboard)
@@ -47,13 +51,17 @@ func _ready():
 		self._on_chat_scrollbar_scrolling
 	)
 
+	async_show_welcome_message.call_deferred()
+	button_send.disabled = true
+
+
+func async_show_welcome_message() -> void:
 	await Global.loading_finished
 	Global.on_chat_message.emit(
 		"system",
 		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b][/color]",
 		Time.get_unix_time_from_system()
 	)
-	button_send.disabled = true
 
 
 func _on_submit_message(message: String):
@@ -78,10 +86,10 @@ func _scroll_to_bottom() -> void:
 		scroll_container_chats_list.set_v_scroll(target_scroll)
 		scrolled = false
 		button_go_to_last.hide()
-		_scroll_to_bottom_after_layout.call_deferred()
+		_async_scroll_to_bottom_after_layout.call_deferred()
 
 
-func _scroll_to_bottom_after_layout() -> void:
+func _async_scroll_to_bottom_after_layout() -> void:
 	await get_tree().process_frame
 	if not scroll_container_chats_list or not is_instance_valid(scroll_container_chats_list):
 		return
@@ -107,7 +115,7 @@ func _on_button_send_pressed():
 	# or if the configuration requires it
 	if message.begins_with("/") or Global.get_config().submit_message_closes_chat:
 		exit_chat()
-	
+
 
 func _on_line_edit_command_text_submitted(new_text):
 	submit_message.emit(new_text)
@@ -126,8 +134,6 @@ func toggle_chat_visibility(visibility: bool):
 	else:
 		Global.explorer_grab_focus()
 		UiSounds.play_sound("widget_chat_close")
-		
-
 
 
 func exit_chat() -> void:
@@ -164,6 +170,7 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 		new_messages_count = new_messages_count + 1
 		panel_container_new_messages.show()
 		label_new_messages.text = str(new_messages_count)
+
 
 func is_at_bottom() -> bool:
 	if not scroll_container_chats_list or not is_instance_valid(scroll_container_chats_list):
