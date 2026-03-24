@@ -25,6 +25,8 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
+signal session_hide_ui_toggle_sync(pressed: bool)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal favorite_destination_set
 
