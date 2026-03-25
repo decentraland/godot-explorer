@@ -60,6 +60,7 @@ var _gamepad_connected: bool = false
 @onready var notifications: Control = %Notifications
 
 @onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
+@onready var chat_safe_margin: SafeMarginContainer = %SafeMarginContainer_Chat
 
 @onready var chat_container: Control = %ChatContainer
 @onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
@@ -847,6 +848,20 @@ func _on_ui_root_gui_input(event: InputEvent):
 				Input.action_release("ia_pointer")
 
 
+func _on_chat_container_gui_input(event: InputEvent) -> void:
+	if not chat_container.visible:
+		return
+
+	var should_close := false
+	if event is InputEventScreenTouch:
+		should_close = event.pressed
+	elif event is InputEventMouseButton:
+		should_close = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+
+	if should_close:
+		panel_chat.exit_chat()
+
+
 func _on_panel_profile_open_profile():
 	_open_own_profile()
 
@@ -980,6 +995,8 @@ func _on_panel_chat_on_open_chat() -> void:
 	# Hide navbar when chat opens to prevent it from showing when virtual keyboard appears
 	if Global.is_mobile():
 		navbar.set_manually_hidden(true)
+		if chat_safe_margin != null:
+			chat_safe_margin.refresh_margins()
 
 
 func _on_panel_chat_on_exit_chat() -> void:
@@ -992,13 +1009,22 @@ func _on_panel_chat_on_exit_chat() -> void:
 
 
 func _on_change_virtual_keyboard(virtual_keyboard_height: int):
-	if virtual_keyboard_height != 0:
-		var window_size: Vector2i = DisplayServer.window_get_size()
-		var viewport_size = get_viewport().get_visible_rect().size
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var safe_window_height: float = max(float(window_size.y), 1.0)
+	var y_factor: float = viewport_size.y / safe_window_height
+	var keyboard_height_scaled: float = ceil(max(float(virtual_keyboard_height) * y_factor, 0.0))
+	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
 
-		var y_factor: float = viewport_size.y / window_size.y
-		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
-	elif virtual_keyboard_height == 0:
+	if Global.is_mobile() and chat_safe_margin != null:
+		# Keep margin_left (notch); when keyboard is open, align width with keyboard by removing only right inset.
+		if virtual_keyboard_height > 0:
+			chat_safe_margin.add_theme_constant_override("margin_right", 0)
+		else:
+			chat_safe_margin.remove_theme_constant_override("margin_right")
+			chat_safe_margin.refresh_margins()
+
+	if virtual_keyboard_height == 0:
 		panel_chat.exit_chat()
 
 

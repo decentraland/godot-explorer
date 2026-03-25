@@ -111,3 +111,8 @@ func _on_size_changed():
 		right = max(right, abs(safe_area.end.x - window_size.x) * x_factor)
 
 	_apply_margins(top, left, bottom, right)
+
+
+## Recompute margins from the current window size and safe area (e.g. after temporary overrides).
+func refresh_margins() -> void:
+	_on_size_changed()

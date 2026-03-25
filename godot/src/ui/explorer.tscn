@@ -124,14 +124,16 @@ use_bottom = false
 
 [node name="ChatContainer" type="Control" parent="UI"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
-anchor_right = 0.6
+anchors_preset = 15
+anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
 grow_vertical = 2
 mouse_force_pass_scroll_events = false
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="UI/ChatContainer"]
+[node name="SafeMarginContainer_Chat" type="MarginContainer" parent="UI/ChatContainer"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -142,16 +144,15 @@ script = ExtResource("5_c8ksg")
 use_bottom = false
 metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
-[node name="ChatPanel" type="VBoxContainer" parent="UI/ChatContainer/SafeMarginContainer"]
+[node name="ChatPanel" type="VBoxContainer" parent="UI/ChatContainer/SafeMarginContainer_Chat"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Panel_Chat" parent="UI/ChatContainer/SafeMarginContainer/ChatPanel" instance=ExtResource("9_4ktln")]
+[node name="Panel_Chat" parent="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel" instance=ExtResource("9_4ktln")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 3
 
-[node name="VirtualKeyboardMargin" type="Control" parent="UI/ChatContainer/SafeMarginContainer/ChatPanel"]
+[node name="VirtualKeyboardMargin" type="Control" parent="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 250)
 layout_mode = 2
@@ -446,9 +447,10 @@ script = ExtResource("20_064cw")
 
 [node name="ChatHandler" parent="." instance=ExtResource("32_cq187")]
 
-[connection signal="on_exit_chat" from="UI/ChatContainer/SafeMarginContainer/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_exit_chat"]
-[connection signal="on_open_chat" from="UI/ChatContainer/SafeMarginContainer/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_open_chat"]
-[connection signal="submit_message" from="UI/ChatContainer/SafeMarginContainer/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
+[connection signal="on_exit_chat" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_exit_chat"]
+[connection signal="on_open_chat" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_open_chat"]
+[connection signal="submit_message" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
+[connection signal="gui_input" from="UI/ChatContainer" to="." method="_on_chat_container_gui_input"]
 [connection signal="pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Panel/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="gui_input" from="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels" to="." method="_on_h_box_container_right_panels_gui_input"]
 [connection signal="emote_wheel_closed" from="UI/SafeMarginContainerHUD/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
