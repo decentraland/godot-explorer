@@ -54,7 +54,6 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
 const FORCE_DEEPLINK = ""
-const RANDOM_ORIENTATION_TEST := true  # Randomly flips portrait/landscape every frame
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 
 # Increase this value for new terms and conditions
@@ -823,12 +822,6 @@ func get_backpack() -> Backpack:
 
 
 func _process(_delta: float) -> void:
-	if RANDOM_ORIENTATION_TEST:
-		if randi() % 2 == 0:
-			set_orientation_portrait()
-		else:
-			set_orientation_landscape()
-
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		var virtual_keyboard_height: int = DisplayServer.virtual_keyboard_get_height()
 
