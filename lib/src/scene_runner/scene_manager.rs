@@ -299,6 +299,9 @@ impl SceneManager {
     /// leaving SceneManager with a dangling Gd<DclUiControl> reference.
     #[func]
     fn recreate_base_ui(&mut self) {
+        if self.base_ui.is_instance_valid() {
+            self.base_ui.clone().free();
+        }
         let mut base_ui = DclUiControl::new_alloc();
         base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
         base_ui.set_mouse_filter(MouseFilter::IGNORE);
