@@ -293,6 +293,25 @@ impl SceneManager {
         new_scene_id.0
     }
 
+    /// Recreate the base_ui DclUiControl node.
+    /// Must be called at the start of explorer._ready() because the previous base_ui
+    /// is freed when the Explorer scene is torn down (change_scene_to_file/logout),
+    /// leaving SceneManager with a dangling Gd<DclUiControl> reference.
+    #[func]
+    fn recreate_base_ui(&mut self) {
+        if self.base_ui.is_instance_valid() {
+            self.base_ui.clone().free();
+        }
+        let mut base_ui = DclUiControl::new_alloc();
+        base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
+        base_ui.set_mouse_filter(MouseFilter::IGNORE);
+        base_ui.set_name("scenes_ui");
+        let callable_on_ui_resize = self.base().callable("_on_ui_resize");
+        base_ui.connect("resized", &callable_on_ui_resize);
+        self.base_ui = base_ui;
+        self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
     #[func]
     fn kill_scene(&mut self, scene_id: i32) -> bool {
         let scene_id = SceneId(scene_id);
