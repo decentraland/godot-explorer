@@ -394,13 +394,14 @@ func _update_exo_player_state():
 		video_length = duration
 
 	# Determine state based on ExoPlayer status
-	if duration <= 0:
-		# Still loading/buffering
-		video_state = VIDEO_STATE_LOADING
-	elif is_playing:
+	# Note: is_playing takes priority over duration check because live HLS streams
+	# report duration=0 even while actively playing, which would keep state stuck
+	# in LOADING and prevent video texture from being displayed.
+	if is_playing:
 		video_state = VIDEO_STATE_PLAYING
+	elif duration <= 0:
+		video_state = VIDEO_STATE_LOADING
 	else:
-		# Not playing - could be paused or ready
 		if video_state == VIDEO_STATE_LOADING:
 			video_state = VIDEO_STATE_READY
 		elif video_state != VIDEO_STATE_READY:
@@ -422,13 +423,14 @@ func _update_av_player_state():
 		video_length = duration
 
 	# Determine state based on AVPlayer status
-	if duration <= 0:
-		# Still loading/buffering
-		video_state = VIDEO_STATE_LOADING
-	elif is_playing:
+	# Note: is_playing takes priority over duration check because live HLS streams
+	# report duration=0 even while actively playing, which would keep state stuck
+	# in LOADING and prevent video texture from being displayed.
+	if is_playing:
 		video_state = VIDEO_STATE_PLAYING
+	elif duration <= 0:
+		video_state = VIDEO_STATE_LOADING
 	else:
-		# Not playing - could be paused or ready
 		if video_state == VIDEO_STATE_LOADING:
 			video_state = VIDEO_STATE_READY
 		elif video_state != VIDEO_STATE_READY:
