@@ -178,6 +178,25 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 			if parsed_urn != null:
 				realm_scene_urns.push_back(parsed_urn)
 
+		# For DCL worlds, the /about endpoint only returns the last deployed scene.
+		# Fetch all scenes from the /scenes endpoint to support multi-scene worlds.
+		var resolved_realm_name = configuration.get("realmName", "")
+		if Realm.is_dcl_ens(resolved_realm_name):
+			# Use the worlds content server /contents/ URL for baseUrl,
+			# not content.publicUrl (which points to Genesis City peer)
+			# worlds_content_server() returns ".../world/", we need ".../contents/"
+			var worlds_base = DclUrls.worlds_content_server().replace("/world/", "/")
+			var world_content_url = worlds_base + "contents/"
+			var all_urns = await _async_fetch_world_scenes(resolved_realm_name, world_content_url)
+			if not all_urns.is_empty():
+				realm_scene_urns.clear()
+				var urns_array: Array = []
+				for urn_data in all_urns:
+					realm_scene_urns.push_back(urn_data)
+					urns_array.push_back(urn_data.urn + "?=&baseUrl=" + urn_data.baseUrl)
+				# Update scenesUrn in realm_about so scene_fetcher reads the full list
+				configuration["scenesUrn"] = urns_array
+
 		realm_global_scene_urns.clear()
 		for urn in configuration.get("globalScenesUrn", []):
 			var parsed_urn = Realm.parse_urn(urn)
@@ -236,7 +255,11 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 			realm_about.get("content", {}).get("publicUrl")
 		)
 
-		if not realm_scene_urns.is_empty() and search_new_pos:
+		# For DCL worlds, always resolve spawn position from scene metadata
+		# since the caller may not know the correct parcel coordinates.
+		# For other realms, only resolve if explicitly requested.
+		var should_resolve_pos = search_new_pos or Realm.is_dcl_ens(resolved_realm_name)
+		if not realm_scene_urns.is_empty() and should_resolve_pos:
 			await async_request_set_position(realm_scene_urns.back())
 
 		Global.get_config().last_realm_joined = realm_url
@@ -246,6 +269,43 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 
 		_has_realm = true
 		realm_changed.emit()
+
+
+func _async_fetch_world_scenes(world_name: String, base_content_url: String) -> Array:
+	var scenes_url = Realm.dcl_world_url(world_name) + "/scenes"
+	var promise: Promise = Global.http_requester.request_json(
+		scenes_url, HTTPClient.METHOD_GET, "", {}
+	)
+
+	var res = await PromiseUtils.async_awaiter(promise)
+	if res is PromiseError:
+		printerr("[REALM] Failed to fetch world scenes: ", res.get_error())
+		return []
+	elif res is RequestResponse:
+		var response: RequestResponse = res
+		var json = response.get_string_response_as_json()
+		if json == null or not json is Dictionary:
+			printerr("[REALM] Invalid response from /scenes endpoint")
+			return []
+
+		var scenes = json.get("scenes", [])
+		if scenes.is_empty():
+			return []
+
+		var result: Array = []
+		for scene in scenes:
+			var entity_id = scene.get("entityId", "")
+			if entity_id.is_empty():
+				continue
+			var urn = "urn:decentraland:entity:" + entity_id
+			result.push_back({"urn": urn, "entityId": entity_id, "baseUrl": base_content_url})
+
+		if result.size() > 1:
+			prints("[REALM] Loaded", result.size(), "scenes for world", world_name)
+
+		return result
+
+	return []
 
 
 func async_request_set_position(scene_urn):
