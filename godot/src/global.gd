@@ -25,6 +25,8 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
+signal session_hide_ui_toggle_sync(pressed: bool)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal favorite_destination_set
 
@@ -594,10 +596,7 @@ func open_webview_url(url):
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
 		if DclIosPlugin.is_available():
-			if "provider=apple" in url:
-				DclIosPlugin.open_safari_auth_url(url)
-			else:
-				DclIosPlugin.open_auth_url(url)
+			DclIosPlugin.open_safari_auth_url(url)
 		elif DclAndroidPlugin.is_available():
 			if "provider=wallet-connect" in url:
 				DclAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
