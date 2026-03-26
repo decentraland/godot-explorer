@@ -24,6 +24,12 @@ var _is_loading: bool = true  # Start as loading
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 var _gamepad_connected: bool = false
 
+## Children of %UI hidden while "hide explorer UI" is on; restored when toggled off.
+var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
+
+## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
+var _session_hide_main_hud: bool = false
+
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 @onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
@@ -69,6 +75,8 @@ var _gamepad_connected: bool = false
 @onready var joypad: Control = %Joypad
 @onready var chatbar: Control = %Chatbar
 @onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
+@onready var button_show_ui: Button = %Button_ShowUI
+@onready var margin_container_show_ui: MarginContainer = %MarginContainer_ShowUI
 
 
 func _process(_dt):
@@ -299,6 +307,10 @@ func _ready():
 		load("res://src/decentraland_components/dcl_global_camera_controller.tscn").instantiate()
 	)
 	add_child(dcl_global_camera_controller)
+
+	button_show_ui.pressed.connect(_on_button_show_ui_pressed)
+	_session_hide_main_hud = false
+	set_visible_ui(true, true)
 
 
 func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:
@@ -753,7 +765,17 @@ func release_mouse():
 			label_crosshair.hide()
 
 
-func set_visible_ui(value: bool):
+func set_visible_ui(value: bool, use_hud_mode: bool = false):
+	if use_hud_mode:
+		_set_explorer_hud_elements_visible(value)
+		return
+
+	# External callers (e.g. scene capture): if session "hide UI" is on, restoring the
+	# root must reapply minimized HUD + show-UI button, not only ui_root.show().
+	if value and _session_hide_main_hud:
+		_set_explorer_hud_elements_visible(false)
+		return
+
 	if value == ui_root.visible:
 		return
 
@@ -761,6 +783,36 @@ func set_visible_ui(value: bool):
 		ui_root.show()
 	else:
 		ui_root.hide()
+
+	if value:
+		margin_container_show_ui.hide()
+
+
+func _is_ui_hud_mode_exception(node: Node) -> bool:
+	return node == ui_safe_area or node == control_menu or node == margin_container_show_ui
+
+
+func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
+	ui_root.show()
+	if full_hud:
+		for node in _ui_children_hidden_for_hud_mode:
+			if is_instance_valid(node):
+				node.show()
+		_ui_children_hidden_for_hud_mode.clear()
+		margin_container_show_ui.hide()
+		return
+
+	for child in ui_root.get_children():
+		if _is_ui_hud_mode_exception(child):
+			continue
+		if not child is CanvasItem:
+			continue
+		var canvas_child := child as CanvasItem
+		if canvas_child.visible:
+			_ui_children_hidden_for_hud_mode.append(canvas_child)
+			canvas_child.hide()
+
+	margin_container_show_ui.show()
 
 
 func _on_control_menu_request_debug_panel(enabled):
@@ -1120,6 +1172,9 @@ func _on_toast_mark_as_read(notification_d: Dictionary) -> void:
 func _on_loading_started() -> void:
 	_is_loading = true
 	_pending_notification_toast = {}  # Clear any pending notification
+	_session_hide_main_hud = false
+	set_visible_ui(true, true)
+	Global.session_hide_ui_toggle_sync.emit(false)
 
 
 func _on_loading_finished() -> void:
@@ -1318,3 +1373,18 @@ func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
 		_close_all_panels()
 		navbar.collapse()
 		capture_mouse()
+
+
+func _on_button_show_ui_pressed() -> void:
+	_session_hide_main_hud = false
+	set_visible_ui(true, true)
+	Global.session_hide_ui_toggle_sync.emit(false)
+
+
+func set_hide_main_hud_from_settings(minimized: bool) -> void:
+	_session_hide_main_hud = minimized
+	set_visible_ui(not minimized, true)
+
+
+func is_session_hide_main_hud() -> bool:
+	return _session_hide_main_hud
