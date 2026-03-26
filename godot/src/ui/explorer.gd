@@ -765,8 +765,8 @@ func release_mouse():
 			label_crosshair.hide()
 
 
-func set_visible_ui(value: bool, sync_show_ui_button: bool = false):
-	if sync_show_ui_button:
+func set_visible_ui(value: bool, use_hud_mode: bool = false):
+	if use_hud_mode:
 		_set_explorer_hud_elements_visible(value)
 		return
 

@@ -352,7 +352,7 @@ theme_override_constants/margin_right = 0
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="SectionTittle_ChatAndSocial" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" instance=ExtResource("15_h5vs5")]
+[node name="SectionTittle_Interface" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" instance=ExtResource("15_h5vs5")]
 layout_mode = 2
 title = "INTERFACE"
 
@@ -1375,8 +1375,8 @@ font = ExtResource("25_jf4mt")
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Nav/TabsScrollContainer/HBoxContainer/Button_Storage" to="." method="_on_button_storage_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Nav/TabsScrollContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
-[connection signal="value_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Gamepad/SectionGamepad/VBoxContainer/GamepadCameraSensitivity" to="." method="_on_gamepad_camera_sensitivity_value_changed"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/CheckButton_HideExplorerUI" to="." method="_on_check_button_hide_explorer_ui_toggled"]
+[connection signal="value_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Gamepad/SectionGamepad/VBoxContainer/GamepadCameraSensitivity" to="." method="_on_gamepad_camera_sensitivity_value_changed"]
 [connection signal="visibility_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
