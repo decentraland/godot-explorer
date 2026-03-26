@@ -32,21 +32,21 @@
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_smf4l"]
-content_margin_left = 14.0
-content_margin_top = 14.0
-content_margin_right = 14.0
-content_margin_bottom = 14.0
-bg_color = Color(0, 0, 0, 0.8980392)
+content_margin_left = 7.0
+content_margin_top = 7.0
+content_margin_right = 7.0
+content_margin_bottom = 7.0
+bg_color = Color(0, 0, 0, 0.8)
 corner_radius_top_left = 100
 corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u4dfr"]
-content_margin_left = 14.0
-content_margin_top = 14.0
-content_margin_right = 14.0
-content_margin_bottom = 14.0
+content_margin_left = 7.0
+content_margin_top = 7.0
+content_margin_right = 7.0
+content_margin_bottom = 7.0
 bg_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 corner_radius_top_left = 100
 corner_radius_top_right = 100
@@ -120,7 +120,7 @@ theme_override_constants/margin_right = 18
 
 [node name="Button_ShowUI" type="Button" parent="UI/MarginContainer_ShowUI"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 size_flags_horizontal = 10
 size_flags_vertical = 2
@@ -513,10 +513,10 @@ script = ExtResource("20_064cw")
 
 [node name="ChatHandler" parent="." instance=ExtResource("32_cq187")]
 
+[connection signal="gui_input" from="UI/ChatContainer" to="." method="_on_chat_container_gui_input"]
 [connection signal="on_exit_chat" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_exit_chat"]
 [connection signal="on_open_chat" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_on_open_chat"]
 [connection signal="submit_message" from="UI/ChatContainer/SafeMarginContainer_Chat/ChatPanel/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
-[connection signal="gui_input" from="UI/ChatContainer" to="." method="_on_chat_container_gui_input"]
 [connection signal="pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Panel/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="gui_input" from="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels" to="." method="_on_h_box_container_right_panels_gui_input"]
 [connection signal="emote_wheel_closed" from="UI/SafeMarginContainerHUD/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
