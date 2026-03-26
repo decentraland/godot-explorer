@@ -281,7 +281,8 @@ func _async_fetch_world_scenes(world_name: String, base_content_url: String) -> 
 	if res is PromiseError:
 		printerr("[REALM] Failed to fetch world scenes: ", res.get_error())
 		return []
-	elif res is RequestResponse:
+
+	if res is RequestResponse:
 		var response: RequestResponse = res
 		var json = response.get_string_response_as_json()
 		if json == null or not json is Dictionary:
