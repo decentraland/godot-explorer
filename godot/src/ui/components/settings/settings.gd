@@ -11,6 +11,7 @@ enum SceneLogLevel {
 }
 
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
+const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -29,6 +30,7 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
+@onready var gamepad_camera_sensitivity: SettingsSlider = %GamepadCameraSensitivity
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 
@@ -87,6 +89,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
+@onready var container_gamepad: MarginContainer = %Container_Gamepad
 
 
 func _ready():
@@ -111,6 +114,11 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+
+	# gamepad
+	_init_gamepad_sensitivity.call_deferred()
+	container_gamepad.visible = Input.get_connected_joypads().size() > 0
+	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 	dropdown_list_max_cache_size.add_item("1 GB", 0)
 	dropdown_list_max_cache_size.add_item("2 GB", 1)
@@ -805,6 +813,26 @@ func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
 	Global.get_config().audio_avatar_and_emotes_volume = value
 	AudioSettings.apply_avatar_and_emotes_volume_settings()
 	Global.get_config().save_to_settings_file()
+
+
+func _init_gamepad_sensitivity() -> void:
+	gamepad_camera_sensitivity.min_value = MIN_GAMEPAD_CAMERA_SENSITIVITY
+	var clamped_sensitivity := maxf(
+		Global.get_config().gamepad_camera_sensitivity, MIN_GAMEPAD_CAMERA_SENSITIVITY
+	)
+	gamepad_camera_sensitivity.value = clamped_sensitivity
+	if clamped_sensitivity != Global.get_config().gamepad_camera_sensitivity:
+		Global.get_config().gamepad_camera_sensitivity = clamped_sensitivity
+		Global.get_config().save_to_settings_file()
+
+
+func _on_gamepad_camera_sensitivity_value_changed(value: float) -> void:
+	Global.get_config().gamepad_camera_sensitivity = maxf(value, MIN_GAMEPAD_CAMERA_SENSITIVITY)
+	Global.get_config().save_to_settings_file()
+
+
+func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
+	container_gamepad.visible = Input.get_connected_joypads().size() > 0
 
 
 func _on_custom_button_sign_out_pressed() -> void:
