@@ -206,6 +206,10 @@ func _async_on_scrollbar_value_changed(new_value):
 			await _async_add_remote_emotes(_last_loaded_page)
 
 
+func set_narrow_mode(is_narrow: bool) -> void:
+	container_all_emotes.columns = 2 if is_narrow else 3
+
+
 func _on_visibility_changed() -> void:
 	if not is_node_ready():
 		return

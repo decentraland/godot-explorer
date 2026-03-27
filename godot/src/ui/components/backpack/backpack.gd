@@ -35,6 +35,10 @@ var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
 var _avatar_update_retries: int = 0
+var _button_wearables_text: String
+var _button_emotes_text: String
+
+const NARROW_WIDTH_THRESHOLD := 1550
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
@@ -72,10 +76,13 @@ var _avatar_update_retries: int = 0
 @onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
 @onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
 @onready var right_editor_container := %RightEditorContainer
+@onready var hseparator_size_maintainer: HSeparator = %HSeparator_SizeMaintainer
 
 # gdlint:ignore = async-function-name
 func _ready():
 	UiSounds.install_audio_recusirve(self)
+	_button_wearables_text = button_wearables.text
+	_button_emotes_text = button_emotes.text
 	color_rect_background.visible = !hide_background
 	texture_rect_background.visible = !hide_background
 	for category in Wearables.Categories.ALL_CATEGORIES:
@@ -181,6 +188,16 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_left", 20)
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
+	_apply_narrow_mode(not portrait and window_size.x < NARROW_WIDTH_THRESHOLD)
+
+
+func _apply_narrow_mode(is_narrow: bool) -> void:
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	button_wearables.text = "" if is_narrow else _button_wearables_text
+	button_emotes.text = "" if is_narrow else _button_emotes_text
+	grid_container_wearables_list.columns = 2 if is_narrow else 3
+	hseparator_size_maintainer.custom_minimum_size.x = 420 if is_narrow else 630 # 630 / 420
+	emote_editor.set_narrow_mode(is_narrow)
 
 
 func _update_visible_categories():

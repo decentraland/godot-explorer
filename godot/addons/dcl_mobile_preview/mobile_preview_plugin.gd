@@ -4,6 +4,7 @@ extends EditorPlugin
 # Device definitions: [label, portrait_w, portrait_h, landscape_w, landscape_h, is_ios, color]
 const DEVICES := [
 	["Default", 720, 720, 720, 720, false, Color(0.5, 0.5, 0.5)],
+	["iPhone SE", 750, 1334, 1334, 750, true, Color(0.55, 0.75, 1.0)],
 	["iPhone 14 Pro", 590, 1280, 1561, 720, true, Color(0.35, 0.6, 1.0)],
 	["Moto Edge 60 Pro", 576, 1280, 1600, 720, false, Color(0.35, 0.85, 0.45)],
 	["Figma Base", 720, 1600, 1600, 720, false, Color(0.35, 0.85, 0.45)],
