@@ -44,6 +44,17 @@ var _pending_play_state: int = -1  # -1=none, 0=pause, 1=play
 # Track if we ever received a valid frame (to distinguish garbage from last frame)
 var _has_received_frame: bool = false
 
+# Static black placeholder texture shared across all video players
+static var _black_placeholder: ImageTexture = null
+
+
+static func _get_black_placeholder() -> ImageTexture:
+	if _black_placeholder == null:
+		var img = Image.create(2, 2, false, Image.FORMAT_RGBA8)
+		img.fill(Color.BLACK)
+		_black_placeholder = ImageTexture.create_from_image(img)
+	return _black_placeholder
+
 
 # Called from Rust DclVideoPlayer::init_backend
 func _init_backend_impl(backend_type: int, source: String, playing: bool, looping: bool):
@@ -280,14 +291,21 @@ func _process(_delta):
 	_update_video_state()
 
 	# Track first valid frame for native players (ExoPlayer/AVPlayer).
-	# update_texture() runs in the child node's _process and returns true when a
-	# real GPU frame is available. We check frame_count to detect this, which avoids
-	# showing GPU garbage (pink textures) before the first valid frame arrives.
-	if not _has_received_frame:
-		if current_backend == BackendType.AV_PLAYER and av_player and av_player._frame_count > 0:
-			_has_received_frame = true
-		elif current_backend == BackendType.EXO_PLAYER and exo_player and exo_player._frame_count > 0:
-			_has_received_frame = true
+	# Requires BOTH conditions to avoid pink garbage:
+	# 1. video_state == PLAYING (player reports active playback)
+	# 2. Native player has actually delivered a GPU frame (_frame_count > 0)
+	# Without #2, there's a gap where is_playing=true but ExternalTexture has garbage.
+	# For LiveKit, _has_received_frame is set in _update_video_state (frames come from Rust).
+	if not _has_received_frame and video_state == VIDEO_STATE_PLAYING:
+		match current_backend:
+			BackendType.AV_PLAYER:
+				if av_player and av_player._frame_count > 0:
+					_has_received_frame = true
+			BackendType.EXO_PLAYER:
+				if exo_player and exo_player._frame_count > 0:
+					_has_received_frame = true
+			_:
+				pass
 
 
 ## Process pending play/pause commands after debounce period
@@ -601,11 +619,11 @@ func _backend_dispose():
 
 func _get_backend_texture() -> Texture2D:
 	# Before receiving the first valid frame, ExternalTexture (ExoPlayer/AVPlayer)
-	# may contain GPU garbage. Return null to let Rust use the black placeholder.
+	# may contain GPU garbage. Return a black placeholder instead.
 	# After the first frame, always return the backend texture so that pause/buffering
 	# keeps showing the last valid frame instead of going black.
 	if not _has_received_frame:
-		return null
+		return _get_black_placeholder()
 
 	match current_backend:
 		BackendType.EXO_PLAYER:
