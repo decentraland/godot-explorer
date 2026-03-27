@@ -55,11 +55,11 @@ var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
-# Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
-var _force_hide_name: bool = false
-
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
+
+# Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
+var _force_hide_name: bool = false
 
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
@@ -366,6 +366,7 @@ func _apply_nickname_visibility() -> void:
 		nickname_quad.hide()
 	else:
 		nickname_quad.show()
+
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
 	avatar_data.set_eyes_color(eyes_color)
