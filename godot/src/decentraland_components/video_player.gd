@@ -279,6 +279,16 @@ func _process(_delta):
 	_update_effective_volume()
 	_update_video_state()
 
+	# Track first valid frame for native players (ExoPlayer/AVPlayer).
+	# update_texture() runs in the child node's _process and returns true when a
+	# real GPU frame is available. We check frame_count to detect this, which avoids
+	# showing GPU garbage (pink textures) before the first valid frame arrives.
+	if not _has_received_frame:
+		if current_backend == BackendType.AV_PLAYER and av_player and av_player._frame_count > 0:
+			_has_received_frame = true
+		elif current_backend == BackendType.EXO_PLAYER and exo_player and exo_player._frame_count > 0:
+			_has_received_frame = true
+
 
 ## Process pending play/pause commands after debounce period
 func _process_pending_play_state():
@@ -375,7 +385,10 @@ func _update_video_state():
 		_:
 			pass
 
-	if video_state == VIDEO_STATE_PLAYING:
+	# For native players, _has_received_frame is set when update_texture() returns true
+	# (i.e., the GPU actually has a valid frame). For LiveKit, it's set here since
+	# frames are pushed from Rust and video_state is set to PLAYING on first frame.
+	if current_backend == BackendType.LIVEKIT and video_state == VIDEO_STATE_PLAYING:
 		_has_received_frame = true
 
 
