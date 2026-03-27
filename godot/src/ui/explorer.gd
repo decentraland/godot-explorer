@@ -797,7 +797,12 @@ func set_visible_ui(value: bool, use_hud_mode: bool = false):
 
 
 func _is_ui_hud_mode_exception(node: Node) -> bool:
-	return node == ui_safe_area or node == control_menu or node == margin_container_show_ui
+	return (
+		node == ui_safe_area
+		or node == control_menu
+		or node == margin_container_show_ui
+		or node == profile_container
+	)
 
 
 func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
@@ -957,6 +962,10 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 
 
 func _on_profile_container_visibility_changed() -> void:
+	if _session_hide_main_hud:
+		# Keep profile visibility controlled by its own open/close flow in Hide UI mode.
+		# Avoid forcing hide/show here to prevent visibility_changed re-entrancy loops.
+		return
 	if not profile_container.visible and not _gamepad_connected:
 		joypad.show()
 
@@ -1060,6 +1069,11 @@ func _on_panel_chat_on_open_chat() -> void:
 
 
 func _on_panel_chat_on_exit_chat() -> void:
+	if _session_hide_main_hud:
+		# Keep strict hidden HUD when profile/chat transitions occur while Hide UI is active.
+		chat_container.hide()
+		_set_explorer_hud_elements_visible(false)
+		return
 	safe_margin_container_hud.show()
 	chat_container.hide()
 	if Global.is_mobile():
