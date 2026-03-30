@@ -638,7 +638,10 @@ fn check_texture(
             // garbage (pink) before the video player is created or delivers its
             // first frame. update_video_material_textures() will replace this with
             // the real texture once available.
-            material.set_texture(param, &get_black_placeholder_texture().upcast::<Texture2D>());
+            material.set_texture(
+                param,
+                &get_black_placeholder_texture().upcast::<Texture2D>(),
+            );
             false
         }
     }
