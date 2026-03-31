@@ -102,6 +102,12 @@ func _async_update_modal_size() -> void:
 		panel_container._request_update()
 
 
+func _unhandled_input(_event: InputEvent) -> void:
+	if not visible or not blocker:
+		return
+	get_viewport().set_input_as_handled()
+
+
 func _on_gui_input(event: InputEvent) -> void:
 	if blocker or not dismissable:
 		return

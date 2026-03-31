@@ -38,6 +38,7 @@ const SCENE_CRASH_SECONDARY = "BACK"
 
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
+var _canvas_layer: CanvasLayer = null
 
 
 func _ready() -> void:
@@ -243,14 +244,20 @@ func _async_create_modal() -> Modal:
 		push_error("ModalManager: Could not instantiate modal from scene")
 		return null
 
-	# Add the modal to the main viewport so it's always visible
-	# Use get_tree().root to ensure it's at the highest level
+	# Wrap in a CanvasLayer with high layer to ensure modals render above all overlays
+	if _canvas_layer and is_instance_valid(_canvas_layer):
+		_canvas_layer.queue_free()
+
+	_canvas_layer = CanvasLayer.new()
+	_canvas_layer.layer = 100
+
 	var root = get_tree().root
 	if not root:
 		push_error("ModalManager: Could not get scene tree root")
 		return null
 
-	root.add_child(modal)
+	root.add_child(_canvas_layer)
+	_canvas_layer.add_child(modal)
 	current_modal = modal
 
 	# Connect signal to clean up when modal exits the tree
@@ -359,3 +366,6 @@ func _remove_modal() -> void:
 	if current_modal:
 		current_modal.queue_free()
 		current_modal = null
+	if _canvas_layer and is_instance_valid(_canvas_layer):
+		_canvas_layer.queue_free()
+		_canvas_layer = null
