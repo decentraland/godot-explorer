@@ -12,6 +12,8 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 	"bid_accepted",
 ]
 
+const NARROW_WIDTH_THRESHOLD := 1550
+
 @export var hide_background: bool = false
 @export var hide_navbar: bool = false
 
@@ -37,8 +39,6 @@ var is_loading_profile: bool = false
 var _avatar_update_retries: int = 0
 var _button_wearables_text: String
 var _button_emotes_text: String
-
-const NARROW_WIDTH_THRESHOLD := 1550
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
@@ -77,6 +77,10 @@ const NARROW_WIDTH_THRESHOLD := 1550
 @onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
 @onready var right_editor_container := %RightEditorContainer
 @onready var hseparator_size_maintainer: HSeparator = %HSeparator_SizeMaintainer
+@onready var inner_safe_margin: SafeMarginContainer = %InnerSafeMargin
+@onready var panel_margin_container: MarginContainer = %PanelMarginContainer
+@onready var safe_margin_container: SafeMarginContainer = $SafeMarginContainer
+
 
 # gdlint:ignore = async-function-name
 func _ready():
@@ -183,20 +187,33 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_left", 0)
 		right_editor_container.add_theme_constant_override("margin_right", 0)
 		right_editor_container.add_theme_constant_override("margin_bottom", 0)
+		inner_safe_margin.use_left = true
+		safe_margin_container.grow_horizontal = GrowDirection.GROW_DIRECTION_BOTH
+		safe_margin_container.grow_vertical = GrowDirection.GROW_DIRECTION_BOTH
+		panel_margin_container.add_theme_constant_override("margin_top", 48)
 	else:
 		right_editor_container.add_theme_constant_override("margin_top", 10)
 		right_editor_container.add_theme_constant_override("margin_left", 20)
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
+		panel_margin_container.add_theme_constant_override("margin_top", 10)
+		inner_safe_margin.use_left = false
+		# Hack to force the container to be fixed
+		# to the top left corner to prevent weird jumps in the ui
+		safe_margin_container.grow_horizontal = GrowDirection.GROW_DIRECTION_END
+		safe_margin_container.grow_vertical = GrowDirection.GROW_DIRECTION_END
+	# Force to update size
+	inner_safe_margin._on_size_changed()
 	_apply_narrow_mode(not portrait and window_size.x < NARROW_WIDTH_THRESHOLD)
+	emote_editor.on_screen_rotation(portrait)
 
 
 func _apply_narrow_mode(is_narrow: bool) -> void:
-	var window_size: Vector2i = DisplayServer.window_get_size()
+	#var window_size: Vector2i = DisplayServer.window_get_size()
 	button_wearables.text = "" if is_narrow else _button_wearables_text
 	button_emotes.text = "" if is_narrow else _button_emotes_text
 	grid_container_wearables_list.columns = 2 if is_narrow else 3
-	hseparator_size_maintainer.custom_minimum_size.x = 420 if is_narrow else 630 # 630 / 420
+	hseparator_size_maintainer.custom_minimum_size.x = 420 if is_narrow else 630  # 630 / 420
 	emote_editor.set_narrow_mode(is_narrow)
 
 

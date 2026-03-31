@@ -78,6 +78,10 @@ func _update_margins_editor() -> void:
 
 
 func _apply_margins(top: int, left: int, bottom: int, right: int) -> void:
+	remove_theme_constant_override("margin_top")
+	remove_theme_constant_override("margin_left")
+	remove_theme_constant_override("margin_right")
+	remove_theme_constant_override("margin_bottom")
 	if use_top:
 		add_theme_constant_override("margin_top", maxi(top, min_margin_top))
 	if use_left:

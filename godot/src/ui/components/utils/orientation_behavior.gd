@@ -63,8 +63,10 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 			if node is CanvasItem:
 				node.visible = true
 		elif node is CanvasItem:
-			node.visible = not (hide_on_portrait and is_portrait) \
+			node.visible = (
+				not (hide_on_portrait and is_portrait)
 				and not (hide_on_landscape and not is_portrait)
+			)
 
 	# Container direction
 	if control_direction and node is BoxContainer:
@@ -76,8 +78,10 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		if target != null and target != self and get_parent() != target:
 			if is_ancestor_of(target):
 				push_error(
-					"OrientationBehavior: cannot reparent '%s' to '%s' — target is a descendant." \
-					% [name, target.name]
+					(
+						"OrientationBehavior: cannot reparent '%s' to '%s' — target is a descendant."
+						% [name, target.name]
+					)
 				)
 				return
 			_do_reparent.call_deferred(target)
