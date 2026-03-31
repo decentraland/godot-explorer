@@ -170,11 +170,16 @@ func _on_poor_connection() -> void:
 func _async_on_connection_lost() -> void:
 	await Global.modal_manager.async_show_connection_lost_modal()
 	# Replace the default secondary (exit) handler so the modal stays visible while quitting
-	if Global.modal_manager.current_modal and Global.modal_manager.current_modal.button_secondary:
-		var btn = Global.modal_manager.current_modal.button_secondary
-		if btn.pressed.is_connected(Global.modal_manager._on_connection_lost_secondary):
-			btn.pressed.disconnect(Global.modal_manager._on_connection_lost_secondary)
-		btn.pressed.connect(_on_exit)
+	# On iOS the exit button is hidden, so no rewiring needed
+	if OS.get_name() != "iOS":
+		if (
+			Global.modal_manager.current_modal
+			and Global.modal_manager.current_modal.button_secondary
+		):
+			var btn = Global.modal_manager.current_modal.button_secondary
+			if btn.pressed.is_connected(Global.modal_manager._on_connection_lost_secondary):
+				btn.pressed.disconnect(Global.modal_manager._on_connection_lost_secondary)
+			btn.pressed.connect(_on_exit)
 
 
 func _on_connection_restored() -> void:

@@ -108,7 +108,15 @@ func async_show_connection_lost_modal() -> void:
 	# Disconnect previous connections and connect button actions
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_connection_lost_primary)
-	current_modal.button_secondary.pressed.connect(_on_connection_lost_secondary)
+
+	# Hide exit button on iOS (quit() is not allowed by Apple)
+	if OS.get_name() == "iOS":
+		current_modal.set_body(
+			CONNECTION_LOST_BODY + "\nTo close the app, swipe up from the Home Screen."
+		)
+		current_modal.button_secondary.hide()
+	else:
+		current_modal.button_secondary.pressed.connect(_on_connection_lost_secondary)
 
 
 ## Shows a TELEPORT type modal
