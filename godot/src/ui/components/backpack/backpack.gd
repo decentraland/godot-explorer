@@ -187,16 +187,16 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_left", 0)
 		right_editor_container.add_theme_constant_override("margin_right", 0)
 		right_editor_container.add_theme_constant_override("margin_bottom", 0)
+		panel_margin_container.add_theme_constant_override("margin_top", 48)
 		inner_safe_margin.use_left = true
 		safe_margin_container.grow_horizontal = GrowDirection.GROW_DIRECTION_BOTH
 		safe_margin_container.grow_vertical = GrowDirection.GROW_DIRECTION_BOTH
-		panel_margin_container.add_theme_constant_override("margin_top", 48)
 	else:
 		right_editor_container.add_theme_constant_override("margin_top", 10)
 		right_editor_container.add_theme_constant_override("margin_left", 20)
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
-		panel_margin_container.add_theme_constant_override("margin_top", 10)
+		panel_margin_container.add_theme_constant_override("margin_top", 12)
 		inner_safe_margin.use_left = false
 		# Hack to force the container to be fixed
 		# to the top left corner to prevent weird jumps in the ui
@@ -209,12 +209,10 @@ func _on_size_changed():
 
 
 func _apply_narrow_mode(is_narrow: bool) -> void:
-	#var window_size: Vector2i = DisplayServer.window_get_size()
 	button_wearables.text = "" if is_narrow else _button_wearables_text
 	button_emotes.text = "" if is_narrow else _button_emotes_text
 	grid_container_wearables_list.columns = 2 if is_narrow else 3
 	hseparator_size_maintainer.custom_minimum_size.x = 420 if is_narrow else 630  # 630 / 420
-	emote_editor.set_narrow_mode(is_narrow)
 
 
 func _update_visible_categories():

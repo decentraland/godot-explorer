@@ -49,6 +49,8 @@ func _notification(what: int) -> void:
 
 
 func _do_reparent(target: Node) -> void:
+	# OrientationBehavior IS the node being reparented (not its parent).
+	# Calling get_parent().reparent() fails with owner errors at runtime.
 	reparent(target, false)
 	if reparent_to_front:
 		get_parent().move_child(self, 0)

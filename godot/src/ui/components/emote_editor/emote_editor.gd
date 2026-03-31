@@ -209,17 +209,11 @@ func _async_on_scrollbar_value_changed(new_value):
 			await _async_add_remote_emotes(_last_loaded_page)
 
 
-func set_narrow_mode(_is_narrow: bool) -> void:
-	#container_all_emotes.columns = 2 if is_narrow else 3
-	pass
-
-
 func on_screen_rotation(is_portrait: bool) -> void:
 	if is_portrait:
 		container_all_emotes.columns = 3
 		emote_selection_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 		emote_selection_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-		emote_selection_margin.add_theme_constant_override("margin_left", 40)
 		emote_selection_margin.add_theme_constant_override("margin_left", 0)
 		emote_selection_external_margin.add_theme_constant_override("margin_top", 6)
 		emote_selection_external_margin.add_theme_constant_override("margin_right", 0)
@@ -227,7 +221,6 @@ func on_screen_rotation(is_portrait: bool) -> void:
 		container_all_emotes.columns = 2
 		emote_selection_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		emote_selection_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-		emote_selection_margin.add_theme_constant_override("margin_left", 0)
 		emote_selection_margin.add_theme_constant_override("margin_left", 30)
 		emote_selection_external_margin.add_theme_constant_override("margin_top", 30)
 		emote_selection_external_margin.add_theme_constant_override("margin_right", 60)
