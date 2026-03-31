@@ -58,6 +58,9 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
+# Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
+var _force_hide_name: bool = false
+
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
 
@@ -110,6 +113,7 @@ func _ready():
 	# Hide mic when the avatar is spawned
 	nickname_ui.mic_enabled = false
 	Global.on_chat_message.connect(on_chat_message)
+	_apply_nickname_visibility()
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
@@ -291,13 +295,7 @@ func async_update_avatar(
 	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 	nickname_ui.mic_enabled = false
 
-	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
-	if is_avatar_shape:
-		nickname_quad.hide()
-	elif hide_name:
-		nickname_quad.hide()
-	else:
-		nickname_quad.show()
+	_apply_nickname_visibility()
 
 	wearable_to_request.append_array(avatar_data.get_wearables())
 
@@ -349,6 +347,25 @@ func async_update_avatar(
 	)
 	await PromiseUtils.async_all(promise)
 	await async_fetch_wearables_dependencies()
+
+
+func set_force_hide_name(value: bool) -> void:
+	if _force_hide_name == value:
+		return
+	_force_hide_name = value
+	if is_inside_tree():
+		_apply_nickname_visibility()
+
+
+func _apply_nickname_visibility() -> void:
+	if nickname_quad == null:
+		return
+	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
+	var should_hide := is_avatar_shape or hide_name or _force_hide_name
+	if should_hide:
+		nickname_quad.hide()
+	else:
+		nickname_quad.show()
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:

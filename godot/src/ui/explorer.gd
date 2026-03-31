@@ -273,6 +273,14 @@ func _ready():
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
+	# Keep avatar nicknames in sync with the session "Hide UI" setting.
+	# This is session-only (no config persistence) and must apply to existing + newly added avatars.
+	if Global.avatars and Global.avatars.avatar_added:
+		if not Global.avatars.avatar_added.is_connected(_on_avatar_added_apply_hide_ui):
+			Global.avatars.avatar_added.connect(_on_avatar_added_apply_hide_ui)
+	# Apply current state once at startup (in case something toggled early).
+	_apply_hide_ui_to_avatar_nicks(_session_hide_main_hud)
+
 	# Initialize social service for non-guest accounts
 	if not Global.player_identity.is_guest:
 		_async_initialize_social_service()
@@ -789,7 +797,12 @@ func set_visible_ui(value: bool, use_hud_mode: bool = false):
 
 
 func _is_ui_hud_mode_exception(node: Node) -> bool:
-	return node == ui_safe_area or node == control_menu or node == margin_container_show_ui
+	return (
+		node == ui_safe_area
+		or node == control_menu
+		or node == margin_container_show_ui
+		or node == profile_container
+	)
 
 
 func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
@@ -949,6 +962,10 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 
 
 func _on_profile_container_visibility_changed() -> void:
+	if _session_hide_main_hud:
+		# Keep profile visibility controlled by its own open/close flow in Hide UI mode.
+		# Avoid forcing hide/show here to prevent visibility_changed re-entrancy loops.
+		return
 	if not profile_container.visible and not _gamepad_connected:
 		joypad.show()
 
@@ -1052,6 +1069,11 @@ func _on_panel_chat_on_open_chat() -> void:
 
 
 func _on_panel_chat_on_exit_chat() -> void:
+	if _session_hide_main_hud:
+		# Keep strict hidden HUD when profile/chat transitions occur while Hide UI is active.
+		chat_container.hide()
+		_set_explorer_hud_elements_visible(false)
+		return
 	safe_margin_container_hud.show()
 	chat_container.hide()
 	if Global.is_mobile():
@@ -1179,6 +1201,7 @@ func _on_loading_started() -> void:
 	_session_hide_main_hud = false
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
+	_apply_hide_ui_to_avatar_nicks(false)
 
 
 func _on_loading_finished() -> void:
@@ -1383,12 +1406,38 @@ func _on_button_show_ui_pressed() -> void:
 	_session_hide_main_hud = false
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
+	_apply_hide_ui_to_avatar_nicks(false)
 
 
 func set_hide_main_hud_from_settings(minimized: bool) -> void:
 	_session_hide_main_hud = minimized
 	set_visible_ui(not minimized, true)
+	_apply_hide_ui_to_avatar_nicks(minimized)
 
 
 func is_session_hide_main_hud() -> bool:
 	return _session_hide_main_hud
+
+
+func _on_avatar_added_apply_hide_ui(avatar = null) -> void:
+	# Called when a new avatar is spawned; ensure its nickname obeys current Hide UI state.
+	if not _session_hide_main_hud:
+		return
+	if avatar != null and avatar is Avatar:
+		(avatar as Avatar).set_force_hide_name(true)
+	else:
+		_apply_hide_ui_to_avatar_nicks(true)
+
+
+func _apply_hide_ui_to_avatar_nicks(hide: bool) -> void:
+	# Remote avatars
+	if Global.avatars:
+		var avatars = Global.avatars.get_avatars() if "get_avatars" in Global.avatars else []
+		for a in avatars:
+			if a is Avatar:
+				(a as Avatar).set_force_hide_name(hide)
+	# Local player avatar
+	if Global.scene_runner and is_instance_valid(Global.scene_runner.player_avatar_node):
+		var p = Global.scene_runner.player_avatar_node
+		if p is Avatar:
+			(p as Avatar).set_force_hide_name(hide)
