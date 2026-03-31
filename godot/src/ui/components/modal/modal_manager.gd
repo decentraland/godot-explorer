@@ -56,8 +56,6 @@ func async_show_external_link_modal(external_url: String) -> void:
 			return
 
 	current_modal.set_title(EXTERNAL_LINK_TITLE)
-	current_modal.blocker = false
-	current_modal.dismissable = true
 	current_modal.set_body(EXTERNAL_LINK_BODY)
 	current_modal.set_primary_button_text(EXTERNAL_LINK_PRIMARY)
 	current_modal.set_secondary_button_text(EXTERNAL_LINK_SECONDARY)
@@ -79,8 +77,6 @@ func async_show_scene_timeout_modal() -> void:
 			return
 
 	current_modal.set_title(SCENE_TIMEOUT_TITLE)
-	current_modal.blocker = false
-	current_modal.dismissable = true
 	current_modal.set_body(SCENE_TIMEOUT_BODY)
 	current_modal.set_primary_button_text(SCENE_TIMEOUT_PRIMARY)
 	current_modal.set_secondary_button_text(SCENE_TIMEOUT_SECONDARY)
@@ -101,7 +97,6 @@ func async_show_connection_lost_modal() -> void:
 			return
 
 	current_modal.blocker = true
-	current_modal.dismissable = false
 	current_modal.set_title(CONNECTION_LOST_TITLE)
 	current_modal.set_body(CONNECTION_LOST_BODY)
 	current_modal.set_primary_button_text(CONNECTION_LOST_PRIMARY)
@@ -127,8 +122,6 @@ func async_show_teleport_modal(location: Vector2i, realm: String = "") -> void:
 
 	var destination_realm = realm if not realm.is_empty() else DclUrls.main_realm()
 
-	current_modal.blocker = false
-	current_modal.dismissable = true
 	current_modal.set_title(TELEPORT_TITLE)
 	current_modal.set_body(TELEPORT_BODY + str(location))
 	current_modal.set_primary_button_text(TELEPORT_PRIMARY)
@@ -168,8 +161,6 @@ func async_show_change_realm_modal(realm_name: String, message: String = "") -> 
 	if not message.is_empty():
 		body_text += "\nScene message: " + message
 
-	current_modal.blocker = false
-	current_modal.dismissable = true
 	current_modal.set_title("Change Realm")
 	current_modal.set_body(body_text)
 	current_modal.set_primary_button_text("Let's go!")
@@ -192,7 +183,6 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 			return
 
 	current_modal.blocker = true
-	current_modal.dismissable = false
 	current_modal.set_title(SCENE_CRASH_TITLE)
 	current_modal.set_body(SCENE_CRASH_BODY)
 	current_modal.set_primary_button_text(SCENE_CRASH_PRIMARY)
@@ -266,7 +256,6 @@ func _async_create_modal() -> Modal:
 	current_modal.hide_url()
 	current_modal.hide_icon()
 	current_modal.blocker = false
-	current_modal.dismissable = true
 
 	# Wait for modal to be fully in tree and @onready nodes initialized
 	# This is especially important when called from SDK/Rust

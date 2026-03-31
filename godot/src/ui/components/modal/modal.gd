@@ -5,9 +5,7 @@ const MODAL_ALERT_ICON = preload("res://assets/ui/modal-alert-icon.svg")
 const MODAL_BLOCK_ICON = preload("res://assets/ui/modal-block-icon.svg")
 const MODAL_CONNECTION_ICON = preload("res://assets/ui/modal-connection-icon.svg")
 
-# Deprecated toggle kept for backward compatibility.
-var dismissable: bool = true
-# When true, tapping outside the modal will never close it.
+# When true, the modal cannot be dismissed and consumes all input behind it.
 var blocker: bool = false
 
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
@@ -109,7 +107,7 @@ func _unhandled_input(_event: InputEvent) -> void:
 
 
 func _on_gui_input(event: InputEvent) -> void:
-	if blocker or not dismissable:
+	if blocker:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:

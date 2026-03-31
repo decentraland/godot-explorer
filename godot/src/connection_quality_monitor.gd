@@ -72,8 +72,8 @@ func _async_check_connection() -> void:
 	var result = await PromiseUtils.async_awaiter(promise)
 	var elapsed_ms := Time.get_ticks_msec() - start_ms
 
-	# Discard result if a retry happened while this request was in-flight
-	if generation != _check_generation:
+	# Discard result if a retry happened or the realm changed while this request was in-flight
+	if generation != _check_generation or url != _get_health_url():
 		_is_checking = false
 		return
 
