@@ -39,6 +39,7 @@ func async_show_notification(notification: Dictionary) -> void:
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		notification_image.texture = load(icon_path)
 
+	await get_tree().process_frame
 	position.y = -size.y
 
 	var tween = create_tween()

@@ -151,6 +151,8 @@ func _get_health_url() -> String:
 	var realm_url: String = Global.realm.realm_url
 	if realm_url.is_empty():
 		return DclUrls.peer_base() + "/about"
+	if not realm_url.ends_with("/"):
+		realm_url += "/"
 	return realm_url + "about"
 
 
@@ -170,8 +172,8 @@ func _async_on_connection_lost() -> void:
 	# Replace the default secondary (exit) handler so the modal stays visible while quitting
 	if Global.modal_manager.current_modal and Global.modal_manager.current_modal.button_secondary:
 		var btn = Global.modal_manager.current_modal.button_secondary
-		for connection in btn.pressed.get_connections():
-			btn.pressed.disconnect(connection.callable)
+		if btn.pressed.is_connected(Global.modal_manager._on_connection_lost_secondary):
+			btn.pressed.disconnect(Global.modal_manager._on_connection_lost_secondary)
 		btn.pressed.connect(_on_exit)
 
 
