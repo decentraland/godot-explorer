@@ -44,6 +44,17 @@ var _pending_play_state: int = -1  # -1=none, 0=pause, 1=play
 # Track if we ever received a valid frame (to distinguish garbage from last frame)
 var _has_received_frame: bool = false
 
+# Static black placeholder texture shared across all video players
+static var _black_placeholder: ImageTexture = null
+
+
+static func _get_black_placeholder() -> ImageTexture:
+	if _black_placeholder == null:
+		var img = Image.create(2, 2, false, Image.FORMAT_RGBA8)
+		img.fill(Color.BLACK)
+		_black_placeholder = ImageTexture.create_from_image(img)
+	return _black_placeholder
+
 
 # Called from Rust DclVideoPlayer::init_backend
 func _init_backend_impl(backend_type: int, source: String, playing: bool, looping: bool):
@@ -279,6 +290,23 @@ func _process(_delta):
 	_update_effective_volume()
 	_update_video_state()
 
+	# Track first valid frame for native players (ExoPlayer/AVPlayer).
+	# Requires BOTH conditions to avoid pink garbage:
+	# 1. video_state == PLAYING (player reports active playback)
+	# 2. Native player has actually delivered a GPU frame (_frame_count > 0)
+	# Without #2, there's a gap where is_playing=true but ExternalTexture has garbage.
+	# For LiveKit, _has_received_frame is set in _update_video_state (frames come from Rust).
+	if not _has_received_frame and video_state == VIDEO_STATE_PLAYING:
+		match current_backend:
+			BackendType.AV_PLAYER:
+				if av_player and av_player._frame_count > 0:
+					_has_received_frame = true
+			BackendType.EXO_PLAYER:
+				if exo_player and exo_player._frame_count > 0:
+					_has_received_frame = true
+			_:
+				pass
+
 
 ## Process pending play/pause commands after debounce period
 func _process_pending_play_state():
@@ -375,7 +403,10 @@ func _update_video_state():
 		_:
 			pass
 
-	if video_state == VIDEO_STATE_PLAYING:
+	# For native players, _has_received_frame is set when update_texture() returns true
+	# (i.e., the GPU actually has a valid frame). For LiveKit, it's set here since
+	# frames are pushed from Rust and video_state is set to PLAYING on first frame.
+	if current_backend == BackendType.LIVEKIT and video_state == VIDEO_STATE_PLAYING:
 		_has_received_frame = true
 
 
@@ -394,13 +425,14 @@ func _update_exo_player_state():
 		video_length = duration
 
 	# Determine state based on ExoPlayer status
-	if duration <= 0:
-		# Still loading/buffering
-		video_state = VIDEO_STATE_LOADING
-	elif is_playing:
+	# Note: is_playing takes priority over duration check because live HLS streams
+	# report duration=0 even while actively playing, which would keep state stuck
+	# in LOADING and prevent video texture from being displayed.
+	if is_playing:
 		video_state = VIDEO_STATE_PLAYING
+	elif duration <= 0:
+		video_state = VIDEO_STATE_LOADING
 	else:
-		# Not playing - could be paused or ready
 		if video_state == VIDEO_STATE_LOADING:
 			video_state = VIDEO_STATE_READY
 		elif video_state != VIDEO_STATE_READY:
@@ -422,13 +454,14 @@ func _update_av_player_state():
 		video_length = duration
 
 	# Determine state based on AVPlayer status
-	if duration <= 0:
-		# Still loading/buffering
-		video_state = VIDEO_STATE_LOADING
-	elif is_playing:
+	# Note: is_playing takes priority over duration check because live HLS streams
+	# report duration=0 even while actively playing, which would keep state stuck
+	# in LOADING and prevent video texture from being displayed.
+	if is_playing:
 		video_state = VIDEO_STATE_PLAYING
+	elif duration <= 0:
+		video_state = VIDEO_STATE_LOADING
 	else:
-		# Not playing - could be paused or ready
 		if video_state == VIDEO_STATE_LOADING:
 			video_state = VIDEO_STATE_READY
 		elif video_state != VIDEO_STATE_READY:
@@ -586,11 +619,11 @@ func _backend_dispose():
 
 func _get_backend_texture() -> Texture2D:
 	# Before receiving the first valid frame, ExternalTexture (ExoPlayer/AVPlayer)
-	# may contain GPU garbage. Return null to let Rust use the black placeholder.
+	# may contain GPU garbage. Return a black placeholder instead.
 	# After the first frame, always return the backend texture so that pause/buffering
 	# keeps showing the last valid frame instead of going black.
 	if not _has_received_frame:
-		return null
+		return _get_black_placeholder()
 
 	match current_backend:
 		BackendType.EXO_PLAYER:

@@ -25,13 +25,11 @@ corner_radius_bottom_left = 24
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2fmgn"]
 
 [node name="Chatbar" type="Control"]
-custom_minimum_size = Vector2(200, 60)
+custom_minimum_size = Vector2(328, 66)
 layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+anchors_preset = 0
+offset_right = 228.0
+offset_bottom = 66.0
 script = ExtResource("1_8wxvk")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
@@ -91,7 +89,7 @@ flat = true
 icon_alignment = 1
 
 [node name="PanelContainer2" type="PanelContainer" parent="HBoxContainer"]
-custom_minimum_size = Vector2(120, 0)
+custom_minimum_size = Vector2(172, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
 
