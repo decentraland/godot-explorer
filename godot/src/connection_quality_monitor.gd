@@ -16,8 +16,8 @@ signal connection_restored
 
 enum State { GOOD, POOR, LOST }
 
-const POLL_INTERVAL_SECONDS: float = 10.0
-const RETRY_POLL_INTERVAL_SECONDS: float = 3.0
+const POLL_INTERVAL_SECONDS: float = 5.0
+const RETRY_POLL_INTERVAL_SECONDS: float = 2.0
 const SLOW_RESPONSE_MS: float = 5000.0
 
 # With explorer: toast at 2, modal at 4 (toast warns first)
