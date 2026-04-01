@@ -39,6 +39,9 @@ import java.io.File
 import java.io.FileOutputStream
 
 // Reown/WalletConnect Sign SDK imports (without Compose UI)
+import com.android.installreferrer.api.InstallReferrerClient
+import com.android.installreferrer.api.InstallReferrerStateListener
+import com.android.installreferrer.api.ReferrerDetails
 import com.reown.android.Core
 import com.reown.android.CoreClient
 import com.reown.android.relay.ConnectionType
@@ -2025,6 +2028,104 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         sb.appendLine("Graphics: %.1f MB".format(memInfo.getOrDefault("graphics_pss_mb", 0.0)))
         sb.appendLine("System Available: %.1f MB".format(memInfo.getOrDefault("system_available_mb", 0.0)))
         return sb.toString()
+    }
+
+    // Install Referrer state (volatile for cross-thread visibility from InstallReferrerClient callback)
+    @Volatile private var installReferrerData: Dictionary? = null
+    @Volatile private var installReferrerFetched = false
+
+    /**
+     * Fetches install referrer data from the Google Play Store.
+     * This should be called once at app startup. The result is cached.
+     * Returns a Dictionary with:
+     *   - referrer: String (UTM params, e.g. "utm_source=youtube&utm_campaign=xyz")
+     *   - click_timestamp: Long (seconds since epoch when the referrer click happened)
+     *   - install_timestamp: Long (seconds since epoch when the install began)
+     *   - google_play_instant: Boolean (whether the app was launched as a Google Play Instant app)
+     *   - status: String ("ok", "pending", "error", "not_available")
+     *   - error: String (error message if status is "error")
+     */
+    @UsedByGodot
+    fun getInstallReferrer(): Dictionary {
+        // Return cached data if already fetched
+        installReferrerData?.let { return it }
+
+        // If already in progress, return pending
+        if (installReferrerFetched) {
+            val pending = Dictionary()
+            pending["status"] = "pending"
+            return pending
+        }
+
+        installReferrerFetched = true
+
+        val ctx = activity
+        if (ctx == null) {
+            val errorDict = Dictionary()
+            errorDict["status"] = "error"
+            errorDict["error"] = "Activity is null"
+            installReferrerData = errorDict
+            return errorDict
+        }
+
+        val referrerClient = InstallReferrerClient.newBuilder(ctx).build()
+        referrerClient.startConnection(object : InstallReferrerStateListener {
+            override fun onInstallReferrerSetupFinished(responseCode: Int) {
+                val result = Dictionary()
+                when (responseCode) {
+                    InstallReferrerClient.InstallReferrerResponse.OK -> {
+                        try {
+                            val response: ReferrerDetails = referrerClient.installReferrer
+                            result["status"] = "ok"
+                            result["referrer"] = response.installReferrer ?: ""
+                            result["click_timestamp"] = response.referrerClickTimestampSeconds
+                            result["install_timestamp"] = response.installBeginTimestampSeconds
+                            result["google_play_instant"] = response.googlePlayInstantParam
+                            Log.i(pluginName, "Install referrer fetched: ${response.installReferrer}")
+                        } catch (e: Exception) {
+                            result["status"] = "error"
+                            result["error"] = "Failed to read referrer: ${e.message}"
+                            Log.e(pluginName, "Error reading install referrer", e)
+                        }
+                    }
+                    InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED -> {
+                        result["status"] = "not_available"
+                        result["error"] = "Install referrer not supported on this device"
+                        Log.w(pluginName, "Install referrer API not supported")
+                    }
+                    InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE -> {
+                        result["status"] = "not_available"
+                        result["error"] = "Google Play Store service unavailable"
+                        Log.w(pluginName, "Install referrer service unavailable")
+                    }
+                    else -> {
+                        result["status"] = "error"
+                        result["error"] = "Unknown response code: $responseCode"
+                        Log.e(pluginName, "Install referrer unknown response: $responseCode")
+                    }
+                }
+                installReferrerData = result
+                try {
+                    referrerClient.endConnection()
+                } catch (e: Exception) {
+                    Log.w(pluginName, "Error ending install referrer connection", e)
+                }
+            }
+
+            override fun onInstallReferrerServiceDisconnected() {
+                if (installReferrerData == null) {
+                    val result = Dictionary()
+                    result["status"] = "error"
+                    result["error"] = "Service disconnected before data was received"
+                    installReferrerData = result
+                    Log.w(pluginName, "Install referrer service disconnected prematurely")
+                }
+            }
+        })
+
+        val pending = Dictionary()
+        pending["status"] = "pending"
+        return pending
     }
 
 }

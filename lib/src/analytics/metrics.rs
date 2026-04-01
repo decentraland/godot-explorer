@@ -16,6 +16,7 @@ use crate::{
 };
 
 use super::{
+    install_referrer::InstallReferrer,
     data_definition::{
         build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
@@ -56,6 +57,9 @@ pub struct Metrics {
     // Debug level: 0=disabled, 1=enabled (full JSON output)
     debug_level: u8,
 
+    // Install referrer tracker (Android only, None when not applicable or already sent)
+    install_referrer: Option<InstallReferrer>,
+
     base: Base<Node>,
 }
 
@@ -75,6 +79,7 @@ impl INode for Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
+            install_referrer: None,
             base,
         }
     }
@@ -99,6 +104,8 @@ impl INode for Metrics {
             self.mobile_platform = Some(MobilePlatform::Android);
             self.device_info = DclAndroidPlugin::get_mobile_device_info_internal();
             tracing::debug!("Android mobile platform detected for metrics collection");
+
+            self.install_referrer = InstallReferrer::start();
         }
     }
 
@@ -116,6 +123,14 @@ impl INode for Metrics {
 impl Metrics {
     #[func]
     fn timer_timeout(&mut self) {
+        // Poll install referrer (Android only, auto-completes after first success)
+        if let Some(ref mut referrer) = self.install_referrer {
+            if let Some(event) = referrer.poll() {
+                self.events.push(event);
+                self.install_referrer = None;
+            }
+        }
+
         self.process_and_send_events(false);
     }
 
@@ -131,6 +146,7 @@ impl Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
+            install_referrer: None,
             base,
         })
     }
