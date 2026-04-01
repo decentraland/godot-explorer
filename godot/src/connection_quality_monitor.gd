@@ -17,7 +17,8 @@ signal connection_restored
 enum State { GOOD, POOR, LOST }
 
 const POLL_INTERVAL_SECONDS: float = 5.0
-const RETRY_POLL_INTERVAL_SECONDS: float = 2.0
+const RETRY_POLL_INTERVAL_SECONDS: float = 1.0
+const LOST_POLL_INTERVAL_SECONDS: float = 1.0
 const SLOW_RESPONSE_MS: float = 5000.0
 
 # With explorer: toast at 2, modal at 4 (toast warns first)
@@ -36,6 +37,7 @@ var _poll_timer: Timer = null
 var _is_checking: bool = false
 var _retrying: bool = false
 var _check_generation: int = 0
+var _ios_retry_used: bool = false
 
 
 func _ready() -> void:
@@ -139,7 +141,8 @@ func _update_state() -> void:
 		if _state != State.LOST:
 			_state = State.LOST
 			_retrying = false
-			_poll_timer.stop()
+			_poll_timer.wait_time = LOST_POLL_INTERVAL_SECONDS
+			_poll_timer.start()
 			connection_lost_detected.emit()
 	elif has_explorer and not _retrying and _consecutive_errors >= CONSECUTIVE_ERRORS_FOR_POOR:
 		if _state != State.POOR and _state != State.LOST:
@@ -168,7 +171,9 @@ func _on_poor_connection() -> void:
 
 
 func _async_on_connection_lost() -> void:
-	await Global.modal_manager.async_show_connection_lost_modal()
+	# On iOS: first time show retry, second time show modal without buttons
+	var hide_buttons := OS.get_name() == "iOS" and _ios_retry_used
+	await Global.modal_manager.async_show_connection_lost_modal(hide_buttons)
 	# Replace the default secondary (exit) handler so the modal stays visible while quitting
 	# On iOS the exit button is hidden, so no rewiring needed
 	if OS.get_name() != "iOS":
@@ -184,6 +189,7 @@ func _async_on_connection_lost() -> void:
 
 func _on_connection_restored() -> void:
 	_retrying = false
+	_ios_retry_used = false
 	_poll_timer.wait_time = POLL_INTERVAL_SECONDS
 	_poll_timer.start()
 	Global.modal_manager.close_current_modal()
@@ -200,5 +206,7 @@ func _on_retry() -> void:
 	_state = State.GOOD
 	_is_checking = false
 	_retrying = true
+	if OS.get_name() == "iOS":
+		_ios_retry_used = true
 	_poll_timer.wait_time = RETRY_POLL_INTERVAL_SECONDS
 	_poll_timer.start()

@@ -90,7 +90,8 @@ func async_show_scene_timeout_modal() -> void:
 
 
 ## Shows a CONNECTION_LOST type modal
-func async_show_connection_lost_modal() -> void:
+## @param hide_buttons: If true, hides all buttons (used on iOS after retry fails)
+func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
 	if not current_modal:
 		if not await _async_create_modal():
 			print("NOT CREATED MODAL")
@@ -107,14 +108,14 @@ func async_show_connection_lost_modal() -> void:
 
 	# Disconnect previous connections and connect button actions
 	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(_on_connection_lost_primary)
 
-	# Hide exit button on iOS (quit() is not allowed by Apple)
+	current_modal.button_primary.pressed.connect(_on_connection_lost_primary)
 	if OS.get_name() == "iOS":
-		current_modal.set_body(
-			CONNECTION_LOST_BODY + "\nTo close the app, swipe up from the Home Screen."
-		)
 		current_modal.button_secondary.hide()
+		if hide_buttons:
+			# No buttons at all — modal auto-closes only when connection restores
+			current_modal.button_primary.hide()
+			current_modal.set_body(CONNECTION_LOST_BODY + "\n \n Try restarting the app.")
 	else:
 		current_modal.button_secondary.pressed.connect(_on_connection_lost_secondary)
 
