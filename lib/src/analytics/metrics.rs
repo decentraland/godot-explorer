@@ -16,7 +16,6 @@ use crate::{
 };
 
 use super::{
-    install_referrer::InstallReferrer,
     data_definition::{
         build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
@@ -24,6 +23,7 @@ use super::{
         SegmentEventRequestFriend, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
+    install_referrer::InstallReferrer,
 };
 
 #[derive(Clone, Copy)]
