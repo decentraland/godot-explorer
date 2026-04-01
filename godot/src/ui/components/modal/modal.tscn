@@ -155,17 +155,18 @@ max_lines_visible = 2
 visible_characters = 106
 visible_ratio = 1.0707071
 
-[node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="HSeparator_ButtonsSeparator" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 53
 theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 21
 
-[node name="Button_Secondary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
+[node name="Button_Secondary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
@@ -174,7 +175,7 @@ theme = ExtResource("5_bdjpj")
 theme_type_variation = &"SecondaryButton"
 text = "SECONDARY"
 
-[node name="Button_Primary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
+[node name="Button_Primary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
@@ -202,5 +203,5 @@ expand_mode = 1
 stretch_mode = 4
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
-[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Secondary" to="." method="_on_button_secondary_pressed"]
-[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Primary" to="." method="_on_button_primary_pressed"]
+[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons/Button_Secondary" to="." method="_on_button_secondary_pressed"]
+[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons/Button_Primary" to="." method="_on_button_primary_pressed"]

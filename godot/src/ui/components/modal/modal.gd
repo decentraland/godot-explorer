@@ -16,8 +16,9 @@ var blocker: bool = false
 @onready var icon: TextureRect = %Icon
 @onready var button_secondary: Button = %Button_Secondary
 @onready var button_primary: Button = %Button_Primary
-@onready var buttons_container: HBoxContainer = %HBoxContainer
 @onready var panel_container: PanelContainer = $PanelContainer
+@onready var buttons_separator: HSeparator = %HSeparator_ButtonsSeparator
+@onready var buttons_container: HBoxContainer = %HBoxContainer_Buttons
 
 
 func _ready() -> void:
