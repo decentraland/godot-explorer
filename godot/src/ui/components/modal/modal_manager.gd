@@ -114,7 +114,7 @@ func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
 		current_modal.button_secondary.hide()
 		if hide_buttons:
 			# No buttons at all — modal auto-closes only when connection restores
-			current_modal.button_primary.hide()
+			current_modal.buttons_container.hide()
 			current_modal.set_body(CONNECTION_LOST_BODY + "\n \n Try restarting the app.")
 	else:
 		current_modal.button_secondary.pressed.connect(_on_connection_lost_secondary)
