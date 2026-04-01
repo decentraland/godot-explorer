@@ -21,7 +21,6 @@ enum State { GOOD, POOR, LOST }
 
 const FAST_POLL_SECONDS: float = 0.5
 const SLOW_POLL_SECONDS: float = 2.0
-const SLOW_RESPONSE_MS: float = 5000.0
 const CONSECUTIVE_ERRORS_FOR_DEGRADED: int = 2
 const CONSECUTIVE_ERRORS_FOR_LOST: int = 4
 
@@ -63,9 +62,11 @@ func _async_check_connection() -> void:
 		_is_checking = false
 		return
 
-	var start_ms := Time.get_ticks_msec()
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
-	var result = await PromiseUtils.async_awaiter(promise)
+	var timeout_promise := _create_timeout_promise(_poll_timer.wait_time)
+
+	var start_ms := Time.get_ticks_msec()
+	var result = await PromiseUtils.async_race([promise, timeout_promise])
 	var elapsed_ms := Time.get_ticks_msec() - start_ms
 
 	# Discard result if a retry happened or the realm changed while this request was in-flight
@@ -73,24 +74,24 @@ func _async_check_connection() -> void:
 		_is_checking = false
 		return
 
-	if result is PromiseError:
+	# Timeout or error
+	if not promise.is_resolved() or result is PromiseError:
 		_consecutive_errors += 1
 		_set_poll_interval(FAST_POLL_SECONDS)
-		print(
-			(
-				"[ConnectionQualityMonitor] Request failed (%d consecutive errors): %s"
-				% [_consecutive_errors, result.get_error()]
+		if not promise.is_resolved():
+			print(
+				(
+					"[ConnectionQualityMonitor] Request timed out after %d ms (%d consecutive errors)"
+					% [elapsed_ms, _consecutive_errors]
+				)
 			)
-		)
-	elif elapsed_ms > SLOW_RESPONSE_MS:
-		_consecutive_errors += 1
-		_set_poll_interval(FAST_POLL_SECONDS)
-		print(
-			(
-				"[ConnectionQualityMonitor] Slow response (%d ms, %d consecutive errors)"
-				% [elapsed_ms, _consecutive_errors]
+		else:
+			print(
+				(
+					"[ConnectionQualityMonitor] Request failed (%d consecutive errors): %s"
+					% [_consecutive_errors, result.get_error()]
+				)
 			)
-		)
 	else:
 		if _consecutive_errors > 0:
 			print(
@@ -139,6 +140,12 @@ func _update_state() -> void:
 	):
 		_state = State.LOST
 		connection_lost_detected.emit()
+
+
+func _create_timeout_promise(timeout_seconds: float) -> Promise:
+	var p := Promise.new()
+	get_tree().create_timer(timeout_seconds).timeout.connect(func(): p.reject("timeout"))
+	return p
 
 
 func _set_poll_interval(interval: float) -> void:
