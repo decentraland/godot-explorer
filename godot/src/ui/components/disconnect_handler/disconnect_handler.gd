@@ -53,6 +53,12 @@ func _on_disconnected(reason: int) -> void:
 		_show_disconnect_error(reason)
 		return
 
+	# Kicked/Banned - don't retry, show ban modal and go to lobby
+	if reason == 2:
+		_should_stop_reconnecting = true
+		Global.modal_manager.async_show_ban_kicked_modal()
+		return
+
 	_last_disconnect_reason = reason
 	_reconnect_attempts += 1
 	_should_stop_reconnecting = false  # Allow reconnection attempts

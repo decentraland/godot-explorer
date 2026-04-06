@@ -36,6 +36,14 @@ const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back t
 const SCENE_CRASH_PRIMARY = "RELOAD"
 const SCENE_CRASH_SECONDARY = "BACK"
 
+const BAN_PRE_CHECK_TITLE = "You are banned"
+const BAN_PRE_CHECK_BODY = "You have been banned from this scene and cannot enter."
+const BAN_PRE_CHECK_PRIMARY = "OK"
+
+const BAN_KICKED_TITLE = "You have been banned"
+const BAN_KICKED_BODY = "You have been banned from this scene by a moderator."
+const BAN_KICKED_PRIMARY = "GO TO LOBBY"
+
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
 
@@ -196,6 +204,44 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 	current_modal.button_secondary.pressed.connect(_on_scene_crash_back)
 
 
+## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
+func async_show_ban_pre_check_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.dismissable = false
+	current_modal.set_title(BAN_PRE_CHECK_TITLE)
+	current_modal.set_body(BAN_PRE_CHECK_BODY)
+	current_modal.set_primary_button_text(BAN_PRE_CHECK_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a ban kicked modal (when kicked from a scene in real-time)
+func async_show_ban_kicked_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.dismissable = false
+	current_modal.set_title(BAN_KICKED_TITLE)
+	current_modal.set_body(BAN_KICKED_BODY)
+	current_modal.set_primary_button_text(BAN_KICKED_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_ban_kicked_go_to_lobby)
+
+
 ## Closes the current modal if it exists
 func close_current_modal() -> void:
 	if current_modal:
@@ -335,6 +381,11 @@ func _on_scene_crash_reload(_entity_id: String) -> void:
 func _on_scene_crash_back() -> void:
 	Global.open_discover.emit()
 	close_current_modal()
+
+
+func _on_ban_kicked_go_to_lobby() -> void:
+	close_current_modal()
+	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
 
 
 func _on_modal_tree_exited() -> void:
