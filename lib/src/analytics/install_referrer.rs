@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use godot::{
-    classes::{file_access::ModeFlags, FileAccess},
-    prelude::*,
-};
+use godot::{classes::FileAccess, prelude::*};
 
 use crate::godot_classes::dcl_android_plugin::DclAndroidPlugin;
 
@@ -22,14 +19,21 @@ impl InstallReferrer {
     /// Create and start the referrer fetch if needed.
     /// Returns `None` if already sent in a previous session.
     pub fn start() -> Option<Self> {
-        if FileAccess::file_exists(&GString::from(FLAG_PATH)) {
-            tracing::info!("Install referrer already sent in a previous session, skipping");
-            return None;
-        }
+        let flag_exists = FileAccess::file_exists(&GString::from(FLAG_PATH));
+        tracing::info!("[IR] InstallReferrer::start() called, flag_exists={flag_exists} (NOTE: persistence check disabled for debugging - will fire every session)");
 
         // Trigger the async fetch on the Android side
-        DclAndroidPlugin::get_install_referrer_internal();
-        tracing::info!("Install referrer fetch requested");
+        tracing::info!("[IR] Calling get_install_referrer_internal() to trigger first fetch");
+        let initial = DclAndroidPlugin::get_install_referrer_internal();
+        tracing::info!("[IR] Initial call returned: {:?}", initial.is_some());
+        if let Some(d) = &initial {
+            let status = d
+                .get("status")
+                .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "<missing>".to_string());
+            tracing::info!("[IR] Initial dict status='{status}'");
+        }
 
         Some(Self {
             requested: true,
@@ -40,11 +44,22 @@ impl InstallReferrer {
     /// Poll for the referrer result. Returns a SegmentEvent when ready.
     /// Returns `None` while still pending or after already completed.
     pub fn poll(&mut self) -> Option<SegmentEvent> {
-        if self.done || !self.requested {
+        if self.done {
+            return None;
+        }
+        if !self.requested {
+            tracing::debug!("[IR] poll() called but not requested");
             return None;
         }
 
-        let dict = DclAndroidPlugin::get_install_referrer_internal()?;
+        tracing::info!("[IR] poll() calling JNI get_install_referrer_internal()");
+        let dict = match DclAndroidPlugin::get_install_referrer_internal() {
+            Some(d) => d,
+            None => {
+                tracing::warn!("[IR] poll: plugin returned None (singleton missing or JNI failed)");
+                return None;
+            }
+        };
 
         let status = dict
             .get("status")
@@ -52,11 +67,15 @@ impl InstallReferrer {
             .unwrap_or_default()
             .to_string();
 
+        tracing::info!("[IR] poll: status='{status}'");
+
         if status == "pending" {
+            tracing::info!("[IR] poll: still pending, will retry next tick");
             return None;
         }
 
         self.done = true;
+        tracing::info!("[IR] poll: terminal status='{status}', marking done");
 
         if status != "ok" {
             let error = dict
@@ -64,7 +83,9 @@ impl InstallReferrer {
                 .and_then(|v| v.try_to::<GString>().ok())
                 .unwrap_or_default()
                 .to_string();
-            tracing::warn!("Install referrer not available: {status} - {error}");
+            tracing::warn!(
+                "[IR] Install referrer not available: status='{status}' error='{error}'"
+            );
             return None;
         }
 
@@ -92,15 +113,16 @@ impl InstallReferrer {
         let utm = parse_utm_params(&referrer);
 
         tracing::info!(
-            "Install attribution tracked: source={:?}, campaign={:?}, referrer={referrer}",
+            "[IR] Install attribution tracked: source={:?}, medium={:?}, campaign={:?}, content={:?}, term={:?}, referrer='{referrer}', click_ts={click_timestamp}, install_ts={install_timestamp}, instant={google_play_instant}",
             utm.get("utm_source"),
+            utm.get("utm_medium"),
             utm.get("utm_campaign"),
+            utm.get("utm_content"),
+            utm.get("utm_term"),
         );
 
-        // Persist so we never send again
-        if let Some(mut fa) = FileAccess::open(&GString::from(FLAG_PATH), ModeFlags::WRITE) {
-            fa.store_string(&GString::from("1"));
-        }
+        // Persistence disabled for debugging - event will be sent every session
+        tracing::info!("[IR] Persistence flag write SKIPPED (debug mode - sends every session)");
 
         Some(SegmentEvent::InstallAttribution(
             SegmentEventInstallAttribution {
