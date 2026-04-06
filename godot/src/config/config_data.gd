@@ -31,7 +31,6 @@ enum ConfigParams {
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
-	GAMEPAD_CAMERA_SENSITIVITY,
 }
 
 # Graphics profile index for Custom (manual settings)
@@ -203,11 +202,6 @@ var audio_avatar_and_emotes_volume: float = 100.0:
 var audio_mic_amplification: float = 100.0:
 	set(value):
 		audio_mic_amplification = value
-
-var gamepad_camera_sensitivity: float = 50.0:
-	set(value):
-		gamepad_camera_sensitivity = maxf(value, 1.0)
-		param_changed.emit(ConfigParams.GAMEPAD_CAMERA_SENSITIVITY)
 
 var analytics_user_id: String = "":
 	set(value):
@@ -393,10 +387,6 @@ func load_from_settings_file():
 		"config", "audio_mic_amplification", data_default.audio_mic_amplification
 	)
 
-	self.gamepad_camera_sensitivity = settings_file.get_value(
-		"config", "gamepad_camera_sensitivity", data_default.gamepad_camera_sensitivity
-	)
-
 	var profile_suffix := _get_profile_suffix()
 	self.session_account = settings_file.get_value(
 		"session", "account" + profile_suffix, data_default.session_account
@@ -477,9 +467,6 @@ func save_to_settings_file():
 		"config", "audio_avatar_and_emotes_volume", self.audio_avatar_and_emotes_volume
 	)
 	new_settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
-	new_settings_file.set_value(
-		"config", "gamepad_camera_sensitivity", self.gamepad_camera_sensitivity
-	)
 	new_settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 
 	# Preserve all existing session keys (other profile slots)

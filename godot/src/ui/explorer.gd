@@ -24,12 +24,6 @@ var _is_loading: bool = true  # Start as loading
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 var _gamepad_connected: bool = false
 
-## Children of %UI hidden while "hide explorer UI" is on; restored when toggled off.
-var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
-
-## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
-var _session_hide_main_hud: bool = false
-
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 @onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
@@ -66,7 +60,6 @@ var _session_hide_main_hud: bool = false
 @onready var notifications: Control = %Notifications
 
 @onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
-@onready var chat_safe_margin: SafeMarginContainer = %SafeMarginContainer_Chat
 
 @onready var chat_container: Control = %ChatContainer
 @onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
@@ -75,8 +68,6 @@ var _session_hide_main_hud: bool = false
 @onready var joypad: Control = %Joypad
 @onready var chatbar: Control = %Chatbar
 @onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
-@onready var button_show_ui: Button = %Button_ShowUI
-@onready var margin_container_show_ui: MarginContainer = %MarginContainer_ShowUI
 
 
 func _process(_dt):
@@ -238,9 +229,6 @@ func _ready():
 	Global.scene_runner.console = self._on_scene_console_message
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
 	player.avatar.emote_triggered.connect(Global.scene_runner.on_primary_player_trigger_emote)
-	# Recreate base_ui before use: the previous instance is freed when the Explorer
-	# scene is torn down (logout/change_scene_to_file), leaving a dangling reference.
-	Global.scene_runner.recreate_base_ui()
 	ui_safe_area.add_child(Global.scene_runner.base_ui)
 	ui_safe_area.move_child(Global.scene_runner.base_ui, 0)
 
@@ -258,8 +246,7 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
-		if not Global.deep_link_obj.preview.is_empty():
-			Global.scene_fetcher.set_preview_url(cmd_realm)
+		Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
@@ -272,14 +259,6 @@ func _ready():
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
-
-	# Keep avatar nicknames in sync with the session "Hide UI" setting.
-	# This is session-only (no config persistence) and must apply to existing + newly added avatars.
-	if Global.avatars and Global.avatars.avatar_added:
-		if not Global.avatars.avatar_added.is_connected(_on_avatar_added_apply_hide_ui):
-			Global.avatars.avatar_added.connect(_on_avatar_added_apply_hide_ui)
-	# Apply current state once at startup (in case something toggled early).
-	_apply_hide_ui_to_avatar_nicks(_session_hide_main_hud)
 
 	# Initialize social service for non-guest accounts
 	if not Global.player_identity.is_guest:
@@ -315,10 +294,6 @@ func _ready():
 		load("res://src/decentraland_components/dcl_global_camera_controller.tscn").instantiate()
 	)
 	add_child(dcl_global_camera_controller)
-
-	button_show_ui.pressed.connect(_on_button_show_ui_pressed)
-	_session_hide_main_hud = false
-	set_visible_ui(true, true)
 
 
 func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:
@@ -773,17 +748,7 @@ func release_mouse():
 			label_crosshair.hide()
 
 
-func set_visible_ui(value: bool, use_hud_mode: bool = false):
-	if use_hud_mode:
-		_set_explorer_hud_elements_visible(value)
-		return
-
-	# External callers (e.g. scene capture): if session "hide UI" is on, restoring the
-	# root must reapply minimized HUD + show-UI button, not only ui_root.show().
-	if value and _session_hide_main_hud:
-		_set_explorer_hud_elements_visible(false)
-		return
-
+func set_visible_ui(value: bool):
 	if value == ui_root.visible:
 		return
 
@@ -791,41 +756,6 @@ func set_visible_ui(value: bool, use_hud_mode: bool = false):
 		ui_root.show()
 	else:
 		ui_root.hide()
-
-	if value:
-		margin_container_show_ui.hide()
-
-
-func _is_ui_hud_mode_exception(node: Node) -> bool:
-	return (
-		node == ui_safe_area
-		or node == control_menu
-		or node == margin_container_show_ui
-		or node == profile_container
-	)
-
-
-func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
-	ui_root.show()
-	if full_hud:
-		for node in _ui_children_hidden_for_hud_mode:
-			if is_instance_valid(node):
-				node.show()
-		_ui_children_hidden_for_hud_mode.clear()
-		margin_container_show_ui.hide()
-		return
-
-	for child in ui_root.get_children():
-		if _is_ui_hud_mode_exception(child):
-			continue
-		if not child is CanvasItem:
-			continue
-		var canvas_child := child as CanvasItem
-		if canvas_child.visible:
-			_ui_children_hidden_for_hud_mode.append(canvas_child)
-			canvas_child.hide()
-
-	margin_container_show_ui.show()
 
 
 func _on_control_menu_request_debug_panel(enabled):
@@ -913,20 +843,6 @@ func _on_ui_root_gui_input(event: InputEvent):
 				Input.action_release("ia_pointer")
 
 
-func _on_chat_container_gui_input(event: InputEvent) -> void:
-	if not chat_container.visible:
-		return
-
-	var should_close := false
-	if event is InputEventScreenTouch:
-		should_close = event.pressed
-	elif event is InputEventMouseButton:
-		should_close = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
-
-	if should_close:
-		panel_chat.exit_chat()
-
-
 func _on_panel_profile_open_profile():
 	_open_own_profile()
 
@@ -962,10 +878,6 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 
 
 func _on_profile_container_visibility_changed() -> void:
-	if _session_hide_main_hud:
-		# Keep profile visibility controlled by its own open/close flow in Hide UI mode.
-		# Avoid forcing hide/show here to prevent visibility_changed re-entrancy loops.
-		return
 	if not profile_container.visible and not _gamepad_connected:
 		joypad.show()
 
@@ -1064,16 +976,9 @@ func _on_panel_chat_on_open_chat() -> void:
 	# Hide navbar when chat opens to prevent it from showing when virtual keyboard appears
 	if Global.is_mobile():
 		navbar.set_manually_hidden(true)
-		if chat_safe_margin != null:
-			chat_safe_margin.refresh_margins()
 
 
 func _on_panel_chat_on_exit_chat() -> void:
-	if _session_hide_main_hud:
-		# Keep strict hidden HUD when profile/chat transitions occur while Hide UI is active.
-		chat_container.hide()
-		_set_explorer_hud_elements_visible(false)
-		return
 	safe_margin_container_hud.show()
 	chat_container.hide()
 	if Global.is_mobile():
@@ -1083,22 +988,13 @@ func _on_panel_chat_on_exit_chat() -> void:
 
 
 func _on_change_virtual_keyboard(virtual_keyboard_height: int):
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var safe_window_height: float = max(float(window_size.y), 1.0)
-	var y_factor: float = viewport_size.y / safe_window_height
-	var keyboard_height_scaled: float = ceil(max(float(virtual_keyboard_height) * y_factor, 0.0))
-	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
+	if virtual_keyboard_height != 0:
+		var window_size: Vector2i = DisplayServer.window_get_size()
+		var viewport_size = get_viewport().get_visible_rect().size
 
-	if Global.is_mobile() and chat_safe_margin != null:
-		# Keep margin_left (notch); when keyboard is open, align width with keyboard by removing only right inset.
-		if virtual_keyboard_height > 0:
-			chat_safe_margin.add_theme_constant_override("margin_right", 0)
-		else:
-			chat_safe_margin.remove_theme_constant_override("margin_right")
-			chat_safe_margin.refresh_margins()
-
-	if virtual_keyboard_height == 0:
+		var y_factor: float = viewport_size.y / window_size.y
+		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
+	elif virtual_keyboard_height == 0:
 		panel_chat.exit_chat()
 
 
@@ -1194,10 +1090,6 @@ func _on_toast_mark_as_read(notification_d: Dictionary) -> void:
 func _on_loading_started() -> void:
 	_is_loading = true
 	_pending_notification_toast = {}  # Clear any pending notification
-	_session_hide_main_hud = false
-	set_visible_ui(true, true)
-	Global.session_hide_ui_toggle_sync.emit(false)
-	_apply_hide_ui_to_avatar_nicks(false)
 
 
 func _on_loading_finished() -> void:
@@ -1396,44 +1288,3 @@ func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
 		_close_all_panels()
 		navbar.collapse()
 		capture_mouse()
-
-
-func _on_button_show_ui_pressed() -> void:
-	_session_hide_main_hud = false
-	set_visible_ui(true, true)
-	Global.session_hide_ui_toggle_sync.emit(false)
-	_apply_hide_ui_to_avatar_nicks(false)
-
-
-func set_hide_main_hud_from_settings(minimized: bool) -> void:
-	_session_hide_main_hud = minimized
-	set_visible_ui(not minimized, true)
-	_apply_hide_ui_to_avatar_nicks(minimized)
-
-
-func is_session_hide_main_hud() -> bool:
-	return _session_hide_main_hud
-
-
-func _on_avatar_added_apply_hide_ui(avatar = null) -> void:
-	# Called when a new avatar is spawned; ensure its nickname obeys current Hide UI state.
-	if not _session_hide_main_hud:
-		return
-	if avatar != null and avatar is Avatar:
-		(avatar as Avatar).set_force_hide_name(true)
-	else:
-		_apply_hide_ui_to_avatar_nicks(true)
-
-
-func _apply_hide_ui_to_avatar_nicks(hide: bool) -> void:
-	# Remote avatars
-	if Global.avatars:
-		var avatars = Global.avatars.get_avatars() if "get_avatars" in Global.avatars else []
-		for a in avatars:
-			if a is Avatar:
-				(a as Avatar).set_force_hide_name(hide)
-	# Local player avatar
-	if Global.scene_runner and is_instance_valid(Global.scene_runner.player_avatar_node):
-		var p = Global.scene_runner.player_avatar_node
-		if p is Avatar:
-			(p as Avatar).set_force_hide_name(hide)

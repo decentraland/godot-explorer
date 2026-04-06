@@ -12,8 +12,6 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 	"bid_accepted",
 ]
 
-const NARROW_WIDTH_THRESHOLD := 1550
-
 @export var hide_background: bool = false
 @export var hide_navbar: bool = false
 
@@ -37,8 +35,6 @@ var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
 var _avatar_update_retries: int = 0
-var _button_wearables_text: String
-var _button_emotes_text: String
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
@@ -55,7 +51,7 @@ var _button_emotes_text: String
 @onready var control_no_items = %Control_NoItems
 @onready var backpack_loading = %TextureProgressBar_BackpackLoading
 @onready var container_backpack = %HBoxContainer_Backpack
-@onready var control_left_bar: Control = %Control_LeftBar
+@onready var button_back_to_explorer := %Button_BackToExplorer
 
 @onready var wearable_editor = %WearableEditor
 @onready var emote_editor = %EmoteEditor
@@ -75,18 +71,11 @@ var _button_emotes_text: String
 @onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
 @onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
 @onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
-@onready var right_editor_container := %RightEditorContainer
-@onready var hseparator_size_maintainer: HSeparator = %HSeparator_SizeMaintainer
-@onready var inner_safe_margin: SafeMarginContainer = %InnerSafeMargin
-@onready var panel_margin_container: MarginContainer = %PanelMarginContainer
-@onready var safe_margin_container: SafeMarginContainer = $SafeMarginContainer
 
 
 # gdlint:ignore = async-function-name
 func _ready():
 	UiSounds.install_audio_recusirve(self)
-	_button_wearables_text = button_wearables.text
-	_button_emotes_text = button_emotes.text
 	color_rect_background.visible = !hide_background
 	texture_rect_background.visible = !hide_background
 	for category in Wearables.Categories.ALL_CATEGORIES:
@@ -106,6 +95,7 @@ func _ready():
 
 	container_backpack.hide()
 	backpack_loading.show()
+	button_back_to_explorer.hide()
 
 	color_carrousel.hide()
 	carrousel_separator.hide()
@@ -182,37 +172,17 @@ func _ready():
 func _on_size_changed():
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var portrait = window_size.x < window_size.y
+	var right_editor_container: MarginContainer = %RightEditorContainer
 	if portrait:
 		right_editor_container.add_theme_constant_override("margin_top", 0)
 		right_editor_container.add_theme_constant_override("margin_left", 0)
 		right_editor_container.add_theme_constant_override("margin_right", 0)
 		right_editor_container.add_theme_constant_override("margin_bottom", 0)
-		panel_margin_container.add_theme_constant_override("margin_top", 48)
-		inner_safe_margin.use_left = true
-		safe_margin_container.grow_horizontal = GrowDirection.GROW_DIRECTION_BOTH
-		safe_margin_container.grow_vertical = GrowDirection.GROW_DIRECTION_BOTH
 	else:
 		right_editor_container.add_theme_constant_override("margin_top", 10)
 		right_editor_container.add_theme_constant_override("margin_left", 20)
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
-		panel_margin_container.add_theme_constant_override("margin_top", 12)
-		inner_safe_margin.use_left = false
-		# Hack to force the container to be fixed
-		# to the top left corner to prevent weird jumps in the ui
-		safe_margin_container.grow_horizontal = GrowDirection.GROW_DIRECTION_END
-		safe_margin_container.grow_vertical = GrowDirection.GROW_DIRECTION_END
-	# Force to update size
-	inner_safe_margin._on_size_changed()
-	_apply_narrow_mode(not portrait and window_size.x < NARROW_WIDTH_THRESHOLD)
-	emote_editor.on_screen_rotation(portrait)
-
-
-func _apply_narrow_mode(is_narrow: bool) -> void:
-	button_wearables.text = "" if is_narrow else _button_wearables_text
-	button_emotes.text = "" if is_narrow else _button_emotes_text
-	grid_container_wearables_list.columns = 2 if is_narrow else 3
-	hseparator_size_maintainer.custom_minimum_size.x = 420 if is_narrow else 630  # 630 / 420
 
 
 func _update_visible_categories():
@@ -650,3 +620,17 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 		maincategories_container.show()
 		hseparator_extra_space.hide()
 		hseparator_extra_space_b.show()
+
+
+func _on_visibility_changed() -> void:
+	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
+		Global.set_orientation_portrait()
+		if Global.get_explorer():
+			if button_back_to_explorer:
+				button_back_to_explorer.show()
+
+
+func _on_button_back_to_explorer_pressed() -> void:
+	if Global.get_explorer():
+		Global.close_menu.emit()
+		Global.set_orientation_landscape()

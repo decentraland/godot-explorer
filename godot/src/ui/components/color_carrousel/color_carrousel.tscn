@@ -55,25 +55,14 @@ metadata/_edit_use_anchors_ = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer_Offset" type="MarginContainer" parent="MarginContainer_Aligment/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = -43
-theme_override_constants/margin_right = -43
-
-[node name="MarginContainer_ClipContent" type="MarginContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer_Offset"]
-clip_contents = true
-layout_mode = 2
-theme_override_constants/margin_left = 43
-theme_override_constants/margin_right = 43
-
-[node name="ScrollSwatchContainer" type="ScrollContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer_Offset/MarginContainer_ClipContent"]
+[node name="ScrollSwatchContainer" type="ScrollContainer" parent="MarginContainer_Aligment/VBoxContainer"]
 unique_name_in_owner = true
 clip_contents = false
 layout_mode = 2
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer_Offset/MarginContainer_ClipContent/ScrollSwatchContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Aligment/VBoxContainer/ScrollSwatchContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_left = 6
@@ -81,15 +70,15 @@ theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer_Offset/MarginContainer_ClipContent/ScrollSwatchContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Aligment/VBoxContainer/ScrollSwatchContainer/MarginContainer"]
 layout_mode = 2
 
-[node name="ColorCarrousel" type="HBoxContainer" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer_Offset/MarginContainer_ClipContent/ScrollSwatchContainer/MarginContainer/VBoxContainer"]
+[node name="ColorCarrousel" type="HBoxContainer" parent="MarginContainer_Aligment/VBoxContainer/ScrollSwatchContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="ColorButton" parent="MarginContainer_Aligment/VBoxContainer/MarginContainer_Offset/MarginContainer_ClipContent/ScrollSwatchContainer/MarginContainer/VBoxContainer/ColorCarrousel" instance=ExtResource("2_mgcx2")]
+[node name="ColorButton" parent="MarginContainer_Aligment/VBoxContainer/ScrollSwatchContainer/MarginContainer/VBoxContainer/ColorCarrousel" instance=ExtResource("2_mgcx2")]
 layout_mode = 2
 color = Color(1, 0, 1, 1)
 

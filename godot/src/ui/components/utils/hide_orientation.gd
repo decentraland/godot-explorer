@@ -4,15 +4,26 @@ extends Control
 @export var hide_on_portrait: bool = false
 
 var _original_visible: bool = true
-var _watcher: OrientationWatcher
 
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		_original_visible = visible
-	_watcher = OrientationWatcher.new()
-	_watcher.orientation_changed.connect(_on_watcher_orientation_changed)
-	add_child(_watcher)
+		set_process(true)
+		_update_visibility_editor()
+		return
+	get_window().size_changed.connect(self._on_size_changed)
+	_on_size_changed()
+
+
+func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		set_process(false)
+
+
+func _process(_delta: float) -> void:
+	if Engine.is_editor_hint():
+		_update_visibility_editor()
 
 
 func _notification(what: int) -> void:
@@ -21,12 +32,24 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_EDITOR_PRE_SAVE:
 		visible = _original_visible
 	elif what == NOTIFICATION_EDITOR_POST_SAVE:
-		if _watcher:
-			_on_watcher_orientation_changed(_watcher.get_is_portrait())
+		_update_visibility_editor()
 
 
-func _on_watcher_orientation_changed(is_portrait: bool) -> void:
-	if Engine.is_editor_hint() and not OrientationWatcher.is_editor_preview_active():
+func _update_visibility_editor() -> void:
+	var preview_active: bool = ProjectSettings.get_setting("_mobile_preview/active", false)
+	if not preview_active:
 		visible = true
 		return
-	visible = not is_portrait if hide_on_portrait else is_portrait
+	var is_portrait: bool = ProjectSettings.get_setting("_mobile_preview/is_portrait", true)
+	if hide_on_portrait:
+		visible = not is_portrait
+	else:
+		visible = is_portrait
+
+
+func _on_size_changed():
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	if hide_on_portrait:
+		visible = window_size.x > window_size.y
+	else:
+		visible = window_size.x < window_size.y

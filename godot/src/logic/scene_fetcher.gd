@@ -469,11 +469,7 @@ func _async_on_desired_scene_changed():
 		# Only emit if:
 		# - Coordinator was busy at some point (meaning it fetched and found no scenes), OR
 		# - We're not in a reloading state (normal update, not teleport/realm change)
-		if (
-			not loading_session_started
-			and not Global.scene_runner.has_active_loading_session()
-			and (coordinator_was_busy or not is_reloading_now)
-		):
+		if not loading_session_started and (coordinator_was_busy or not is_reloading_now):
 			Global.scene_runner.loading_complete.emit(-1)
 
 	var empty_parcels_coords = []

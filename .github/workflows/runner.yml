@@ -23,12 +23,10 @@ jobs:
     uses: ./.github/workflows/clippy.yml
 
   # Third stage: Run all the builds and tests (all depend on static-checks)
-
-  # Temporarily disabled: GPU self-hosted runner is down
-  # test-coverage:
-  #   name: 🔎 Test & Coverage
-  #   needs: static-checks
-  #   uses: ./.github/workflows/coverage.yml
+  test-coverage:
+    name: 🔎 Test & Coverage
+    needs: static-checks
+    uses: ./.github/workflows/coverage.yml
 
   android-build:
     name: 🤖 Android (VR and Mobile)
@@ -73,13 +71,12 @@ jobs:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
 
-  # Temporarily disabled: GPU self-hosted runner is down
-  # benchmark:
-  #   name: 📊 Benchmark Report
-  #   needs: static-checks
-  #   uses: ./.github/workflows/benchmark.yml
-  #   secrets:
-  #     BENCHMARK_AWS_ACCESS_KEY_ID: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
-  #     BENCHMARK_AWS_SECRET_ACCESS_KEY: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
-  #     BENCHMARK_AWS_ENDPOINT_URL: ${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}
-  #     BENCHMARK_AWS_S3_BUCKET: ${{ secrets.BENCHMARK_AWS_S3_BUCKET }}
+  benchmark:
+    name: 📊 Benchmark Report
+    needs: static-checks
+    uses: ./.github/workflows/benchmark.yml
+    secrets:
+      BENCHMARK_AWS_ACCESS_KEY_ID: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
+      BENCHMARK_AWS_SECRET_ACCESS_KEY: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
+      BENCHMARK_AWS_ENDPOINT_URL: ${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}
+      BENCHMARK_AWS_S3_BUCKET: ${{ secrets.BENCHMARK_AWS_S3_BUCKET }}

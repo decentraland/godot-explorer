@@ -385,6 +385,25 @@ impl SceneEntityCoordinator {
         self.requested_entity.remove(&request_id);
     }
 
+    /// Checks if any parcel of a scene is within the scene radius from current position
+    fn is_scene_in_range(&self, scene_def: &SceneEntityDefinition) -> bool {
+        let inner_parcels = self.parcel_radius_calculator.get_inner_parcels();
+
+        for scene_parcel in scene_def.scene_meta_scene.scene.parcels.iter() {
+            let scene_coord = Coord::from(scene_parcel);
+
+            // Check if this parcel is within range of current position
+            for radius_offset in inner_parcels {
+                let target_coord = radius_offset.plus(&self.current_position);
+                if scene_coord == target_coord {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
     /// Determines which scenes should be loaded based on current mode and position.
     ///
     /// This is the core logic that decides what scenes to load. It's called whenever:
@@ -419,10 +438,11 @@ impl SceneEntityCoordinator {
             }
 
             for entity_hash in self.fixed_desired_entities.iter() {
-                if self.cache_scene_data.contains_key(entity_hash) {
-                    // Fixed entities from scenesUrn are explicitly configured for this realm
-                    // and should always be loadable regardless of distance from player
-                    self.loadable_scenes.insert(entity_hash.clone());
+                if let Some(scene_def) = self.cache_scene_data.get(entity_hash) {
+                    // Check if scene is within range
+                    if self.is_scene_in_range(scene_def) {
+                        self.loadable_scenes.insert(entity_hash.clone());
+                    }
                 } else {
                     tracing::debug!(
                         "Fixed entity {} not in cache yet (still loading?)",
