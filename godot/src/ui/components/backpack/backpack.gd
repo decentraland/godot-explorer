@@ -624,7 +624,7 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		Global.set_orientation_portrait()
+		#Global.set_orientation_portrait()
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
