@@ -30,9 +30,11 @@ const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
+@onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
 @onready var gamepad_camera_sensitivity: SettingsSlider = %GamepadCameraSensitivity
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
+@onready var container_interface: MarginContainer = %Container_Interface
 
 #Audio items
 @onready var general_volume: SettingsSlider = %GeneralVolume
@@ -114,6 +116,10 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+
+	if not Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
+		Global.session_hide_ui_toggle_sync.connect(_on_session_hide_ui_toggle_sync)
+	_refresh_hide_explorer_ui_row()
 
 	# gamepad
 	_init_gamepad_sensitivity.call_deferred()
@@ -507,6 +513,31 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 		Global.get_config().save_to_settings_file()
 
 
+func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_hide_main_hud_from_settings(toggled_on)
+
+
+func _on_session_hide_ui_toggle_sync(pressed: bool) -> void:
+	check_button_hide_explorer_ui.set_pressed_no_signal(pressed)
+
+
+func _refresh_hide_explorer_ui_row() -> void:
+	var explorer = Global.get_explorer()
+	var in_explorer := is_instance_valid(explorer)
+	container_interface.visible = in_explorer
+	if in_explorer:
+		check_button_hide_explorer_ui.set_pressed_no_signal(explorer.is_session_hide_main_hud())
+	else:
+		check_button_hide_explorer_ui.set_pressed_no_signal(false)
+
+
+func _exit_tree() -> void:
+	if Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
+		Global.session_hide_ui_toggle_sync.disconnect(_on_session_hide_ui_toggle_sync)
+
+
 func _on_button_developer_pressed() -> void:
 	show_control(container_advanced)
 	_async_scroll_to_tab_button(button_developer)
@@ -519,6 +550,7 @@ func _on_button_graphics_pressed() -> void:
 
 func _on_button_gameplay_pressed() -> void:
 	show_control(container_gameplay)
+	_refresh_hide_explorer_ui_row()
 	_async_scroll_to_tab_button(button_gameplay)
 
 
@@ -776,6 +808,7 @@ func _on_visibility_changed() -> void:
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+		_refresh_hide_explorer_ui_row()
 
 
 func _on_check_button_scene_processing_paused_toggled(toggled_on: bool) -> void:
