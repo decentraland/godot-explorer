@@ -46,6 +46,8 @@ class AndroidExportPlugin extends EditorExportPlugin:
 			"androidx.media3:media3-exoplayer-dash:1.4.1",
 			"androidx.media3:media3-exoplayer-hls:1.4.1",
 			"androidx.media3:media3-ui:1.4.1",
+			# Google Play Install Referrer for install attribution tracking
+			"com.android.installreferrer:installreferrer:2.2",
 			# Reown/WalletConnect Sign SDK for native wallet connection
 			"com.reown:android-core:1.5.2",
 			"com.reown:sign:1.5.2"

@@ -2142,11 +2142,13 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 }
             })
             Log.i(pluginName, "[IR] startConnection() returned (async, waiting for callback)")
-        } catch (e: Exception) {
-            Log.e(pluginName, "[IR] Exception in InstallReferrerClient setup", e)
+        } catch (e: Throwable) {
+            // Catch Throwable (not just Exception) to also catch NoClassDefFoundError
+            // which happens if the installreferrer library isn't bundled in the APK
+            Log.e(pluginName, "[IR] Throwable in InstallReferrerClient setup: ${e.javaClass.name}: ${e.message}", e)
             val errorDict = Dictionary()
             errorDict["status"] = "error"
-            errorDict["error"] = "Setup exception: ${e.message}"
+            errorDict["error"] = "Setup ${e.javaClass.simpleName}: ${e.message}"
             installReferrerData = errorDict
             return errorDict
         }
