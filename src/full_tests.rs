@@ -2,6 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use base64::{engine::general_purpose::STANDARD, Engine};
+
 use crate::consts::RUST_LIB_PROJECT_FOLDER;
 use crate::helpers::BinPaths;
 use crate::image_comparison::compare_images_similarity;
@@ -37,65 +39,132 @@ impl StepResult {
     }
 }
 
-/// Run a single test step, recording timing and status.
-/// Returns true if execution should continue, false if it should abort.
-fn run_step<F>(
-    name: &str,
-    results: &mut Vec<StepResult>,
+/// Tracks test steps, handles continue-on-failure logic, and produces the summary.
+struct StepRunner {
+    results: Vec<StepResult>,
     continue_on_failure: bool,
-    f: F,
-) -> bool
-where
-    F: FnOnce() -> Result<(), anyhow::Error>,
-{
-    ui::print_section(name);
-    let start = Instant::now();
-    let status = match f() {
-        Ok(()) => StepStatus::Pass,
-        Err(e) => StepStatus::Fail(format!("{}", e)),
-    };
-    let duration = start.elapsed();
-
-    match &status {
-        StepStatus::Pass => {
-            ui::print_message(
-                MessageType::Success,
-                &format!("{} completed in {}", name, format_duration(duration)),
-            );
-        }
-        StepStatus::Fail(msg) => {
-            ui::print_message(
-                MessageType::Error,
-                &format!("{} failed in {}: {}", name, format_duration(duration), msg),
-            );
-        }
-        StepStatus::Skip(_) => {}
-    }
-
-    let passed = matches!(status, StepStatus::Pass);
-    results.push(StepResult {
-        name: name.to_string(),
-        duration,
-        status,
-    });
-
-    if !passed && !continue_on_failure {
-        return false;
-    }
-    true
+    start: Instant,
 }
 
-/// Record a skipped step without executing anything.
-fn skip_step(name: &str, reason: &str, results: &mut Vec<StepResult>) {
-    ui::print_message(
-        MessageType::Warning,
-        &format!("{} skipped: {}", name, reason),
-    );
-    results.push(StepResult {
-        name: name.to_string(),
-        duration: Duration::ZERO,
-        status: StepStatus::Skip(reason.to_string()),
-    });
+/// Returned by `StepRunner::step` to signal whether execution should continue.
+enum StepOutcome {
+    Continue,
+    Abort,
+}
+
+impl StepRunner {
+    fn new(continue_on_failure: bool) -> Self {
+        Self {
+            results: Vec::new(),
+            continue_on_failure,
+            start: Instant::now(),
+        }
+    }
+
+    /// Run a step, record its result. Returns `Abort` if the step failed and
+    /// `continue_on_failure` is false.
+    fn step<F>(&mut self, name: &str, f: F) -> StepOutcome
+    where
+        F: FnOnce() -> Result<(), anyhow::Error>,
+    {
+        ui::print_section(name);
+        let start = Instant::now();
+        let status = match f() {
+            Ok(()) => StepStatus::Pass,
+            Err(e) => StepStatus::Fail(format!("{}", e)),
+        };
+        let duration = start.elapsed();
+
+        match &status {
+            StepStatus::Pass => ui::print_message(
+                MessageType::Success,
+                &format!("{} completed in {}", name, format_duration(duration)),
+            ),
+            StepStatus::Fail(msg) => ui::print_message(
+                MessageType::Error,
+                &format!("{} failed in {}: {}", name, format_duration(duration), msg),
+            ),
+            StepStatus::Skip(_) => {}
+        }
+
+        let passed = matches!(status, StepStatus::Pass);
+        self.results.push(StepResult {
+            name: name.to_string(),
+            duration,
+            status,
+        });
+
+        if !passed && !self.continue_on_failure {
+            StepOutcome::Abort
+        } else {
+            StepOutcome::Continue
+        }
+    }
+
+    /// Record a skipped step.
+    fn skip(&mut self, name: &str, reason: &str) {
+        ui::print_message(
+            MessageType::Warning,
+            &format!("{} skipped: {}", name, reason),
+        );
+        self.results.push(StepResult {
+            name: name.to_string(),
+            duration: Duration::ZERO,
+            status: StepStatus::Skip(reason.to_string()),
+        });
+    }
+
+    fn elapsed(&self) -> Duration {
+        self.start.elapsed()
+    }
+
+    fn print_summary(&self) {
+        let rows: Vec<SummaryRow> = self.results.iter().map(|r| r.to_summary_row()).collect();
+        ui::print_summary_table(&rows, self.elapsed());
+    }
+
+    fn has_failures(&self) -> bool {
+        self.results
+            .iter()
+            .any(|r| matches!(r.status, StepStatus::Fail(_)))
+    }
+
+    fn abort_error(&self) -> anyhow::Error {
+        let failed: Vec<String> = self
+            .results
+            .iter()
+            .filter_map(|r| {
+                if let StepStatus::Fail(msg) = &r.status {
+                    Some(format!("  - {}: {}", r.name, msg))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        anyhow::anyhow!("Failed steps:\n{}", failed.join("\n"))
+    }
+}
+
+/// Convenience macro to run a step and early-return on abort.
+macro_rules! step {
+    ($runner:expr, $name:expr, $body:expr) => {
+        if let StepOutcome::Abort = $runner.step($name, $body) {
+            $runner.print_summary();
+            return Err($runner.abort_error());
+        }
+    };
+}
+
+/// Like `step!` but tolerates failure when `$tolerate` is true (e.g. update_snapshots mode).
+macro_rules! step_tolerant {
+    ($runner:expr, $name:expr, $tolerate:expr, $body:expr) => {
+        if let StepOutcome::Abort = $runner.step($name, $body) {
+            if !$tolerate {
+                $runner.print_summary();
+                return Err($runner.abort_error());
+            }
+        }
+    };
 }
 
 /// Run an external command, returning Ok if exit code is 0.
@@ -158,21 +227,21 @@ fn ensure_gdtoolkit() -> Result<(), anyhow::Error> {
         "Installing DCL fork of gdtoolkit into .bin/gdtoolkit-venv/...",
     );
 
-    // Create venv
     let status = std::process::Command::new("python3")
         .args(["-m", "venv", GDTOOLKIT_VENV_DIR])
         .status()?;
     if !status.success() {
-        return Err(anyhow::anyhow!("Failed to create Python venv at {}", GDTOOLKIT_VENV_DIR));
+        return Err(anyhow::anyhow!(
+            "Failed to create Python venv at {}",
+            GDTOOLKIT_VENV_DIR
+        ));
     }
 
-    // Install fork into venv
     let pip_bin = format!("{}/bin/pip", GDTOOLKIT_VENV_DIR);
     let status = std::process::Command::new(&pip_bin)
         .args(["install", &format!("git+{}", GDTOOLKIT_FORK_URL)])
         .status()?;
     if !status.success() {
-        // Clean up broken venv
         let _ = std::fs::remove_dir_all(venv_dir);
         return Err(anyhow::anyhow!(
             "Failed to install gdtoolkit fork into venv"
@@ -190,26 +259,16 @@ fn ensure_gdtoolkit() -> Result<(), anyhow::Error> {
 fn update_local_snapshots() -> Result<(), anyhow::Error> {
     ui::print_section("Updating Snapshots");
 
-    let snapshot_dirs = [
-        "tests/snapshots/avatar-image-generation",
-        "tests/snapshots/scene-image-generation",
-        "tests/snapshots/scenes",
-        "tests/snapshots/client",
-    ];
-
     let mut total_copied = 0;
 
-    for base_dir in &snapshot_dirs {
+    for (base_dir, _) in SNAPSHOT_DIRS {
         let comparison_dir = Path::new(base_dir).join("comparison");
         if !comparison_dir.exists() {
             continue;
         }
 
-        let entries = std::fs::read_dir(&comparison_dir)?;
         let mut count = 0;
-
-        for entry in entries {
-            let entry = entry?;
+        for entry in fs::read_dir(&comparison_dir)?.flatten() {
             let path = entry.path();
             let is_png = path.extension().and_then(|e| e.to_str()) == Some("png");
             let is_diff = path
@@ -218,9 +277,8 @@ fn update_local_snapshots() -> Result<(), anyhow::Error> {
                 .map_or(false, |f| f.ends_with(".diff.png"));
 
             if is_png && !is_diff {
-                let file_name = path.file_name().unwrap();
-                let dest_path = Path::new(base_dir).join(file_name);
-                std::fs::copy(&path, &dest_path)?;
+                let dest_path = Path::new(base_dir).join(path.file_name().unwrap());
+                fs::copy(&path, &dest_path)?;
                 count += 1;
             }
         }
@@ -261,8 +319,7 @@ pub fn run_full_tests(
         ));
     }
 
-    let total_start = Instant::now();
-    let mut results: Vec<StepResult> = Vec::new();
+    let mut runner = StepRunner::new(continue_on_failure);
     let lib_dir = Some(RUST_LIB_PROJECT_FOLDER);
 
     // ── Setup: ensure gdtoolkit fork ──
@@ -272,122 +329,67 @@ pub fn run_full_tests(
 
     ui::print_message(MessageType::Step, "Phase 1: Static Checks");
 
-    if !run_step("Cargo fmt", &mut results, continue_on_failure, || {
-        run_external_command("cargo", &["fmt", "--all", "--", "--check"], lib_dir)
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
     let gdformat_bin = gdtoolkit_bin("gdformat");
     let gdlint_bin = gdtoolkit_bin("gdlint");
 
-    if !run_step("GDScript format", &mut results, continue_on_failure, || {
+    step!(runner, "Cargo fmt", || {
+        run_external_command("cargo", &["fmt", "--all", "--", "--check"], lib_dir)
+    });
+    step!(runner, "GDScript format", || {
         run_external_command(&gdformat_bin, &["-d", "godot/"], None)
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
-    if !run_step("GDScript lint", &mut results, continue_on_failure, || {
+    });
+    step!(runner, "GDScript lint", || {
         run_external_command(&gdlint_bin, &["godot/"], None)
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
-    if !run_step("Cargo check", &mut results, continue_on_failure, || {
+    });
+    step!(runner, "Cargo check", || {
         run_external_command("cargo", &["check"], lib_dir)
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
-    if !run_step("Cargo clippy", &mut results, continue_on_failure, || {
+    });
+    step!(runner, "Cargo clippy", || {
         run_external_command("cargo", &["clippy", "--", "-D", "warnings"], lib_dir)
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
-    if !run_step(
-        "Asset import check",
-        &mut results,
-        continue_on_failure,
-        || run_external_command("python3", &["tests/check_asset_imports.py"], None),
-    ) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
-    if !run_step("Version check", &mut results, continue_on_failure, || {
-        version_check::run_version_check()
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
+    });
+    step!(runner, "Asset import check", || {
+        run_external_command("python3", &["tests/check_asset_imports.py"], None)
+    });
+    step!(runner, "Version check", version_check::run_version_check);
 
     // ── Phase 2: Rust Unit Tests ──
 
     ui::print_message(MessageType::Step, "Phase 2: Rust Unit Tests");
 
-    if !run_step("Rust unit tests", &mut results, continue_on_failure, || {
+    step!(runner, "Rust unit tests", || {
         run_external_command("cargo", &["test", "--", "--skip", "auth"], lib_dir)
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
+    });
 
     // ── Phase 3: Build & Godot Tests ──
 
     ui::print_message(MessageType::Step, "Phase 3: Build & Godot Tests");
 
-    if !run_step("Build lib", &mut results, continue_on_failure, || {
+    step!(runner, "Build lib", || {
         run::build(false, false, vec![], None, None)
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
-    if !run_step("Import assets", &mut results, continue_on_failure, || {
+    });
+    step!(runner, "Import assets", || {
         let status = crate::export::import_assets();
         if status.success() {
             Ok(())
         } else {
-            Err(anyhow::anyhow!("import-assets exited with status: {}", status))
+            Err(anyhow::anyhow!(
+                "import-assets exited with status: {}",
+                status
+            ))
         }
-    }) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
-    if !run_step(
-        "GDScript validation",
-        &mut results,
-        continue_on_failure,
-        || check_gdscript::check_gdscript(),
-    ) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
-
-    if !run_step(
-        "Integration tests",
-        &mut results,
-        continue_on_failure,
-        || run::run(false, true, vec![], false, false, false),
-    ) {
-        print_results(&results, total_start.elapsed());
-        return Err(first_failure(&results));
-    }
+    });
+    step!(runner, "GDScript validation", check_gdscript::check_gdscript);
+    step!(runner, "Integration tests", || {
+        run::run(false, true, vec![], false, false, false)
+    });
 
     // ── Phase 4: Visual Tests ──
 
     if skip_visual {
         ui::print_message(MessageType::Step, "Phase 4: Visual Tests (skipped)");
-        skip_step("Client tests", "--skip-visual", &mut results);
-        skip_step("Avatar generation", "--skip-visual", &mut results);
-        skip_step("Scene generation", "--skip-visual", &mut results);
+        runner.skip("Client tests", "--skip-visual");
+        runner.skip("Avatar generation", "--skip-visual");
+        runner.skip("Scene generation", "--skip-visual");
     } else {
         ui::print_message(MessageType::Step, "Phase 4: Visual Tests");
 
@@ -399,69 +401,37 @@ pub fn run_full_tests(
             }
         }
 
-        // Client tests: need --snapshot-folder for comparison
-        let client_snapshot_folder =
-            Path::new("./tests/snapshots/client").canonicalize()?;
+        let client_snapshot_folder = Path::new("./tests/snapshots/client").canonicalize()?;
         let client_snapshot_str = client_snapshot_folder.to_string_lossy().to_string();
+        let tolerate = update_snapshots;
 
-        if !run_step("Client tests", &mut results, continue_on_failure, || {
+        step_tolerant!(runner, "Client tests", tolerate, || {
             let extra_args = vec![
                 "--snapshot-folder".to_string(),
                 client_snapshot_str.clone(),
             ];
             run::run(false, false, extra_args, false, true, false)
-        }) {
-            if !continue_on_failure && !update_snapshots {
-                print_results(&results, total_start.elapsed());
-                return Err(first_failure(&results));
-            }
-        }
+        });
 
-        // Avatar generation with snapshot comparison
-        if !run_step(
-            "Avatar generation",
-            &mut results,
-            continue_on_failure,
-            || tests::test_avatar_generation(None),
-        ) {
-            if !continue_on_failure && !update_snapshots {
-                print_results(&results, total_start.elapsed());
-                return Err(first_failure(&results));
-            }
-        }
+        step_tolerant!(runner, "Avatar generation", tolerate, || {
+            tests::test_avatar_generation(None)
+        });
 
-        // Scene generation with snapshot comparison
-        if !run_step(
-            "Scene generation",
-            &mut results,
-            continue_on_failure,
-            || tests::test_scene_generation(None),
-        ) {
-            if !continue_on_failure && !update_snapshots {
-                print_results(&results, total_start.elapsed());
-                return Err(first_failure(&results));
-            }
-        }
+        step_tolerant!(runner, "Scene generation", tolerate, || {
+            tests::test_scene_generation(None)
+        });
 
-        // Update snapshots if requested
         if update_snapshots {
-            run_step(
-                "Update snapshots",
-                &mut results,
-                continue_on_failure,
-                update_local_snapshots,
-            );
+            step!(runner, "Update snapshots", update_local_snapshots);
         }
     }
 
     // ── Summary ──
 
-    let total_duration = total_start.elapsed();
-    print_results(&results, total_duration);
+    runner.print_summary();
 
-    // Generate HTML report if requested
     if report {
-        if let Err(e) = generate_html_report(&results, total_duration) {
+        if let Err(e) = generate_html_report(&runner.results, runner.elapsed()) {
             ui::print_message(
                 MessageType::Warning,
                 &format!("Failed to generate report: {}", e),
@@ -469,43 +439,11 @@ pub fn run_full_tests(
         }
     }
 
-    let has_failures = results
-        .iter()
-        .any(|r| matches!(r.status, StepStatus::Fail(_)));
-
-    if has_failures {
-        Err(all_failures(&results))
+    if runner.has_failures() {
+        Err(runner.abort_error())
     } else {
         Ok(())
     }
-}
-
-fn print_results(results: &[StepResult], total_duration: Duration) {
-    let rows: Vec<SummaryRow> = results.iter().map(|r| r.to_summary_row()).collect();
-    ui::print_summary_table(&rows, total_duration);
-}
-
-fn first_failure(results: &[StepResult]) -> anyhow::Error {
-    for r in results {
-        if let StepStatus::Fail(msg) = &r.status {
-            return anyhow::anyhow!("{} failed: {}", r.name, msg);
-        }
-    }
-    anyhow::anyhow!("Unknown failure")
-}
-
-fn all_failures(results: &[StepResult]) -> anyhow::Error {
-    let failed: Vec<String> = results
-        .iter()
-        .filter_map(|r| {
-            if let StepStatus::Fail(msg) = &r.status {
-                Some(format!("  - {}: {}", r.name, msg))
-            } else {
-                None
-            }
-        })
-        .collect();
-    anyhow::anyhow!("Failed steps:\n{}", failed.join("\n"))
 }
 
 // ── HTML Report Generation ──
@@ -587,41 +525,13 @@ fn collect_snapshot_comparisons() -> Vec<SnapshotComparison> {
     comparisons
 }
 
-const BASE64_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-fn base64_encode(data: &[u8]) -> String {
-    let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
-    for chunk in data.chunks(3) {
-        let b0 = chunk[0] as u32;
-        let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
-        let n = (b0 << 16) | (b1 << 8) | b2;
-        result.push(BASE64_CHARS[((n >> 18) & 0x3F) as usize] as char);
-        result.push(BASE64_CHARS[((n >> 12) & 0x3F) as usize] as char);
-        if chunk.len() > 1 {
-            result.push(BASE64_CHARS[((n >> 6) & 0x3F) as usize] as char);
-        } else {
-            result.push('=');
-        }
-        if chunk.len() > 2 {
-            result.push(BASE64_CHARS[(n & 0x3F) as usize] as char);
-        } else {
-            result.push('=');
-        }
-    }
-    result
-}
-
 /// Encode a PNG file as a base64 data URI, or return an SVG placeholder.
 fn image_to_data_uri(path: &Path) -> String {
     if !path.exists() {
         return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512'><rect width='512' height='512' fill='%23333'/><text x='50%25' y='50%25' fill='%23999' font-size='24' text-anchor='middle' dy='.3em'>No image</text></svg>".to_string();
     }
     match fs::read(path) {
-        Ok(bytes) => {
-            let encoded = base64_encode(&bytes);
-            format!("data:image/png;base64,{}", encoded)
-        }
+        Ok(bytes) => format!("data:image/png;base64,{}", STANDARD.encode(&bytes)),
         Err(_) => String::new(),
     }
 }
@@ -675,28 +585,10 @@ fn generate_html_report(
             };
             let baseline_uri = image_to_data_uri(&c.baseline_path);
             let comparison_uri = image_to_data_uri(&c.comparison_path);
-
-            // Passing snapshots are collapsed, failing ones are open
-            let (tag_open, tag_close) = if c.passed {
-                (
-                    format!(
-                        "<details class=\"snapshot-card {}\"><summary class=\"snapshot-header\">",
-                        status_class
-                    ),
-                    "</details>".to_string(),
-                )
-            } else {
-                (
-                    format!(
-                        "<details class=\"snapshot-card {}\" open><summary class=\"snapshot-header\">",
-                        status_class
-                    ),
-                    "</details>".to_string(),
-                )
-            };
+            let open_attr = if c.passed { "" } else { " open" };
 
             snapshots_html.push_str(&format!(
-                r#"{tag_open}
+                r#"<details class="snapshot-card {status_class}"{open_attr}><summary class="snapshot-header">
     <span class="snapshot-name">{name}</span>
     <span class="snapshot-category">{category}</span>
     <span class="snapshot-similarity">Similarity: {similarity}</span>
@@ -711,15 +603,15 @@ fn generate_html_report(
       <img src="{comparison}" />
     </div>
   </div>
-{tag_close}
+</details>
 "#,
-                tag_open = tag_open,
+                status_class = status_class,
+                open_attr = open_attr,
                 name = html_escape(&c.name),
                 category = html_escape(&c.category),
                 similarity = similarity_pct,
                 baseline = baseline_uri,
                 comparison = comparison_uri,
-                tag_close = tag_close,
             ));
         }
     }
@@ -816,9 +708,7 @@ fn generate_html_report(
         &format!("Report saved to {}", abs_path.display()),
     );
 
-    // Open in browser
     open_in_browser(&abs_path);
-
     Ok(())
 }
 
