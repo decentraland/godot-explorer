@@ -328,6 +328,23 @@ impl INode for CommunicationManager {
             // Check if disconnected from the server (returns reason + room_id)
             disconnect_info = processor.consume_disconnect_reason();
 
+            // Check if room metadata indicates the player was banned.
+            // Only clean the scene room — keep main room alive for navigation.
+            if processor.consume_room_metadata_banned() {
+                tracing::warn!("Detected ban via room metadata — emitting kicked disconnect");
+                #[cfg(feature = "use_livekit")]
+                {
+                    if let Some(scene_room) = &mut self.scene_room {
+                        scene_room.clean();
+                    }
+                    self.scene_room = None;
+                    self.scene_room_reconnect_at = None;
+                }
+                self.current_scene_id = None;
+                self.base_mut()
+                    .emit_signal("disconnected", &[2i32.to_variant()]);
+            }
+
             if !processor_polling_ok {
                 // Reset the message processor if it fails
                 processor_reset = true;
@@ -1543,13 +1560,19 @@ impl CommunicationManager {
 
     #[cfg(feature = "use_livekit")]
     fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
-        // Handle banned signal from reconnect_scene_room
+        // Handle banned signal from scene room connection/reconnection.
+        // Only clean the scene room — keep main room alive so the user can navigate away.
         if request.livekit_url == "banned:" {
             tracing::warn!(
                 "🚫 User is banned from scene '{}' — emitting kicked disconnect",
                 request.scene_id
             );
-            self.clean();
+            if let Some(scene_room) = &mut self.scene_room {
+                scene_room.clean();
+            }
+            self.scene_room = None;
+            self.scene_room_reconnect_at = None;
+            self.current_scene_id = None;
             self.base_mut()
                 .emit_signal("disconnected", &[2i32.to_variant()]);
             return;
