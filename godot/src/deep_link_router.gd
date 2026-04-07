@@ -106,17 +106,17 @@ func _route_teleport() -> void:
 	if realm.is_empty():
 		realm = Global.deep_link_obj.realm
 
-	# World realm without explicit location → use join_world for proper ban check
+	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
 	if not realm.is_empty() and Realm.is_dcl_ens(realm) and not Global.deep_link_obj.is_location_defined():
-		Global.join_world(realm)
+		Global.join_world(realm, "", true)
 		return
 
 	if Global.deep_link_obj.is_location_defined():
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.teleport_to(Global.deep_link_obj.location, realm)
+		Global.teleport_to(Global.deep_link_obj.location, realm, "", true)
 	elif not realm.is_empty():
-		Global.teleport_to(Vector2i.ZERO, realm)
+		Global.teleport_to(Vector2i.ZERO, realm, "", true)
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:

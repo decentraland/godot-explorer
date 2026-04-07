@@ -569,6 +569,15 @@ impl CommunicationManager {
                             .await;
                     }
                 }
+                Err(e) if e == "BANNED" => {
+                    tracing::warn!("🚫 Scene room reconnection denied: user is banned");
+                    let _ = connection_sender
+                        .send(SceneRoomConnectionRequest {
+                            scene_id: scene_entity_id,
+                            livekit_url: "banned:".to_string(),
+                        })
+                        .await;
+                }
                 Err(e) => {
                     tracing::warn!("🔄 Scene room reconnection failed (will retry): {}", e);
                 }
@@ -1534,6 +1543,18 @@ impl CommunicationManager {
 
     #[cfg(feature = "use_livekit")]
     fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
+        // Handle banned signal from reconnect_scene_room
+        if request.livekit_url == "banned:" {
+            tracing::warn!(
+                "🚫 User is banned from scene '{}' — emitting kicked disconnect",
+                request.scene_id
+            );
+            self.clean();
+            self.base_mut()
+                .emit_signal("disconnected", &[2i32.to_variant()]);
+            return;
+        }
+
         tracing::debug!(
             "🔌 Processing scene room connection request for scene '{}' with URL: {}",
             request.scene_id,
@@ -1693,6 +1714,15 @@ impl CommunicationManager {
                     } else {
                         tracing::warn!("⚠️  Unsupported scene adapter type: {}", adapter_url);
                     }
+                }
+                Err(e) if e == "BANNED" => {
+                    tracing::warn!("🚫 Scene adapter denied: user is banned from scene '{}'", scene_entity_id);
+                    let _ = connection_sender
+                        .send(SceneRoomConnectionRequest {
+                            scene_id: scene_entity_id,
+                            livekit_url: "banned:".to_string(),
+                        })
+                        .await;
                 }
                 Err(e) => {
                     tracing::error!(
@@ -1988,6 +2018,15 @@ async fn get_scene_adapter(
         "📡 Received HTTP response with status: {}",
         response.status_code
     );
+
+    if response.status_code == http::StatusCode::FORBIDDEN {
+        tracing::info!(
+            "Scene adapter denied (403) for scene '{}' in realm '{}' — user is banned",
+            scene_id,
+            realm_name
+        );
+        return Err("BANNED".to_string());
+    }
 
     if !response.status_code.is_success() {
         tracing::error!(

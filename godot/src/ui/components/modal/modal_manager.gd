@@ -42,7 +42,7 @@ const BAN_PRE_CHECK_PRIMARY = "OK"
 
 const BAN_KICKED_TITLE = "You have been banned"
 const BAN_KICKED_BODY = "You have been banned from this scene by a moderator."
-const BAN_KICKED_PRIMARY = "GO TO LOBBY"
+const BAN_KICKED_PRIMARY = "GO TO DISCOVER"
 
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
@@ -239,7 +239,7 @@ func async_show_ban_kicked_modal() -> void:
 	current_modal.show()
 
 	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(_on_ban_kicked_go_to_lobby)
+	current_modal.button_primary.pressed.connect(_on_ban_go_to_discover)
 
 
 ## Closes the current modal if it exists
@@ -383,9 +383,10 @@ func _on_scene_crash_back() -> void:
 	close_current_modal()
 
 
-func _on_ban_kicked_go_to_lobby() -> void:
+func _on_ban_go_to_discover() -> void:
 	close_current_modal()
-	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+	Global.set_orientation_portrait()
+	Global.open_discover.emit()
 
 
 func _on_modal_tree_exited() -> void:

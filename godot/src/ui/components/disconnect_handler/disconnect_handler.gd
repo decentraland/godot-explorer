@@ -11,17 +11,32 @@ extends Node
 ## 3 = Other (server shutdown, signal close, etc.)
 
 const MAX_RECONNECT_ATTEMPTS: int = 3
+## How often (seconds) to re-check gatekeeper access while inside a scene.
+const BAN_POLL_INTERVAL: float = 5.0
 
 var _reconnect_attempts: int = 0
 var _last_adapter_str: String = ""
 var _last_disconnect_reason: int = -1
 var _overlay: ColorRect = null
 var _should_stop_reconnecting: bool = false
+var _scene_banned: bool = false
+var _is_loading: bool = false
+var _ban_poll_timer: Timer = null
 
 
 func _ready() -> void:
 	Global.comms.disconnected.connect(_on_disconnected)
 	Global.comms.on_adapter_changed.connect(_on_adapter_changed)
+	Global.loading_started.connect(func(): _is_loading = true)
+	Global.loading_finished.connect(_on_loading_finished)
+	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
+
+	# Periodic timer to check gatekeeper access while inside a scene
+	_ban_poll_timer = Timer.new()
+	_ban_poll_timer.wait_time = BAN_POLL_INTERVAL
+	_ban_poll_timer.one_shot = false
+	_ban_poll_timer.timeout.connect(_on_ban_poll_timeout)
+	add_child(_ban_poll_timer)
 
 
 func _reset_reconnect_state() -> void:
@@ -37,6 +52,8 @@ func _on_adapter_changed(_voice_chat_enabled: bool, _adapter_str: String) -> voi
 	_last_adapter_str = ""
 	_last_disconnect_reason = -1
 	_should_stop_reconnecting = false
+	_scene_banned = false
+	_ban_poll_timer.stop()
 
 
 func _on_disconnected(reason: int) -> void:
@@ -53,10 +70,12 @@ func _on_disconnected(reason: int) -> void:
 		_show_disconnect_error(reason)
 		return
 
-	# Kicked/Banned - don't retry, show ban modal and go to lobby
+	# Kicked/Banned - don't retry, show ban modal (defer if still loading)
 	if reason == 2:
 		_should_stop_reconnecting = true
-		Global.modal_manager.async_show_ban_kicked_modal()
+		_scene_banned = true
+		if not _is_loading:
+			Global.modal_manager.async_show_ban_kicked_modal()
 		return
 
 	_last_disconnect_reason = reason
@@ -208,3 +227,52 @@ func _on_reconnect_pressed() -> void:
 	# Reconnect
 	if not adapter_to_reconnect.is_empty():
 		Global.comms.change_adapter(adapter_to_reconnect)
+
+
+func _on_loading_finished() -> void:
+	_is_loading = false
+
+	# Start periodic ban polling now that we're in a scene
+	_ban_poll_timer.start()
+
+	# If kicked during loading (scene room 403), show the deferred modal now
+	if _scene_banned:
+		Global.modal_manager.async_show_ban_kicked_modal()
+		return
+
+	# Deeplink deferred ban check: verify gatekeeper access now that we're loaded
+	var check_data = Global.pending_deeplink_ban_check
+	if not check_data.is_empty():
+		Global.pending_deeplink_ban_check = {}
+		var scene_id: String = check_data.get("scene_id", "")
+		var realm: String = check_data.get("realm", "")
+		var allowed = await Global.async_check_scene_access(scene_id, realm)
+		if not allowed:
+			_scene_banned = true
+			Global.modal_manager.async_show_ban_kicked_modal()
+
+
+## Periodic gatekeeper check to detect bans while inside a scene.
+func _on_ban_poll_timeout() -> void:
+	if _scene_banned or _is_loading:
+		return
+
+	var scene_id: String = Global.scene_fetcher.current_scene_entity_id
+	if scene_id.is_empty():
+		return
+
+	var realm_name: String = Global.realm.get_realm_string()
+	if realm_name.is_empty():
+		return
+
+	var allowed = await Global.async_check_scene_access(scene_id, realm_name)
+	if not allowed:
+		_scene_banned = true
+		Global.modal_manager.async_show_ban_kicked_modal()
+
+
+## Re-check ban when the user closes the menu (back from discover).
+func _on_menu_close_ban_recheck() -> void:
+	if not _scene_banned:
+		return
+	Global.modal_manager.async_show_ban_kicked_modal()

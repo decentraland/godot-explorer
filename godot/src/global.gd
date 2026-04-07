@@ -98,6 +98,9 @@ var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
 
+## Pending ban check for deeplink entries (scene_id + realm), consumed after loading.
+var pending_deeplink_ban_check: Dictionary = {}
+
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var session_id: String
@@ -781,19 +784,29 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 	return result[1]
 
 
-func teleport_to(parcel_position: Vector2i, new_realm: String, scene_id: String = "") -> void:
+func teleport_to(
+	parcel_position: Vector2i,
+	new_realm: String,
+	scene_id: String = "",
+	skip_ban_check: bool = false,
+) -> void:
 	var effective_realm = new_realm if not new_realm.is_empty() else DclUrls.main_realm()
 
 	# Resolve scene_id if not provided
 	if scene_id.is_empty():
 		scene_id = await async_resolve_scene_entity_id(parcel_position)
 
-	# Check ban (fail-open if resolution failed)
-	if not scene_id.is_empty():
-		var allowed = await async_check_scene_access(scene_id, effective_realm)
-		if not allowed:
-			Global.modal_manager.async_show_ban_pre_check_modal()
-			return
+	if skip_ban_check:
+		# Defer ban check until after the scene loads (deeplink entry)
+		if not scene_id.is_empty():
+			pending_deeplink_ban_check = {"scene_id": scene_id, "realm": effective_realm}
+	else:
+		# Check ban before entering (fail-open if resolution failed)
+		if not scene_id.is_empty():
+			var allowed = await async_check_scene_access(scene_id, effective_realm)
+			if not allowed:
+				Global.modal_manager.async_show_ban_pre_check_modal()
+				return
 
 	Global.set_orientation_landscape()
 	var explorer = Global.get_explorer()
@@ -812,16 +825,23 @@ func teleport_to(parcel_position: Vector2i, new_realm: String, scene_id: String 
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func join_world(world_realm: String, scene_id: String = "") -> void:
+func join_world(
+	world_realm: String, scene_id: String = "", skip_ban_check: bool = false
+) -> void:
 	# Resolve scene entity ID for the world if not provided
 	if scene_id.is_empty():
 		scene_id = await async_resolve_world_scene_id(world_realm)
 
-	# Check ban
-	var allowed = await async_check_scene_access(scene_id, world_realm)
-	if not allowed:
-		Global.modal_manager.async_show_ban_pre_check_modal()
-		return
+	if skip_ban_check:
+		# Defer ban check until after the scene loads (deeplink entry)
+		if not scene_id.is_empty():
+			pending_deeplink_ban_check = {"scene_id": scene_id, "realm": world_realm}
+	else:
+		# Check ban before entering
+		var allowed = await async_check_scene_access(scene_id, world_realm)
+		if not allowed:
+			Global.modal_manager.async_show_ban_pre_check_modal()
+			return
 
 	Global.set_orientation_landscape()
 	Global.on_chat_message.emit(
