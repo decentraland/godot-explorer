@@ -38,11 +38,11 @@ const SCENE_CRASH_SECONDARY = "BACK"
 
 const BAN_PRE_CHECK_TITLE = "You can't enter"
 const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
-const BAN_PRE_CHECK_PRIMARY = "OK"
+const BAN_PRE_CHECK_PRIMARY = "BACK TO DISCOVER"
 
 const BAN_KICKED_TITLE = "You've been banned"
 const BAN_KICKED_BODY = "Please contact support for more information."
-const BAN_KICKED_PRIMARY = "GO TO DISCOVER"
+const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
 
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
