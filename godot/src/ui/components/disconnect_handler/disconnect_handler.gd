@@ -26,7 +26,7 @@ func _ready() -> void:
 	Global.comms.on_adapter_changed.connect(_on_adapter_changed)
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
-	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
+	Global.on_menu_close.connect(_async_on_menu_close_ban_recheck)
 
 
 func _reset_reconnect_state() -> void:
@@ -235,7 +235,7 @@ func _on_loading_finished() -> void:
 
 ## Re-check ban when the user closes the menu (back from discover).
 ## Waits one frame so loading_started can clear _scene_banned if the user navigated.
-func _on_menu_close_ban_recheck() -> void:
+func _async_on_menu_close_ban_recheck() -> void:
 	if not _scene_banned:
 		return
 	await get_tree().process_frame

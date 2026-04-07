@@ -258,7 +258,7 @@ func _ready():
 
 	if cmd_realm != null:
 		if Realm.is_dcl_ens(cmd_realm) and Global.deep_link_obj.preview.is_empty():
-			Global.join_world(cmd_realm)
+			Global.async_join_world(cmd_realm)
 		else:
 			Global.realm.async_set_realm(cmd_realm)
 			if not Global.deep_link_obj.preview.is_empty():
@@ -524,7 +524,7 @@ func _on_panel_chat_submit_message(message: String):
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
 			if Realm.is_dcl_ens(target_realm):
-				Global.join_world(target_realm)
+				Global.async_join_world(target_realm)
 			else:
 				Global.on_chat_message.emit(
 					"system",
@@ -541,8 +541,10 @@ func _on_panel_chat_submit_message(message: String):
 				Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 		elif command_str == "/world" and params.size() > 1:
-			var world_realm = params[1] if params[1].ends_with(".dcl.eth") else params[1] + ".dcl.eth"
-			Global.join_world(world_realm)
+			var world_realm = (
+				params[1] if params[1].ends_with(".dcl.eth") else params[1] + ".dcl.eth"
+			)
+			Global.async_join_world(world_realm)
 
 		elif command_str == "/pos":
 			_emit_pos_command_message()

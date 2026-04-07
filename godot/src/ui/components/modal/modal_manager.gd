@@ -363,7 +363,7 @@ func _on_connection_lost_secondary() -> void:
 
 
 func _on_teleport_primary(location: Vector2i, realm: String) -> void:
-	Global.teleport_to(location, realm)
+	Global.async_teleport_to(location, realm)
 	close_current_modal()
 
 

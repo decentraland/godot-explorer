@@ -781,7 +781,7 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 	return result[1]
 
 
-func teleport_to(
+func async_teleport_to(
 	parcel_position: Vector2i,
 	new_realm: String,
 	scene_id: String = "",
@@ -816,9 +816,7 @@ func teleport_to(
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func join_world(
-	world_realm: String, scene_id: String = "", skip_ban_check: bool = false
-) -> void:
+func async_join_world(world_realm: String, scene_id: String = "", skip_ban_check: bool = false) -> void:
 	# Resolve scene entity ID for the world if not provided
 	if scene_id.is_empty():
 		scene_id = await async_resolve_world_scene_id(world_realm)
