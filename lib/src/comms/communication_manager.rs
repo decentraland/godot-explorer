@@ -1739,7 +1739,10 @@ impl CommunicationManager {
                     }
                 }
                 Err(e) if e == "BANNED" => {
-                    tracing::warn!("🚫 Scene adapter denied: user is banned from scene '{}'", scene_entity_id);
+                    tracing::warn!(
+                        "🚫 Scene adapter denied: user is banned from scene '{}'",
+                        scene_entity_id
+                    );
                     let _ = connection_sender
                         .send(SceneRoomConnectionRequest {
                             scene_id: scene_entity_id,

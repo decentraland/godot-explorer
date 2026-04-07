@@ -928,7 +928,7 @@ impl MessageProcessor {
                 }
             }
             // Handled via early return at the top of process_message()
-            MessageType::RoomMetadataChanged(_) => {},
+            MessageType::RoomMetadataChanged(_) => {}
         }
     }
 
@@ -947,8 +947,7 @@ impl MessageProcessor {
         let local_addr_no_prefix = &local_addr[2..]; // strip "0x"
         let is_banned = banned.iter().any(|v| {
             v.as_str().is_some_and(|s| {
-                s.eq_ignore_ascii_case(&local_addr)
-                    || s.eq_ignore_ascii_case(local_addr_no_prefix)
+                s.eq_ignore_ascii_case(&local_addr) || s.eq_ignore_ascii_case(local_addr_no_prefix)
             })
         });
 
