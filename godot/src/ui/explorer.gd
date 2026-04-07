@@ -1211,7 +1211,7 @@ func _on_loading_finished() -> void:
 
 func _update_version_label() -> void:
 	var version_text = DclGlobal.get_version_with_env()
-	if Global.content_provider.get_optimized_scene_count() > 0:
+	if not DclGlobal.is_production() and Global.content_provider.get_optimized_scene_count() > 0:
 		version_text += " - Opt"
 	label_version.set_text(version_text)
 
