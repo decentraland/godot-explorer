@@ -134,6 +134,23 @@ impl DclVideoPlayer {
         self.backend_type == BackendType::LiveKit
     }
 
+    /// Check if this backend uses ExternalTexture (ExoPlayer/AVPlayer).
+    ///
+    /// ExternalTexture in Godot does not create an sRGB texture view, so
+    /// the `source_color` shader hint has no effect — hardware sRGB→linear
+    /// conversion never happens. Materials using these textures need
+    /// `ALBEDO_TEXTURE_FORCE_SRGB = true` to get the conversion in the shader.
+    ///
+    /// In contrast, LiveKit uses ImageTexture which does have an sRGB view,
+    /// so `source_color` already handles the conversion and FORCE_SRGB must
+    /// be false to avoid double conversion.
+    pub fn uses_external_texture(&self) -> bool {
+        matches!(
+            self.backend_type,
+            BackendType::ExoPlayer | BackendType::AVPlayer
+        )
+    }
+
     /// Send a play command to the backend
     #[func]
     pub fn backend_play(&mut self) {
