@@ -36,12 +36,12 @@ const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back t
 const SCENE_CRASH_PRIMARY = "RELOAD"
 const SCENE_CRASH_SECONDARY = "BACK"
 
-const BAN_PRE_CHECK_TITLE = "You are banned"
-const BAN_PRE_CHECK_BODY = "You have been banned from this scene and cannot enter."
+const BAN_PRE_CHECK_TITLE = "You can't enter"
+const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
 const BAN_PRE_CHECK_PRIMARY = "OK"
 
-const BAN_KICKED_TITLE = "You have been banned"
-const BAN_KICKED_BODY = "You have been banned from this scene by a moderator."
+const BAN_KICKED_TITLE = "You've been banned"
+const BAN_KICKED_BODY = "Please contact support for more information."
 const BAN_KICKED_PRIMARY = "GO TO DISCOVER"
 
 var current_modal: Modal = null
@@ -214,7 +214,7 @@ func async_show_ban_pre_check_modal() -> void:
 	current_modal.set_title(BAN_PRE_CHECK_TITLE)
 	current_modal.set_body(BAN_PRE_CHECK_BODY)
 	current_modal.set_primary_button_text(BAN_PRE_CHECK_PRIMARY)
-	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
+	current_modal.show_icon(Modal.MODAL_BAN_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
 	current_modal.show()
@@ -233,7 +233,7 @@ func async_show_ban_kicked_modal() -> void:
 	current_modal.set_title(BAN_KICKED_TITLE)
 	current_modal.set_body(BAN_KICKED_BODY)
 	current_modal.set_primary_button_text(BAN_KICKED_PRIMARY)
-	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
+	current_modal.show_icon(Modal.MODAL_BAN_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
 	current_modal.show()
