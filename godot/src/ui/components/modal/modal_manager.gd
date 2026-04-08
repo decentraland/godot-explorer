@@ -47,6 +47,8 @@ const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
 var _ban_pre_check_active: bool = false
+## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
+var _suppress_ban_kicked: bool = false
 
 
 func _ready() -> void:
@@ -209,9 +211,6 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 
 ## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
 func async_show_ban_pre_check_modal() -> void:
-	# Kill the loading screen immediately so it doesn't bleed through behind the modal
-	_force_hide_loading_screen()
-
 	if not current_modal:
 		if not await _async_create_modal():
 			return
@@ -231,6 +230,10 @@ func async_show_ban_pre_check_modal() -> void:
 
 ## Shows a ban kicked modal (when kicked from a scene in real-time)
 func async_show_ban_kicked_modal() -> void:
+	# A pre-check already handled this ban — ignore the stale comms disconnect
+	if _suppress_ban_kicked:
+		_suppress_ban_kicked = false
+		return
 	if not current_modal:
 		if not await _async_create_modal():
 			return
@@ -391,9 +394,19 @@ func _on_scene_crash_back() -> void:
 
 func _on_ban_pre_check_go_to_discover() -> void:
 	close_current_modal()
-	_ban_pre_check_active = true
-	Global.set_orientation_portrait()
-	Global.open_discover.emit()
+	_suppress_ban_kicked = true
+
+	if Global.realm.get_realm_string().is_empty() and is_instance_valid(Global.get_explorer()):
+		# Case 1: Cold start deep link — explorer loaded but no realm, trap in discover loop
+		_ban_pre_check_active = true
+		_force_hide_loading_screen()
+		Global.set_orientation_portrait()
+		Global.open_discover.emit()
+	elif not Global.is_orientation_portrait():
+		# Case 2: In-game command (/world, /goto) — open discover
+		Global.set_orientation_portrait()
+		Global.open_discover.emit()
+	# Case 3: Already in discover — modal closed, discover is already behind
 
 
 func _on_ban_go_to_discover() -> void:
@@ -424,7 +437,18 @@ func _force_hide_loading_screen() -> void:
 func _on_menu_close_ban_recheck() -> void:
 	if not _ban_pre_check_active:
 		return
+	# If a realm is already connected, the user has a scene to return to — clear the flag
+	if not Global.realm.get_realm_string().is_empty():
+		_ban_pre_check_active = false
+		return
+	# No realm to go back to — re-show modal and re-open discover (deferred so close finishes first)
+	_deferred_reshow_ban_loop.call_deferred()
+
+
+func _deferred_reshow_ban_loop() -> void:
 	async_show_ban_pre_check_modal()
+	Global.set_orientation_portrait()
+	Global.open_discover.emit()
 
 
 func _on_loading_started_clear_ban() -> void:
