@@ -27,9 +27,9 @@ const TELEPORT_PRIMARY = "JUMP TO"
 const TELEPORT_SECONDARY = "CANCEL"
 
 const CONNECTION_LOST_TITLE = "Connection lost"
-const CONNECTION_LOST_BODY = "We can't connect to Decentraland right now. Please check your connection and try again."
+const CONNECTION_LOST_BODY = "Please check your internet connection and try again."
 const CONNECTION_LOST_PRIMARY = "RETRY"
-const CONNECTION_LOST_SECONDARY = "EXIT APP"
+const CONNECTION_LOST_SECONDARY = "EXIT"
 
 const SCENE_CRASH_TITLE = "Scene error"
 const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back to discover."
@@ -49,6 +49,7 @@ var modal_scene: PackedScene = null
 var _ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
+var _canvas_layer: CanvasLayer = null
 
 
 func _ready() -> void:
@@ -103,13 +104,14 @@ func async_show_scene_timeout_modal() -> void:
 
 
 ## Shows a CONNECTION_LOST type modal
-func async_show_connection_lost_modal() -> void:
+## @param hide_buttons: If true, hides all buttons (used on iOS after retry fails)
+func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
 	if not current_modal:
 		if not await _async_create_modal():
 			print("NOT CREATED MODAL")
 			return
 
-	current_modal.dismissable = false
+	current_modal.blocker = true
 	current_modal.set_title(CONNECTION_LOST_TITLE)
 	current_modal.set_body(CONNECTION_LOST_BODY)
 	current_modal.set_primary_button_text(CONNECTION_LOST_PRIMARY)
@@ -120,8 +122,17 @@ func async_show_connection_lost_modal() -> void:
 
 	# Disconnect previous connections and connect button actions
 	_disconnect_button_signals()
+
 	current_modal.button_primary.pressed.connect(_on_connection_lost_primary)
-	current_modal.button_secondary.pressed.connect(_on_connection_lost_secondary)
+	if OS.get_name() == "iOS":
+		current_modal.button_secondary.hide()
+		if hide_buttons:
+			# No buttons at all — modal auto-closes only when connection restores
+			current_modal.buttons_container.hide()
+			current_modal.buttons_separator.hide()
+			current_modal.set_body(CONNECTION_LOST_BODY + "\n \n Try restarting the app.")
+	else:
+		current_modal.button_secondary.pressed.connect(_on_connection_lost_secondary)
 
 
 ## Shows a TELEPORT type modal
@@ -195,7 +206,7 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 		if not await _async_create_modal():
 			return
 
-	current_modal.dismissable = false
+	current_modal.blocker = true
 	current_modal.set_title(SCENE_CRASH_TITLE)
 	current_modal.set_body(SCENE_CRASH_BODY)
 	current_modal.set_primary_button_text(SCENE_CRASH_PRIMARY)
@@ -289,14 +300,20 @@ func _async_create_modal() -> Modal:
 		push_error("ModalManager: Could not instantiate modal from scene")
 		return null
 
-	# Add the modal to the main viewport so it's always visible
-	# Use get_tree().root to ensure it's at the highest level
+	# Wrap in a CanvasLayer with high layer to ensure modals render above all overlays
+	if _canvas_layer and is_instance_valid(_canvas_layer):
+		_canvas_layer.queue_free()
+
+	_canvas_layer = CanvasLayer.new()
+	_canvas_layer.layer = 100
+
 	var root = get_tree().root
 	if not root:
 		push_error("ModalManager: Could not get scene tree root")
 		return null
 
-	root.add_child(modal)
+	root.add_child(_canvas_layer)
+	_canvas_layer.add_child(modal)
 	current_modal = modal
 
 	# Connect signal to clean up when modal exits the tree
@@ -304,6 +321,7 @@ func _async_create_modal() -> Modal:
 
 	current_modal.hide_url()
 	current_modal.hide_icon()
+	current_modal.blocker = false
 
 	# Wait for modal to be fully in tree and @onready nodes initialized
 	# This is especially important when called from SDK/Rust
@@ -471,3 +489,6 @@ func _remove_modal() -> void:
 	if current_modal:
 		current_modal.queue_free()
 		current_modal = null
+	if _canvas_layer and is_instance_valid(_canvas_layer):
+		_canvas_layer.queue_free()
+		_canvas_layer = null
