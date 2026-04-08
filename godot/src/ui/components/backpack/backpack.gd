@@ -627,7 +627,8 @@ func _on_visibility_changed() -> void:
 		#Global.set_orientation_portrait()
 		if Global.get_explorer():
 			if button_back_to_explorer:
-				button_back_to_explorer.show()
+				#button_back_to_explorer.show()
+				button_back_to_explorer.hide()
 
 
 func _on_button_back_to_explorer_pressed() -> void:

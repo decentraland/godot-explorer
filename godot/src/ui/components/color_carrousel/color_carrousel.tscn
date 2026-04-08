@@ -15,6 +15,7 @@ draw_center = false
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8hv1p"]
 
 [node name="VBoxContainer2" type="VBoxContainer"]
+custom_minimum_size = Vector2(0, 100)
 offset_left = -5.0
 offset_right = 720.0
 offset_bottom = 499.0
@@ -46,23 +47,32 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_6c3l5")
 [node name="MarginContainer_Aligment" type="MarginContainer" parent="."]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme = ExtResource("1_mfuy6")
 theme_override_constants/margin_left = -5
 theme_override_constants/margin_bottom = 16
 metadata/_edit_use_anchors_ = true
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Aligment"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer_Aligment"]
+clip_contents = false
 layout_mode = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Aligment/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 0
 
-[node name="ScrollSwatchContainer" type="ScrollContainer" parent="MarginContainer_Aligment/VBoxContainer"]
+[node name="ScrollSwatchContainer" type="ScrollContainer" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 clip_contents = false
 layout_mode = 2
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Aligment/VBoxContainer/ScrollSwatchContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ScrollSwatchContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_left = 6
@@ -70,49 +80,49 @@ theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Aligment/VBoxContainer/ScrollSwatchContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ScrollSwatchContainer/MarginContainer"]
 layout_mode = 2
 
-[node name="ColorCarrousel" type="HBoxContainer" parent="MarginContainer_Aligment/VBoxContainer/ScrollSwatchContainer/MarginContainer/VBoxContainer"]
+[node name="ColorCarrousel" type="HBoxContainer" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ScrollSwatchContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="ColorButton" parent="MarginContainer_Aligment/VBoxContainer/ScrollSwatchContainer/MarginContainer/VBoxContainer/ColorCarrousel" instance=ExtResource("2_mgcx2")]
+[node name="ColorButton" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ScrollSwatchContainer/MarginContainer/VBoxContainer/ColorCarrousel" instance=ExtResource("2_mgcx2")]
 layout_mode = 2
 color = Color(1, 0, 1, 1)
 
-[node name="ColorPicker" type="VBoxContainer" parent="MarginContainer_Aligment/VBoxContainer"]
+[node name="ColorPicker" type="VBoxContainer" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 56
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer_Aligment/VBoxContainer/ColorPicker"]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker"]
 layout_mode = 2
 theme_override_constants/separation = -6
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8hv1p")
 
-[node name="ColorSlider" parent="MarginContainer_Aligment/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+[node name="ColorSlider" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
 unique_name_in_owner = true
 layout_mode = 2
 slider_type = 0
 value = 50
 
-[node name="SaturationSlider" parent="MarginContainer_Aligment/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+[node name="SaturationSlider" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
 unique_name_in_owner = true
 layout_mode = 2
 value = 50
 
-[node name="BrightnessSlider" parent="MarginContainer_Aligment/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
+[node name="BrightnessSlider" parent="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker" instance=ExtResource("3_5kk7f")]
 unique_name_in_owner = true
 layout_mode = 2
 slider_type = 1
 value = 50
 
 [connection signal="pressed" from="ColorSwatchTitle" to="." method="_on_color_picker_title_pressed"]
-[connection signal="slider_released" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/ColorSlider" to="." method="_on_slider_released"]
-[connection signal="value_change" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/ColorSlider" to="." method="_on_color_slider_value_change"]
-[connection signal="slider_released" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/SaturationSlider" to="." method="_on_slider_released"]
-[connection signal="value_change" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/SaturationSlider" to="." method="_on_color_slider_value_change"]
-[connection signal="slider_released" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/BrightnessSlider" to="." method="_on_slider_released"]
-[connection signal="value_change" from="MarginContainer_Aligment/VBoxContainer/ColorPicker/BrightnessSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="slider_released" from="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker/ColorSlider" to="." method="_on_slider_released"]
+[connection signal="value_change" from="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker/ColorSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="slider_released" from="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker/SaturationSlider" to="." method="_on_slider_released"]
+[connection signal="value_change" from="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker/SaturationSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="slider_released" from="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker/BrightnessSlider" to="." method="_on_slider_released"]
+[connection signal="value_change" from="MarginContainer_Aligment/ScrollContainer/VBoxContainer/ColorPicker/BrightnessSlider" to="." method="_on_color_slider_value_change"]
