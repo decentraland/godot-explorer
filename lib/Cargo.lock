@@ -861,7 +861,7 @@ dependencies = [
 
 [[package]]
 name = "dclgodot"
-version = "0.58.0"
+version = "0.59.0"
 dependencies = [
  "anyhow",
  "async-trait",
