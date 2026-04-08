@@ -434,6 +434,8 @@ func _force_hide_loading_screen() -> void:
 	var explorer = Global.get_explorer()
 	if not is_instance_valid(explorer) or not explorer.loading_ui.visible:
 		return
+	if not is_instance_valid(explorer.loading_ui.loading_screen_progress_logic):
+		return
 	# Hide the Control instantly so the tween in async_hide_loading_screen_effect
 	# has nothing visible to fade — avoids the alpha bleed-through.
 	explorer.loading_ui.hide()
@@ -460,13 +462,8 @@ func _on_loading_started_clear_ban() -> void:
 	_ban_pre_check_active = false
 
 
-## Clear suppress flag after loading finishes, deferred so disconnect_handler's
-## _on_loading_finished can still be suppressed (stale kick from pre-check).
+## Clear suppress flag after loading finishes.
 func _on_loading_finished_clear_suppress() -> void:
-	_clear_suppress_deferred.call_deferred()
-
-
-func _clear_suppress_deferred() -> void:
 	_suppress_ban_kicked = false
 
 

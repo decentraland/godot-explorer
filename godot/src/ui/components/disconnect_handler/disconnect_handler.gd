@@ -4,11 +4,11 @@ extends Node
 ## Handles comms disconnection with automatic reconnection attempts
 ## and displays an overlay when reconnection fails.
 
-## Disconnect reasons from CommunicationManager:
-## 0 = DuplicateIdentity (same account logged in elsewhere)
-## 1 = RoomClosed (the room was closed)
-## 2 = Kicked (removed from server by admin)
-## 3 = Other (server shutdown, signal close, etc.)
+## Disconnect reasons from CommunicationManager (must match Rust DisconnectReason enum)
+const REASON_DUPLICATE_IDENTITY: int = 0
+const REASON_ROOM_CLOSED: int = 1
+const REASON_KICKED: int = 2
+const REASON_OTHER: int = 3
 
 const MAX_RECONNECT_ATTEMPTS: int = 3
 
@@ -51,7 +51,7 @@ func _on_disconnected(reason: int) -> void:
 		_last_adapter_str = Global.comms.get_current_adapter_conn_str()
 
 	# DuplicateIdentity means someone else logged in - don't retry, show error immediately
-	if reason == 0:
+	if reason == REASON_DUPLICATE_IDENTITY:
 		# Note: Don't reset _last_adapter_str here - we need it for reconnection
 		_reconnect_attempts = 0
 		_last_disconnect_reason = -1
@@ -60,7 +60,7 @@ func _on_disconnected(reason: int) -> void:
 		return
 
 	# Kicked/Banned - don't retry, show ban modal (defer if still loading)
-	if reason == 2:
+	if reason == REASON_KICKED:
 		_should_stop_reconnecting = true
 		_scene_banned = true
 		if not _is_loading:
@@ -110,16 +110,16 @@ func _show_disconnect_error(reason: int) -> void:
 	var message: String
 
 	match reason:
-		0:  # DuplicateIdentity
+		REASON_DUPLICATE_IDENTITY:
 			title = "Session Ended"
 			message = "Your session was ended because your account\nlogged in from another location."
-		1:  # RoomClosed
+		REASON_ROOM_CLOSED:
 			title = "Room Closed"
 			message = "The room you were in has been closed."
-		2:  # Kicked
+		REASON_KICKED:
 			title = "Removed from Server"
 			message = "You have been removed from the server\nby an administrator."
-		_:  # Other
+		_:
 			title = "Disconnected"
 			message = "You have been disconnected from the server.\nPlease try again later."
 
