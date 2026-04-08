@@ -94,7 +94,6 @@ use_resource_tracking = []
 use_voice_chat = []
 use_memory_debugger = []
 asset_server = ["dep:hyper-util"]
-scene_logging = []
 
 # TODO: Fix enable_inspector failure when cross-compiling to Android from Windows.
 #       The FastWebSockets build incorrectly includes `unmask`.

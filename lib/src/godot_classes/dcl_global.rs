@@ -27,9 +27,6 @@ use crate::tools::memory_debugger::MemoryDebugger;
 #[cfg(feature = "use_memory_debugger")]
 use crate::tools::benchmark_report::BenchmarkReport;
 
-#[cfg(feature = "scene_logging")]
-use crate::tools::scene_logging::{init_global_logger, SceneLoggingConfig};
-
 use super::{
     dcl_cli::DclCli, dcl_config::DclConfig,
     dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
@@ -278,18 +275,8 @@ impl INode for DclGlobal {
 
         log_panics::init();
 
-        // Initialize scene logging if enabled
-        #[cfg(feature = "scene_logging")]
-        {
-            let config = SceneLoggingConfig::default();
-            if let Err(e) = init_global_logger(config) {
-                tracing::warn!("Failed to initialize scene logger: {}", e);
-            } else {
-                tracing::info!(
-                    "Scene logging enabled. Web UI at http://localhost:9876"
-                );
-            }
-        }
+        // Scene logging is initialized lazily when the first scene with
+        // --scene-debug enabled is spawned (see scene_thread in dcl/js/mod.rs).
 
         // Initialize Rust classes
         let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();

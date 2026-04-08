@@ -13,8 +13,29 @@ use crate::tools::scene_logging::{
     current_timestamp_ms, get_logger_sender, OpCallEndEntry, OpCallStartEntry, SceneLogEntry,
 };
 
+/// Per-scene debug flag, inserted into the Deno `OpState` at scene boot from
+/// `SpawnDclSceneData::should_debug`. When `false`, the JS `setupOpLogging`
+/// wrapper bails out and CRDT/lifecycle hooks short-circuit, so non-debugged
+/// scenes pay zero per-call overhead.
+pub struct SceneDebugFlag(pub bool);
+
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_scene_log_op_start(), op_scene_log_op_end()]
+    vec![
+        op_scene_debug_enabled(),
+        op_scene_log_op_start(),
+        op_scene_log_op_end(),
+    ]
+}
+
+/// Returns whether the current scene was spawned with `--scene-debug` enabled.
+/// Called once from `main.js` during `setupOpLogging` so the JS wrapper knows
+/// whether to install itself.
+#[op2(fast)]
+fn op_scene_debug_enabled(state: &mut OpState) -> bool {
+    state
+        .try_borrow::<SceneDebugFlag>()
+        .map(|f| f.0)
+        .unwrap_or(false)
 }
 
 /// Op call start data received from JavaScript.

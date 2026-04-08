@@ -12,22 +12,22 @@ use crate::dcl::{
         CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
     },
     crdt::{
-        message::{append_gos_component, put_or_delete_lww_component},
-        SceneCrdtState,
+        message::{
+            append_gos_component, process_many_messages_with_logging, put_or_delete_lww_component,
+        },
+        CrdtLoggingContext, SceneCrdtState,
     },
     scene_apis::{LocalCall, RpcCall},
     serialization::{reader::DclReader, writer::DclWriter},
     RendererResponse, SceneId, SceneResponse, SharedSceneCrdtState,
 };
 
-#[cfg(not(feature = "scene_logging"))]
-use crate::dcl::crdt::message::process_many_messages;
+use super::scene_logging_ops::SceneDebugFlag;
 
-#[cfg(feature = "scene_logging")]
-use crate::dcl::crdt::CrdtLoggingContext;
-
-/// Tick counter for scene logging (increments each time CRDT messages are processed)
-#[cfg(feature = "scene_logging")]
+/// Tick counter shared by `op_crdt_send_to_renderer` and
+/// `op_crdt_recv_from_renderer`. Always present in `op_state`; only consulted
+/// when the per-scene `SceneDebugFlag` is on, but kept unconditional so the hot
+/// path doesn't pay an extra `try_borrow` lookup.
 pub struct SceneTickCounter(pub std::sync::atomic::AtomicU32);
 
 use super::{
@@ -57,26 +57,17 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
 
     let mut stream = DclReader::new(messages);
 
-    #[cfg(feature = "scene_logging")]
-    {
-        use crate::dcl::crdt::message::process_many_messages_with_logging;
-        use crate::tools::scene_logging::{get_logger_sender, CrdtDirection};
-
-        let logging_ctx = get_logger_sender().map(|sender| {
-            // Get or create tick counter
-            let tick = op_state
-                .try_borrow::<SceneTickCounter>()
-                .map(|tc| tc.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
-                .unwrap_or(0);
-
-            CrdtLoggingContext::new(sender, tick, CrdtDirection::SceneToRenderer)
-        });
-
-        process_many_messages_with_logging(&mut stream, &mut scene_crdt_state, logging_ctx.as_ref());
-    }
-
-    #[cfg(not(feature = "scene_logging"))]
-    process_many_messages(&mut stream, &mut scene_crdt_state);
+    let debug = op_state.borrow::<SceneDebugFlag>().0;
+    let logging_ctx = if debug {
+        build_send_logging_ctx(&op_state)
+    } else {
+        None
+    };
+    process_many_messages_with_logging(
+        &mut stream,
+        &mut scene_crdt_state,
+        logging_ctx.as_ref(),
+    );
 
     let dirty = scene_crdt_state.take_dirty();
 
@@ -151,12 +142,15 @@ async fn op_crdt_recv_from_renderer(
             let mut skipped_lww = 0u32;
             let mut skipped_gos = 0u32;
 
-            // Get current tick for logging
-            #[cfg(feature = "scene_logging")]
-            let current_tick = op_state
-                .try_borrow::<SceneTickCounter>()
-                .map(|tc| tc.0.load(std::sync::atomic::Ordering::Relaxed))
-                .unwrap_or(0);
+            let debug = op_state.borrow::<SceneDebugFlag>().0;
+            let current_tick = if debug {
+                op_state
+                    .try_borrow::<SceneTickCounter>()
+                    .map(|tc| tc.0.load(std::sync::atomic::Ordering::Relaxed))
+                    .unwrap_or(0)
+            } else {
+                0
+            };
 
             // Skip component updates for entities that died — the renderer handles
             // entity lifecycle on its own side. Sending component deletions for dead
@@ -169,44 +163,13 @@ async fn op_crdt_recv_from_renderer(
                         skipped_lww += 1;
                         continue;
                     }
-                    // Log renderer->scene CRDT operation
-                    #[cfg(feature = "scene_logging")]
-                    {
-                        use crate::dcl::serialization::writer::DclWriter;
-                        use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
-
-                        if let Some(comp_def) =
-                            scene_crdt_state.get_lww_component_definition(*component_id)
-                        {
-                            if let Some(opaque) = comp_def.get_opaque(*entity_id) {
-                                let operation = if opaque.value.is_some() {
-                                    CrdtOperation::Put
-                                } else {
-                                    CrdtOperation::Delete
-                                };
-
-                                let payload_data = if opaque.value.is_some() {
-                                    let mut payload_buf = Vec::new();
-                                    let mut payload_writer = DclWriter::new(&mut payload_buf);
-                                    if comp_def.to_binary(*entity_id, &mut payload_writer).is_ok() {
-                                        Some(payload_buf)
-                                    } else {
-                                        None
-                                    }
-                                } else {
-                                    None
-                                };
-
-                                log_crdt_renderer_to_scene(
-                                    current_tick,
-                                    entity_id.as_i32() as u32,
-                                    component_id.0,
-                                    operation,
-                                    opaque.timestamp.0,
-                                    payload_data.as_deref(),
-                                );
-                            }
-                        }
+                    if debug {
+                        log_lww_renderer_to_scene(
+                            &scene_crdt_state,
+                            *component_id,
+                            *entity_id,
+                            current_tick,
+                        );
                     }
 
                     if let Err(err) = put_or_delete_lww_component(
@@ -226,19 +189,8 @@ async fn op_crdt_recv_from_renderer(
                         skipped_gos += 1;
                         continue;
                     }
-                    // Log renderer->scene GOS append operation
-                    #[cfg(feature = "scene_logging")]
-                    {
-                        use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
-
-                        log_crdt_renderer_to_scene(
-                            current_tick,
-                            entity_id.as_i32() as u32,
-                            component_id.0,
-                            CrdtOperation::Append,
-                            0,
-                            None,
-                        );
+                    if debug {
+                        log_gos_renderer_to_scene(*component_id, *entity_id, current_tick);
                     }
 
                     if let Err(err) = append_gos_component(
@@ -321,6 +273,88 @@ async fn op_crdt_recv_from_renderer(
     }
     ret.push(data);
     Ok(ret)
+}
+
+/// Build the per-call CRDT logging context for the scene→renderer direction.
+/// `#[cold]` so the logging branch never inflates the hot send path.
+#[cold]
+#[inline(never)]
+fn build_send_logging_ctx(op_state: &OpState) -> Option<CrdtLoggingContext> {
+    use crate::tools::scene_logging::{get_logger_sender, CrdtDirection};
+
+    let sender = get_logger_sender()?;
+    let tick = op_state
+        .try_borrow::<SceneTickCounter>()
+        .map(|tc| tc.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+        .unwrap_or(0);
+    Some(CrdtLoggingContext::new(
+        sender,
+        tick,
+        CrdtDirection::SceneToRenderer,
+    ))
+}
+
+#[cold]
+#[inline(never)]
+fn log_lww_renderer_to_scene(
+    scene_crdt_state: &SceneCrdtState,
+    component_id: crate::dcl::components::SceneComponentId,
+    entity_id: crate::dcl::components::SceneEntityId,
+    current_tick: u32,
+) {
+    use crate::dcl::serialization::writer::DclWriter;
+    use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
+
+    let Some(comp_def) = scene_crdt_state.get_lww_component_definition(component_id) else {
+        return;
+    };
+    let Some(opaque) = comp_def.get_opaque(entity_id) else {
+        return;
+    };
+
+    let operation = if opaque.value.is_some() {
+        CrdtOperation::Put
+    } else {
+        CrdtOperation::Delete
+    };
+    let payload_data = if opaque.value.is_some() {
+        let mut payload_buf = Vec::new();
+        let mut payload_writer = DclWriter::new(&mut payload_buf);
+        if comp_def.to_binary(entity_id, &mut payload_writer).is_ok() {
+            Some(payload_buf)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    log_crdt_renderer_to_scene(
+        current_tick,
+        entity_id.as_i32() as u32,
+        component_id.0,
+        operation,
+        opaque.timestamp.0,
+        payload_data.as_deref(),
+    );
+}
+
+#[cold]
+#[inline(never)]
+fn log_gos_renderer_to_scene(
+    component_id: crate::dcl::components::SceneComponentId,
+    entity_id: crate::dcl::components::SceneEntityId,
+    current_tick: u32,
+) {
+    use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
+    log_crdt_renderer_to_scene(
+        current_tick,
+        entity_id.as_i32() as u32,
+        component_id.0,
+        CrdtOperation::Append,
+        0,
+        None,
+    );
 }
 
 fn process_local_api_calls(local_api_calls: Vec<LocalCall>, crdt_state: &SceneCrdtState) {

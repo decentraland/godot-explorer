@@ -234,10 +234,8 @@ pub mod social_service {
     }
 }
 
-/// Deserialize a component's binary data to JSON.
-///
-/// Only available when the `scene_logging` feature is enabled.
-#[cfg(feature = "scene_logging")]
+/// Deserialize a component's binary data to JSON. Used by the runtime scene
+/// logger when a debugged scene receives a CRDT message.
 pub fn deserialize_component_to_json(component_id: u32, data: &[u8]) -> Option<serde_json::Value> {
     use prost::Message;
     use sdk::components::*;
@@ -321,7 +319,6 @@ pub fn deserialize_component_to_json(component_id: u32, data: &[u8]) -> Option<s
 /// Deserialize Transform component (custom binary format, not proto).
 /// Format: translation(Vec3) + rotation(Quat) + scale(Vec3) + parent(EntityId)
 /// = 12 + 16 + 12 + 4 = 44 bytes
-#[cfg(feature = "scene_logging")]
 fn deserialize_transform(data: &[u8]) -> Option<serde_json::Value> {
     if data.len() < 44 {
         return None;

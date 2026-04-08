@@ -313,9 +313,6 @@ fn generate_social_service() -> io::Result<()> {
 }
 
 fn main() -> io::Result<()> {
-    // Rerun if scene_logging feature changes (affects proto codegen)
-    println!("cargo:rerun-if-env-changed=CARGO_FEATURE_SCENE_LOGGING");
-
     // ---------- Linux, Android, the BSDs, Windows-gnu, and other ld/LLD users
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
@@ -387,14 +384,10 @@ fn main() -> io::Result<()> {
 
     std::env::set_var("PROTOC", protoc_path);
 
-    // Configure prost-build with optional serde support for scene_logging
+    // Always derive serde::Serialize on proto types so the runtime scene logger
+    // can serialize component payloads when --scene-debug is enabled.
     let mut prost_config = prost_build::Config::new();
-
-    // When scene_logging feature is enabled, add Serialize derive to all proto types
-    if env::var("CARGO_FEATURE_SCENE_LOGGING").is_ok() {
-        prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
-    }
-
+    prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
     prost_config.compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
 
     // Generate social service with RPC support

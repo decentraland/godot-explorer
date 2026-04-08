@@ -10,7 +10,6 @@ mod players;
 mod portables;
 mod restricted_actions;
 mod runtime;
-#[cfg(feature = "scene_logging")]
 mod scene_logging_ops;
 mod testing;
 mod websocket;
@@ -22,14 +21,13 @@ use crate::dcl::common::{
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
-#[cfg(not(feature = "scene_logging"))]
-use super::crdt::message::process_many_messages;
-use super::crdt::SceneCrdtState;
+use super::crdt::{
+    message::{process_many_messages, process_many_messages_with_logging},
+    CrdtLoggingContext, SceneCrdtState,
+};
 use super::serialization::reader::DclReader;
-
-#[cfg(feature = "scene_logging")]
-use super::crdt::{message::process_many_messages_with_logging, CrdtLoggingContext};
 use super::{RendererResponse, SceneId, SceneResponse, SpawnDclSceneData};
+use scene_logging_ops::SceneDebugFlag;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -102,8 +100,7 @@ pub fn init_runtime() {
 pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorServer>) {
     let mut ops = vec![op_require(), op_log(), op_error()];
 
-    #[cfg_attr(not(feature = "scene_logging"), allow(unused_mut))]
-    let mut op_sets: Vec<Vec<deno_core::OpDecl>> = vec![
+    let op_sets: Vec<Vec<deno_core::OpDecl>> = vec![
         engine::ops(),
         adaptation_layer_helper::ops(),
         runtime::ops(),
@@ -116,10 +113,8 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         testing::ops(),
         ethereum_controller::ops(),
         comms::ops(),
+        scene_logging_ops::ops(),
     ];
-
-    #[cfg(feature = "scene_logging")]
-    op_sets.push(scene_logging_ops::ops());
 
     // add plugin registrations
     let mut op_map = HashMap::new();
@@ -204,16 +199,23 @@ pub(crate) fn scene_thread(
     let mut scene_main_crdt = None;
 
     let scene_id = spawn_dcl_scene_data.scene_id;
+    let should_debug = spawn_dcl_scene_data.should_debug;
 
-    // Log scene initialization
-    #[cfg(feature = "scene_logging")]
-    crate::tools::scene_logging::log_lifecycle_event(
-        scene_id.0,
-        crate::tools::scene_logging::SceneLifecycleEvent::SceneInit,
-        None,
-        None,
-        None,
-    );
+    // Lazily initialize the global scene logger the first time a debugged
+    // scene is spawned. Subsequent debugged scenes reuse the same logger; the
+    // OnceCell.set call returns Err on the second attempt and that's expected.
+    if should_debug {
+        let _ = crate::tools::scene_logging::init_global_logger(
+            crate::tools::scene_logging::SceneLoggingConfig::default(),
+        );
+        crate::tools::scene_logging::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_logging::SceneLifecycleEvent::SceneInit,
+            None,
+            None,
+            None,
+        );
+    }
     let scene_entity_definition = spawn_dcl_scene_data.scene_entity_definition;
     let log_info = SceneLogInfo::new(scene_id, &scene_entity_definition);
     let local_main_js_file_path = spawn_dcl_scene_data.local_main_js_file_path;
@@ -246,8 +248,7 @@ pub(crate) fn scene_thread(
             let mut stream = DclReader::new(&buf);
             let mut scene_crdt_state = scene_crdt.lock().unwrap();
 
-            #[cfg(feature = "scene_logging")]
-            {
+            if should_debug {
                 use crate::tools::scene_logging::{get_logger_sender, CrdtDirection};
 
                 let logging_ctx = get_logger_sender()
@@ -258,20 +259,16 @@ pub(crate) fn scene_thread(
                     &mut scene_crdt_state,
                     logging_ctx.as_ref(),
                 );
+                crate::tools::scene_logging::log_lifecycle_event(
+                    scene_id.0,
+                    crate::tools::scene_logging::SceneLifecycleEvent::MainCrdtLoaded,
+                    None,
+                    None,
+                    None,
+                );
+            } else {
+                process_many_messages(&mut stream, &mut scene_crdt_state);
             }
-
-            #[cfg(not(feature = "scene_logging"))]
-            process_many_messages(&mut stream, &mut scene_crdt_state);
-
-            // Log main.crdt loaded
-            #[cfg(feature = "scene_logging")]
-            crate::tools::scene_logging::log_lifecycle_event(
-                scene_id.0,
-                crate::tools::scene_logging::SceneLifecycleEvent::MainCrdtLoaded,
-                None,
-                None,
-                None,
-            );
 
             let dirty = scene_crdt_state.take_dirty();
 
@@ -394,11 +391,16 @@ pub(crate) fn scene_thread(
     // Initialize Deno memory stats tracking
     state.borrow_mut().put(super::DenoMemoryStats::default());
 
-    // Initialize tick counter for scene logging
-    #[cfg(feature = "scene_logging")]
-    state
-        .borrow_mut()
-        .put(engine::SceneTickCounter(std::sync::atomic::AtomicU32::new(0)));
+    // Per-scene debug flag and tick counter consumed by the engine ops.
+    // Both are inserted unconditionally so the hot path can read them with a
+    // single `borrow::<T>()` call instead of a fallible `try_borrow`.
+    {
+        let mut op_state = state.borrow_mut();
+        op_state.put(SceneDebugFlag(should_debug));
+        op_state.put(engine::SceneTickCounter(
+            std::sync::atomic::AtomicU32::new(0),
+        ));
+    }
 
     if inspector.is_some() {
         // TODO: maybe send a message to announce the inspector is being waited
@@ -432,54 +434,51 @@ pub(crate) fn scene_thread(
         Ok(script) => script,
     };
 
-    // Log script loaded
-    #[cfg(feature = "scene_logging")]
-    crate::tools::scene_logging::log_lifecycle_event(
-        scene_id.0,
-        crate::tools::scene_logging::SceneLifecycleEvent::ScriptLoaded,
-        None,
-        None,
-        None,
-    );
-
-    // Log onStart called
-    #[cfg(feature = "scene_logging")]
-    crate::tools::scene_logging::log_lifecycle_event(
-        scene_id.0,
-        crate::tools::scene_logging::SceneLifecycleEvent::OnStart,
-        None,
-        None,
-        None,
-    );
+    if should_debug {
+        crate::tools::scene_logging::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_logging::SceneLifecycleEvent::ScriptLoaded,
+            None,
+            None,
+            None,
+        );
+        crate::tools::scene_logging::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_logging::SceneLifecycleEvent::OnStart,
+            None,
+            None,
+            None,
+        );
+    }
 
     let result =
         rt.block_on(async { run_script(&mut runtime, &script, "onStart", |_| Vec::new()).await });
     if let Err(e) = result {
         tracing::error!("{} script onStart error: {}", log_info.prefix(), e);
 
-        // Log onStart error
-        #[cfg(feature = "scene_logging")]
-        crate::tools::scene_logging::log_lifecycle_event(
-            scene_id.0,
-            crate::tools::scene_logging::SceneLifecycleEvent::OnStartEnd,
-            None,
-            None,
-            Some(format!("{}", e)),
-        );
+        if should_debug {
+            crate::tools::scene_logging::log_lifecycle_event(
+                scene_id.0,
+                crate::tools::scene_logging::SceneLifecycleEvent::OnStartEnd,
+                None,
+                None,
+                Some(format!("{}", e)),
+            );
+        }
 
         send_remove_godot_scene(&state, scene_id);
         return;
     }
 
-    // Log onStart completed
-    #[cfg(feature = "scene_logging")]
-    crate::tools::scene_logging::log_lifecycle_event(
-        scene_id.0,
-        crate::tools::scene_logging::SceneLifecycleEvent::OnStartEnd,
-        None,
-        None,
-        None,
-    );
+    if should_debug {
+        crate::tools::scene_logging::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_logging::SceneLifecycleEvent::OnStartEnd,
+            None,
+            None,
+            None,
+        );
+    }
 
     // Workaround: this piece of code is to make v8-runtime to process the microqueue tasks
     //  and let it to tokio-runtime resolve the promises (futures)
@@ -495,7 +494,6 @@ pub(crate) fn scene_thread(
     let mut reported_error_filter = 0;
     let mut last_memory_stats_update = std::time::Instant::now();
 
-    #[cfg(feature = "scene_logging")]
     let mut tick_counter: u32 = 0;
 
     loop {
@@ -509,9 +507,7 @@ pub(crate) fn scene_thread(
             .borrow_mut()
             .put(SceneElapsedTime(elapsed.as_secs_f32()));
 
-        // Log onUpdate called
-        #[cfg(feature = "scene_logging")]
-        {
+        if should_debug {
             crate::tools::scene_logging::log_lifecycle_event(
                 scene_id.0,
                 crate::tools::scene_logging::SceneLifecycleEvent::OnUpdate,
@@ -534,9 +530,7 @@ pub(crate) fn scene_thread(
             if reported_error_filter <= 10 {
                 let err_str = format!("{:?}", e);
 
-                // Log onUpdate error
-                #[cfg(feature = "scene_logging")]
-                {
+                if should_debug {
                     crate::tools::scene_logging::log_lifecycle_event(
                         scene_id.0,
                         crate::tools::scene_logging::SceneLifecycleEvent::OnUpdateEnd,
@@ -577,22 +571,17 @@ pub(crate) fn scene_thread(
                 );
                 break;
             }
-        } else {
-            // Log onUpdate completed successfully
-            #[cfg(feature = "scene_logging")]
-            {
-                crate::tools::scene_logging::log_lifecycle_event(
-                    scene_id.0,
-                    crate::tools::scene_logging::SceneLifecycleEvent::OnUpdateEnd,
-                    Some(tick_counter),
-                    Some(dt.as_secs_f64()),
-                    None,
-                );
-            }
+        } else if should_debug {
+            crate::tools::scene_logging::log_lifecycle_event(
+                scene_id.0,
+                crate::tools::scene_logging::SceneLifecycleEvent::OnUpdateEnd,
+                Some(tick_counter),
+                Some(dt.as_secs_f64()),
+                None,
+            );
         }
 
-        #[cfg(feature = "scene_logging")]
-        {
+        if should_debug {
             tick_counter += 1;
         }
 
@@ -621,15 +610,15 @@ pub(crate) fn scene_thread(
         state.borrow_mut().try_take::<CommunicatedWithRenderer>();
     }
 
-    // Log scene shutdown
-    #[cfg(feature = "scene_logging")]
-    crate::tools::scene_logging::log_lifecycle_event(
-        scene_id.0,
-        crate::tools::scene_logging::SceneLifecycleEvent::SceneShutdown,
-        None,
-        None,
-        None,
-    );
+    if should_debug {
+        crate::tools::scene_logging::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_logging::SceneLifecycleEvent::SceneShutdown,
+            None,
+            None,
+            None,
+        );
+    }
 
     send_remove_godot_scene(&state, scene_id);
     runtime.v8_isolate().terminate_execution();

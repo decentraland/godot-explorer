@@ -1,5 +1,5 @@
 use crate::dcl::{
-    components::{SceneComponentId, SceneCrdtTimestamp, SceneEntityId},
+    components::{component_id_to_name, SceneComponentId, SceneCrdtTimestamp, SceneEntityId},
     crdt::SceneCrdtState,
     serialization::{
         reader::{DclReader, DclReaderError},
@@ -7,26 +7,20 @@ use crate::dcl::{
     },
 };
 
-#[cfg(feature = "scene_logging")]
-use crate::dcl::components::component_id_to_name;
-
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
-#[cfg(feature = "scene_logging")]
 use crate::tools::scene_logging::{
     CrdtDirection, CrdtLogEntry, CrdtOperation, SceneLogEntry, SceneLoggerSender,
 };
 
-/// Context for logging CRDT messages (only used when scene_logging feature is enabled).
-#[cfg(feature = "scene_logging")]
+/// Context for logging CRDT messages. Constructed only by debugged scenes.
 pub struct CrdtLoggingContext {
     pub sender: SceneLoggerSender,
     pub tick: u32,
     pub direction: CrdtDirection,
 }
 
-#[cfg(feature = "scene_logging")]
 impl CrdtLoggingContext {
     pub fn new(sender: SceneLoggerSender, tick: u32, direction: CrdtDirection) -> Self {
         Self {
@@ -131,34 +125,17 @@ fn process_message(
     Ok(())
 }
 
-/// Process multiple CRDT messages from a stream.
-#[cfg(not(feature = "scene_logging"))]
-pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut SceneCrdtState) {
-    // collect commands
-    while stream.len() > CRDT_HEADER_SIZE {
-        let length = stream.read_u32().unwrap() as usize;
-        let crdt_type = stream.read_u32().unwrap();
-        let mut message_stream = stream.take_reader(length.saturating_sub(8));
-
-        match FromPrimitive::from_u32(crdt_type) {
-            Some(crdt_type) => {
-                if let Err(e) = process_message(scene_crdt_state, crdt_type, &mut message_stream) {
-                    tracing::warn!("CRDT Buffer error: {:?}", e);
-                };
-            }
-            None => tracing::warn!("CRDT Header error: unhandled crdt message type {crdt_type}"),
-        }
-    }
-}
-
-/// Process multiple CRDT messages from a stream with optional logging context.
-#[cfg(feature = "scene_logging")]
+/// Process multiple CRDT messages from a stream. Most callers go through this
+/// thin wrapper which never allocates a logging context — used by all
+/// non-debugged scenes (the hot path).
 pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut SceneCrdtState) {
     process_many_messages_with_logging(stream, scene_crdt_state, None);
 }
 
-/// Process multiple CRDT messages from a stream with logging context.
-#[cfg(feature = "scene_logging")]
+/// Process multiple CRDT messages from a stream with an optional logging
+/// context. When `logging_ctx` is `None`, the logging branch is a single
+/// predictable jump; the cold logging path lives in `log_crdt_message` which
+/// is `#[inline(never)]` so it never bloats the hot loop.
 pub fn process_many_messages_with_logging(
     stream: &mut DclReader,
     scene_crdt_state: &mut SceneCrdtState,
@@ -173,15 +150,8 @@ pub fn process_many_messages_with_logging(
 
         match FromPrimitive::from_u32(crdt_type_raw) {
             Some(crdt_type) => {
-                // Log the message if logging is enabled
                 if let Some(ctx) = logging_ctx {
-                    log_crdt_message(
-                        ctx,
-                        crdt_type_raw,
-                        &crdt_type,
-                        &message_stream,
-                        message_size,
-                    );
+                    log_crdt_message(ctx, &crdt_type, &message_stream, message_size);
                 }
 
                 if let Err(e) = process_message(scene_crdt_state, crdt_type, &mut message_stream) {
@@ -195,10 +165,10 @@ pub fn process_many_messages_with_logging(
     }
 }
 
-#[cfg(feature = "scene_logging")]
+#[cold]
+#[inline(never)]
 fn log_crdt_message(
     ctx: &CrdtLoggingContext,
-    _crdt_type_raw: u32,
     crdt_type: &CrdtMessageType,
     message_stream: &DclReader,
     message_size: usize,
@@ -271,7 +241,6 @@ fn log_crdt_message(
     let _ = ctx.sender.try_send(SceneLogEntry::CrdtMessage(entry));
 }
 
-const CRDT_DELETE_ENTITY_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 4;
 const CRDT_PUT_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 20;
 const CRDT_DELETE_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 16;
 
@@ -351,12 +320,6 @@ pub fn append_gos_component(
     }
 
     Ok(())
-}
-
-pub fn delete_entity(entity_id: &SceneEntityId, writer: &mut DclWriter) {
-    writer.write_u32(CRDT_DELETE_ENTITY_HEADER_SIZE as u32);
-    writer.write(&CrdtMessageType::DeleteEntity);
-    writer.write(entity_id);
 }
 
 /// Filters raw CRDT bytes, preserving only messages for components known to

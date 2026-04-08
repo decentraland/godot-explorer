@@ -97,6 +97,8 @@ pub struct DclCli {
     #[var(get)]
     pub asset_server: bool,
     #[var(get)]
+    pub scene_debug: bool,
+    #[var(get)]
     pub fi_benchmark_size: i32,
 
     // Arguments with values
@@ -402,6 +404,12 @@ impl DclCli {
                 arg_type: ArgType::Value("<number>".to_string()),
                 category: "Authentication".to_string(),
             },
+            ArgDefinition {
+                name: "--scene-debug".to_string(),
+                description: "Enable per-scene CRDT and op-call logging to user://scene_logs/. Off by default. Also passable via deeplink (?scene-debug=true)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
             // Logging
             ArgDefinition {
                 name: "--rust-log".to_string(),
@@ -554,6 +562,7 @@ impl INode for DclCli {
         let emulate_android = args_map.contains_key("--emulate-android");
         let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
+        let scene_debug = args_map.contains_key("--scene-debug");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
@@ -658,6 +667,7 @@ impl INode for DclCli {
             emulate_android,
             landscape,
             asset_server,
+            scene_debug,
             fi_benchmark_size,
             asset_server_port,
             realm,

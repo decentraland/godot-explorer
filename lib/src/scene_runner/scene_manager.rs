@@ -196,6 +196,7 @@ impl SceneManager {
         let network_id = realm.get_network_id();
 
         let is_preview = dcl_global.bind().get_preview_mode();
+        let should_debug = dcl_global.bind().cli.bind().scene_debug;
 
         let comms_adapter = dcl_global
             .bind()
@@ -237,6 +238,7 @@ impl SceneManager {
             },
             inspect,
             network_inspector_sender,
+            should_debug,
         });
 
         let new_scene = Scene::new(
