@@ -18,6 +18,7 @@ mod doctor;
 mod download_file;
 mod export;
 mod fi_benchmark;
+mod full_tests;
 mod helpers;
 mod image_comparison;
 mod install_dependency;
@@ -122,6 +123,34 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("headless")
                         .help("Run in headless mode (faster, no screenshots)")
                         .action(clap::ArgAction::SetTrue),
+                ),
+        )
+        .subcommand(
+            Command::new("full-tests")
+                .about("Run ALL test workflows locally in sequence with timing information")
+                .arg(
+                    Arg::new("continue-on-failure")
+                        .long("continue-on-failure")
+                        .help("Continue running steps even if one fails")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("skip-visual")
+                        .long("skip-visual")
+                        .help("Skip visual/GPU tests (scene, client, test-tools)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("update-snapshots")
+                        .long("update-snapshots")
+                        .help("After visual tests, accept new output as baseline snapshots")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("report")
+                        .long("report")
+                        .help("Generate an HTML report with snapshot diffs and open in browser")
+                        .takes_value(false),
                 ),
         )
         .subcommand(
@@ -795,6 +824,12 @@ fn main() -> Result<(), anyhow::Error> {
             sentry_metrics::push_metrics(from, to)
         }
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
+        ("full-tests", sm) => full_tests::run_full_tests(
+            sm.is_present("continue-on-failure"),
+            sm.is_present("skip-visual"),
+            sm.is_present("update-snapshots"),
+            sm.is_present("report"),
+        ),
         _ => unreachable!("unreachable branch"),
     };
 

@@ -236,12 +236,15 @@ func async_bloom_unlit_test() -> Dictionary:
 	sub_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(sub_viewport)
 
-	# Use the real sky_high scene so the test stays in sync with the game environment
-	var sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
-	sub_viewport.add_child(sky)
-
-	# Apply High bloom quality preset (same logic as EnvironmentSelector.set_bloom)
-	var environment = sky.world_environment.environment
+	# Use a deterministic solid-color environment instead of the dynamic game sky
+	# so snapshots are reproducible across different machines and times of day
+	var world_env = WorldEnvironment.new()
+	var environment = Environment.new()
+	environment.background_mode = Environment.BG_COLOR
+	environment.background_color = Color(0.05, 0.05, 0.05)
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color.WHITE
+	environment.ambient_light_energy = 0.3
 	environment.glow_enabled = true
 	environment.glow_intensity = 1.5
 	environment.glow_hdr_threshold = 1.0
@@ -250,6 +253,8 @@ func async_bloom_unlit_test() -> Dictionary:
 	environment.set("glow_levels/2", 0.3)
 	environment.set("glow_levels/3", 0.0)
 	environment.set("glow_levels/5", 0.0)
+	world_env.environment = environment
+	sub_viewport.add_child(world_env)
 
 	# Camera looking at the plane
 	var camera = Camera3D.new()
