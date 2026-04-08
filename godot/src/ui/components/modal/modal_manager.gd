@@ -57,6 +57,7 @@ func _ready() -> void:
 		push_error("ModalManager: Could not load modal scene at: " + MODAL_SCENE_PATH)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_started.connect(_on_loading_started_clear_ban)
+	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
 
 ## Shows an EXTERNAL_LINK type modal
@@ -457,6 +458,16 @@ func _deferred_reshow_ban_loop() -> void:
 
 func _on_loading_started_clear_ban() -> void:
 	_ban_pre_check_active = false
+
+
+## Clear suppress flag after loading finishes, deferred so disconnect_handler's
+## _on_loading_finished can still be suppressed (stale kick from pre-check).
+func _on_loading_finished_clear_suppress() -> void:
+	_clear_suppress_deferred.call_deferred()
+
+
+func _clear_suppress_deferred() -> void:
+	_suppress_ban_kicked = false
 
 
 func _remove_modal() -> void:
