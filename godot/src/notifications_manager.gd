@@ -598,7 +598,10 @@ func _on_debug_timer_timeout() -> void:
 ## @param description: The notification description
 ## @param notification_type: Type identifier (default: "system")
 func show_system_toast(
-	title: String, description: String, notification_type: String = "system"
+	title: String,
+	description: String,
+	notification_type: String = "system",
+	toast_style: String = "default"
 ) -> void:
 	var timestamp = Time.get_unix_time_from_system() * 1000  # milliseconds
 	var notif: Dictionary = {
@@ -607,7 +610,8 @@ func show_system_toast(
 		"address": "",
 		"timestamp": int(timestamp),
 		"read": true,  # Mark as read so it doesn't persist
-		"metadata": {"title": title, "description": description, "link": ""}
+		"metadata": {"title": title, "description": description, "link": ""},
+		"toast_style": toast_style,
 	}
 
 	# Add to queue for toast display

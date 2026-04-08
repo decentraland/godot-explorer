@@ -1167,7 +1167,11 @@ func _show_notification_toast(notification_d: Dictionary) -> void:
 			return
 
 	# Create and show toast notification
-	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
+	var style = notification_d.get("toast_style", "default")
+	var scene_path := "res://src/ui/components/notifications/notification_toast.tscn"
+	if style == "alert":
+		scene_path = "res://src/ui/components/notifications/alert_toast.tscn"
+	var toast_scene = load(scene_path)
 	var toast = toast_scene.instantiate()
 	ui_root.add_child(toast)
 
