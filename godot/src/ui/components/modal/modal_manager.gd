@@ -396,12 +396,18 @@ func _on_ban_pre_check_go_to_discover() -> void:
 	close_current_modal()
 	_suppress_ban_kicked = true
 
-	if Global.realm.get_realm_string().is_empty() and is_instance_valid(Global.get_explorer()):
-		# Case 1: Cold start deep link — explorer loaded but no realm, trap in discover loop
-		_ban_pre_check_active = true
+	if (
+		Global.realm.get_realm_string().is_empty()
+		and is_instance_valid(Global.get_explorer())
+		and not Global.is_orientation_portrait()
+	):
+		# Case 1: Cold start deep link, landscape — explorer loaded but no realm, open discover
 		_force_hide_loading_screen()
 		Global.set_orientation_portrait()
 		Global.open_discover.emit()
+		# Activate the loop AFTER opening discover, so any on_menu_close signals
+		# fired during the transition don't trigger a premature reshow.
+		_ban_pre_check_active = true
 	elif not Global.is_orientation_portrait():
 		# Case 2: In-game command (/world, /goto) — open discover
 		Global.set_orientation_portrait()
@@ -447,8 +453,6 @@ func _on_menu_close_ban_recheck() -> void:
 
 func _deferred_reshow_ban_loop() -> void:
 	async_show_ban_pre_check_modal()
-	Global.set_orientation_portrait()
-	Global.open_discover.emit()
 
 
 func _on_loading_started_clear_ban() -> void:
