@@ -46,12 +46,15 @@ const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
 
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
+var _ban_pre_check_active: bool = false
 
 
 func _ready() -> void:
 	modal_scene = load(MODAL_SCENE_PATH)
 	if not modal_scene:
 		push_error("ModalManager: Could not load modal scene at: " + MODAL_SCENE_PATH)
+	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
+	Global.loading_started.connect(_on_loading_started_clear_ban)
 
 
 ## Shows an EXTERNAL_LINK type modal
@@ -206,6 +209,9 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 
 ## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
 func async_show_ban_pre_check_modal() -> void:
+	# Kill the loading screen immediately so it doesn't bleed through behind the modal
+	_force_hide_loading_screen()
+
 	if not current_modal:
 		if not await _async_create_modal():
 			return
@@ -220,7 +226,7 @@ func async_show_ban_pre_check_modal() -> void:
 	current_modal.show()
 
 	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(close_current_modal)
+	current_modal.button_primary.pressed.connect(_on_ban_pre_check_go_to_discover)
 
 
 ## Shows a ban kicked modal (when kicked from a scene in real-time)
@@ -383,6 +389,13 @@ func _on_scene_crash_back() -> void:
 	close_current_modal()
 
 
+func _on_ban_pre_check_go_to_discover() -> void:
+	close_current_modal()
+	_ban_pre_check_active = true
+	Global.set_orientation_portrait()
+	Global.open_discover.emit()
+
+
 func _on_ban_go_to_discover() -> void:
 	close_current_modal()
 	Global.set_orientation_portrait()
@@ -393,6 +406,29 @@ func _on_modal_tree_exited() -> void:
 	# Modal was removed from tree, clear reference
 	if current_modal:
 		current_modal = null
+
+
+## Instantly kills the loading screen and runs the normal post-loading cleanup
+## (release comms, restore audio, close navbar, emit loading_finished, etc.).
+func _force_hide_loading_screen() -> void:
+	var explorer = Global.get_explorer()
+	if not is_instance_valid(explorer) or not explorer.loading_ui.visible:
+		return
+	# Hide the Control instantly so the tween in async_hide_loading_screen_effect
+	# has nothing visible to fade — avoids the alpha bleed-through.
+	explorer.loading_ui.hide()
+	# Run the normal post-loading path (release comms, restore audio, close navbar, etc.)
+	explorer.loading_ui.loading_screen_progress_logic.hide_loading_screen()
+
+
+func _on_menu_close_ban_recheck() -> void:
+	if not _ban_pre_check_active:
+		return
+	async_show_ban_pre_check_modal()
+
+
+func _on_loading_started_clear_ban() -> void:
+	_ban_pre_check_active = false
 
 
 func _remove_modal() -> void:
