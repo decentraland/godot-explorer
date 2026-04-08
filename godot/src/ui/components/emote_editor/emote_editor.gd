@@ -47,7 +47,7 @@ func _ready():
 	first_button.set_pressed(true)
 	current_selected_index = 0
 
-	button_group_all_emotes.allow_unpress = true
+	button_group_all_emotes.allow_unpress = false
 
 	_async_load_emotes()
 
@@ -63,6 +63,7 @@ func _add_default_emotes():
 		emote_item.button_group = button_group_all_emotes
 		emote_item.async_load_from_urn(emote_urn)
 		emote_item.play_emote.connect(self._on_emote_item_play_emote)
+		emote_item.equip_emote.connect(self._on_emote_item_equip_emote.bind(emote_item))
 		container_all_emotes.add_child(emote_item)
 		all_emote_items.push_back(emote_item)
 
@@ -77,6 +78,7 @@ func _async_add_remote_emotes(page_number: int):
 			emote_item.button_group = button_group_all_emotes
 			emote_item.async_load_from_urn(emotes.urn)
 			emote_item.play_emote.connect(self._on_emote_item_play_emote)
+			emote_item.equip_emote.connect(self._on_emote_item_equip_emote.bind(emote_item))
 			container_all_emotes.add_child(emote_item)
 			all_emote_items.push_back(emote_item)
 	else:
@@ -130,22 +132,16 @@ func _on_emote_editor_item_select_emote(_emote_urn: String, index: int):
 
 
 func _on_emote_item_play_emote(_emote_urn: String):
-	# Tapping the already-equipped emote in the current slot clears it
-	if (
-		current_selected_index >= 0
-		and current_selected_index < _equipped_emote_urns.size()
-		and (
-			_normalize_emote_urn(_equipped_emote_urns[current_selected_index])
-			== _normalize_emote_urn(_emote_urn)
-		)
-	):
-		_clear_slot(current_selected_index)
-		return
-
 	avatar.async_play_emote(_emote_urn)
+
+
+func _on_emote_item_equip_emote(equip: bool, _emote_urn: String, emote_item: EmoteItemUi):
+	if not equip:
+		_clear_slot(current_selected_index)
+		emote_item.set_pressed(true)
+		return
 	var emote_urns = avatar.avatar_data.get_emotes()
 	emote_urns[current_selected_index] = _emote_urn
-	# Update both the avatar's data (for display) and emit signal (for profile saving)
 	avatar.avatar_data.set_emotes(emote_urns)
 	set_new_emotes.emit(emote_urns)
 	_on_avatar_loaded()
