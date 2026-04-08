@@ -1167,7 +1167,11 @@ func _show_notification_toast(notification_d: Dictionary) -> void:
 			return
 
 	# Create and show toast notification
-	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
+	var style = notification_d.get("toast_style", "default")
+	var scene_path := "res://src/ui/components/notifications/notification_toast.tscn"
+	if style == "alert":
+		scene_path = "res://src/ui/components/notifications/alert_toast.tscn"
+	var toast_scene = load(scene_path)
 	var toast = toast_scene.instantiate()
 	ui_root.add_child(toast)
 
@@ -1211,7 +1215,7 @@ func _on_loading_finished() -> void:
 
 func _update_version_label() -> void:
 	var version_text = DclGlobal.get_version_with_env()
-	if Global.content_provider.get_optimized_scene_count() > 0:
+	if not DclGlobal.is_production() and Global.content_provider.get_optimized_scene_count() > 0:
 		version_text += " - Opt"
 	label_version.set_text(version_text)
 
