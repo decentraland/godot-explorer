@@ -104,8 +104,6 @@ impl INode for Metrics {
             self.mobile_platform = Some(MobilePlatform::Android);
             self.device_info = DclAndroidPlugin::get_mobile_device_info_internal();
             tracing::debug!("Android mobile platform detected for metrics collection");
-
-            self.install_referrer = InstallReferrer::start();
         }
     }
 
@@ -132,6 +130,18 @@ impl Metrics {
         }
 
         self.process_and_send_events(false);
+    }
+
+    /// Start fetching the Google Play install referrer.
+    /// GDScript should call this only once per install (gated by a config flag).
+    #[func]
+    pub fn track_install_referrer(&mut self) {
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return;
+        }
+        if self.install_referrer.is_none() {
+            self.install_referrer = Some(InstallReferrer::start());
+        }
     }
 
     #[func]
