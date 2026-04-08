@@ -3,6 +3,9 @@ pub mod grow_only_set;
 pub mod last_write_wins;
 pub mod message;
 
+#[cfg(feature = "scene_logging")]
+pub use message::{process_many_messages_with_logging, CrdtLoggingContext};
+
 use std::{
     any::Any,
     collections::{HashMap, HashSet},
