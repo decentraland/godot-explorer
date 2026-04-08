@@ -7,6 +7,11 @@ signal release_mouse
 
 ## Fixed width for the messages list column (scroll), aligned with `chat.tscn` PanelContainer.
 const MESSAGES_COLUMN_WIDTH_PX: int = 709
+const MAX_AUTOCOMPLETE_RESULTS: int = 3
+## MentionItem min height (56) + AutocompleteItems VBox separation (2).
+const AUTOCOMPLETE_ITEM_STRIDE: float = 58.0
+## MarginContainer top+bottom (16) minus one trailing VBox separation (2).
+const AUTOCOMPLETE_SCROLL_PADDING: float = 14.0
 
 var hide_tween = null
 var open_tween = null
@@ -15,6 +20,8 @@ var nearby_avatars = null
 var is_open: bool = false
 var scrolled: bool = false
 var new_messages_count: int = 0
+
+var _mention_item_scene: PackedScene
 
 @onready var panel_line_edit: PanelContainer = %PanelLineEdit
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
@@ -30,6 +37,9 @@ var new_messages_count: int = 0
 @onready var button_send: Button = %Button_Send
 @onready var panel_messages: PanelContainer = $VBoxContainer/HBoxContainer/PanelContainer
 @onready var column_go_to_last: Control = $VBoxContainer/HBoxContainer/VSeparator
+@onready var _autocomplete_panel: PanelContainer = %AutocompletePanel
+@onready var _autocomplete_scroll: ScrollContainer = %AutocompleteScroll
+@onready var _autocomplete_container: VBoxContainer = %AutocompleteItems
 
 
 func _ready():
@@ -53,6 +63,7 @@ func _ready():
 
 	async_show_welcome_message.call_deferred()
 	button_send.disabled = true
+	_setup_autocomplete()
 
 
 func async_show_welcome_message() -> void:
@@ -105,6 +116,7 @@ func _async_scroll_to_bottom_after_layout() -> void:
 
 
 func _on_button_send_pressed():
+	_hide_autocomplete()
 	var message = line_edit_command.text
 	submit_message.emit(message)
 	line_edit_command.text = ""
@@ -118,6 +130,7 @@ func _on_button_send_pressed():
 
 
 func _on_line_edit_command_text_submitted(new_text):
+	_hide_autocomplete()
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
 	button_send.disabled = true
@@ -137,6 +150,7 @@ func toggle_chat_visibility(visibility: bool):
 
 
 func exit_chat() -> void:
+	_hide_autocomplete()
 	hide()
 	on_exit_chat.emit()
 	if Global.is_mobile():
@@ -207,8 +221,140 @@ func _async_on_change_virtual_keyboard(keyboard_height: int) -> void:
 
 
 func _on_line_edit_command_focus_exited() -> void:
+	if _is_clicking_autocomplete():
+		line_edit_command.grab_focus.call_deferred()
+		return
 	exit_chat()
 
 
 func _on_line_edit_command_text_changed(new_text: String) -> void:
 	button_send.disabled = new_text.length() == 0
+	# Deferred so caret_column is fully updated before we read it.
+	_update_autocomplete.call_deferred()
+
+
+# region Mention Autocomplete
+
+
+func _setup_autocomplete() -> void:
+	_mention_item_scene = load("res://src/ui/components/chat/mention_item.tscn")
+
+
+## Returns the partial name being typed after @, or null if not currently typing a mention.
+func _get_mention_query():
+	var text: String = line_edit_command.text
+	var caret: int = line_edit_command.caret_column
+	var before_caret: String = text.substr(0, caret)
+
+	var at_pos: int = before_caret.rfind("@")
+	if at_pos == -1:
+		return null
+
+	# @ must be at start of text or preceded by a space
+	if at_pos > 0 and before_caret[at_pos - 1] != " ":
+		return null
+
+	var query: String = before_caret.substr(at_pos + 1)
+	# If there's a space in the query portion, the mention is already finished
+	if query.contains(" "):
+		return null
+
+	return query
+
+
+func _get_matching_avatars(query: String) -> Array:
+	var results: Array = []
+	if not Global.avatars:
+		return results
+
+	var avatars = Global.avatars.get_avatars()
+
+	for avatar in avatars:
+		if not avatar or not avatar.has_method("get_avatar_name"):
+			continue
+		var avatar_name: String = avatar.get_avatar_name()
+		if avatar_name.is_empty():
+			continue
+		if query.is_empty() or avatar_name.containsn(query):
+			results.append(avatar)
+
+	results.sort_custom(
+		func(a, b): return a.get_avatar_name().nocasecmp_to(b.get_avatar_name()) < 0
+	)
+	return results
+
+
+func _update_autocomplete() -> void:
+	var query = _get_mention_query()
+	if query == null:
+		_hide_autocomplete()
+		return
+
+	var avatars: Array = _get_matching_avatars(query)
+	if avatars.is_empty():
+		_hide_autocomplete()
+		return
+
+	_show_autocomplete(avatars)
+
+
+func _show_autocomplete(avatars: Array) -> void:
+	# Clear previous items immediately to avoid ghost nodes
+	for child in _autocomplete_container.get_children():
+		_autocomplete_container.remove_child(child)
+		child.queue_free()
+
+	for avatar in avatars:
+		var item = _mention_item_scene.instantiate()
+		_autocomplete_container.add_child(item)
+		item.setup(avatar)
+		item.mention_selected.connect(_on_autocomplete_item_pressed)
+
+	_resize_autocomplete_scroll(avatars.size())
+	_autocomplete_panel.visible = true
+	_autocomplete_scroll.scroll_vertical = 0
+
+
+func _hide_autocomplete() -> void:
+	if _autocomplete_panel:
+		_autocomplete_panel.visible = false
+
+
+func _resize_autocomplete_scroll(item_count: int) -> void:
+	var visible_count: int = mini(item_count, MAX_AUTOCOMPLETE_RESULTS)
+	var scroll_height: float = (
+		visible_count * AUTOCOMPLETE_ITEM_STRIDE + AUTOCOMPLETE_SCROLL_PADDING
+	)
+	_autocomplete_scroll.custom_minimum_size.y = scroll_height
+
+
+func _on_autocomplete_item_pressed(avatar_name: String) -> void:
+	var text: String = line_edit_command.text
+	var caret: int = line_edit_command.caret_column
+	var before_caret: String = text.substr(0, caret)
+	var after_caret: String = text.substr(caret)
+
+	var at_pos: int = before_caret.rfind("@")
+	if at_pos == -1:
+		_hide_autocomplete()
+		return
+
+	var new_text: String = text.substr(0, at_pos) + "@" + avatar_name + " " + after_caret
+	var new_caret: int = at_pos + 1 + avatar_name.length() + 1
+
+	line_edit_command.text = new_text
+	line_edit_command.caret_column = new_caret
+	button_send.disabled = new_text.length() == 0
+
+	_hide_autocomplete()
+	line_edit_command.grab_focus()
+
+
+## Returns true if the user is clicking/tapping on the autocomplete popup.
+func _is_clicking_autocomplete() -> bool:
+	if not _autocomplete_panel or not _autocomplete_panel.visible:
+		return false
+	var mouse_pos := get_viewport().get_mouse_position()
+	return _autocomplete_panel.get_global_rect().has_point(mouse_pos)
+
+# endregion

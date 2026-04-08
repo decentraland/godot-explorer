@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=17 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
@@ -12,6 +12,16 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_euk1h"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ac_panel"]
+bg_color = Color(0.13333334, 0.12941177, 0.14509805, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.5019608)
+shadow_size = 3
+shadow_offset = Vector2(0, -3)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0pohw"]
 
@@ -151,6 +161,39 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_constants/separation = 8
 theme_override_styles/separator = SubResource("StyleBoxEmpty_euk1h")
+
+[node name="AutocompletePanel" type="PanelContainer" parent="VBoxContainer/HBoxContainer/PanelContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 8
+theme_override_styles/panel = SubResource("StyleBoxFlat_ac_panel")
+
+[node name="AutocompleteScroll" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel/AutocompleteScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 8
+
+[node name="AutocompleteItems" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel/AutocompleteScroll/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 2
 
 [node name="VSeparator" type="VSeparator" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2

@@ -1,0 +1,63 @@
+[gd_scene load_steps=7 format=3 uid="uid://4rudebe1w754"]
+
+[ext_resource type="Script" uid="uid://drvkii605eum2" path="res://src/ui/components/chat/mention_item.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="2_profile"]
+[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="3_check"]
+[ext_resource type="FontVariation" uid="uid://buop40k3e4u13" path="res://assets/themes/fonts/multilanguage/multilanguage_font-SemiBold.tres" id="4_font"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_tpv4r"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_8iu80"]
+font = ExtResource("4_tpv4r")
+font_size = 22
+
+[node name="MentionItem" type="Button"]
+custom_minimum_size = Vector2(200, 56)
+size_flags_horizontal = 3
+focus_mode = 0
+mouse_filter = 1
+flat = true
+script = ExtResource("1_script")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="ProfilePicture" parent="MarginContainer/HBoxContainer" instance=ExtResource("2_profile")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Nickname" type="Label" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("4_font")
+theme_override_font_sizes/font_size = 22
+label_settings = SubResource("LabelSettings_8iu80")
+
+[node name="TextureRect_Checkmark" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("3_check")
+expand_mode = 3
+stretch_mode = 5
+
+[connection signal="pressed" from="." to="." method="_on_pressed"]
