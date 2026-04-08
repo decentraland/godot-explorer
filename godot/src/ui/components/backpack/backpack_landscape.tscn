@@ -140,13 +140,11 @@ mouse_filter = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar"]
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -229.5
-offset_right = 229.5
+anchors_preset = 10
+anchor_right = 1.0
 offset_bottom = 60.0
 grow_horizontal = 2
+theme_override_constants/margin_right = 30
 
 [node name="PanelContainer_Navbar" type="PanelContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer"]
 unique_name_in_owner = true
@@ -362,7 +360,7 @@ layout_mode = 2
 
 [node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor"]
 layout_mode = 2
-theme_override_constants/separation = 150
+theme_override_constants/separation = 110
 theme_override_styles/separator = SubResource("StyleBoxEmpty_fi3i1")
 
 [node name="WearableEditorr" type="PanelContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor"]

@@ -25,6 +25,8 @@ var _last_loaded_page = 0
 @onready var button_group_avatar_emotes = ButtonGroup.new()
 @onready var button_group_all_emotes = ButtonGroup.new()
 @onready var scroll_container = %ScrollContainer
+@onready var inner_margin_container: MarginContainer = %InnerMarginContainer
+@onready var emote_grid_outter_margin_container: MarginContainer = $MarginContainer/HBoxContainer/EmoteGridOutterMarginContainer
 
 
 func _ready():
@@ -210,3 +212,9 @@ func _on_visibility_changed() -> void:
 	if not is_node_ready():
 		return
 	scroll_container.scroll_vertical = 0
+
+
+func _on_landscape() -> void:
+	inner_margin_container.add_theme_constant_override("margin_left", -20)
+	inner_margin_container.add_theme_constant_override("margin_right", -20)
+	emote_grid_outter_margin_container.add_theme_constant_override("margin_top", 0)

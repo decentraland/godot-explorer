@@ -183,6 +183,7 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_left", 20)
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
+		emote_editor._on_landscape()
 
 
 func _update_visible_categories():
