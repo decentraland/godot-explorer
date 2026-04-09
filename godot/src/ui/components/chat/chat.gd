@@ -22,6 +22,8 @@ var scrolled: bool = false
 var new_messages_count: int = 0
 
 var _mention_item_scene: PackedScene
+var _suppress_autocomplete: bool = false
+var _autocomplete_queued: bool = false
 
 @onready var panel_line_edit: PanelContainer = %PanelLineEdit
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
@@ -221,16 +223,19 @@ func _async_on_change_virtual_keyboard(keyboard_height: int) -> void:
 
 
 func _on_line_edit_command_focus_exited() -> void:
-	if _is_clicking_autocomplete():
-		line_edit_command.grab_focus.call_deferred()
-		return
 	exit_chat()
 
 
 func _on_line_edit_command_text_changed(new_text: String) -> void:
 	button_send.disabled = new_text.length() == 0
+	if _suppress_autocomplete:
+		_suppress_autocomplete = false
+		return
 	# Deferred so caret_column is fully updated before we read it.
-	_update_autocomplete.call_deferred()
+	# Only queue one call per frame to avoid rapid node churn on fast typing/deleting.
+	if not _autocomplete_queued:
+		_autocomplete_queued = true
+		_update_autocomplete.call_deferred()
 
 
 # region Mention Autocomplete
@@ -270,7 +275,7 @@ func _get_matching_avatars(query: String) -> Array:
 	var avatars = Global.avatars.get_avatars()
 
 	for avatar in avatars:
-		if not avatar or not avatar.has_method("get_avatar_name"):
+		if not avatar is Avatar:
 			continue
 		var avatar_name: String = avatar.get_avatar_name()
 		if avatar_name.is_empty():
@@ -285,6 +290,7 @@ func _get_matching_avatars(query: String) -> Array:
 
 
 func _update_autocomplete() -> void:
+	_autocomplete_queued = false
 	var query = _get_mention_query()
 	if query == null:
 		_hide_autocomplete()
@@ -316,8 +322,12 @@ func _show_autocomplete(avatars: Array) -> void:
 
 
 func _hide_autocomplete() -> void:
-	if _autocomplete_panel:
-		_autocomplete_panel.visible = false
+	if not _autocomplete_panel:
+		return
+	_autocomplete_panel.visible = false
+	for child in _autocomplete_container.get_children():
+		_autocomplete_container.remove_child(child)
+		child.queue_free()
 
 
 func _resize_autocomplete_scroll(item_count: int) -> void:
@@ -329,32 +339,35 @@ func _resize_autocomplete_scroll(item_count: int) -> void:
 
 
 func _on_autocomplete_item_pressed(avatar_name: String) -> void:
-	var text: String = line_edit_command.text
 	var caret: int = line_edit_command.caret_column
+	var text: String = line_edit_command.text
 	var before_caret: String = text.substr(0, caret)
-	var after_caret: String = text.substr(caret)
 
 	var at_pos: int = before_caret.rfind("@")
 	if at_pos == -1:
 		_hide_autocomplete()
 		return
 
-	var new_text: String = text.substr(0, at_pos) + "@" + avatar_name + " " + after_caret
-	var new_caret: int = at_pos + 1 + avatar_name.length() + 1
-
-	line_edit_command.text = new_text
-	line_edit_command.caret_column = new_caret
-	button_send.disabled = new_text.length() == 0
+	var mention: String = "@" + avatar_name + " "
+	var new_text: String = text.substr(0, at_pos) + mention + text.substr(caret)
+	var new_caret: int = at_pos + mention.length()
 
 	_hide_autocomplete()
-	line_edit_command.grab_focus()
-
-
-## Returns true if the user is clicking/tapping on the autocomplete popup.
-func _is_clicking_autocomplete() -> bool:
-	if not _autocomplete_panel or not _autocomplete_panel.visible:
-		return false
-	var mouse_pos := get_viewport().get_mouse_position()
-	return _autocomplete_panel.get_global_rect().has_point(mouse_pos)
+	_suppress_autocomplete = true
+	line_edit_command.text = new_text
+	line_edit_command.caret_column = new_caret
+	button_send.disabled = new_text.is_empty()
+	# Sync the OS keyboard/IME text buffer with the new content, otherwise
+	# backspace won't work on programmatically inserted text because the OS
+	# still holds the old buffer. This is what a tap on the LineEdit triggers.
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		DisplayServer.virtual_keyboard_show(
+			new_text,
+			Rect2i(),
+			DisplayServer.KEYBOARD_TYPE_DEFAULT,
+			line_edit_command.max_length,
+			new_caret,
+			new_caret
+		)
 
 # endregion

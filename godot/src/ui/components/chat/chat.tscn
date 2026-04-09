@@ -168,6 +168,8 @@ custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 8
+focus_mode = 0
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ac_panel")
 
 [node name="AutocompleteScroll" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel"]
@@ -175,6 +177,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_mode = 0
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 

@@ -1,4 +1,4 @@
-extends Button
+extends Control
 
 signal mention_selected(avatar_name: String)
 
@@ -9,7 +9,13 @@ var _avatar_name: String
 @onready var texture_rect_checkmark: TextureRect = %TextureRect_Checkmark
 
 
-func setup(avatar) -> void:
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		accept_event()
+		mention_selected.emit(_avatar_name)
+
+
+func setup(avatar: Avatar) -> void:
 	_avatar_name = avatar.get_avatar_name()
 	if _avatar_name.is_empty():
 		return
@@ -38,7 +44,3 @@ func setup(avatar) -> void:
 		social_data.profile_picture_url = avatar_data.get_snapshots_face_url()
 		social_data.has_claimed_name = has_claimed
 		profile_picture.async_update_profile_picture(social_data)
-
-
-func _on_pressed() -> void:
-	mention_selected.emit(_avatar_name)
