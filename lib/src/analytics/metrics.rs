@@ -23,6 +23,7 @@ use super::{
         SegmentEventRequestFriend, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
+    install_referrer::InstallReferrer,
 };
 
 #[derive(Clone, Copy)]
@@ -56,6 +57,9 @@ pub struct Metrics {
     // Debug level: 0=disabled, 1=enabled (full JSON output)
     debug_level: u8,
 
+    // Install referrer tracker (Android only, None when not applicable or already sent)
+    install_referrer: Option<InstallReferrer>,
+
     base: Base<Node>,
 }
 
@@ -75,6 +79,7 @@ impl INode for Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
+            install_referrer: None,
             base,
         }
     }
@@ -116,7 +121,27 @@ impl INode for Metrics {
 impl Metrics {
     #[func]
     fn timer_timeout(&mut self) {
+        // Poll install referrer (Android only, auto-completes after first success)
+        if let Some(ref mut referrer) = self.install_referrer {
+            if let Some(event) = referrer.poll() {
+                self.events.push(event);
+                self.install_referrer = None;
+            }
+        }
+
         self.process_and_send_events(false);
+    }
+
+    /// Start fetching the Google Play install referrer.
+    /// GDScript should call this only once per install (gated by a config flag).
+    #[func]
+    pub fn track_install_referrer(&mut self) {
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return;
+        }
+        if self.install_referrer.is_none() {
+            self.install_referrer = Some(InstallReferrer::start());
+        }
     }
 
     #[func]
@@ -131,6 +156,7 @@ impl Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
+            install_referrer: None,
             base,
         })
     }
