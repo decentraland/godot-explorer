@@ -223,10 +223,8 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 
 ## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
 func async_show_ban_pre_check_modal() -> void:
-	push_error("[BAN-DEBUG] async_show_ban_pre_check_modal called")
 	if not current_modal:
 		if not await _async_create_modal():
-			push_error("[BAN-DEBUG] ban_pre_check: _async_create_modal failed")
 			return
 
 	current_modal.blocker = true
@@ -244,16 +242,12 @@ func async_show_ban_pre_check_modal() -> void:
 
 ## Shows a ban kicked modal (when kicked from a scene in real-time)
 func async_show_ban_kicked_modal() -> void:
-	push_error(
-		"[BAN-DEBUG] async_show_ban_kicked_modal called, _suppress=%s" % _suppress_ban_kicked
-	)
 	# A pre-check already handled this ban — ignore the stale comms disconnect
 	if _suppress_ban_kicked:
 		_suppress_ban_kicked = false
 		return
 	if not current_modal:
 		if not await _async_create_modal():
-			push_error("[BAN-DEBUG] ban_kicked: _async_create_modal failed")
 			return
 
 	current_modal.blocker = true

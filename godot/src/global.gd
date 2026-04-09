@@ -771,14 +771,22 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 		return true  # fail-open
 
 	Global.comms.check_scene_access(scene_id, realm_name)
-	var result = await Global.comms.scene_access_checked
 
-	# result = [scene_id, allowed, error_message]
-	if not str(result[2]).is_empty():
-		push_warning("Ban check failed, allowing navigation: " + str(result[2]))
-		return true  # fail-open on error
+	# Loop until we get the result for OUR scene_id (discard stale results from
+	# earlier navigations that may still be in-flight).
+	while true:
+		var result = await Global.comms.scene_access_checked
+		# result = [scene_id, allowed, error_message]
+		if str(result[0]) != scene_id:
+			continue
 
-	return result[1]
+		if not str(result[2]).is_empty():
+			push_warning("Ban check failed, allowing navigation: " + str(result[2]))
+			return true  # fail-open on error
+
+		return result[1]
+
+	return true  # unreachable, keeps compiler happy
 
 
 func async_teleport_to(

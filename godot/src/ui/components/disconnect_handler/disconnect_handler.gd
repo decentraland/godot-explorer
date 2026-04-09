@@ -61,7 +61,6 @@ func _on_disconnected(reason: int) -> void:
 
 	# Kicked/Banned - don't retry, show ban modal (defer if still loading)
 	if reason == REASON_KICKED:
-		push_error("[BAN-DEBUG] _on_disconnected KICKED _is_loading=%s" % _is_loading)
 		_should_stop_reconnecting = true
 		_scene_banned = true
 		if not _is_loading:
@@ -231,7 +230,6 @@ func _on_loading_finished() -> void:
 
 	# If kicked during loading (scene room 403 or room metadata ban), show the deferred modal now
 	if _scene_banned:
-		push_error("[BAN-DEBUG] _on_loading_finished showing deferred ban modal")
 		Global.modal_manager.async_show_ban_kicked_modal()
 
 
