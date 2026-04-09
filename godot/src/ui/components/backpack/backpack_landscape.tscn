@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3 uid="uid://gdgamqboy6v5"]
+[gd_scene load_steps=39 format=3 uid="uid://gdgamqboy6v5"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_2eknj"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="2_ran1e"]
@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://b2q0ujq6jy8x6" path="res://assets/ui/emotes2_square.svg" id="7_pjbir"]
 [ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/Filter.svg" id="8_1jjbm"]
 [ext_resource type="Texture2D" uid="uid://cg8riejty6306" path="res://src/ui/components/dropdown_list/icons/check.svg" id="9_myr8c"]
+[ext_resource type="PackedScene" uid="uid://md6xoha44tbf" path="res://src/ui/components/backpack/emote_name.tscn" id="12_qqh12"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="15_623dt"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="16_hsr60"]
 [ext_resource type="Shader" uid="uid://diwdvth6qfad7" path="res://src/ui/components/backpack/detail_background.gdshader" id="17_p8a0d"]
@@ -340,6 +341,11 @@ size_flags_horizontal = 1
 mouse_filter = 2
 stretch = true
 hide_name = true
+
+[node name="EmoteNameAnim" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" instance=ExtResource("12_qqh12")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
 
 [node name="RightEditorContainer" type="MarginContainer" parent="SafeMarginContainer/HBoxContainer_Backpack"]
 unique_name_in_owner = true
@@ -877,3 +883,5 @@ texture = SubResource("GradientTexture2D_yjmsa")
 [connection signal="color_set" from="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_set"]
 [connection signal="toggle_color_picker" from="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_carrousel_toggle_color_picker"]
 [connection signal="meta_clicked" from="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems/RichTextBox_OpenMarketplace" to="." method="_on_rich_text_box_open_marketplace_meta_clicked"]
+[connection signal="emote_grid_selected" from="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/EmoteEditor" to="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/EmoteNameAnim" method="set_emote_name"]
+[connection signal="emote_equipped" from="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/EmoteEditor" to="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/EmoteNameAnim" method="set_equipped"]

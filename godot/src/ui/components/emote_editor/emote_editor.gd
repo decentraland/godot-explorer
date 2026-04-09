@@ -1,8 +1,11 @@
 extends Control
 
 signal set_new_emotes(emotes_run: PackedStringArray)
+signal emote_grid_selected(emote_name: String)
+signal emote_equipped(equipped: bool)
 
-const PAGE_SIZE: int = 16
+var _currently_selected_emote_item: EmoteItemUi = null
+
 const EMOTE_SQUARE_ITEM = preload("res://src/ui/components/emotes/emote_square_item.tscn")
 
 @export var avatar: Avatar = null:
@@ -13,12 +16,9 @@ const EMOTE_SQUARE_ITEM = preload("res://src/ui/components/emotes/emote_square_i
 var avatar_emote_items: Array[EmoteEditorItem] = []
 var all_emote_items: Array[EmoteItemUi] = []
 var current_selected_index: int = -1
-var vscroll_bar: VScrollBar = null
 var _equipped_emote_urns: PackedStringArray = []
 
 var _only_collectibles: bool = false
-var _can_load_more = false
-var _last_loaded_page = 0
 
 @onready var container_avatar_emotes = %VBoxContainer_AvatarEmotes
 @onready var container_all_emotes = %GridContainer_Emotes
@@ -30,8 +30,6 @@ var _last_loaded_page = 0
 
 
 func _ready():
-	vscroll_bar = scroll_container.get_v_scroll_bar()
-	vscroll_bar.value_changed.connect(self._async_on_scrollbar_value_changed)
 	var first_button: BaseButton = null
 	for child in container_avatar_emotes.get_children():
 		if child is EmoteEditorItem:
@@ -62,29 +60,26 @@ func _add_default_emotes():
 		var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
 		emote_item.button_group = button_group_all_emotes
 		emote_item.async_load_from_urn(emote_urn)
-		emote_item.play_emote.connect(self._on_emote_item_play_emote)
-		emote_item.equip_emote.connect(self._on_emote_item_equip_emote.bind(emote_item))
+		emote_item.play_emote.connect(self._on_emote_item_play_emote.bind(emote_item))
+		emote_item.emote_name_ready.connect(self.emote_grid_selected.emit)
 		container_all_emotes.add_child(emote_item)
 		all_emote_items.push_back(emote_item)
 
 
-func _async_add_remote_emotes(page_number: int):
-	var remote_emotes = await WearableRequest.async_request_emotes(page_number, PAGE_SIZE)
+func _async_load_remote_emotes():
+	var remote_emotes = await WearableRequest.async_request_all_emotes()
 	if remote_emotes != null:
 		remote_emotes.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
-		_can_load_more = remote_emotes.elements.size() == PAGE_SIZE
-		for emotes in remote_emotes.elements:
+		for emote in remote_emotes.elements:
 			var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
 			emote_item.button_group = button_group_all_emotes
-			emote_item.async_load_from_urn(emotes.urn)
-			emote_item.play_emote.connect(self._on_emote_item_play_emote)
-			emote_item.equip_emote.connect(self._on_emote_item_equip_emote.bind(emote_item))
+			emote_item.async_load_from_urn(emote.urn)
+			emote_item.play_emote.connect(self._on_emote_item_play_emote.bind(emote_item))
+			emote_item.emote_name_ready.connect(self.emote_grid_selected.emit)
 			container_all_emotes.add_child(emote_item)
 			all_emote_items.push_back(emote_item)
-	else:
-		_can_load_more = false
 
-	if not _can_load_more and not _only_collectibles:
+	if not _only_collectibles:
 		_add_default_emotes()
 	_update_grid_equipped_state()
 
@@ -97,8 +92,7 @@ func _async_load_emotes():
 
 	all_emote_items.clear()
 
-	_last_loaded_page = 1
-	await _async_add_remote_emotes(_last_loaded_page)
+	await _async_load_remote_emotes()
 	_sync_grid_selection()
 
 
@@ -131,20 +125,33 @@ func _on_emote_editor_item_select_emote(_emote_urn: String, index: int):
 	_sync_grid_selection()
 
 
-func _on_emote_item_play_emote(_emote_urn: String):
+func _on_emote_item_play_emote(_emote_urn: String, emote_item: EmoteItemUi):
+	if emote_item == _currently_selected_emote_item:
+		_on_emote_item_equip_emote(not emote_item._is_equipped, _emote_urn, emote_item)
+		return
+	_currently_selected_emote_item = emote_item
 	avatar.async_play_emote(_emote_urn)
+	emote_grid_selected.emit(emote_item.emote_name)
+	var normalized_urn := _normalize_emote_urn(_emote_urn)
+	for i in range(_equipped_emote_urns.size()):
+		if _normalize_emote_urn(_equipped_emote_urns[i]) == normalized_urn:
+			current_selected_index = i
+			avatar_emote_items[i].set_pressed(true)
+			return
 
 
 func _on_emote_item_equip_emote(equip: bool, _emote_urn: String, emote_item: EmoteItemUi):
 	if not equip:
 		_clear_slot(current_selected_index)
 		emote_item.set_pressed(true)
+		emote_equipped.emit(false)
 		return
 	var emote_urns = avatar.avatar_data.get_emotes()
 	emote_urns[current_selected_index] = _emote_urn
 	avatar.avatar_data.set_emotes(emote_urns)
 	set_new_emotes.emit(emote_urns)
 	_on_avatar_loaded()
+	emote_equipped.emit(true)
 
 
 func _on_emote_editor_item_clear_emote(index: int):
@@ -191,17 +198,11 @@ func _sync_grid_selection():
 		if emote_item is EmoteItemUi:
 			if _normalize_emote_urn(emote_item.emote_urn) == selected_urn:
 				emote_item.set_pressed(true)
+				_currently_selected_emote_item = emote_item
+				if not emote_item.emote_name.is_empty():
+					emote_grid_selected.emit(emote_item.emote_name)
 				break
 
-
-func _async_on_scrollbar_value_changed(new_value):
-	if _can_load_more:
-		var max_value = vscroll_bar.max_value
-		var end = max_value <= (new_value + scroll_container.size.y)
-		if end:
-			_can_load_more = false  # avoid processing until the add finishes
-			_last_loaded_page += 1
-			await _async_add_remote_emotes(_last_loaded_page)
 
 
 func _on_visibility_changed() -> void:

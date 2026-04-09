@@ -160,6 +160,7 @@ stretch_mode = 4
 
 [node name="Button_Equiped" type="Button" parent="Control_Inner/TextureRect_Picture"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 1
 anchors_preset = 12

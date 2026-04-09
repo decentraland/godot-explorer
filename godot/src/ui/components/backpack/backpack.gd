@@ -55,6 +55,7 @@ var _avatar_update_retries: int = 0
 
 @onready var wearable_editor = %WearableEditor
 @onready var emote_editor = %EmoteEditor
+@onready var emote_name_anim = get_node_or_null("%EmoteNameAnim")
 
 @onready var container_navbar = %PanelContainer_Navbar
 @onready var button_emotes = %Button_Emotes
@@ -497,6 +498,8 @@ func _on_button_wearables_pressed():
 	avatar_preview.avatar.emote_controller.stop_emote()
 	wearable_editor.show()
 	emote_editor.hide()
+	if emote_name_anim != null:
+		emote_name_anim.hide()
 
 
 func _on_button_emotes_pressed():
@@ -507,6 +510,8 @@ func show_emotes() -> void:
 	avatar_preview.focus_camera_on(Wearables.Categories.BODY_SHAPE)
 	wearable_editor.hide()
 	emote_editor.show()
+	if emote_name_anim != null:
+		emote_name_anim.show()
 
 
 func press_button_emotes() -> void:

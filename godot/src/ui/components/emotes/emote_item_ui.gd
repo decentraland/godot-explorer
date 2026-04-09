@@ -4,7 +4,7 @@ extends BaseButton
 
 signal play_emote(emote_urn: String)
 signal select_emote(selected: bool, emote_urn: String)
-signal equip_emote(equip: bool, emote_urn: String)
+signal emote_name_ready(emote_name: String)
 
 @export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
@@ -71,6 +71,8 @@ func async_load_from_entity(emote_data: DclItemEntityDefinition) -> void:
 	emote_name = emote_data.get_display_name()
 	rarity = emote_data.get_rarity()
 	await async_set_texture(emote_data)
+	if button_pressed:
+		emote_name_ready.emit(emote_name)
 
 
 func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
@@ -111,8 +113,6 @@ func _ready():
 		button_down.connect(self._on_button_down)
 		button_up.connect(self._on_button_up)
 		toggled.connect(self._on_toggled)
-		if button_equiped != null:
-			button_equiped.pressed.connect(self._on_button_equiped_pressed)
 	set_rarity_background()
 
 
@@ -189,29 +189,18 @@ func set_slot_selected(toggled_on: bool) -> void:
 
 func _update_equip_ui() -> void:
 	if button_equiped == null:
-		texture_rect_equiped.set_visible(not button_pressed and _is_equipped)
-		texture_rect_equiped_mark.set_visible(not button_pressed and _is_equipped)
+		texture_rect_equiped.set_visible(_is_equipped)
+		texture_rect_equiped_mark.set_visible(_is_equipped)
 		return
-	if not button_pressed and not _is_equipped:
-		texture_rect_equiped.hide()
-		texture_rect_equiped_mark.hide()
-		button_equiped.hide()
-	elif not button_pressed and _is_equipped:
-		texture_rect_equiped.show()
-		texture_rect_equiped_mark.show()
+	if not button_pressed:
+		texture_rect_equiped.set_visible(_is_equipped)
+		texture_rect_equiped_mark.set_visible(_is_equipped)
 		button_equiped.hide()
 	else:
 		texture_rect_equiped.hide()
 		texture_rect_equiped_mark.hide()
 		button_equiped.show()
-		button_equiped.set_pressed_no_signal(_is_equipped)
 		button_equiped.text = "UNEQUIP" if _is_equipped else "EQUIP"
-
-
-func _on_button_equiped_pressed() -> void:
-	_is_equipped = button_equiped.button_pressed
-	button_equiped.text = "UNEQUIP" if _is_equipped else "EQUIP"
-	equip_emote.emit(_is_equipped, emote_urn)
 
 
 func set_empty() -> void:
