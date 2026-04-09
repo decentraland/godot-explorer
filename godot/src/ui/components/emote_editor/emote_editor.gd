@@ -13,6 +13,7 @@ const EMOTE_SQUARE_ITEM = preload("res://src/ui/components/emotes/emote_square_i
 		avatar = new_value
 		avatar.avatar_loaded.connect(self._on_avatar_loaded)
 
+var last_equipped_emote_urn: String = ""
 var avatar_emote_items: Array[EmoteEditorItem] = []
 var all_emote_items: Array[EmoteItemUi] = []
 var current_selected_index: int = -1
@@ -150,6 +151,7 @@ func _on_emote_item_equip_emote(equip: bool, _emote_urn: String, emote_item: Emo
 	emote_urns[current_selected_index] = _emote_urn
 	avatar.avatar_data.set_emotes(emote_urns)
 	set_new_emotes.emit(emote_urns)
+	last_equipped_emote_urn = _emote_urn
 	_on_avatar_loaded()
 	emote_equipped.emit(true)
 

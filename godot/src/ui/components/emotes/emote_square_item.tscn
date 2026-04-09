@@ -146,6 +146,7 @@ offset_right = -2.0
 offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 0
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_7fnr5")
 
 [node name="TextureRect_EquipedB" type="TextureRect" parent="Control_Inner/TextureRect_Picture/TextureRect_Equiped"]
@@ -153,7 +154,6 @@ custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-mouse_filter = 2
 texture = ExtResource("3_oumy4")
 expand_mode = 1
 stretch_mode = 4
@@ -173,6 +173,7 @@ offset_right = -2.0
 offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 0
+mouse_filter = 1
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)

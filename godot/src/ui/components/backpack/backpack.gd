@@ -56,6 +56,7 @@ var _avatar_update_retries: int = 0
 @onready var wearable_editor = %WearableEditor
 @onready var emote_editor = %EmoteEditor
 @onready var emote_name_anim = get_node_or_null("%EmoteNameAnim")
+@onready var avatar_vfx: AnimatedTextureRect = get_node_or_null("%AvatarVFX")
 
 @onready var container_navbar = %PanelContainer_Navbar
 @onready var button_emotes = %Button_Emotes
@@ -89,6 +90,7 @@ func _ready():
 
 	emote_editor.avatar = avatar_preview.avatar
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
+	emote_editor.emote_equipped.connect(self._on_emote_equipped)
 	wearable_editor.show()
 	emote_editor.hide()
 	filter_menu.hide()
@@ -641,3 +643,18 @@ func _on_button_back_to_explorer_pressed() -> void:
 	if Global.get_explorer():
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
+
+
+func _on_emote_equipped(equipped: bool) -> void:
+	if not equipped:
+		return
+	var tween := create_tween()
+	tween.tween_property(avatar_preview, "modulate:a", 0.0, 0.2)
+	tween.tween_callback(func() -> void:
+		if avatar_vfx != null:
+			avatar_vfx.play()
+		var urn: String = emote_editor.last_equipped_emote_urn
+		if not urn.is_empty():
+			avatar_preview.avatar.async_play_emote(urn)
+	)
+	tween.tween_property(avatar_preview, "modulate:a", 1.0, 0.3)

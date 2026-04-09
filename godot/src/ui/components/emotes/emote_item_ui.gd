@@ -200,6 +200,7 @@ func _update_equip_ui() -> void:
 		texture_rect_equiped.hide()
 		texture_rect_equiped_mark.hide()
 		button_equiped.show()
+		button_equiped.set_pressed_no_signal(_is_equipped)
 		button_equiped.text = "UNEQUIP" if _is_equipped else "EQUIP"
 
 
