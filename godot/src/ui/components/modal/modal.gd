@@ -3,6 +3,7 @@ extends ColorRect
 
 const MODAL_ALERT_ICON = preload("res://assets/ui/modal-alert-icon.svg")
 const MODAL_BLOCK_ICON = preload("res://assets/ui/modal-block-icon.svg")
+const MODAL_BAN_ICON = preload("res://assets/ui/modal-ban-icon.svg")
 const MODAL_CONNECTION_ICON = preload("res://assets/ui/modal-connection-icon.svg")
 
 # When true, the modal cannot be dismissed and consumes all input behind it.

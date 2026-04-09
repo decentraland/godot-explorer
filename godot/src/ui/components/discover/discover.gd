@@ -89,12 +89,12 @@ func async_open_place_by_id(place_id: String) -> void:
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 	jump_in.hide()
-	Global.teleport_to(parcel_position, realm)
+	Global.async_teleport_to(parcel_position, realm)
 
 
 func _on_jump_in_world(realm: String):
 	jump_in.hide()
-	Global.join_world(realm)
+	Global.async_join_world(realm)
 
 
 func _get_ui_location() -> String:
@@ -198,12 +198,12 @@ func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 
 func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
 	event_details.hide()
-	Global.teleport_to(parcel_position, realm)
+	Global.async_teleport_to(parcel_position, realm)
 
 
 func _on_event_details_jump_in_world(realm: String) -> void:
 	event_details.hide()
-	Global.join_world(realm)
+	Global.async_join_world(realm)
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:

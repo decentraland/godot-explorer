@@ -665,11 +665,11 @@ func _get_jump_in_position_and_realm_from_data(item_data: Dictionary) -> Array:
 	return [pos, r]
 
 
-static func _is_event_in_world(item_data: Dictionary) -> bool:
+static func _is_world(item_data: Dictionary) -> bool:
 	if not item_data is Dictionary or item_data.is_empty():
 		return false
-	if not item_data.has("duration"):
-		return false
+	if item_data.get("world", false):
+		return true
 	var server = item_data.get("server", null)
 	if server == null:
 		return false
@@ -678,7 +678,7 @@ static func _is_event_in_world(item_data: Dictionary) -> bool:
 
 
 func _do_jump_in() -> void:
-	if _data is Dictionary and not _data.is_empty() and _is_event_in_world(_data):
+	if _data is Dictionary and not _data.is_empty() and _is_world(_data):
 		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
 		var world_realm: String = pos_realm[1]
 		jump_in_world.emit(world_realm)
