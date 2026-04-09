@@ -223,11 +223,13 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 
 ## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
 func async_show_ban_pre_check_modal() -> void:
+	push_error("[BAN-DEBUG] async_show_ban_pre_check_modal called")
 	if not current_modal:
 		if not await _async_create_modal():
+			push_error("[BAN-DEBUG] ban_pre_check: _async_create_modal failed")
 			return
 
-	current_modal.dismissable = false
+	current_modal.blocker = true
 	current_modal.set_title(BAN_PRE_CHECK_TITLE)
 	current_modal.set_body(BAN_PRE_CHECK_BODY)
 	current_modal.set_primary_button_text(BAN_PRE_CHECK_PRIMARY)
@@ -242,15 +244,17 @@ func async_show_ban_pre_check_modal() -> void:
 
 ## Shows a ban kicked modal (when kicked from a scene in real-time)
 func async_show_ban_kicked_modal() -> void:
+	push_error("[BAN-DEBUG] async_show_ban_kicked_modal called, _suppress=%s" % _suppress_ban_kicked)
 	# A pre-check already handled this ban — ignore the stale comms disconnect
 	if _suppress_ban_kicked:
 		_suppress_ban_kicked = false
 		return
 	if not current_modal:
 		if not await _async_create_modal():
+			push_error("[BAN-DEBUG] ban_kicked: _async_create_modal failed")
 			return
 
-	current_modal.dismissable = false
+	current_modal.blocker = true
 	current_modal.set_title(BAN_KICKED_TITLE)
 	current_modal.set_body(BAN_KICKED_BODY)
 	current_modal.set_primary_button_text(BAN_KICKED_PRIMARY)
@@ -261,6 +265,11 @@ func async_show_ban_kicked_modal() -> void:
 
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_ban_go_to_discover)
+
+
+## Clears the suppress flag so the next ban_kicked_modal call is not silenced.
+func clear_suppress_ban_kicked() -> void:
+	_suppress_ban_kicked = false
 
 
 ## Closes the current modal if it exists

@@ -61,6 +61,7 @@ func _on_disconnected(reason: int) -> void:
 
 	# Kicked/Banned - don't retry, show ban modal (defer if still loading)
 	if reason == REASON_KICKED:
+		push_error("[BAN-DEBUG] _on_disconnected KICKED _is_loading=%s" % _is_loading)
 		_should_stop_reconnecting = true
 		_scene_banned = true
 		if not _is_loading:
@@ -220,9 +221,9 @@ func _on_reconnect_pressed() -> void:
 
 func _on_loading_started() -> void:
 	_is_loading = true
-	if _scene_banned:
-		_scene_banned = false
-		Global.modal_manager.close_current_modal()
+	# Close any visible ban modal during loading, but keep _scene_banned
+	# so _on_loading_finished can re-show the deferred modal.
+	Global.modal_manager.close_current_modal()
 
 
 func _on_loading_finished() -> void:
@@ -230,6 +231,7 @@ func _on_loading_finished() -> void:
 
 	# If kicked during loading (scene room 403 or room metadata ban), show the deferred modal now
 	if _scene_banned:
+		push_error("[BAN-DEBUG] _on_loading_finished showing deferred ban modal")
 		Global.modal_manager.async_show_ban_kicked_modal()
 
 
@@ -241,4 +243,6 @@ func _async_on_menu_close_ban_recheck() -> void:
 	await get_tree().process_frame
 	if not _scene_banned or _is_loading:
 		return
+	# Clear suppress — this is an intentional re-show, not a stale signal.
+	Global.modal_manager.clear_suppress_ban_kicked()
 	Global.modal_manager.async_show_ban_kicked_modal()
