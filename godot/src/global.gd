@@ -325,6 +325,11 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.testing_tools)
 	if self.metrics != null:
 		get_tree().root.add_child.call_deferred(self.metrics)
+		# Fire install attribution once per install (Android only).
+		if self.is_android() and not self.config.install_referrer_sent:
+			self.metrics.track_install_referrer.call_deferred()
+			self.config.install_referrer_sent = true
+			self.config.save_to_settings_file()
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)

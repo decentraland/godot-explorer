@@ -214,6 +214,16 @@ impl DclAndroidPlugin {
         result.try_to::<bool>().unwrap_or(false)
     }
 
+    /// Fetch install referrer data from Google Play.
+    /// Returns a Dictionary with status, referrer (UTM params), timestamps, etc.
+    /// The first call triggers the async fetch and returns {status: "pending"}.
+    /// Subsequent calls return the cached result once available.
+    pub(crate) fn get_install_referrer_internal() -> Option<VarDictionary> {
+        let mut singleton = Self::try_get_singleton()?;
+        let result = Self::timed_jni_call(&mut singleton, "getInstallReferrer", &[]);
+        result.try_to::<VarDictionary>().ok()
+    }
+
     /// Share text with an image using the system share sheet
     /// image should be a Godot Image object
     /// Returns true if the share dialog was shown successfully, false otherwise
