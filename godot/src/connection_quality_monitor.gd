@@ -21,6 +21,7 @@ enum State { GOOD, POOR, LOST }
 
 const FAST_POLL_SECONDS: float = 0.5
 const SLOW_POLL_SECONDS: float = 2.0
+const REQUEST_TIMEOUT_SECONDS: float = 3.0
 const CONSECUTIVE_ERRORS_FOR_DEGRADED: int = 2
 const CONSECUTIVE_ERRORS_FOR_LOST: int = 4
 
@@ -63,7 +64,7 @@ func _async_check_connection() -> void:
 		return
 
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
-	var timeout_promise := _create_timeout_promise(_poll_timer.wait_time)
+	var timeout_promise := _create_timeout_promise(REQUEST_TIMEOUT_SECONDS)
 
 	var start_ms := Time.get_ticks_msec()
 	var result = await PromiseUtils.async_race([promise, timeout_promise])
