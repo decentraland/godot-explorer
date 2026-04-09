@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "648520657482",
+    "project_id": "decentraland-b2352",
+    "storage_bucket": "decentraland-b2352.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648520657482:android:bfbce176a268d7bc5754b3",
+        "android_client_info": {
+          "package_name": "org.decentraland.godotexplorer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCupQnsdSn7NdjRea7lqDb4bPaICjDJ8Hw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
