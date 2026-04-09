@@ -1,10 +1,10 @@
 extends Control
 
-@onready var label: Label = $EmoteName
-@onready var equiped_container: MarginContainer = $EquippedNotification
-
 var _tween: Tween = null
 var _tween_equiped: Tween = null
+
+@onready var label: Label = $EmoteName
+@onready var equiped_container: MarginContainer = $EquippedNotification
 
 
 func _ready() -> void:

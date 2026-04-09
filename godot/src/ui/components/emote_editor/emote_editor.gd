@@ -4,8 +4,6 @@ signal set_new_emotes(emotes_run: PackedStringArray)
 signal emote_grid_selected(emote_name: String)
 signal emote_equipped(equipped: bool)
 
-var _currently_selected_emote_item: EmoteItemUi = null
-
 const EMOTE_SQUARE_ITEM = preload("res://src/ui/components/emotes/emote_square_item.tscn")
 
 @export var avatar: Avatar = null:
@@ -17,8 +15,9 @@ var last_equipped_emote_urn: String = ""
 var avatar_emote_items: Array[EmoteEditorItem] = []
 var all_emote_items: Array[EmoteItemUi] = []
 var current_selected_index: int = -1
-var _equipped_emote_urns: PackedStringArray = []
 
+var _currently_selected_emote_item: EmoteItemUi = null
+var _equipped_emote_urns: PackedStringArray = []
 var _only_collectibles: bool = false
 
 @onready var container_avatar_emotes = %VBoxContainer_AvatarEmotes
@@ -27,7 +26,8 @@ var _only_collectibles: bool = false
 @onready var button_group_all_emotes = ButtonGroup.new()
 @onready var scroll_container = %ScrollContainer
 @onready var inner_margin_container: MarginContainer = %InnerMarginContainer
-@onready var emote_grid_outter_margin_container: MarginContainer = $MarginContainer/HBoxContainer/EmoteGridOutterMarginContainer
+@onready
+var emote_grid_outter_margin_container: MarginContainer = $MarginContainer/HBoxContainer/EmoteGridOutterMarginContainer
 
 
 func _ready():
@@ -204,7 +204,6 @@ func _sync_grid_selection():
 				if not emote_item.emote_name.is_empty():
 					emote_grid_selected.emit(emote_item.emote_name)
 				break
-
 
 
 func _on_visibility_changed() -> void:

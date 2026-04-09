@@ -648,13 +648,15 @@ func _on_button_back_to_explorer_pressed() -> void:
 func _on_emote_equipped(equipped: bool) -> void:
 	if not equipped:
 		return
+	Global.send_haptic_feedback(80, 0.5)
 	var tween := create_tween()
 	tween.tween_property(avatar_preview, "modulate:a", 0.0, 0.2)
-	tween.tween_callback(func() -> void:
-		if avatar_vfx != null:
-			avatar_vfx.play()
-		var urn: String = emote_editor.last_equipped_emote_urn
-		if not urn.is_empty():
-			avatar_preview.avatar.async_play_emote(urn)
+	tween.tween_callback(
+		func() -> void:
+			if avatar_vfx != null:
+				avatar_vfx.play()
+			var urn: String = emote_editor.last_equipped_emote_urn
+			if not urn.is_empty():
+				avatar_preview.avatar.async_play_emote(urn)
 	)
 	tween.tween_property(avatar_preview, "modulate:a", 1.0, 0.3)

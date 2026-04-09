@@ -145,9 +145,9 @@ func _instantiate_phone_frame_overlay() -> void:
 
 
 ## Vibrate handheld device
-func send_haptic_feedback() -> void:
+func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> void:
 	if is_mobile():
-		Input.vibrate_handheld(20)
+		Input.vibrate_handheld(duration_ms, amplitude)
 
 
 # gdlint: ignore=async-function-name

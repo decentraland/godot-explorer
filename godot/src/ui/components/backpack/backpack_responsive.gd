@@ -4,19 +4,21 @@ extends Control
 @onready var backpack_portrait := PlaceholderManager.new($BackpackPortrait)
 @onready var backpack_landscape := PlaceholderManager.new($BackpackLandscape)
 
+
 func _ready() -> void:
 	backpack_portrait.placeholder.visible = false
 	backpack_landscape.placeholder.visible = false
-	_handle_screen_resize()
+	async_handle_screen_resize()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
-		_handle_screen_resize()
+		async_handle_screen_resize()
 
 
-func _handle_screen_resize() -> void:
-	if not is_node_ready(): return
+func async_handle_screen_resize() -> void:
+	if not is_node_ready():
+		return
 	var rect_size := get_viewport_rect().size
 	if rect_size.x < rect_size.y:
 		if Engine.is_editor_hint():

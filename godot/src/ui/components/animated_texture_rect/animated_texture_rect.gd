@@ -52,7 +52,9 @@ func _update_frame() -> void:
 		return
 	var frame_w: int = x_offset if x_offset > 0 else atlas.get_width()
 	var frame_h: int = y_offset if y_offset > 0 else atlas.get_height()
-	_atlas_tex.region = Rect2(_current_frame * x_offset, _current_frame * y_offset, frame_w, frame_h)
+	_atlas_tex.region = Rect2(
+		_current_frame * x_offset, _current_frame * y_offset, frame_w, frame_h
+	)
 
 
 func play() -> void:
