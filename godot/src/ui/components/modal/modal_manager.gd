@@ -36,8 +36,19 @@ const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back t
 const SCENE_CRASH_PRIMARY = "RELOAD"
 const SCENE_CRASH_SECONDARY = "BACK"
 
+const BAN_PRE_CHECK_TITLE = "You can't enter"
+const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
+const BAN_PRE_CHECK_PRIMARY = "BACK TO DISCOVER"
+
+const BAN_KICKED_TITLE = "You've been banned"
+const BAN_KICKED_BODY = "Please contact support for more information."
+const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
+
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
+var _ban_pre_check_active: bool = false
+## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
+var _suppress_ban_kicked: bool = false
 var _canvas_layer: CanvasLayer = null
 
 
@@ -45,6 +56,9 @@ func _ready() -> void:
 	modal_scene = load(MODAL_SCENE_PATH)
 	if not modal_scene:
 		push_error("ModalManager: Could not load modal scene at: " + MODAL_SCENE_PATH)
+	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
+	Global.loading_started.connect(_on_loading_started_clear_ban)
+	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
 
 ## Shows an EXTERNAL_LINK type modal
@@ -207,6 +221,53 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 	current_modal.button_secondary.pressed.connect(_on_scene_crash_back)
 
 
+## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
+func async_show_ban_pre_check_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.blocker = true
+	current_modal.set_title(BAN_PRE_CHECK_TITLE)
+	current_modal.set_body(BAN_PRE_CHECK_BODY)
+	current_modal.set_primary_button_text(BAN_PRE_CHECK_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_BAN_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_ban_pre_check_go_to_discover)
+
+
+## Shows a ban kicked modal (when kicked from a scene in real-time)
+func async_show_ban_kicked_modal() -> void:
+	# A pre-check already handled this ban — ignore the stale comms disconnect
+	if _suppress_ban_kicked:
+		_suppress_ban_kicked = false
+		return
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.blocker = true
+	current_modal.set_title(BAN_KICKED_TITLE)
+	current_modal.set_body(BAN_KICKED_BODY)
+	current_modal.set_primary_button_text(BAN_KICKED_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_BAN_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_ban_go_to_discover)
+
+
+## Clears the suppress flag so the next ban_kicked_modal call is not silenced.
+func clear_suppress_ban_kicked() -> void:
+	_suppress_ban_kicked = false
+
+
 ## Closes the current modal if it exists
 func close_current_modal() -> void:
 	if current_modal:
@@ -335,7 +396,7 @@ func _on_connection_lost_secondary() -> void:
 
 
 func _on_teleport_primary(location: Vector2i, realm: String) -> void:
-	Global.teleport_to(location, realm)
+	Global.async_teleport_to(location, realm)
 	close_current_modal()
 
 
@@ -355,10 +416,78 @@ func _on_scene_crash_back() -> void:
 	close_current_modal()
 
 
+func _on_ban_pre_check_go_to_discover() -> void:
+	close_current_modal()
+	_suppress_ban_kicked = true
+
+	if (
+		Global.realm.get_realm_string().is_empty()
+		and is_instance_valid(Global.get_explorer())
+		and not Global.is_orientation_portrait()
+	):
+		# Case 1: Cold start deep link, landscape — explorer loaded but no realm, open discover
+		_force_hide_loading_screen()
+		Global.set_orientation_portrait()
+		Global.open_discover.emit()
+		# Activate the loop AFTER opening discover, so any on_menu_close signals
+		# fired during the transition don't trigger a premature reshow.
+		_ban_pre_check_active = true
+	elif not Global.is_orientation_portrait():
+		# Case 2: In-game command (/world, /goto) — open discover
+		Global.set_orientation_portrait()
+		Global.open_discover.emit()
+	# Case 3: Already in discover — modal closed, discover is already behind
+
+
+func _on_ban_go_to_discover() -> void:
+	close_current_modal()
+	Global.set_orientation_portrait()
+	Global.open_discover.emit()
+
+
 func _on_modal_tree_exited() -> void:
 	# Modal was removed from tree, clear reference
 	if current_modal:
 		current_modal = null
+
+
+## Instantly kills the loading screen and runs the normal post-loading cleanup
+## (release comms, restore audio, close navbar, emit loading_finished, etc.).
+func _force_hide_loading_screen() -> void:
+	var explorer = Global.get_explorer()
+	if not is_instance_valid(explorer) or not explorer.loading_ui.visible:
+		return
+	if not is_instance_valid(explorer.loading_ui.loading_screen_progress_logic):
+		return
+	# Hide the Control instantly so the tween in async_hide_loading_screen_effect
+	# has nothing visible to fade — avoids the alpha bleed-through.
+	explorer.loading_ui.hide()
+	# Run the normal post-loading path (release comms, restore audio, close navbar, etc.)
+	explorer.loading_ui.loading_screen_progress_logic.hide_loading_screen()
+
+
+func _on_menu_close_ban_recheck() -> void:
+	if not _ban_pre_check_active:
+		return
+	# If a realm is already connected, the user has a scene to return to — clear the flag
+	if not Global.realm.get_realm_string().is_empty():
+		_ban_pre_check_active = false
+		return
+	# No realm to go back to — re-show modal and re-open discover (deferred so close finishes first)
+	_deferred_reshow_ban_loop.call_deferred()
+
+
+func _deferred_reshow_ban_loop() -> void:
+	async_show_ban_pre_check_modal()
+
+
+func _on_loading_started_clear_ban() -> void:
+	_ban_pre_check_active = false
+
+
+## Clear suppress flag after loading finishes.
+func _on_loading_finished_clear_suppress() -> void:
+	_suppress_ban_kicked = false
 
 
 func _remove_modal() -> void:

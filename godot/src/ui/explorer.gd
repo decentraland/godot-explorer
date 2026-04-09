@@ -257,9 +257,12 @@ func _ready():
 	Global.scene_fetcher.update_position(start_parcel_position, true)
 
 	if cmd_realm != null:
-		Global.realm.async_set_realm(cmd_realm)
-		if not Global.deep_link_obj.preview.is_empty():
-			Global.scene_fetcher.set_preview_url(cmd_realm)
+		if Realm.is_dcl_ens(cmd_realm) and Global.deep_link_obj.preview.is_empty():
+			Global.async_join_world(cmd_realm)
+		else:
+			Global.realm.async_set_realm(cmd_realm)
+			if not Global.deep_link_obj.preview.is_empty():
+				Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
@@ -519,35 +522,29 @@ func _on_panel_chat_submit_message(message: String):
 			)
 			_on_control_menu_jump_to(dest_vector)
 		elif command_str == "/changerealm" and params.size() > 1:
-			Global.on_chat_message.emit(
-				"system",
-				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]",
-				Time.get_unix_time_from_system()
-			)
-			Global.realm.async_set_realm(params[1], true)
-			loading_ui.enable_loading_screen()
-			# LOADING_START metric
-			var loading_data = {
-				"position": str(Global.scene_fetcher.current_position),
-				"realm": params[1],
-				"when": "on_changerealm"
-			}
-			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+			var target_realm = params[1]
+			if Realm.is_dcl_ens(target_realm):
+				Global.async_join_world(target_realm)
+			else:
+				Global.on_chat_message.emit(
+					"system",
+					"[color=#ccc]Trying to change to realm " + target_realm + "[/color]",
+					Time.get_unix_time_from_system()
+				)
+				Global.realm.async_set_realm(target_realm, true)
+				loading_ui.enable_loading_screen()
+				var loading_data = {
+					"position": str(Global.scene_fetcher.current_position),
+					"realm": target_realm,
+					"when": "on_changerealm"
+				}
+				Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 		elif command_str == "/world" and params.size() > 1:
-			var world_realm = params[1] + ".dcl.eth"
-			Global.on_chat_message.emit(
-				"system",
-				"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
-				Time.get_unix_time_from_system()
+			var world_realm = (
+				params[1] if params[1].ends_with(".dcl.eth") else params[1] + ".dcl.eth"
 			)
-			Global.realm.async_set_realm(world_realm, true)
-			var loading_data = {
-				"position": str(Global.scene_fetcher.current_position),
-				"realm": world_realm,
-				"when": "on_world"
-			}
-			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+			Global.async_join_world(world_realm)
 
 		elif command_str == "/pos":
 			_emit_pos_command_message()
