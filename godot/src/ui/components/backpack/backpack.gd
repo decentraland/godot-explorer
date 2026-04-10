@@ -73,6 +73,8 @@ var _avatar_update_retries: int = 0
 @onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
 @onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
 @onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
+@onready var hseparator_size_maintainer: HSeparator = get_node_or_null("%HSeparator_SizeMaintainer")
+@onready var control_left_bar: Control = get_node_or_null("%Control_LeftBar")
 
 
 # gdlint:ignore = async-function-name
@@ -187,6 +189,64 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
 		emote_editor._on_landscape()
+
+	_update_grid_columns()
+
+
+func _update_grid_columns() -> void:
+	if not is_node_ready():
+		print("[DEBUG] _update_grid_columns: not ready")
+		return
+	if grid_container_wearables_list == null or emote_editor == null:
+		print("[DEBUG] _update_grid_columns: grid or emote_editor is null")
+		return
+
+	# Check if the Wearables button gets clipped by its container
+	var is_narrow := _is_wearables_button_clipped()
+	var columns := 2 if is_narrow else 3
+
+	print("[DEBUG] _update_grid_columns: is_narrow=", is_narrow, " columns=", columns)
+
+	grid_container_wearables_list.columns = columns
+	if emote_editor.container_all_emotes != null:
+		emote_editor.container_all_emotes.columns = columns
+
+	if hseparator_size_maintainer != null:
+		hseparator_size_maintainer.visible = not is_narrow
+
+
+var _is_currently_narrow: bool = false
+
+func _is_wearables_button_clipped() -> bool:
+	if button_wearables == null or control_left_bar == null:
+		print("[DEBUG] button_wearables or control_left_bar is null")
+		return _is_currently_narrow
+
+	# Check if the button extends outside the Control_LeftBar bounds (left or right)
+	var button_rect: Rect2 = button_wearables.get_global_rect()
+	var container_rect: Rect2 = control_left_bar.get_global_rect()
+
+	var button_left := button_rect.position.x
+	var button_right := button_rect.position.x + button_rect.size.x
+	var container_left := container_rect.position.x
+	var container_right := container_rect.position.x + container_rect.size.x
+
+	# Hysteresis: require margin before switching back to 3 columns
+	const HYSTERESIS_MARGIN := 100.0
+	var is_clipped: bool
+	if _is_currently_narrow:
+		# Currently narrow - only switch back if button has enough margin on both sides
+		is_clipped = button_left < container_left + HYSTERESIS_MARGIN
+	else:
+		# Currently wide - switch to narrow if button is clipped at all
+		is_clipped = button_left < container_left or button_right > container_right
+
+	_is_currently_narrow = is_clipped
+
+	print("[DEBUG] button_left: ", button_left, " container_left: ", container_left)
+	print("[DEBUG] is_clipped: ", is_clipped, " _is_currently_narrow: ", _is_currently_narrow)
+
+	return is_clipped
 
 
 func _update_visible_categories():
