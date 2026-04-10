@@ -40,12 +40,20 @@ func _ready() -> void:
 	_poll_timer.timeout.connect(_on_poll_timeout)
 	add_child(_poll_timer)
 	_poll_timer.start()
+	# Before a realm is set (lobby / backpack / discover), _get_health_url() falls
+	# back to peer_base() so we still detect real connection loss on those screens.
 
 	poor_connection_detected.connect(_on_poor_connection)
 	connection_lost_detected.connect(_async_on_connection_lost)
 	connection_restored.connect(_on_connection_restored)
 	Global.modal_manager.connection_lost_retry.connect(_on_retry)
 	Global.modal_manager.connection_lost_exit.connect(_on_exit)
+
+	# Pause polling while a realm change is in flight so 404s / slow /about calls
+	# on the new realm don't get counted as connection failures.
+	Global.realm.realm_changing.connect(_on_realm_changing)
+	Global.realm.realm_changed.connect(_on_realm_changed)
+	Global.realm.realm_change_failed.connect(_on_realm_change_failed)
 
 
 func _on_poll_timeout() -> void:
@@ -63,7 +71,9 @@ func _async_check_connection() -> void:
 		_is_checking = false
 		return
 
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+	# HEAD instead of GET: we only care about reachability + status code, not the
+	# /about payload (which is several KB of realm metadata per poll).
+	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_HEAD, "", {})
 	var timeout_promise := _create_timeout_promise(REQUEST_TIMEOUT_SECONDS)
 
 	var start_ms := Time.get_ticks_msec()
@@ -211,3 +221,30 @@ func _on_retry() -> void:
 	_retrying = true
 	if OS.get_name() == "iOS":
 		_ios_retry_used = true
+
+
+func _on_realm_changing() -> void:
+	# Discard any in-flight check and stop pinging until the realm change settles.
+	_poll_timer.stop()
+	_check_generation += 1
+	_is_checking = false
+	_consecutive_errors = 0
+
+
+func _on_realm_changed() -> void:
+	# New realm is validated: (re)start polling from a clean slate.
+	_resume_polling()
+
+
+func _on_realm_change_failed(_new_realm_string: String, _reason: String) -> void:
+	# Realm change was rejected. Resume polling either against the previous realm
+	# (if any) or against the peer_base() fallback used in the pre-realm screens.
+	_resume_polling()
+
+
+func _resume_polling() -> void:
+	_state = State.GOOD
+	_consecutive_errors = 0
+	_retrying = false
+	_set_poll_interval(FAST_POLL_SECONDS)
+	_poll_timer.start()
