@@ -2,25 +2,23 @@ extends Node
 
 ## ConnectionQualityMonitor
 ##
-## Autoload that periodically pings a lightweight endpoint to assess
-## connection quality. Emits signals consumed by the toast and modal systems.
+## Autoload that periodically HEADs the current realm's /about (or peer_base when
+## no realm is set) to assess connection quality. Emits signals consumed by the
+## toast and modal systems.
 ##
 ## Polling:
-##   - Fast (0.5s): default, and while connection is degraded
-##   - Slow (2.0s): after a successful ping
+##   - Slow (10s): happy path, when the last ping succeeded
+##   - Fast (0.5s): investigation mode, triggered as soon as any ping fails so
+##     consecutive errors get counted quickly without waiting a full slow tick
 ##
-## After 2 consecutive failures:
-##   - With explorer UI: poor connection notification
-##   - Without explorer UI: connection lost modal
-
-signal poor_connection_detected
-signal connection_lost_detected
-signal connection_restored
+## Thresholds (consecutive failures):
+##   - With explorer UI:    2 → poor connection toast, 4 → connection lost modal
+##   - Without explorer UI: 2 → connection lost modal (no toast stage)
 
 enum State { GOOD, POOR, LOST }
 
 const FAST_POLL_SECONDS: float = 0.5
-const SLOW_POLL_SECONDS: float = 2.0
+const SLOW_POLL_SECONDS: float = 10.0
 const REQUEST_TIMEOUT_SECONDS: float = 3.0
 const CONSECUTIVE_ERRORS_FOR_DEGRADED: int = 2
 const CONSECUTIVE_ERRORS_FOR_LOST: int = 4
@@ -43,9 +41,6 @@ func _ready() -> void:
 	# Before a realm is set (lobby / backpack / discover), _get_health_url() falls
 	# back to peer_base() so we still detect real connection loss on those screens.
 
-	poor_connection_detected.connect(_on_poor_connection)
-	connection_lost_detected.connect(_async_on_connection_lost)
-	connection_restored.connect(_on_connection_restored)
 	Global.modal_manager.connection_lost_retry.connect(_on_retry)
 	Global.modal_manager.connection_lost_exit.connect(_on_exit)
 
@@ -90,14 +85,14 @@ func _async_check_connection() -> void:
 		_consecutive_errors += 1
 		_set_poll_interval(FAST_POLL_SECONDS)
 		if not promise.is_resolved():
-			print(
+			printerr(
 				(
 					"[ConnectionQualityMonitor] Request timed out after %d ms (%d consecutive errors)"
 					% [elapsed_ms, _consecutive_errors]
 				)
 			)
 		else:
-			print(
+			printerr(
 				(
 					"[ConnectionQualityMonitor] Request failed (%d consecutive errors): %s"
 					% [_consecutive_errors, result.get_error()]
@@ -105,17 +100,16 @@ func _async_check_connection() -> void:
 			)
 	else:
 		if _consecutive_errors > 0:
-			print(
-				(
-					"[ConnectionQualityMonitor] Connection recovered (was %d errors)"
-					% [_consecutive_errors]
-				)
+			prints(
+				"[ConnectionQualityMonitor] Connection recovered (was",
+				_consecutive_errors,
+				"errors)"
 			)
 		_consecutive_errors = 0
 		_set_poll_interval(SLOW_POLL_SECONDS)
 		if _state != State.GOOD:
 			_state = State.GOOD
-			connection_restored.emit()
+			_on_connection_restored()
 		_is_checking = false
 		return
 
@@ -131,7 +125,7 @@ func _update_state() -> void:
 	if _retrying and _consecutive_errors >= 1:
 		_state = State.LOST
 		_retrying = false
-		connection_lost_detected.emit()
+		_async_on_connection_lost()
 		return
 
 	var has_explorer := Global.get_explorer() != null
@@ -144,13 +138,13 @@ func _update_state() -> void:
 		and _consecutive_errors >= CONSECUTIVE_ERRORS_FOR_DEGRADED
 	):
 		_state = State.POOR
-		poor_connection_detected.emit()
+		_on_poor_connection()
 	elif (
 		_consecutive_errors
 		>= (CONSECUTIVE_ERRORS_FOR_LOST if has_explorer else CONSECUTIVE_ERRORS_FOR_DEGRADED)
 	):
 		_state = State.LOST
-		connection_lost_detected.emit()
+		_async_on_connection_lost()
 
 
 func _create_timeout_promise(timeout_seconds: float) -> Promise:
