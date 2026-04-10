@@ -1,6 +1,8 @@
 @tool
 extends Control
 
+var _is_switching: bool = false
+
 @onready var backpack_portrait := PlaceholderManager.new($BackpackPortrait)
 @onready var backpack_landscape := PlaceholderManager.new($BackpackLandscape)
 
@@ -19,6 +21,9 @@ func _notification(what: int) -> void:
 func async_handle_screen_resize() -> void:
 	if not is_node_ready():
 		return
+	if _is_switching:
+		return
+	_is_switching = true
 	var rect_size := get_viewport_rect().size
 	if rect_size.x < rect_size.y:
 		if Engine.is_editor_hint():
@@ -36,3 +41,4 @@ func async_handle_screen_resize() -> void:
 			backpack_portrait.queue_free_instance()
 			await backpack_landscape._async_instantiate()
 			backpack_landscape.instance.show()
+	_is_switching = false

@@ -71,6 +71,7 @@ func _async_load_remote_emotes():
 	var remote_emotes = await WearableRequest.async_request_all_emotes()
 	if remote_emotes != null:
 		remote_emotes.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
+		var count := 0
 		for emote in remote_emotes.elements:
 			var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
 			emote_item.button_group = button_group_all_emotes
@@ -79,6 +80,9 @@ func _async_load_remote_emotes():
 			emote_item.emote_name_ready.connect(self.emote_grid_selected.emit)
 			container_all_emotes.add_child(emote_item)
 			all_emote_items.push_back(emote_item)
+			count += 1
+			if count % 10 == 0:
+				await get_tree().process_frame
 
 	if not _only_collectibles:
 		_add_default_emotes()

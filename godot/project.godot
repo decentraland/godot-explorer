@@ -59,7 +59,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--emulate-android --landscape"
+run/main_run_args="--emulate-ios"
 
 [editor_plugins]
 

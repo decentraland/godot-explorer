@@ -199,17 +199,13 @@ func _on_size_changed():
 
 func _update_grid_columns() -> void:
 	if not is_node_ready():
-		print("[DEBUG] _update_grid_columns: not ready")
 		return
 	if grid_container_wearables_list == null or emote_editor == null:
-		print("[DEBUG] _update_grid_columns: grid or emote_editor is null")
 		return
 
 	# Check if the Wearables button gets clipped by its container
 	var is_narrow := _is_wearables_button_clipped()
 	var columns := 2 if is_narrow else 3
-
-	print("[DEBUG] _update_grid_columns: is_narrow=", is_narrow, " columns=", columns)
 
 	grid_container_wearables_list.columns = columns
 	if emote_editor.container_all_emotes != null:
@@ -221,7 +217,6 @@ func _update_grid_columns() -> void:
 
 func _is_wearables_button_clipped() -> bool:
 	if button_wearables == null or control_left_bar == null:
-		print("[DEBUG] button_wearables or control_left_bar is null")
 		return _is_currently_narrow
 
 	# Check if the button extends outside the Control_LeftBar bounds (left or right)
@@ -244,10 +239,6 @@ func _is_wearables_button_clipped() -> bool:
 		is_clipped = button_left < container_left or button_right > container_right
 
 	_is_currently_narrow = is_clipped
-
-	print("[DEBUG] button_left: ", button_left, " container_left: ", container_left)
-	print("[DEBUG] is_clipped: ", is_clipped, " _is_currently_narrow: ", _is_currently_narrow)
-
 	return is_clipped
 
 
