@@ -723,7 +723,95 @@ func set_orientation_portrait():
 		get_window().move_to_center()
 
 
-func teleport_to(parcel_position: Vector2i, new_realm: String):
+func async_resolve_scene_entity_id(coord: Vector2i) -> String:
+	# Try cache first
+	var cached = Global.scene_fetcher.scene_entity_coordinator.get_scene_entity_id(coord)
+	if not cached.is_empty():
+		return cached
+
+	# Make HTTP request to entities/active
+	var content_url = Global.realm.content_base_url
+	if content_url.is_empty():
+		return ""
+
+	var url = content_url.trim_suffix("/") + "/entities/active"
+	var body = JSON.stringify({"pointers": [str(coord.x) + "," + str(coord.y)]})
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_POST, body, headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_warning("Failed to resolve scene entity ID: " + result.get_error())
+		return ""
+
+	var json = result.get_string_response_as_json()
+	if json is Array and not json.is_empty():
+		return json[0].get("id", "")
+	return ""
+
+
+func async_resolve_world_scene_id(world_realm: String) -> String:
+	var scenes_url = Realm.dcl_world_url(world_realm) + "/scenes"
+	var promise: Promise = Global.http_requester.request_json(
+		scenes_url, HTTPClient.METHOD_GET, "", {}
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_warning("Failed to resolve world scene ID: " + result.get_error())
+		return ""
+
+	var json = result.get_string_response_as_json()
+	if json is Dictionary:
+		var scenes = json.get("scenes", [])
+		if not scenes.is_empty():
+			return scenes[0].get("entityId", "")
+	return ""
+
+
+func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
+	if scene_id.is_empty():
+		return true  # fail-open
+
+	Global.comms.check_scene_access(scene_id, realm_name)
+
+	# Loop until we get the result for OUR scene_id (discard stale results from
+	# earlier navigations that may still be in-flight).
+	while true:
+		var result = await Global.comms.scene_access_checked
+		# result = [scene_id, allowed, error_message]
+		if str(result[0]) != scene_id:
+			continue
+
+		if not str(result[2]).is_empty():
+			push_warning("Ban check failed, allowing navigation: " + str(result[2]))
+			return true  # fail-open on error
+
+		return result[1]
+
+	return true  # unreachable, keeps compiler happy
+
+
+func async_teleport_to(
+	parcel_position: Vector2i,
+	new_realm: String,
+	scene_id: String = "",
+	skip_ban_check: bool = false,
+) -> void:
+	var effective_realm = new_realm if not new_realm.is_empty() else DclUrls.main_realm()
+
+	# Resolve scene_id if not provided
+	if scene_id.is_empty():
+		scene_id = await async_resolve_scene_entity_id(parcel_position)
+
+	if not skip_ban_check and not scene_id.is_empty():
+		var allowed = await async_check_scene_access(scene_id, effective_realm)
+		if not allowed:
+			Global.modal_manager.async_show_ban_pre_check_modal()
+			return
+
 	Global.set_orientation_landscape()
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
@@ -741,7 +829,19 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func join_world(world_realm: String) -> void:
+func async_join_world(
+	world_realm: String, scene_id: String = "", skip_ban_check: bool = false
+) -> void:
+	# Resolve scene entity ID for the world if not provided
+	if scene_id.is_empty():
+		scene_id = await async_resolve_world_scene_id(world_realm)
+
+	if not skip_ban_check and not scene_id.is_empty():
+		var allowed = await async_check_scene_access(scene_id, world_realm)
+		if not allowed:
+			Global.modal_manager.async_show_ban_pre_check_modal()
+			return
+
 	Global.set_orientation_landscape()
 	Global.on_chat_message.emit(
 		"system",
