@@ -35,6 +35,7 @@ var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
 var _avatar_update_retries: int = 0
+var _is_currently_narrow: bool = false
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
@@ -214,8 +215,6 @@ func _update_grid_columns() -> void:
 	if hseparator_size_maintainer != null:
 		hseparator_size_maintainer.visible = not is_narrow
 
-
-var _is_currently_narrow: bool = false
 
 func _is_wearables_button_clipped() -> bool:
 	if button_wearables == null or control_left_bar == null:
