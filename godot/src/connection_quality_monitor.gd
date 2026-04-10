@@ -30,6 +30,10 @@ var _is_checking: bool = false
 var _check_generation: int = 0
 var _retrying: bool = false
 var _ios_retry_used: bool = false
+# True while a connection_lost modal opened *by us* is on screen. Used so that
+# _on_connection_restored only dismisses our own modal, not e.g. a teleport modal
+# that the user opened in the meantime.
+var _showing_our_modal: bool = false
 
 
 func _ready() -> void:
@@ -98,6 +102,17 @@ func _async_check_connection() -> void:
 					% [_consecutive_errors, result.get_error()]
 				)
 			)
+
+		# A failure right after a retry goes straight to LOST: the user already
+		# acknowledged the problem once and asked us to verify, so a single fresh
+		# failure is enough to bring the modal back without waiting for the threshold.
+		if _retrying:
+			_retrying = false
+			if _state != State.LOST:
+				_state = State.LOST
+				_async_on_connection_lost()
+			_is_checking = false
+			return
 	else:
 		if _consecutive_errors > 0:
 			prints(
@@ -119,13 +134,6 @@ func _async_check_connection() -> void:
 
 func _update_state() -> void:
 	if _state == State.LOST:
-		return
-
-	# After retry: 1 failure goes straight to modal
-	if _retrying and _consecutive_errors >= 1:
-		_state = State.LOST
-		_retrying = false
-		_async_on_connection_lost()
 		return
 
 	var has_explorer := Global.get_explorer() != null
@@ -182,24 +190,19 @@ func _on_poor_connection() -> void:
 func _async_on_connection_lost() -> void:
 	# On iOS: first time show retry, second time show modal without buttons
 	var hide_buttons := OS.get_name() == "iOS" and _ios_retry_used
+	_showing_our_modal = true
 	await Global.modal_manager.async_show_connection_lost_modal(hide_buttons)
-	# Replace the default secondary (exit) handler so the modal stays visible while quitting
-	# On iOS the exit button is hidden, so no rewiring needed
-	if OS.get_name() != "iOS":
-		if (
-			Global.modal_manager.current_modal
-			and Global.modal_manager.current_modal.button_secondary
-		):
-			var btn = Global.modal_manager.current_modal.button_secondary
-			if btn.pressed.is_connected(Global.modal_manager._on_connection_lost_secondary):
-				btn.pressed.disconnect(Global.modal_manager._on_connection_lost_secondary)
-			btn.pressed.connect(_on_exit)
+	# Exit handling is wired via Global.modal_manager.connection_lost_exit → _on_exit
+	# in _ready(). modal_manager._on_connection_lost_secondary intentionally does not
+	# close the modal so it stays visible while get_tree().quit() runs.
 
 
 func _on_connection_restored() -> void:
 	_retrying = false
 	_ios_retry_used = false
-	Global.modal_manager.close_current_modal()
+	if _showing_our_modal:
+		_showing_our_modal = false
+		Global.modal_manager.close_current_modal()
 
 
 func _on_exit() -> void:
@@ -213,6 +216,8 @@ func _on_retry() -> void:
 	_state = State.GOOD
 	_is_checking = false
 	_retrying = true
+	# modal_manager._on_connection_lost_primary already closed the modal.
+	_showing_our_modal = false
 	if OS.get_name() == "iOS":
 		_ios_retry_used = true
 
