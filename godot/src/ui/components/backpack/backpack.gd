@@ -125,6 +125,9 @@ func _ready():
 	# Connect to blacklist changes
 	Global.social_blacklist.blacklist_changed.connect(self._on_blacklist_changed)
 
+	# Retry avatar loading when connection is restored
+	ConnectionQualityMonitor.connection_restored.connect(self._on_connection_restored)
+
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_main_category_filter_type)
@@ -317,22 +320,11 @@ func _async_update_avatar():
 	var mutable_profile = Global.player_identity.get_mutable_profile()
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()
 	if mutable_profile == null or mutable_avatar == null:
+		# Profile not ready - keep retrying, connection_quality_monitor handles modal
 		_avatar_update_retries += 1
-		if _avatar_update_retries >= 3:
-			_avatar_update_retries = 0
-			printerr("Failed to load avatar after 3 attempts: profile or avatar is null")
-			if Global.modal_manager != null:
-				Global.modal_manager.async_show_connection_lost_modal()
-				Global.modal_manager.connection_lost_retry.connect(
-					func(): request_update_avatar = true, CONNECT_ONE_SHOT
-				)
-				Global.modal_manager.connection_lost_exit.connect(
-					func(): get_tree().quit(), CONNECT_ONE_SHOT
-				)
-		else:
-			printerr("Avatar update retry %d/3, waiting 1s..." % _avatar_update_retries)
-			await get_tree().create_timer(1.0).timeout
-			request_update_avatar = true
+		var delay := minf(1.0 * _avatar_update_retries, 5.0)  # Cap at 5 seconds
+		await get_tree().create_timer(delay).timeout
+		request_update_avatar = true
 		return
 	_avatar_update_retries = 0
 	mutable_profile.set_avatar(mutable_avatar)
@@ -649,6 +641,15 @@ func _exit_tree():
 
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
+
+	if ConnectionQualityMonitor.connection_restored.is_connected(self._on_connection_restored):
+		ConnectionQualityMonitor.connection_restored.disconnect(self._on_connection_restored)
+
+
+func _on_connection_restored() -> void:
+	# Reset retry counter and immediately try to load avatar
+	_avatar_update_retries = 0
+	request_update_avatar = true
 
 
 func _on_blacklist_changed():
