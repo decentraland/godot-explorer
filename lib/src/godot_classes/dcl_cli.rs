@@ -97,6 +97,8 @@ pub struct DclCli {
     #[var(get)]
     pub asset_server: bool,
     #[var(get)]
+    pub low_spec_warning: bool,
+    #[var(get)]
     pub fi_benchmark_size: i32,
 
     // Arguments with values
@@ -415,6 +417,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
+            ArgDefinition {
+                name: "--low-spec-warning".to_string(),
+                description: "Simulate low-spec iPhone warnings (for testing on desktop)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
         ]
     }
 
@@ -554,6 +562,7 @@ impl INode for DclCli {
         let emulate_android = args_map.contains_key("--emulate-android");
         let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
+        let low_spec_warning = args_map.contains_key("--low-spec-warning");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
@@ -658,6 +667,7 @@ impl INode for DclCli {
             emulate_android,
             landscape,
             asset_server,
+            low_spec_warning,
             fi_benchmark_size,
             asset_server_port,
             realm,

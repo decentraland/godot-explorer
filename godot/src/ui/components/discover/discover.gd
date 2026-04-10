@@ -21,6 +21,8 @@ var _generator_statuses: Dictionary = {}
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 #@onready var discover_content: VBoxContainer = %DiscoverContent
 
+static var _low_spec_warning_shown: bool = false
+
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
@@ -108,9 +110,22 @@ func _on_visibility_changed():
 		Global.metrics.track_screen_viewed(
 			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
 		)
+		_show_low_spec_warning_if_needed()
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+
+
+func _show_low_spec_warning_if_needed():
+	# Only show modal via deep link parameter (FTUE handles normal first-time flow)
+	if _low_spec_warning_shown:
+		return
+	var deeplink_warning = Global.deep_link_obj and Global.deep_link_obj.low_spec_warning
+	if not deeplink_warning:
+		return
+	_low_spec_warning_shown = true
+	Global.metrics.track_screen_viewed("LOWSPEC_PROMPT", "")
+	Global.modal_manager.async_show_low_spec_iphone_modal()
 
 
 func _on_search_bar_opened() -> void:
