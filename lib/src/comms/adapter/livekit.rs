@@ -741,6 +741,16 @@ fn spawn_livekit_task(
                             }
                             break 'stream;
                         }
+                        livekit::RoomEvent::RoomMetadataChanged { metadata, .. } => {
+                            tracing::debug!("Room metadata changed: {}", metadata);
+                            if let Err(e) = sender.send(IncomingMessage {
+                                message: MessageType::RoomMetadataChanged(metadata),
+                                address: H160::zero(),
+                                room_id: room_id.clone(),
+                            }).await {
+                                tracing::warn!("Failed to send RoomMetadataChanged: {}", e);
+                            }
+                        }
                         livekit::RoomEvent::ParticipantMetadataChanged { participant, metadata, .. } => {
                             let identity_str = participant.identity().0.clone();
 
