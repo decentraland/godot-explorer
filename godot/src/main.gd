@@ -4,9 +4,17 @@ extends Node
 var _startup_time: int = Time.get_ticks_msec()
 
 
+# gdlint:ignore = async-function-name
 func _ready():
 	print("[Startup] main._ready: %dms" % (Time.get_ticks_msec() - _startup_time))
 	Global.set_orientation_portrait()
+	# Wait a frame on mobile for orientation change to take effect before applying UI zoom.
+	# On iOS, DisplayServer.screen_set_orientation() is asynchronous - the window size
+	# doesn't update instantly. Without this wait, apply_ui_zoom (called in start())
+	# may calculate scaling with the wrong screen dimensions, especially when the app
+	# is cold-started via deeplink.
+	if Global.is_mobile():
+		await get_tree().process_frame
 	start.call_deferred()
 
 
