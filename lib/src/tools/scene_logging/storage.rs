@@ -142,33 +142,6 @@ impl StorageManager {
         Ok(())
     }
 
-    /// Lists all log files in the log directory.
-    pub fn list_log_files(&self) -> io::Result<Vec<PathBuf>> {
-        let mut files: Vec<_> = fs::read_dir(&self.config.log_directory)?
-            .filter_map(|e| e.ok())
-            .map(|e| e.path())
-            .filter(|p| p.extension().map(|ext| ext == "jsonl").unwrap_or(false))
-            .collect();
-
-        // Sort by modification time (newest first)
-        files.sort_by(|a, b| {
-            let a_time = fs::metadata(a).and_then(|m| m.modified()).ok();
-            let b_time = fs::metadata(b).and_then(|m| m.modified()).ok();
-            b_time.cmp(&a_time)
-        });
-
-        Ok(files)
-    }
-
-    /// Gets the path to the current log file.
-    pub fn current_file_path(&self) -> &PathBuf {
-        &self.current_file_path
-    }
-
-    /// Gets the session ID.
-    pub fn session_id(&self) -> &str {
-        &self.session_id
-    }
 }
 
 impl Drop for StorageManager {

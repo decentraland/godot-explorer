@@ -24,10 +24,11 @@ use crate::dcl::{
 
 use super::scene_logging_ops::SceneDebugFlag;
 
-/// Tick counter shared by `op_crdt_send_to_renderer` and
-/// `op_crdt_recv_from_renderer`. Always present in `op_state`; only consulted
-/// when the per-scene `SceneDebugFlag` is on, but kept unconditional so the hot
-/// path doesn't pay an extra `try_borrow` lookup.
+/// Current frame tick, set by `scene_thread` at the start of each `onUpdate`
+/// iteration and read by `op_crdt_send_to_renderer` / `op_crdt_recv_from_renderer`
+/// to tag CRDT log entries with the correct frame number. Always present in
+/// `op_state`; only consulted when `SceneDebugFlag` is on, but kept unconditional
+/// so the hot path doesn't pay an extra `try_borrow` lookup.
 pub struct SceneTickCounter(pub std::sync::atomic::AtomicU32);
 
 use super::{
@@ -281,7 +282,7 @@ fn build_send_logging_ctx(op_state: &OpState) -> Option<CrdtLoggingContext> {
     let sender = get_logger_sender()?;
     let tick = op_state
         .try_borrow::<SceneTickCounter>()
-        .map(|tc| tc.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+        .map(|tc| tc.0.load(std::sync::atomic::Ordering::Relaxed))
         .unwrap_or(0);
     Some(CrdtLoggingContext::new(
         sender,

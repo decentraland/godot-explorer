@@ -155,11 +155,11 @@ pub fn process_many_messages_with_logging(
                 }
 
                 if let Err(e) = process_message(scene_crdt_state, crdt_type, &mut message_stream) {
-                    tracing::info!("CRDT Buffer error: {:?}", e);
+                    tracing::warn!("CRDT Buffer error: {:?}", e);
                 };
             }
             None => {
-                tracing::info!("CRDT Header error: unhandled crdt message type {crdt_type_raw}")
+                tracing::warn!("CRDT Header error: unhandled crdt message type {crdt_type_raw}")
             }
         }
     }
@@ -206,9 +206,7 @@ fn log_crdt_message(
             {
                 let payload_data = &data[16..];
                 let json_payload = deserialize_component_to_json(comp_id, payload_data);
-                // Encode as hex string
-                let hex_payload: String =
-                    payload_data.iter().map(|b| format!("{:02x}", b)).collect();
+                let hex_payload = crate::tools::scene_logging::bytes_to_hex(payload_data);
                 (json_payload, Some(hex_payload))
             } else {
                 (None, None)

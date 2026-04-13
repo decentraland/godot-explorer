@@ -201,8 +201,13 @@ pub(crate) fn scene_thread(
     let scene_id = spawn_dcl_scene_data.scene_id;
     let should_debug = spawn_dcl_scene_data.should_debug;
 
-    // The global sender is already set by DclGlobal at startup.
-    // Just log the lifecycle event if debugging is enabled.
+    // Lifecycle logging: each `if should_debug` guard below emits a
+    // SceneLifecycleEvent at the exact point in the scene thread where the
+    // event happens. They are intentionally kept inline (not extracted into a
+    // loop or macro) because each call site has unique arguments (tick, dt,
+    // error) and sits at a distinct control-flow position. The actual logging
+    // work lives behind `#[cold] #[inline(never)]` helpers, so the hot path
+    // only pays for a single predictable branch when `should_debug` is false.
     if should_debug {
         crate::tools::scene_logging::log_lifecycle_event(
             scene_id.0,
@@ -505,6 +510,15 @@ pub(crate) fn scene_thread(
             .put(SceneElapsedTime(elapsed.as_secs_f32()));
 
         if should_debug {
+            tick_counter += 1;
+            // Sync to OpState so op_crdt_send_to_renderer and
+            // op_crdt_recv_from_renderer log the correct frame tick.
+            state
+                .borrow()
+                .borrow::<engine::SceneTickCounter>()
+                .0
+                .store(tick_counter, std::sync::atomic::Ordering::Relaxed);
+
             crate::tools::scene_logging::log_lifecycle_event(
                 scene_id.0,
                 crate::tools::scene_logging::SceneLifecycleEvent::OnUpdate,
@@ -576,10 +590,6 @@ pub(crate) fn scene_thread(
                 Some(dt.as_secs_f64()),
                 None,
             );
-        }
-
-        if should_debug {
-            tick_counter += 1;
         }
 
         // Collect V8 heap statistics every second
@@ -720,6 +730,34 @@ fn op_require(
     }
 }
 
+/// Sends a console log/error message to the scene logging channel if debugging
+/// is enabled. Shared by `op_log` and `op_error` to avoid duplicated blocks.
+#[cold]
+#[inline(never)]
+fn maybe_send_log_to_scene_logger(op_state: &OpState, op_name: &str, message: &str) {
+    if op_state
+        .try_borrow::<scene_logging_ops::SceneDebugFlag>()
+        .map(|f| f.0)
+        .unwrap_or(false)
+    {
+        if let Some(sender) = crate::tools::scene_logging::get_logger_sender() {
+            let scene_id = op_state
+                .try_borrow::<SceneId>()
+                .map(|id| id.0)
+                .unwrap_or(0);
+            let _ = sender.try_send(crate::tools::scene_logging::SceneLogEntry::OpCallStart(
+                crate::tools::scene_logging::OpCallStartEntry {
+                    call_id: 0,
+                    scene_id,
+                    timestamp_ms: crate::tools::scene_logging::current_timestamp_ms(),
+                    op_name: op_name.to_string(),
+                    args: Some(serde_json::Value::String(message.to_string())),
+                },
+            ));
+        }
+    }
+}
+
 #[op2(fast)]
 fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate: bool) {
     if !is_scene_log_enabled() {
@@ -737,31 +775,7 @@ fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate:
         tracing::debug!("{}", message);
     }
 
-    // Send to scene logging channel (fast ops bypass JS wrapper)
-    {
-        let op_state = state.borrow();
-        if op_state
-            .try_borrow::<scene_logging_ops::SceneDebugFlag>()
-            .map(|f| f.0)
-            .unwrap_or(false)
-        {
-            if let Some(sender) = crate::tools::scene_logging::get_logger_sender() {
-                let scene_id = op_state
-                    .try_borrow::<SceneId>()
-                    .map(|id| id.0)
-                    .unwrap_or(0);
-                let _ = sender.try_send(crate::tools::scene_logging::SceneLogEntry::OpCallStart(
-                    crate::tools::scene_logging::OpCallStartEntry {
-                        call_id: 0,
-                        scene_id,
-                        timestamp_ms: crate::tools::scene_logging::current_timestamp_ms(),
-                        op_name: "op_log".to_string(),
-                        args: Some(serde_json::Value::String(message.clone())),
-                    },
-                ));
-            }
-        }
-    }
+    maybe_send_log_to_scene_logger(&state.borrow(), "op_log", &message);
 
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state
@@ -791,31 +805,7 @@ fn op_error(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediat
     }
     tracing::debug!("{}", message);
 
-    // Send to scene logging channel (fast ops bypass JS wrapper)
-    {
-        let op_state = state.borrow();
-        if op_state
-            .try_borrow::<scene_logging_ops::SceneDebugFlag>()
-            .map(|f| f.0)
-            .unwrap_or(false)
-        {
-            if let Some(sender) = crate::tools::scene_logging::get_logger_sender() {
-                let scene_id = op_state
-                    .try_borrow::<SceneId>()
-                    .map(|id| id.0)
-                    .unwrap_or(0);
-                let _ = sender.try_send(crate::tools::scene_logging::SceneLogEntry::OpCallStart(
-                    crate::tools::scene_logging::OpCallStartEntry {
-                        call_id: 0,
-                        scene_id,
-                        timestamp_ms: crate::tools::scene_logging::current_timestamp_ms(),
-                        op_name: "op_error".to_string(),
-                        args: Some(serde_json::Value::String(message.clone())),
-                    },
-                ));
-            }
-        }
-    }
+    maybe_send_log_to_scene_logger(&state.borrow(), "op_error", &message);
 
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state

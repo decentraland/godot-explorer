@@ -16,12 +16,6 @@ pub struct SceneLoggingConfig {
     pub max_file_size_mb: u64,
     /// Maximum total size of all log files in megabytes.
     pub max_total_size_mb: u64,
-    /// Whether CRDT message logging is enabled.
-    pub crdt_logging_enabled: bool,
-    /// Whether op call logging is enabled.
-    pub op_logging_enabled: bool,
-    /// Maximum size of response bodies to log (in bytes). Larger bodies are truncated.
-    pub truncate_body_bytes: usize,
 }
 
 impl Default for SceneLoggingConfig {
@@ -51,29 +45,7 @@ impl Default for SceneLoggingConfig {
             log_directory,
             max_file_size_mb: 100,
             max_total_size_mb: 1024, // 1 GB
-            crdt_logging_enabled: true,
-            op_logging_enabled: true,
-            truncate_body_bytes: 10 * 1024, // 10 KB
         }
     }
 }
 
-impl SceneLoggingConfig {
-    /// Creates a new configuration with the specified log directory.
-    pub fn with_log_directory(mut self, path: PathBuf) -> Self {
-        self.log_directory = path;
-        self
-    }
-
-    /// Disables CRDT logging.
-    pub fn without_crdt_logging(mut self) -> Self {
-        self.crdt_logging_enabled = false;
-        self
-    }
-
-    /// Disables op call logging.
-    pub fn without_op_logging(mut self) -> Self {
-        self.op_logging_enabled = false;
-        self
-    }
-}

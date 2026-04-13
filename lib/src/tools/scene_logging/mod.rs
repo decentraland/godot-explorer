@@ -22,6 +22,17 @@ pub use storage::StorageManager;
 
 use once_cell::sync::OnceCell;
 
+/// Encodes a byte slice as a lowercase hex string. Uses a pre-allocated buffer
+/// with `std::fmt::Write` instead of per-byte `format!()` allocations.
+pub fn bytes_to_hex(data: &[u8]) -> String {
+    use std::fmt::Write;
+    let mut s = String::with_capacity(data.len() * 2);
+    for b in data {
+        let _ = write!(s, "{:02x}", b);
+    }
+    s
+}
+
 /// Global sender for scene log entries. Set once when the SceneLogDispatcher is
 /// created in DclGlobal. Scene threads clone this sender to push entries.
 static SCENE_LOG_SENDER: OnceCell<SceneLoggerSender> = OnceCell::new();
@@ -77,11 +88,7 @@ pub fn log_crdt_renderer_to_scene(
     if let Some(sender) = get_logger_sender() {
         let payload =
             payload_data.and_then(|data| deserialize_component_to_json(component_id, data));
-        let bin_payload = payload_data.map(|data| {
-            data.iter()
-                .map(|b| format!("{:02x}", b))
-                .collect::<String>()
-        });
+        let bin_payload = payload_data.map(bytes_to_hex);
 
         let entry = CrdtLogEntry {
             tick,
