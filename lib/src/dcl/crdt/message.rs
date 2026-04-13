@@ -207,7 +207,8 @@ fn log_crdt_message(
                 let payload_data = &data[16..];
                 let json_payload = deserialize_component_to_json(comp_id, payload_data);
                 // Encode as hex string
-                let hex_payload: String = payload_data.iter().map(|b| format!("{:02x}", b)).collect();
+                let hex_payload: String =
+                    payload_data.iter().map(|b| format!("{:02x}", b)).collect();
                 (json_payload, Some(hex_payload))
             } else {
                 (None, None)

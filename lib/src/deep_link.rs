@@ -27,6 +27,10 @@ pub struct DeepLinkResult {
     pub livekit_debug: bool,
     /// Routable path (e.g. "/jump", "/events", "/places", "/mobile")
     pub path: String,
+    /// Scene logging target: empty=off, "true"=auto (use preview WS + debugger), "ws://host:port"=custom target
+    pub scene_logging: String,
+    /// Whether to write JSONL scene log files to disk
+    pub scene_logging_file: bool,
 }
 
 impl DeepLinkResult {
@@ -143,6 +147,16 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "livekit_debug" => {
                 result.livekit_debug = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "scene-logging" => {
+                result.scene_logging = if value.eq_ignore_ascii_case("true") || value == "1" {
+                    "true".to_string()
+                } else {
+                    value.to_string()
+                };
+            }
+            "scene-logging-file" => {
+                result.scene_logging_file = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
@@ -486,5 +500,39 @@ mod tests {
         assert_eq!(r.realm, "r1");
         assert!(r.livekit_debug);
         assert_eq!(get_param(&r, "rust-log"), Some("debug"));
+    }
+
+    // ---- Scene logging parameters -------------------------------------------
+
+    #[test]
+    fn scene_logging_true() {
+        let r = parse("decentraland://open?scene-logging=true");
+        assert_eq!(r.scene_logging, "true");
+    }
+
+    #[test]
+    fn scene_logging_one() {
+        let r = parse("decentraland://open?scene-logging=1");
+        assert_eq!(r.scene_logging, "true");
+    }
+
+    #[test]
+    fn scene_logging_custom_ws() {
+        let r = parse("decentraland://open?scene-logging=ws://192.168.1.5:9090");
+        assert_eq!(r.scene_logging, "ws://192.168.1.5:9090");
+    }
+
+    #[test]
+    fn scene_logging_file() {
+        let r = parse("decentraland://open?scene-logging=true&scene-logging-file=true");
+        assert_eq!(r.scene_logging, "true");
+        assert!(r.scene_logging_file);
+    }
+
+    #[test]
+    fn scene_logging_default_off() {
+        let r = parse("decentraland://open?location=0,0");
+        assert!(r.scene_logging.is_empty());
+        assert!(!r.scene_logging_file);
     }
 }

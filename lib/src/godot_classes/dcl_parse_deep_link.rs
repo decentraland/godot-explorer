@@ -49,6 +49,14 @@ pub struct DclParseDeepLink {
     /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
     #[var]
     path: GString,
+
+    /// Scene logging target: empty=off, "true"=auto, "ws://host:port"=custom target
+    #[var]
+    scene_logging: GString,
+
+    /// Whether to write JSONL scene log files to disk
+    #[var]
+    scene_logging_file: bool,
 }
 
 #[godot_api]
@@ -74,6 +82,8 @@ impl DclParseDeepLink {
             saved_profile: GString::new(),
             livekit_debug: false,
             path: GString::new(),
+            scene_logging: GString::new(),
+            scene_logging_file: false,
         }
     }
 
@@ -98,6 +108,8 @@ impl DclParseDeepLink {
             saved_profile: GString::from(&r.saved_profile),
             livekit_debug: r.livekit_debug,
             path: GString::from(&r.path),
+            scene_logging: GString::from(&r.scene_logging),
+            scene_logging_file: r.scene_logging_file,
         }
     }
 }

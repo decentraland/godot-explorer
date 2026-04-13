@@ -206,6 +206,9 @@ pub struct DclGlobal {
     pub network_inspector: Gd<NetworkInspector>,
 
     #[var]
+    pub scene_log_dispatcher: Gd<crate::tools::scene_logging::SceneLogDispatcher>,
+
+    #[var]
     pub social_blacklist: Gd<DclSocialBlacklist>,
 
     #[var]
@@ -229,6 +232,11 @@ pub struct DclGlobal {
     pub dynamic_graphics_manager: Gd<DclDynamicGraphicsManager>,
 
     pub selected_avatar: Option<Gd<DclAvatar>>,
+
+    // Scene logging active flag — set from GDScript when deeplink/CLI activates scene logging.
+    // Checked by scene_manager when spawning scenes to decide if they should be instrumented.
+    #[var]
+    pub scene_logging_active: bool,
 
     // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
     #[var]
@@ -285,6 +293,8 @@ impl INode for DclGlobal {
         let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
         let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
+        let mut scene_log_dispatcher: Gd<crate::tools::scene_logging::SceneLogDispatcher> =
+            crate::tools::scene_logging::SceneLogDispatcher::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
         let mut social_service: Gd<DclSocialService> = DclSocialService::new_alloc();
 
@@ -319,6 +329,12 @@ impl INode for DclGlobal {
         content_provider.set_name("content_provider");
         portable_experience_controller.set_name("portable_experience_controller");
         network_inspector.set_name("network_inspector");
+        scene_log_dispatcher.set_name("scene_log_dispatcher");
+
+        // Register the global scene log sender so Rust scene threads can push entries
+        let _ = crate::tools::scene_logging::set_global_sender(
+            scene_log_dispatcher.bind().get_sender(),
+        );
         social_blacklist.set_name("social_blacklist");
         social_service.set_name("social_service");
 
@@ -394,6 +410,7 @@ impl INode for DclGlobal {
             metrics,
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector,
+            scene_log_dispatcher,
             social_blacklist,
             social_service,
 
@@ -412,6 +429,8 @@ impl INode for DclGlobal {
             cli,
             dynamic_graphics_manager,
             selected_avatar: None,
+
+            scene_logging_active: false,
 
             // Input modifiers start as false (no modification)
             input_modifier_disable_all: false,

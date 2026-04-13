@@ -55,7 +55,8 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
-const FORCE_DEEPLINK = ""
+const FORCE_DEEPLINK = "decentraland://open?scene-logging=true"
+#const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 
 # Increase this value for new terms and conditions
@@ -331,6 +332,7 @@ func _ready():
 			self.config.install_referrer_sent = true
 			self.config.save_to_settings_file()
 	get_tree().root.add_child.call_deferred(self.network_inspector)
+	get_tree().root.add_child.call_deferred(self.scene_log_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
 

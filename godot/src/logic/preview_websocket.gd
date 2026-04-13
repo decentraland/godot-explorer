@@ -13,6 +13,15 @@ func set_url(url: String) -> void:
 	_pending_url = (url.to_lower().replace("http://", "ws://").replace("https://", "wss://"))
 
 
+func is_open() -> bool:
+	return _ws.get_ready_state() == WebSocketPeer.STATE_OPEN
+
+
+func send_json(msg: Dictionary) -> void:
+	if _ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		_ws.send_text(JSON.stringify(msg))
+
+
 func _process(_delta):
 	_ws.poll()
 

@@ -99,6 +99,10 @@ pub struct DclCli {
     #[var(get)]
     pub scene_debug: bool,
     #[var(get)]
+    pub scene_logging: GString,
+    #[var(get)]
+    pub scene_logging_file: bool,
+    #[var(get)]
     pub fi_benchmark_size: i32,
 
     // Arguments with values
@@ -406,7 +410,19 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--scene-debug".to_string(),
-                description: "Enable per-scene CRDT and op-call logging to user://scene_logs/. Off by default. Also passable via deeplink (?scene-debug=true)".to_string(),
+                description: "(Deprecated alias for --scene-logging=true --scene-logging-file) Enable per-scene CRDT and op-call logging".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--scene-logging".to_string(),
+                description: "Enable scene logging. 'true' = auto (preview WS + editor debugger), or 'ws://host:port' for a custom WebSocket target. Also passable via deeplink (?scene-logging=true)".to_string(),
+                arg_type: ArgType::Value("<target>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--scene-logging-file".to_string(),
+                description: "Write scene logs to JSONL files on disk (user://scene_logs/)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
@@ -563,6 +579,23 @@ impl INode for DclCli {
         let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
         let scene_debug = args_map.contains_key("--scene-debug");
+        // --scene-logging accepts an optional value; bare flag means "true"
+        let mut scene_logging = args_map
+            .get("--scene-logging")
+            .map(|v| {
+                v.as_ref()
+                    .map(GString::from)
+                    .unwrap_or_else(|| GString::from("true"))
+            })
+            .unwrap_or_default();
+        let mut scene_logging_file = args_map.contains_key("--scene-logging-file");
+        // --scene-debug is a backward-compat alias for --scene-logging=true --scene-logging-file
+        if scene_debug {
+            if scene_logging.is_empty() {
+                scene_logging = GString::from("true");
+            }
+            scene_logging_file = true;
+        }
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
@@ -668,6 +701,8 @@ impl INode for DclCli {
             landscape,
             asset_server,
             scene_debug,
+            scene_logging,
+            scene_logging_file,
             fi_benchmark_size,
             asset_server_port,
             realm,

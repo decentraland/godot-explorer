@@ -201,13 +201,9 @@ pub(crate) fn scene_thread(
     let scene_id = spawn_dcl_scene_data.scene_id;
     let should_debug = spawn_dcl_scene_data.should_debug;
 
-    // Lazily initialize the global scene logger the first time a debugged
-    // scene is spawned. Subsequent debugged scenes reuse the same logger; the
-    // OnceCell.set call returns Err on the second attempt and that's expected.
+    // The global sender is already set by DclGlobal at startup.
+    // Just log the lifecycle event if debugging is enabled.
     if should_debug {
-        let _ = crate::tools::scene_logging::init_global_logger(
-            crate::tools::scene_logging::SceneLoggingConfig::default(),
-        );
         crate::tools::scene_logging::log_lifecycle_event(
             scene_id.0,
             crate::tools::scene_logging::SceneLifecycleEvent::SceneInit,
@@ -251,8 +247,9 @@ pub(crate) fn scene_thread(
             if should_debug {
                 use crate::tools::scene_logging::{get_logger_sender, CrdtDirection};
 
-                let logging_ctx = get_logger_sender()
-                    .map(|sender| CrdtLoggingContext::new(sender, 0, CrdtDirection::SceneToRenderer));
+                let logging_ctx = get_logger_sender().map(|sender| {
+                    CrdtLoggingContext::new(sender, 0, CrdtDirection::SceneToRenderer)
+                });
 
                 process_many_messages_with_logging(
                     &mut stream,
@@ -397,9 +394,9 @@ pub(crate) fn scene_thread(
     {
         let mut op_state = state.borrow_mut();
         op_state.put(SceneDebugFlag(should_debug));
-        op_state.put(engine::SceneTickCounter(
-            std::sync::atomic::AtomicU32::new(0),
-        ));
+        op_state.put(engine::SceneTickCounter(std::sync::atomic::AtomicU32::new(
+            0,
+        )));
     }
 
     if inspector.is_some() {
@@ -740,6 +737,32 @@ fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate:
         tracing::debug!("{}", message);
     }
 
+    // Send to scene logging channel (fast ops bypass JS wrapper)
+    {
+        let op_state = state.borrow();
+        if op_state
+            .try_borrow::<scene_logging_ops::SceneDebugFlag>()
+            .map(|f| f.0)
+            .unwrap_or(false)
+        {
+            if let Some(sender) = crate::tools::scene_logging::get_logger_sender() {
+                let scene_id = op_state
+                    .try_borrow::<SceneId>()
+                    .map(|id| id.0)
+                    .unwrap_or(0);
+                let _ = sender.try_send(crate::tools::scene_logging::SceneLogEntry::OpCallStart(
+                    crate::tools::scene_logging::OpCallStartEntry {
+                        call_id: 0,
+                        scene_id,
+                        timestamp_ms: crate::tools::scene_logging::current_timestamp_ms(),
+                        op_name: "op_log".to_string(),
+                        args: Some(serde_json::Value::String(message.clone())),
+                    },
+                ));
+            }
+        }
+    }
+
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state
         .borrow_mut()
@@ -767,6 +790,32 @@ fn op_error(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediat
         tracing::error!("{}", message);
     }
     tracing::debug!("{}", message);
+
+    // Send to scene logging channel (fast ops bypass JS wrapper)
+    {
+        let op_state = state.borrow();
+        if op_state
+            .try_borrow::<scene_logging_ops::SceneDebugFlag>()
+            .map(|f| f.0)
+            .unwrap_or(false)
+        {
+            if let Some(sender) = crate::tools::scene_logging::get_logger_sender() {
+                let scene_id = op_state
+                    .try_borrow::<SceneId>()
+                    .map(|id| id.0)
+                    .unwrap_or(0);
+                let _ = sender.try_send(crate::tools::scene_logging::SceneLogEntry::OpCallStart(
+                    crate::tools::scene_logging::OpCallStartEntry {
+                        call_id: 0,
+                        scene_id,
+                        timestamp_ms: crate::tools::scene_logging::current_timestamp_ms(),
+                        op_name: "op_error".to_string(),
+                        args: Some(serde_json::Value::String(message.clone())),
+                    },
+                ));
+            }
+        }
+    }
 
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state

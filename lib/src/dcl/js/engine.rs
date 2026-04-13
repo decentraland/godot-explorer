@@ -63,11 +63,7 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
     } else {
         None
     };
-    process_many_messages_with_logging(
-        &mut stream,
-        &mut scene_crdt_state,
-        logging_ctx.as_ref(),
-    );
+    process_many_messages_with_logging(&mut stream, &mut scene_crdt_state, logging_ctx.as_ref());
 
     let dirty = scene_crdt_state.take_dirty();
 

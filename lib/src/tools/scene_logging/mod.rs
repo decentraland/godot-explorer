@@ -1,87 +1,46 @@
 //! Scene Logging System
 //!
-//! A comprehensive logging and debugging tool for Decentraland scenes that captures:
-//! - CRDT messages (component updates, entity lifecycle)
-//! - Op calls (JS -> Rust runtime calls via Deno.core.ops)
-//!
-//! Data is stored in JSONL format for offline analysis.
-//!
-//! # Usage
-//!
-//! Enable the `scene_logging` feature in Cargo.toml:
-//! ```toml
-//! [features]
-//! scene_logging = []
-//! ```
-//!
-//! Then build with the feature enabled:
-//! ```bash
-//! cargo run -- run --features scene_logging
-//! ```
+//! Captures CRDT messages, JS op-calls, and lifecycle events from Decentraland scenes.
+//! Data is dispatched to GDScript via a signal, which then routes to:
+//! - WebSocket (preview channel or dedicated target)
+//! - Godot Editor Debugger (EngineDebugger)
+//! - JSONL files (optional, when scene-logging-file is enabled)
 
-mod config;
-mod logger;
-mod storage;
+pub mod config;
+pub mod dispatcher;
+pub mod logger;
+pub mod storage;
 
 pub use config::SceneLoggingConfig;
+pub use dispatcher::SceneLogDispatcher;
 pub use logger::{
     current_timestamp_ms, CrdtDirection, CrdtLogEntry, CrdtOperation, OpCallEndEntry,
-    OpCallStartEntry, SceneLifecycleEntry, SceneLifecycleEvent, SceneLogEntry, SceneLogger,
-    SceneLoggerSender, SessionEndEntry, SessionStartEntry,
+    OpCallStartEntry, SceneLifecycleEntry, SceneLifecycleEvent, SceneLogEntry, SceneLoggerSender,
+    SessionEndEntry, SessionStartEntry,
 };
 pub use storage::StorageManager;
 
 use once_cell::sync::OnceCell;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
-/// Global scene logger instance.
-static SCENE_LOGGER: OnceCell<Arc<SceneLogger>> = OnceCell::new();
+/// Global sender for scene log entries. Set once when the SceneLogDispatcher is
+/// created in DclGlobal. Scene threads clone this sender to push entries.
+static SCENE_LOG_SENDER: OnceCell<SceneLoggerSender> = OnceCell::new();
 
-/// Initializes the global scene logger with the given configuration.
-///
-/// Returns an error if the logger is already initialized.
-pub fn init_global_logger(config: SceneLoggingConfig) -> Result<(), &'static str> {
-    let logger = SceneLogger::new(config);
-    SCENE_LOGGER
-        .set(Arc::new(logger))
-        .map_err(|_| "Scene logger already initialized")
+/// Sets the global scene log sender. Called once from DclGlobal when the
+/// SceneLogDispatcher is initialized. Returns Err if already set.
+pub fn set_global_sender(sender: SceneLoggerSender) -> Result<(), &'static str> {
+    SCENE_LOG_SENDER
+        .set(sender)
+        .map_err(|_| "Scene log sender already set")
 }
 
-/// Gets a reference to the global scene logger.
-///
-/// Returns None if the logger has not been initialized.
-pub fn get_global_logger() -> Option<Arc<SceneLogger>> {
-    SCENE_LOGGER.get().cloned()
-}
-
-/// Gets a sender for the global scene logger.
-///
-/// Returns None if the logger has not been initialized.
+/// Gets a clone of the global scene log sender.
+/// Returns None if the dispatcher has not been initialized.
 pub fn get_logger_sender() -> Option<SceneLoggerSender> {
-    SCENE_LOGGER.get().map(|l| l.sender())
+    SCENE_LOG_SENDER.get().cloned()
 }
 
-/// Statistics for the logging session.
-#[derive(Default, Debug, Clone)]
-pub struct LoggingStats {
-    pub total_crdt_messages: u64,
-    pub total_op_calls: u64,
-    pub bytes_written: u64,
-}
-
-/// Global statistics instance.
-static LOGGING_STATS: OnceCell<Arc<RwLock<LoggingStats>>> = OnceCell::new();
-
-/// Gets the global logging statistics.
-pub fn get_stats() -> Arc<RwLock<LoggingStats>> {
-    LOGGING_STATS
-        .get_or_init(|| Arc::new(RwLock::new(LoggingStats::default())))
-        .clone()
-}
-
-/// Logs a scene lifecycle event. This is a convenience function that handles
-/// the case where logging is not initialized.
+/// Logs a scene lifecycle event. No-op if logging is not initialized.
 pub fn log_lifecycle_event(
     scene_id: i32,
     event: SceneLifecycleEvent,
@@ -103,7 +62,6 @@ pub fn log_lifecycle_event(
 }
 
 /// Logs a CRDT operation from renderer to scene.
-/// This is used when the renderer sends dirty CRDT state back to the scene.
 pub fn log_crdt_renderer_to_scene(
     tick: u32,
     entity_id: u32,
@@ -112,13 +70,17 @@ pub fn log_crdt_renderer_to_scene(
     crdt_timestamp: u32,
     payload_data: Option<&[u8]>,
 ) {
-    use crate::dcl::components::{component_id_to_name, proto_components::deserialize_component_to_json};
+    use crate::dcl::components::{
+        component_id_to_name, proto_components::deserialize_component_to_json,
+    };
 
     if let Some(sender) = get_logger_sender() {
-        let payload = payload_data.and_then(|data| deserialize_component_to_json(component_id, data));
-        // Encode as hex string
+        let payload =
+            payload_data.and_then(|data| deserialize_component_to_json(component_id, data));
         let bin_payload = payload_data.map(|data| {
-            data.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+            data.iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<String>()
         });
 
         let entry = CrdtLogEntry {

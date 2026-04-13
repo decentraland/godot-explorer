@@ -196,7 +196,7 @@ impl SceneManager {
         let network_id = realm.get_network_id();
 
         let is_preview = dcl_global.bind().get_preview_mode();
-        let should_debug = dcl_global.bind().cli.bind().scene_debug;
+        let should_debug = dcl_global.bind().scene_logging_active;
 
         let comms_adapter = dcl_global
             .bind()
@@ -1651,6 +1651,16 @@ impl SceneManager {
             .values()
             .filter_map(|scene| scene.deno_memory_stats)
             .map(|stats| stats.external_memory_mb())
+            .sum()
+    }
+
+    /// Get total V8 heap limit across all scenes in MB
+    #[func]
+    pub fn get_total_deno_heap_limit_mb(&self) -> f64 {
+        self.scenes
+            .values()
+            .filter_map(|scene| scene.deno_memory_stats)
+            .map(|stats| stats.heap_limit_mb())
             .sum()
     }
 

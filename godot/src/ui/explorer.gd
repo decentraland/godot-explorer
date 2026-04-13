@@ -199,6 +199,26 @@ func _ready():
 	if Global.deep_link_obj.livekit_debug:
 		_on_control_menu_request_livekit_debug(true)
 
+	# Scene logging: activate bridge if --scene-logging or ?scene-logging= is set
+	var scene_logging_target := ""
+	if not Global.deep_link_obj.scene_logging.is_empty():
+		scene_logging_target = Global.deep_link_obj.scene_logging
+	elif not Global.cli.scene_logging.is_empty():
+		scene_logging_target = Global.cli.scene_logging
+	if not scene_logging_target.is_empty():
+		# Activate Rust-side instrumentation before any scene is spawned
+		Global.scene_logging_active = true
+		var bridge = SceneLogBridge.new()
+		bridge.set_name("scene_log_bridge")
+		add_child(bridge)
+		bridge.setup(scene_logging_target, Global.scene_fetcher._preview_ws)
+	# Scene logging to file: --scene-logging-file or ?scene-logging-file=true
+	var scene_logging_file: bool = (
+		Global.deep_link_obj.scene_logging_file or Global.cli.scene_logging_file
+	)
+	if scene_logging_file:
+		Global.scene_log_dispatcher.set_file_logging(true)
+
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
 	Global.deep_link_router._clear_deep_link()
 
