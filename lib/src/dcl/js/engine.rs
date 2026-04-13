@@ -140,6 +140,7 @@ async fn op_crdt_recv_from_renderer(
             let mut skipped_gos = 0u32;
 
             let debug = op_state.borrow::<SceneDebugFlag>().0;
+            let scene_id_val = op_state.try_borrow::<SceneId>().map(|id| id.0).unwrap_or(0);
             let current_tick = if debug {
                 op_state
                     .try_borrow::<SceneTickCounter>()
@@ -166,6 +167,7 @@ async fn op_crdt_recv_from_renderer(
                             *component_id,
                             *entity_id,
                             current_tick,
+                            scene_id_val,
                         );
                     }
 
@@ -187,7 +189,12 @@ async fn op_crdt_recv_from_renderer(
                         continue;
                     }
                     if debug {
-                        log_gos_renderer_to_scene(*component_id, *entity_id, current_tick);
+                        log_gos_renderer_to_scene(
+                            *component_id,
+                            *entity_id,
+                            current_tick,
+                            scene_id_val,
+                        );
                     }
 
                     if let Err(err) = append_gos_component(
@@ -280,12 +287,14 @@ fn build_send_logging_ctx(op_state: &OpState) -> Option<CrdtLoggingContext> {
     use crate::tools::scene_logging::{get_logger_sender, CrdtDirection};
 
     let sender = get_logger_sender()?;
+    let scene_id = op_state.try_borrow::<SceneId>().map(|id| id.0).unwrap_or(0);
     let tick = op_state
         .try_borrow::<SceneTickCounter>()
         .map(|tc| tc.0.load(std::sync::atomic::Ordering::Relaxed))
         .unwrap_or(0);
     Some(CrdtLoggingContext::new(
         sender,
+        scene_id,
         tick,
         CrdtDirection::SceneToRenderer,
     ))
@@ -298,6 +307,7 @@ fn log_lww_renderer_to_scene(
     component_id: crate::dcl::components::SceneComponentId,
     entity_id: crate::dcl::components::SceneEntityId,
     current_tick: u32,
+    scene_id: i32,
 ) {
     use crate::dcl::serialization::writer::DclWriter;
     use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
@@ -327,6 +337,7 @@ fn log_lww_renderer_to_scene(
     };
 
     log_crdt_renderer_to_scene(
+        scene_id,
         current_tick,
         entity_id.as_i32() as u32,
         component_id.0,
@@ -342,9 +353,11 @@ fn log_gos_renderer_to_scene(
     component_id: crate::dcl::components::SceneComponentId,
     entity_id: crate::dcl::components::SceneEntityId,
     current_tick: u32,
+    scene_id: i32,
 ) {
     use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
     log_crdt_renderer_to_scene(
+        scene_id,
         current_tick,
         entity_id.as_i32() as u32,
         component_id.0,

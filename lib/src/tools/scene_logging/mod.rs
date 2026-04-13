@@ -67,6 +67,25 @@ pub fn log_lifecycle_event(
             tick,
             delta_time,
             error,
+            title: None,
+            base_parcel: None,
+        };
+        let _ = sender.try_send(SceneLogEntry::SceneLifecycle(entry));
+    }
+}
+
+/// Logs a scene init event with title and base parcel metadata.
+pub fn log_scene_init_event(scene_id: i32, title: Option<String>, base_parcel: Option<String>) {
+    if let Some(sender) = get_logger_sender() {
+        let entry = SceneLifecycleEntry {
+            scene_id,
+            timestamp_ms: current_timestamp_ms(),
+            event: SceneLifecycleEvent::SceneInit,
+            tick: None,
+            delta_time: None,
+            error: None,
+            title,
+            base_parcel,
         };
         let _ = sender.try_send(SceneLogEntry::SceneLifecycle(entry));
     }
@@ -74,6 +93,7 @@ pub fn log_lifecycle_event(
 
 /// Logs a CRDT operation from renderer to scene.
 pub fn log_crdt_renderer_to_scene(
+    scene_id: i32,
     tick: u32,
     entity_id: u32,
     component_id: u32,
@@ -91,6 +111,7 @@ pub fn log_crdt_renderer_to_scene(
         let bin_payload = payload_data.map(bytes_to_hex);
 
         let entry = CrdtLogEntry {
+            scene_id,
             tick,
             timestamp_ms: current_timestamp_ms(),
             direction: CrdtDirection::RendererToScene,

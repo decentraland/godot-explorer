@@ -17,14 +17,21 @@ use crate::tools::scene_logging::{
 /// Context for logging CRDT messages. Constructed only by debugged scenes.
 pub struct CrdtLoggingContext {
     pub sender: SceneLoggerSender,
+    pub scene_id: i32,
     pub tick: u32,
     pub direction: CrdtDirection,
 }
 
 impl CrdtLoggingContext {
-    pub fn new(sender: SceneLoggerSender, tick: u32, direction: CrdtDirection) -> Self {
+    pub fn new(
+        sender: SceneLoggerSender,
+        scene_id: i32,
+        tick: u32,
+        direction: CrdtDirection,
+    ) -> Self {
         Self {
             sender,
+            scene_id,
             tick,
             direction,
         }
@@ -225,6 +232,7 @@ fn log_crdt_message(
     };
 
     let entry = CrdtLogEntry {
+        scene_id: ctx.scene_id,
         tick: ctx.tick,
         timestamp_ms: current_timestamp_ms(),
         direction: ctx.direction,

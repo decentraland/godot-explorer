@@ -928,6 +928,9 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
+                if scene.paused {
+                    continue;
+                }
                 if scene.dcl_scene.thread_join_handle.is_finished() {
                     tracing::error!("scene closed without kill signal");
                     if matches!(scene.scene_type, SceneType::Parcel) {

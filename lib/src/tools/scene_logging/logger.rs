@@ -61,6 +61,8 @@ pub enum CrdtDirection {
 /// A logged CRDT message with compact field names.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrdtLogEntry {
+    #[serde(rename = "sid")]
+    pub scene_id: i32,
     #[serde(rename = "tk")]
     pub tick: u32,
     #[serde(rename = "t")]
@@ -116,6 +118,8 @@ pub struct SessionStartEntry {
     pub timestamp_ms: u64,
     pub version: String,
     pub platform: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_name: Option<String>,
 }
 
 /// Session end marker.
@@ -153,6 +157,10 @@ pub struct SceneLifecycleEntry {
     pub delta_time: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_parcel: Option<String>,
 }
 
 /// A performance snapshot with rendering, memory, and asset metrics.

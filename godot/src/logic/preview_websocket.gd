@@ -2,6 +2,10 @@ class_name PreviewWebSocket
 extends Node
 
 signal scene_update(scene_id: String)
+signal scene_log_command(cmd: String, args: Dictionary, request_id: String)
+
+## 64 MB outbound buffer — connections are local, never drop messages.
+const OUTBOUND_BUFFER_SIZE := 64 * 1024 * 1024
 
 var _ws := WebSocketPeer.new()
 var _pending_url: String = ""
@@ -43,6 +47,11 @@ func _process(_delta):
 					"SCENE_UPDATE":
 						var scene_id = json.get("payload", {}).get("sceneId", "unknown")
 						scene_update.emit(scene_id)
+					"SCENE_LOG_CMD":
+						var cmd: String = json.get("cmd", "")
+						var args: Dictionary = json.get("args", {})
+						var request_id: String = str(json.get("id", ""))
+						scene_log_command.emit(cmd, args, request_id)
 					_:
 						printerr("preview-ws > unknown message type ", msg_type)
 
@@ -53,6 +62,7 @@ func _process(_delta):
 			_dirty_closed = false
 
 		if not _pending_url.is_empty():
+			_ws.set_outbound_buffer_size(OUTBOUND_BUFFER_SIZE)
 			_ws.connect_to_url(_pending_url)
 			_pending_url = ""
 			_dirty_connected = true

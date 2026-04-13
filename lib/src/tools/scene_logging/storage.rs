@@ -141,7 +141,6 @@ impl StorageManager {
 
         Ok(())
     }
-
 }
 
 impl Drop for StorageManager {

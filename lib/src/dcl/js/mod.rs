@@ -208,16 +208,16 @@ pub(crate) fn scene_thread(
     // error) and sits at a distinct control-flow position. The actual logging
     // work lives behind `#[cold] #[inline(never)]` helpers, so the hot path
     // only pays for a single predictable branch when `should_debug` is false.
+    let scene_entity_definition = spawn_dcl_scene_data.scene_entity_definition;
     if should_debug {
-        crate::tools::scene_logging::log_lifecycle_event(
+        let title = scene_entity_definition.get_title().to_string();
+        let base = scene_entity_definition.get_base_parcel();
+        crate::tools::scene_logging::log_scene_init_event(
             scene_id.0,
-            crate::tools::scene_logging::SceneLifecycleEvent::SceneInit,
-            None,
-            None,
-            None,
+            if title.is_empty() { None } else { Some(title) },
+            Some(format!("{},{}", base.x, base.y)),
         );
     }
-    let scene_entity_definition = spawn_dcl_scene_data.scene_entity_definition;
     let log_info = SceneLogInfo::new(scene_id, &scene_entity_definition);
     let local_main_js_file_path = spawn_dcl_scene_data.local_main_js_file_path;
     let local_main_crdt_file_path = spawn_dcl_scene_data.local_main_crdt_file_path;
@@ -253,7 +253,7 @@ pub(crate) fn scene_thread(
                 use crate::tools::scene_logging::{get_logger_sender, CrdtDirection};
 
                 let logging_ctx = get_logger_sender().map(|sender| {
-                    CrdtLoggingContext::new(sender, 0, CrdtDirection::SceneToRenderer)
+                    CrdtLoggingContext::new(sender, scene_id.0, 0, CrdtDirection::SceneToRenderer)
                 });
 
                 process_many_messages_with_logging(
@@ -741,10 +741,7 @@ fn maybe_send_log_to_scene_logger(op_state: &OpState, op_name: &str, message: &s
         .unwrap_or(false)
     {
         if let Some(sender) = crate::tools::scene_logging::get_logger_sender() {
-            let scene_id = op_state
-                .try_borrow::<SceneId>()
-                .map(|id| id.0)
-                .unwrap_or(0);
+            let scene_id = op_state.try_borrow::<SceneId>().map(|id| id.0).unwrap_or(0);
             let _ = sender.try_send(crate::tools::scene_logging::SceneLogEntry::OpCallStart(
                 crate::tools::scene_logging::OpCallStartEntry {
                     call_id: 0,

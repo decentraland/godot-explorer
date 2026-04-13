@@ -4,6 +4,8 @@
 //! drains them in process() each frame, serializes to JSON, and emits a signal
 //! that GDScript connects to for dispatching to WebSocket / EngineDebugger / file.
 
+use std::collections::HashMap;
+
 use godot::classes::performance::Monitor;
 use godot::classes::Performance;
 use godot::prelude::*;
@@ -11,8 +13,8 @@ use tokio::sync::mpsc;
 
 use super::config::SceneLoggingConfig;
 use super::logger::{
-    current_timestamp_ms, PerformanceSnapshotEntry, SceneLogEntry, SceneLoggerSender,
-    SessionEndEntry, SessionStartEntry,
+    current_timestamp_ms, CrdtLogEntry, CrdtOperation, PerformanceSnapshotEntry, SceneLogEntry,
+    SceneLoggerSender, SessionEndEntry, SessionStartEntry,
 };
 use super::storage::StorageManager;
 use crate::godot_classes::dcl_global::DclGlobal;
@@ -32,8 +34,16 @@ pub struct SceneLogDispatcher {
     receiver: mpsc::Receiver<SceneLogEntry>,
     sender: mpsc::Sender<SceneLogEntry>,
     session_id: String,
+    device_name: Option<String>,
     storage: Option<StorageManager>,
     perf_timer: f64,
+    paused: bool,
+    entry_count: u64,
+    perf_interval: f64,
+    /// Snapshot of latest LWW CRDT state: (scene_id, entity_id, component_name) → serialized JSON
+    crdt_lww_snapshot: HashMap<(i32, u32, String), String>,
+    /// Snapshot of GOS (append) CRDT state: (scene_id, entity_id, component_name) → serialized JSON entries
+    crdt_gos_snapshot: HashMap<(i32, u32, String), Vec<String>>,
     _base: Base<Node>,
 }
 
@@ -55,6 +65,7 @@ impl SceneLogDispatcher {
                         timestamp_ms: current_timestamp_ms(),
                         version: env!("CARGO_PKG_VERSION").to_string(),
                         platform: std::env::consts::OS.to_string(),
+                        device_name: self.device_name.clone(),
                     });
                     let _ = storage.write_entry(&start_entry);
                     let _ = storage.flush();
@@ -89,12 +100,157 @@ impl SceneLogDispatcher {
     fn get_session_id(&self) -> GString {
         GString::from(&self.session_id)
     }
+
+    /// Track paused state for status reporting. Scene processing is paused from GDScript
+    /// via `SceneManager.set_scene_is_paused`; this field is informational only.
+    #[func]
+    fn set_paused(&mut self, paused: bool) {
+        self.paused = paused;
+    }
+
+    /// Returns whether scene processing is currently paused.
+    #[func]
+    fn is_paused(&self) -> bool {
+        self.paused
+    }
+
+    /// Returns the total number of entries processed since session start.
+    #[func]
+    fn get_entry_count(&self) -> u64 {
+        self.entry_count
+    }
+
+    /// Change the performance snapshot interval (in seconds). Clamped to [0.5, 60.0].
+    #[func]
+    fn set_perf_interval(&mut self, seconds: f64) {
+        self.perf_interval = seconds.clamp(0.5, 60.0);
+    }
+
+    /// Returns the current performance snapshot interval.
+    #[func]
+    fn get_perf_interval(&self) -> f64 {
+        self.perf_interval
+    }
+
+    /// Returns whether file logging is currently enabled.
+    #[func]
+    fn is_file_logging(&self) -> bool {
+        self.storage.is_some()
+    }
+
+    /// Returns a JSON array of the current CRDT state snapshot for hot-connect.
+    /// Includes all LWW and GOS entries so a newly connected inspector can
+    /// reconstruct the full entity tree.
+    #[func]
+    fn get_crdt_snapshot_json(&self) -> GString {
+        let mut entries: Vec<&str> = Vec::with_capacity(
+            self.crdt_lww_snapshot.len()
+                + self
+                    .crdt_gos_snapshot
+                    .values()
+                    .map(|v| v.len())
+                    .sum::<usize>(),
+        );
+        for json in self.crdt_lww_snapshot.values() {
+            entries.push(json);
+        }
+        for gos_entries in self.crdt_gos_snapshot.values() {
+            for json in gos_entries {
+                entries.push(json);
+            }
+        }
+        if entries.is_empty() {
+            return GString::new();
+        }
+        let result = format!("[{}]", entries.join(","));
+        GString::from(&result)
+    }
+
+    /// Emit a session_start entry into the channel (sent over WS on next batch).
+    /// Resolves device name lazily since mobile plugins may not be ready at init time.
+    #[func]
+    fn emit_session_start(&mut self) {
+        // Resolve device name lazily if not yet set
+        if self.device_name.is_none() {
+            self.device_name = Self::detect_device_name();
+        }
+        let entry = SceneLogEntry::SessionStart(SessionStartEntry {
+            session_id: self.session_id.clone(),
+            timestamp_ms: current_timestamp_ms(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            platform: std::env::consts::OS.to_string(),
+            device_name: self.device_name.clone(),
+        });
+        let _ = self.sender.try_send(entry);
+    }
 }
 
 impl SceneLogDispatcher {
     /// Gets a clone of the sender for Rust-side callers.
     pub fn get_sender(&self) -> SceneLoggerSender {
         self.sender.clone()
+    }
+
+    /// Update the CRDT snapshot based on an incoming CRDT entry.
+    fn update_crdt_snapshot(&mut self, crdt: &CrdtLogEntry, json: &str) {
+        let sid = crdt.scene_id;
+        let key = (sid, crdt.entity_id, crdt.component_name.clone());
+        match crdt.operation {
+            CrdtOperation::Put => {
+                self.crdt_lww_snapshot.insert(key, json.to_string());
+            }
+            CrdtOperation::Delete => {
+                self.crdt_lww_snapshot.remove(&key);
+            }
+            CrdtOperation::DeleteEntity => {
+                let eid = crdt.entity_id;
+                self.crdt_lww_snapshot
+                    .retain(|k, _| !(k.0 == sid && k.1 == eid));
+                self.crdt_gos_snapshot
+                    .retain(|k, _| !(k.0 == sid && k.1 == eid));
+            }
+            CrdtOperation::Append => {
+                let entries = self.crdt_gos_snapshot.entry(key).or_default();
+                entries.push(json.to_string());
+                if entries.len() > 100 {
+                    entries.remove(0);
+                }
+            }
+        }
+    }
+
+    /// Detect device name from iOS/Android plugins, or fallback to OS name.
+    fn detect_device_name() -> Option<String> {
+        #[cfg(target_os = "ios")]
+        {
+            if let Some(info) =
+                crate::godot_classes::dcl_ios_plugin::DclIosPlugin::get_mobile_device_info_internal(
+                )
+            {
+                let name = format!("{} {}", info.device_brand, info.device_model)
+                    .trim()
+                    .to_string();
+                if !name.is_empty() {
+                    return Some(name);
+                }
+            }
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            if let Some(info) = crate::godot_classes::dcl_android_plugin::DclAndroidPlugin::get_mobile_device_info_internal()
+            {
+                let name = format!("{} {}", info.device_brand, info.device_model)
+                    .trim()
+                    .to_string();
+                if !name.is_empty() {
+                    return Some(name);
+                }
+            }
+        }
+
+        // Desktop fallback
+        Some(std::env::consts::OS.to_string())
     }
 
     /// Collects a performance snapshot from Godot Performance singleton,
@@ -104,16 +260,12 @@ impl SceneLogDispatcher {
 
         let fps = performance.get_monitor(Monitor::TIME_FPS);
         let dt = 1.0 / fps.max(1.0);
-        let draw_calls =
-            performance.get_monitor(Monitor::RENDER_TOTAL_DRAW_CALLS_IN_FRAME) as i64;
-        let primitives =
-            performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME) as i64;
+        let draw_calls = performance.get_monitor(Monitor::RENDER_TOTAL_DRAW_CALLS_IN_FRAME) as i64;
+        let primitives = performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME) as i64;
         let objects_in_frame =
             performance.get_monitor(Monitor::RENDER_TOTAL_OBJECTS_IN_FRAME) as i64;
-        let mem_static_mb =
-            performance.get_monitor(Monitor::MEMORY_STATIC) / 1_048_576.0;
-        let mem_gpu_mb =
-            performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) / 1_048_576.0;
+        let mem_static_mb = performance.get_monitor(Monitor::MEMORY_STATIC) / 1_048_576.0;
+        let mem_gpu_mb = performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) / 1_048_576.0;
 
         // Rust heap (feature-gated)
         #[cfg(feature = "use_memory_debugger")]
@@ -128,27 +280,44 @@ impl SceneLogDispatcher {
         let mem_rust_mb = 0.0;
 
         // Deno/V8 memory + asset loading from DclGlobal
-        let (js_heap_total_mb, js_heap_used_mb, js_heap_limit_mb, js_external_mb, scene_count, assets_loading, assets_loaded, download_speed_mbs) =
-            if let Some(global) = DclGlobal::try_singleton() {
-                let global_ref = global.bind();
-                let sr = global_ref.scene_runner.bind();
-                let js_total = sr.get_total_deno_heap_size_mb();
-                let js_used = sr.get_total_deno_memory_mb();
-                let js_external = sr.get_total_deno_external_memory_mb();
-                let js_limit = sr.get_total_deno_heap_limit_mb();
-                let sc = sr.get_deno_scene_count();
-                drop(sr);
+        let (
+            js_heap_total_mb,
+            js_heap_used_mb,
+            js_heap_limit_mb,
+            js_external_mb,
+            scene_count,
+            assets_loading,
+            assets_loaded,
+            download_speed_mbs,
+        ) = if let Some(global) = DclGlobal::try_singleton() {
+            let global_ref = global.bind();
+            let sr = global_ref.scene_runner.bind();
+            let js_total = sr.get_total_deno_heap_size_mb();
+            let js_used = sr.get_total_deno_memory_mb();
+            let js_external = sr.get_total_deno_external_memory_mb();
+            let js_limit = sr.get_total_deno_heap_limit_mb();
+            let sc = sr.get_deno_scene_count();
+            drop(sr);
 
-                let cp = global_ref.content_provider.bind();
-                let loading = cp.count_loading_resources();
-                let loaded = cp.count_loaded_resources();
-                let speed = cp.get_download_speed_mbs();
-                drop(cp);
+            let cp = global_ref.content_provider.bind();
+            let loading = cp.count_loading_resources();
+            let loaded = cp.count_loaded_resources();
+            let speed = cp.get_download_speed_mbs();
+            drop(cp);
 
-                (js_total, js_used, js_limit, js_external, sc, loading, loaded, speed)
-            } else {
-                (0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0.0)
-            };
+            (
+                js_total,
+                js_used,
+                js_limit,
+                js_external,
+                sc,
+                loading,
+                loaded,
+                speed,
+            )
+        } else {
+            (0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0.0)
+        };
 
         let entry = SceneLogEntry::PerformanceSnapshot(PerformanceSnapshotEntry {
             timestamp_ms: current_timestamp_ms(),
@@ -186,12 +355,21 @@ impl INode for SceneLogDispatcher {
         let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
         let session_id = uuid::Uuid::new_v4().to_string();
 
+        // Detect device name from mobile plugins or OS
+        let device_name = Self::detect_device_name();
+
         SceneLogDispatcher {
             receiver,
             sender,
             session_id,
+            device_name,
             storage: None,
             perf_timer: 0.0,
+            paused: false,
+            entry_count: 0,
+            perf_interval: PERF_INTERVAL,
+            crdt_lww_snapshot: HashMap::new(),
+            crdt_gos_snapshot: HashMap::new(),
             _base,
         }
     }
@@ -203,9 +381,14 @@ impl INode for SceneLogDispatcher {
         while count < MAX_ENTRIES_PER_FRAME {
             match self.receiver.try_recv() {
                 Ok(entry) => {
+                    self.entry_count += 1;
                     // Serialize to JSON
                     match serde_json::to_string(&entry) {
                         Ok(json) => {
+                            // Maintain CRDT snapshot for hot-connect
+                            if let SceneLogEntry::CrdtMessage(ref crdt) = entry {
+                                self.update_crdt_snapshot(crdt, &json);
+                            }
                             // Write to file if enabled
                             if let Some(ref mut storage) = self.storage {
                                 let _ = storage.write_entry(&entry);
@@ -222,9 +405,9 @@ impl INode for SceneLogDispatcher {
             }
         }
 
-        // Collect performance snapshot every PERF_INTERVAL seconds
+        // Collect performance snapshot every perf_interval seconds
         self.perf_timer += dt;
-        if self.perf_timer >= PERF_INTERVAL {
+        if self.perf_timer >= self.perf_interval {
             self.perf_timer = 0.0;
             if let Some(snapshot_json) = self.collect_performance_snapshot() {
                 batch.push(snapshot_json);
