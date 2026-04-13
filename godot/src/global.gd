@@ -872,6 +872,15 @@ func _notification(what: int) -> void:
 			if new_url.is_empty():
 				return
 
+			# On cold start (NOTIFICATION_READY), pre-set the environment from the deeplink
+			# BEFORE processing it. This prevents _check_dclenv_change() from seeing a
+			# difference (default "org" vs deeplink env) and calling sign_out() prematurely,
+			# which would skip the orientation/UI zoom setup in main.gd.
+			if what == NOTIFICATION_READY:
+				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
+				if not parsed.dclenv.is_empty():
+					DclGlobal.set_dcl_environment(parsed.dclenv)
+
 			deep_link_router.process_deep_link(new_url)
 
 
