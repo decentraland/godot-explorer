@@ -285,7 +285,7 @@ func async_close_sign_in():
 func _ready():
 	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
 	label_version.set_text(DclGlobal.get_version_with_env())
-	#button_enter_as_guest.visible = DclGlobal.is_dev()
+	button_enter_as_guest.visible = DclGlobal.is_dev()
 
 	Global.music_player.play.call_deferred("music_builder")
 
@@ -522,7 +522,7 @@ func _on_button_continue_pressed():
 
 func _on_button_start_pressed():
 	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	#button_enter_as_guest.visible = DclGlobal.is_dev()
+	button_enter_as_guest.visible = DclGlobal.is_dev()
 	sign_in_title.text = "Create your account"
 	is_creating_account = true
 	show_auth_home_screen()
@@ -559,7 +559,7 @@ func _on_button_random_name_pressed():
 
 func _on_button_go_to_sign_in_pressed():
 	Global.metrics.track_click_button("sign_in", current_screen_name, "")
-	#button_enter_as_guest.visible = DclGlobal.is_dev()
+	button_enter_as_guest.visible = DclGlobal.is_dev()
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
 	show_auth_home_screen()
