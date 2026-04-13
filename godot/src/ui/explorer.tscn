@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=38 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
@@ -30,6 +30,7 @@
 [ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/url_popup/url_popup.tscn" id="27_url_popup"]
 [ext_resource type="PackedScene" uid="uid://ks0sxu8dsf66" path="res://src/ui/components/jump_in_popup/jump_in_popup.tscn" id="28_jump_in_popup"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
+[ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="33_settings"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_smf4l"]
 content_margin_left = 7.0
@@ -61,6 +62,13 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_u4dfr"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_bg"]
+bg_color = Color(0.133333, 0.129412, 0.145098, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
 
@@ -349,13 +357,30 @@ mouse_filter = 2
 [node name="NotificationsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels" instance=ExtResource("14_notif_panel")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(400, 500)
+custom_minimum_size = Vector2(450, 500)
 layout_mode = 2
 size_flags_vertical = 3
 
 [node name="FriendsPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels" instance=ExtResource("21_cwgs4")]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="SettingsPanel" type="PanelContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(640, 0)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_settings_bg")
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels/SettingsPanel"]
+layout_mode = 2
+theme_override_constants/margin_top = 28
+
+[node name="Settings" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels/SettingsPanel/MarginContainer" instance=ExtResource("33_settings")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+panel_mode = true
 
 [node name="VSeparator" type="VSeparator" parent="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels"]
 layout_mode = 2
@@ -488,6 +513,7 @@ layout_mode = 1
 
 [node name="SafeMarginContainerDebug" type="MarginContainer" parent="UI"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

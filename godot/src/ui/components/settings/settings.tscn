@@ -1,4 +1,4 @@
-[gd_scene load_steps=47 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=42 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -54,17 +54,6 @@ font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 [sub_resource type="Theme" id="Theme_7krp8"]
 CheckBox/font_sizes/font_size = 19
 
-[sub_resource type="Theme" id="Theme_47ptg"]
-Label/font_sizes/font_size = 23
-
-[sub_resource type="Theme" id="Theme_h5vs5"]
-Label/font_sizes/font_size = 14
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nra8i"]
-
-[sub_resource type="Theme" id="Theme_n3110"]
-Label/font_sizes/font_size = 14
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_47ptg"]
 
 [sub_resource type="Theme" id="Theme_3h20j"]
@@ -72,8 +61,6 @@ Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 Label/font_sizes/font_size = 19
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ewc0a"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mwb5b"]
 
 [node name="Control_SettingsPanel" type="TextureRect"]
 anchors_preset = 15
@@ -127,9 +114,9 @@ flat = true
 expand_icon = true
 
 [node name="Label_Title" type="Label" parent="VBoxContainer/SafeTopMarginContainer_Header/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_1ym31")
-theme_override_font_sizes/font_size = 28
 text = "Settings"
 label_settings = ExtResource("6_sa1v7")
 
@@ -297,7 +284,9 @@ size_flags_horizontal = 3
 
 [node name="VBoxContainer_Gameplay" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
+mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 72
@@ -321,6 +310,7 @@ title = "CHAT & SOCIAL"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
@@ -358,6 +348,7 @@ title = "INTERFACE"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
@@ -398,6 +389,7 @@ title = "GAMEPAD"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Gamepad/SectionGamepad/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
@@ -421,6 +413,7 @@ title = "TEMPORARY FILES"
 
 [node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
@@ -475,6 +468,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 50
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
@@ -486,6 +480,7 @@ description = "Sets how much storage the app can use."
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 74
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
@@ -494,68 +489,71 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 focus_mode = 0
+mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
 text = "CLEAN CACHE"
 
 [node name="HSeparator4" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="Label_CleanCacheDescription" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage"]
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
 theme_override_font_sizes/font_size = 12
 text = "Clears downloaded files used to speed up loading. Safe to delete."
 label_settings = ExtResource("19_t1cvu")
+autowrap_mode = 2
 text_overrun_behavior = 4
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 20
-
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics"]
-layout_mode = 2
-size_flags_horizontal = 3
+mouse_filter = 2
 theme_override_constants/separation = 72
 
-[node name="SectionPerformance" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer"]
+[node name="SectionPerformance" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="SectionTittle_Performance" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer" instance=ExtResource("15_h5vs5")]
+[node name="SectionTittle_Performance" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer" instance=ExtResource("15_h5vs5")]
 layout_mode = 2
 title = "PERFORMANCE"
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="DynamicGraphics" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer"]
+[node name="DynamicGraphics" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 32
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics"]
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 13
 theme_override_styles/separator = SubResource("StyleBoxEmpty_blskf")
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
@@ -563,12 +561,13 @@ theme_override_font_sizes/font_size = 14
 text = "Dynamic Graphics"
 label_settings = ExtResource("17_67hd5")
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_blskf")
 
-[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
+[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
@@ -579,59 +578,65 @@ label_settings = ExtResource("19_t1cvu")
 autowrap_mode = 2
 text_overrun_behavior = 4
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 5
 theme_override_styles/separator = SubResource("StyleBoxEmpty_blskf")
 
-[node name="CheckButton_DynamicGraphics" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics"]
+[node name="CheckButton_DynamicGraphics" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 30
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="DropdownList_GraphicProfiles" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer" instance=ExtResource("20_67hd5")]
+[node name="DropdownList_GraphicProfiles" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer" instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Graphics Profile"
 description = "Sets a graphics quality preset for your device."
 
-[node name="SectionVisual" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer"]
+[node name="SectionVisual" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="SectionTittle_Visual" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer" instance=ExtResource("15_h5vs5")]
+[node name="SectionTittle_Visual" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" instance=ExtResource("15_h5vs5")]
 layout_mode = 2
 title = "VISUAL"
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="DynamicSkybox" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
+[node name="DynamicSkybox" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 32
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox"]
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 13
 theme_override_styles/separator = SubResource("StyleBoxEmpty_blskf")
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
@@ -639,12 +644,13 @@ theme_override_font_sizes/font_size = 14
 text = "Dynamic Skybox"
 label_settings = ExtResource("17_67hd5")
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_blskf")
 
-[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
+[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
@@ -655,260 +661,73 @@ label_settings = ExtResource("19_t1cvu")
 autowrap_mode = 2
 text_overrun_behavior = 4
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 5
 theme_override_styles/separator = SubResource("StyleBoxEmpty_blskf")
 
-[node name="CheckButton_DynamicSkybox" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox"]
+[node name="CheckButton_DynamicSkybox" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 30
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="DropdownList_CustomSkybox" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer" instance=ExtResource("20_67hd5")]
+[node name="DropdownList_CustomSkybox" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Custom Skybox"
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 28
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="PreviewViewportContainer" type="SubViewportContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
+[node name="PreviewViewportContainer" type="SubViewportContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(500, 351)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer"]
+[node name="SubViewport" type="SubViewport" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer"]
 handle_input_locally = false
 size = Vector2i(500, 351)
 render_target_clear_mode = 2
-render_target_update_mode = 0
+render_target_update_mode = 4
 
-[node name="PreviewCamera3D" type="Camera3D" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/PreviewViewportContainer/SubViewport"]
+[node name="PreviewCamera3D" type="Camera3D" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
 cull_mask = 524287
 current = true
 
-[node name="GraphicProfile" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer"]
+[node name="HSeparator4" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 28
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="GraphicProfile" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer"]
 visible = false
 layout_mode = 2
 alignment = 1
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/GraphicProfile"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/GraphicProfile"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Graphic Profile"
 
-[node name="RadioSelector_GraphicProfile" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/GraphicProfile" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_GraphicProfile" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/GraphicProfile" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_7krp8")
 items = Array[String](["VERY LOW", "LOW", "MEDIUM", "HIGH", "CUSTOM"])
-
-[node name="VBoxContainer_Windowed" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-
-[node name="Label_Windowed" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "Window mode"
-
-[node name="RadioSelector_Windowed" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed" instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-theme = SubResource("Theme_7krp8")
-items = Array[String](["Windowed", "Borderless", "Full Screen"])
-
-[node name="UiZoom" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer"]
-visible = false
-layout_mode = 2
-size_flags_vertical = 4
-alignment = 1
-
-[node name="Label_UiZoom" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/UiZoom"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "2D UI Zoom"
-
-[node name="RadioSelector_UiZoom" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/UiZoom" instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-theme = SubResource("Theme_7krp8")
-items = Array[String](["Max"])
-
-[node name="LimitFps" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_vertical = 0
-alignment = 1
-
-[node name="Label_LimitFps" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/LimitFps"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "Limit FPS"
-
-[node name="RadioSelector_LimitFps" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/LimitFps" instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-theme = SubResource("Theme_7krp8")
-items = Array[String](["VSync", "No limit", "18 FPS", "30 FPS", "60 FPS"])
-
-[node name="Resolution3DScale" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_vertical = 4
-alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale"]
-layout_mode = 2
-
-[node name="Label_Resolution3DScale" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale/HBoxContainer"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "3D Resolution scale"
-
-[node name="Label_Resolution3DScale2" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale/HBoxContainer"]
-self_modulate = Color(1, 1, 1, 0.784314)
-layout_mode = 2
-theme = SubResource("Theme_h5vs5")
-text = "(lower value might improve performance)"
-vertical_alignment = 1
-
-[node name="HSlider_Resolution3DScale" type="HSlider" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale"]
-unique_name_in_owner = true
-layout_mode = 2
-min_value = 0.5
-max_value = 1.0
-step = 0.1
-value = 1.0
-
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics"]
-layout_mode = 2
-theme_override_constants/separation = 70
-theme_override_styles/separator = SubResource("StyleBoxEmpty_nra8i")
-
-[node name="CustomSettings" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics"]
-visible = false
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-
-[node name="VBoxContainer_Custom" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 30
-
-[node name="Skybox" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
-layout_mode = 2
-size_flags_vertical = 0
-alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Skybox"]
-layout_mode = 2
-
-[node name="Label_Skybox" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Skybox/HBoxContainer"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "Skybox"
-
-[node name="RadioSelector_Skybox" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Skybox" instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-theme = SubResource("Theme_7krp8")
-items = Array[String](["BASIC", "NORMAL", "REALISTIC"])
-
-[node name="Shadows" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
-layout_mode = 2
-size_flags_vertical = 0
-alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Shadows"]
-layout_mode = 2
-
-[node name="Label_Skybox" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Shadows/HBoxContainer"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "Shadows"
-
-[node name="RadioSelector_Shadow" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Shadows" instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-items = Array[String](["DISABLED", "NORMAL", "HIGH QUALITY"])
-
-[node name="Bloom" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
-layout_mode = 2
-size_flags_vertical = 0
-alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Bloom"]
-layout_mode = 2
-
-[node name="Label_Bloom" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Bloom/HBoxContainer"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "Bloom"
-
-[node name="RadioSelector_Bloom" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Bloom" instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-items = Array[String](["OFF", "LOW", "HIGH"])
-
-[node name="Antialiasing" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
-layout_mode = 2
-size_flags_vertical = 0
-alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing"]
-layout_mode = 2
-
-[node name="Label_Antialiasing" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing/HBoxContainer"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "Anti-aliasing"
-
-[node name="RadioSelector_AA" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing" instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-items = Array[String](["OFF", "X2", "X4", "X8"])
-
-[node name="TextureQuality" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
-layout_mode = 2
-size_flags_vertical = 0
-alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality"]
-layout_mode = 2
-
-[node name="Label_Antialiasing" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality/HBoxContainer"]
-layout_mode = 2
-theme = SubResource("Theme_47ptg")
-text = "Texture Quality"
-
-[node name="Label_Resolution3DScale2" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality/HBoxContainer"]
-self_modulate = Color(1, 1, 1, 0.784314)
-layout_mode = 2
-theme = SubResource("Theme_n3110")
-text = "(requires restart of the client to take effect)"
-vertical_alignment = 1
-
-[node name="RadioSelector_TextureQuality" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality" instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-items = Array[String](["LOW", "MEDIUM", "HIGH", "SOURCE"])
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections"]
 unique_name_in_owner = true
@@ -1067,22 +886,10 @@ label_settings = ExtResource("17_67hd5")
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="HSeparator6" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 74
-theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
-
 [node name="DropdownList_Realm" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Realm"
-
-[node name="HSeparator7" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 74
-theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
 [node name="VBoxContainer_Connection" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced"]
 custom_minimum_size = Vector2(400, 0)
@@ -1158,18 +965,7 @@ size_flags_vertical = 3
 mouse_filter = 2
 theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
-theme_override_constants/separation = 0
-
-[node name="Button_AllNotifications" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account"]
-visible = false
-custom_minimum_size = Vector2(300, 50)
-layout_mode = 2
-size_flags_horizontal = 0
-theme = ExtResource("12_sa1v7")
-theme_override_font_sizes/font_size = 22
-disabled = true
-button_pressed = true
-text = "ALL NOTIFICATIONS"
+theme_override_constants/separation = 72
 
 [node name="SectionReport" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account"]
 layout_mode = 2
@@ -1215,6 +1011,7 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
+mouse_filter = 1
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1226,11 +1023,6 @@ icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
 icon_alignment = 2
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account"]
-layout_mode = 2
-theme_override_constants/separation = 72
-theme_override_styles/separator = SubResource("StyleBoxEmpty_mwb5b")
 
 [node name="SectionHelp" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account"]
 layout_mode = 2
@@ -1276,6 +1068,7 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
+mouse_filter = 1
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1293,6 +1086,7 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
+mouse_filter = 1
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1310,6 +1104,7 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
+mouse_filter = 1
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1327,6 +1122,7 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
+mouse_filter = 1
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_constants/h_separation = 16
@@ -1338,12 +1134,6 @@ icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
 icon_alignment = 2
-
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 72
-theme_override_styles/separator = SubResource("StyleBoxEmpty_mwb5b")
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account"]
 layout_mode = 2
@@ -1379,19 +1169,10 @@ font = ExtResource("25_jf4mt")
 [connection signal="value_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Gamepad/SectionGamepad/VBoxContainer/GamepadCameraSensitivity" to="." method="_on_gamepad_camera_sensitivity_value_changed"]
 [connection signal="visibility_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
-[connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionPerformance/VBoxContainer/DropdownList_GraphicProfiles" to="." method="_on_dropdown_list_graphic_profiles_item_selected"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DynamicSkybox/CheckButton_DynamicSkybox" to="." method="_on_check_button_dynamic_skybox_toggled"]
-[connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/SectionVisual/VBoxContainer/DropdownList_CustomSkybox" to="." method="_on_dropdown_list_custom_skybox_item_selected"]
-[connection signal="select_item" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed/RadioSelector_Windowed" to="." method="_on_radio_selector_windowed_select_item"]
-[connection signal="select_item" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/UiZoom/RadioSelector_UiZoom" to="." method="_on_radio_selector_ui_zoom_select_item"]
-[connection signal="select_item" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/LimitFps/RadioSelector_LimitFps" to="." method="_on_radio_selector_select_item"]
-[connection signal="drag_ended" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale/HSlider_Resolution3DScale" to="." method="_on_h_slider_rendering_scale_drag_ended"]
-[connection signal="select_item" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Skybox/RadioSelector_Skybox" to="." method="_on_radio_selector_skybox_select_item"]
-[connection signal="select_item" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Shadows/RadioSelector_Shadow" to="." method="_on_radio_selector_shadow_select_item"]
-[connection signal="select_item" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Bloom/RadioSelector_Bloom" to="." method="_on_radio_selector_bloom_select_item"]
-[connection signal="select_item" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing/RadioSelector_AA" to="." method="_on_radio_selector_aa_select_item"]
-[connection signal="select_item" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality/RadioSelector_TextureQuality" to="." method="_on_radio_selector_texture_quality_select_item"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
+[connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DropdownList_GraphicProfiles" to="." method="_on_dropdown_list_graphic_profiles_item_selected"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/CheckButton_DynamicSkybox" to="." method="_on_check_button_dynamic_skybox_toggled"]
+[connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DropdownList_CustomSkybox" to="." method="_on_dropdown_list_custom_skybox_item_selected"]
 [connection signal="value_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/GeneralVolume" to="." method="_on_h_slider_general_volume_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/UIVolume" to="." method="_on_h_slider_ui_volume_value_changed"]
