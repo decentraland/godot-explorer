@@ -967,8 +967,9 @@ fn get_connected_ios_device() -> anyhow::Result<String> {
 
     // Parse the table output to find connected devices
     // Lines contain: Name  Hostname  Identifier  State  ...
+    // State can be "connected", "available", "available (paired)", etc.
     for line in stdout.lines() {
-        if line.contains("connected") {
+        if line.contains("connected") || line.contains("available") {
             // Extract the UUID (format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
             for word in line.split_whitespace() {
                 if word.len() == 36 && word.chars().filter(|c| *c == '-').count() == 4 {
