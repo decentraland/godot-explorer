@@ -125,9 +125,6 @@ func _ready():
 	# Connect to blacklist changes
 	Global.social_blacklist.blacklist_changed.connect(self._on_blacklist_changed)
 
-	# Retry avatar loading when connection is restored
-	ConnectionQualityMonitor.connection_restored.connect(self._on_connection_restored)
-
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_main_category_filter_type)
@@ -632,15 +629,6 @@ func _exit_tree():
 
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
-
-	if ConnectionQualityMonitor.connection_restored.is_connected(self._on_connection_restored):
-		ConnectionQualityMonitor.connection_restored.disconnect(self._on_connection_restored)
-
-
-func _on_connection_restored() -> void:
-	# Reset retry counter and immediately try to load avatar
-	_avatar_update_retries = 0
-	request_update_avatar = true
 
 
 func _on_blacklist_changed():
