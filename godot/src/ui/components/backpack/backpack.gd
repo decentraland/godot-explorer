@@ -35,6 +35,7 @@ var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
 var _avatar_update_retries: int = 0
+var _is_currently_narrow: bool = false
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
@@ -55,6 +56,8 @@ var _avatar_update_retries: int = 0
 
 @onready var wearable_editor = %WearableEditor
 @onready var emote_editor = %EmoteEditor
+@onready var emote_name_anim = get_node_or_null("%EmoteNameAnim")
+@onready var avatar_vfx: AnimatedTextureRect = get_node_or_null("%AvatarVFX")
 
 @onready var container_navbar = %PanelContainer_Navbar
 @onready var button_emotes = %Button_Emotes
@@ -71,6 +74,8 @@ var _avatar_update_retries: int = 0
 @onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
 @onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
 @onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
+@onready var hseparator_size_maintainer: HSeparator = get_node_or_null("%HSeparator_SizeMaintainer")
+@onready var control_left_bar: Control = get_node_or_null("%Control_LeftBar")
 
 
 # gdlint:ignore = async-function-name
@@ -88,6 +93,7 @@ func _ready():
 
 	emote_editor.avatar = avatar_preview.avatar
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
+	emote_editor.emote_equipped.connect(self._on_emote_equipped)
 	wearable_editor.show()
 	emote_editor.hide()
 	filter_menu.hide()
@@ -118,6 +124,9 @@ func _ready():
 
 	# Connect to blacklist changes
 	Global.social_blacklist.blacklist_changed.connect(self._on_blacklist_changed)
+
+	# Retry avatar loading when connection is restored
+	ConnectionQualityMonitor.connection_restored.connect(self._on_connection_restored)
 
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
@@ -183,6 +192,54 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_left", 20)
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
+		emote_editor._on_landscape()
+
+	_update_grid_columns()
+
+
+func _update_grid_columns() -> void:
+	if not is_node_ready():
+		return
+	if grid_container_wearables_list == null or emote_editor == null:
+		return
+
+	# Check if the Wearables button gets clipped by its container
+	var is_narrow := _is_wearables_button_clipped()
+	var columns := 2 if is_narrow else 3
+
+	grid_container_wearables_list.columns = columns
+	if emote_editor.container_all_emotes != null:
+		emote_editor.container_all_emotes.columns = columns
+
+	if hseparator_size_maintainer != null:
+		hseparator_size_maintainer.visible = not is_narrow
+
+
+func _is_wearables_button_clipped() -> bool:
+	if button_wearables == null or control_left_bar == null:
+		return _is_currently_narrow
+
+	# Check if the button extends outside the Control_LeftBar bounds (left or right)
+	var button_rect: Rect2 = button_wearables.get_global_rect()
+	var container_rect: Rect2 = control_left_bar.get_global_rect()
+
+	var button_left := button_rect.position.x
+	var button_right := button_rect.position.x + button_rect.size.x
+	var container_left := container_rect.position.x
+	var container_right := container_rect.position.x + container_rect.size.x
+
+	# Hysteresis: require margin before switching back to 3 columns
+	const HYSTERESIS_MARGIN := 100.0
+	var is_clipped: bool
+	if _is_currently_narrow:
+		# Currently narrow - only switch back if button has enough margin on both sides
+		is_clipped = button_left < container_left + HYSTERESIS_MARGIN
+	else:
+		# Currently wide - switch to narrow if button is clipped at all
+		is_clipped = button_left < container_left or button_right > container_right
+
+	_is_currently_narrow = is_clipped
+	return is_clipped
 
 
 func _update_visible_categories():
@@ -254,22 +311,11 @@ func _async_update_avatar():
 	var mutable_profile = Global.player_identity.get_mutable_profile()
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()
 	if mutable_profile == null or mutable_avatar == null:
+		# Profile not ready - keep retrying, connection_quality_monitor handles modal
 		_avatar_update_retries += 1
-		if _avatar_update_retries >= 3:
-			_avatar_update_retries = 0
-			printerr("Failed to load avatar after 3 attempts: profile or avatar is null")
-			if Global.modal_manager != null:
-				Global.modal_manager.async_show_connection_lost_modal()
-				Global.modal_manager.connection_lost_retry.connect(
-					func(): request_update_avatar = true, CONNECT_ONE_SHOT
-				)
-				Global.modal_manager.connection_lost_exit.connect(
-					func(): get_tree().quit(), CONNECT_ONE_SHOT
-				)
-		else:
-			printerr("Avatar update retry %d/3, waiting 1s..." % _avatar_update_retries)
-			await get_tree().create_timer(1.0).timeout
-			request_update_avatar = true
+		var delay := minf(1.0 * _avatar_update_retries, 5.0)  # Cap at 5 seconds
+		await get_tree().create_timer(delay).timeout
+		request_update_avatar = true
 		return
 	_avatar_update_retries = 0
 	mutable_profile.set_avatar(mutable_avatar)
@@ -496,6 +542,8 @@ func _on_button_wearables_pressed():
 	avatar_preview.avatar.emote_controller.stop_emote()
 	wearable_editor.show()
 	emote_editor.hide()
+	if emote_name_anim != null:
+		emote_name_anim.hide()
 
 
 func _on_button_emotes_pressed():
@@ -506,6 +554,8 @@ func show_emotes() -> void:
 	avatar_preview.focus_camera_on(Wearables.Categories.BODY_SHAPE)
 	wearable_editor.hide()
 	emote_editor.show()
+	if emote_name_anim != null:
+		emote_name_anim.show()
 
 
 func press_button_emotes() -> void:
@@ -583,6 +633,15 @@ func _exit_tree():
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
 
+	if ConnectionQualityMonitor.connection_restored.is_connected(self._on_connection_restored):
+		ConnectionQualityMonitor.connection_restored.disconnect(self._on_connection_restored)
+
+
+func _on_connection_restored() -> void:
+	# Reset retry counter and immediately try to load avatar
+	_avatar_update_retries = 0
+	request_update_avatar = true
+
 
 func _on_blacklist_changed():
 	# Don't trigger deployment if we're loading a profile from server
@@ -624,13 +683,31 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		Global.set_orientation_portrait()
+		#Global.set_orientation_portrait()
 		if Global.get_explorer():
 			if button_back_to_explorer:
-				button_back_to_explorer.show()
+				#button_back_to_explorer.show()
+				button_back_to_explorer.hide()
 
 
 func _on_button_back_to_explorer_pressed() -> void:
 	if Global.get_explorer():
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
+
+
+func _on_emote_equipped(equipped: bool) -> void:
+	if not equipped:
+		return
+	Global.send_haptic_feedback(80, 0.5)
+	var tween := create_tween()
+	tween.tween_property(avatar_preview, "modulate:a", 0.0, 0.2)
+	tween.tween_callback(
+		func() -> void:
+			if avatar_vfx != null:
+				avatar_vfx.play()
+			var urn: String = emote_editor.last_equipped_emote_urn
+			if not urn.is_empty():
+				avatar_preview.avatar.async_play_emote(urn)
+	)
+	tween.tween_property(avatar_preview, "modulate:a", 1.0, 0.3)
