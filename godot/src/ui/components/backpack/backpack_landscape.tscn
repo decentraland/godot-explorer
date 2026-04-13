@@ -136,7 +136,6 @@ min_margin_top = 48
 
 [node name="HBoxContainer_Backpack" type="HBoxContainer" parent="SafeMarginContainer"]
 unique_name_in_owner = true
-clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -381,7 +380,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 size_flags_stretch_ratio = 0.0
-theme_override_constants/margin_left = 20
+theme_override_constants/margin_left = 18
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 20
 
@@ -393,6 +392,7 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor"]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 110
 theme_override_styles/separator = SubResource("StyleBoxEmpty_fi3i1")

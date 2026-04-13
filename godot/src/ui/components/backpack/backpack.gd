@@ -205,8 +205,8 @@ func _update_grid_columns() -> void:
 	var columns := 2 if is_narrow else 3
 
 	grid_container_wearables_list.columns = columns
-	if emote_editor.container_all_emotes != null:
-		emote_editor.container_all_emotes.columns = columns
+	#if emote_editor.container_all_emotes != null:
+		#emote_editor.container_all_emotes.columns = columns
 
 	if hseparator_size_maintainer != null:
 		hseparator_size_maintainer.visible = not is_narrow
