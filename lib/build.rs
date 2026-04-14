@@ -286,19 +286,6 @@ impl SceneCrdtStateProtoComponents {{
     generate_file(dest_path, output_str.as_bytes());
 }
 
-fn generate_social_service() -> io::Result<()> {
-    let mut conf = prost_build::Config::new();
-    conf.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
-    conf.compile_protos(
-        &[
-            "src/dcl/components/proto/decentraland/social_service/errors.proto",
-            "src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto",
-        ],
-        &["src/dcl/components/proto"],
-    )?;
-    Ok(())
-}
-
 fn main() -> io::Result<()> {
     // ---------- Linux, Android, the BSDs, Windows-gnu, and other ld/LLD users
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
@@ -355,6 +342,14 @@ fn main() -> io::Result<()> {
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/v3/archipelago.proto").into(),
     );
 
+    // Social service protos (with RPC services)
+    proto_files.push(
+        format!("{PROTO_FILES_BASE_DIR}decentraland/social_service/errors.proto").into(),
+    );
+    proto_files.push(
+        format!("{PROTO_FILES_BASE_DIR}decentraland/social_service/v2/social_service_v2.proto").into(),
+    );
+
     generate_enum(&proto_components);
     generate_impl_crdt(&proto_components);
     generate_dcl_component_impl(&proto_components);
@@ -370,10 +365,12 @@ fn main() -> io::Result<()> {
         .expect("Failed to canonicalize protoc path");
 
     std::env::set_var("PROTOC", protoc_path);
-    prost_build::compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
 
-    // Generate social service with RPC support
-    generate_social_service()?;
+    // Single prost compilation with service generator for RPC support
+    // (service generator only affects protos that define services)
+    let mut conf = prost_build::Config::new();
+    conf.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
+    conf.compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
 
     #[cfg(feature = "use_livekit")]
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
@@ -384,12 +381,6 @@ fn main() -> io::Result<()> {
         let value = source.to_str().unwrap();
         println!("cargo:rerun-if-changed={value}");
     }
-
-    // Also watch the social service proto files
-    println!(
-        "cargo:rerun-if-changed=src/dcl/components/proto/decentraland/social_service/errors.proto"
-    );
-    println!("cargo:rerun-if-changed=src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto");
 
     set_godot_explorer_version();
 
