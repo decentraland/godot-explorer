@@ -70,7 +70,6 @@ var _is_currently_narrow: bool = false
 @onready var subcategories_separator := %SubcategoriesSeparator
 @onready var maincategories_container := %MainCategoriesContainer
 @onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
-@onready var open_marketplace_label := %RichTextBox_OpenMarketplace
 @onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
 @onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
 @onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
@@ -110,10 +109,6 @@ func _ready():
 	maincategories_container.show()
 	hseparator_extra_space.hide()
 	hseparator_extra_space_b.hide()
-
-	open_marketplace_label.show()
-	if Global.is_ios():
-		open_marketplace_label.hide()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -529,10 +524,6 @@ func _on_color_picker_panel_pick_color(color: Color):
 
 func _on_color_set() -> void:
 	request_update_avatar = true
-
-
-func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
-	Global.open_url(DclUrls.marketplace() + "/browse?section=wearables")
 
 
 func _on_button_wearables_pressed():

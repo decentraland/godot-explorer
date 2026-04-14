@@ -22,6 +22,7 @@ var _only_collectibles: bool = false
 
 @onready var container_avatar_emotes = %VBoxContainer_AvatarEmotes
 @onready var container_all_emotes = %GridContainer_Emotes
+@onready var control_no_emotes = %Control_NoEmotes
 @onready var button_group_avatar_emotes = ButtonGroup.new()
 @onready var button_group_all_emotes = ButtonGroup.new()
 @onready var scroll_container_grid: ScrollContainer = %ScrollContainer_Grid
@@ -99,7 +100,15 @@ func _async_load_emotes():
 	all_emote_items.clear()
 
 	await _async_load_remote_emotes()
+	_update_empty_state()
 	_sync_grid_selection()
+
+
+func _update_empty_state():
+	var is_empty := all_emote_items.is_empty()
+	if control_no_emotes != null:
+		control_no_emotes.visible = is_empty
+	container_all_emotes.visible = not is_empty
 
 
 func _on_avatar_loaded():

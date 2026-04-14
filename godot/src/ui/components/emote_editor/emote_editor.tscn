@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3 uid="uid://cse8fx0ei572e"]
+[gd_scene load_steps=8 format=3 uid="uid://cse8fx0ei572e"]
 
 [ext_resource type="Script" uid="uid://qv75d4qodnwj" path="res://src/ui/components/emote_editor/emote_editor.gd" id="1_xxj75"]
 [ext_resource type="PackedScene" uid="uid://c6t7jqpx38nxd" path="res://src/ui/components/emote_editor/emote_editor_item.tscn" id="2_3uk1s"]
 [ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="2_7jnql"]
+[ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/components/backpack/no_items_message.tscn" id="4_noitems"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5ejwy"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -150,6 +151,7 @@ theme_override_constants/margin_right = 0
 theme_override_constants/margin_bottom = 0
 
 [node name="PanelContainer" type="PanelContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer"]
+custom_minimum_size = Vector2(0, 504)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_xdeik")
 
@@ -160,6 +162,7 @@ theme_override_constants/margin_top = 38
 [node name="ScrollContainer_Grid" type="ScrollContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
 focus_mode = 1
 follow_focus = true
 horizontal_scroll_mode = 0
@@ -180,5 +183,10 @@ layout_mode = 2
 theme_override_constants/h_separation = 30
 theme_override_constants/v_separation = 28
 columns = 3
+
+[node name="Control_NoEmotes" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer" instance=ExtResource("4_noitems")]
+unique_name_in_owner = true
+layout_mode = 2
+marketplace_section = "emotes"
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

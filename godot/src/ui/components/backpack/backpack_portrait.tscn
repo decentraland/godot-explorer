@@ -1,4 +1,4 @@
-[gd_scene load_steps=48 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=45 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -21,9 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://cf4f5teas815x" path="res://src/ui/components/color_carrousel/color_carrousel.tscn" id="19_k780d"]
 [ext_resource type="Script" uid="uid://drm7w13o3wggu" path="res://src/ui/components/animated_texture_rect/animated_texture_rect.gd" id="19_ku1si"]
 [ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/components/discover/icons/back.svg" id="19_t0yet"]
-[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="21_k780d"]
-[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="22_et6he"]
-[ext_resource type="Texture2D" uid="uid://10ljw6k05g33" path="res://assets/ui/backpack/no-items-in-category.svg" id="27_kffkw"]
+[ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/components/backpack/no_items_message.tscn" id="27_noitems"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/emote_editor/emote_editor.tscn" id="30_vfwc7"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="34_gaa2l"]
 
@@ -95,10 +93,6 @@ resource_local_to_scene = false
 resource_local_to_scene = false
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_et6he"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_t0yet"]
-font = ExtResource("21_k780d")
-font_size = 40
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_18vfg"]
 
@@ -843,46 +837,11 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 60
 theme_override_constants/margin_bottom = 60
 
-[node name="Control_NoItems" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer"]
+[node name="Control_NoItems" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer" instance=ExtResource("27_noitems")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
-custom_minimum_size = Vector2(120, 120)
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("27_kffkw")
-expand_mode = 3
-stretch_mode = 5
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
-layout_mode = 2
-theme_override_constants/separation = 24
-theme_override_styles/separator = SubResource("StyleBoxEmpty_et6he")
-
-[node name="Label" type="Label" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
-layout_mode = 2
-text = "Nothing here yet"
-label_settings = SubResource("LabelSettings_t0yet")
-horizontal_alignment = 1
-
-[node name="RichTextBox_OpenMarketplace" type="RichTextLabel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("22_et6he")
-theme_override_font_sizes/normal_font_size = 28
-bbcode_enabled = true
-text = "Find new ones in the
-[color=#A0ABFF][url]Marketplace[/url][/color]"
-fit_content = true
-scroll_active = false
-autowrap_mode = 2
-horizontal_alignment = 1
+marketplace_section = "wearables"
 
 [node name="EmoteEditor" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" instance=ExtResource("30_vfwc7")]
 unique_name_in_owner = true
@@ -948,6 +907,5 @@ texture = SubResource("GradientTexture2D_yjmsa")
 [connection signal="color_picked" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_picker_panel_pick_color"]
 [connection signal="color_set" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_set"]
 [connection signal="toggle_color_picker" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_carrousel_toggle_color_picker"]
-[connection signal="meta_clicked" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems/RichTextBox_OpenMarketplace" to="." method="_on_rich_text_box_open_marketplace_meta_clicked"]
 [connection signal="emote_equipped" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/EmoteEditor" to="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/EmoteNameAnim" method="set_equipped"]
 [connection signal="emote_grid_selected" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/EmoteEditor" to="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/EmoteNameAnim" method="set_emote_name"]
