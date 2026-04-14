@@ -261,6 +261,14 @@ fn log_crdt_message(
 
 const CRDT_PUT_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 20;
 const CRDT_DELETE_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 16;
+const CRDT_DELETE_ENTITY_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 4;
+
+#[allow(dead_code)]
+pub fn delete_entity(entity_id: &SceneEntityId, writer: &mut DclWriter) {
+    writer.write_u32(CRDT_DELETE_ENTITY_HEADER_SIZE as u32);
+    writer.write(&CrdtMessageType::DeleteEntity);
+    writer.write(entity_id);
+}
 
 pub fn put_or_delete_lww_component(
     scene_crdt_state: &SceneCrdtState,

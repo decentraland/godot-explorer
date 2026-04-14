@@ -35,8 +35,8 @@ boot_splash/minimum_display_time=300
 
 [autoload]
 
-Global="*res://src/global.gd"
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
+Global="*res://src/global.gd"
 NotificationsManager="*res://src/notifications_manager.gd"
 ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"

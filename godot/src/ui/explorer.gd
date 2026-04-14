@@ -211,7 +211,7 @@ func _ready():
 		var bridge = SceneInspectorBridge.new()
 		bridge.set_name("scene_inspector_bridge")
 		add_child(bridge)
-		bridge.setup(scene_inspector_target, Global.scene_fetcher.get_preview_ws())
+		bridge.setup(scene_inspector_target)
 	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
 	var scene_inspector_file: bool = (
 		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file

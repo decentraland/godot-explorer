@@ -1,20 +1,18 @@
 class_name SceneInspectorBridge
 extends Node
 
-## Bridges Scene Inspector entries from the Rust SceneInspectorDispatcher to
-## output channels:
-## - WebSocket (preview channel or dedicated target)
-## Also handles incoming commands from external tools (SCENE_INSPECTOR_CMD protocol).
+## Bridges Scene Inspector entries from the Rust SceneInspectorDispatcher to a
+## dedicated WebSocket target. Also handles incoming commands from external
+## tools (SCENE_INSPECTOR_CMD protocol).
 
-var _preview_ws: PreviewWebSocket
 var _dedicated_ws: SceneInspectorWebSocket
 var _session_id: String = ""
 
 
-func setup(scene_inspector_target: String, preview_ws: PreviewWebSocket) -> void:
+func setup(scene_inspector_target: String) -> void:
 	_session_id = Global.scene_inspector_dispatcher.get_session_id()
 
-	_connect_to_target(scene_inspector_target, preview_ws)
+	_connect_to_target(scene_inspector_target)
 
 	Global.scene_inspector_dispatcher.scene_inspector_batch.connect(_on_batch)
 
@@ -22,28 +20,24 @@ func setup(scene_inspector_target: String, preview_ws: PreviewWebSocket) -> void
 	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 
 
-func _connect_to_target(target: String, preview_ws: PreviewWebSocket = null) -> void:
-	if target == "true":
-		# Use the existing preview WebSocket if available
-		if preview_ws and not _preview_ws:
-			_preview_ws = preview_ws
-			_preview_ws.scene_inspector_command.connect(_on_command)
-	elif target.begins_with("ws://") or target.begins_with("wss://"):
-		if not _dedicated_ws:
-			_dedicated_ws = SceneInspectorWebSocket.new()
-			_dedicated_ws.set_name("scene_inspector_ws")
-			add_child(_dedicated_ws)
-			_dedicated_ws.command_received.connect(_on_command)
-		# Connect (or reconnect) to the target URL
-		_dedicated_ws.connect_to(target)
+func _connect_to_target(target: String) -> void:
+	if not (target.begins_with("ws://") or target.begins_with("wss://")):
+		printerr("SceneInspectorBridge: unsupported target %s (expected ws:// or wss://)" % target)
+		return
+
+	if not _dedicated_ws:
+		_dedicated_ws = SceneInspectorWebSocket.new()
+		_dedicated_ws.set_name("scene_inspector_ws")
+		add_child(_dedicated_ws)
+		_dedicated_ws.command_received.connect(_on_command)
+
+	# Connect (or reconnect) to the target URL
+	_dedicated_ws.connect_to(target)
 
 	# Emit session_start entry so the receiver knows device info
 	Global.scene_inspector_dispatcher.emit_session_start()
 
-	if _preview_ws:
-		print("SceneInspectorBridge: Preview WebSocket channel active")
-	if _dedicated_ws:
-		print("SceneInspectorBridge: Dedicated WebSocket channel -> ", target)
+	print("SceneInspectorBridge: Dedicated WebSocket channel -> ", target)
 
 	# Hot-connect: send current CRDT state so inspector can reconstruct entity tree
 	_send_crdt_snapshot()
@@ -60,8 +54,7 @@ func _on_deep_link_received() -> void:
 
 
 func _on_batch(entries_json: String) -> void:
-	var ws_target = _dedicated_ws if _dedicated_ws else _preview_ws
-	if ws_target and ws_target.is_open():
+	if _dedicated_ws and _dedicated_ws.is_open():
 		# `entries_json` is already valid JSON from Rust — splicing it into the
 		# envelope as a literal avoids parse → re-stringify on every frame (up
 		# to 500 entries each). `session_id` goes through JSON.stringify so any
@@ -73,7 +66,7 @@ func _on_batch(entries_json: String) -> void:
 			+ entries_json
 			+ "}}"
 		)
-		ws_target.send_raw_text(envelope)
+		_dedicated_ws.send_raw_text(envelope)
 
 
 func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
@@ -139,8 +132,7 @@ func _send_crdt_snapshot() -> void:
 	var snapshot_json := Global.scene_inspector_dispatcher.get_crdt_snapshot_json()
 	if snapshot_json.is_empty():
 		return
-	var ws_target = _dedicated_ws if _dedicated_ws else _preview_ws
-	if ws_target and ws_target.is_open():
+	if _dedicated_ws and _dedicated_ws.is_open():
 		var envelope := (
 			'{"type":"SCENE_INSPECTOR","payload":{"sessionId":'
 			+ JSON.stringify(_session_id)
@@ -148,7 +140,7 @@ func _send_crdt_snapshot() -> void:
 			+ snapshot_json
 			+ "}}"
 		)
-		ws_target.send_raw_text(envelope)
+		_dedicated_ws.send_raw_text(envelope)
 
 
 func _set_all_scenes_paused(paused: bool) -> void:
@@ -160,8 +152,7 @@ func _set_all_scenes_paused(paused: bool) -> void:
 func _send_ack(request_id: String, ok: bool, data: Dictionary) -> void:
 	if request_id.is_empty():
 		return
-	var ws_target = _dedicated_ws if _dedicated_ws else _preview_ws
-	if ws_target and ws_target.is_open():
-		ws_target.send_json(
+	if _dedicated_ws and _dedicated_ws.is_open():
+		_dedicated_ws.send_json(
 			{"type": "SCENE_INSPECTOR_CMD_ACK", "id": request_id, "ok": ok, "data": data}
 		)

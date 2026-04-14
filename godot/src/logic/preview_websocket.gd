@@ -2,7 +2,6 @@ class_name PreviewWebSocket
 extends Node
 
 signal scene_update(scene_id: String)
-signal scene_inspector_command(cmd: String, args: Dictionary, request_id: String)
 
 ## 64 MB outbound buffer — connections are local, never drop messages.
 const OUTBOUND_BUFFER_SIZE := 64 * 1024 * 1024
@@ -26,14 +25,6 @@ func send_json(msg: Dictionary) -> void:
 		_ws.send_text(JSON.stringify(msg))
 
 
-## Send a pre-serialized JSON string. Skips the Dictionary → JSON.stringify round
-## trip — use for hot paths (e.g. scene inspector batches) where the payload is
-## already a JSON string produced by Rust.
-func send_raw_text(text: String) -> void:
-	if _ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
-		_ws.send_text(text)
-
-
 func _process(_delta):
 	_ws.poll()
 
@@ -55,11 +46,6 @@ func _process(_delta):
 					"SCENE_UPDATE":
 						var scene_id = json.get("payload", {}).get("sceneId", "unknown")
 						scene_update.emit(scene_id)
-					"SCENE_INSPECTOR_CMD":
-						var cmd: String = json.get("cmd", "")
-						var args: Dictionary = json.get("args", {})
-						var request_id: String = str(json.get("id", ""))
-						scene_inspector_command.emit(cmd, args, request_id)
 					_:
 						printerr("preview-ws > unknown message type ", msg_type)
 
