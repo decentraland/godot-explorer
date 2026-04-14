@@ -748,7 +748,7 @@ grow_vertical = 2
 theme_override_constants/margin_left = 72
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 72
-theme_override_constants/margin_bottom = 0
+theme_override_constants/margin_bottom = 40
 
 [node name="VBoxFixed" type="VBoxContainer" parent="Main/SignIn/MarginContainer" unique_id=690038950]
 layout_mode = 2
