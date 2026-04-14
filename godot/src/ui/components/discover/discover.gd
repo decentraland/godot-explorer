@@ -117,13 +117,25 @@ func _on_visibility_changed():
 
 
 func _show_low_spec_warning_if_needed():
-	# Only show modal via deep link parameter (FTUE handles normal first-time flow)
+	# Skip if already shown this session
 	if _low_spec_warning_shown:
 		return
+
 	var deeplink_warning = Global.deep_link_obj and Global.deep_link_obj.low_spec_warning
-	if not deeplink_warning:
+	var is_ftue = not Global.get_config().low_spec_warning_shown
+	var is_low_spec = DclIosPlugin.is_available() and DclIosPlugin.is_low_spec_iphone()
+
+	# Show if: deep link forces it OR (FTUE and low-spec device)
+	if not deeplink_warning and not (is_ftue and is_low_spec):
 		return
+
 	_low_spec_warning_shown = true
+
+	# Persist FTUE flag (not for deep link bypass)
+	if is_ftue and is_low_spec:
+		Global.get_config().low_spec_warning_shown = true
+		Global.get_config().save_to_settings_file()
+
 	Global.metrics.track_screen_viewed("MINSPEC_PROMPT", "")
 	Global.modal_manager.async_show_low_spec_iphone_modal()
 

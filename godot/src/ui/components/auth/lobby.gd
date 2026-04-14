@@ -240,18 +240,6 @@ func show_control_ftue():
 		nickname_label.text = current_profile.get_name()
 	show_panel(control_ftue)
 	_async_fetch_ftue_place()
-	_show_low_spec_warning_if_needed()
-
-
-func _show_low_spec_warning_if_needed():
-	var is_low_spec = (
-		Global.cli.low_spec_warning
-		or (DclIosPlugin.is_available() and DclIosPlugin.is_low_spec_iphone())
-	)
-	if not is_low_spec:
-		return
-	Global.metrics.track_screen_viewed("MINSPEC_PROMPT", "")
-	Global.modal_manager.async_show_low_spec_iphone_modal()
 
 
 func _async_fetch_ftue_place() -> void:
