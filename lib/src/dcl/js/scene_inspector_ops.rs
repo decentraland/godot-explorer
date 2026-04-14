@@ -28,7 +28,7 @@ pub fn ops() -> Vec<OpDecl> {
     ]
 }
 
-/// Returns whether the current scene was spawned with `--scene-debug` enabled.
+/// Returns whether the current scene was spawned with `--scene-inspector` enabled.
 /// Called once from `main.js` during `setupOpLogging` so the JS wrapper knows
 /// whether to install itself.
 #[op2(fast)]

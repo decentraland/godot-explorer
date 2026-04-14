@@ -4,7 +4,6 @@
 //! snapshots from Decentraland scenes; also receives inspector commands.
 //! Data is dispatched to GDScript via a signal, which then routes to:
 //! - WebSocket (preview channel or dedicated target)
-//! - Godot Editor Debugger (EngineDebugger)
 //! - JSONL files (optional, when scene-inspector-file is enabled)
 
 pub mod config;
@@ -91,6 +90,20 @@ pub fn is_lifecycle_verbose() -> bool {
     LIFECYCLE_VERBOSE.load(Ordering::Relaxed)
 }
 
+/// When `true`, always attach a hex-encoded copy of the raw proto payload
+/// (`bin_payload`) to every CRDT entry. Default `false`: hex is only attached
+/// as a fallback when JSON deserialization fails, avoiding the ~2x payload
+/// bloat for consumers that only read the decoded JSON.
+static INCLUDE_BIN_PAYLOAD: AtomicBool = AtomicBool::new(false);
+
+pub fn set_include_bin_payload(enabled: bool) {
+    INCLUDE_BIN_PAYLOAD.store(enabled, Ordering::Relaxed);
+}
+
+pub fn is_bin_payload_included() -> bool {
+    INCLUDE_BIN_PAYLOAD.load(Ordering::Relaxed)
+}
+
 /// Logs a scene lifecycle event. No-op if the Scene Inspector is not
 /// initialized. Per-tick events (`OnUpdate` / `OnUpdateEnd`) are additionally
 /// gated by `LIFECYCLE_VERBOSE` so they can be suppressed without affecting
@@ -160,7 +173,9 @@ pub fn log_crdt_renderer_to_scene(
     if let Some(sender) = get_logger_sender() {
         let payload =
             payload_data.and_then(|data| deserialize_component_to_json(component_id, data));
-        let bin_payload = payload_data.map(bytes_to_hex);
+        let bin_payload = payload_data
+            .filter(|_| payload.is_none() || is_bin_payload_included())
+            .map(bytes_to_hex);
 
         let entry = CrdtLogEntry {
             scene_id,

@@ -43,6 +43,14 @@ func send_json(msg: Dictionary) -> void:
 		_ws.send_text(JSON.stringify(msg))
 
 
+## Send a pre-serialized JSON string. Skips the Dictionary → JSON.stringify round
+## trip — use for hot paths (e.g. scene inspector batches) where the payload is
+## already a JSON string produced by Rust.
+func send_raw_text(text: String) -> void:
+	if _ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		_ws.send_text(text)
+
+
 func _process(delta):
 	_ws.poll()
 

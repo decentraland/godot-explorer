@@ -213,8 +213,16 @@ fn log_crdt_message(
             {
                 let payload_data = &data[16..];
                 let json_payload = deserialize_component_to_json(comp_id, payload_data);
-                let hex_payload = crate::tools::scene_inspector::bytes_to_hex(payload_data);
-                (json_payload, Some(hex_payload))
+                // Hex is redundant when JSON decoded — only attach as fallback,
+                // or when the runtime flag forces it on.
+                let bin_payload = if json_payload.is_none()
+                    || crate::tools::scene_inspector::is_bin_payload_included()
+                {
+                    Some(crate::tools::scene_inspector::bytes_to_hex(payload_data))
+                } else {
+                    None
+                };
+                (json_payload, bin_payload)
             } else {
                 (None, None)
             };

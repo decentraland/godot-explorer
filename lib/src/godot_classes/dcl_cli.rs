@@ -97,8 +97,6 @@ pub struct DclCli {
     #[var(get)]
     pub asset_server: bool,
     #[var(get)]
-    pub scene_debug: bool,
-    #[var(get)]
     pub scene_inspector: GString,
     #[var(get)]
     pub scene_inspector_file: bool,
@@ -409,14 +407,8 @@ impl DclCli {
                 category: "Authentication".to_string(),
             },
             ArgDefinition {
-                name: "--scene-debug".to_string(),
-                description: "(Deprecated alias for --scene-inspector=true --scene-inspector-file) Enable per-scene CRDT and op-call instrumentation".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Debugging".to_string(),
-            },
-            ArgDefinition {
                 name: "--scene-inspector".to_string(),
-                description: "Enable the Scene Inspector. 'true' = auto (preview WS + editor debugger), or 'ws://host:port' for a custom WebSocket target. Also passable via deeplink (?scene-inspector=true)".to_string(),
+                description: "Enable the Scene Inspector. 'true' = use the preview WebSocket channel, or 'ws://host:port' for a custom WebSocket target. Also passable via deeplink (?scene-inspector=true)".to_string(),
                 arg_type: ArgType::Value("<target>".to_string()),
                 category: "Debugging".to_string(),
             },
@@ -578,9 +570,8 @@ impl INode for DclCli {
         let emulate_android = args_map.contains_key("--emulate-android");
         let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
-        let scene_debug = args_map.contains_key("--scene-debug");
         // --scene-inspector accepts an optional value; bare flag means "true"
-        let mut scene_inspector = args_map
+        let scene_inspector = args_map
             .get("--scene-inspector")
             .map(|v| {
                 v.as_ref()
@@ -588,14 +579,7 @@ impl INode for DclCli {
                     .unwrap_or_else(|| GString::from("true"))
             })
             .unwrap_or_default();
-        let mut scene_inspector_file = args_map.contains_key("--scene-inspector-file");
-        // --scene-debug is a backward-compat alias for --scene-inspector=true --scene-inspector-file
-        if scene_debug {
-            if scene_inspector.is_empty() {
-                scene_inspector = GString::from("true");
-            }
-            scene_inspector_file = true;
-        }
+        let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
@@ -700,7 +684,6 @@ impl INode for DclCli {
             emulate_android,
             landscape,
             asset_server,
-            scene_debug,
             scene_inspector,
             scene_inspector_file,
             fi_benchmark_size,

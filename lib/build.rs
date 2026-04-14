@@ -426,7 +426,7 @@ fn main() -> io::Result<()> {
     std::env::set_var("PROTOC", protoc_path);
 
     // Always derive serde::Serialize on proto types so the runtime Scene Inspector
-    // can serialize component payloads when --scene-debug is enabled.
+    // can serialize component payloads when --scene-inspector is enabled.
     //
     // This is intentionally applied to ALL proto types (`"."`) rather than a
     // hand-curated whitelist. Rationale:

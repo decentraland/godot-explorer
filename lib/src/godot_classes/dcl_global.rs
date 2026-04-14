@@ -284,7 +284,7 @@ impl INode for DclGlobal {
         log_panics::init();
 
         // Scene Inspector is initialized lazily when the first scene with
-        // --scene-debug enabled is spawned (see scene_thread in dcl/js/mod.rs).
+        // --scene-inspector enabled is spawned (see scene_thread in dcl/js/mod.rs).
 
         // Initialize Rust classes
         let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();

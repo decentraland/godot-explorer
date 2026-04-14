@@ -62,12 +62,18 @@ func _on_deep_link_received() -> void:
 func _on_batch(entries_json: String) -> void:
 	var ws_target = _dedicated_ws if _dedicated_ws else _preview_ws
 	if ws_target and ws_target.is_open():
-		ws_target.send_json(
-			{
-				"type": "SCENE_INSPECTOR",
-				"payload": {"sessionId": _session_id, "entries": JSON.parse_string(entries_json)}
-			}
+		# `entries_json` is already valid JSON from Rust — splicing it into the
+		# envelope as a literal avoids parse → re-stringify on every frame (up
+		# to 500 entries each). `session_id` goes through JSON.stringify so any
+		# special characters are properly escaped.
+		var envelope := (
+			'{"type":"SCENE_INSPECTOR","payload":{"sessionId":'
+			+ JSON.stringify(_session_id)
+			+ ',"entries":'
+			+ entries_json
+			+ "}}"
 		)
+		ws_target.send_raw_text(envelope)
 
 
 func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
@@ -116,6 +122,12 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 			var enabled: bool = args.get("enabled", true)
 			dispatcher.set_lifecycle_verbose(enabled)
 
+		"set_include_bin_payload":
+			# Opt-in to always attach raw hex payload alongside JSON. Off by default:
+			# hex is redundant when JSON decodes, and doubles per-entry size.
+			var enabled: bool = args.get("enabled", false)
+			dispatcher.set_include_bin_payload(enabled)
+
 		_:
 			ok = false
 			data = {"error": "unknown command: " + cmd}
@@ -129,12 +141,14 @@ func _send_crdt_snapshot() -> void:
 		return
 	var ws_target = _dedicated_ws if _dedicated_ws else _preview_ws
 	if ws_target and ws_target.is_open():
-		ws_target.send_json(
-			{
-				"type": "SCENE_INSPECTOR",
-				"payload": {"sessionId": _session_id, "entries": JSON.parse_string(snapshot_json)}
-			}
+		var envelope := (
+			'{"type":"SCENE_INSPECTOR","payload":{"sessionId":'
+			+ JSON.stringify(_session_id)
+			+ ',"entries":'
+			+ snapshot_json
+			+ "}}"
 		)
+		ws_target.send_raw_text(envelope)
 
 
 func _set_all_scenes_paused(paused: bool) -> void:

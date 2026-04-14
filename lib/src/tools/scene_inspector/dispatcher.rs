@@ -3,7 +3,7 @@
 //!
 //! Follows the NetworkInspector pattern: receives entries via tokio mpsc channel,
 //! drains them in process() each frame, serializes to JSON, and emits a signal
-//! that GDScript connects to for dispatching to WebSocket / EngineDebugger / file.
+//! that GDScript connects to for dispatching to WebSocket / file.
 
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
@@ -19,7 +19,10 @@ use super::logger::{
     SceneInspectorEntry, SceneInspectorSender, SessionEndEntry, SessionStartEntry,
 };
 use super::storage::StorageManager;
-use super::{is_lifecycle_verbose, set_lifecycle_verbose, take_dropped_count, try_send_entry};
+use super::{
+    is_bin_payload_included, is_lifecycle_verbose, set_include_bin_payload, set_lifecycle_verbose,
+    take_dropped_count, try_send_entry,
+};
 use crate::godot_classes::dcl_global::DclGlobal;
 
 /// Channel capacity for log entries.
@@ -150,6 +153,21 @@ impl SceneInspectorDispatcher {
     #[func]
     fn is_lifecycle_verbose(&self) -> bool {
         is_lifecycle_verbose()
+    }
+
+    /// When enabled, attach a hex-encoded copy of the raw proto bytes to every
+    /// CRDT entry. Default off: hex is redundant when the JSON payload decodes,
+    /// and doubles the on-wire size. Kept as an opt-in knob for cases where the
+    /// raw bytes are needed (proto diffing, unknown components, etc.). When off,
+    /// hex is still attached as a fallback if JSON deserialization fails.
+    #[func]
+    fn set_include_bin_payload(&mut self, enabled: bool) {
+        set_include_bin_payload(enabled);
+    }
+
+    #[func]
+    fn is_bin_payload_included(&self) -> bool {
+        is_bin_payload_included()
     }
 
     /// Returns a JSON array of the current CRDT state snapshot for hot-connect.
