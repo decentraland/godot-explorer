@@ -10,13 +10,13 @@ use crate::dcl::{
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
-use crate::tools::scene_logging::{
-    CrdtDirection, CrdtLogEntry, CrdtOperation, SceneLogEntry, SceneLoggerSender,
+use crate::tools::scene_inspector::{
+    CrdtDirection, CrdtLogEntry, CrdtOperation, SceneInspectorEntry, SceneInspectorSender,
 };
 
 /// Context for logging CRDT messages. Constructed only by debugged scenes.
 pub struct CrdtLoggingContext {
-    pub sender: SceneLoggerSender,
+    pub sender: SceneInspectorSender,
     pub scene_id: i32,
     pub tick: u32,
     pub direction: CrdtDirection,
@@ -24,7 +24,7 @@ pub struct CrdtLoggingContext {
 
 impl CrdtLoggingContext {
     pub fn new(
-        sender: SceneLoggerSender,
+        sender: SceneInspectorSender,
         scene_id: i32,
         tick: u32,
         direction: CrdtDirection,
@@ -181,7 +181,7 @@ fn log_crdt_message(
     message_size: usize,
 ) {
     use crate::dcl::components::proto_components::deserialize_component_to_json;
-    use crate::tools::scene_logging::current_timestamp_ms;
+    use crate::tools::scene_inspector::current_timestamp_ms;
 
     // Parse minimal info from message for logging without consuming the stream
     let data = message_stream.as_slice();
@@ -213,7 +213,7 @@ fn log_crdt_message(
             {
                 let payload_data = &data[16..];
                 let json_payload = deserialize_component_to_json(comp_id, payload_data);
-                let hex_payload = crate::tools::scene_logging::bytes_to_hex(payload_data);
+                let hex_payload = crate::tools::scene_inspector::bytes_to_hex(payload_data);
                 (json_payload, Some(hex_payload))
             } else {
                 (None, None)
@@ -245,7 +245,10 @@ fn log_crdt_message(
         raw_size_bytes: message_size,
     };
 
-    crate::tools::scene_logging::try_send_entry(&ctx.sender, SceneLogEntry::CrdtMessage(entry));
+    crate::tools::scene_inspector::try_send_entry(
+        &ctx.sender,
+        SceneInspectorEntry::CrdtMessage(entry),
+    );
 }
 
 const CRDT_PUT_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 20;

@@ -196,7 +196,7 @@ impl SceneManager {
         let network_id = realm.get_network_id();
 
         let is_preview = dcl_global.bind().get_preview_mode();
-        let should_debug = dcl_global.bind().scene_logging_active;
+        let should_debug = dcl_global.bind().scene_inspector_active;
 
         let comms_adapter = dcl_global
             .bind()

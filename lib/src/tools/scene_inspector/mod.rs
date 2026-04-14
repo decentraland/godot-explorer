@@ -1,22 +1,23 @@
-//! Scene Logging System
+//! Scene Inspector
 //!
-//! Captures CRDT messages, JS op-calls, and lifecycle events from Decentraland scenes.
+//! Captures CRDT messages, JS op-calls, lifecycle events, and performance
+//! snapshots from Decentraland scenes; also receives inspector commands.
 //! Data is dispatched to GDScript via a signal, which then routes to:
 //! - WebSocket (preview channel or dedicated target)
 //! - Godot Editor Debugger (EngineDebugger)
-//! - JSONL files (optional, when scene-logging-file is enabled)
+//! - JSONL files (optional, when scene-inspector-file is enabled)
 
 pub mod config;
 pub mod dispatcher;
 pub mod logger;
 pub mod storage;
 
-pub use config::SceneLoggingConfig;
-pub use dispatcher::SceneLogDispatcher;
+pub use config::SceneInspectorConfig;
+pub use dispatcher::SceneInspectorDispatcher;
 pub use logger::{
     current_timestamp_ms, CrdtDirection, CrdtLogEntry, CrdtOperation, OpCallEndEntry,
-    OpCallStartEntry, SceneLifecycleEntry, SceneLifecycleEvent, SceneLogEntry, SceneLoggerSender,
-    SessionEndEntry, SessionStartEntry,
+    OpCallStartEntry, SceneInspectorEntry, SceneInspectorSender, SceneLifecycleEntry,
+    SceneLifecycleEvent, SessionEndEntry, SessionStartEntry,
 };
 pub use storage::StorageManager;
 
@@ -36,22 +37,23 @@ pub fn bytes_to_hex(data: &[u8]) -> String {
     s
 }
 
-/// Global sender for scene log entries. Set once when the SceneLogDispatcher is
-/// created in DclGlobal. Scene threads clone this sender to push entries.
-static SCENE_LOG_SENDER: OnceLock<SceneLoggerSender> = OnceLock::new();
+/// Global sender for Scene Inspector entries. Set once when the
+/// SceneInspectorDispatcher is created in DclGlobal. Scene threads clone this
+/// sender to push entries.
+static SCENE_INSPECTOR_SENDER: OnceLock<SceneInspectorSender> = OnceLock::new();
 
-/// Sets the global scene log sender. Called once from DclGlobal when the
-/// SceneLogDispatcher is initialized. Returns Err if already set.
-pub fn set_global_sender(sender: SceneLoggerSender) -> Result<(), &'static str> {
-    SCENE_LOG_SENDER
+/// Sets the global Scene Inspector sender. Called once from DclGlobal when the
+/// SceneInspectorDispatcher is initialized. Returns Err if already set.
+pub fn set_global_sender(sender: SceneInspectorSender) -> Result<(), &'static str> {
+    SCENE_INSPECTOR_SENDER
         .set(sender)
-        .map_err(|_| "Scene log sender already set")
+        .map_err(|_| "Scene Inspector sender already set")
 }
 
-/// Gets a clone of the global scene log sender.
+/// Gets a clone of the global Scene Inspector sender.
 /// Returns None if the dispatcher has not been initialized.
-pub fn get_logger_sender() -> Option<SceneLoggerSender> {
-    SCENE_LOG_SENDER.get().cloned()
+pub fn get_logger_sender() -> Option<SceneInspectorSender> {
+    SCENE_INSPECTOR_SENDER.get().cloned()
 }
 
 /// Total entries dropped because the dispatcher channel was full.
@@ -62,7 +64,7 @@ static DROPPED_COUNT: AtomicU64 = AtomicU64::new(0);
 
 /// Send an entry on the bounded channel. If the channel is full, increment
 /// `DROPPED_COUNT` and discard the entry rather than blocking the caller.
-pub fn try_send_entry(sender: &SceneLoggerSender, entry: SceneLogEntry) {
+pub fn try_send_entry(sender: &SceneInspectorSender, entry: SceneInspectorEntry) {
     if sender.try_send(entry).is_err() {
         DROPPED_COUNT.fetch_add(1, Ordering::Relaxed);
     }
@@ -89,10 +91,11 @@ pub fn is_lifecycle_verbose() -> bool {
     LIFECYCLE_VERBOSE.load(Ordering::Relaxed)
 }
 
-/// Logs a scene lifecycle event. No-op if logging is not initialized.
-/// Per-tick events (`OnUpdate` / `OnUpdateEnd`) are additionally gated by
-/// `LIFECYCLE_VERBOSE` so they can be suppressed without affecting CRDT/op
-/// logging. One-shot events are always emitted while logging is on.
+/// Logs a scene lifecycle event. No-op if the Scene Inspector is not
+/// initialized. Per-tick events (`OnUpdate` / `OnUpdateEnd`) are additionally
+/// gated by `LIFECYCLE_VERBOSE` so they can be suppressed without affecting
+/// CRDT/op logging. One-shot events are always emitted while the inspector is
+/// on.
 pub fn log_lifecycle_event(
     scene_id: i32,
     event: SceneLifecycleEvent,
@@ -119,7 +122,7 @@ pub fn log_lifecycle_event(
             title: None,
             base_parcel: None,
         };
-        try_send_entry(&sender, SceneLogEntry::SceneLifecycle(entry));
+        try_send_entry(&sender, SceneInspectorEntry::SceneLifecycle(entry));
     }
 }
 
@@ -136,7 +139,7 @@ pub fn log_scene_init_event(scene_id: i32, title: Option<String>, base_parcel: O
             title,
             base_parcel,
         };
-        try_send_entry(&sender, SceneLogEntry::SceneLifecycle(entry));
+        try_send_entry(&sender, SceneInspectorEntry::SceneLifecycle(entry));
     }
 }
 
@@ -172,6 +175,6 @@ pub fn log_crdt_renderer_to_scene(
             bin_payload,
             raw_size_bytes: payload_data.map(|d| d.len()).unwrap_or(0),
         };
-        try_send_entry(&sender, SceneLogEntry::CrdtMessage(entry));
+        try_send_entry(&sender, SceneInspectorEntry::CrdtMessage(entry));
     }
 }

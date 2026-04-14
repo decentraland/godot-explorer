@@ -299,7 +299,7 @@ impl SceneCrdtStateProtoComponents {{
     generate_file(dest_path, output_str.as_bytes());
 }
 
-/// Generate `deserialize_proto_component_to_json` so the runtime scene logger
+/// Generate `deserialize_proto_component_to_json` so the runtime Scene Inspector
 /// can decode any proto component without us hand-maintaining a 60+ entry table.
 /// Stays in sync with the .proto sources automatically.
 fn generate_deserialize_component(proto_components: &Vec<Component>) {
@@ -425,7 +425,7 @@ fn main() -> io::Result<()> {
 
     std::env::set_var("PROTOC", protoc_path);
 
-    // Always derive serde::Serialize on proto types so the runtime scene logger
+    // Always derive serde::Serialize on proto types so the runtime Scene Inspector
     // can serialize component payloads when --scene-debug is enabled.
     //
     // This is intentionally applied to ALL proto types (`"."`) rather than a

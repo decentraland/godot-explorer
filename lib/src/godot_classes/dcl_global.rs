@@ -206,7 +206,7 @@ pub struct DclGlobal {
     pub network_inspector: Gd<NetworkInspector>,
 
     #[var]
-    pub scene_log_dispatcher: Gd<crate::tools::scene_logging::SceneLogDispatcher>,
+    pub scene_inspector_dispatcher: Gd<crate::tools::scene_inspector::SceneInspectorDispatcher>,
 
     #[var]
     pub social_blacklist: Gd<DclSocialBlacklist>,
@@ -233,10 +233,10 @@ pub struct DclGlobal {
 
     pub selected_avatar: Option<Gd<DclAvatar>>,
 
-    // Scene logging active flag — set from GDScript when deeplink/CLI activates scene logging.
+    // Scene Inspector active flag — set from GDScript when deeplink/CLI activates the Scene Inspector.
     // Checked by scene_manager when spawning scenes to decide if they should be instrumented.
     #[var]
-    pub scene_logging_active: bool,
+    pub scene_inspector_active: bool,
 
     // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
     #[var]
@@ -283,7 +283,7 @@ impl INode for DclGlobal {
 
         log_panics::init();
 
-        // Scene logging is initialized lazily when the first scene with
+        // Scene Inspector is initialized lazily when the first scene with
         // --scene-debug enabled is spawned (see scene_thread in dcl/js/mod.rs).
 
         // Initialize Rust classes
@@ -293,8 +293,9 @@ impl INode for DclGlobal {
         let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
         let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
-        let mut scene_log_dispatcher: Gd<crate::tools::scene_logging::SceneLogDispatcher> =
-            crate::tools::scene_logging::SceneLogDispatcher::new_alloc();
+        let mut scene_inspector_dispatcher: Gd<
+            crate::tools::scene_inspector::SceneInspectorDispatcher,
+        > = crate::tools::scene_inspector::SceneInspectorDispatcher::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
         let mut social_service: Gd<DclSocialService> = DclSocialService::new_alloc();
 
@@ -329,11 +330,11 @@ impl INode for DclGlobal {
         content_provider.set_name("content_provider");
         portable_experience_controller.set_name("portable_experience_controller");
         network_inspector.set_name("network_inspector");
-        scene_log_dispatcher.set_name("scene_log_dispatcher");
+        scene_inspector_dispatcher.set_name("scene_inspector_dispatcher");
 
-        // Register the global scene log sender so Rust scene threads can push entries
-        let _ = crate::tools::scene_logging::set_global_sender(
-            scene_log_dispatcher.bind().get_sender(),
+        // Register the global Scene Inspector sender so Rust scene threads can push entries
+        let _ = crate::tools::scene_inspector::set_global_sender(
+            scene_inspector_dispatcher.bind().get_sender(),
         );
         social_blacklist.set_name("social_blacklist");
         social_service.set_name("social_service");
@@ -410,7 +411,7 @@ impl INode for DclGlobal {
             metrics,
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector,
-            scene_log_dispatcher,
+            scene_inspector_dispatcher,
             social_blacklist,
             social_service,
 
@@ -430,7 +431,7 @@ impl INode for DclGlobal {
             dynamic_graphics_manager,
             selected_avatar: None,
 
-            scene_logging_active: false,
+            scene_inspector_active: false,
 
             // Input modifiers start as false (no modification)
             input_modifier_disable_all: false,

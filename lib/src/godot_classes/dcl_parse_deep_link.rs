@@ -50,13 +50,13 @@ pub struct DclParseDeepLink {
     #[var]
     path: GString,
 
-    /// Scene logging target: empty=off, "true"=auto, "ws://host:port"=custom target
+    /// Scene Inspector target: empty=off, "true"=auto, "ws://host:port"=custom target
     #[var]
-    scene_logging: GString,
+    scene_inspector: GString,
 
-    /// Whether to write JSONL scene log files to disk
+    /// Whether to write JSONL Scene Inspector files to disk
     #[var]
-    scene_logging_file: bool,
+    scene_inspector_file: bool,
 }
 
 #[godot_api]
@@ -82,8 +82,8 @@ impl DclParseDeepLink {
             saved_profile: GString::new(),
             livekit_debug: false,
             path: GString::new(),
-            scene_logging: GString::new(),
-            scene_logging_file: false,
+            scene_inspector: GString::new(),
+            scene_inspector_file: false,
         }
     }
 
@@ -108,8 +108,8 @@ impl DclParseDeepLink {
             saved_profile: GString::from(&r.saved_profile),
             livekit_debug: r.livekit_debug,
             path: GString::from(&r.path),
-            scene_logging: GString::from(&r.scene_logging),
-            scene_logging_file: r.scene_logging_file,
+            scene_inspector: GString::from(&r.scene_inspector),
+            scene_inspector_file: r.scene_inspector_file,
         }
     }
 }

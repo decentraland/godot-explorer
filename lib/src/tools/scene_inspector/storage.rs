@@ -1,15 +1,15 @@
-//! JSONL storage manager for scene logs.
+//! JSONL storage manager for Scene Inspector entries.
 
-use super::{config::SceneLoggingConfig, SceneLogEntry};
+use super::{config::SceneInspectorConfig, SceneInspectorEntry};
 use std::{
     fs::{self, File, OpenOptions},
     io::{self, BufWriter, Write},
     path::PathBuf,
 };
 
-/// Manages JSONL file storage for scene logs.
+/// Manages JSONL file storage for Scene Inspector entries.
 pub struct StorageManager {
-    config: SceneLoggingConfig,
+    config: SceneInspectorConfig,
     current_file: Option<BufWriter<File>>,
     current_file_path: PathBuf,
     current_file_size: u64,
@@ -18,7 +18,7 @@ pub struct StorageManager {
 
 impl StorageManager {
     /// Creates a new storage manager.
-    pub fn new(config: SceneLoggingConfig, session_id: String) -> io::Result<Self> {
+    pub fn new(config: SceneInspectorConfig, session_id: String) -> io::Result<Self> {
         // Create log directory if it doesn't exist
         fs::create_dir_all(&config.log_directory)?;
 
@@ -38,8 +38,8 @@ impl StorageManager {
         })
     }
 
-    /// Writes a log entry to the current file.
-    pub fn write_entry(&mut self, entry: &SceneLogEntry) -> io::Result<()> {
+    /// Writes a Scene Inspector entry to the current file.
+    pub fn write_entry(&mut self, entry: &SceneInspectorEntry) -> io::Result<()> {
         let json = serde_json::to_string(entry)?;
         self.write_serialized(&json)
     }

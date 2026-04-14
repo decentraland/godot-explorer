@@ -199,25 +199,25 @@ func _ready():
 	if Global.deep_link_obj.livekit_debug:
 		_on_control_menu_request_livekit_debug(true)
 
-	# Scene logging: activate bridge if --scene-logging or ?scene-logging= is set
-	var scene_logging_target := ""
-	if not Global.deep_link_obj.scene_logging.is_empty():
-		scene_logging_target = Global.deep_link_obj.scene_logging
-	elif not Global.cli.scene_logging.is_empty():
-		scene_logging_target = Global.cli.scene_logging
-	if not scene_logging_target.is_empty():
+	# Scene Inspector: activate bridge if --scene-inspector or ?scene-inspector= is set
+	var scene_inspector_target := ""
+	if not Global.deep_link_obj.scene_inspector.is_empty():
+		scene_inspector_target = Global.deep_link_obj.scene_inspector
+	elif not Global.cli.scene_inspector.is_empty():
+		scene_inspector_target = Global.cli.scene_inspector
+	if not scene_inspector_target.is_empty():
 		# Activate Rust-side instrumentation before any scene is spawned
-		Global.scene_logging_active = true
-		var bridge = SceneLogBridge.new()
-		bridge.set_name("scene_log_bridge")
+		Global.scene_inspector_active = true
+		var bridge = SceneInspectorBridge.new()
+		bridge.set_name("scene_inspector_bridge")
 		add_child(bridge)
-		bridge.setup(scene_logging_target, Global.scene_fetcher.get_preview_ws())
-	# Scene logging to file: --scene-logging-file or ?scene-logging-file=true
-	var scene_logging_file: bool = (
-		Global.deep_link_obj.scene_logging_file or Global.cli.scene_logging_file
+		bridge.setup(scene_inspector_target, Global.scene_fetcher.get_preview_ws())
+	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
+	var scene_inspector_file: bool = (
+		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
 	)
-	if scene_logging_file:
-		Global.scene_log_dispatcher.set_file_logging(true)
+	if scene_inspector_file:
+		Global.scene_inspector_dispatcher.set_file_logging(true)
 
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
 	Global.deep_link_router._clear_deep_link()

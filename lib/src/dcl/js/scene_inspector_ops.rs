@@ -1,7 +1,7 @@
-//! Deno operations for scene logging from JavaScript.
+//! Deno operations for the Scene Inspector from JavaScript.
 //!
 //! These ops allow JavaScript code to report op calls and other events
-//! to the scene logging system by wrapping Deno.core.ops with a Proxy.
+//! to the Scene Inspector by wrapping Deno.core.ops with a Proxy.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -9,9 +9,9 @@ use std::rc::Rc;
 use deno_core::{op2, OpDecl, OpState};
 use serde::Deserialize;
 
-use crate::tools::scene_logging::{
+use crate::tools::scene_inspector::{
     current_timestamp_ms, get_logger_sender, try_send_entry, OpCallEndEntry, OpCallStartEntry,
-    SceneLogEntry,
+    SceneInspectorEntry,
 };
 
 /// Per-scene debug flag, inserted into the Deno `OpState` at scene boot from
@@ -23,8 +23,8 @@ pub struct SceneDebugFlag(pub bool);
 pub fn ops() -> Vec<OpDecl> {
     vec![
         op_scene_debug_enabled(),
-        op_scene_log_op_start(),
-        op_scene_log_op_end(),
+        op_scene_inspector_op_start(),
+        op_scene_inspector_op_end(),
     ]
 }
 
@@ -75,7 +75,7 @@ pub struct JsOpCallEndData {
 
 /// Log an op call start from JavaScript.
 #[op2]
-fn op_scene_log_op_start(state: Rc<RefCell<OpState>>, #[serde] data: JsOpCallStartData) {
+fn op_scene_inspector_op_start(state: Rc<RefCell<OpState>>, #[serde] data: JsOpCallStartData) {
     let scene_id = {
         let op_state = state.borrow();
         op_state
@@ -93,13 +93,13 @@ fn op_scene_log_op_start(state: Rc<RefCell<OpState>>, #[serde] data: JsOpCallSta
             args: data.args,
         };
 
-        try_send_entry(&sender, SceneLogEntry::OpCallStart(entry));
+        try_send_entry(&sender, SceneInspectorEntry::OpCallStart(entry));
     }
 }
 
 /// Log an op call end from JavaScript.
 #[op2]
-fn op_scene_log_op_end(state: Rc<RefCell<OpState>>, #[serde] data: JsOpCallEndData) {
+fn op_scene_inspector_op_end(state: Rc<RefCell<OpState>>, #[serde] data: JsOpCallEndData) {
     let scene_id = {
         let op_state = state.borrow();
         op_state
@@ -120,6 +120,6 @@ fn op_scene_log_op_end(state: Rc<RefCell<OpState>>, #[serde] data: JsOpCallEndDa
             error: data.error,
         };
 
-        try_send_entry(&sender, SceneLogEntry::OpCallEnd(entry));
+        try_send_entry(&sender, SceneInspectorEntry::OpCallEnd(entry));
     }
 }

@@ -1,8 +1,9 @@
-class_name SceneLogWebSocket
+class_name SceneInspectorWebSocket
 extends Node
 
-## WebSocket for sending scene log data and receiving commands from a dedicated target.
-## Used when scene-logging=ws://host:port (not reusing the preview channel).
+## WebSocket for sending Scene Inspector data and receiving commands from a
+## dedicated target. Used when scene-inspector=ws://host:port (not reusing the
+## preview channel).
 
 signal command_received(cmd: String, args: Dictionary, request_id: String)
 
@@ -74,7 +75,7 @@ func _handle_message(text: String) -> void:
 	if parsed == null or not parsed is Dictionary:
 		return
 	var msg: Dictionary = parsed
-	if msg.get("type") != "SCENE_LOG_CMD":
+	if msg.get("type") != "SCENE_INSPECTOR_CMD":
 		return
 	var cmd: String = msg.get("cmd", "")
 	var args: Dictionary = msg.get("args", {})

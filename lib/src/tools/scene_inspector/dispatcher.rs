@@ -1,4 +1,5 @@
-//! SceneLogDispatcher: GodotClass node that bridges Rust scene log entries to GDScript.
+//! SceneInspectorDispatcher: GodotClass node that bridges Rust Scene Inspector
+//! entries to GDScript.
 //!
 //! Follows the NetworkInspector pattern: receives entries via tokio mpsc channel,
 //! drains them in process() each frame, serializes to JSON, and emits a signal
@@ -12,10 +13,10 @@ use godot::classes::Performance;
 use godot::prelude::*;
 use tokio::sync::mpsc;
 
-use super::config::SceneLoggingConfig;
+use super::config::SceneInspectorConfig;
 use super::logger::{
-    current_timestamp_ms, CrdtLogEntry, CrdtOperation, PerformanceSnapshotEntry, SceneLogEntry,
-    SceneLoggerSender, SessionEndEntry, SessionStartEntry,
+    current_timestamp_ms, CrdtLogEntry, CrdtOperation, PerformanceSnapshotEntry,
+    SceneInspectorEntry, SceneInspectorSender, SessionEndEntry, SessionStartEntry,
 };
 use super::storage::StorageManager;
 use super::{is_lifecycle_verbose, set_lifecycle_verbose, take_dropped_count, try_send_entry};
@@ -32,9 +33,9 @@ const PERF_INTERVAL: f64 = 2.0;
 
 #[derive(GodotClass)]
 #[class(base=Node)]
-pub struct SceneLogDispatcher {
-    receiver: mpsc::Receiver<SceneLogEntry>,
-    sender: mpsc::Sender<SceneLogEntry>,
+pub struct SceneInspectorDispatcher {
+    receiver: mpsc::Receiver<SceneInspectorEntry>,
+    sender: mpsc::Sender<SceneInspectorEntry>,
     session_id: String,
     device_name: Option<String>,
     storage: Option<StorageManager>,
@@ -51,19 +52,19 @@ pub struct SceneLogDispatcher {
 }
 
 #[godot_api]
-impl SceneLogDispatcher {
+impl SceneInspectorDispatcher {
     #[signal]
-    fn scene_log_batch(entries_json: GString);
+    fn scene_inspector_batch(entries_json: GString);
 
     /// Enable or disable JSONL file logging. Creates StorageManager on demand.
     #[func]
     fn set_file_logging(&mut self, enabled: bool) {
         if enabled && self.storage.is_none() {
-            let config = SceneLoggingConfig::default();
+            let config = SceneInspectorConfig::default();
             match StorageManager::new(config, self.session_id.clone()) {
                 Ok(mut storage) => {
                     // Write session start marker
-                    let start_entry = SceneLogEntry::SessionStart(SessionStartEntry {
+                    let start_entry = SceneInspectorEntry::SessionStart(SessionStartEntry {
                         session_id: self.session_id.clone(),
                         timestamp_ms: current_timestamp_ms(),
                         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -74,18 +75,18 @@ impl SceneLogDispatcher {
                     let _ = storage.flush();
                     self.storage = Some(storage);
                     tracing::info!(
-                        "Scene log file logging enabled, session={}",
+                        "Scene Inspector file logging enabled, session={}",
                         self.session_id
                     );
                 }
                 Err(e) => {
-                    tracing::error!("Failed to create scene log storage: {}", e);
+                    tracing::error!("Failed to create Scene Inspector storage: {}", e);
                 }
             }
         } else if !enabled {
             // Flush and drop storage
             if let Some(ref mut storage) = self.storage {
-                let end_entry = SceneLogEntry::SessionEnd(SessionEndEntry {
+                let end_entry = SceneInspectorEntry::SessionEnd(SessionEndEntry {
                     session_id: self.session_id.clone(),
                     timestamp_ms: current_timestamp_ms(),
                 });
@@ -187,7 +188,7 @@ impl SceneLogDispatcher {
         if self.device_name.is_none() {
             self.device_name = Self::detect_device_name();
         }
-        let entry = SceneLogEntry::SessionStart(SessionStartEntry {
+        let entry = SceneInspectorEntry::SessionStart(SessionStartEntry {
             session_id: self.session_id.clone(),
             timestamp_ms: current_timestamp_ms(),
             version: env!("CARGO_PKG_VERSION").to_string(),
@@ -198,9 +199,9 @@ impl SceneLogDispatcher {
     }
 }
 
-impl SceneLogDispatcher {
+impl SceneInspectorDispatcher {
     /// Gets a clone of the sender for Rust-side callers.
-    pub fn get_sender(&self) -> SceneLoggerSender {
+    pub fn get_sender(&self) -> SceneInspectorSender {
         self.sender.clone()
     }
 
@@ -336,7 +337,7 @@ impl SceneLogDispatcher {
             (0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0.0)
         };
 
-        let entry = SceneLogEntry::PerformanceSnapshot(PerformanceSnapshotEntry {
+        let entry = SceneInspectorEntry::PerformanceSnapshot(PerformanceSnapshotEntry {
             timestamp_ms: current_timestamp_ms(),
             fps,
             dt,
@@ -367,7 +368,7 @@ impl SceneLogDispatcher {
 }
 
 #[godot_api]
-impl INode for SceneLogDispatcher {
+impl INode for SceneInspectorDispatcher {
     fn init(_base: Base<Node>) -> Self {
         let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
         let session_id = uuid::Uuid::new_v4().to_string();
@@ -375,7 +376,7 @@ impl INode for SceneLogDispatcher {
         // Detect device name from mobile plugins or OS
         let device_name = Self::detect_device_name();
 
-        SceneLogDispatcher {
+        SceneInspectorDispatcher {
             receiver,
             sender,
             session_id,
@@ -403,7 +404,7 @@ impl INode for SceneLogDispatcher {
                     match serde_json::to_string(&entry) {
                         Ok(json) => {
                             // Maintain CRDT snapshot for hot-connect
-                            if let SceneLogEntry::CrdtMessage(ref crdt) = entry {
+                            if let SceneInspectorEntry::CrdtMessage(ref crdt) = entry {
                                 self.update_crdt_snapshot(crdt, &json);
                             }
                             // Write to file if enabled. Reuse the already-
@@ -415,7 +416,7 @@ impl INode for SceneLogDispatcher {
                             batch.push(json);
                         }
                         Err(e) => {
-                            tracing::warn!("Failed to serialize scene log entry: {}", e);
+                            tracing::warn!("Failed to serialize Scene Inspector entry: {}", e);
                         }
                     }
                     count += 1;
@@ -436,7 +437,7 @@ impl INode for SceneLogDispatcher {
             let dropped = take_dropped_count();
             if dropped > 0 {
                 tracing::warn!(
-                    "Scene logging dropped {} entries (channel full) in the last {:.1}s",
+                    "Scene Inspector dropped {} entries (channel full) in the last {:.1}s",
                     dropped,
                     self.perf_interval
                 );
@@ -454,7 +455,7 @@ impl INode for SceneLogDispatcher {
         if !batch.is_empty() {
             let json_array = format!("[{}]", batch.join(","));
             self.base_mut().emit_signal(
-                "scene_log_batch",
+                "scene_inspector_batch",
                 &[GString::from(&json_array).to_variant()],
             );
         }

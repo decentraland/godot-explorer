@@ -22,7 +22,7 @@ use crate::dcl::{
     RendererResponse, SceneId, SceneResponse, SharedSceneCrdtState,
 };
 
-use super::scene_logging_ops::SceneDebugFlag;
+use super::scene_inspector_ops::SceneDebugFlag;
 
 /// Current frame tick, set by `scene_thread` at the start of each `onUpdate`
 /// iteration and read by `op_crdt_send_to_renderer` / `op_crdt_recv_from_renderer`
@@ -287,7 +287,7 @@ async fn op_crdt_recv_from_renderer(
 #[cold]
 #[inline(never)]
 fn build_send_logging_ctx(op_state: &OpState) -> Option<CrdtLoggingContext> {
-    use crate::tools::scene_logging::{get_logger_sender, CrdtDirection};
+    use crate::tools::scene_inspector::{get_logger_sender, CrdtDirection};
 
     let sender = get_logger_sender()?;
     let scene_id = op_state.try_borrow::<SceneId>().map(|id| id.0).unwrap_or(0);
@@ -313,7 +313,7 @@ fn log_lww_renderer_to_scene(
     scene_id: i32,
 ) {
     use crate::dcl::serialization::writer::DclWriter;
-    use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
+    use crate::tools::scene_inspector::{log_crdt_renderer_to_scene, CrdtOperation};
 
     let Some(comp_def) = scene_crdt_state.get_lww_component_definition(component_id) else {
         return;
@@ -358,7 +358,7 @@ fn log_gos_renderer_to_scene(
     current_tick: u32,
     scene_id: i32,
 ) {
-    use crate::tools::scene_logging::{log_crdt_renderer_to_scene, CrdtOperation};
+    use crate::tools::scene_inspector::{log_crdt_renderer_to_scene, CrdtOperation};
     log_crdt_renderer_to_scene(
         scene_id,
         current_tick,

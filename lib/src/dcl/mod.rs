@@ -152,7 +152,7 @@ pub struct SpawnDclSceneData {
     // Inspect Network sender
     pub network_inspector_sender: Option<NetworkInspectorSender>,
     // When true, the scene runtime instruments CRDT and op-call activity into the
-    // global scene logger (initialized lazily on the first debugged scene).
+    // global Scene Inspector (initialized lazily on the first debugged scene).
     pub should_debug: bool,
 }
 

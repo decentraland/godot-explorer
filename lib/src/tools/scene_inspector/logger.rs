@@ -1,13 +1,14 @@
-//! Scene log entry types and sender/receiver type aliases.
+//! Scene Inspector entry types and sender/receiver type aliases.
 
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use tokio::sync::mpsc;
 
-/// A log entry that can be a CRDT message, op call start/end, or session marker.
+/// A Scene Inspector entry: CRDT message, op call start/end, lifecycle, session
+/// marker, or performance snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum SceneLogEntry {
+pub enum SceneInspectorEntry {
     #[serde(rename = "crdt")]
     CrdtMessage(CrdtLogEntry),
     #[serde(rename = "op_call_start")]
@@ -192,8 +193,8 @@ pub struct PerformanceSnapshotEntry {
     pub scene_count: i32,
 }
 
-/// Sender half of the scene logger channel.
-pub type SceneLoggerSender = mpsc::Sender<SceneLogEntry>;
+/// Sender half of the Scene Inspector channel.
+pub type SceneInspectorSender = mpsc::Sender<SceneInspectorEntry>;
 
 /// Gets the current timestamp in milliseconds since epoch.
 pub fn current_timestamp_ms() -> u64 {
