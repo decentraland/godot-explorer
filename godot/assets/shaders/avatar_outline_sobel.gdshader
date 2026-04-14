@@ -7,6 +7,7 @@ render_mode unshaded, cull_disabled, depth_draw_never, depth_test_disabled;
 uniform sampler2D depth_texture : hint_depth_texture, filter_linear_mipmap;
 uniform sampler2D extracted_texture : hint_default_white, filter_linear_mipmap;  // The viewport texture with avatars
 uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+uniform vec2 viewport_size = vec2(256.0, 500.0);  // Set from outline_system.gd; avoids textureSize() ambiguity in nested/scaled SubViewports
 uniform float max_distance : hint_range(0.0, 100.0) = 10.0;
 uniform float outline_thickness : hint_range(0.1, 5.0) = 1.0;
 uniform float hue_rotation_speed : hint_range(0.1, 5.0) = 1.0;
@@ -19,7 +20,7 @@ void vertex() {
 }
 
 float sobel_edge_detection(vec2 uv, mat4 inv_proj_mat) {
-	vec2 texel_size = outline_thickness / vec2(textureSize(extracted_texture, 0));
+	vec2 texel_size = outline_thickness / viewport_size;
 	float depth = texture(depth_texture, uv).r;
 #if CURRENT_RENDERER == RENDERER_COMPATIBILITY
   vec3 real_ndc = vec3(uv, depth) * 2.0 - 1.0;

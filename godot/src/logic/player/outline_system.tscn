@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://qyi7gcf7tphy"]
+[gd_scene load_steps=9 format=3 uid="uid://qyi7gcf7tphy"]
 
 [ext_resource type="Shader" uid="uid://c1amtn82m0opc" path="res://assets/shaders/avatar_outline_sobel.gdshader" id="1_outline"]
 [ext_resource type="Script" uid="uid://cypaj0ak7monu" path="res://src/logic/player/outline_system.gd" id="2_script"]
@@ -26,16 +26,24 @@ shader_parameter/hue_rotation_speed = 1.0
 shader_parameter/saturation = 1.0
 shader_parameter/value = 1.0
 
+[sub_resource type="Environment" id="Environment_depth_clean"]
+background_mode = 1
+background_color = Color(0, 0, 0, 1)
+ambient_light_source = 0
+tonemap_mode = 0
+glow_enabled = false
+adjustment_enabled = false
+
 [node name="OutlineSystem" type="Node3D"]
 script = ExtResource("2_script")
 
 [node name="SubViewport" type="SubViewport" parent="."]
-use_hdr_2d = true
 size = Vector2i(1920, 1080)
 render_target_update_mode = 4
 
 [node name="DepthCamera" type="Camera3D" parent="SubViewport"]
 cull_mask = 524288
+environment = SubResource("Environment_depth_clean")
 current = true
 far = 100.0
 
