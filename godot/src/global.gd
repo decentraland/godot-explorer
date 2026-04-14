@@ -145,9 +145,9 @@ func _instantiate_phone_frame_overlay() -> void:
 
 
 ## Vibrate handheld device
-func send_haptic_feedback() -> void:
+func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> void:
 	if is_mobile():
-		Input.vibrate_handheld(20)
+		Input.vibrate_handheld(duration_ms, amplitude)
 
 
 # gdlint: ignore=async-function-name
@@ -234,6 +234,7 @@ func _ready():
 
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
+	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
@@ -983,6 +984,19 @@ func _notification(what: int) -> void:
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	# Sync attended events notifications from server after authentication
 	NotificationsManager.async_sync_attended_events()
+
+
+func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> void:
+	# User-visible feedback when a requested realm cannot be loaded (e.g. /world
+	# pointing at a non-existent world). Only fires for Global.realm — transient
+	# Realm instances created elsewhere (e.g. portable experiences) are not wired
+	# to this handler.
+	NotificationsManager.show_system_toast(
+		"World unavailable",
+		'Could not load "%s": %s' % [new_realm_string, reason],
+		"error",
+		"alert"
+	)
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:

@@ -124,7 +124,7 @@ func _show_low_spec_warning_if_needed():
 	if not deeplink_warning:
 		return
 	_low_spec_warning_shown = true
-	Global.metrics.track_screen_viewed("LOWSPEC_PROMPT", "")
+	Global.metrics.track_screen_viewed("MINSPEC_PROMPT", "")
 	Global.modal_manager.async_show_low_spec_iphone_modal()
 
 

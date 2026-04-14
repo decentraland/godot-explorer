@@ -415,8 +415,10 @@ func _on_connection_lost_primary() -> void:
 
 
 func _on_connection_lost_secondary() -> void:
+	# Intentionally does NOT close the modal: the listener (e.g. CQM) handles
+	# get_tree().quit() and we want the modal to stay visible until the app is gone,
+	# otherwise the user briefly sees the broken UI underneath before exit.
 	connection_lost_exit.emit()
-	close_current_modal()
 
 
 func _on_teleport_primary(location: Vector2i, realm: String) -> void:
