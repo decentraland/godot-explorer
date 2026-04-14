@@ -10,6 +10,7 @@ const SLIDE_OUT_DURATION = 0.2
 const ICON_MAP: Dictionary = {
 	"poor_connection": "res://assets/ui/modal-connection-icon.svg",
 	"system": "res://assets/ui/notifications/DefaultNotification.png",
+	"error": "res://assets/ui/modal-alert-icon.svg"
 }
 
 var notification_data: Dictionary = {}
