@@ -160,3 +160,7 @@ func close_picker() -> void:
 func _on_color_picker_title_pressed() -> void:
 	close_picker()
 	toggle_color_picker.emit(false)
+
+
+func on_landscape() -> void:
+	color_picker.add_theme_constant_override("separation", 40)

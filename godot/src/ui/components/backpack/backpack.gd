@@ -75,6 +75,9 @@ var _is_currently_narrow: bool = false
 @onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
 @onready var hseparator_size_maintainer: HSeparator = get_node_or_null("%HSeparator_SizeMaintainer")
 @onready var control_left_bar: Control = get_node_or_null("%Control_LeftBar")
+@onready var canary_container: Control = get_node_or_null("%ControlContainer_Canary")
+@onready var canary_content: Control = get_node_or_null("%ControlContent_Canary")
+@onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
 
 
 # gdlint:ignore = async-function-name
@@ -89,6 +92,9 @@ func _ready():
 
 	if hide_navbar:
 		container_navbar.hide()
+
+	if size_canary != null:
+		size_canary.show()
 
 	emote_editor.avatar = avatar_preview.avatar
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
@@ -185,6 +191,7 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
 		emote_editor._on_landscape()
+		color_carrousel.on_landscape()
 
 	_update_grid_columns()
 
@@ -204,34 +211,18 @@ func _update_grid_columns() -> void:
 		#emote_editor.container_all_emotes.columns = columns
 
 	if hseparator_size_maintainer != null:
-		hseparator_size_maintainer.visible = not is_narrow
+		hseparator_size_maintainer.custom_minimum_size.x = 410.0 if is_narrow else 630.0
 
 
 func _is_wearables_button_clipped() -> bool:
-	if button_wearables == null or control_left_bar == null:
+	if canary_container == null or canary_content == null:
 		return _is_currently_narrow
 
-	# Check if the button extends outside the Control_LeftBar bounds (left or right)
-	var button_rect: Rect2 = button_wearables.get_global_rect()
-	var container_rect: Rect2 = control_left_bar.get_global_rect()
-
-	var button_left := button_rect.position.x
-	var button_right := button_rect.position.x + button_rect.size.x
-	var container_left := container_rect.position.x
-	var container_right := container_rect.position.x + container_rect.size.x
-
-	# Hysteresis: require margin before switching back to 3 columns
-	const HYSTERESIS_MARGIN := 100.0
-	var is_clipped: bool
-	if _is_currently_narrow:
-		# Currently narrow - only switch back if button has enough margin on both sides
-		is_clipped = button_left < container_left + HYSTERESIS_MARGIN
-	else:
-		# Currently wide - switch to narrow if button is clipped at all
-		is_clipped = button_left < container_left or button_right > container_right
-
-	_is_currently_narrow = is_clipped
-	return is_clipped
+	# Compare canary container width vs canary content width
+	# These nodes are not affected by column changes, providing stable measurement
+	var is_narrow := canary_container.size.x < canary_content.size.x
+	_is_currently_narrow = is_narrow
+	return is_narrow
 
 
 func _update_visible_categories():

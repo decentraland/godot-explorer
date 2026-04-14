@@ -62,6 +62,7 @@ vertical_scroll_mode = 3
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_left = 40
+theme_override_constants/margin_right = 40
 
 [node name="VBoxContainer_AvatarEmotes" type="BoxContainer" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer"]
 unique_name_in_owner = true

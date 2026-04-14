@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3 uid="uid://gdgamqboy6v5"]
+[gd_scene load_steps=40 format=3 uid="uid://gdgamqboy6v5"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_2eknj"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="2_ran1e"]
@@ -57,7 +57,7 @@ resource_name = "CollectiblesFilter"
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_2eknj"]
 shader = ExtResource("13_n6hfh")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_n6hfh"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_k5k0a"]
 atlas = ExtResource("14_n6hfh")
 region = Rect2(0, 0, 343, 580)
 
@@ -87,8 +87,6 @@ resource_local_to_scene = false
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_meiko"]
 resource_local_to_scene = false
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_et6he"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_18vfg"]
 
@@ -137,6 +135,7 @@ theme_override_constants/separation = 0
 
 [node name="Control_LeftBar" type="Control" parent="SafeMarginContainer/HBoxContainer_Backpack"]
 unique_name_in_owner = true
+clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -360,7 +359,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("AtlasTexture_n6hfh")
+texture = SubResource("AtlasTexture_k5k0a")
 script = ExtResource("14_vqisn")
 atlas = ExtResource("14_n6hfh")
 frame_count = 13
@@ -731,7 +730,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 unique_name_in_owner = true
 editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
 Otherwise the Editor shrinks if there is less than 3 wearables."
-custom_minimum_size = Vector2(630, 0)
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
@@ -740,7 +738,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 unique_name_in_owner = true
 editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
 Otherwise the Editor shrinks if there is less than 3 wearables."
-custom_minimum_size = Vector2(630, 0)
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
@@ -805,16 +802,15 @@ columns = 3
 [node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 60
+theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 60
+theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 60
 
 [node name="Control_NoItems" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer" instance=ExtResource("20_noitems")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-marketplace_section = "wearables"
 
 [node name="EmoteEditor" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" instance=ExtResource("23_jr70y")]
 unique_name_in_owner = true
@@ -826,6 +822,56 @@ size_flags_horizontal = 3
 layout_mode = 2
 theme_override_constants/separation = 110
 theme_override_styles/separator = SubResource("StyleBoxEmpty_18vfg")
+
+[node name="HBoxContainer_SizeCanary" type="HBoxContainer" parent="SafeMarginContainer"]
+unique_name_in_owner = true
+editor_description = "Used only to estimate size and position of UI. This info is then used to determine if the Screen is too narrow to accomodate the full UI. If not the number of wearable collumns in the grid is reduced to 2."
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ControlContainer_Canary" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="ControlContent_Canary" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary/ControlContainer_Canary"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(500, 60)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="ColorRect" type="ColorRect" parent="SafeMarginContainer/HBoxContainer_SizeCanary/ControlContainer_Canary/ControlContent_Canary"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 1, 1, 1)
+
+[node name="Control2" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary"]
+custom_minimum_size = Vector2(870, 0)
+layout_mode = 2
+size_flags_stretch_ratio = 0.0
+mouse_filter = 2
+
+[node name="ColorRect" type="ColorRect" parent="SafeMarginContainer/HBoxContainer_SizeCanary/Control2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.7254902)
 
 [node name="TextureProgressBar_BackpackLoading" parent="." instance=ExtResource("15_623dt")]
 unique_name_in_owner = true
