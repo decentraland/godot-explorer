@@ -159,6 +159,7 @@ func close_picker() -> void:
 
 func _on_color_picker_title_pressed() -> void:
 	close_picker()
+	scroll_swatch_container.scroll_horizontal = 0
 	toggle_color_picker.emit(false)
 
 

@@ -135,7 +135,6 @@ theme_override_constants/separation = 0
 
 [node name="Control_LeftBar" type="Control" parent="SafeMarginContainer/HBoxContainer_Backpack"]
 unique_name_in_owner = true
-clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
