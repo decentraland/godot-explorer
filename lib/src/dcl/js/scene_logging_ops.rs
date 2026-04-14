@@ -10,7 +10,8 @@ use deno_core::{op2, OpDecl, OpState};
 use serde::Deserialize;
 
 use crate::tools::scene_logging::{
-    current_timestamp_ms, get_logger_sender, OpCallEndEntry, OpCallStartEntry, SceneLogEntry,
+    current_timestamp_ms, get_logger_sender, try_send_entry, OpCallEndEntry, OpCallStartEntry,
+    SceneLogEntry,
 };
 
 /// Per-scene debug flag, inserted into the Deno `OpState` at scene boot from
@@ -41,8 +42,9 @@ fn op_scene_debug_enabled(state: &mut OpState) -> bool {
 /// Op call start data received from JavaScript.
 #[derive(Debug, Deserialize)]
 pub struct JsOpCallStartData {
-    /// Unique call ID for correlation.
-    pub call_id: u64,
+    /// Unique call ID for correlation. `u32` because JS `Number` is `f64` —
+    /// `u64` would silently lose precision once `nextCallId` crosses 2^53.
+    pub call_id: u32,
     /// Name of the op (e.g., "op_fetch_custom").
     pub op_name: String,
     /// Arguments passed to the op (JSON value).
@@ -53,8 +55,8 @@ pub struct JsOpCallStartData {
 /// Op call end data received from JavaScript.
 #[derive(Debug, Deserialize)]
 pub struct JsOpCallEndData {
-    /// Unique call ID for correlation.
-    pub call_id: u64,
+    /// Unique call ID for correlation. See `JsOpCallStartData::call_id`.
+    pub call_id: u32,
     /// Name of the op (e.g., "op_fetch_custom").
     pub op_name: String,
     /// Return value from the op (JSON value).
@@ -91,7 +93,7 @@ fn op_scene_log_op_start(state: Rc<RefCell<OpState>>, #[serde] data: JsOpCallSta
             args: data.args,
         };
 
-        let _ = sender.try_send(SceneLogEntry::OpCallStart(entry));
+        try_send_entry(&sender, SceneLogEntry::OpCallStart(entry));
     }
 }
 
@@ -118,6 +120,6 @@ fn op_scene_log_op_end(state: Rc<RefCell<OpState>>, #[serde] data: JsOpCallEndDa
             error: data.error,
         };
 
-        let _ = sender.try_send(SceneLogEntry::OpCallEnd(entry));
+        try_send_entry(&sender, SceneLogEntry::OpCallEnd(entry));
     }
 }

@@ -9,8 +9,15 @@ signal command_received(cmd: String, args: Dictionary, request_id: String)
 ## 64 MB outbound buffer — connections are local, never drop messages.
 const OUTBOUND_BUFFER_SIZE := 64 * 1024 * 1024
 
+## Exponential backoff for auto-reconnect: starts at 1s, doubles up to 30s.
+const RECONNECT_INITIAL_DELAY := 1.0
+const RECONNECT_MAX_DELAY := 30.0
+
 var _ws := WebSocketPeer.new()
 var _target_url: String = ""
+var _reconnect_delay: float = RECONNECT_INITIAL_DELAY
+var _reconnect_timer: float = 0.0
+var _was_open: bool = false
 
 
 func connect_to(url: String) -> void:
@@ -19,6 +26,9 @@ func connect_to(url: String) -> void:
 		_ws.close()
 		_ws = WebSocketPeer.new()
 	_target_url = url
+	_reconnect_delay = RECONNECT_INITIAL_DELAY
+	_reconnect_timer = 0.0
+	_was_open = false
 	_ws.set_outbound_buffer_size(OUTBOUND_BUFFER_SIZE)
 	_ws.connect_to_url(_target_url)
 
@@ -32,7 +42,7 @@ func send_json(msg: Dictionary) -> void:
 		_ws.send_text(JSON.stringify(msg))
 
 
-func _process(_delta):
+func _process(delta):
 	_ws.poll()
 
 	# Handle incoming messages
@@ -41,9 +51,22 @@ func _process(_delta):
 		var text := packet.get_string_from_utf8()
 		_handle_message(text)
 
-	# Auto-reconnect on disconnect
-	if _ws.get_ready_state() == WebSocketPeer.STATE_CLOSED and not _target_url.is_empty():
-		_ws.connect_to_url(_target_url)
+	# Reset backoff once a connection has succeeded
+	var state := _ws.get_ready_state()
+	if state == WebSocketPeer.STATE_OPEN:
+		if not _was_open:
+			_was_open = true
+		_reconnect_delay = RECONNECT_INITIAL_DELAY
+		_reconnect_timer = 0.0
+		return
+
+	# Auto-reconnect on disconnect with exponential backoff (1s → 2s → 4s … 30s).
+	if state == WebSocketPeer.STATE_CLOSED and not _target_url.is_empty():
+		_reconnect_timer += delta
+		if _reconnect_timer >= _reconnect_delay:
+			_reconnect_timer = 0.0
+			_ws.connect_to_url(_target_url)
+			_reconnect_delay = min(_reconnect_delay * 2.0, RECONNECT_MAX_DELAY)
 
 
 func _handle_message(text: String) -> void:

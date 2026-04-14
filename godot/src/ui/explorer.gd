@@ -211,7 +211,7 @@ func _ready():
 		var bridge = SceneLogBridge.new()
 		bridge.set_name("scene_log_bridge")
 		add_child(bridge)
-		bridge.setup(scene_logging_target, Global.scene_fetcher._preview_ws)
+		bridge.setup(scene_logging_target, Global.scene_fetcher.get_preview_ws())
 	# Scene logging to file: --scene-logging-file or ?scene-logging-file=true
 	var scene_logging_file: bool = (
 		Global.deep_link_obj.scene_logging_file or Global.cli.scene_logging_file

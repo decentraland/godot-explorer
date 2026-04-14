@@ -4,7 +4,8 @@
 //! drains them in process() each frame, serializes to JSON, and emits a signal
 //! that GDScript connects to for dispatching to WebSocket / EngineDebugger / file.
 
-use std::collections::HashMap;
+use std::borrow::Cow;
+use std::collections::{HashMap, VecDeque};
 
 use godot::classes::performance::Monitor;
 use godot::classes::Performance;
@@ -17,6 +18,7 @@ use super::logger::{
     SceneLoggerSender, SessionEndEntry, SessionStartEntry,
 };
 use super::storage::StorageManager;
+use super::{is_lifecycle_verbose, set_lifecycle_verbose, take_dropped_count, try_send_entry};
 use crate::godot_classes::dcl_global::DclGlobal;
 
 /// Channel capacity for log entries.
@@ -41,9 +43,10 @@ pub struct SceneLogDispatcher {
     entry_count: u64,
     perf_interval: f64,
     /// Snapshot of latest LWW CRDT state: (scene_id, entity_id, component_name) → serialized JSON
-    crdt_lww_snapshot: HashMap<(i32, u32, String), String>,
-    /// Snapshot of GOS (append) CRDT state: (scene_id, entity_id, component_name) → serialized JSON entries
-    crdt_gos_snapshot: HashMap<(i32, u32, String), Vec<String>>,
+    crdt_lww_snapshot: HashMap<(i32, u32, Cow<'static, str>), String>,
+    /// Snapshot of GOS (append) CRDT state: (scene_id, entity_id, component_name) → serialized JSON entries.
+    /// `VecDeque` so the per-key cap (see `update_crdt_snapshot`) drops the oldest entry in O(1).
+    crdt_gos_snapshot: HashMap<(i32, u32, Cow<'static, str>), VecDeque<String>>,
     _base: Base<Node>,
 }
 
@@ -85,8 +88,6 @@ impl SceneLogDispatcher {
                 let end_entry = SceneLogEntry::SessionEnd(SessionEndEntry {
                     session_id: self.session_id.clone(),
                     timestamp_ms: current_timestamp_ms(),
-                    total_crdt_messages: 0,
-                    total_op_calls: 0,
                 });
                 let _ = storage.write_entry(&end_entry);
                 let _ = storage.flush();
@@ -138,6 +139,18 @@ impl SceneLogDispatcher {
         self.storage.is_some()
     }
 
+    /// Toggle per-tick lifecycle events (`OnUpdate` / `OnUpdateEnd`).
+    /// Default is `true`; disable when CRDT/ops are the only signal of interest.
+    #[func]
+    fn set_lifecycle_verbose(&mut self, enabled: bool) {
+        set_lifecycle_verbose(enabled);
+    }
+
+    #[func]
+    fn is_lifecycle_verbose(&self) -> bool {
+        is_lifecycle_verbose()
+    }
+
     /// Returns a JSON array of the current CRDT state snapshot for hot-connect.
     /// Includes all LWW and GOS entries so a newly connected inspector can
     /// reconstruct the full entity tree.
@@ -181,7 +194,7 @@ impl SceneLogDispatcher {
             platform: std::env::consts::OS.to_string(),
             device_name: self.device_name.clone(),
         });
-        let _ = self.sender.try_send(entry);
+        try_send_entry(&self.sender, entry);
     }
 }
 
@@ -210,11 +223,15 @@ impl SceneLogDispatcher {
                     .retain(|k, _| !(k.0 == sid && k.1 == eid));
             }
             CrdtOperation::Append => {
+                // NOTE: cap is per-(scene,entity,component). Kept per-key (not
+                // global) so a single chatty component can't evict snapshot
+                // entries from quieter ones; revisit if total snapshot memory
+                // becomes a concern.
                 let entries = self.crdt_gos_snapshot.entry(key).or_default();
-                entries.push(json.to_string());
-                if entries.len() > 100 {
-                    entries.remove(0);
+                if entries.len() >= 100 {
+                    entries.pop_front();
                 }
+                entries.push_back(json.to_string());
             }
         }
     }
@@ -389,9 +406,11 @@ impl INode for SceneLogDispatcher {
                             if let SceneLogEntry::CrdtMessage(ref crdt) = entry {
                                 self.update_crdt_snapshot(crdt, &json);
                             }
-                            // Write to file if enabled
+                            // Write to file if enabled. Reuse the already-
+                            // serialized `json` rather than asking storage to
+                            // serialize the entry again.
                             if let Some(ref mut storage) = self.storage {
-                                let _ = storage.write_entry(&entry);
+                                let _ = storage.write_serialized(&json);
                             }
                             batch.push(json);
                         }
@@ -411,6 +430,16 @@ impl INode for SceneLogDispatcher {
             self.perf_timer = 0.0;
             if let Some(snapshot_json) = self.collect_performance_snapshot() {
                 batch.push(snapshot_json);
+            }
+            // Report any entries dropped because the channel was full since the
+            // previous tick. Silent drops would mask real loss of telemetry.
+            let dropped = take_dropped_count();
+            if dropped > 0 {
+                tracing::warn!(
+                    "Scene logging dropped {} entries (channel full) in the last {:.1}s",
+                    dropped,
+                    self.perf_interval
+                );
             }
         }
 

@@ -114,6 +114,11 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 			var seconds: float = args.get("seconds", 2.0)
 			dispatcher.set_perf_interval(seconds)
 
+		"set_lifecycle_verbose":
+			# Suppress per-tick lifecycle entries while keeping CRDT/ops/log entries.
+			var enabled: bool = args.get("enabled", true)
+			dispatcher.set_lifecycle_verbose(enabled)
+
 		_:
 			ok = false
 			data = {"error": "unknown command: " + cmd}

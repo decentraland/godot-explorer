@@ -1,6 +1,7 @@
 //! Scene log entry types and sender/receiver type aliases.
 
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use tokio::sync::mpsc;
 
 /// A log entry that can be a CRDT message, op call start/end, or session marker.
@@ -71,8 +72,11 @@ pub struct CrdtLogEntry {
     pub direction: CrdtDirection,
     #[serde(rename = "e")]
     pub entity_id: u32,
+    /// Borrowed `&'static str` for proto components (avoids per-message
+    /// allocation in the scene-thread hot path); falls back to `String` only
+    /// when serde deserialization needs ownership.
     #[serde(rename = "c")]
-    pub component_name: String,
+    pub component_name: Cow<'static, str>,
     #[serde(rename = "op")]
     pub operation: CrdtOperation,
     #[serde(rename = "ct")]
@@ -88,7 +92,10 @@ pub struct CrdtLogEntry {
 /// A logged Deno op call start.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpCallStartEntry {
-    pub call_id: u64,
+    /// `u32` to match the JS-side `nextCallId` counter, which starts at 1 and
+    /// is bounded well below 2^32; using `u64` would silently lose precision
+    /// once it crossed 2^53 (since JS `Number` is `f64`).
+    pub call_id: u32,
     pub scene_id: i32,
     pub timestamp_ms: u64,
     pub op_name: String,
@@ -99,7 +106,8 @@ pub struct OpCallStartEntry {
 /// A logged Deno op call end.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpCallEndEntry {
-    pub call_id: u64,
+    /// See `OpCallStartEntry::call_id`.
+    pub call_id: u32,
     pub scene_id: i32,
     pub timestamp_ms: u64,
     pub op_name: String,
@@ -127,8 +135,6 @@ pub struct SessionStartEntry {
 pub struct SessionEndEntry {
     pub session_id: String,
     pub timestamp_ms: u64,
-    pub total_crdt_messages: u64,
-    pub total_op_calls: u64,
 }
 
 /// Scene lifecycle event types.

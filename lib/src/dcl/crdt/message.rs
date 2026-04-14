@@ -38,7 +38,7 @@ impl CrdtLoggingContext {
     }
 }
 
-#[derive(FromPrimitive, ToPrimitive, Debug)]
+#[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy)]
 pub enum CrdtMessageType {
     PutComponent = 1,
     DeleteComponent = 2,
@@ -158,7 +158,7 @@ pub fn process_many_messages_with_logging(
         match FromPrimitive::from_u32(crdt_type_raw) {
             Some(crdt_type) => {
                 if let Some(ctx) = logging_ctx {
-                    log_crdt_message(ctx, &crdt_type, &message_stream, message_size);
+                    log_crdt_message(ctx, crdt_type, &message_stream, message_size);
                 }
 
                 if let Err(e) = process_message(scene_crdt_state, crdt_type, &mut message_stream) {
@@ -176,7 +176,7 @@ pub fn process_many_messages_with_logging(
 #[inline(never)]
 fn log_crdt_message(
     ctx: &CrdtLoggingContext,
-    crdt_type: &CrdtMessageType,
+    crdt_type: CrdtMessageType,
     message_stream: &DclReader,
     message_size: usize,
 ) {
@@ -237,7 +237,7 @@ fn log_crdt_message(
         timestamp_ms: current_timestamp_ms(),
         direction: ctx.direction,
         entity_id,
-        component_name: component_id_to_name(component_id).to_string(),
+        component_name: std::borrow::Cow::Borrowed(component_id_to_name(component_id)),
         operation,
         crdt_timestamp,
         payload,
@@ -245,7 +245,7 @@ fn log_crdt_message(
         raw_size_bytes: message_size,
     };
 
-    let _ = ctx.sender.try_send(SceneLogEntry::CrdtMessage(entry));
+    crate::tools::scene_logging::try_send_entry(&ctx.sender, SceneLogEntry::CrdtMessage(entry));
 }
 
 const CRDT_PUT_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 20;

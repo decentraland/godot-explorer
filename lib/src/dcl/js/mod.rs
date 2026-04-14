@@ -399,9 +399,7 @@ pub(crate) fn scene_thread(
     {
         let mut op_state = state.borrow_mut();
         op_state.put(SceneDebugFlag(should_debug));
-        op_state.put(engine::SceneTickCounter(std::sync::atomic::AtomicU32::new(
-            0,
-        )));
+        op_state.put(engine::SceneTickCounter(std::cell::Cell::new(0)));
     }
 
     if inspector.is_some() {
@@ -517,7 +515,7 @@ pub(crate) fn scene_thread(
                 .borrow()
                 .borrow::<engine::SceneTickCounter>()
                 .0
-                .store(tick_counter, std::sync::atomic::Ordering::Relaxed);
+                .set(tick_counter);
 
             crate::tools::scene_logging::log_lifecycle_event(
                 scene_id.0,
@@ -742,15 +740,18 @@ fn maybe_send_log_to_scene_logger(op_state: &OpState, op_name: &str, message: &s
     {
         if let Some(sender) = crate::tools::scene_logging::get_logger_sender() {
             let scene_id = op_state.try_borrow::<SceneId>().map(|id| id.0).unwrap_or(0);
-            let _ = sender.try_send(crate::tools::scene_logging::SceneLogEntry::OpCallStart(
-                crate::tools::scene_logging::OpCallStartEntry {
-                    call_id: 0,
-                    scene_id,
-                    timestamp_ms: crate::tools::scene_logging::current_timestamp_ms(),
-                    op_name: op_name.to_string(),
-                    args: Some(serde_json::Value::String(message.to_string())),
-                },
-            ));
+            crate::tools::scene_logging::try_send_entry(
+                &sender,
+                crate::tools::scene_logging::SceneLogEntry::OpCallStart(
+                    crate::tools::scene_logging::OpCallStartEntry {
+                        call_id: 0,
+                        scene_id,
+                        timestamp_ms: crate::tools::scene_logging::current_timestamp_ms(),
+                        op_name: op_name.to_string(),
+                        args: Some(serde_json::Value::String(message.to_string())),
+                    },
+                ),
+            );
         }
     }
 }

@@ -236,85 +236,19 @@ pub mod social_service {
 
 /// Deserialize a component's binary data to JSON. Used by the runtime scene
 /// logger when a debugged scene receives a CRDT message.
+///
+/// Transform (id=1) uses a custom binary format and is handled inline; every
+/// other id is delegated to the generated `deserialize_proto_component_to_json`
+/// (see `build.rs`), so the dispatch table stays in sync with the .proto sources
+/// automatically.
 pub fn deserialize_component_to_json(component_id: u32, data: &[u8]) -> Option<serde_json::Value> {
-    use prost::Message;
-    use sdk::components::*;
-
-    // Helper macro to decode and serialize a component
-    macro_rules! decode_component {
-        ($type:ty) => {{
-            <$type>::decode(data)
-                .ok()
-                .and_then(|v| serde_json::to_value(v).ok())
-        }};
-    }
-
     match component_id {
-        // Transform is a custom binary format, not proto
         1 => deserialize_transform(data),
-        1017 => decode_component!(PbMaterial),
-        1018 => decode_component!(PbMeshRenderer),
-        1019 => decode_component!(PbMeshCollider),
-        1020 => decode_component!(PbAudioSource),
-        1021 => decode_component!(PbAudioStream),
-        1030 => decode_component!(PbTextShape),
-        1040 => decode_component!(PbNftShape),
-        1041 => decode_component!(PbGltfContainer),
-        1042 => decode_component!(PbAnimator),
-        1043 => decode_component!(PbVideoPlayer),
-        1044 => decode_component!(PbVideoEvent),
-        1048 => decode_component!(PbEngineInfo),
-        1049 => decode_component!(PbGltfContainerLoadingState),
-        1050 => decode_component!(PbUiTransform),
-        1052 => decode_component!(PbUiText),
-        1053 => decode_component!(PbUiBackground),
-        1054 => decode_component!(PbUiCanvasInformation),
-        1060 => decode_component!(PbTriggerArea),
-        1061 => decode_component!(PbTriggerAreaResult),
-        1062 => decode_component!(PbPointerEvents),
-        1063 => decode_component!(PbPointerEventsResult),
-        1067 => decode_component!(PbRaycast),
-        1068 => decode_component!(PbRaycastResult),
-        1070 => decode_component!(PbAvatarModifierArea),
-        1071 => decode_component!(PbCameraModeArea),
-        1072 => decode_component!(PbCameraMode),
-        1073 => decode_component!(PbAvatarAttach),
-        1074 => decode_component!(PbPointerLock),
-        1075 => decode_component!(PbMainCamera),
-        1076 => decode_component!(PbVirtualCamera),
-        1078 => decode_component!(PbInputModifier),
-        1079 => decode_component!(PbLightSource),
-        1080 => decode_component!(PbAvatarShape),
-        1081 => decode_component!(PbVisibilityComponent),
-        1087 => decode_component!(PbAvatarBase),
-        1088 => decode_component!(PbAvatarEmoteCommand),
-        1089 => decode_component!(PbPlayerIdentityData),
-        1090 => decode_component!(PbBillboard),
-        1091 => decode_component!(PbAvatarEquippedData),
-        1093 => decode_component!(PbUiInput),
-        1094 => decode_component!(PbUiDropdown),
-        1095 => decode_component!(PbUiInputResult),
-        1096 => decode_component!(PbUiDropdownResult),
-        1097 => decode_component!(PbMapPin),
-        1099 => decode_component!(PbGltfNodeModifiers),
-        1102 => decode_component!(PbTween),
-        1103 => decode_component!(PbTweenState),
-        1104 => decode_component!(PbTweenSequence),
-        1105 => decode_component!(PbAudioEvent),
-        1106 => decode_component!(PbRealmInfo),
-        1200 => decode_component!(PbGltfNode),
-        1201 => decode_component!(PbGltfNodeState),
-        1202 => decode_component!(PbUiScrollResult),
-        1203 => decode_component!(PbUiCanvas),
-        1206 => decode_component!(PbGlobalLight),
-        1207 => decode_component!(PbTextureCamera),
-        1208 => decode_component!(PbCameraLayers),
-        1209 => decode_component!(PbPrimaryPointerInfo),
-        1210 => decode_component!(PbSkyboxTime),
-        1211 => decode_component!(PbCameraLayer),
-        _ => None,
+        _ => deserialize_proto_component_to_json(component_id, data),
     }
 }
+
+include!(concat!(env!("OUT_DIR"), "/deserialize_component.gen.rs"));
 
 /// Deserialize Transform component (custom binary format, not proto).
 /// Format: translation(Vec3) + rotation(Quat) + scale(Vec3) + parent(EntityId)
@@ -344,6 +278,13 @@ fn deserialize_transform(data: &[u8]) -> Option<serde_json::Value> {
     let parent_number = u16::from_le_bytes([data[40], data[41]]);
     let parent_version = u16::from_le_bytes([data[42], data[43]]);
     let parent = ((parent_version as u32) << 16) | (parent_number as u32);
+
+    // serde_json refuses NaN/Infinity floats; reject the whole transform rather
+    // than emitting an invalid log entry that would later fail to serialize.
+    let floats = [tx, ty, tz, rx, ry, rz, rw, sx, sy, sz];
+    if floats.iter().any(|v| !v.is_finite()) {
+        return None;
+    }
 
     Some(serde_json::json!({
         "position": { "x": tx, "y": ty, "z": tz },

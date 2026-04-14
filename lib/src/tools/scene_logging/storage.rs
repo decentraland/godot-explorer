@@ -40,8 +40,15 @@ impl StorageManager {
 
     /// Writes a log entry to the current file.
     pub fn write_entry(&mut self, entry: &SceneLogEntry) -> io::Result<()> {
+        let json = serde_json::to_string(entry)?;
+        self.write_serialized(&json)
+    }
+
+    /// Writes an already-serialized JSON line to the current file. Lets callers
+    /// that have already paid the serialization cost (e.g. the dispatcher's
+    /// per-frame loop) avoid serializing the same entry twice.
+    pub fn write_serialized(&mut self, json: &str) -> io::Result<()> {
         if let Some(ref mut writer) = self.current_file {
-            let json = serde_json::to_string(entry)?;
             let bytes = json.as_bytes();
 
             writer.write_all(bytes)?;
@@ -73,7 +80,9 @@ impl StorageManager {
         }
         self.current_file = None;
 
-        // Rename current file with timestamp
+        // Rename current file with timestamp.
+        // `chrono` is already a workspace dep (see lib/Cargo.toml), so reusing
+        // it here adds no extra dependency surface.
         let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
         let rotated_path = self
             .config
@@ -132,9 +141,22 @@ impl StorageManager {
                 let file_size = metadata.len();
                 // Don't delete the current session file
                 if entry.path() != self.current_file_path {
-                    fs::remove_file(entry.path())?;
-                    total_size -= file_size;
-                    tracing::info!("Removed old log file: {:?}", entry.path());
+                    // Per-file failure must not abort the whole rotation, or one
+                    // permission error would leave us unable to free disk space.
+                    match fs::remove_file(entry.path()) {
+                        Ok(_) => {
+                            total_size = total_size.saturating_sub(file_size);
+                            tracing::info!("Removed old log file: {:?}", entry.path());
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to remove old log file {:?}: {}; continuing",
+                                entry.path(),
+                                e
+                            );
+                            continue;
+                        }
+                    }
                 }
             }
         }

@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     rc::Rc,
     sync::{Arc, Mutex},
 };
@@ -29,7 +29,10 @@ use super::scene_logging_ops::SceneDebugFlag;
 /// to tag CRDT log entries with the correct frame number. Always present in
 /// `op_state`; only consulted when `SceneDebugFlag` is on, but kept unconditional
 /// so the hot path doesn't pay an extra `try_borrow` lookup.
-pub struct SceneTickCounter(pub std::sync::atomic::AtomicU32);
+///
+/// `Cell<u32>` rather than `AtomicU32`: `OpState` is `!Send` and the scene runs
+/// single-threaded inside its own tokio runtime, so we don't need atomics.
+pub struct SceneTickCounter(pub Cell<u32>);
 
 use super::{
     comms::{InternalPendingBinaryMessages, COMMS_MSG_TYPE_BINARY},
@@ -144,7 +147,7 @@ async fn op_crdt_recv_from_renderer(
             let current_tick = if debug {
                 op_state
                     .try_borrow::<SceneTickCounter>()
-                    .map(|tc| tc.0.load(std::sync::atomic::Ordering::Relaxed))
+                    .map(|tc| tc.0.get())
                     .unwrap_or(0)
             } else {
                 0
@@ -290,7 +293,7 @@ fn build_send_logging_ctx(op_state: &OpState) -> Option<CrdtLoggingContext> {
     let scene_id = op_state.try_borrow::<SceneId>().map(|id| id.0).unwrap_or(0);
     let tick = op_state
         .try_borrow::<SceneTickCounter>()
-        .map(|tc| tc.0.load(std::sync::atomic::Ordering::Relaxed))
+        .map(|tc| tc.0.get())
         .unwrap_or(0);
     Some(CrdtLoggingContext::new(
         sender,
