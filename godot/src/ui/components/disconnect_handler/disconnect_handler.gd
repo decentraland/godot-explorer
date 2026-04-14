@@ -4,11 +4,11 @@ extends Node
 ## Handles comms disconnection with automatic reconnection attempts
 ## and displays an overlay when reconnection fails.
 
-## Disconnect reasons from CommunicationManager:
-## 0 = DuplicateIdentity (same account logged in elsewhere)
-## 1 = RoomClosed (the room was closed)
-## 2 = Kicked (removed from server by admin)
-## 3 = Other (server shutdown, signal close, etc.)
+## Disconnect reasons from CommunicationManager (must match Rust DisconnectReason enum)
+const REASON_DUPLICATE_IDENTITY: int = 0
+const REASON_ROOM_CLOSED: int = 1
+const REASON_KICKED: int = 2
+const REASON_OTHER: int = 3
 
 const MAX_RECONNECT_ATTEMPTS: int = 3
 
@@ -17,11 +17,16 @@ var _last_adapter_str: String = ""
 var _last_disconnect_reason: int = -1
 var _overlay: ColorRect = null
 var _should_stop_reconnecting: bool = false
+var _scene_banned: bool = false
+var _is_loading: bool = false
 
 
 func _ready() -> void:
 	Global.comms.disconnected.connect(_on_disconnected)
 	Global.comms.on_adapter_changed.connect(_on_adapter_changed)
+	Global.loading_started.connect(_on_loading_started)
+	Global.loading_finished.connect(_on_loading_finished)
+	Global.on_menu_close.connect(_async_on_menu_close_ban_recheck)
 
 
 func _reset_reconnect_state() -> void:
@@ -37,6 +42,7 @@ func _on_adapter_changed(_voice_chat_enabled: bool, _adapter_str: String) -> voi
 	_last_adapter_str = ""
 	_last_disconnect_reason = -1
 	_should_stop_reconnecting = false
+	_scene_banned = false
 
 
 func _on_disconnected(reason: int) -> void:
@@ -45,12 +51,20 @@ func _on_disconnected(reason: int) -> void:
 		_last_adapter_str = Global.comms.get_current_adapter_conn_str()
 
 	# DuplicateIdentity means someone else logged in - don't retry, show error immediately
-	if reason == 0:
+	if reason == REASON_DUPLICATE_IDENTITY:
 		# Note: Don't reset _last_adapter_str here - we need it for reconnection
 		_reconnect_attempts = 0
 		_last_disconnect_reason = -1
 		_should_stop_reconnecting = true  # Stop any pending reconnect attempts
 		_show_disconnect_error(reason)
+		return
+
+	# Kicked/Banned - don't retry, show ban modal (defer if still loading)
+	if reason == REASON_KICKED:
+		_should_stop_reconnecting = true
+		_scene_banned = true
+		if not _is_loading:
+			Global.modal_manager.async_show_ban_kicked_modal()
 		return
 
 	_last_disconnect_reason = reason
@@ -96,16 +110,16 @@ func _show_disconnect_error(reason: int) -> void:
 	var message: String
 
 	match reason:
-		0:  # DuplicateIdentity
+		REASON_DUPLICATE_IDENTITY:
 			title = "Session Ended"
 			message = "Your session was ended because your account\nlogged in from another location."
-		1:  # RoomClosed
+		REASON_ROOM_CLOSED:
 			title = "Room Closed"
 			message = "The room you were in has been closed."
-		2:  # Kicked
+		REASON_KICKED:
 			title = "Removed from Server"
 			message = "You have been removed from the server\nby an administrator."
-		_:  # Other
+		_:
 			title = "Disconnected"
 			message = "You have been disconnected from the server.\nPlease try again later."
 
@@ -202,3 +216,31 @@ func _on_reconnect_pressed() -> void:
 	# Reconnect
 	if not adapter_to_reconnect.is_empty():
 		Global.comms.change_adapter(adapter_to_reconnect)
+
+
+func _on_loading_started() -> void:
+	_is_loading = true
+	# Close any visible ban modal during loading, but keep _scene_banned
+	# so _on_loading_finished can re-show the deferred modal.
+	Global.modal_manager.close_current_modal()
+
+
+func _on_loading_finished() -> void:
+	_is_loading = false
+
+	# If kicked during loading (scene room 403 or room metadata ban), show the deferred modal now
+	if _scene_banned:
+		Global.modal_manager.async_show_ban_kicked_modal()
+
+
+## Re-check ban when the user closes the menu (back from discover).
+## Waits one frame so loading_started can clear _scene_banned if the user navigated.
+func _async_on_menu_close_ban_recheck() -> void:
+	if not _scene_banned:
+		return
+	await get_tree().process_frame
+	if not _scene_banned or _is_loading:
+		return
+	# Clear suppress — this is an intentional re-show, not a stale signal.
+	Global.modal_manager.clear_suppress_ban_kicked()
+	Global.modal_manager.async_show_ban_kicked_modal()

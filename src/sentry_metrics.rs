@@ -71,10 +71,7 @@ fn sentry_get(config: &SentryConfig, path: &str) -> anyhow::Result<Value> {
 }
 
 fn get_project_id(config: &SentryConfig, project_slug: &str) -> anyhow::Result<String> {
-    let projects = sentry_get(
-        config,
-        &format!("/organizations/{}/projects/", config.org),
-    )?;
+    let projects = sentry_get(config, &format!("/organizations/{}/projects/", config.org))?;
 
     if let Some(arr) = projects.as_array() {
         for p in arr {
@@ -361,8 +358,8 @@ pub fn get_metrics(from: &str, to: &str) -> anyhow::Result<()> {
 }
 
 pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
-    let slack_webhook =
-        env::var("SENTRY_METRICS_SLACK_WEBHOOK_URL").map_err(|_| anyhow::anyhow!("SENTRY_METRICS_SLACK_WEBHOOK_URL not set"))?;
+    let slack_webhook = env::var("SENTRY_METRICS_SLACK_WEBHOOK_URL")
+        .map_err(|_| anyhow::anyhow!("SENTRY_METRICS_SLACK_WEBHOOK_URL not set"))?;
 
     let config = SentryConfig::from_env()?;
 

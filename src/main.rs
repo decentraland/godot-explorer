@@ -27,11 +27,11 @@ mod keystore;
 mod path;
 mod platform;
 mod run;
+mod sentry_metrics;
 mod tests;
 mod ui;
 mod update_snapshots;
 mod version;
-mod sentry_metrics;
 mod version_check;
 
 fn ensure_project_root() -> Result<(), anyhow::Error> {
