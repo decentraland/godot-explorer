@@ -208,7 +208,7 @@ func _update_grid_columns() -> void:
 
 	grid_container_wearables_list.columns = columns
 	#if emote_editor.container_all_emotes != null:
-		#emote_editor.container_all_emotes.columns = columns
+	#emote_editor.container_all_emotes.columns = columns
 
 	if hseparator_size_maintainer != null:
 		hseparator_size_maintainer.custom_minimum_size.x = 410.0 if is_narrow else 630.0
