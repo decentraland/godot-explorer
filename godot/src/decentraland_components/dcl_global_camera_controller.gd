@@ -92,10 +92,11 @@ func _process(delta: float) -> void:
 			global_virtual_camera.make_current()
 			Global.set_camera_mode(Global.CameraMode.CINEMATIC)
 
-			# When virtual camera is active we always show the primary avatar and hide outlines
+			# When virtual camera is active we always show the primary avatar and hide outlines.
+			# Use set_hidden(false) instead of show() so AvatarModifierArea hide still applies.
 			var explorer = Global.get_explorer()
 			if is_instance_valid(explorer):
-				explorer.player.avatar.show()
+				explorer.player.avatar.set_hidden(false)
 				explorer.player.outline_system.hide()
 
 		# Reset transition counter and store start transform
@@ -155,7 +156,7 @@ func _process(delta: float) -> void:
 				explorer.reset_cursor_position()
 				explorer.player.outline_system.show()
 				if explorer.player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-					explorer.player.avatar.hide()
+					explorer.player.avatar.set_hidden(true)
 	else:
 		# Transitioning to virtual camera target
 		var target_transform = desired_target.global_transform
