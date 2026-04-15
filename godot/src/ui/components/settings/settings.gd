@@ -5,6 +5,16 @@ signal request_pause_scenes(enabled: bool)
 signal request_livekit_debug(enabled: bool)
 signal panel_closed
 
+enum SceneLogLevel {
+	LOG = 1,
+	SCENE_ERROR = 2,
+	SYSTEM_ERROR = 3,
+}
+
+const _SECTION_TITLE_SCRIPT = preload("res://src/ui/components/settings/section_title.gd")
+const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
+const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
+
 ## When true, settings operates as a side panel inside the explorer:
 ## orientation is not changed and the background texture is hidden.
 @export var panel_mode: bool = false:
@@ -12,17 +22,6 @@ signal panel_closed
 		panel_mode = value
 		if is_node_ready():
 			_apply_panel_mode()
-
-const _SECTION_TITLE_SCRIPT = preload("res://src/ui/components/settings/section_title.gd")
-
-enum SceneLogLevel {
-	LOG = 1,
-	SCENE_ERROR = 2,
-	SYSTEM_ERROR = 3,
-}
-
-const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
-const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 
 @onready var label_title: Label = %Label_Title
 
@@ -67,7 +66,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
 @onready var label_skybox_warning: Label = %Label_SkyboxWarning
 
-
 #Advanced items:
 @onready var content_scroll_container: ScrollContainer = %ContentScrollContainer
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
@@ -87,7 +85,8 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
 @onready var container_gamepad: MarginContainer = %Container_Gamepad
 
-@onready var button_sign_out: CustomButton = $"VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer/CustomButton_SignOut"
+@onready
+var button_sign_out: CustomButton = $"VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer/CustomButton_SignOut"
 
 
 func _ready():
@@ -219,23 +218,22 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 		button_h = 96
 		button_theme_variation = "SecondaryOutlinedButton"
 		preview_h = 351
-	
+
 	container_gameplay.add_theme_constant_override("separation", section_v_separation)
 	container_graphics.add_theme_constant_override("separation", section_v_separation)
 	container_gameplay.add_theme_constant_override("separation", section_v_separation)
 	container_gameplay.add_theme_constant_override("separation", section_v_separation)
-	
+
 	button_clear_cache.custom_minimum_size.y = button_h
 	button_clear_cache.theme_type_variation = button_theme_variation
 	button_sign_out.custom_minimum_size.y = button_h
 	button_sign_out.theme_type_variation = button_theme_variation
-	
+
 	preview_viewport_container.custom_minimum_size.y = preview_h
-	
+
 	for node in find_children("*", "PanelContainer", true, false):
 		if node.get_script() == _SECTION_TITLE_SCRIPT:
 			node.set_font_size(section_title_font_size)
-
 
 	for node in find_children("*", "DropdownList", true, false):
 		node.max_visible_items = dropdown_max

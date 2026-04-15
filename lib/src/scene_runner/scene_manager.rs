@@ -1407,10 +1407,7 @@ impl SceneManager {
             global_bind.reset_skybox_time();
             drop(global_bind);
             if was_skybox_active {
-                global.emit_signal(
-                    "sdk_skybox_time_active_changed",
-                    &[false.to_variant()],
-                );
+                global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
             }
         }
 

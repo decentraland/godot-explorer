@@ -13,6 +13,6 @@ extends PanelContainer
 func _ready():
 	label_title.text = title
 
-		
+
 func set_font_size(size: int) -> void:
 	label_title.label_settings.font_size = size

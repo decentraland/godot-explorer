@@ -7,13 +7,12 @@ signal toggled(is_open: bool)
 
 const ITEM_HEIGHT: float = 68.0
 const ITEM_GAP: float = 8.0
-
-## Maximum number of items visible at once before the popup scrolls.
-@export var max_visible_items: int = 5
-
 const DROPDOWN_ITEM_SCENE = preload("res://src/ui/components/dropdown_list/dropdown_item.tscn")
 const COLOR_ARROW_NORMAL := Color(236, 235, 237, 1)
 const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
+
+## Maximum number of items visible at once before the popup scrolls.
+@export var max_visible_items: int = 5
 
 ## Title displayed above the dropdown button. Hidden when empty.
 @export var title: String = "":
