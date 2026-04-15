@@ -125,21 +125,26 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
                 let colgen_name = format!("{}_colgen", mesh_instance_3d.get_name());
                 static_body_3d.set_name(&colgen_name);
 
-                // Enable backface collision for concave shapes
-                for body_child in static_body_3d
-                    .get_children_ex()
-                    .include_internal(true)
-                    .done()
-                    .iter_shared()
-                {
-                    if let Ok(collision_shape_3d) =
-                        body_child.clone().try_cast::<CollisionShape3D>()
+                // Enable backface collision only for volumetric meshes.
+                // Unity's PhysX MeshCollider is always double-sided for physics, so volumetric
+                // meshes (streets, ramps, buildings) need backface collision to prevent falling
+                // through. Thin/planar meshes (one-way colliders) are left single-sided so they
+                // only block from the front face direction.
+                let is_planar = is_mesh_planar(&mesh_instance_3d);
+                if !is_planar {
+                    for body_child in static_body_3d
+                        .get_children_ex()
+                        .include_internal(true)
+                        .done()
+                        .iter_shared()
                     {
-                        if let Some(shape) = collision_shape_3d.get_shape() {
-                            if let Ok(mut concave_polygon_shape_3d) =
-                                shape.try_cast::<ConcavePolygonShape3D>()
-                            {
-                                concave_polygon_shape_3d.set_backface_collision_enabled(true);
+                        if let Ok(collision_shape_3d) =
+                            body_child.clone().try_cast::<CollisionShape3D>()
+                        {
+                            if let Some(shape) = collision_shape_3d.get_shape() {
+                                if let Ok(mut concave) = shape.try_cast::<ConcavePolygonShape3D>() {
+                                    concave.set_backface_collision_enabled(true);
+                                }
                             }
                         }
                     }
@@ -151,5 +156,22 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
         }
 
         create_scene_colliders(child, root_node.clone());
+    }
+}
+
+/// Minimum thickness (in any axis) below which a mesh is considered planar/one-way.
+const PLANAR_THICKNESS_THRESHOLD: f32 = 0.01;
+
+/// Check if a mesh is essentially planar (very thin in at least one axis).
+/// Planar meshes are used as one-way colliders and should NOT have backface collision.
+fn is_mesh_planar(mesh_instance: &Gd<MeshInstance3D>) -> bool {
+    if let Some(mesh) = mesh_instance.get_mesh() {
+        let aabb = mesh.get_aabb();
+        let size = aabb.size;
+        size.x < PLANAR_THICKNESS_THRESHOLD
+            || size.y < PLANAR_THICKNESS_THRESHOLD
+            || size.z < PLANAR_THICKNESS_THRESHOLD
+    } else {
+        false
     }
 }
