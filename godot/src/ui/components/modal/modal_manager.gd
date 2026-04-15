@@ -44,6 +44,10 @@ const BAN_KICKED_TITLE = "You've been banned"
 const BAN_KICKED_BODY = "Please contact support for more information."
 const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
 
+const LOW_SPEC_IPHONE_TITLE = "Limited performance"
+const LOW_SPEC_IPHONE_BODY = "Your device is below our recommended specs (iPhone 13/SE 2023). You may notice slowdowns, crashes or heating issues while playing."
+const LOW_SPEC_IPHONE_PRIMARY = "OK"
+
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
 var _ban_pre_check_active: bool = false
@@ -261,6 +265,26 @@ func async_show_ban_kicked_modal() -> void:
 
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_ban_go_to_discover)
+
+
+## Shows a low-spec iPhone warning modal (lobby popup)
+func async_show_low_spec_iphone_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(LOW_SPEC_IPHONE_TITLE)
+	current_modal.set_body(LOW_SPEC_IPHONE_BODY)
+	current_modal.set_primary_button_text(LOW_SPEC_IPHONE_PRIMARY)
+	current_modal.set_primary_button_font_size(24)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.blocker = true
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
 
 
 ## Clears the suppress flag so the next ban_kicked_modal call is not silenced.

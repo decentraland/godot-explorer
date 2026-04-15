@@ -101,6 +101,8 @@ pub struct DclCli {
     #[var(get)]
     pub scene_inspector_file: bool,
     #[var(get)]
+    pub low_spec_warning: bool,
+    #[var(get)]
     pub fi_benchmark_size: i32,
 
     // Arguments with values
@@ -431,6 +433,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
+            ArgDefinition {
+                name: "--low-spec-warning".to_string(),
+                description: "Simulate low-spec iPhone warnings (for testing on desktop)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
         ]
     }
 
@@ -580,6 +588,7 @@ impl INode for DclCli {
             })
             .unwrap_or_default();
         let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
+        let low_spec_warning = args_map.contains_key("--low-spec-warning");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
@@ -686,6 +695,7 @@ impl INode for DclCli {
             asset_server,
             scene_inspector,
             scene_inspector_file,
+            low_spec_warning,
             fi_benchmark_size,
             asset_server_port,
             realm,

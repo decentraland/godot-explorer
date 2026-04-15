@@ -31,6 +31,8 @@ pub struct DeepLinkResult {
     pub scene_inspector: String,
     /// Whether to write JSONL Scene Inspector files to disk
     pub scene_inspector_file: bool,
+    /// Simulate low-spec iPhone warnings (for testing)
+    pub low_spec_warning: bool,
 }
 
 impl DeepLinkResult {
@@ -157,6 +159,9 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "scene-inspector-file" => {
                 result.scene_inspector_file = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "low_spec_warning" => {
+                result.low_spec_warning = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
@@ -444,6 +449,18 @@ mod tests {
     fn rust_log_param() {
         let r = parse("decentraland://open?rust-log=debug");
         assert_eq!(get_param(&r, "rust-log"), Some("debug"));
+    }
+
+    #[test]
+    fn low_spec_warning() {
+        let r = parse("decentraland://open?low_spec_warning=true");
+        assert!(r.low_spec_warning);
+    }
+
+    #[test]
+    fn low_spec_warning_one() {
+        let r = parse("decentraland://open?low_spec_warning=1");
+        assert!(r.low_spec_warning);
     }
 
     // ---- Edge cases ---------------------------------------------------------

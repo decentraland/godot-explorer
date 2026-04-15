@@ -57,6 +57,10 @@ pub struct DclParseDeepLink {
     /// Whether to write JSONL Scene Inspector files to disk
     #[var]
     scene_inspector_file: bool,
+
+    /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
+    #[var]
+    low_spec_warning: bool,
 }
 
 #[godot_api]
@@ -84,6 +88,7 @@ impl DclParseDeepLink {
             path: GString::new(),
             scene_inspector: GString::new(),
             scene_inspector_file: false,
+            low_spec_warning: false,
         }
     }
 
@@ -110,6 +115,7 @@ impl DclParseDeepLink {
             path: GString::from(&r.path),
             scene_inspector: GString::from(&r.scene_inspector),
             scene_inspector_file: r.scene_inspector_file,
+            low_spec_warning: r.low_spec_warning,
         }
     }
 }
