@@ -27,6 +27,10 @@ pub struct DeepLinkResult {
     pub livekit_debug: bool,
     /// Routable path (e.g. "/jump", "/events", "/places", "/mobile")
     pub path: String,
+    /// Scene Inspector target: empty=off, "true"=auto (use preview WS + debugger), "ws://host:port"=custom target
+    pub scene_inspector: String,
+    /// Whether to write JSONL Scene Inspector files to disk
+    pub scene_inspector_file: bool,
     /// Simulate low-spec iPhone warnings (for testing)
     pub low_spec_warning: bool,
 }
@@ -145,6 +149,16 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "livekit_debug" => {
                 result.livekit_debug = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "scene-inspector" => {
+                result.scene_inspector = if value.eq_ignore_ascii_case("true") || value == "1" {
+                    "true".to_string()
+                } else {
+                    value.to_string()
+                };
+            }
+            "scene-inspector-file" => {
+                result.scene_inspector_file = value.eq_ignore_ascii_case("true") || value == "1";
             }
             "low_spec_warning" => {
                 result.low_spec_warning = value.eq_ignore_ascii_case("true") || value == "1";
@@ -503,5 +517,39 @@ mod tests {
         assert_eq!(r.realm, "r1");
         assert!(r.livekit_debug);
         assert_eq!(get_param(&r, "rust-log"), Some("debug"));
+    }
+
+    // ---- Scene Inspector parameters -----------------------------------------
+
+    #[test]
+    fn scene_inspector_true() {
+        let r = parse("decentraland://open?scene-inspector=true");
+        assert_eq!(r.scene_inspector, "true");
+    }
+
+    #[test]
+    fn scene_inspector_one() {
+        let r = parse("decentraland://open?scene-inspector=1");
+        assert_eq!(r.scene_inspector, "true");
+    }
+
+    #[test]
+    fn scene_inspector_custom_ws() {
+        let r = parse("decentraland://open?scene-inspector=ws://192.168.1.5:9090");
+        assert_eq!(r.scene_inspector, "ws://192.168.1.5:9090");
+    }
+
+    #[test]
+    fn scene_inspector_file() {
+        let r = parse("decentraland://open?scene-inspector=true&scene-inspector-file=true");
+        assert_eq!(r.scene_inspector, "true");
+        assert!(r.scene_inspector_file);
+    }
+
+    #[test]
+    fn scene_inspector_default_off() {
+        let r = parse("decentraland://open?location=0,0");
+        assert!(r.scene_inspector.is_empty());
+        assert!(!r.scene_inspector_file);
     }
 }

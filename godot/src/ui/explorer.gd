@@ -203,6 +203,26 @@ func _ready():
 	if Global.deep_link_obj.livekit_debug:
 		_on_control_menu_request_livekit_debug(true)
 
+	# Scene Inspector: activate bridge if --scene-inspector or ?scene-inspector= is set
+	var scene_inspector_target := ""
+	if not Global.deep_link_obj.scene_inspector.is_empty():
+		scene_inspector_target = Global.deep_link_obj.scene_inspector
+	elif not Global.cli.scene_inspector.is_empty():
+		scene_inspector_target = Global.cli.scene_inspector
+	if not scene_inspector_target.is_empty():
+		# Activate Rust-side instrumentation before any scene is spawned
+		Global.scene_inspector_active = true
+		var bridge = SceneInspectorBridge.new()
+		bridge.set_name("scene_inspector_bridge")
+		add_child(bridge)
+		bridge.setup(scene_inspector_target)
+	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
+	var scene_inspector_file: bool = (
+		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
+	)
+	if scene_inspector_file:
+		Global.scene_inspector_dispatcher.set_file_logging(true)
+
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
 	Global.deep_link_router._clear_deep_link()
 
