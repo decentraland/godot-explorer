@@ -65,6 +65,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 # Dynamic skybox toggle
 @onready var dynamic_skybox: HBoxContainer = %DynamicSkybox
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
+@onready var label_skybox_warning: Label = %Label_SkyboxWarning
 
 
 #Advanced items:
@@ -187,6 +188,9 @@ func _ready():
 	dropdown_list_realm.add_item("https://sdilauro.github.io/dae-unit-tests/dae-unit-tests", 9)
 	dropdown_list_realm.add_item("https://realm-provider.decentraland.org/main", 10)
 
+	Global.connect("sdk_skybox_time_active_changed", _on_sdk_skybox_time_active_changed)
+	_on_sdk_skybox_time_active_changed(Global.sdk_skybox_time_active)
+
 	if label_title.label_settings:
 		label_title.label_settings = label_title.label_settings.duplicate()
 	resized.connect(_on_resized)
@@ -246,6 +250,7 @@ func show_control(control: Control):
 	for child in v_box_container_sections.get_children():
 		child.hide()
 	control.show()
+	content_scroll_container.scroll_vertical = 0
 
 
 func _async_scroll_to_tab_button(button: Button) -> void:
@@ -404,10 +409,21 @@ func _update_current_cache_size():
 
 
 func _on_container_storage_visibility_changed():
+	if not is_node_ready():
+		return
 	_update_current_cache_size()
 
 
+func _on_sdk_skybox_time_active_changed(is_active: bool) -> void:
+	label_skybox_warning.visible = is_active
+	check_button_dynamic_skybox.disabled = is_active
+	dropdown_list_custom_skybox.disabled = is_active or check_button_dynamic_skybox.button_pressed
+
+
 func _on_check_button_dynamic_skybox_toggled(toggled_on: bool) -> void:
+	if Global.sdk_skybox_time_active:
+		check_button_dynamic_skybox.set_pressed_no_signal(not toggled_on)
+		return
 	dropdown_list_custom_skybox.disabled = toggled_on
 	if toggled_on:
 		dropdown_list_custom_skybox.select(-1)
@@ -734,6 +750,7 @@ func _on_button_back_to_explorer_pressed() -> void:
 
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
+		show_control(container_graphics)
 		if not panel_mode:
 			Global.set_orientation_portrait()
 		if Global.get_explorer() and not panel_mode:

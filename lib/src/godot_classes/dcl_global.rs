@@ -428,6 +428,9 @@ impl INode for DclGlobal {
 
 #[godot_api]
 impl DclGlobal {
+    #[signal]
+    fn sdk_skybox_time_active_changed(is_active: bool);
+
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
         set_scene_log_enabled(enabled);
