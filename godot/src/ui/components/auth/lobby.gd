@@ -396,7 +396,7 @@ func _process(delta: float) -> void:
 
 func _on_sign_in_logo_gui_input(event: InputEvent) -> void:
 	# Secret guest mode: double-tap logo when not in prod
-	if DclGlobal.is_prod():
+	if DclGlobal.is_production():
 		return
 
 	if event is InputEventScreenTouch and event.pressed:
