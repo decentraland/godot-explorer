@@ -45,6 +45,11 @@ func set_primary_button_text(text: String) -> void:
 	button_primary.text = text
 
 
+## Sets the primary button font size
+func set_primary_button_font_size(size: int) -> void:
+	button_primary.add_theme_font_size_override("font_size", size)
+
+
 ## Sets the secondary button text
 func set_secondary_button_text(text: String) -> void:
 	button_secondary.text = text

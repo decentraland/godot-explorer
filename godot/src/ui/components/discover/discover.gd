@@ -21,6 +21,8 @@ var _generator_statuses: Dictionary = {}
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 #@onready var discover_content: VBoxContainer = %DiscoverContent
 
+static var _low_spec_warning_shown: bool = false
+
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
@@ -108,9 +110,34 @@ func _on_visibility_changed():
 		Global.metrics.track_screen_viewed(
 			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
 		)
+		_show_low_spec_warning_if_needed()
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+
+
+func _show_low_spec_warning_if_needed():
+	# Skip if already shown this session
+	if _low_spec_warning_shown:
+		return
+
+	var deeplink_warning = Global.deep_link_obj and Global.deep_link_obj.low_spec_warning
+	var is_ftue = not Global.get_config().low_spec_warning_shown
+	var is_low_spec = DclIosPlugin.is_available() and DclIosPlugin.is_low_spec_iphone()
+
+	# Show if: deep link forces it OR (FTUE and low-spec device)
+	if not deeplink_warning and not (is_ftue and is_low_spec):
+		return
+
+	_low_spec_warning_shown = true
+
+	# Persist FTUE flag (not for deep link bypass)
+	if is_ftue and is_low_spec:
+		Global.get_config().low_spec_warning_shown = true
+		Global.get_config().save_to_settings_file()
+
+	Global.metrics.track_screen_viewed("MINSPEC_PROMPT", "")
+	Global.modal_manager.async_show_low_spec_iphone_modal()
 
 
 func _on_search_bar_opened() -> void:
