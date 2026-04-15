@@ -895,6 +895,8 @@ impl CommunicationManager {
                 let movement_packet = rfc4::MovementCompressed {
                     temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
                     movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
+                    head_sync_data: todo!("implement head sync compression"),
+                    point_at_data: todo!("implement point-at compression"),
                 };
 
                 rfc4::Packet {
@@ -931,12 +933,22 @@ impl CommunicationManager {
                     slide_blend_value: 0.0,
                     is_grounded: land,
                     is_jumping: rise,
+                    jump_count: todo!("implement jump count"),
                     is_long_jump: false,
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
+                    glide_state: todo!("implement glide state"),
                     is_instant: false,
                     is_emoting: self.is_emoting,
+                    head_ik_yaw_enabled: todo!("implement head sync"),
+                    head_ik_pitch_enabled: todo!("implement head sync"),
+                    head_yaw: todo!("implement head sync"),
+                    head_pitch: todo!("implement head sync"),
+                    point_at_x: todo!("implement point-at"),
+                    point_at_y: todo!("implement point-at"),
+                    point_at_z: todo!("implement point-at"),
+                    is_pointing_at: todo!("implement point-at"),
                 };
 
                 rfc4::Packet {

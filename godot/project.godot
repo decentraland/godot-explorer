@@ -27,7 +27,7 @@ config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
 run/main_loop_type="ProjectMainLoop"
-config/features=PackedStringArray("4.5")
+config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/image="uid://de6dww6t0a7v"
 config/icon="res://decentraland_logo_squared.png"
@@ -234,10 +234,10 @@ reflections/sky_reflections/ggx_samples=16
 environment/ssao/quality=0
 environment/ssil/quality=0
 environment/glow/upscale_mode=0
-environment/screen_space_reflection/roughness_quality=0
 environment/subsurface_scattering/subsurface_scattering_quality=0
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
+environment/screen_space_reflection/roughness_quality=0
 
 [sentry]
 
