@@ -700,7 +700,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="PreviewViewportContainer" type="SubViewportContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1269517432]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 351)
+custom_minimum_size = Vector2(0, 351)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -708,7 +708,7 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer" unique_id=1504030425]
 handle_input_locally = false
-size = Vector2i(500, 351)
+size = Vector2i(494, 351)
 render_target_clear_mode = 2
 render_target_update_mode = 4
 

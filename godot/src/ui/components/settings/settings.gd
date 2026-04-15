@@ -657,8 +657,6 @@ func _update_dynamic_graphics_status() -> void:
 	var state_name: String = manager.get_state_name()
 	var profile_name: String = GraphicSettings.PROFILE_NAMES[current_profile]
 
-	print(profile_name, state_name)
-
 	match state_name:
 		"Disabled":
 			print("")
