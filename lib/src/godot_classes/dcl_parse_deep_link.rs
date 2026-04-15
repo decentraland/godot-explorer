@@ -49,6 +49,10 @@ pub struct DclParseDeepLink {
     /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
     #[var]
     path: GString,
+
+    /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
+    #[var]
+    low_spec_warning: bool,
 }
 
 #[godot_api]
@@ -74,6 +78,7 @@ impl DclParseDeepLink {
             saved_profile: GString::new(),
             livekit_debug: false,
             path: GString::new(),
+            low_spec_warning: false,
         }
     }
 
@@ -98,6 +103,7 @@ impl DclParseDeepLink {
             saved_profile: GString::from(&r.saved_profile),
             livekit_debug: r.livekit_debug,
             path: GString::from(&r.path),
+            low_spec_warning: r.low_spec_warning,
         }
     }
 }
