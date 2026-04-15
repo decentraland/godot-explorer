@@ -97,6 +97,10 @@ pub struct DclCli {
     #[var(get)]
     pub asset_server: bool,
     #[var(get)]
+    pub scene_inspector: GString,
+    #[var(get)]
+    pub scene_inspector_file: bool,
+    #[var(get)]
     pub low_spec_warning: bool,
     #[var(get)]
     pub fi_benchmark_size: i32,
@@ -404,6 +408,18 @@ impl DclCli {
                 arg_type: ArgType::Value("<number>".to_string()),
                 category: "Authentication".to_string(),
             },
+            ArgDefinition {
+                name: "--scene-inspector".to_string(),
+                description: "Enable the Scene Inspector. 'true' = use the preview WebSocket channel, or 'ws://host:port' for a custom WebSocket target. Also passable via deeplink (?scene-inspector=true)".to_string(),
+                arg_type: ArgType::Value("<target>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--scene-inspector-file".to_string(),
+                description: "Write Scene Inspector entries to JSONL files on disk (user://scene_inspector/)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
             // Logging
             ArgDefinition {
                 name: "--rust-log".to_string(),
@@ -562,6 +578,16 @@ impl INode for DclCli {
         let emulate_android = args_map.contains_key("--emulate-android");
         let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
+        // --scene-inspector accepts an optional value; bare flag means "true"
+        let scene_inspector = args_map
+            .get("--scene-inspector")
+            .map(|v| {
+                v.as_ref()
+                    .map(GString::from)
+                    .unwrap_or_else(|| GString::from("true"))
+            })
+            .unwrap_or_default();
+        let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
         let low_spec_warning = args_map.contains_key("--low-spec-warning");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
@@ -667,6 +693,8 @@ impl INode for DclCli {
             emulate_android,
             landscape,
             asset_server,
+            scene_inspector,
+            scene_inspector_file,
             low_spec_warning,
             fi_benchmark_size,
             asset_server_port,
