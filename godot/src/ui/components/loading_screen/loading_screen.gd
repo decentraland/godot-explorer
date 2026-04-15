@@ -39,6 +39,8 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 @onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
 @onready var debug_chronometer := Chronometer.new()
 
+static var _low_spec_toast_shown: bool = false
+
 
 func _ready():
 	last_activity_time = Time.get_ticks_msec()
@@ -61,6 +63,7 @@ func async_hide_loading_screen_effect():
 	debug_chronometer.lap("Finished loading scene")
 	Global.loading_finished.emit()
 	timer_check_progress_timeout.stop()
+	_low_spec_toast_shown = false
 	var tween = get_tree().create_tween()
 	background.use_parent_material = true  # disable material
 	modulate = Color.WHITE
@@ -208,6 +211,26 @@ func _on_loading_screen_progress_logic_loading_show_requested():
 	loading_start_time = now
 	timer_check_progress_timeout.start()
 	loaded_resources_offset = Global.content_provider.count_loaded_resources()
+	_show_low_spec_toast_if_needed()
+
+
+func _show_low_spec_toast_if_needed():
+	if _low_spec_toast_shown:
+		return
+	var deeplink_warning = Global.deep_link_obj and Global.deep_link_obj.low_spec_warning
+	var is_low_spec = (
+		Global.cli.low_spec_warning
+		or deeplink_warning
+		or (DclIosPlugin.is_available() and DclIosPlugin.is_low_spec_iphone())
+	)
+	if not is_low_spec:
+		return
+
+	_low_spec_toast_shown = true
+	var toast_scene = load("res://src/ui/components/notifications/low_spec_toast.tscn")
+	var toast = toast_scene.instantiate()
+	add_child(toast)
+	toast.async_show()
 
 
 # For dev purposes
