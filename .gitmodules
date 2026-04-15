@@ -1,3 +1,4 @@
 [submodule "plugins/dcl-godot-ios/godot"]
 	path = plugins/dcl-godot-ios/godot
 	url = https://github.com/decentraland/godotengine.git
+	branch = 4.6.2

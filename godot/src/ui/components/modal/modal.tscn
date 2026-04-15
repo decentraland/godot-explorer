@@ -1,14 +1,30 @@
-[gd_scene load_steps=13 format=3 uid="uid://cwa2ufu3umupb"]
+[gd_scene load_steps=15 format=3 uid="uid://cwa2ufu3umupb"]
 
 [ext_resource type="Script" uid="uid://cqguabv2a1c7f" path="res://src/ui/components/modal/modal.gd" id="1_146x8"]
-[ext_resource type="Script" uid="uid://btifit7el05or" path="res://src/ui/components/utils/responsive_container.gd" id="2_5cdoh"]
+[ext_resource type="Script" uid="uid://b5n8gac80dncv" path="res://src/ui/components/utils/responsive_container.gd" id="2_5cdoh"]
 [ext_resource type="LabelSettings" uid="uid://b4jgney45syyy" path="res://assets/themes/modal_tittle.tres" id="2_ijrai"]
-[ext_resource type="Script" uid="uid://pwlonouve8et" path="res://src/ui/components/utils/figma_margins.gd" id="3_146x8"]
+[ext_resource type="Script" uid="uid://bbt567j8m5b18" path="res://src/ui/components/utils/figma_margins.gd" id="3_146x8"]
 [ext_resource type="Texture2D" uid="uid://bth12b5lxd4ul" path="res://assets/ui/modal-background.png" id="3_ijrai"]
 [ext_resource type="LabelSettings" uid="uid://cp7awd4s8rtcn" path="res://assets/themes/modal_body.tres" id="3_tquji"]
 [ext_resource type="LabelSettings" uid="uid://cmc7vbpljmiry" path="res://assets/themes/modal_url.tres" id="4_4n1cu"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_bdjpj"]
 [ext_resource type="Texture2D" uid="uid://bpsb828rp2tlt" path="res://assets/ui/modal-alert-icon.svg" id="6_rvkw6"]
+
+[sub_resource type="Shader" id="Shader_ijrai"]
+code = "shader_type canvas_item;
+
+uniform float blur_amount : hint_range(0.0, 8.0) = 2.0;
+
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+
+void fragment() {
+	vec4 color = textureLod(screen_texture, SCREEN_UV, blur_amount);
+	COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tquji"]
+shader = SubResource("Shader_ijrai")
+shader_parameter/blur_amount = 3.0000001425
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_figov"]
 corner_radius_top_left = 24
@@ -31,22 +47,35 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_force_pass_scroll_events = false
-color = Color(0, 0, 0, 0.5019608)
+color = Color(0, 0, 0, 0.33333334)
 script = ExtResource("1_146x8")
+metadata/mobile_preview_orientation = "both"
+
+[node name="Blur" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_tquji")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.63529414)
 
 [node name="PanelContainer" type="PanelContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 129.5
-offset_top = 28.0
-offset_right = -129.5
-offset_bottom = -28.0
+offset_left = 440.0
+offset_top = 85.5
+offset_right = -440.0
+offset_bottom = -85.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_figov")
 script = ExtResource("2_5cdoh")
+portrait_width = 0.72
 portrait_min_height = 0.1
 landscape_min_height = 0.1
 
@@ -68,11 +97,11 @@ theme_override_constants/margin_top = 80
 theme_override_constants/margin_right = 80
 theme_override_constants/margin_bottom = 70
 script = ExtResource("3_146x8")
-height_portrait = 1080.0
-top_portrait = 100.0
-right_portrait = 80.0
-bottom_portrait = 90.0
-portrait_left_margin = 80.0
+height_portrait = 1600.0
+top_portrait = 64.0
+right_portrait = 56.0
+bottom_portrait = 60.0
+portrait_left_margin = 56.0
 top_landscape = 80.0
 right_landscape = 80.0
 bottom_landscape = 70.0
@@ -126,16 +155,18 @@ max_lines_visible = 2
 visible_characters = 106
 visible_ratio = 1.0707071
 
-[node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="HSeparator_ButtonsSeparator" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 53
 theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 21
 
-[node name="Button_Secondary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
+[node name="Button_Secondary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
@@ -144,7 +175,7 @@ theme = ExtResource("5_bdjpj")
 theme_type_variation = &"SecondaryButton"
 text = "SECONDARY"
 
-[node name="Button_Primary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer"]
+[node name="Button_Primary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
@@ -172,5 +203,5 @@ expand_mode = 1
 stretch_mode = 4
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
-[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Secondary" to="." method="_on_button_secondary_pressed"]
-[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer/Button_Primary" to="." method="_on_button_primary_pressed"]
+[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons/Button_Secondary" to="." method="_on_button_secondary_pressed"]
+[connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons/Button_Primary" to="." method="_on_button_primary_pressed"]

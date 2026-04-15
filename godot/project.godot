@@ -19,6 +19,7 @@ viewport_height=720
 [animation]
 
 warnings/check_invalid_track_paths=false
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
@@ -26,7 +27,7 @@ config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
 run/main_loop_type="ProjectMainLoop"
-config/features=PackedStringArray("4.5")
+config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/image="uid://de6dww6t0a7v"
 config/icon="res://decentraland_logo_squared.png"
@@ -37,6 +38,7 @@ boot_splash/minimum_display_time=300
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
 NotificationsManager="*res://src/notifications_manager.gd"
+ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 
 [debug]
@@ -232,10 +234,10 @@ reflections/sky_reflections/ggx_samples=16
 environment/ssao/quality=0
 environment/ssil/quality=0
 environment/glow/upscale_mode=0
-environment/screen_space_reflection/roughness_quality=0
 environment/subsurface_scattering/subsurface_scattering_quality=0
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
+environment/screen_space_reflection/roughness_quality=0
 
 [sentry]
 

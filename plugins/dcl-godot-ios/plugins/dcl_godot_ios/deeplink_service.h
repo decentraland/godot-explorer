@@ -9,7 +9,7 @@
 #ifdef __OBJC__
 #import <UIKit/UIKit.h>
 
-@interface DeeplinkService : UIResponder<UIApplicationDelegate>
+@interface DeeplinkService : UIResponder<UIApplicationDelegate, UIWindowSceneDelegate>
 
 + (instancetype) shared;
 
