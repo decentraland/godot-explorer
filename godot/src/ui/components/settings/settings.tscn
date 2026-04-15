@@ -746,11 +746,6 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Graphic Profile"
 
-[node name="RadioSelector_GraphicProfile" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/GraphicProfile" unique_id=1615834888 instance=ExtResource("7_u8bs2")]
-unique_name_in_owner = true
-layout_mode = 2
-theme = SubResource("Theme_7krp8")
-items = Array[String](["VERY LOW", "LOW", "MEDIUM", "HIGH", "CUSTOM"])
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1100264795]
 unique_name_in_owner = true
@@ -1174,6 +1169,7 @@ layout_mode = 2
 theme_override_constants/separation = 44
 
 [node name="CustomButton_SignOut" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer" unique_id=1982531289 instance=ExtResource("22_mwb5b")]
+unique_name_in_owner = true
 layout_mode = 2
 
 [node name="UnderlinedButton_DeleteAccount" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer" unique_id=911061775 instance=ExtResource("25_mwb5b")]

@@ -85,8 +85,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
 @onready var container_gamepad: MarginContainer = %Container_Gamepad
 
-@onready
-var button_sign_out: CustomButton = $"VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer/CustomButton_SignOut"
+@onready var button_sign_out: CustomButton = %CustomButton_SignOut
 
 
 func _ready():
@@ -221,8 +220,7 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 
 	container_gameplay.add_theme_constant_override("separation", section_v_separation)
 	container_graphics.add_theme_constant_override("separation", section_v_separation)
-	container_gameplay.add_theme_constant_override("separation", section_v_separation)
-	container_gameplay.add_theme_constant_override("separation", section_v_separation)
+	container_advanced.add_theme_constant_override("separation", section_v_separation)
 
 	button_clear_cache.custom_minimum_size.y = button_h
 	button_clear_cache.theme_type_variation = button_theme_variation
