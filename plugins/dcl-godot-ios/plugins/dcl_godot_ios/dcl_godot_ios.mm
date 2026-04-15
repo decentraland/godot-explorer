@@ -987,7 +987,7 @@ TypedArray<Dictionary> DclGodotiOS::db_query_notifications(String where_clause, 
             String str_key = String([key UTF8String]);
 
             if ([objc_value isKindOfClass:[NSString class]]) {
-                dict[str_key] = String([(NSString *)objc_value UTF8String]);
+                dict[str_key] = String::utf8([(NSString *)objc_value UTF8String]);
             } else if ([objc_value isKindOfClass:[NSNumber class]]) {
                 NSNumber *num = (NSNumber *)objc_value;
                 // Check if it's a long long or int
@@ -1065,7 +1065,7 @@ Dictionary DclGodotiOS::db_get_notification(String id) {
         String str_key = String([key UTF8String]);
 
         if ([objc_value isKindOfClass:[NSString class]]) {
-            result[str_key] = String([(NSString *)objc_value UTF8String]);
+            result[str_key] = String::utf8([(NSString *)objc_value UTF8String]);
         } else if ([objc_value isKindOfClass:[NSNumber class]]) {
             NSNumber *num = (NSNumber *)objc_value;
             if (strcmp([num objCType], @encode(long long)) == 0) {
