@@ -444,6 +444,11 @@ impl DclGlobal {
     }
 
     #[func]
+    fn is_android_or_emulating(&self) -> bool {
+        self.is_android || self.cli.bind().emulate_android
+    }
+
+    #[func]
     fn is_ios(&self) -> bool {
         self.is_ios
     }
