@@ -32,7 +32,6 @@ const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
 @onready var container_storage: VBoxContainer = %VBoxContainer_Storage
 @onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
-@onready var button_back_to_explorer: Button = %Button_BackToExplorer
 
 #Storage items:
 @onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
@@ -90,7 +89,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
-	button_back_to_explorer.hide()
 	button_developer.visible = !Global.is_production()
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
@@ -722,8 +720,6 @@ func _on_button_storage_pressed() -> void:
 
 func _apply_panel_mode() -> void:
 	set("texture", null if panel_mode else load("res://assets/ui/settings-background.png"))
-	if panel_mode:
-		button_back_to_explorer.hide()
 
 
 func show_panel() -> void:
@@ -735,23 +731,11 @@ func hide_panel() -> void:
 	panel_closed.emit()
 
 
-func _on_button_back_to_explorer_pressed() -> void:
-	if panel_mode:
-		hide_panel()
-		return
-	if Global.get_explorer():
-		Global.close_menu.emit()
-		Global.set_orientation_landscape()
-
-
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		show_control(container_graphics)
 		if not panel_mode:
 			Global.set_orientation_portrait()
-		if Global.get_explorer() and not panel_mode:
-			if button_back_to_explorer:
-				button_back_to_explorer.show()
 		_refresh_hide_explorer_ui_row()
 
 
