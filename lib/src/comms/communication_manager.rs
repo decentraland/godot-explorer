@@ -926,7 +926,7 @@ impl CommunicationManager {
                     velocity_x: velocity.x,
                     velocity_y: velocity.y,
                     velocity_z: velocity.z,
-                    rotation_y: -rotation_y,
+                    rotation_y,
                     movement_blend_value,
                     slide_blend_value: 0.0,
                     is_grounded: land,
