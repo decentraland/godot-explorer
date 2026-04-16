@@ -5,4 +5,4 @@
 [resource]
 line_spacing = 0.0
 font = ExtResource("1_gegye")
-font_size = 80
+font_size = 65

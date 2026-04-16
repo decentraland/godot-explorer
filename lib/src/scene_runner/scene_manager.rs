@@ -196,6 +196,7 @@ impl SceneManager {
         let network_id = realm.get_network_id();
 
         let is_preview = dcl_global.bind().get_preview_mode();
+        let should_debug = dcl_global.bind().scene_inspector_active;
 
         let comms_adapter = dcl_global
             .bind()
@@ -237,6 +238,7 @@ impl SceneManager {
             },
             inspect,
             network_inspector_sender,
+            should_debug,
         });
 
         let new_scene = Scene::new(
@@ -926,6 +928,9 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
+                if scene.paused {
+                    continue;
+                }
                 if scene.dcl_scene.thread_join_handle.is_finished() {
                     tracing::error!("scene closed without kill signal");
                     if matches!(scene.scene_type, SceneType::Parcel) {
@@ -1649,6 +1654,16 @@ impl SceneManager {
             .values()
             .filter_map(|scene| scene.deno_memory_stats)
             .map(|stats| stats.external_memory_mb())
+            .sum()
+    }
+
+    /// Get total V8 heap limit across all scenes in MB
+    #[func]
+    pub fn get_total_deno_heap_limit_mb(&self) -> f64 {
+        self.scenes
+            .values()
+            .filter_map(|scene| scene.deno_memory_stats)
+            .map(|stats| stats.heap_limit_mb())
             .sum()
     }
 

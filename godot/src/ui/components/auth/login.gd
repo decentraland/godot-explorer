@@ -22,6 +22,7 @@ var _wc_polling_start_time: int = 0
 @onready var button_google: Button = %Button_Google
 @onready var button_apple: Button = %Button_Apple
 @onready var button_wallet_connect: Button = %Button_WalletConnect
+@onready var button_metamask: Button = %Button_MetaMask
 @onready var texture_rect_wallet_icon: TextureRect = %TextureRect_WalletIcon
 
 @onready var texture_rect_google: TextureRect = $Button_Google/TextureRect_Google
@@ -29,10 +30,7 @@ var _wc_polling_start_time: int = 0
 
 
 func _ready():
-	texture_rect_apple.hide()
-	texture_rect_google.show()
-
-	if Global.is_ios():
+	if Global.is_ios_or_emulating():
 		switch_google_with_apple()
 
 	# Configure wallet button based on platform
@@ -40,17 +38,14 @@ func _ready():
 
 
 func _configure_wallet_button() -> void:
-	if Global.is_android():
+	if Global.is_android_or_emulating():
 		# Android: Show Metamask button
-		button_wallet_connect.text = "METAMASK"
-		texture_rect_wallet_icon.texture = METAMASK_ICON
-		# Adjust icon position for "METAMASK" text (shorter than "WALLET CONNECT")
-		texture_rect_wallet_icon.offset_left = -170.0
-		texture_rect_wallet_icon.offset_right = texture_rect_wallet_icon.offset_left + 60
+		button_wallet_connect.hide()
+		button_metamask.show()
 	else:
 		# iOS and other platforms: Show WalletConnect button
-		button_wallet_connect.text = "WALLET CONNECT"
-		texture_rect_wallet_icon.texture = WALLETCONNECT_ICON
+		button_wallet_connect.show()
+		button_metamask.hide()
 
 
 func set_lobby(new_lobby: Lobby):
@@ -73,17 +68,8 @@ func async_login(provider: String = ""):
 
 
 func switch_google_with_apple():
-	button_google.reparent(h_box_container_more)
-	button_google.text = ""
-	button_google.icon = GOOGLE_ICON
-	texture_rect_google.hide()
-	h_box_container_more.move_child(button_google, 0)
-
-	button_apple.reparent(self)
+	self.move_child(button_google, 2)
 	self.move_child(button_apple, 0)
-	button_apple.text = "APPLE"
-	button_apple.icon = null
-	texture_rect_apple.show()
 
 
 # =============================================================================
@@ -379,6 +365,11 @@ func _on_button_google_pressed() -> void:
 	Global.metrics.track_click_button("google", lobby.current_screen_name, "")
 
 
+func _on_button_email_pressed() -> void:
+	async_login("")
+	Global.metrics.track_click_button("email", lobby.current_screen_name, "")
+
+
 func _on_button_discord_pressed() -> void:
 	async_login("discord")
 	Global.metrics.track_click_button("discord", lobby.current_screen_name, "")
@@ -392,3 +383,7 @@ func _on_button_x_pressed() -> void:
 func _on_button_apple_pressed() -> void:
 	async_login("apple")
 	Global.metrics.track_click_button("apple", lobby.current_screen_name, "")
+
+
+func _on_button_meta_mask_pressed() -> void:
+	_on_button_wallet_connect_pressed()

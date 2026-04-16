@@ -56,8 +56,21 @@ pub struct DclParseDeepLink {
 
     /// Dev/testing: URNs to inject into the backpack as fake-owned wearables
     /// (deep link param: fake-owned-wearables=urn1,urn2)
+
     #[var]
     fake_owned_wearables: PackedStringArray,
+
+    /// Scene Inspector target: empty=off, "true"=auto, "ws://host:port"=custom target
+    #[var]
+    scene_inspector: GString,
+
+    /// Whether to write JSONL Scene Inspector files to disk
+    #[var]
+    scene_inspector_file: bool,
+
+    /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
+    #[var]
+    low_spec_warning: bool,
 }
 
 #[godot_api]
@@ -85,6 +98,9 @@ impl DclParseDeepLink {
             path: GString::new(),
             disable_profile_deploy: false,
             fake_owned_wearables: PackedStringArray::new(),
+            scene_inspector: GString::new(),
+            scene_inspector_file: false,
+            low_spec_warning: false,
         }
     }
 
@@ -113,6 +129,9 @@ impl DclParseDeepLink {
             fake_owned_wearables: PackedStringArray::from_iter(
                 r.fake_owned_wearables.iter().map(GString::from),
             ),
+            scene_inspector: GString::from(&r.scene_inspector),
+            scene_inspector_file: r.scene_inspector_file,
+            low_spec_warning: r.low_spec_warning,
         }
     }
 }
