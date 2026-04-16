@@ -152,6 +152,10 @@ func _ready():
 	Global.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
 	_on_scene_changed(Global.scene_runner.get_current_parcel_scene_id())
 
+	# Avatar is top-level: initialize its world transform to match the player
+	avatar.global_position = global_position
+	avatar.rotation = Vector3(0, rotation.y, 0)
+
 
 func _on_player_profile_changed(new_profile: DclUserProfile):
 	var new_version = new_profile.get_profile_version()
@@ -193,6 +197,10 @@ func clamp_camera_rotation():
 
 
 func _physics_process(dt: float) -> void:
+	# Keep the top-level avatar co-located with the player (picks up teleports,
+	# external position changes, and ensures look_at below uses the correct origin)
+	avatar.global_position = global_position
+
 	# Handle hard landing cooldown
 	if _hard_landing_timer > 0:
 		_hard_landing_timer -= dt
