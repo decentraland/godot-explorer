@@ -74,7 +74,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 			Tween.EASE_IN_OUT
 		)
 		avatar.set_hidden(false)
-		avatar.set_rotation(Vector3(0, 0, 0))
+		avatar.set_rotation(Vector3(0, rotation.y, 0))
 		if play_sound:
 			UiSounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
@@ -319,6 +319,7 @@ func _physics_process(dt: float) -> void:
 	last_position = global_position
 	move_and_slide()
 	position.y = max(position.y, 0)
+	avatar.global_position = global_position
 
 
 func avatar_look_at(target_position: Vector3):
@@ -334,7 +335,7 @@ func avatar_look_at(target_position: Vector3):
 
 	# Set player body, avatar, and camera to look at same target (backward compatibility)
 	rotation.y = y_rot + PI
-	avatar.set_rotation(Vector3(0, 0, 0))
+	avatar.set_rotation(Vector3(0, y_rot + PI, 0))
 	mount_camera.rotation.x = x_rot
 
 	clamp_camera_rotation()
@@ -348,8 +349,8 @@ func set_avatar_rotation_independent(target_position: Vector3):
 
 	var y_rot = atan2(target_direction.x, target_direction.z)
 
-	# Set avatar rotation relative to player body
-	avatar.rotation.y = (y_rot + PI) - rotation.y
+	# Avatar is top-level, so set world-space Y rotation directly
+	avatar.rotation.y = y_rot + PI
 
 
 func camera_look_at(target_position: Vector3):
@@ -382,7 +383,7 @@ func get_broadcast_rotation_y() -> float:
 	var rotation_y := 0.0
 
 	if camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-		rotation_y = rotation.y + avatar.rotation.y
+		rotation_y = avatar.rotation.y
 	else:
 		rotation_y = rotation.y
 
