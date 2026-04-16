@@ -584,22 +584,17 @@ impl AvatarScene {
             }
         }
 
-        // rotation_y on the wire is the yaw in DCL/Unity convention (radians, no
-        // sign flip). Build the Godot-space quaternion via from_euler, then flip
-        // z/w so the value stored in DclTransformAndParent is already in DCL
-        // space — the Godot↔DCL handedness conversion is performed once at the
-        // to_godot_transform_3d() boundary, mirroring Position packets.
-        let godot_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
+        // rotation_y on the wire is the yaw in DCL/Unity (left-handed) space,
+        // in degrees — matching Unity Foundation Client's rfc4.Movement
+        // encoding (transform.eulerAngles.y). Convert to radians, then build
+        // the DCL-space quaternion directly. to_godot_transform_3d flips z/w
+        // at render time to convert to Godot's right-handed space, mirroring
+        // how Position packets handle translation.z.
+        let dcl_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
             x: 0.0,
-            y: movement.rotation_y,
+            y: movement.rotation_y.to_radians(),
             z: 0.0,
         });
-        let dcl_quat = godot::prelude::Quaternion {
-            x: godot_quat.x,
-            y: godot_quat.y,
-            z: -godot_quat.z,
-            w: -godot_quat.w,
-        };
 
         let dcl_transform = DclTransformAndParent {
             translation: godot::prelude::Vector3 {
@@ -646,20 +641,13 @@ impl AvatarScene {
             }
         }
 
-        // rotation_rad is the yaw in DCL/Unity convention (radians, no sign
-        // flip). See update_avatar_transform_with_movement for the rationale
-        // behind building a DCL-space quaternion here.
-        let godot_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
+        // rotation_rad is the yaw in DCL/Unity (left-handed) space. See
+        // update_avatar_transform_with_movement for the rationale.
+        let dcl_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
             x: 0.0,
             y: rotation_rad,
             z: 0.0,
         });
-        let dcl_quat = godot::prelude::Quaternion {
-            x: godot_quat.x,
-            y: godot_quat.y,
-            z: -godot_quat.z,
-            w: -godot_quat.w,
-        };
 
         let dcl_transform = DclTransformAndParent {
             translation: position,

@@ -880,11 +880,14 @@ impl CommunicationManager {
                     MoveKind::Idle
                 };
 
-                // Temporal::with_rotation_f32 expects radians (quantizes over 0..TAU)
+                // Wire convention matches Unity Foundation Client: rotation_y
+                // on the wire is a left-handed (Unity/DCL) yaw in radians.
+                // Godot is right-handed, so negate to cross the handedness
+                // boundary — analogous to position_z negation below.
                 let temporal = Temporal::from_parts(
                     time,
                     false,
-                    rotation_y, // radians from Godot
+                    -rotation_y,
                     movement.velocity_tier(),
                     move_kind,
                     !fall && !rise,
@@ -926,7 +929,11 @@ impl CommunicationManager {
                     velocity_x: velocity.x,
                     velocity_y: velocity.y,
                     velocity_z: velocity.z,
-                    rotation_y,
+                    // Unity Foundation Client writes rfc4.Movement.rotation_y
+                    // as degrees in [0, 360) (from transform.eulerAngles.y).
+                    // Negate to cross the Godot→Unity handedness boundary,
+                    // then convert radians→degrees.
+                    rotation_y: (-rotation_y).to_degrees(),
                     movement_blend_value,
                     slide_blend_value: 0.0,
                     is_grounded: land,
