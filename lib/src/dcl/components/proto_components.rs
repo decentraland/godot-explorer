@@ -233,3 +233,63 @@ pub mod social_service {
         ));
     }
 }
+
+/// Deserialize a component's binary data to JSON. Used by the runtime scene
+/// logger when a debugged scene receives a CRDT message.
+///
+/// Transform (id=1) uses a custom binary format and is handled inline; every
+/// other id is delegated to the generated `deserialize_proto_component_to_json`
+/// (see `build.rs`), so the dispatch table stays in sync with the .proto sources
+/// automatically.
+pub fn deserialize_component_to_json(component_id: u32, data: &[u8]) -> Option<serde_json::Value> {
+    match component_id {
+        1 => deserialize_transform(data),
+        _ => deserialize_proto_component_to_json(component_id, data),
+    }
+}
+
+include!(concat!(env!("OUT_DIR"), "/deserialize_component.gen.rs"));
+
+/// Deserialize Transform component (custom binary format, not proto).
+/// Format: translation(Vec3) + rotation(Quat) + scale(Vec3) + parent(EntityId)
+/// = 12 + 16 + 12 + 4 = 44 bytes
+fn deserialize_transform(data: &[u8]) -> Option<serde_json::Value> {
+    if data.len() < 44 {
+        return None;
+    }
+
+    // Read translation (3 floats)
+    let tx = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
+    let ty = f32::from_le_bytes([data[4], data[5], data[6], data[7]]);
+    let tz = f32::from_le_bytes([data[8], data[9], data[10], data[11]]);
+
+    // Read rotation (4 floats - quaternion)
+    let rx = f32::from_le_bytes([data[12], data[13], data[14], data[15]]);
+    let ry = f32::from_le_bytes([data[16], data[17], data[18], data[19]]);
+    let rz = f32::from_le_bytes([data[20], data[21], data[22], data[23]]);
+    let rw = f32::from_le_bytes([data[24], data[25], data[26], data[27]]);
+
+    // Read scale (3 floats)
+    let sx = f32::from_le_bytes([data[28], data[29], data[30], data[31]]);
+    let sy = f32::from_le_bytes([data[32], data[33], data[34], data[35]]);
+    let sz = f32::from_le_bytes([data[36], data[37], data[38], data[39]]);
+
+    // Read parent entity ID (u16 number + u16 version = 4 bytes)
+    let parent_number = u16::from_le_bytes([data[40], data[41]]);
+    let parent_version = u16::from_le_bytes([data[42], data[43]]);
+    let parent = ((parent_version as u32) << 16) | (parent_number as u32);
+
+    // serde_json refuses NaN/Infinity floats; reject the whole transform rather
+    // than emitting an invalid log entry that would later fail to serialize.
+    let floats = [tx, ty, tz, rx, ry, rz, rw, sx, sy, sz];
+    if floats.iter().any(|v| !v.is_finite()) {
+        return None;
+    }
+
+    Some(serde_json::json!({
+        "position": { "x": tx, "y": ty, "z": tz },
+        "rotation": { "x": rx, "y": ry, "z": rz, "w": rw },
+        "scale": { "x": sx, "y": sy, "z": sz },
+        "parent": parent
+    }))
+}

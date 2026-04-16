@@ -49,6 +49,18 @@ pub struct DclParseDeepLink {
     /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
     #[var]
     path: GString,
+
+    /// Scene Inspector target: empty=off, "true"=auto, "ws://host:port"=custom target
+    #[var]
+    scene_inspector: GString,
+
+    /// Whether to write JSONL Scene Inspector files to disk
+    #[var]
+    scene_inspector_file: bool,
+
+    /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
+    #[var]
+    low_spec_warning: bool,
 }
 
 #[godot_api]
@@ -74,6 +86,9 @@ impl DclParseDeepLink {
             saved_profile: GString::new(),
             livekit_debug: false,
             path: GString::new(),
+            scene_inspector: GString::new(),
+            scene_inspector_file: false,
+            low_spec_warning: false,
         }
     }
 
@@ -98,6 +113,9 @@ impl DclParseDeepLink {
             saved_profile: GString::from(&r.saved_profile),
             livekit_debug: r.livekit_debug,
             path: GString::from(&r.path),
+            scene_inspector: GString::from(&r.scene_inspector),
+            scene_inspector_file: r.scene_inspector_file,
+            low_spec_warning: r.low_spec_warning,
         }
     }
 }
