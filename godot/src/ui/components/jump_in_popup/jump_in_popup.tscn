@@ -99,4 +99,4 @@ text = "JUMP IN"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2/Button_JumpInCancel" to="." method="_on_button_jump_in_cancel_pressed"]
-[connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2/Button_JumpIn" to="." method="_async_on_button_jump_in_pressed"]

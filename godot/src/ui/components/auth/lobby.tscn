@@ -960,6 +960,6 @@ expand_icon = true
 [connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
 [connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain" to="." method="_on_button_try_again_pressed"]
 [connection signal="ftue_completed" from="Main/FTUE/FTUE" to="." method="_on_ftue_ftue_completed"]
-[connection signal="jump_in" from="Main/FTUE/FTUE" to="." method="_on_ftue_jump_in"]
-[connection signal="jump_in_world" from="Main/FTUE/FTUE" to="." method="_on_ftue_jump_in_world"]
+[connection signal="jump_in" from="Main/FTUE/FTUE" to="." method="_async_on_ftue_jump_in"]
+[connection signal="jump_in_world" from="Main/FTUE/FTUE" to="." method="_async_on_ftue_jump_in_world"]
 [connection signal="pressed" from="SafeMarginContainer/Control/Button_Back" to="." method="_on_button_back_pressed"]
