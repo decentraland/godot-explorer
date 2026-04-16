@@ -55,8 +55,8 @@ impl ProfileService {
 
     /// Dev/testing toggle: when true, profile deploys are short-circuited to a
     /// local-only update (no POST to the catalyst content server). Used together
-    /// with `FORCE_FAKE_OWNED_WEARABLES` to test unowned wearables without
-    /// publishing fake ownership to the network.
+    /// with the `fake-owned-wearables` deep link param to test unowned wearables
+    /// without publishing fake ownership to the network.
     #[func]
     pub fn set_deploy_disabled(disabled: bool) {
         DEPLOY_DISABLED.store(disabled, Ordering::Relaxed);

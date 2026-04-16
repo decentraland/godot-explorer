@@ -64,6 +64,15 @@ var _force_hide_name: bool = false
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
 
+# Indices of bones added to body_shape_skeleton_3d by _merge_extra_wearable_bones_into_base
+# and currently in use by the active wearables.
+var _active_extra_bone_indices: Array[int] = []
+# Slots recycled from previous merges (renamed + disabled) waiting to be reused by the next
+# merge. Skeleton3D has no remove_bone() in Godot 4.6, so reusing slots is the only way to
+# keep bone_count bounded across outfit / body-shape changes.
+var _free_bone_pool: Array[int] = []
+var _stale_bone_counter: int = 0
+
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
 
@@ -428,6 +437,10 @@ func async_try_to_set_body_shape(body_shape_hash):
 			body_shape_skeleton_3d.remove_child(child)
 			child.queue_free()
 
+	# Recycle any extra bones merged in the previous assembly so the upcoming
+	# _merge_extra_wearable_bones_into_base pass starts from a clean slate.
+	_recycle_extra_wearable_bones()
+
 	# Reparent children directly (no need to duplicate since wearable_loader
 	# returns a fresh instantiated scene that we'll discard anyway)
 	for child in new_skeleton.get_children():
@@ -441,12 +454,34 @@ func async_try_to_set_body_shape(body_shape_hash):
 	_add_attach_points()
 
 
+# Renames bones previously merged via _merge_extra_wearable_bones_into_base to a
+# unique stale sentinel, disables them, detaches them from the active hierarchy
+# (parent=-1, rest=identity), and pushes their indices into the free pool so the
+# next merge can reuse them instead of growing the skeleton. Detaching keeps the
+# per-frame skeleton transform walk cheap by leaving stale slots as flat roots.
+func _recycle_extra_wearable_bones() -> void:
+	if _active_extra_bone_indices.is_empty():
+		return
+	for bone_idx in _active_extra_bone_indices:
+		if bone_idx < 0 or bone_idx >= body_shape_skeleton_3d.get_bone_count():
+			continue
+		var stale_name = "__stale_bone_%d" % _stale_bone_counter
+		_stale_bone_counter += 1
+		body_shape_skeleton_3d.set_bone_name(bone_idx, stale_name)
+		body_shape_skeleton_3d.set_bone_enabled(bone_idx, false)
+		body_shape_skeleton_3d.set_bone_parent(bone_idx, -1)
+		body_shape_skeleton_3d.set_bone_rest(bone_idx, Transform3D.IDENTITY)
+		body_shape_skeleton_3d.reset_bone_pose(bone_idx)
+		_free_bone_pool.push_back(bone_idx)
+	_active_extra_bone_indices.clear()
+
+
 # Copies bones that exist in the wearable's Skeleton3D but not in body_shape_skeleton_3d
 # (typically ADR-316 spring bones for hair, earrings, capes, etc.). Parents are added
 # before children so parent-by-name resolution always succeeds. Without this, mesh
 # skins referencing indices beyond body_shape_skeleton_3d.get_bone_count() log
 # `Skin bind #N contains bone index bind: N, which is greater than the skeleton bone count`.
-func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D, category: String) -> void:
+func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
 	var wearable_bone_count = wearable_skel.get_bone_count()
 	if wearable_bone_count == 0:
 		return
@@ -470,34 +505,34 @@ func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D, category: 
 
 	missing.sort_custom(func(a, b): return a[0] < b[0])
 
-	var added_names: Array[String] = []
 	for entry in missing:
 		var wearable_idx: int = entry[1]
 		var bone_name: String = entry[2]
-		var new_idx = body_shape_skeleton_3d.add_bone(bone_name)
+		var new_idx: int
+		if not _free_bone_pool.is_empty():
+			new_idx = _free_bone_pool.pop_back()
+			body_shape_skeleton_3d.set_bone_name(new_idx, bone_name)
+			body_shape_skeleton_3d.set_bone_enabled(new_idx, true)
+		else:
+			new_idx = body_shape_skeleton_3d.add_bone(bone_name)
 		body_shape_skeleton_3d.set_bone_rest(new_idx, wearable_skel.get_bone_rest(wearable_idx))
 		body_shape_skeleton_3d.reset_bone_pose(new_idx)
+		_active_extra_bone_indices.push_back(new_idx)
+		# Always reset parent: a recycled slot may have been linked to a stale
+		# parent from its previous use.
 		var parent_wearable_idx = wearable_skel.get_bone_parent(wearable_idx)
+		var parent_base_idx = -1
 		if parent_wearable_idx != -1:
 			var parent_name = wearable_skel.get_bone_name(parent_wearable_idx)
-			var parent_base_idx = body_shape_skeleton_3d.find_bone(parent_name)
-			if parent_base_idx != -1:
-				body_shape_skeleton_3d.set_bone_parent(new_idx, parent_base_idx)
-			else:
+			parent_base_idx = body_shape_skeleton_3d.find_bone(parent_name)
+			if parent_base_idx == -1:
 				push_warning(
 					(
 						"[AVATAR] Extra bone '%s' parent '%s' not found in base skeleton; leaving as root"
 						% [bone_name, parent_name]
 					)
 				)
-		added_names.push_back(bone_name)
-
-	print(
-		(
-			"[AVATAR] Added %d extra bone(s) from wearable '%s': %s"
-			% [added_names.size(), category, added_names]
-		)
-	)
+		body_shape_skeleton_3d.set_bone_parent(new_idx, parent_base_idx)
 
 
 # Rewrites a MeshInstance3D's Skin so every bind references its target bone by name.
@@ -639,7 +674,7 @@ func async_load_wearables():
 			# Spring bones (ADR-316) and other extra bones not in the base armature
 			# must be copied into body_shape_skeleton_3d before meshes are reparented,
 			# otherwise mesh skins reference bone indices that don't exist here.
-			_merge_extra_wearable_bones_into_base(skeleton_3d, category)
+			_merge_extra_wearable_bones_into_base(skeleton_3d)
 
 			for child in skeleton_3d.get_children():
 				if child is MeshInstance3D:
