@@ -27,6 +27,10 @@ pub struct DeepLinkResult {
     pub livekit_debug: bool,
     /// Routable path (e.g. "/jump", "/events", "/places", "/mobile")
     pub path: String,
+    /// Dev/testing: short-circuit profile deploys so local changes never publish.
+    pub disable_profile_deploy: bool,
+    /// Dev/testing: URNs to inject into the backpack as fake-owned wearables.
+    pub fake_owned_wearables: Vec<String>,
 }
 
 impl DeepLinkResult {
@@ -144,8 +148,25 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             "livekit_debug" => {
                 result.livekit_debug = value.eq_ignore_ascii_case("true") || value == "1";
             }
+            "disable-profile-deploy" => {
+                result.disable_profile_deploy = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "fake-owned-wearables" => {
+                result.fake_owned_wearables = value
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+            }
             _ => {}
         }
+    }
+
+    // Fake-owned wearables imply disabling profile deploys: otherwise the
+    // catalyst rejects the deploy because the signed profile references items
+    // the wallet doesn't actually own.
+    if !result.fake_owned_wearables.is_empty() {
+        result.disable_profile_deploy = true;
     }
 
     Some(result)
@@ -424,6 +445,47 @@ mod tests {
     fn livekit_debug() {
         let r = parse("decentraland://open?livekit_debug=true");
         assert!(r.livekit_debug);
+    }
+
+    #[test]
+    fn disable_profile_deploy_true() {
+        let r = parse("decentraland://open?disable-profile-deploy=true");
+        assert!(r.disable_profile_deploy);
+    }
+
+    #[test]
+    fn disable_profile_deploy_absent() {
+        let r = parse("decentraland://open");
+        assert!(!r.disable_profile_deploy);
+    }
+
+    #[test]
+    fn fake_owned_wearables_single() {
+        let r = parse(
+            "decentraland://open?fake-owned-wearables=urn:decentraland:amoy:collections-v2:0xabc:5",
+        );
+        assert_eq!(
+            r.fake_owned_wearables,
+            vec!["urn:decentraland:amoy:collections-v2:0xabc:5"]
+        );
+    }
+
+    #[test]
+    fn fake_owned_wearables_multiple() {
+        let r = parse("decentraland://open?fake-owned-wearables=urn:a,urn:b, urn:c ");
+        assert_eq!(r.fake_owned_wearables, vec!["urn:a", "urn:b", "urn:c"]);
+    }
+
+    #[test]
+    fn fake_owned_wearables_absent() {
+        let r = parse("decentraland://open");
+        assert!(r.fake_owned_wearables.is_empty());
+    }
+
+    #[test]
+    fn fake_owned_wearables_implies_disable_profile_deploy() {
+        let r = parse("decentraland://open?fake-owned-wearables=urn:a");
+        assert!(r.disable_profile_deploy);
     }
 
     #[test]

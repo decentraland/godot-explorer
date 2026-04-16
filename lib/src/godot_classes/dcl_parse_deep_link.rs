@@ -49,6 +49,15 @@ pub struct DclParseDeepLink {
     /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
     #[var]
     path: GString,
+
+    /// Dev/testing: short-circuit profile deploys (deep link param: disable-profile-deploy=true)
+    #[var]
+    disable_profile_deploy: bool,
+
+    /// Dev/testing: URNs to inject into the backpack as fake-owned wearables
+    /// (deep link param: fake-owned-wearables=urn1,urn2)
+    #[var]
+    fake_owned_wearables: PackedStringArray,
 }
 
 #[godot_api]
@@ -74,6 +83,8 @@ impl DclParseDeepLink {
             saved_profile: GString::new(),
             livekit_debug: false,
             path: GString::new(),
+            disable_profile_deploy: false,
+            fake_owned_wearables: PackedStringArray::new(),
         }
     }
 
@@ -98,6 +109,10 @@ impl DclParseDeepLink {
             saved_profile: GString::from(&r.saved_profile),
             livekit_debug: r.livekit_debug,
             path: GString::from(&r.path),
+            disable_profile_deploy: r.disable_profile_deploy,
+            fake_owned_wearables: PackedStringArray::from_iter(
+                r.fake_owned_wearables.iter().map(GString::from),
+            ),
         }
     }
 }

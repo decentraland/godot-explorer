@@ -441,6 +441,81 @@ func async_try_to_set_body_shape(body_shape_hash):
 	_add_attach_points()
 
 
+# Copies bones that exist in the wearable's Skeleton3D but not in body_shape_skeleton_3d
+# (typically ADR-316 spring bones for hair, earrings, capes, etc.). Parents are added
+# before children so parent-by-name resolution always succeeds. Without this, mesh
+# skins referencing indices beyond body_shape_skeleton_3d.get_bone_count() log
+# `Skin bind #N contains bone index bind: N, which is greater than the skeleton bone count`.
+func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D, category: String) -> void:
+	var wearable_bone_count = wearable_skel.get_bone_count()
+	if wearable_bone_count == 0:
+		return
+
+	# Collect missing bones along with their depth in the wearable hierarchy so we
+	# can add parents before children.
+	var missing: Array = []  # Array of [depth, wearable_idx, name]
+	for i in wearable_bone_count:
+		var bone_name = wearable_skel.get_bone_name(i)
+		if body_shape_skeleton_3d.find_bone(bone_name) != -1:
+			continue
+		var depth = 0
+		var cursor = wearable_skel.get_bone_parent(i)
+		while cursor != -1:
+			depth += 1
+			cursor = wearable_skel.get_bone_parent(cursor)
+		missing.push_back([depth, i, bone_name])
+
+	if missing.is_empty():
+		return
+
+	missing.sort_custom(func(a, b): return a[0] < b[0])
+
+	var added_names: Array[String] = []
+	for entry in missing:
+		var wearable_idx: int = entry[1]
+		var bone_name: String = entry[2]
+		var new_idx = body_shape_skeleton_3d.add_bone(bone_name)
+		body_shape_skeleton_3d.set_bone_rest(new_idx, wearable_skel.get_bone_rest(wearable_idx))
+		body_shape_skeleton_3d.reset_bone_pose(new_idx)
+		var parent_wearable_idx = wearable_skel.get_bone_parent(wearable_idx)
+		if parent_wearable_idx != -1:
+			var parent_name = wearable_skel.get_bone_name(parent_wearable_idx)
+			var parent_base_idx = body_shape_skeleton_3d.find_bone(parent_name)
+			if parent_base_idx != -1:
+				body_shape_skeleton_3d.set_bone_parent(new_idx, parent_base_idx)
+			else:
+				push_warning(
+					(
+						"[AVATAR] Extra bone '%s' parent '%s' not found in base skeleton; leaving as root"
+						% [bone_name, parent_name]
+					)
+				)
+		added_names.push_back(bone_name)
+
+	print(
+		(
+			"[AVATAR] Added %d extra bone(s) from wearable '%s': %s"
+			% [added_names.size(), category, added_names]
+		)
+	)
+
+
+# Rewrites a MeshInstance3D's Skin so every bind references its target bone by name.
+# Godot resolves named binds against the attached skeleton at runtime, so once the
+# mesh is reparented to body_shape_skeleton_3d (which may have been extended with
+# extra wearable bones) every joint resolves correctly, including ADR-316 spring bones.
+func _rebind_skin_by_name(mesh: MeshInstance3D, wearable_skel: Skeleton3D) -> void:
+	if mesh.skin == null:
+		return
+	var skin: Skin = mesh.skin.duplicate()
+	var wearable_bone_count = wearable_skel.get_bone_count()
+	for i in skin.get_bind_count():
+		var bone_idx = skin.get_bind_bone(i)
+		if bone_idx >= 0 and bone_idx < wearable_bone_count:
+			skin.set_bind_name(i, wearable_skel.get_bone_name(bone_idx))
+	mesh.skin = skin
+
+
 func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
 	var is_alpha_scissor = base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	var is_alpha_blend = (
@@ -561,7 +636,14 @@ func async_load_wearables():
 		# returns a fresh instantiated scene that we'll discard anyway)
 		var wearable_skeletons = obj.find_children("Skeleton3D")
 		for skeleton_3d in wearable_skeletons:
+			# Spring bones (ADR-316) and other extra bones not in the base armature
+			# must be copied into body_shape_skeleton_3d before meshes are reparented,
+			# otherwise mesh skins reference bone indices that don't exist here.
+			_merge_extra_wearable_bones_into_base(skeleton_3d, category)
+
 			for child in skeleton_3d.get_children():
+				if child is MeshInstance3D:
+					_rebind_skin_by_name(child, skeleton_3d)
 				skeleton_3d.remove_child(child)
 				child.set_owner(null)  # Clear owner since we're reparenting
 				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts

@@ -141,6 +141,12 @@ func _ready():
 		for wearable_item in remote_wearables.elements:
 			wearable_data[wearable_item.urn] = null
 
+	# Dev/testing: inject fake-owned wearables from deeplink (see FORCE_DEEPLINK in global.gd).
+	for fake_urn in Global.deep_link_obj.fake_owned_wearables:
+		if not wearable_data.has(fake_urn):
+			wearable_data[fake_urn] = null
+			print("[BACKPACK] Injected fake-owned wearable: ", fake_urn)
+
 	# Add base wearables last
 	for wearable_id in Wearables.BASE_WEARABLES:
 		var key = Wearables.get_base_avatar_urn(wearable_id)

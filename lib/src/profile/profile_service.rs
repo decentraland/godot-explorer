@@ -8,7 +8,15 @@ use anyhow::anyhow;
 use godot::prelude::*;
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
-use std::{io::Read, sync::Arc};
+use std::{
+    io::Read,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
+
+static DEPLOY_DISABLED: AtomicBool = AtomicBool::new(false);
 
 // ADR-290: Profile deployments no longer include snapshot content files.
 // Profile images are served on-demand by the profile-images service.
@@ -45,6 +53,23 @@ impl ProfileService {
         Self::async_deploy_profile_with_version_control(new_profile, true)
     }
 
+    /// Dev/testing toggle: when true, profile deploys are short-circuited to a
+    /// local-only update (no POST to the catalyst content server). Used together
+    /// with `FORCE_FAKE_OWNED_WEARABLES` to test unowned wearables without
+    /// publishing fake ownership to the network.
+    #[func]
+    pub fn set_deploy_disabled(disabled: bool) {
+        DEPLOY_DISABLED.store(disabled, Ordering::Relaxed);
+        if disabled {
+            tracing::warn!("profile > deploys DISABLED (local-only profile updates)");
+        }
+    }
+
+    #[func]
+    pub fn get_deploy_disabled() -> bool {
+        DEPLOY_DISABLED.load(Ordering::Relaxed)
+    }
+
     // ADR-290: Removed generate_snapshots parameter - snapshots are no longer uploaded
     #[func]
     pub fn async_deploy_profile_with_version_control(
@@ -58,6 +83,9 @@ impl ProfileService {
         let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
         let is_guest = player_identity.bind().get_is_guest();
 
+        // Dev/testing short-circuit: skip HTTP deploy, update local profile only.
+        let deploy_disabled = DEPLOY_DISABLED.load(Ordering::Relaxed);
+
         // Handle guest profile
         if is_guest {
             let profile_dict = new_profile.bind().to_godot_dictionary();
@@ -65,6 +93,17 @@ impl ProfileService {
             config.set("guest_profile", &profile_dict.to_variant());
             config.call("save_to_settings_file", &[]);
 
+            if increment_version {
+                new_profile.bind_mut().increment_profile_version();
+            }
+            player_identity.bind_mut().set_profile(new_profile);
+
+            let mut promise_clone = promise.clone();
+            promise_clone.bind_mut().resolve();
+            return promise;
+        }
+
+        if deploy_disabled {
             if increment_version {
                 new_profile.bind_mut().increment_profile_version();
             }
