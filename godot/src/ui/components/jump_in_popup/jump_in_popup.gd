@@ -31,7 +31,7 @@ func _on_button_jump_in_cancel_pressed() -> void:
 
 func _on_button_jump_in_pressed() -> void:
 	close()
-	Global.async_teleport_to(location, realm)
+	await Global.async_teleport_to(location, realm)
 
 
 func async_load_place_position():
