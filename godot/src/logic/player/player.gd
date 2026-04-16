@@ -1,8 +1,8 @@
 class_name Player
 extends CharacterBody3D
 
-const DEFAULT_CAMERA_FOV = 75.0
-const SPRINTING_CAMERA_FOV = 100.0
+const DEFAULT_CAMERA_FOV = 60.0
+const SPRINTING_CAMERA_FOV = 75.0
 const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
 
 var last_position: Vector3
