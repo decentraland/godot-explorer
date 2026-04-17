@@ -1,15 +1,14 @@
+use godot::{classes::Node3D, obj::Gd};
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::Ordering,
 };
 
-use godot::{classes::Node3D, obj::Gd};
-
 use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                common::{InputAction, PointerEventType},
+                common::{InputAction, InteractionType, PointerEventType},
                 PbPointerEvents, PbPointerEventsResult,
             },
             SceneComponentId, SceneEntityId,
@@ -108,6 +107,20 @@ pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdt
             } else {
                 None
             };
+
+            if let Some(asd) = &new_value {
+                let is_proximity = asd.pointer_events.iter().any(|item| {
+                    item.interaction_type == Some(i32::from(InteractionType::Proximity))
+                });
+                if is_proximity {
+                    godot::prelude::godot_print!(
+                        "Proximity pointer: entity {:?}, is_proximity={}",
+                        entity,
+                        new_value.is_some()
+                    );
+                }
+            } else {
+            }
 
             tracing::debug!(
                 "PointerEvents update: entity {:?}, has_pointer_events={}",

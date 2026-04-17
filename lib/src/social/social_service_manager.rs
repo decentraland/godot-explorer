@@ -838,7 +838,7 @@ impl SocialServiceManager {
             .upsert_social_settings(UpsertSocialSettingsPayload {
                 private_messages_privacy,
                 blocked_users_messages_visibility,
-                show_situation_reactions: todo!("implement situation reactions setting"),
+                show_situation_reactions: None, // TODO: implement situation reactions setting
             })
             .await
             .map_err(|e| anyhow!("Failed to upsert social settings: {:?}", e))?;

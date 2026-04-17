@@ -895,8 +895,8 @@ impl CommunicationManager {
                 let movement_packet = rfc4::MovementCompressed {
                     temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
                     movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
-                    head_sync_data: todo!("implement head sync compression"),
-                    point_at_data: todo!("implement point-at compression"),
+                    head_sync_data: 0, // TODO: implement head sync compression
+                    point_at_data: 0,  // TODO: implement point-at compression
                 };
 
                 rfc4::Packet {
@@ -933,22 +933,22 @@ impl CommunicationManager {
                     slide_blend_value: 0.0,
                     is_grounded: land,
                     is_jumping: rise,
-                    jump_count: todo!("implement jump count"),
+                    jump_count: 0, // TODO: implement jump count
                     is_long_jump: false,
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
-                    glide_state: todo!("implement glide state"),
+                    glide_state: 0, // TODO: implement glide state
                     is_instant: false,
                     is_emoting: self.is_emoting,
-                    head_ik_yaw_enabled: todo!("implement head sync"),
-                    head_ik_pitch_enabled: todo!("implement head sync"),
-                    head_yaw: todo!("implement head sync"),
-                    head_pitch: todo!("implement head sync"),
-                    point_at_x: todo!("implement point-at"),
-                    point_at_y: todo!("implement point-at"),
-                    point_at_z: todo!("implement point-at"),
-                    is_pointing_at: todo!("implement point-at"),
+                    head_ik_yaw_enabled: false, // TODO: implement head sync
+                    head_ik_pitch_enabled: false,
+                    head_yaw: 0.0,
+                    head_pitch: 0.0,
+                    point_at_x: 0.0, // TODO: implement point-at
+                    point_at_y: 0.0,
+                    point_at_z: 0.0,
+                    is_pointing_at: false,
                 };
 
                 rfc4::Packet {
