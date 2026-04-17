@@ -91,6 +91,10 @@ var _large_scene_floor: Node3D = null
 var _preview_ws := PreviewWebSocket.new()
 
 
+func get_preview_ws() -> PreviewWebSocket:
+	return _preview_ws
+
+
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 

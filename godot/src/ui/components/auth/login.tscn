@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bi3eesytuc1tr"]
+[gd_scene load_steps=14 format=3 uid="uid://bi3eesytuc1tr"]
 
 [ext_resource type="Script" uid="uid://cpe0atflphcxw" path="res://src/ui/components/auth/login.gd" id="1_f6pdb"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_55bff"]
@@ -6,9 +6,17 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="3_kk1uc"]
 [ext_resource type="Texture2D" uid="uid://c8mj35upr63j4" path="res://src/ui/components/auth/images/wallet-connect.png" id="5_mqpw2"]
 [ext_resource type="Texture2D" uid="uid://wywgcgt311ft" path="res://src/ui/components/auth/images/google.svg" id="5_ys0bb"]
+[ext_resource type="Texture2D" uid="uid://bmjih2ii4oabx" path="res://src/ui/components/auth/images/metamask.svg" id="6_3kqo8"]
+[ext_resource type="Texture2D" uid="uid://cdm4il5dcl2x8" path="res://src/ui/components/auth/images/email.svg" id="6_email"]
 [ext_resource type="Texture2D" uid="uid://cbukvmu67blst" path="res://src/ui/components/auth/images/discord.svg" id="7_apdvw"]
 [ext_resource type="Texture2D" uid="uid://b1wknyg6nwrwo" path="res://src/ui/components/auth/images/x.svg" id="8_8hgbb"]
 [ext_resource type="Texture2D" uid="uid://kxlueau7wo2u" path="res://src/ui/components/auth/images/apple.svg" id="9_tuhne"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_stkud"]
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_stkud"]
+color = Color(1, 1, 1, 1)
+thickness = 2
 
 [node name="Login" type="VBoxContainer"]
 offset_right = 576.0
@@ -18,7 +26,7 @@ script = ExtResource("1_f6pdb")
 
 [node name="Button_Google" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 112)
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
@@ -27,7 +35,7 @@ theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_constants/icon_max_width = 45
 theme_override_fonts/font = ExtResource("3_f6pdb")
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 30
 text = "GOOGLE"
 icon_alignment = 1
 expand_icon = true
@@ -39,10 +47,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -131.5
-offset_top = -25.5
-offset_right = -81.5
-offset_bottom = 24.5
+offset_left = -112.0
+offset_top = -22.0
+offset_right = -68.0
+offset_bottom = 22.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -51,7 +59,7 @@ expand_mode = 1
 
 [node name="Button_WalletConnect" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 112)
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("3_kk1uc")
@@ -59,21 +67,20 @@ theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("3_f6pdb")
-theme_override_font_sizes/font_size = 36
-text = "WALLET CONNECT"
+theme_override_font_sizes/font_size = 30
+text = "      WALLET CONNECT"
 expand_icon = true
 
 [node name="TextureRect_WalletIcon" type="TextureRect" parent="Button_WalletConnect"]
-unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -233.5
+offset_left = -190.0
 offset_top = -31.5
-offset_right = -173.5
+offset_right = -130.0
 offset_bottom = 28.5
 grow_horizontal = 2
 grow_vertical = 2
@@ -81,12 +88,79 @@ mouse_filter = 2
 texture = ExtResource("5_mqpw2")
 expand_mode = 1
 
+[node name="Button_MetaMask" type="Button" parent="."]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("3_kk1uc")
+theme_type_variation = &"SnowButton"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 32
+theme_override_fonts/font = ExtResource("3_f6pdb")
+theme_override_font_sizes/font_size = 30
+text = "     METAMASK"
+expand_icon = true
+
+[node name="TextureRect_WalletIcon" type="TextureRect" parent="Button_MetaMask"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -134.0
+offset_top = -31.5
+offset_right = -74.0
+offset_bottom = 28.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("6_3kqo8")
+expand_mode = 1
+
+[node name="Button_Apple" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("3_kk1uc")
+theme_type_variation = &"SnowButton"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 80
+theme_override_fonts/font = ExtResource("3_f6pdb")
+theme_override_font_sizes/font_size = 30
+text = "      APPLE"
+icon_alignment = 1
+expand_icon = true
+
+[node name="TextureRect_Apple" type="TextureRect" parent="Button_Apple"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -80.0
+offset_top = -28.0
+offset_right = -30.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("9_tuhne")
+expand_mode = 1
+
 [node name="HBoxContainer_More" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 30
 
 [node name="Button_Discord" type="Button" parent="HBoxContainer_More"]
+visible = false
 custom_minimum_size = Vector2(0, 112)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -102,6 +176,7 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="Button_X" type="Button" parent="HBoxContainer_More"]
+visible = false
 custom_minimum_size = Vector2(0, 112)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -116,41 +191,66 @@ icon = ExtResource("8_8hgbb")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Apple" type="Button" parent="HBoxContainer_More"]
+[node name="Separator2" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 35
+theme_override_styles/separator = SubResource("StyleBoxEmpty_stkud")
+
+[node name="Separator" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 27
+
+[node name="Sep1" type="HSeparator" parent="Separator"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxLine_stkud")
+
+[node name="Label" type="Label" parent="Separator"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "or"
+
+[node name="Sep2" type="HSeparator" parent="Separator"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxLine_stkud")
+
+[node name="Button_Email" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 112)
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
 theme = ExtResource("3_kk1uc")
-theme_type_variation = &"SnowButton"
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_constants/icon_max_width = 80
+theme_type_variation = &"SecondaryButton"
+theme_override_constants/icon_max_width = 45
 theme_override_fonts/font = ExtResource("3_f6pdb")
-theme_override_font_sizes/font_size = 36
-icon = ExtResource("9_tuhne")
+theme_override_font_sizes/font_size = 30
+text = "       CONTINUE WITH EMAIL"
 icon_alignment = 1
 expand_icon = true
 
-[node name="TextureRect_Apple" type="TextureRect" parent="HBoxContainer_More/Button_Apple"]
+[node name="TextureRect_Email" type="TextureRect" parent="Button_Email"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -110.5
-offset_top = -27.5
-offset_right = -60.5
-offset_bottom = 22.5
+offset_left = -205.5
+offset_top = -25.5
+offset_right = -155.5
+offset_bottom = 24.5
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("9_tuhne")
+texture = ExtResource("6_email")
 expand_mode = 1
 
 [connection signal="pressed" from="Button_Google" to="." method="_on_button_google_pressed"]
 [connection signal="pressed" from="Button_WalletConnect" to="." method="_on_button_wallet_connect_pressed"]
+[connection signal="pressed" from="Button_MetaMask" to="." method="_on_button_meta_mask_pressed"]
+[connection signal="pressed" from="Button_Apple" to="." method="_on_button_apple_pressed"]
 [connection signal="pressed" from="HBoxContainer_More/Button_Discord" to="." method="_on_button_discord_pressed"]
 [connection signal="pressed" from="HBoxContainer_More/Button_X" to="." method="_on_button_x_pressed"]
-[connection signal="pressed" from="HBoxContainer_More/Button_Apple" to="." method="_on_button_apple_pressed"]
+[connection signal="pressed" from="Button_Email" to="." method="_on_button_email_pressed"]
