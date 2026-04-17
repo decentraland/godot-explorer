@@ -1,21 +1,18 @@
-[gd_resource type="Sky" load_steps=21 format=3 uid="uid://l82r2nfrgcbx"]
+[gd_resource type="Sky" load_steps=24 format=3 uid="uid://l82r2nfrgcbx"]
 
 [ext_resource type="Shader" uid="uid://cpu82bv2y58bl" path="res://shaders/sky.gdshader" id="1_bggni"]
-[ext_resource type="Texture2D" uid="uid://byoq8loywg516" path="res://assets/environment/panorama_image.png" id="2_ljc2v"]
+[ext_resource type="Texture2D" path="res://assets/environment/horizon_clouds.png" id="2_ljc2v"]
 
-[sub_resource type="Gradient" id="Gradient_o4o57"]
-colors = PackedColorArray(0.740011, 0.848556, 0.999999, 1, 1, 1, 1, 1)
+; clouds_color_cycle: per-time-of-day cloud tint.
+; Indexed by day_night_cycle (raw skybox time, 0=midnight, 0.5=noon).
+; HDR values >1 are tonemapped down by the env's filmic tonemap.
+[sub_resource type="Gradient" id="Gradient_clouds_cycle"]
+offsets = PackedFloat32Array(0.05, 0.14, 0.26, 0.5, 0.71, 0.85, 1.0)
+colors = PackedColorArray(0.339, 0.194, 1.059, 1, 0.298, 0.416, 1.153, 1, 0.72, 0.33, 0.024, 1, 1.423, 1.798, 2.0, 1, 1.498, 0.847, 0.664, 1, 0.759, 0.769, 1.553, 1, 0.336, 0.197, 1.061, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_7vh77"]
-gradient = SubResource("Gradient_o4o57")
-width = 2
-
-[sub_resource type="Gradient" id="Gradient_gikcw"]
-colors = PackedColorArray(0.343792, 0.000684323, 0.483585, 1, 0.368376, 0.00165907, 0.662806, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_33c0e"]
-gradient = SubResource("Gradient_gikcw")
-width = 2
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_clouds_cycle"]
+gradient = SubResource("Gradient_clouds_cycle")
+width = 256
 
 [sub_resource type="Gradient" id="Gradient_5s28x"]
 offsets = PackedFloat32Array(0, 0.725632)
@@ -40,9 +37,13 @@ colors = PackedColorArray(1, 1, 1, 1, 1, 0.458027, 0.205551, 1, 0.883214, 0, 0.0
 gradient = SubResource("Gradient_fb67a")
 width = 5
 
+; sky_gradient: base sky color sampled by day_night_blend (0=noon, 1=midnight).
+; Day color: tonemap+glow brighten midtones, so input must be lower than output target.
+; Targeted Unity U12 sky avg (126,178,197). Reduced B significantly (was 0.73, now 0.55)
+; because Godot pipeline was over-amplifying blue.
 [sub_resource type="Gradient" id="Gradient_8yx6h"]
-offsets = PackedFloat32Array(0.483755, 1)
-colors = PackedColorArray(0, 0.599795, 0.873399, 1, 0.121488, 0.000196012, 0.236836, 1)
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(0.39, 0.6, 0.55, 1, 0.15, 0.03, 0.4, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_8513b"]
 gradient = SubResource("Gradient_8yx6h")
@@ -56,11 +57,14 @@ colors = PackedColorArray(1, 0.54902, 0.176471, 1, 0.629251, 0.0174917, 1.92523e
 gradient = SubResource("Gradient_paq02")
 width = 5
 
+; tint_color_cycle_bottom (zenith tint): multiplies sky base. Cycle = skybox_time + 0.43,
+; so cycle 0.43=midnight, 0.93=noon, 0.23=sunset, 0.63=sunrise. Keep white at midnight/noon
+; (let base color show), warm at sunrise/sunset.
 [sub_resource type="Gradient" id="Gradient_dn7ne"]
 interpolation_mode = 2
 interpolation_color_space = 2
-offsets = PackedFloat32Array(0, 0.288809, 0.79661, 1)
-colors = PackedColorArray(1, 1, 1, 1, 0.839233, 0.509745, 3.85046e-07, 1, 0.791751, 0, 0.111045, 1, 1, 1, 1, 1)
+offsets = PackedFloat32Array(0.0, 0.13, 0.23, 0.43, 0.63, 0.83, 1.0)
+colors = PackedColorArray(0.95, 0.95, 0.95, 1, 0.95, 0.92, 0.9, 1, 1.0, 0.7, 0.5, 1, 0.85, 0.85, 0.95, 1, 1.0, 0.7, 0.5, 1, 0.95, 0.92, 0.9, 1, 0.95, 0.95, 0.95, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_g2lqa"]
 gradient = SubResource("Gradient_dn7ne")
@@ -74,14 +78,40 @@ colors = PackedColorArray(1, 1, 1, 1)
 gradient = SubResource("Gradient_og5o5")
 width = 6
 
+; Floor: constant original purple. Phase D will replace with TOD-modulated values.
+[sub_resource type="Gradient" id="Gradient_floor"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(0.169958, 0.000345964, 0.313964, 1, 0.169958, 0.000345964, 0.313964, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_floor"]
+gradient = SubResource("Gradient_floor")
+width = 2
+
+; Nadir: identical to top tint (single white) → tri-zone collapses to legacy 2-zone behavior.
+[sub_resource type="Gradient" id="Gradient_nadir"]
+offsets = PackedFloat32Array(0.537906)
+colors = PackedColorArray(1, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_nadir"]
+gradient = SubResource("Gradient_nadir")
+width = 2
+
+; Rim: black → no halo until tuned in Phase D.
+[sub_resource type="Gradient" id="Gradient_rim"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_rim"]
+gradient = SubResource("Gradient_rim")
+width = 2
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fx4kt"]
 shader = ExtResource("1_bggni")
 shader_parameter/milky_way_noise = SubResource("NoiseTexture2D_8yx6h")
 shader_parameter/stars_energy = 1.0
 shader_parameter/clouds_panorama = ExtResource("2_ljc2v")
 shader_parameter/sky_gradient = SubResource("GradientTexture1D_8513b")
-shader_parameter/clouds_gradient_day = SubResource("GradientTexture1D_7vh77")
-shader_parameter/clouds_gradient_night = SubResource("GradientTexture1D_33c0e")
+shader_parameter/clouds_color_cycle = SubResource("GradientTexture1D_clouds_cycle")
 shader_parameter/energy = 1.0
 shader_parameter/gamma = 0.90000004275
 shader_parameter/tint_color_cycle_top = SubResource("GradientTexture1D_xttk3")
@@ -91,7 +121,14 @@ shader_parameter/moon_color_cycle = SubResource("GradientTexture1D_nrrql")
 shader_parameter/dither_range = 0.1
 shader_parameter/dither_amount = 128.0
 shader_parameter/other_sun_rotation_offset = Vector2(0.3, 0.3)
-shader_parameter/floor_color = Color(0.169958, 0.000345964, 0.313964, 1)
+shader_parameter/floor_color_cycle = SubResource("GradientTexture1D_floor")
+shader_parameter/floor_horizon_blend = 0.15
+shader_parameter/floor_nadir_dim = 1.0
+shader_parameter/tint_color_cycle_nadir = SubResource("GradientTexture1D_nadir")
+shader_parameter/rim_color_cycle = SubResource("GradientTexture1D_rim")
+shader_parameter/sun_radiance_intensity = 0.0
+shader_parameter/sun_radiance_falloff = 4.0
+shader_parameter/clouds_scroll_speed = 0.0
 
 [resource]
 sky_material = SubResource("ShaderMaterial_fx4kt")
