@@ -107,6 +107,7 @@ text = "Settings"
 label_settings = ExtResource("6_sa1v7")
 
 [node name="MarginContainer_Nav" type="MarginContainer" parent="VBoxContainer" unique_id=225568042]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_top = 18
 theme_override_constants/margin_bottom = 18
@@ -247,6 +248,7 @@ text = "RESET ALL
 alignment = 0
 
 [node name="MarginContainer_Content" type="MarginContainer" parent="VBoxContainer" unique_id=663736676]
+unique_name_in_owner = true
 clip_children = 1
 layout_mode = 2
 size_flags_vertical = 3

@@ -1380,6 +1380,10 @@ func _on_discover_open():
 
 
 func _on_menu_open():
+	_on_friends_panel_closed()
+	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	release_mouse()
 
 

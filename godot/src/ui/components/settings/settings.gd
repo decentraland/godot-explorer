@@ -24,6 +24,7 @@ const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 			_apply_panel_mode()
 
 @onready var label_title: Label = %Label_Title
+@onready var margin_container_nav: MarginContainer = %MarginContainer_Nav
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -85,6 +86,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var container_gamepad: MarginContainer = %Container_Gamepad
 
 @onready var button_sign_out: CustomButton = %CustomButton_SignOut
+@onready var margin_container_content: MarginContainer = %MarginContainer_Content
 
 
 func _ready():
@@ -205,9 +207,13 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	var button_h: int = 74
 	var button_theme_variation: String = "SecondaryOutlinedButtonSmall"
 	var preview_h: int = 290
+	var margin_container_nav_v: int = 0
+	var margin_container_content_top: int = 12
 	label_title.label_settings.font_size = 44
 
 	if is_orientation_portrait:
+		margin_container_nav_v = 18
+		margin_container_content_top = 32
 		label_title.label_settings.font_size = 48
 		dropdown_max = 5
 		section_title_font_size = 26
@@ -233,6 +239,10 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 
 	for node in find_children("*", "DropdownList", true, false):
 		node.max_visible_items = dropdown_max
+
+	margin_container_nav.add_theme_constant_override("margin_bottom", margin_container_nav_v)
+	margin_container_nav.add_theme_constant_override("margin_top", margin_container_nav_v)
+	margin_container_content.add_theme_constant_override("margin_top", margin_container_content_top)
 
 
 func refresh_graphic_settings():
@@ -731,7 +741,11 @@ func hide_panel() -> void:
 
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		show_control(container_graphics)
+		for btn in button_graphics.button_group.get_buttons():
+			btn.set_pressed_no_signal(false)
+		button_graphics.set_pressed_no_signal(true)
+		_on_button_graphics_pressed()
+		tabs_scroll_container.scroll_horizontal = 0
 		if not panel_mode:
 			Global.set_orientation_portrait()
 		_refresh_hide_explorer_ui_row()
