@@ -549,43 +549,13 @@ func _on_panel_chat_submit_message(message: String):
 				)
 				Global.async_join_world(world_realm)
 			else:
-				Global.on_chat_message.emit(
-					"system",
-					"[color=#ccc]Trying to change to realm " + arg_string + "[/color]",
-					Time.get_unix_time_from_system()
-				)
-				var success = await Global.realm.async_set_realm(arg_string, true)
-				if success:
-					loading_ui.enable_loading_screen()
-					var loading_data = {
-						"position": str(Global.scene_fetcher.current_position),
-						"realm": arg_string,
-						"when": "on_goto_realm"
-					}
-					Global.metrics.track_screen_viewed(
-						"LOADING_START", JSON.stringify(loading_data)
-					)
+				_async_try_change_realm(arg_string, "on_goto_realm")
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
 			if Realm.is_dcl_ens(target_realm):
 				Global.async_join_world(target_realm)
 			else:
-				Global.on_chat_message.emit(
-					"system",
-					"[color=#ccc]Trying to change to realm " + target_realm + "[/color]",
-					Time.get_unix_time_from_system()
-				)
-				var success = await Global.realm.async_set_realm(target_realm, true)
-				if success:
-					loading_ui.enable_loading_screen()
-					var loading_data = {
-						"position": str(Global.scene_fetcher.current_position),
-						"realm": target_realm,
-						"when": "on_changerealm"
-					}
-					Global.metrics.track_screen_viewed(
-						"LOADING_START", JSON.stringify(loading_data)
-					)
+				_async_try_change_realm(target_realm, "on_changerealm")
 
 		elif command_str == "/world" and params.size() > 1:
 			var world_realm = (
@@ -768,6 +738,23 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 				"when": "on_moveto"
 			}
 			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+
+func _async_try_change_realm(realm_string: String, when: String) -> void:
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#ccc]Trying to change to realm " + realm_string + "[/color]",
+		Time.get_unix_time_from_system()
+	)
+	var success = await Global.realm.async_set_realm(realm_string, true)
+	if success:
+		loading_ui.enable_loading_screen()
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm": realm_string,
+			"when": when
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
