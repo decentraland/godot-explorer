@@ -87,12 +87,11 @@ uniform vec4 atm_sky_tint : source_color = vec4(0.5, 0.5, 0.5, 1.0);
 uniform vec4 atm_ground_color : source_color = vec4(0.369, 0.349, 0.341, 1.0);
 uniform float atm_exposure : hint_range(0.0, 5.0) = 1.3;
 
-// Baked atmosphere lookup — runtime samples 2 adjacent keyframes and lerps. Driven by
-// sky_base.gd._update_baked_cubemaps from current skybox_time. Replaces gradient-based
-// base atmosphere (Phase E3).
-uniform samplerCube baked_cubemap_a : source_color, hint_default_black;
-uniform samplerCube baked_cubemap_b : source_color, hint_default_black;
-uniform float baked_blend_factor : hint_range(0.0, 1.0) = 0.0;
+// Baked atmosphere lookup — CubemapArray with one layer per keyframe (uniform 2h
+// spacing: 00, 02, 04, ..., 22). Uniform spacing lets the shader pick adjacent
+// layers + blend factor with pure arithmetic — no loop, no branches.
+uniform samplerCubeArray baked_array : hint_default_black;
+const int BAKE_LAYERS = 12;
 
 // Second sun orbital parameters
 uniform float second_sun_speed : hint_range(0.0, 2.0) = 0.1;
@@ -383,10 +382,13 @@ void sky() {
   // Soft horizon falloff (~15° instead of ~1.4°) — kills the "tea-cup cap" look
   float is_floor = smoothstep(0.0, -floor_horizon_blend, eye_y);
 
-  // === BASE ATMOSPHERE — sample baked Rayleigh/Mie cubemaps and lerp between keyframes ===
-  // baked_cubemap_a/b and baked_blend_factor are pushed by sky_base.gd each frame.
-  vec3 atm_a = textureLod(baked_cubemap_a, EYEDIR, 0.0).rgb;
-  vec3 atm_b = textureLod(baked_cubemap_b, EYEDIR, 0.0).rgb;
+  // === BASE ATMOSPHERE — sample baked CubemapArray, lerp adjacent keyframes ===
+  float layer_f = day_night_cycle * float(BAKE_LAYERS);
+  float lo_idx = floor(layer_f);
+  float hi_idx = mod(lo_idx + 1.0, float(BAKE_LAYERS));
+  float baked_blend_factor = fract(layer_f);
+  vec3 atm_a = textureLod(baked_array, vec4(EYEDIR, lo_idx), 0.0).rgb;
+  vec3 atm_b = textureLod(baked_array, vec4(EYEDIR, hi_idx), 0.0).rgb;
   vec3 atm_color = mix(atm_a, atm_b, baked_blend_factor);
 
   // Cloud color: single gradient indexed by time-of-day. Cloud density modulates

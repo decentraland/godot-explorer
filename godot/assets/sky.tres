@@ -1,7 +1,8 @@
-[gd_resource type="Sky" load_steps=24 format=3 uid="uid://l82r2nfrgcbx"]
+[gd_resource type="Sky" load_steps=25 format=3 uid="uid://l82r2nfrgcbx"]
 
 [ext_resource type="Shader" uid="uid://cpu82bv2y58bl" path="res://shaders/sky.gdshader" id="1_bggni"]
-[ext_resource type="Texture2D" path="res://assets/environment/horizon_clouds.png" id="2_ljc2v"]
+[ext_resource type="CompressedCubemap" uid="uid://dm7cqly71j3q8" path="res://assets/environment/horizon_clouds.png" id="2_ljc2v"]
+[ext_resource type="CompressedCubemapArray" uid="uid://u5ypuc3d77f8" path="res://assets/environment/atm_array.png" id="3_atm"]
 
 ; clouds_color_cycle: per-time-of-day cloud tint.
 ; Indexed by day_night_cycle (raw skybox time, 0=midnight, 0.5=noon).
@@ -110,6 +111,8 @@ shader = ExtResource("1_bggni")
 shader_parameter/milky_way_noise = SubResource("NoiseTexture2D_8yx6h")
 shader_parameter/stars_energy = 1.0
 shader_parameter/clouds_panorama = ExtResource("2_ljc2v")
+shader_parameter/clouds_cubemap = ExtResource("2_ljc2v")
+shader_parameter/baked_array = ExtResource("3_atm")
 shader_parameter/sky_gradient = SubResource("GradientTexture1D_8513b")
 shader_parameter/clouds_color_cycle = SubResource("GradientTexture1D_clouds_cycle")
 shader_parameter/energy = 1.0

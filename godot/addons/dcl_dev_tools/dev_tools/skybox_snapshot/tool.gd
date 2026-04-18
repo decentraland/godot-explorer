@@ -20,9 +20,10 @@ const DIRECTIONS: Array = [
 	["U", Vector3(0, 1, 0), Vector3(0, 0, -1)],
 ]
 
-# Sparse cubemap keyframes — denser around sunrise/sunset where atmosphere changes fast.
-# Runtime samples the two adjacent keyframes and lerps (Phase E3).
-const BAKE_HOURS: Array = [0, 4, 6, 8, 12, 16, 18, 20]
+# Cubemap keyframes — uniform 2h spacing so the runtime shader can derive the adjacent
+# layer indices and blend factor with pure arithmetic (no loop, no branches).
+# Must stay in sync with BAKE_LAYERS in sky.gdshader and slices/amount in atm_array.png.import.
+const BAKE_HOURS: Array = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
 
 # Face order matches Godot's Cubemap layer convention (+X, -X, +Y, -Y, +Z, -Z).
 # Up vectors use Godot/Vulkan convention (world up for sides). The OpenGL cubemap spec
@@ -38,11 +39,14 @@ const FACE_DIRS: Array = [
 	["nz", Vector3(0, 0, -1), Vector3(0, 1, 0)],
 ]
 
-const BAKE_FACE_RESOLUTION := Vector2i(512, 512)
+# All keyframes baked into a single super-atlas (atm_array.png) — 6 faces wide × N
+# layers tall, one cubemap per row. Imported as CompressedCubemapArray so runtime is a
+# single load() with no image processing. Tiny resolution: atmosphere is smooth color
+# data and runtime lerps adjacent keyframes anyway. Total: 6×8 cells of 64² ≈ 40 KB.
+const BAKE_FACE_RESOLUTION := Vector2i(64, 64)
 
-# Bake output goes INSIDE godot/ so the editor imports each PNG as CompressedTexture2D
-# (we want the .import files this time — they're our runtime assets).
-const DEFAULT_BAKE_REL := "assets/environment/sky_baked/"
+# Bake output goes next to atm_array.png.import which configures CubemapArray import.
+const DEFAULT_BAKE_REL := "assets/environment/"
 
 const RESOLUTION_PRESETS: Array = [
 	["1920 × 1080 (fast)", Vector2i(1920, 1080)],
@@ -528,15 +532,22 @@ func _bake_cubemaps(out_dir: String):
 	# Flip the bake-mode global on. Restored in the cleanup branch below regardless of error.
 	RenderingServer.global_shader_parameter_set("atm_bake_mode", true)
 
-	var total: int = BAKE_HOURS.size() * FACE_DIRS.size()
-	var done := 0
-	for hour in BAKE_HOURS:
-		var skybox_time: float = float(hour) / 24.0
+	var face_size: int = BAKE_FACE_RESOLUTION.x
+	var num_layers: int = BAKE_HOURS.size()
+
+	# Super-atlas for CubemapArray: 6 faces wide × N hours tall. Cells are face_size².
+	# Imported as CompressedCubemapArray (.import file specifies arrangement=6x1, vertical
+	# stacking, amount=N). Single asset — no runtime slicing.
+	var atlas := Image.create(face_size * 6, face_size * num_layers, false, Image.FORMAT_RGBA8)
+
+	for layer in range(num_layers):
+		var hour: float = BAKE_HOURS[layer]
+		var skybox_time: float = hour / 24.0
 		_drive_skybox(skybox_time, anim_player, main_light)
 		await plugin.get_tree().process_frame
 
-		for entry in FACE_DIRS:
-			var face_name: String = entry[0]
+		for i in range(FACE_DIRS.size()):
+			var entry: Array = FACE_DIRS[i]
 			var look_at: Vector3 = entry[1]
 			var up: Vector3 = entry[2]
 
@@ -549,17 +560,22 @@ func _bake_cubemaps(out_dir: String):
 			# OpenGL/Vulkan cubemap convention (samplerCube expects image right = -Z for +X
 			# face, but Godot renders +Z to image right). Mirror once to align all 6 faces.
 			img.flip_x()
-			var path := "%satm_%02d_%s.png" % [out_dir, hour, face_name]
-			var err := img.save_png(path)
-			if err != OK:
-				push_error("Failed to save %s (err=%d)" % [path, err])
+			img.convert(Image.FORMAT_RGBA8)
+			var dst := Vector2i(i * face_size, layer * face_size)
+			atlas.blit_rect(img, Rect2i(0, 0, face_size, face_size), dst)
 
-			done += 1
-			status_label.text = ("Baked %d/%d  (atm_%02d_%s.png)" % [done, total, hour, face_name])
+		status_label.text = ("Baked layer %d/%d (hour %02d)" % [layer + 1, num_layers, int(hour)])
+
+	var path := "%satm_array.png" % out_dir
+	var err := atlas.save_png(path)
+	if err != OK:
+		push_error("Failed to save %s (err=%d)" % [path, err])
 
 	RenderingServer.global_shader_parameter_set("atm_bake_mode", false)
 	viewport.queue_free()
-	status_label.text = "Bake done. %d images in %s" % [total, out_dir]
+	status_label.text = (
+		"Bake done. Super-atlas: %s (%d×%d)" % [path, atlas.get_width(), atlas.get_height()]
+	)
 
 
 # Replicates sky_base.gd's _process logic so the editor doesn't need Global.skybox_time.
@@ -573,8 +589,9 @@ func _drive_skybox(
 	RenderingServer.global_shader_parameter_set("sun_direction", sun_dir)
 	RenderingServer.global_shader_parameter_set("moon_direction", -sun_dir)
 
-	# Synthetic atm sun (below horizon at night) — see sky_base.gd for the formula.
-	var atm_sun_dir = Vector3(sin(TAU * skybox_time), -cos(TAU * skybox_time), 0.0)
+	# Atm sun: keep visual sun's azimuth (X/Z), synthesize Y so it cycles below horizon
+	# at night — see sky_base.gd for the formula.
+	var atm_sun_dir = Vector3(sun_dir.x, -cos(TAU * skybox_time), sun_dir.z).normalized()
 	RenderingServer.global_shader_parameter_set("atm_sun_direction", atm_sun_dir)
 
 	RenderingServer.global_shader_parameter_set("sun_opacity", SUN_OPACITY.sample(skybox_time))
