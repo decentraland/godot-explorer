@@ -15,6 +15,7 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
+var _int_regex := RegEx.create_from_string(r"^-?\d+$")
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
@@ -501,9 +502,7 @@ func _is_coordinate_string(text: String) -> bool:
 	var parts = cleaned.split(",")
 	if parts.size() < 2:
 		return false
-	var int_regex = RegEx.new()
-	int_regex.compile(r"^-?\d+$")
-	return int_regex.search(parts[0]) != null and int_regex.search(parts[1]) != null
+	return _int_regex.search(parts[0]) != null and _int_regex.search(parts[1]) != null
 
 
 func _parse_coordinates(coord_string: String) -> Vector2i:
@@ -521,10 +520,7 @@ func _parse_coordinates(coord_string: String) -> Vector2i:
 		var y_str = parts[1].strip_edges()
 
 		# Validate and parse integers (including negative values)
-		var int_regex = RegEx.new()
-		int_regex.compile(r"^-?\d+$")
-
-		if int_regex.search(x_str) != null and int_regex.search(y_str) != null:
+		if _int_regex.search(x_str) != null and _int_regex.search(y_str) != null:
 			return Vector2i(int(x_str), int(y_str))
 
 	return Vector2i(0, 0)
@@ -558,14 +554,17 @@ func _on_panel_chat_submit_message(message: String):
 					"[color=#ccc]Trying to change to realm " + arg_string + "[/color]",
 					Time.get_unix_time_from_system()
 				)
-				Global.realm.async_set_realm(arg_string, true)
-				loading_ui.enable_loading_screen()
-				var loading_data = {
-					"position": str(Global.scene_fetcher.current_position),
-					"realm": arg_string,
-					"when": "on_goto_realm"
-				}
-				Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+				var success = await Global.realm.async_set_realm(arg_string, true)
+				if success:
+					loading_ui.enable_loading_screen()
+					var loading_data = {
+						"position": str(Global.scene_fetcher.current_position),
+						"realm": arg_string,
+						"when": "on_goto_realm"
+					}
+					Global.metrics.track_screen_viewed(
+						"LOADING_START", JSON.stringify(loading_data)
+					)
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
 			if Realm.is_dcl_ens(target_realm):
@@ -576,14 +575,17 @@ func _on_panel_chat_submit_message(message: String):
 					"[color=#ccc]Trying to change to realm " + target_realm + "[/color]",
 					Time.get_unix_time_from_system()
 				)
-				Global.realm.async_set_realm(target_realm, true)
-				loading_ui.enable_loading_screen()
-				var loading_data = {
-					"position": str(Global.scene_fetcher.current_position),
-					"realm": target_realm,
-					"when": "on_changerealm"
-				}
-				Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+				var success = await Global.realm.async_set_realm(target_realm, true)
+				if success:
+					loading_ui.enable_loading_screen()
+					var loading_data = {
+						"position": str(Global.scene_fetcher.current_position),
+						"realm": target_realm,
+						"when": "on_changerealm"
+					}
+					Global.metrics.track_screen_viewed(
+						"LOADING_START", JSON.stringify(loading_data)
+					)
 
 		elif command_str == "/world" and params.size() > 1:
 			var world_realm = (
@@ -774,8 +776,10 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 
 func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 	if not realm.is_empty() and realm != Global.realm.get_realm_string():
+		var success = await Global.realm.async_set_realm(realm)
+		if not success:
+			return
 		loading_ui.enable_loading_screen()
-		await Global.realm.async_set_realm(realm)
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
