@@ -496,6 +496,16 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
+func _is_coordinate_string(text: String) -> bool:
+	var cleaned = text.strip_edges().replace("(", "").replace(")", "").replace(" ", "")
+	var parts = cleaned.split(",")
+	if parts.size() < 2:
+		return false
+	var int_regex = RegEx.new()
+	int_regex.compile(r"^-?\d+$")
+	return int_regex.search(parts[0]) != null and int_regex.search(parts[1]) != null
+
+
 func _parse_coordinates(coord_string: String) -> Vector2i:
 	# Remove parentheses if present
 	var cleaned = coord_string.strip_edges()
@@ -527,20 +537,35 @@ func _on_panel_chat_submit_message(message: String):
 	var params := message.split(" ")
 	var command_str := params[0].to_lower()
 	if command_str.begins_with("/"):
-		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
-			# Join all params after the command to handle spaces properly
-			var coord_string = ""
-			if params.size() > 1:
-				coord_string = " ".join(params.slice(1))
-
-			var dest_vector = _parse_coordinates(coord_string)
-
-			Global.on_chat_message.emit(
-				"system",
-				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
-				Time.get_unix_time_from_system()
-			)
-			_on_control_menu_jump_to(dest_vector)
+		if (command_str == "/go" or command_str == "/goto") and params.size() > 1:
+			var arg_string = " ".join(params.slice(1)).strip_edges()
+			if _is_coordinate_string(arg_string):
+				var dest_vector = _parse_coordinates(arg_string)
+				Global.on_chat_message.emit(
+					"system",
+					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
+					Time.get_unix_time_from_system()
+				)
+				_on_control_menu_jump_to(dest_vector)
+			elif Realm.is_dcl_ens(arg_string) or not arg_string.contains("."):
+				var world_realm = (
+					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
+				)
+				Global.async_join_world(world_realm)
+			else:
+				Global.on_chat_message.emit(
+					"system",
+					"[color=#ccc]Trying to change to realm " + arg_string + "[/color]",
+					Time.get_unix_time_from_system()
+				)
+				Global.realm.async_set_realm(arg_string, true)
+				loading_ui.enable_loading_screen()
+				var loading_data = {
+					"position": str(Global.scene_fetcher.current_position),
+					"realm": arg_string,
+					"when": "on_goto_realm"
+				}
+				Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
 			if Realm.is_dcl_ens(target_realm):
