@@ -46,6 +46,7 @@ var _session_hide_main_hud: bool = false
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
+@onready var settings_panel: Control = %SettingsPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -140,6 +141,9 @@ func _ready():
 
 	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
+
+	# Connect settings panel button
+	Global.open_settings_panel.connect(_show_settings_panel)
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
@@ -1057,6 +1061,8 @@ func _on_global_open_own_profile() -> void:
 		friends_panel.hide_panel()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
 	navbar.collapse()
 	_open_own_profile()
 
@@ -1136,6 +1142,8 @@ func _show_friends_panel() -> void:
 	friends_panel.show_panel_on_friends_tab()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
@@ -1148,6 +1156,27 @@ func _on_friends_panel_closed() -> void:
 	capture_mouse()
 
 
+func _show_settings_panel() -> void:
+	if settings_panel.visible:
+		return
+	joypad.hide()
+	settings_panel.show()
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
+
+
+func _on_settings_panel_closed() -> void:
+	settings_panel.hide()
+	Global.explorer_grab_focus()
+	capture_mouse()
+
+
 func _show_notifications_panel() -> void:
 	if notifications_panel.visible:
 		return
@@ -1155,6 +1184,8 @@ func _show_notifications_panel() -> void:
 	notifications_panel.show_panel()
 	if friends_panel.visible:
 		friends_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
@@ -1257,9 +1288,10 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 			friends_panel.show_panel_on_friends_tab()
 			navbar.open_navbar_silently()
 			navbar.set_button_pressed(navbar.BUTTON.FRIENDS)
-			# Close notifications panel if open
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()
+			if settings_panel.visible:
+				settings_panel.hide()
 			h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
@@ -1318,7 +1350,10 @@ func _update_virtual_controls_visibility() -> void:
 	else:
 		# Only restore if no panel is covering them
 		var panel_open := (
-			friends_panel.visible or notifications_panel.visible or profile_container.visible
+			friends_panel.visible
+			or notifications_panel.visible
+			or settings_panel.visible
+			or profile_container.visible
 		)
 		if not panel_open:
 			joypad.show()
@@ -1336,6 +1371,7 @@ func _close_all_panels():
 	control_menu.async_close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not _gamepad_connected:
 		joypad.show()
@@ -1347,12 +1383,17 @@ func _on_discover_open():
 		joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
 
 func _on_menu_open():
+	_on_friends_panel_closed()
+	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	release_mouse()
 
 

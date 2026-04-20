@@ -200,8 +200,7 @@ fn run_external_command(
     }
 }
 
-const GDTOOLKIT_FORK_URL: &str =
-    "https://github.com/dcl-regenesislabs/godot-gdscript-toolkit.git";
+const GDTOOLKIT_FORK_URL: &str = "https://github.com/dcl-regenesislabs/godot-gdscript-toolkit.git";
 const GDTOOLKIT_VENV_DIR: &str = ".bin/gdtoolkit-venv";
 
 /// Get the path to gdformat/gdlint binaries inside the local venv.
@@ -378,7 +377,11 @@ pub fn run_full_tests(
             ))
         }
     });
-    step!(runner, "GDScript validation", check_gdscript::check_gdscript);
+    step!(
+        runner,
+        "GDScript validation",
+        check_gdscript::check_gdscript
+    );
     step!(runner, "Integration tests", || {
         run::run(false, true, vec![], false, false, false)
     });
@@ -406,10 +409,7 @@ pub fn run_full_tests(
         let tolerate = update_snapshots;
 
         step_tolerant!(runner, "Client tests", tolerate, || {
-            let extra_args = vec![
-                "--snapshot-folder".to_string(),
-                client_snapshot_str.clone(),
-            ];
+            let extra_args = vec!["--snapshot-folder".to_string(), client_snapshot_str.clone()];
             run::run(false, false, extra_args, false, true, false)
         });
 
@@ -553,10 +553,7 @@ fn generate_html_report(
             StepStatus::Skip(_) => ("skip", "SKIP", "--".to_string()),
         };
         let error_detail = if let StepStatus::Fail(msg) = &r.status {
-            format!(
-                "<div class=\"error-detail\">{}</div>",
-                html_escape(msg)
-            )
+            format!("<div class=\"error-detail\">{}</div>", html_escape(msg))
         } else {
             String::new()
         };
@@ -573,8 +570,9 @@ fn generate_html_report(
     // Build snapshot comparison cards
     let mut snapshots_html = String::new();
     if comparisons.is_empty() {
-        snapshots_html
-            .push_str("<p class=\"muted\">No snapshot comparisons found. Run visual tests first.</p>");
+        snapshots_html.push_str(
+            "<p class=\"muted\">No snapshot comparisons found. Run visual tests first.</p>",
+        );
     } else {
         for c in &comparisons {
             let status_class = if c.passed { "pass" } else { "fail" };
