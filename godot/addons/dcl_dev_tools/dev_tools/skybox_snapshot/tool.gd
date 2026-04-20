@@ -585,7 +585,10 @@ func _drive_skybox(
 	RenderingServer.global_shader_parameter_set("day_night_cycle", skybox_time)
 	anim_player.seek(skybox_time, true)
 
+	# 180° around Y mirrors the X/Z components to compensate for the Unity → Godot
+	# handedness flip that wasn't applied when the keyframes were imported.
 	var sun_dir = main_light.global_transform.basis.z
+	sun_dir = Vector3(-sun_dir.x, sun_dir.y, -sun_dir.z)
 	RenderingServer.global_shader_parameter_set("sun_direction", sun_dir)
 	RenderingServer.global_shader_parameter_set("moon_direction", -sun_dir)
 

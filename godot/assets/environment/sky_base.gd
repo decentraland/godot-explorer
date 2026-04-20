@@ -89,8 +89,11 @@ func _process(_delta: float) -> void:
 	main_light.visible = energy_factor > 0.01
 	main_light.light_energy = initial_sun_energy * energy_factor
 
-	# Visual sun direction — driven by the animation.
+	# Visual sun direction — driven by the animation. The 180° rotation around Y mirrors
+	# the X/Z components to compensate for the Unity (left-handed) → Godot (right-handed)
+	# coordinate flip that wasn't applied when the keyframes were imported.
 	var sun_dir = main_light.global_transform.basis.z
+	sun_dir = Vector3(-sun_dir.x, sun_dir.y, -sun_dir.z)
 	RenderingServer.global_shader_parameter_set("sun_direction", sun_dir)
 
 	# Atmospheric sun position — keeps the visual sun's azimuth (X/Z) so the bake's bright

@@ -12,9 +12,15 @@ uniform float stars_energy = 1.0;
 
 uniform sampler2D clouds_panorama : source_color;
 
-// Cubemap clouds. The 4×3 source PNG is sliced into 6 faces by sky_base.gd and assembled
-// at runtime. Sampled with EYEDIR directly so no equirect distortion at the poles.
+// Cubemap clouds (imported from a 6×1 strip atlas). Sampled with EYEDIR rotated around
+// the Y axis by clouds_rotation_y_deg + scroll, so the cloud silhouettes can be aligned
+// to a reference (and slowly rotate with clouds_scroll_speed).
 uniform samplerCube clouds_cubemap : source_color, hint_default_black;
+uniform float clouds_rotation_y_deg : hint_range(-180.0, 180.0) = 0.0;
+// Squashes the cubemap sampling vertically: <1 pulls clouds toward the horizon (clouds
+// appear lower and concentrated near horizon), >1 pushes them up. Match Unity's apparent
+// cloud altitude.
+uniform float clouds_height_compress : hint_range(0.1, 2.0) = 1.5;
 
 uniform sampler2D sky_gradient : source_color, repeat_disable, hint_default_white;
 
@@ -39,8 +45,8 @@ uniform sampler2D moon_color_cycle : source_color, repeat_disable, hint_default_
 // Sun radiance halo (Genesis Sky parity). Warm bloom around sun direction, transparent at
 // night via the gradient — adds the "morning glow" that's missing from the procedural sun.
 uniform sampler2D rim_color_cycle : source_color, repeat_disable, hint_default_white;
-uniform float sun_radiance_intensity : hint_range(0.0, 5.0) = 0.0;
-uniform float sun_radiance_falloff : hint_range(0.5, 16.0) = 4.0;
+uniform float sun_radiance_intensity : hint_range(0.0, 5.0) = 0.05;
+uniform float sun_radiance_falloff : hint_range(0.5, 32.0) = 12.0;
 
 // Cheap cloud rotation. Single uniform, ~zero added GPU cost vs static panorama.
 uniform float clouds_scroll_speed : hint_range(-0.05, 0.05) = 0.0;
@@ -312,12 +318,13 @@ void sky() {
   float horizon = 1.0 - smoothstep(0.0, 0.1, eye_dot);
   horizon *= horizon * horizon;
 
-  // Cubemap-sampled clouds. Rotate EYEDIR around Y for cheap cloud scroll.
+  // Cubemap-sampled clouds. Rotate EYEDIR around Y by user-set offset + cheap scroll,
+  // then squash Y so clouds sit closer to the horizon.
   vec3 rd = EYEDIR;
-  float scroll = TIME * clouds_scroll_speed * TAU;
-  float cs = cos(scroll);
-  float sn = sin(scroll);
-  vec3 cloud_eye = vec3(cs * rd.x + sn * rd.z, rd.y, -sn * rd.x + cs * rd.z);
+  float angle = TIME * clouds_scroll_speed * TAU + radians(clouds_rotation_y_deg);
+  float cs = cos(angle);
+  float sn = sin(angle);
+  vec3 cloud_eye = vec3(cs * rd.x + sn * rd.z, rd.y * clouds_height_compress, -sn * rd.x + cs * rd.z);
 
   vec3 clouds_sample = textureLod(clouds_cubemap, cloud_eye, 0.0).rgb;
   // Cloud cubemap channel encoding:
@@ -391,6 +398,16 @@ void sky() {
   vec3 atm_b = textureLod(baked_array, vec4(EYEDIR, hi_idx), 0.0).rgb;
   vec3 atm_color = mix(atm_a, atm_b, baked_blend_factor);
 
+  // Tri-zone tint per time-of-day (zenith / horizon / nadir colors).
+  // TODO: re-confirm composition formula against Unity's GenesisSky shader graph.
+  float zenith_w = smoothstep(0.25, 0.75, eye_y);
+  float nadir_w = smoothstep(-0.25, -0.75, eye_y);
+  float horizon_w = max(0.0, 1.0 - zenith_w - nadir_w);
+  vec3 zenith_tint = textureLod(tint_color_cycle_bottom, vec2(day_night_cycle, 0.0), 0.0).rgb;
+  vec3 horizon_tint = textureLod(tint_color_cycle_top, vec2(day_night_cycle, 0.0), 0.0).rgb;
+  vec3 nadir_tint = textureLod(tint_color_cycle_nadir, vec2(day_night_cycle, 0.0), 0.0).rgb;
+  atm_color *= zenith_tint * zenith_w + horizon_tint * horizon_w + nadir_tint * nadir_w;
+
   // Cloud color: single gradient indexed by time-of-day. Cloud density modulates
   // brightness so denser cloud regions read brighter.
   vec3 cloud_tint = textureLod(clouds_color_cycle, vec2(day_night_cycle, 0.0), 0.0).rgb;
@@ -401,10 +418,10 @@ void sky() {
 
   COLOR = dither_interleaved(COLOR,dither_amount,FRAGCOORD.xy);
 
-  // Celestial body color — blend sun/moon based on moon mask activity (during night moon
-  // mask is active → use moon color; during day → sun color)
-  vec3 sun_col = textureLod(sun_color_cycle, vec2(cycle), 0.0).rgb * 3.0;
-  vec3 moon_col = textureLod(moon_color_cycle, vec2(day_night_blend), 0.0).rgb * 1.5;
+  // Celestial body color — sun/moon gradients are HDR (peaks ~24 for sun); scale down
+  // to keep the disc bright but not blown-out after Godot's filmic tonemap.
+  vec3 sun_col = textureLod(sun_color_cycle, vec2(day_night_cycle, 0.0), 0.0).rgb * 0.15;
+  vec3 moon_col = textureLod(moon_color_cycle, vec2(day_night_cycle, 0.0), 0.0).rgb * 0.5;
   float moon_influence = smoothstep(0.0, 0.01, moon_mask_size);
   vec3 celestial_col = mix(sun_col, moon_col, moon_influence);
 
@@ -416,13 +433,13 @@ void sky() {
   COLOR += sun_col * smoothstep(0.85, 1.5, second_sun_dot) * sun_opacity * sun_above_horizon * 0.2;
 
   // Sun radiance halo (rim color) — warm halo around sun direction, gated by gradient
-  // (black at night → no halo; warm at sunrise/sunset). Defaults to intensity=0 (off).
+  // (dark at night → no halo; warm at sunrise/sunset).
   float radiance = pow(max(sun_dot, 0.0), sun_radiance_falloff) * (1.0 - eye_dot * 0.5);
-  vec3 rim_tint = textureLod(rim_color_cycle, vec2(cycle, 0.0), 0.0).rgb;
+  vec3 rim_tint = textureLod(rim_color_cycle, vec2(day_night_cycle, 0.0), 0.0).rgb;
   COLOR += rim_tint * radiance * sun_radiance_intensity * sun_opacity;
 
   // Floor: TOD-modulated color × depth-based dim. No more flat purple cap.
-  vec3 floor_tod = textureLod(floor_color_cycle, vec2(cycle, 0.0), 0.0).rgb;
+  vec3 floor_tod = textureLod(floor_color_cycle, vec2(day_night_cycle, 0.0), 0.0).rgb;
   float floor_depth = clamp(-eye_y, 0.0, 1.0);
   vec3 floor_final = floor_tod * mix(1.0, floor_nadir_dim, smoothstep(0.0, 0.7, floor_depth));
   COLOR = mix(COLOR, floor_final, is_floor);
