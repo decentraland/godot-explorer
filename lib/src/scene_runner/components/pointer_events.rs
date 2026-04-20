@@ -108,20 +108,6 @@ pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 None
             };
 
-            if let Some(asd) = &new_value {
-                let is_proximity = asd.pointer_events.iter().any(|item| {
-                    item.interaction_type == Some(i32::from(InteractionType::Proximity))
-                });
-                if is_proximity {
-                    godot::prelude::godot_print!(
-                        "Proximity pointer: entity {:?}, is_proximity={}",
-                        entity,
-                        new_value.is_some()
-                    );
-                }
-            } else {
-            }
-
             tracing::debug!(
                 "PointerEvents update: entity {:?}, has_pointer_events={}",
                 entity,
@@ -145,6 +131,19 @@ pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdt
 impl PbPointerEvents {
     pub fn has_pointer_event(&self, pet: PointerEventType) -> bool {
         self.pointer_events.iter().any(|pe| pe.event_type() == pet)
+    }
+
+    pub fn has_non_proximity_pointer_event(&self, pet: PointerEventType) -> bool {
+        self.pointer_events.iter().any(|pe| {
+            pe.event_type() == pet
+                && pe.interaction_type != Some(i32::from(InteractionType::Proximity))
+        })
+    }
+
+    pub fn has_non_proximity_pointer_event_any(&self) -> bool {
+        self.pointer_events
+            .iter()
+            .any(|pe| pe.interaction_type != Some(i32::from(InteractionType::Proximity)))
     }
 }
 
@@ -172,7 +171,7 @@ pub fn pointer_events_system(
             if let Some(pointer_event) =
                 get_entity_pointer_event(scenes, &raycast.scene_id, &raycast.entity_id)
             {
-                if pointer_event.has_pointer_event(PointerEventType::PetHoverLeave) {
+                if pointer_event.has_non_proximity_pointer_event(PointerEventType::PetHoverLeave) {
                     let pointer_event_result = PbPointerEventsResult {
                         button: InputAction::IaAny as i32,
                         hit: None,
@@ -196,7 +195,7 @@ pub fn pointer_events_system(
             if let Some(pointer_event) =
                 get_entity_pointer_event(scenes, &raycast.scene_id, &raycast.entity_id)
             {
-                if pointer_event.has_pointer_event(PointerEventType::PetHoverEnter) {
+                if pointer_event.has_non_proximity_pointer_event(PointerEventType::PetHoverEnter) {
                     let pointer_event_result = PbPointerEventsResult {
                         button: InputAction::IaAny as i32,
                         hit: None,
@@ -280,6 +279,10 @@ pub fn pointer_events_system(
     let pointer_event = pointer_event.unwrap().clone();
 
     for pointer_event in pointer_event.pointer_events.iter() {
+        if pointer_event.interaction_type == Some(i32::from(InteractionType::Proximity)) {
+            continue;
+        }
+
         if pointer_event.event_info.is_none() {
             continue;
         }

@@ -339,19 +339,6 @@ fn generate_deserialize_component(proto_components: &Vec<Component>) {
     generate_file(dest_path, body.as_bytes());
 }
 
-fn generate_social_service() -> io::Result<()> {
-    let mut conf = prost_build::Config::new();
-    conf.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
-    conf.compile_protos(
-        &[
-            "src/dcl/components/proto/decentraland/social_service/errors.proto",
-            "src/dcl/components/proto/decentraland/social_service/v2/social_service_v2.proto",
-        ],
-        &["src/dcl/components/proto"],
-    )?;
-    Ok(())
-}
-
 fn main() -> io::Result<()> {
     // ---------- Linux, Android, the BSDs, Windows-gnu, and other ld/LLD users
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
@@ -444,10 +431,8 @@ fn main() -> io::Result<()> {
     //     every time a new component is added; blanket-derive avoids that.
     let mut prost_config = prost_build::Config::new();
     prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
+    prost_config.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
     prost_config.compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
-
-    // Generate social service with RPC support
-    generate_social_service()?;
 
     #[cfg(feature = "use_livekit")]
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
