@@ -8,7 +8,7 @@ use crate::{
                 common::BorderRect,
                 sdk::components::{
                     common::{InputAction, PointerEventType, RaycastHit},
-                    PbAvatarEmoteCommand, PbPointerEventsResult, PbUiCanvasInformation,
+                    PbAvatarEmoteCommand, PbUiCanvasInformation,
                 },
             },
             SceneEntityId,
@@ -40,7 +40,9 @@ use std::{
 };
 
 use super::{
-    components::pointer_events::{get_entity_pointer_event, pointer_events_system},
+    components::pointer_events::{
+        find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
+    },
     input::InputState,
     loading_session::LoadingSession,
     pool_manager::PoolManager,
@@ -1852,177 +1854,27 @@ impl INode for SceneManager {
             }
         }
 
+        let player_position = self.player_avatar_node.get_global_position();
+        let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
+            let size = viewport.get_visible_rect().size;
+            viewport.get_camera_3d().map(|camera| (camera, size))
+        });
+        let pointing_at_cursor = current_pointer_raycast_result
+            .as_ref()
+            .is_some_and(|raycast| {
+                get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
+                    .is_some_and(|pe| pe.has_any_pointer_event_without_proximity())
+            });
+
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
             &self.last_raycast_result,
             &current_pointer_raycast_result,
+            player_position,
+            &camera_and_viewport,
+            &mut self.last_proximity_entity,
         );
-
-        // Proximity event firing
-        {
-            let proximity_type = i32::from(
-                crate::dcl::components::proto_components::sdk::components::common::InteractionType::Proximity,
-            );
-            let pointing_at_cursor =
-                current_pointer_raycast_result.as_ref().is_some_and(|raycast| {
-                    get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
-                        .is_some_and(|pe| pe.has_non_proximity_pointer_event_any())
-                });
-
-            let current_proximity_entity = if pointing_at_cursor {
-                None
-            } else {
-            let player_position = self.player_avatar_node.get_global_position();
-            let proximity_type = i32::from(
-                crate::dcl::components::proto_components::sdk::components::common::InteractionType::Proximity,
-            );
-            let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
-                let size = viewport.get_visible_rect().size;
-                viewport.get_camera_3d().map(|camera| (camera, size))
-            });
-
-            let mut best_priority = i64::MIN;
-            let mut best_distance = f32::MAX;
-            let mut best_entity: Option<(SceneId, SceneEntityId)> = None;
-
-            for (scene_id, scene) in self.scenes.iter() {
-                for (entity_id, entity_node) in scene.godot_dcl_scene.entities.iter() {
-                    let Some(ref pointer_events) = entity_node.pointer_events else {
-                        continue;
-                    };
-                    let Some(ref node_3d) = entity_node.base_3d else {
-                        continue;
-                    };
-                    for pe in pointer_events.pointer_events.iter() {
-                        if pe.interaction_type != Some(proximity_type) {
-                            continue;
-                        }
-                        let Some(ref info) = pe.event_info else {
-                            continue;
-                        };
-                        let max_player_distance = info.max_player_distance.unwrap_or(0.0);
-                        let entity_position = node_3d.get_global_position();
-                        let distance = player_position.distance_to(entity_position);
-                        if distance > max_player_distance {
-                            continue;
-                        }
-                        if let Some((ref camera, viewport_size)) = camera_and_viewport {
-                            if camera.is_position_behind(entity_position) {
-                                continue;
-                            }
-                            let screen_pos = camera.unproject_position(entity_position);
-                            let screen_center = viewport_size / 2.0;
-                            let threshold = viewport_size.x.min(viewport_size.y) / 3.0;
-                            if screen_pos.distance_to(screen_center) >= threshold {
-                                continue;
-                            }
-                        }
-                        let priority = info.priority.unwrap_or(0) as i64;
-                        if priority < best_priority
-                            || (priority == best_priority && distance >= best_distance)
-                        {
-                            continue;
-                        }
-                        best_priority = priority;
-                        best_distance = distance;
-                        best_entity = Some((*scene_id, *entity_id));
-                    }
-                }
-            }
-
-            best_entity
-            }; // end else !pointing_at_cursor
-
-            let global_tick_number = GLOBAL_TICK_NUMBER.load(std::sync::atomic::Ordering::Relaxed);
-
-            // Fire hover leave if the active proximity entity changed
-            if self.last_proximity_entity != current_proximity_entity {
-                if let Some((scene_id, entity_id)) = self.last_proximity_entity {
-                    if let Some(pointer_events) =
-                        get_entity_pointer_event(&self.scenes, &scene_id, &entity_id)
-                    {
-                        if pointer_events.has_pointer_event(PointerEventType::PetHoverLeave) {
-                            let result = PbPointerEventsResult {
-                                button: InputAction::IaAny as i32,
-                                hit: None,
-                                state: PointerEventType::PetHoverLeave as i32,
-                                timestamp: GLOBAL_TIMESTAMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
-                                analog: None,
-                                tick_number: global_tick_number,
-                            };
-                            if let Some(scene) = self.scenes.get_mut(&scene_id) {
-                                scene.pointer_events_result.push((entity_id, result));
-                            }
-                        }
-                    }
-                }
-
-                // Fire hover enter for the new active proximity entity
-                if let Some((scene_id, entity_id)) = current_proximity_entity {
-                    if let Some(pointer_events) =
-                        get_entity_pointer_event(&self.scenes, &scene_id, &entity_id)
-                    {
-                        if pointer_events.has_pointer_event(PointerEventType::PetHoverEnter) {
-                            let result = PbPointerEventsResult {
-                                button: InputAction::IaAny as i32,
-                                hit: None,
-                                state: PointerEventType::PetHoverEnter as i32,
-                                timestamp: GLOBAL_TIMESTAMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
-                                analog: None,
-                                tick_number: global_tick_number,
-                            };
-                            if let Some(scene) = self.scenes.get_mut(&scene_id) {
-                                scene.pointer_events_result.push((entity_id, result));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Fire PetDown/PetUp for active proximity entity on input changes
-            if let Some((scene_id, entity_id)) = current_proximity_entity {
-                if let Some(pointer_events) =
-                    get_entity_pointer_event(&self.scenes, &scene_id, &entity_id)
-                {
-                    let pointer_events = pointer_events.clone();
-                    for pe in pointer_events.pointer_events.iter() {
-                        if pe.interaction_type != Some(proximity_type) {
-                            continue;
-                        }
-                        let Some(ref info) = pe.event_info else {
-                            continue;
-                        };
-                        let pe_button = info.button.unwrap_or(InputAction::IaAny as i32);
-                        for (input_action, state) in changed_inputs.iter() {
-                            let matches_button = *input_action as i32 == pe_button
-                                || pe_button == InputAction::IaAny as i32
-                                || *input_action == InputAction::IaAny;
-                            if !matches_button {
-                                continue;
-                            }
-                            let match_state = (*state && pe.event_type == PointerEventType::PetDown as i32)
-                                || (!state && pe.event_type == PointerEventType::PetUp as i32);
-                            if match_state {
-                                let result = PbPointerEventsResult {
-                                    button: *input_action as i32,
-                                    hit: None,
-                                    state: pe.event_type,
-                                    timestamp: GLOBAL_TIMESTAMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
-                                    analog: None,
-                                    tick_number: global_tick_number,
-                                };
-                                if let Some(scene) = self.scenes.get_mut(&scene_id) {
-                                    scene.pointer_events_result.push((entity_id, result));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            self.last_proximity_entity = current_proximity_entity;
-        }
 
         let mut tooltips = VarArray::new();
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
@@ -2092,91 +1944,48 @@ impl INode for SceneManager {
         }
 
         // Add proximity tooltip for the closest entity within max_player_distance
-        // Skip if the player is already pointing at a cursor interaction entity
-        let pointing_at_cursor = current_pointer_raycast_result.as_ref().is_some_and(|raycast| {
-            get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
-                .is_some_and(|pe| pe.has_non_proximity_pointer_event_any())
-        });
-        let player_position = self.player_avatar_node.get_global_position();
-        let proximity_type = i32::from(
-            crate::dcl::components::proto_components::sdk::components::common::InteractionType::Proximity,
-        );
-        let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
-            let size = viewport.get_visible_rect().size;
-            viewport.get_camera_3d().map(|camera| (camera, size))
-        });
-        let mut best_priority = i64::MIN;
-        let mut best_distance = f32::MAX;
-        let mut closest_tooltip: Option<VarDictionary> = None;
-
         if !pointing_at_cursor {
-        for scene in self.scenes.values() {
-            for entity_node in scene.godot_dcl_scene.entities.values() {
-                let Some(ref pointer_events) = entity_node.pointer_events else {
-                    continue;
-                };
-                let Some(ref node_3d) = entity_node.base_3d else {
-                    continue;
-                };
-                for pe in pointer_events.pointer_events.iter() {
-                    if pe.interaction_type != Some(proximity_type) {
-                        continue;
-                    }
-                    let Some(ref info) = pe.event_info else {
-                        continue;
-                    };
-                    let show_feedback = info.show_feedback.unwrap_or(true);
-                    if !show_feedback {
-                        continue;
-                    }
-                    let max_player_distance = info.max_player_distance.unwrap_or(0.0);
-                    let entity_position = node_3d.get_global_position();
-                    let distance = player_position.distance_to(entity_position);
-                    if distance > max_player_distance {
-                        continue;
-                    }
-                    if let Some((ref camera, viewport_size)) = camera_and_viewport {
-                        if camera.is_position_behind(entity_position) {
+            if let Some((scene_id, entity_id)) =
+                find_active_proximity_entity(&self.scenes, player_position, &camera_and_viewport)
+            {
+                if let Some(pointer_events) =
+                    get_entity_pointer_event(&self.scenes, &scene_id, &entity_id)
+                {
+                    let proximity_type = i32::from(
+                        crate::dcl::components::proto_components::sdk::components::common::InteractionType::Proximity,
+                    );
+                    for pe in pointer_events.pointer_events.iter() {
+                        if pe.interaction_type != Some(proximity_type) {
                             continue;
                         }
-                        let screen_pos = camera.unproject_position(entity_position);
-                        let screen_center = viewport_size / 2.0;
-                        let threshold = viewport_size.x.min(viewport_size.y) / 3.0;
-                        if screen_pos.distance_to(screen_center) >= threshold {
+                        let Some(ref info) = pe.event_info else {
+                            continue;
+                        };
+                        let show_feedback = info.show_feedback.unwrap_or(true);
+                        if !show_feedback {
                             continue;
                         }
+                        let is_pet_down = pe.event_type == PointerEventType::PetDown as i32;
+                        let is_pet_up = pe.event_type == PointerEventType::PetUp as i32;
+                        if !is_pet_down && !is_pet_up {
+                            continue;
+                        }
+                        let text = info.hover_text.as_deref().unwrap_or("Interact").to_godot();
+                        let input_action = InputAction::from_i32(info.button.unwrap_or(0))
+                            .unwrap_or(InputAction::IaAny);
+                        let mut dict = VarDictionary::new();
+                        if is_pet_down {
+                            dict.set("text_pet_down", text);
+                        } else {
+                            dict.set("text_pet_up", text);
+                        }
+                        dict.set("action", GString::from(input_action.as_str_name()));
+                        tooltips.push(&dict.to_variant());
+                        break;
                     }
-                    let priority = info.priority.unwrap_or(0) as i64;
-                    if priority < best_priority
-                        || (priority == best_priority && distance >= best_distance)
-                    {
-                        continue;
-                    }
-                    let is_pet_down = pe.event_type == PointerEventType::PetDown as i32;
-                    let is_pet_up = pe.event_type == PointerEventType::PetUp as i32;
-                    if !is_pet_down && !is_pet_up {
-                        continue;
-                    }
-                    let text = info.hover_text.as_deref().unwrap_or("Interact").to_godot();
-                    let input_action = InputAction::from_i32(info.button.unwrap_or(0))
-                        .unwrap_or(InputAction::IaAny);
-                    let mut dict = VarDictionary::new();
-                    if is_pet_down {
-                        dict.set("text_pet_down", text);
-                    } else {
-                        dict.set("text_pet_up", text);
-                    }
-                    dict.set("action", GString::from(input_action.as_str_name()));
-                    best_priority = priority;
-                    best_distance = distance;
-                    closest_tooltip = Some(dict);
                 }
             }
         }
-        if let Some(dict) = closest_tooltip {
-            tooltips.push(&dict.to_variant());
-        }
-        } // end if !pointing_at_cursor
 
         // Add avatar profile tooltip if there's an avatar under crosshair with a valid ID
         // Skip AvatarShapes (NPCs from scenes) which don't have valid profile IDs
