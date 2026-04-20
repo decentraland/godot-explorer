@@ -1156,12 +1156,14 @@ impl DclSocialService {
 
         match response.response {
             Some(block_user_response::Response::Ok(_)) => Ok(()),
-            Some(block_user_response::Response::InternalServerError(e)) => {
-                Err(format!("Server error blocking user: {}", e.message.unwrap_or_default()))
-            }
-            Some(block_user_response::Response::InvalidRequest(e)) => {
-                Err(format!("Invalid request blocking user: {}", e.message.unwrap_or_default()))
-            }
+            Some(block_user_response::Response::InternalServerError(e)) => Err(format!(
+                "Server error blocking user: {}",
+                e.message.unwrap_or_default()
+            )),
+            Some(block_user_response::Response::InvalidRequest(e)) => Err(format!(
+                "Invalid request blocking user: {}",
+                e.message.unwrap_or_default()
+            )),
             Some(block_user_response::Response::ProfileNotFound(_)) => {
                 Err("Profile not found when blocking user".to_string())
             }
@@ -1185,12 +1187,14 @@ impl DclSocialService {
 
         match response.response {
             Some(unblock_user_response::Response::Ok(_)) => Ok(()),
-            Some(unblock_user_response::Response::InternalServerError(e)) => {
-                Err(format!("Server error unblocking user: {}", e.message.unwrap_or_default()))
-            }
-            Some(unblock_user_response::Response::InvalidRequest(e)) => {
-                Err(format!("Invalid request unblocking user: {}", e.message.unwrap_or_default()))
-            }
+            Some(unblock_user_response::Response::InternalServerError(e)) => Err(format!(
+                "Server error unblocking user: {}",
+                e.message.unwrap_or_default()
+            )),
+            Some(unblock_user_response::Response::InvalidRequest(e)) => Err(format!(
+                "Invalid request unblocking user: {}",
+                e.message.unwrap_or_default()
+            )),
             Some(unblock_user_response::Response::ProfileNotFound(_)) => {
                 Err("Profile not found when unblocking user".to_string())
             }
