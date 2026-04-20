@@ -7,7 +7,7 @@ use crate::{
             proto_components::{
                 common::BorderRect,
                 sdk::components::{
-                    common::{InputAction, PointerEventType, RaycastHit},
+                    common::{InputAction, InteractionType, PointerEventType, RaycastHit},
                     PbAvatarEmoteCommand, PbUiCanvasInformation,
                 },
             },
@@ -1882,10 +1882,7 @@ impl INode for SceneManager {
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
                 for pointer_event in pointer_events.pointer_events.iter() {
-                    if pointer_event.interaction_type
-                        == Some(i32::from(
-                            crate::dcl::components::proto_components::sdk::components::common::InteractionType::Proximity,
-                        ))
+                    if pointer_event.interaction_type == Some(i32::from(InteractionType::Proximity))
                     {
                         continue;
                     }
@@ -1951,9 +1948,7 @@ impl INode for SceneManager {
                 if let Some(pointer_events) =
                     get_entity_pointer_event(&self.scenes, &scene_id, &entity_id)
                 {
-                    let proximity_type = i32::from(
-                        crate::dcl::components::proto_components::sdk::components::common::InteractionType::Proximity,
-                    );
+                    let proximity_type = i32::from(InteractionType::Proximity);
                     for pe in pointer_events.pointer_events.iter() {
                         if pe.interaction_type != Some(proximity_type) {
                             continue;
