@@ -1408,7 +1408,12 @@ impl SceneManager {
         if let Some(mut global) = DclGlobal::try_singleton() {
             let mut global_bind = global.bind_mut();
             global_bind.reset_input_modifiers();
+            let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
+            drop(global_bind);
+            if was_skybox_active {
+                global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
+            }
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
@@ -1815,7 +1820,10 @@ impl INode for SceneManager {
                                 true // Default to true if global not available
                             };
 
-                            if ui_has_focus {
+                            let passport_disabled: bool =
+                                avatar.get("passport_disabled").try_to().unwrap_or(false);
+
+                            if ui_has_focus && !passport_disabled {
                                 // Emit open_profile_by_avatar signal on the Global singleton
                                 if let Some(mut global) = DclGlobal::try_singleton() {
                                     global.emit_signal(
@@ -1919,11 +1927,13 @@ impl INode for SceneManager {
 
         // Add avatar profile tooltip if there's an avatar under crosshair with a valid ID
         // Skip AvatarShapes (NPCs from scenes) which don't have valid profile IDs
+        // Skip avatars inside an AvatarModifierArea with DisablePassports
         if let Some(RaycastResult::Avatar(avatar)) = &current_raycast {
             // Check if avatar has a valid avatar_id (non-empty and not just "npc-*")
             let avatar_id: GString = avatar.get("avatar_id").try_to().unwrap_or_default();
             let is_avatar_shape: bool = avatar.get("is_avatar_shape").try_to().unwrap_or(false);
-            if !is_avatar_shape && !avatar_id.is_empty() {
+            let passport_disabled: bool = avatar.get("passport_disabled").try_to().unwrap_or(false);
+            if !is_avatar_shape && !avatar_id.is_empty() && !passport_disabled {
                 let mut profile_dict = VarDictionary::new();
                 profile_dict.set("text_pet_down", "View profile");
                 profile_dict.set("action", "ia_pointer");
