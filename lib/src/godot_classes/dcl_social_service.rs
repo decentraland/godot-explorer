@@ -1149,11 +1149,24 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.block_user(address)
+        let response = mgr
+            .block_user(address)
             .await
             .map_err(|e| format!("Failed to block user: {}", e))?;
 
-        Ok(())
+        match response.response {
+            Some(block_user_response::Response::Ok(_)) => Ok(()),
+            Some(block_user_response::Response::InternalServerError(e)) => {
+                Err(format!("Server error blocking user: {}", e.message.unwrap_or_default()))
+            }
+            Some(block_user_response::Response::InvalidRequest(e)) => {
+                Err(format!("Invalid request blocking user: {}", e.message.unwrap_or_default()))
+            }
+            Some(block_user_response::Response::ProfileNotFound(_)) => {
+                Err("Profile not found when blocking user".to_string())
+            }
+            None => Err("Empty response from server when blocking user".to_string()),
+        }
     }
 
     async fn async_unblock_user(
@@ -1165,11 +1178,24 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.unblock_user(address)
+        let response = mgr
+            .unblock_user(address)
             .await
             .map_err(|e| format!("Failed to unblock user: {}", e))?;
 
-        Ok(())
+        match response.response {
+            Some(unblock_user_response::Response::Ok(_)) => Ok(()),
+            Some(unblock_user_response::Response::InternalServerError(e)) => {
+                Err(format!("Server error unblocking user: {}", e.message.unwrap_or_default()))
+            }
+            Some(unblock_user_response::Response::InvalidRequest(e)) => {
+                Err(format!("Invalid request unblocking user: {}", e.message.unwrap_or_default()))
+            }
+            Some(unblock_user_response::Response::ProfileNotFound(_)) => {
+                Err("Profile not found when unblocking user".to_string())
+            }
+            None => Err("Empty response from server when unblocking user".to_string()),
+        }
     }
 
     /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, blocked_at)

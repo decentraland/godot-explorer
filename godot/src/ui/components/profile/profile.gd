@@ -368,7 +368,11 @@ func _async_block_user(user_address: String) -> void:
 	button_block_user.disabled = false
 
 	if promise.is_rejected():
-		printerr("Block failed: ", PromiseUtils.get_error_message(promise))
+		var error_msg := PromiseUtils.get_error_message(promise)
+		printerr("Block failed: ", error_msg)
+		NotificationsManager.show_system_toast(
+			"Block failed", error_msg, "error", "alert"
+		)
 		return
 
 	# Block User metric (track whether blocked user was a friend)
@@ -389,7 +393,11 @@ func _async_unblock_user_from_profile(user_address: String) -> void:
 	button_unblock_user.disabled = false
 
 	if promise.is_rejected():
-		printerr("Unblock failed: ", PromiseUtils.get_error_message(promise))
+		var error_msg := PromiseUtils.get_error_message(promise)
+		printerr("Unblock failed: ", error_msg)
+		NotificationsManager.show_system_toast(
+			"Unblock failed", error_msg, "error", "alert"
+		)
 		return
 
 	Global.social_blacklist.remove_blocked(user_address)  # Update local cache
