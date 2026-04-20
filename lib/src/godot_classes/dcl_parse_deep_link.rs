@@ -50,6 +50,16 @@ pub struct DclParseDeepLink {
     #[var]
     path: GString,
 
+    /// Dev/testing: short-circuit profile deploys (deep link param: disable-profile-deploy=true)
+    #[var]
+    disable_profile_deploy: bool,
+
+    /// Dev/testing: URNs to inject into the backpack as fake-owned wearables
+    /// (deep link param: fake-owned-wearables=urn1,urn2)
+
+    #[var]
+    fake_owned_wearables: PackedStringArray,
+
     /// Scene Inspector target: empty=off, "true"=auto, "ws://host:port"=custom target
     #[var]
     scene_inspector: GString,
@@ -86,6 +96,8 @@ impl DclParseDeepLink {
             saved_profile: GString::new(),
             livekit_debug: false,
             path: GString::new(),
+            disable_profile_deploy: false,
+            fake_owned_wearables: PackedStringArray::new(),
             scene_inspector: GString::new(),
             scene_inspector_file: false,
             low_spec_warning: false,
@@ -113,6 +125,10 @@ impl DclParseDeepLink {
             saved_profile: GString::from(&r.saved_profile),
             livekit_debug: r.livekit_debug,
             path: GString::from(&r.path),
+            disable_profile_deploy: r.disable_profile_deploy,
+            fake_owned_wearables: PackedStringArray::from_iter(
+                r.fake_owned_wearables.iter().map(GString::from),
+            ),
             scene_inspector: GString::from(&r.scene_inspector),
             scene_inspector_file: r.scene_inspector_file,
             low_spec_warning: r.low_spec_warning,
