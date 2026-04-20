@@ -557,12 +557,6 @@ func _on_panel_chat_submit_message(message: String):
 			else:
 				_async_try_change_realm(target_realm, "on_changerealm")
 
-		elif command_str == "/world" and params.size() > 1:
-			var world_realm = (
-				params[1] if params[1].ends_with(".dcl.eth") else params[1] + ".dcl.eth"
-			)
-			Global.async_join_world(world_realm)
-
 		elif command_str == "/pos":
 			_emit_pos_command_message()
 		elif command_str == "/clear":
