@@ -68,7 +68,7 @@ shadow_offset = Vector2(2, 2)
 [sub_resource type="LabelSettings" id="LabelSettings_ep3jl"]
 line_spacing = -3.0
 font = ExtResource("23_c03rv")
-font_size = 23
+font_size = 26
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_47ptg"]
