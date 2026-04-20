@@ -15,6 +15,7 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
+var _int_regex := RegEx.create_from_string(r"^-?\d+$")
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
@@ -500,6 +501,14 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
+func _is_coordinate_string(text: String) -> bool:
+	var cleaned = text.strip_edges().replace("(", "").replace(")", "").replace(" ", "")
+	var parts = cleaned.split(",")
+	if parts.size() < 2:
+		return false
+	return _int_regex.search(parts[0]) != null and _int_regex.search(parts[1]) != null
+
+
 func _parse_coordinates(coord_string: String) -> Vector2i:
 	# Remove parentheses if present
 	var cleaned = coord_string.strip_edges()
@@ -515,10 +524,7 @@ func _parse_coordinates(coord_string: String) -> Vector2i:
 		var y_str = parts[1].strip_edges()
 
 		# Validate and parse integers (including negative values)
-		var int_regex = RegEx.new()
-		int_regex.compile(r"^-?\d+$")
-
-		if int_regex.search(x_str) != null and int_regex.search(y_str) != null:
+		if _int_regex.search(x_str) != null and _int_regex.search(y_str) != null:
 			return Vector2i(int(x_str), int(y_str))
 
 	return Vector2i(0, 0)
@@ -531,44 +537,29 @@ func _on_panel_chat_submit_message(message: String):
 	var params := message.split(" ")
 	var command_str := params[0].to_lower()
 	if command_str.begins_with("/"):
-		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
-			# Join all params after the command to handle spaces properly
-			var coord_string = ""
-			if params.size() > 1:
-				coord_string = " ".join(params.slice(1))
-
-			var dest_vector = _parse_coordinates(coord_string)
-
-			Global.on_chat_message.emit(
-				"system",
-				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
-				Time.get_unix_time_from_system()
-			)
-			_on_control_menu_jump_to(dest_vector)
+		if (command_str == "/go" or command_str == "/goto") and params.size() > 1:
+			var arg_string = " ".join(params.slice(1)).strip_edges()
+			if _is_coordinate_string(arg_string):
+				var dest_vector = _parse_coordinates(arg_string)
+				Global.on_chat_message.emit(
+					"system",
+					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
+					Time.get_unix_time_from_system()
+				)
+				_on_control_menu_jump_to(dest_vector)
+			elif Realm.is_dcl_ens(arg_string) or not arg_string.contains("."):
+				var world_realm = (
+					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
+				)
+				Global.async_join_world(world_realm)
+			else:
+				_async_try_change_realm(arg_string, "on_goto_realm")
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
 			if Realm.is_dcl_ens(target_realm):
 				Global.async_join_world(target_realm)
 			else:
-				Global.on_chat_message.emit(
-					"system",
-					"[color=#ccc]Trying to change to realm " + target_realm + "[/color]",
-					Time.get_unix_time_from_system()
-				)
-				Global.realm.async_set_realm(target_realm, true)
-				loading_ui.enable_loading_screen()
-				var loading_data = {
-					"position": str(Global.scene_fetcher.current_position),
-					"realm": target_realm,
-					"when": "on_changerealm"
-				}
-				Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
-
-		elif command_str == "/world" and params.size() > 1:
-			var world_realm = (
-				params[1] if params[1].ends_with(".dcl.eth") else params[1] + ".dcl.eth"
-			)
-			Global.async_join_world(world_realm)
+				_async_try_change_realm(target_realm, "on_changerealm")
 
 		elif command_str == "/pos":
 			_emit_pos_command_message()
@@ -747,14 +738,33 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
+func _async_try_change_realm(realm_string: String, when: String) -> void:
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#ccc]Trying to change to realm " + realm_string + "[/color]",
+		Time.get_unix_time_from_system()
+	)
+	var success = await Global.realm.async_set_realm(realm_string, true)
+	if success:
+		loading_ui.enable_loading_screen()
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm": realm_string,
+			"when": when
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+
 func teleport_to(parcel: Vector2i, realm: String = ""):
 	_async_teleport_to(parcel, realm)
 
 
 func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 	if not realm.is_empty() and realm != Global.realm.get_realm_string():
+		var success = await Global.realm.async_set_realm(realm)
+		if not success:
+			return
 		loading_ui.enable_loading_screen()
-		await Global.realm.async_set_realm(realm)
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
