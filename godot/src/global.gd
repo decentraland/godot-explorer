@@ -58,6 +58,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 
 const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
+#const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -232,6 +233,11 @@ func _ready():
 	DclGlobal.set_dcl_environment(env)
 	if env != "org":
 		print("[GLOBAL] Environment set to: ", env)
+
+	# Dev/testing: disable profile deploys so fake-owned wearables never publish.
+	if deep_link_obj.disable_profile_deploy:
+		ProfileService.set_deploy_disabled(true)
+		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
 
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
