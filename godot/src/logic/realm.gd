@@ -25,7 +25,9 @@ var _has_realm = false
 
 
 static func is_dcl_ens(str_param: String) -> bool:
-	return str_param.ends_with(".dcl.eth")
+	var regex = RegEx.new()
+	regex.compile("^[a-zA-Z0-9]+\\.dcl\\.eth$")
+	return regex.search(str_param) != null
 
 
 static func is_genesis_city(_realm_name: String) -> bool:
