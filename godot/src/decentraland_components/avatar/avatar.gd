@@ -31,6 +31,7 @@ var is_local_player: bool = false
 # Public
 var avatar_id: String = ""
 var hidden: bool = false
+var passport_disabled: bool = false
 var avatar_ready: bool = false
 var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
@@ -154,7 +155,7 @@ func _input(event):
 	if event.is_action_pressed("ia_pointer"):
 		# Only handle input if this avatar is currently selected and not blocked/hidden
 		var selected = Global.get_selected_avatar()
-		if selected and selected == self and avatar_id and not hidden:
+		if selected and selected == self and avatar_id and not hidden and not passport_disabled:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				Global.open_profile_by_avatar.emit(self)
 
@@ -174,7 +175,7 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 		if modifier == 0:  # hide avatar
 			hide()
 		elif modifier == 1:  # disable passport
-			pass  # TODO: Passport (disable functionality)
+			passport_disabled = true
 
 
 func set_hidden(value):
@@ -199,7 +200,7 @@ func _set_click_area_enabled(enabled: bool) -> void:
 func _unset_avatar_modifier_area():
 	if not hidden:
 		show()
-	# TODO: Passport (enable functionality)
+	passport_disabled = false
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
