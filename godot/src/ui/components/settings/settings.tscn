@@ -21,6 +21,7 @@
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="19_t1cvu"]
 [ext_resource type="PackedScene" uid="uid://bhmbr0xh4h188" path="res://src/ui/components/dropdown_list/dropdown_list.tscn" id="20_67hd5"]
 [ext_resource type="PackedScene" uid="uid://cygtqvymouhov" path="res://src/ui/components/settings/slider.tscn" id="21_xewta"]
+[ext_resource type="Texture2D" uid="uid://bldchilj3kjhx" path="res://assets/ui/warning-triangle.svg" id="22_ewc0a"]
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/custom_button/custom_button.tscn" id="22_mwb5b"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="23_c03rv"]
 [ext_resource type="PackedScene" uid="uid://bij0xgcmb6ivs" path="res://src/ui/components/line_edit_custom/line_edit_custom.tscn" id="24_47ptg"]
@@ -48,6 +49,27 @@ font_size = 30
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_blskf"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_47ptg"]
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8117647, 0.8039216, 0.83137256, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.356863)
+shadow_size = 2
+shadow_offset = Vector2(2, 2)
+
+[sub_resource type="LabelSettings" id="LabelSettings_ep3jl"]
+line_spacing = -3.0
+font = ExtResource("23_c03rv")
+font_size = 26
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_47ptg"]
 
@@ -681,16 +703,51 @@ unique_name_in_owner = true
 layout_mode = 2
 title = "Custom Skybox"
 
-[node name="Label_SkyboxWarning" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1966512894]
+[node name="HBoxContainer_SkyboxWarning" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1001903030]
 unique_name_in_owner = true
-visible = false
+layout_mode = 2
+
+[node name="HSeparator5" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning" unique_id=1128685686]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 28
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="Panel_Skybox" type="PanelContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning" unique_id=1402097322]
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_47ptg")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning/Panel_Skybox" unique_id=60619410]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 16
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning/Panel_Skybox/MarginContainer" unique_id=2036944925]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning/Panel_Skybox/MarginContainer/HBoxContainer" unique_id=812947984]
+custom_minimum_size = Vector2(54, 54)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("22_ewc0a")
+expand_mode = 1
+
+[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning/Panel_Skybox/MarginContainer/HBoxContainer" unique_id=545519243]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
 theme_override_font_sizes/font_size = 12
-text = "The skybox is being controlled by the current scene."
-label_settings = ExtResource("19_t1cvu")
+text = "The skybox is set by the creator. It can’t be changed."
+label_settings = SubResource("LabelSettings_ep3jl")
+vertical_alignment = 1
 autowrap_mode = 2
 text_overrun_behavior = 4
 
