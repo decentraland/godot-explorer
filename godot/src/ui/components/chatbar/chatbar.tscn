@@ -20,8 +20,6 @@ corner_radius_top_right = 24
 corner_radius_bottom_right = 24
 corner_radius_bottom_left = 24
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_grvqo"]
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2fmgn"]
 
 [node name="Chatbar" type="Control"]
@@ -48,6 +46,7 @@ layout_mode = 2
 alignment = 1
 
 [node name="Button_Chat" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer_Buttons"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -58,7 +57,6 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
 toggle_mode = true
-button_group = SubResource("ButtonGroup_grvqo")
 icon = ExtResource("2_8wxvk")
 flat = true
 icon_alignment = 1
@@ -82,8 +80,6 @@ theme_override_constants/icon_max_width = 54
 theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
-toggle_mode = true
-button_group = SubResource("ButtonGroup_grvqo")
 icon = ExtResource("3_2fmgn")
 flat = true
 icon_alignment = 1
@@ -113,8 +109,6 @@ theme_override_constants/icon_max_width = 54
 theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
-toggle_mode = true
-button_group = SubResource("ButtonGroup_grvqo")
 icon = ExtResource("4_o1l3x")
 flat = true
 

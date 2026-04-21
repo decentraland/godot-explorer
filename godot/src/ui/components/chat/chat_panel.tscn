@@ -1,0 +1,100 @@
+[gd_scene format=3 uid="uid://bviu1proryfux"]
+
+[ext_resource type="Script" uid="uid://choybu7exwhau" path="res://src/ui/components/chat/chat_panel.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="2_theme"]
+[ext_resource type="PackedScene" uid="uid://dfi5ql6ogtlxc" path="res://src/ui/components/chatbar/chatbar.tscn" id="3_chatbar"]
+[ext_resource type="Texture2D" uid="uid://c4vnarw7wx36n" path="res://assets/ui/Reset.png" id="4_reset"]
+[ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="5_chat"]
+[ext_resource type="PackedScene" uid="uid://bkjdjy0wlvltq" path="res://src/ui/components/chat/notifications.tscn" id="6_notif"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_loadscenes"]
+bg_color = Color(0, 0, 0, 0.9019608)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_safe"]
+
+[node name="ChatPanel" type="MarginContainer" unique_id=270087426]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 0
+script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "both"
+
+[node name="HBoxContainer_LeftSide" type="HBoxContainer" parent="." unique_id=1390853645]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="VBoxContainer_LeftSide" type="VBoxContainer" parent="HBoxContainer_LeftSide" unique_id=136832159]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(370, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="HBoxContainer_LeftSide/VBoxContainer_LeftSide" unique_id=1290926312]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(370, 60)
+layout_mode = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+theme_override_constants/separation = 12
+
+[node name="Chatbar" parent="HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu" unique_id=1646440645 instance=ExtResource("3_chatbar")]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu" unique_id=1507322975]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_loadscenes")
+
+[node name="Button_LoadScenes" type="Button" parent="HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Panel" unique_id=1132068331]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 60)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 30
+icon = ExtResource("4_reset")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[node name="Chat" parent="HBoxContainer_LeftSide/VBoxContainer_LeftSide" unique_id=602589676 instance=ExtResource("5_chat")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+size_flags_horizontal = 1
+
+[node name="Notifications" parent="HBoxContainer_LeftSide/VBoxContainer_LeftSide" unique_id=1410228761 instance=ExtResource("6_notif")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(340, 400)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+
+[node name="Control_SafeBottomArea" type="PanelContainer" parent="HBoxContainer_LeftSide/VBoxContainer_LeftSide" unique_id=115199345]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_safe")
+
+[node name="VirtualKeyboardMargin" type="Control" parent="HBoxContainer_LeftSide/VBoxContainer_LeftSide" unique_id=127007126]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[connection signal="pressed" from="HBoxContainer_LeftSide/VBoxContainer_LeftSide/HBoxContainer_TopLeftMenu/Panel/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
+[connection signal="on_exit_chat" from="HBoxContainer_LeftSide/VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_on_exit_chat"]
+[connection signal="on_open_chat" from="HBoxContainer_LeftSide/VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_on_open_chat"]
+[connection signal="submit_message" from="HBoxContainer_LeftSide/VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_submit_message"]

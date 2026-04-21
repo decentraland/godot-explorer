@@ -411,6 +411,10 @@ func _adjust_panel_size() -> void:
 	var font_size = rich_text.get_theme_font_size("normal_font_size")
 	var text_width = font.get_string_size(parsed_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 
+	var parent_node = get_parent()
+	if parent_node:
+		max_panel_width = max(200, mini(504, int(parent_node.size.x)))
+
 	var min_width = 25
 	var desired_width = max(min_width, min(text_width + margin, max_panel_width))
 	message_panel.custom_minimum_size.x = desired_width

@@ -5,8 +5,6 @@ signal on_exit_chat
 signal on_open_chat
 signal release_mouse
 
-## Fixed width for the messages list column (scroll), aligned with `chat.tscn` PanelContainer.
-const MESSAGES_COLUMN_WIDTH_PX: int = 709
 const MAX_AUTOCOMPLETE_RESULTS: int = 3
 ## MentionItem min height (56) + AutocompleteItems VBox separation (2).
 const AUTOCOMPLETE_ITEM_STRIDE: float = 58.0
@@ -37,6 +35,7 @@ var _autocomplete_queued: bool = false
 @onready var panel_container_new_messages: PanelContainer = %PanelContainer_NewMessages
 @onready var label_new_messages: Label = %Label_NewMessages
 @onready var button_send: Button = %Button_Send
+@onready var button_write: Button = %Button_Write
 @onready var panel_messages: PanelContainer = $VBoxContainer/HBoxContainer/PanelContainer
 @onready var column_go_to_last: Control = $VBoxContainer/HBoxContainer/VSeparator
 @onready var _autocomplete_panel: PanelContainer = %AutocompletePanel
@@ -45,12 +44,9 @@ var _autocomplete_queued: bool = false
 
 
 func _ready():
-	if Global.is_mobile():
-		# Full chat panel stretches with parent; scroll column keeps fixed width; VSeparator fills remaining X space.
-		custom_minimum_size.x = 0
-		panel_messages.custom_minimum_size.x = MESSAGES_COLUMN_WIDTH_PX
-		panel_messages.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		column_go_to_last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Messages panel fills available width within Panel_Chat.
+	panel_messages.custom_minimum_size.x = 0
+	panel_messages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	Global.on_chat_message.connect(self._on_chat_message_arrived)
 	Global.change_virtual_keyboard.connect(self._async_on_change_virtual_keyboard)
@@ -125,10 +121,19 @@ func _on_button_send_pressed():
 	button_send.disabled = true
 
 	_scroll_to_bottom()
-	# Always close chat if it's a command (starts with "/")
-	# or if the configuration requires it
 	if message.begins_with("/") or Global.get_config().submit_message_closes_chat:
 		exit_chat()
+	else:
+		_close_write_mode()
+
+
+func _on_button_write_pressed():
+	button_write.hide()
+	panel_line_edit.show()
+	line_edit_command.text = ""
+	button_send.disabled = true
+	line_edit_command.grab_focus()
+	DisplayServer.virtual_keyboard_show("")
 
 
 func _on_line_edit_command_text_submitted(new_text):
@@ -137,10 +142,10 @@ func _on_line_edit_command_text_submitted(new_text):
 	line_edit_command.text = ""
 	button_send.disabled = true
 	_scroll_to_bottom()
-	# Always close chat if it's a command (starts with "/")
-	# or if the configuration requires it
 	if new_text.begins_with("/") or Global.get_config().submit_message_closes_chat:
 		exit_chat()
+	else:
+		_close_write_mode()
 
 
 func toggle_chat_visibility(visibility: bool):
@@ -151,22 +156,23 @@ func toggle_chat_visibility(visibility: bool):
 		UiSounds.play_sound("widget_chat_close")
 
 
-func exit_chat() -> void:
+func _close_write_mode() -> void:
 	_hide_autocomplete()
-	hide()
-	on_exit_chat.emit()
+	panel_line_edit.hide()
+	button_write.show()
 	if Global.is_mobile():
 		DisplayServer.virtual_keyboard_hide()
 
 
+func exit_chat() -> void:
+	_close_write_mode()
+	hide()
+	on_exit_chat.emit()
+
+
 func async_start_chat():
 	show()
-	Global.get_explorer().release_mouse()
-	DisplayServer.virtual_keyboard_show("")
-	line_edit_command.text = ""
-	button_send.disabled = true
-	h_box_container_line_edit.show()
-	line_edit_command.grab_focus()
+	panel_line_edit.hide()
 	on_open_chat.emit()
 	if !scrolled:
 		await get_tree().process_frame
@@ -177,7 +183,6 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
 	new_chat.reduce_text = false
-	new_chat.max_panel_width = 550
 	new_chat.set_chat(address, message, timestamp)
 
 	if !scrolled:
@@ -223,7 +228,7 @@ func _async_on_change_virtual_keyboard(keyboard_height: int) -> void:
 
 
 func _on_line_edit_command_focus_exited() -> void:
-	exit_chat()
+	_close_write_mode()
 
 
 func _on_line_edit_command_text_changed(new_text: String) -> void:

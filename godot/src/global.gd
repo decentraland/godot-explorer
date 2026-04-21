@@ -12,6 +12,7 @@ signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal open_chat
+signal close_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings

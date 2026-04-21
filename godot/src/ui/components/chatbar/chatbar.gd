@@ -22,5 +22,9 @@ func _on_hud_button_share_pressed() -> void:
 
 
 func _on_button_chat_pressed() -> void:
-	Global.open_chat.emit()
 	Global.send_haptic_feedback()
+	var button_chat: Button = %Button_Chat
+	if button_chat.button_pressed:
+		Global.open_chat.emit()
+	else:
+		Global.close_chat.emit()
