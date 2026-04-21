@@ -421,7 +421,7 @@ func _on_container_storage_visibility_changed():
 func _on_sdk_skybox_time_active_changed(is_active: bool) -> void:
 	skybox_warning.visible = is_active
 	check_button_dynamic_skybox.disabled = is_active
-	preview_viewport_container.visible = !is_active
+	preview_viewport_container.visible = !is_active and Global.get_explorer() != null
 	dropdown_list_custom_skybox.disabled = is_active or check_button_dynamic_skybox.button_pressed
 
 
