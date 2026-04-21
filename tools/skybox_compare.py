@@ -22,19 +22,23 @@ import json
 from pathlib import Path
 from PIL import Image, ImageChops
 
-# Safe-area crop ratios (skip UI: left sidebar, top notification, bottom HUD, right minimap).
-CROP_LEFT = 0.08
+# Safe-area crop ratios. We compare only the upper-right region:
+#  - left 25%: skip Unity's UI sidebar + notification panel (Godot has no equivalent)
+#  - bottom 50%: skip Unity's water (Godot renders floor color, not water)
+#  - tiny top + right margin: skip Unity's top notification and minimap
+CROP_LEFT = 0.25
 CROP_RIGHT = 0.96
 CROP_TOP = 0.05
-CROP_BOTTOM = 0.92
+CROP_BOTTOM = 0.50
 
-# Sample zones for per-band color analysis (after crop)
+# Sample zones for per-band color analysis (after crop). With CROP_BOTTOM=0.5 the cropped
+# region is just the upper half, so zone fractions are within that half.
 ZONES = {
     "zenith": 0.05,
     "upper_sky": 0.25,
     "mid_sky": 0.50,
     "lower_sky": 0.75,
-    "horizon": 0.90,
+    "horizon": 0.95,
 }
 
 DIRECTIONS = ["N", "E", "S", "W", "U"]

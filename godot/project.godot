@@ -260,10 +260,6 @@ moon_direction={
 "type": "vec3",
 "value": Vector3(0, -0.7, -0.7)
 }
-atm_sun_direction={
-"type": "vec3",
-"value": Vector3(0, -1, 0)
-}
 sun_opacity={
 "type": "float",
 "value": 1.0
@@ -275,10 +271,6 @@ sun_size={
 moon_mask_size={
 "type": "float",
 "value": 0.0
-}
-atm_bake_mode={
-"type": "bool",
-"value": false
 }
 
 [xr]

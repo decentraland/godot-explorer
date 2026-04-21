@@ -96,13 +96,6 @@ func _process(_delta: float) -> void:
 	sun_dir = Vector3(-sun_dir.x, sun_dir.y, -sun_dir.z)
 	RenderingServer.global_shader_parameter_set("sun_direction", sun_dir)
 
-	# Atmospheric sun position — keeps the visual sun's azimuth (X/Z) so the bake's bright
-	# halo lines up with where the visual sun disc appears, but synthesizes the Y component
-	# so the sun cycles below horizon at night (the animation's Y stays mostly positive,
-	# which would never produce a dark Rayleigh sky).
-	var atm_sun_dir = Vector3(sun_dir.x, -cos(TAU * skybox_time), sun_dir.z).normalized()
-	RenderingServer.global_shader_parameter_set("atm_sun_direction", atm_sun_dir)
-
 	# Moon = opposite of visual sun. The sun stays mostly above horizon in the animation,
 	# so -sun_dir puts the moon mostly below — only briefly above during dusk/dawn.
 	# Visibility is gated by moon_mask_size_curve. Slerp filters dusk/dawn jumps.

@@ -20,34 +20,6 @@ const DIRECTIONS: Array = [
 	["U", Vector3(0, 1, 0), Vector3(0, 0, -1)],
 ]
 
-# Cubemap keyframes — uniform 2h spacing so the runtime shader can derive the adjacent
-# layer indices and blend factor with pure arithmetic (no loop, no branches).
-# Must stay in sync with BAKE_LAYERS in sky.gdshader and slices/amount in atm_array.png.import.
-const BAKE_HOURS: Array = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
-
-# Face order matches Godot's Cubemap layer convention (+X, -X, +Y, -Y, +Z, -Z).
-# Up vectors use Godot/Vulkan convention (world up for sides). The OpenGL cubemap spec
-# wants face top = -Y world for sides, but Godot's framebuffer is already Y-flipped vs
-# OpenGL, so we feed natural world-up and the resulting image lines up correctly when
-# sampled with samplerCube + EYEDIR.
-const FACE_DIRS: Array = [
-	["px", Vector3(1, 0, 0), Vector3(0, 1, 0)],
-	["nx", Vector3(-1, 0, 0), Vector3(0, 1, 0)],
-	["py", Vector3(0, 1, 0), Vector3(0, 0, -1)],
-	["ny", Vector3(0, -1, 0), Vector3(0, 0, 1)],
-	["pz", Vector3(0, 0, 1), Vector3(0, 1, 0)],
-	["nz", Vector3(0, 0, -1), Vector3(0, 1, 0)],
-]
-
-# All keyframes baked into a single super-atlas (atm_array.png) — 6 faces wide × N
-# layers tall, one cubemap per row. Imported as CompressedCubemapArray so runtime is a
-# single load() with no image processing. Tiny resolution: atmosphere is smooth color
-# data and runtime lerps adjacent keyframes anyway. Total: 6×8 cells of 64² ≈ 40 KB.
-const BAKE_FACE_RESOLUTION := Vector2i(64, 64)
-
-# Bake output goes next to atm_array.png.import which configures CubemapArray import.
-const DEFAULT_BAKE_REL := "assets/environment/"
-
 const RESOLUTION_PRESETS: Array = [
 	["1920 × 1080 (fast)", Vector2i(1920, 1080)],
 	["2560 × 1440", Vector2i(2560, 1440)],
@@ -69,9 +41,7 @@ var status_label: Label
 var capture_button: Button
 var compare_button: Button
 var approve_button: Button
-var bake_button: Button
 var capturing := false
-var baking := false
 
 
 func populate_menu(menu: PopupMenu, id: int):
@@ -199,21 +169,6 @@ func _create_dialog():
 	clear_approved_btn.pressed.connect(_on_clear_approved_pressed)
 	apr_hbox.add_child(clear_approved_btn)
 	vbox.add_child(apr_hbox)
-
-	vbox.add_child(HSeparator.new())
-
-	# Bake row — Phase E2 atmosphere cubemap baker (8 hours × 6 faces).
-	var bake_hbox := HBoxContainer.new()
-	bake_button = Button.new()
-	bake_button.text = "Bake Atmosphere Cubemaps (8 × 6 faces)"
-	bake_button.pressed.connect(_on_bake_pressed)
-	bake_hbox.add_child(bake_button)
-
-	var open_bake_btn := Button.new()
-	open_bake_btn.text = "Open bake folder"
-	open_bake_btn.pressed.connect(_on_open_bake_folder_pressed)
-	bake_hbox.add_child(open_bake_btn)
-	vbox.add_child(bake_hbox)
 
 	vbox.add_child(HSeparator.new())
 
@@ -415,6 +370,14 @@ func _capture_sequence(out_dir: String, resolution: Vector2i):
 	anim_player.play("light_cycle")
 	anim_player.pause()
 
+	# Cloud rotation simulation: clouds in Unity slowly drift over time. Each photo
+	# advances the rotation by -1°, starting from whatever value sky.tres has set on
+	# clouds_rotation_y_deg. Restored at the end of the capture.
+	var sky_material = ENVIRONMENT.sky.sky_material
+	var base_cloud_rot: float = (
+		sky_material.get_shader_parameter("clouds_rotation_y_deg") if sky_material else 0.0
+	)
+
 	var total := 24 * DIRECTIONS.size()
 	var done := 0
 	for hour in range(24):
@@ -428,6 +391,11 @@ func _capture_sequence(out_dir: String, resolution: Vector2i):
 			var dir_name: String = entry[0]
 			var look_at: Vector3 = entry[1]
 			var up: Vector3 = entry[2]
+
+			if sky_material:
+				sky_material.set_shader_parameter(
+					"clouds_rotation_y_deg", base_cloud_rot - float(done) * 1.0
+				)
 
 			camera.look_at_from_position(Vector3.ZERO, look_at, up)
 
@@ -444,138 +412,11 @@ func _capture_sequence(out_dir: String, resolution: Vector2i):
 			done += 1
 			status_label.text = ("Captured %d/%d  (%s%02d.png)" % [done, total, dir_name, hour])
 
+	# Restore the original cloud rotation so the runtime view isn't left rotated.
+	if sky_material:
+		sky_material.set_shader_parameter("clouds_rotation_y_deg", base_cloud_rot)
 	viewport.queue_free()
 	status_label.text = "Done. %d images written to %s" % [total, out_dir]
-
-
-func _bake_dir() -> String:
-	return ProjectSettings.globalize_path("res://" + DEFAULT_BAKE_REL)
-
-
-func _on_open_bake_folder_pressed():
-	var abs_dir := _bake_dir()
-	DirAccess.make_dir_recursive_absolute(abs_dir)
-	OS.shell_open(abs_dir)
-
-
-func _on_bake_pressed():
-	if baking:
-		return
-	baking = true
-	bake_button.disabled = true
-
-	var abs_dir := _bake_dir()
-	DirAccess.make_dir_recursive_absolute(abs_dir)
-
-	await _bake_cubemaps(abs_dir)
-
-	baking = false
-	bake_button.disabled = false
-
-
-# Renders the atmosphere-only sky (atm_bake_mode=true) into 6 cubemap faces × N keyframes.
-# Output PNGs go into godot/assets/environment/sky_baked/ so Godot imports them as
-# CompressedTexture2D — Phase E3 then assembles them into Cubemap resources.
-#
-# Uses a custom clean Environment (linear tonemap, no glow, no auto-exposure) instead of
-# game_environment.tres. With filmic tonemap + glow, each face gets a different non-linear
-# response (avg luminance of +Y differs from sides), producing visible seams in the cubemap.
-func _bake_cubemaps(out_dir: String):
-	status_label.text = "Setting up bake viewport..."
-	await plugin.get_tree().process_frame
-
-	var viewport := SubViewport.new()
-	viewport.size = BAKE_FACE_RESOLUTION
-	viewport.transparent_bg = false
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	viewport.msaa_3d = Viewport.MSAA_DISABLED
-	viewport.own_world_3d = true
-
-	# Clean env so each face renders identically. Glow OFF (was causing the seams: bright
-	# pixels bleed within a face but not across faces, so edges differ from neighbors).
-	# Keep filmic tonemap — it's per-pixel deterministic, so identical EYEDIR samples produce
-	# identical output across face boundaries (no seam). Linear tonemap clipped Rayleigh's
-	# tiny linear values (~0.1) to near-black before sRGB encoding.
-	var bake_env := Environment.new()
-	bake_env.background_mode = Environment.BG_SKY
-	bake_env.sky = ENVIRONMENT.sky
-	bake_env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	bake_env.tonemap_exposure = 1.0
-	bake_env.tonemap_white = 1.0
-	bake_env.glow_enabled = false
-	bake_env.adjustment_enabled = false
-	bake_env.ambient_light_source = Environment.AMBIENT_SOURCE_DISABLED
-
-	var world_env := WorldEnvironment.new()
-	world_env.environment = bake_env
-	viewport.add_child(world_env)
-
-	var sky_lights = SKY_LIGHTS.instantiate()
-	viewport.add_child(sky_lights)
-
-	var camera := Camera3D.new()
-	camera.fov = 90.0  # cubemap face FOV is exactly 90°
-	camera.near = 0.01
-	camera.far = 1000.0
-	viewport.add_child(camera)
-	camera.current = true
-
-	plugin.get_editor_interface().get_base_control().add_child(viewport)
-	await plugin.get_tree().process_frame
-	await plugin.get_tree().process_frame
-
-	var anim_player: AnimationPlayer = sky_lights.get_node("AnimationPlayer")
-	var main_light: DirectionalLight3D = sky_lights.get_node("MainLight")
-	anim_player.play("light_cycle")
-	anim_player.pause()
-
-	# Flip the bake-mode global on. Restored in the cleanup branch below regardless of error.
-	RenderingServer.global_shader_parameter_set("atm_bake_mode", true)
-
-	var face_size: int = BAKE_FACE_RESOLUTION.x
-	var num_layers: int = BAKE_HOURS.size()
-
-	# Super-atlas for CubemapArray: 6 faces wide × N hours tall. Cells are face_size².
-	# Imported as CompressedCubemapArray (.import file specifies arrangement=6x1, vertical
-	# stacking, amount=N). Single asset — no runtime slicing.
-	var atlas := Image.create(face_size * 6, face_size * num_layers, false, Image.FORMAT_RGBA8)
-
-	for layer in range(num_layers):
-		var hour: float = BAKE_HOURS[layer]
-		var skybox_time: float = hour / 24.0
-		_drive_skybox(skybox_time, anim_player, main_light)
-		await plugin.get_tree().process_frame
-
-		for i in range(FACE_DIRS.size()):
-			var entry: Array = FACE_DIRS[i]
-			var look_at: Vector3 = entry[1]
-			var up: Vector3 = entry[2]
-
-			camera.look_at_from_position(Vector3.ZERO, look_at, up)
-			await plugin.get_tree().process_frame
-			await plugin.get_tree().process_frame
-
-			var img := viewport.get_texture().get_image()
-			# Godot Camera3D produces an image whose horizontal axis is mirrored vs the
-			# OpenGL/Vulkan cubemap convention (samplerCube expects image right = -Z for +X
-			# face, but Godot renders +Z to image right). Mirror once to align all 6 faces.
-			img.flip_x()
-			img.convert(Image.FORMAT_RGBA8)
-			var dst := Vector2i(i * face_size, layer * face_size)
-			atlas.blit_rect(img, Rect2i(0, 0, face_size, face_size), dst)
-
-		status_label.text = ("Baked layer %d/%d (hour %02d)" % [layer + 1, num_layers, int(hour)])
-
-	var path := "%satm_array.png" % out_dir
-	var err := atlas.save_png(path)
-	if err != OK:
-		push_error("Failed to save %s (err=%d)" % [path, err])
-
-	RenderingServer.global_shader_parameter_set("atm_bake_mode", false)
-	viewport.queue_free()
-	status_label.text = (
-		"Bake done. Super-atlas: %s (%d×%d)" % [path, atlas.get_width(), atlas.get_height()]
-	)
 
 
 # Replicates sky_base.gd's _process logic so the editor doesn't need Global.skybox_time.
@@ -591,11 +432,6 @@ func _drive_skybox(
 	sun_dir = Vector3(-sun_dir.x, sun_dir.y, -sun_dir.z)
 	RenderingServer.global_shader_parameter_set("sun_direction", sun_dir)
 	RenderingServer.global_shader_parameter_set("moon_direction", -sun_dir)
-
-	# Atm sun: keep visual sun's azimuth (X/Z), synthesize Y so it cycles below horizon
-	# at night — see sky_base.gd for the formula.
-	var atm_sun_dir = Vector3(sun_dir.x, -cos(TAU * skybox_time), sun_dir.z).normalized()
-	RenderingServer.global_shader_parameter_set("atm_sun_direction", atm_sun_dir)
 
 	RenderingServer.global_shader_parameter_set("sun_opacity", SUN_OPACITY.sample(skybox_time))
 	RenderingServer.global_shader_parameter_set("sun_size", SUN_SIZE.sample(skybox_time))
