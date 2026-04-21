@@ -6,6 +6,7 @@
 [ext_resource type="AnimationLibrary" uid="uid://bfbk8s54f1krh" path="res://assets/animations/locomotion.res" id="3_piipk"]
 [ext_resource type="AnimationLibrary" uid="uid://bt3bj0k3qqmbn" path="res://assets/animations/idle.res" id="5_h07gr"]
 [ext_resource type="AnimationLibrary" uid="uid://cgx3ab1bmo3io" path="res://assets/animations/default_actions.tres" id="5_qy44m"]
+[ext_resource type="AnimationLibrary" path="res://assets/animations/double_jump_and_glide.tres" id="8_djag"]
 [ext_resource type="PackedScene" uid="uid://ci0fn7h7pxdmc" path="res://src/helpers_components/avatar_modifier_area_detector.tscn" id="6_yae5p"]
 [ext_resource type="PackedScene" uid="uid://1llql2trpa5s" path="res://src/decentraland_components/avatar/avatar_sfxs.tscn" id="7_xt6ge"]
 
@@ -840,6 +841,7 @@ unique_name_in_owner = true
 libraries = {
 &"": ExtResource("3_piipk"),
 &"default_actions": ExtResource("5_qy44m"),
+&"double_jump_and_glide": ExtResource("8_djag"),
 &"idle": ExtResource("5_h07gr")
 }
 autoplay = "Idle"

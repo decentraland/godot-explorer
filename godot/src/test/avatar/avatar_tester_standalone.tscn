@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://4227l72a8kdu"]
+[gd_scene format=3 uid="uid://4227l72a8kdu"]
 
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="1_1eenv"]
 [ext_resource type="Script" uid="uid://jns8b2qbn87l" path="res://src/test/avatar/avatar_tester_standalone.gd" id="1_l1th6"]
@@ -10,7 +10,7 @@
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_684t6"]
 number_color = Color(0, 0.670588, 0, 1)
 
-[node name="AvatarTesterStandalone" type="Control"]
+[node name="AvatarTesterStandalone" type="Control" unique_id=1415635946]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -19,18 +19,23 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_l1th6")
 
-[node name="SubViewportContainer" parent="." instance=ExtResource("1_1eenv")]
+[node name="SubViewportContainer" parent="." unique_id=570381552 instance=ExtResource("1_1eenv")]
 layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
 offset_left = 806.0
 offset_top = 109.0
 offset_right = 1062.0
 offset_bottom = 609.0
+grow_horizontal = 1
+grow_vertical = 1
 custom_environment = ExtResource("3_2n2br")
 
 [node name="SubViewport" parent="SubViewportContainer" index="0"]
 transparent_bg = false
 
-[node name="TabContainer" type="TabContainer" parent="."]
+[node name="TabContainer" type="TabContainer" parent="." unique_id=1433755907]
 layout_mode = 0
 offset_left = 33.0
 offset_top = 24.0
@@ -38,19 +43,19 @@ offset_right = 633.0
 offset_bottom = 688.0
 current_tab = 0
 
-[node name="Avatars" type="Panel" parent="TabContainer"]
+[node name="Avatars" type="Panel" parent="TabContainer" unique_id=549458347]
 custom_minimum_size = Vector2(600, 600)
 layout_mode = 2
 metadata/_tab_index = 0
 
-[node name="OptionButton_AvatarList" type="OptionButton" parent="TabContainer/Avatars"]
+[node name="OptionButton_AvatarList" type="OptionButton" parent="TabContainer/Avatars" unique_id=2083991348]
 layout_mode = 0
 offset_left = 14.0
 offset_top = 10.0
 offset_right = 526.0
 offset_bottom = 47.0
 
-[node name="Button_DownloadWearables" type="Button" parent="TabContainer/Avatars"]
+[node name="Button_DownloadWearables" type="Button" parent="TabContainer/Avatars" unique_id=384753154]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 512.0
@@ -58,7 +63,7 @@ offset_right = 581.0
 offset_bottom = 559.0
 text = "Download wearables"
 
-[node name="Button_CopyWearableData" type="Button" parent="TabContainer/Avatars"]
+[node name="Button_CopyWearableData" type="Button" parent="TabContainer/Avatars" unique_id=1957324525]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 568.0
@@ -66,7 +71,7 @@ offset_right = 581.0
 offset_bottom = 615.0
 text = "Copy wearables data"
 
-[node name="Button_Refresh" type="Button" parent="TabContainer/Avatars"]
+[node name="Button_Refresh" type="Button" parent="TabContainer/Avatars" unique_id=191992833]
 layout_mode = 0
 offset_left = 535.0
 offset_top = 9.0
@@ -74,7 +79,7 @@ offset_right = 575.0
 offset_bottom = 48.0
 icon = ExtResource("4_wetld")
 
-[node name="LineEdit_ProfileEntity" type="LineEdit" parent="TabContainer/Avatars"]
+[node name="LineEdit_ProfileEntity" type="LineEdit" parent="TabContainer/Avatars" unique_id=1901535536]
 layout_mode = 0
 offset_left = 24.0
 offset_top = 88.0
@@ -82,7 +87,7 @@ offset_right = 575.0
 offset_bottom = 127.0
 placeholder_text = "Profile Adress(0xff...) or Entity ID (bafk...)"
 
-[node name="Button_Fetch" type="Button" parent="TabContainer/Avatars"]
+[node name="Button_Fetch" type="Button" parent="TabContainer/Avatars" unique_id=1480589123]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 136.0
@@ -90,7 +95,7 @@ offset_right = 583.0
 offset_bottom = 174.0
 text = "Render Avatar"
 
-[node name="OutlineCheckBox" type="CheckBox" parent="TabContainer/Avatars"]
+[node name="OutlineCheckBox" type="CheckBox" parent="TabContainer/Avatars" unique_id=936788339]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 16.0
@@ -99,13 +104,13 @@ offset_right = 200.0
 offset_bottom = 225.0
 text = "Enable Outline"
 
-[node name="Emotes" type="Panel" parent="TabContainer"]
+[node name="Emotes" type="Panel" parent="TabContainer" unique_id=330026678]
 visible = false
 custom_minimum_size = Vector2(600, 600)
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="EmoteWheel" parent="TabContainer/Emotes" node_paths=PackedStringArray("avatar_node") instance=ExtResource("3_ubmva")]
+[node name="EmoteWheel" parent="TabContainer/Emotes" unique_id=329225951 node_paths=PackedStringArray("avatar_node") instance=ExtResource("3_ubmva")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -116,7 +121,7 @@ offset_top = -24.0
 offset_bottom = -24.0
 avatar_node = NodePath("../../../SubViewportContainer/SubViewport/Avatar")
 
-[node name="Button_OpenWheel" type="Button" parent="TabContainer/Emotes"]
+[node name="Button_OpenWheel" type="Button" parent="TabContainer/Emotes" unique_id=13209792]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -129,7 +134,7 @@ grow_horizontal = 2
 text = "Open wheel
 "
 
-[node name="Button_PlayCustom" type="Button" parent="TabContainer/Emotes"]
+[node name="Button_PlayCustom" type="Button" parent="TabContainer/Emotes" unique_id=1754044785]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -142,7 +147,7 @@ grow_horizontal = 2
 text = "Play emote
 "
 
-[node name="Button_Clear" type="Button" parent="TabContainer/Emotes"]
+[node name="Button_Clear" type="Button" parent="TabContainer/Emotes" unique_id=1556267786]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -154,7 +159,7 @@ offset_bottom = 630.0
 grow_horizontal = 2
 text = "Clear"
 
-[node name="LineEdit_Custom" type="LineEdit" parent="TabContainer/Emotes"]
+[node name="LineEdit_Custom" type="LineEdit" parent="TabContainer/Emotes" unique_id=251028106]
 layout_mode = 1
 anchors_preset = 14
 anchor_top = 0.5
@@ -165,15 +170,15 @@ offset_bottom = 267.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Expression" type="PanelContainer" parent="TabContainer"]
+[node name="Expression" type="PanelContainer" parent="TabContainer" unique_id=1777812611]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Expression"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Expression" unique_id=1435227602]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="TabContainer/Expression/VBoxContainer"]
+[node name="Label" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=1213524555]
 modulate = Color(1, 0, 0.211765, 1)
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
@@ -181,13 +186,13 @@ text = "Notepad"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TextEdit_Notepad" type="TextEdit" parent="TabContainer/Expression/VBoxContainer"]
+[node name="TextEdit_Notepad" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=668589128]
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 text = "get_node(\"/root/AvatarTesterStandalone/SubViewportContainer/SubViewport/Avatar\").animation_player.get_animation_list()"
 wrap_mode = 1
 
-[node name="Label2" type="Label" parent="TabContainer/Expression/VBoxContainer"]
+[node name="Label2" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=1356089182]
 modulate = Color(1, 0, 0.211765, 1)
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
@@ -196,7 +201,7 @@ text = "Expression
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TextEdit_Expr" type="TextEdit" parent="TabContainer/Expression/VBoxContainer"]
+[node name="TextEdit_Expr" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=1725544538]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 text = "get_node(\"/root/AvatarTesterStandalone/SubViewportContainer/SubViewport/Avatar\").animation_player.get_animation_list()"
@@ -206,7 +211,7 @@ draw_control_chars = true
 draw_tabs = true
 draw_spaces = true
 
-[node name="Label3" type="Label" parent="TabContainer/Expression/VBoxContainer"]
+[node name="Label3" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=2113673350]
 modulate = Color(1, 0, 0.211765, 1)
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
@@ -214,14 +219,150 @@ text = "Result"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TextEdit_Result" type="TextEdit" parent="TabContainer/Expression/VBoxContainer"]
+[node name="TextEdit_Result" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=1269088280]
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 text = "asdasd"
 editable = false
 wrap_mode = 1
 
-[node name="Spinner" parent="." instance=ExtResource("6_wsp5b")]
+[node name="Animations" type="Panel" parent="TabContainer" unique_id=1900000001]
+visible = false
+custom_minimum_size = Vector2(600, 600)
+layout_mode = 2
+metadata/_tab_index = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Animations" unique_id=1900000002]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+
+[node name="Label_DirectPlay" type="Label" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000003]
+modulate = Color(1, 0.7, 0, 1)
+layout_mode = 2
+text = "Direct playback (bypasses state machine)"
+
+[node name="HBox_Library" type="HBoxContainer" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000004]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TabContainer/Animations/VBoxContainer/HBox_Library" unique_id=1900000005]
+layout_mode = 2
+text = "Library:"
+
+[node name="OptionButton_Library" type="OptionButton" parent="TabContainer/Animations/VBoxContainer/HBox_Library" unique_id=1900000006]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Button_Refresh" type="Button" parent="TabContainer/Animations/VBoxContainer/HBox_Library" unique_id=1900000007]
+layout_mode = 2
+text = "Refresh"
+
+[node name="HBox_Animation" type="HBoxContainer" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000008]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TabContainer/Animations/VBoxContainer/HBox_Animation" unique_id=1900000009]
+layout_mode = 2
+text = "Clip:"
+
+[node name="OptionButton_Animation" type="OptionButton" parent="TabContainer/Animations/VBoxContainer/HBox_Animation" unique_id=1900000010]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBox_Controls" type="HBoxContainer" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000011]
+layout_mode = 2
+
+[node name="Button_Play" type="Button" parent="TabContainer/Animations/VBoxContainer/HBox_Controls" unique_id=1900000012]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Play"
+
+[node name="Button_PlayLoop" type="Button" parent="TabContainer/Animations/VBoxContainer/HBox_Controls" unique_id=1900000013]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Play (loop)"
+
+[node name="Button_Stop" type="Button" parent="TabContainer/Animations/VBoxContainer/HBox_Controls" unique_id=1900000014]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Stop"
+
+[node name="Button_RestoreTree" type="Button" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000015]
+layout_mode = 2
+text = "Restore state machine (re-enable AnimationTree)"
+
+[node name="Label_NowPlaying" type="Label" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000016]
+layout_mode = 2
+text = "Now playing: —"
+
+[node name="HSep1" type="HSeparator" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000017]
+layout_mode = 2
+
+[node name="Label_StateMachine" type="Label" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000018]
+modulate = Color(0, 0.8, 1, 1)
+layout_mode = 2
+text = "State machine flags (drive avatar.tscn transitions)"
+
+[node name="Grid_Flags" type="GridContainer" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000019]
+layout_mode = 2
+columns = 3
+
+[node name="CheckBox_Walk" type="CheckBox" parent="TabContainer/Animations/VBoxContainer/Grid_Flags" unique_id=1900000020]
+layout_mode = 2
+text = "Walk"
+
+[node name="CheckBox_Jog" type="CheckBox" parent="TabContainer/Animations/VBoxContainer/Grid_Flags" unique_id=1900000021]
+layout_mode = 2
+text = "Jog"
+
+[node name="CheckBox_Run" type="CheckBox" parent="TabContainer/Animations/VBoxContainer/Grid_Flags" unique_id=1900000022]
+layout_mode = 2
+text = "Run"
+
+[node name="CheckBox_Rise" type="CheckBox" parent="TabContainer/Animations/VBoxContainer/Grid_Flags" unique_id=1900000023]
+layout_mode = 2
+text = "Rise"
+
+[node name="CheckBox_Fall" type="CheckBox" parent="TabContainer/Animations/VBoxContainer/Grid_Flags" unique_id=1900000024]
+layout_mode = 2
+text = "Fall"
+
+[node name="CheckBox_Land" type="CheckBox" parent="TabContainer/Animations/VBoxContainer/Grid_Flags" unique_id=1900000025]
+layout_mode = 2
+text = "Land"
+
+[node name="HSep2" type="HSeparator" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000026]
+layout_mode = 2
+
+[node name="Label_GliderProp" type="Label" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000027]
+modulate = Color(0.5, 1, 0.5, 1)
+layout_mode = 2
+text = "Glider prop"
+
+[node name="CheckBox_ShowGlider" type="CheckBox" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000028]
+layout_mode = 2
+text = "Show glider prop"
+
+[node name="HBox_GliderClip" type="HBoxContainer" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000029]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TabContainer/Animations/VBoxContainer/HBox_GliderClip" unique_id=1900000030]
+layout_mode = 2
+text = "Clip:"
+
+[node name="OptionButton_GliderAnim" type="OptionButton" parent="TabContainer/Animations/VBoxContainer/HBox_GliderClip" unique_id=1900000031]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Button_PlayGlider" type="Button" parent="TabContainer/Animations/VBoxContainer/HBox_GliderClip" unique_id=1900000032]
+layout_mode = 2
+text = "Play"
+
+[node name="Spinner" parent="." unique_id=937463934 instance=ExtResource("6_wsp5b")]
 layout_mode = 0
 offset_left = 875.0
 offset_top = 257.0
@@ -238,5 +379,19 @@ offset_bottom = 385.0
 [connection signal="pressed" from="TabContainer/Emotes/Button_PlayCustom" to="." method="_on_button_play_custom_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_Clear" to="." method="_on_button_clear_pressed"]
 [connection signal="text_changed" from="TabContainer/Expression/VBoxContainer/TextEdit_Expr" to="." method="_on_text_edit_expr_text_changed"]
+[connection signal="item_selected" from="TabContainer/Animations/VBoxContainer/HBox_Library/OptionButton_Library" to="." method="_on_anim_library_selected"]
+[connection signal="pressed" from="TabContainer/Animations/VBoxContainer/HBox_Library/Button_Refresh" to="." method="_on_anim_refresh_pressed"]
+[connection signal="pressed" from="TabContainer/Animations/VBoxContainer/HBox_Controls/Button_Play" to="." method="_on_anim_play_pressed"]
+[connection signal="pressed" from="TabContainer/Animations/VBoxContainer/HBox_Controls/Button_PlayLoop" to="." method="_on_anim_play_loop_pressed"]
+[connection signal="pressed" from="TabContainer/Animations/VBoxContainer/HBox_Controls/Button_Stop" to="." method="_on_anim_stop_pressed"]
+[connection signal="pressed" from="TabContainer/Animations/VBoxContainer/Button_RestoreTree" to="." method="_on_anim_restore_tree_pressed"]
+[connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Walk" to="." method="_on_flag_walk_toggled"]
+[connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Jog" to="." method="_on_flag_jog_toggled"]
+[connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Run" to="." method="_on_flag_run_toggled"]
+[connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Rise" to="." method="_on_flag_rise_toggled"]
+[connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Fall" to="." method="_on_flag_fall_toggled"]
+[connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Land" to="." method="_on_flag_land_toggled"]
+[connection signal="toggled" from="TabContainer/Animations/VBoxContainer/CheckBox_ShowGlider" to="." method="_on_show_glider_toggled"]
+[connection signal="pressed" from="TabContainer/Animations/VBoxContainer/HBox_GliderClip/Button_PlayGlider" to="." method="_on_play_glider_pressed"]
 
 [editable path="SubViewportContainer"]
