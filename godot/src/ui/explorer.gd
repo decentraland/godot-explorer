@@ -31,6 +31,9 @@ var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
 ## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
 var _session_hide_main_hud: bool = false
 
+## True when the debug panel was auto-enabled by preview mode (not --debug-panel).
+var _debug_panel_from_preview: bool = false
+
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 @onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
@@ -41,6 +44,7 @@ var _session_hide_main_hud: bool = false
 
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
+@onready var button_reload_scene: Button = %Button_ReloadScene
 #@onready var url_popup = %UrlPopup
 #@onready var jump_in_popup = %JumpInPopup
 
@@ -197,8 +201,12 @@ func _ready():
 		add_child(test_spawn_and_move_avatars)
 
 	# --debug-panel (automatically enabled with --preview or preview deeplink)
-	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
+	var is_preview_mode = Global.cli.preview_mode or not Global.deep_link_obj.preview.is_empty()
+	if Global.cli.debug_panel or is_preview_mode:
 		_on_control_menu_request_debug_panel(true)
+		_debug_panel_from_preview = not Global.cli.debug_panel and is_preview_mode
+
+	# Reload button and debug panel visibility toggled in _on_change_scene_id for preview realm
 
 	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
 	if Global.deep_link_obj.livekit_debug:
@@ -967,6 +975,27 @@ func _on_button_load_scenes_pressed() -> void:
 	button_load_scenes.hide()
 
 
+func _on_button_reload_scene_pressed() -> void:
+	var current_scene = Global.scene_fetcher.get_current_scene_data()
+	if current_scene == null:
+		printerr("No current scene to reload")
+		return
+	Global.scene_fetcher.reload_scene(current_scene.id)
+
+
+func _is_in_preview_realm() -> bool:
+	var preview_url := Global.deep_link_obj.preview
+	if not preview_url.is_empty():
+		return Global.realm.realm_string == preview_url
+	return Global.cli.preview_mode
+
+
+func _update_preview_ui(in_preview: bool) -> void:
+	button_reload_scene.get_parent().visible = in_preview
+	if _debug_panel_from_preview:
+		_on_control_menu_request_debug_panel(in_preview)
+
+
 func _on_notify_pending_loading_scenes(pending: bool) -> void:
 	if pending:
 		button_load_scenes.show()
@@ -1451,12 +1480,14 @@ func _on_change_scene_id(scene_id: int):
 	is_genesis_city = Realm.is_genesis_city(Global.realm.realm_url)
 	if scene_id == -1:
 		scene_title = ""
+		_update_preview_ui(false)
 		return
 	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)
 	if scene != null:
 		scene_title = scene.scene_entity_definition.get_title()
 	else:
 		scene_title = ""
+	_update_preview_ui(_is_in_preview_realm())
 
 
 func _on_change_parcel(_position: Vector2i):
