@@ -114,19 +114,13 @@ func wait_for_generation_complete():
 
 
 func count_total_nodes() -> int:
-	var count = 0
-	for parcel_key in Global.scene_fetcher.loaded_empty_scenes:
-		var parcel = Global.scene_fetcher.loaded_empty_scenes[parcel_key]
-		if is_instance_valid(parcel):
-			count += count_nodes_in_tree(parcel)
-	return count
-
-
-func count_nodes_in_tree(node: Node) -> int:
-	var count = 1
-	for child in node.get_children():
-		count += count_nodes_in_tree(child)
-	return count
+	# With the Rust-side Floating Islands manager there are no per-parcel
+	# Node3D trees, so "total nodes" collapses to the count of active parcels
+	# — still a useful stability signal for `wait_for_generation_complete`.
+	var mgr = Global.scene_fetcher.islands_manager
+	if mgr == null:
+		return 0
+	return mgr.get_active_parcel_count()
 
 
 # gdlint:ignore = async-function-name
@@ -176,11 +170,15 @@ func generate_floating_islands():
 	# Call the REAL floating island generation
 	sf._regenerate_floating_islands()
 
-	# Wait for async generation to complete
-	while sf._floating_islands_generating:
-		await get_tree().process_frame
+	# Wait for the Rust manager's initial generation to finish. Use the signal
+	# if the manager is available, otherwise fall through (no-op).
+	if sf.islands_manager != null:
+		await sf.islands_manager.generation_complete
 
-	log_msg("FI Benchmark: SceneFetcher created %d empty parcels" % sf.loaded_empty_scenes.size())
+	var active = 0
+	if sf.islands_manager != null:
+		active = sf.islands_manager.get_active_parcel_count()
+	log_msg("FI Benchmark: manager reports %d active empty parcels" % active)
 
 
 ## Generate parcels for benchmark:
@@ -323,36 +321,15 @@ func calculate_delta(baseline: Dictionary, final: Dictionary) -> Dictionary:
 
 
 func count_nodes_by_type() -> Dictionary:
+	# The Rust manager doesn't expose a per-type breakdown (there are no
+	# per-parcel Node3D trees to walk), so the only meaningful number here is
+	# the active-parcel count. Keep the keys from the legacy schema for diff
+	# compatibility; they'll all read zero on the new path.
 	var counts = {"terrain": 0, "cliff": 0, "grass": 0, "tree": 0, "rock": 0, "prop": 0, "other": 0}
-
-	for parcel_key in Global.scene_fetcher.loaded_empty_scenes:
-		var parcel = Global.scene_fetcher.loaded_empty_scenes[parcel_key]
-		if is_instance_valid(parcel):
-			count_nodes_recursive(parcel, counts)
-
+	var mgr = Global.scene_fetcher.islands_manager
+	if mgr != null:
+		counts["active_parcels"] = mgr.get_active_parcel_count()
 	return counts
-
-
-func count_nodes_recursive(node: Node, counts: Dictionary):
-	var name_lower = node.name.to_lower()
-
-	if "terrain" in name_lower:
-		counts.terrain += 1
-	elif "cliff" in name_lower:
-		counts.cliff += 1
-	elif "grass" in name_lower:
-		counts.grass += 1
-	elif "tree" in name_lower:
-		counts.tree += 1
-	elif "rock" in name_lower:
-		counts.rock += 1
-	elif "prop" in name_lower:
-		counts.prop += 1
-	else:
-		counts.other += 1
-
-	for child in node.get_children():
-		count_nodes_recursive(child, counts)
 
 
 func write_results(result: Dictionary):
