@@ -604,6 +604,16 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform);
+        // Apply authoritative jump/glide/ground state from the wire — this is
+        // what drives double-jump + glide animations on remote avatars via
+        // avatar.gd's rising-edge detection.
+        if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
+            avatar.bind_mut().apply_wire_movement_state(
+                movement.jump_count,
+                movement.glide_state,
+                movement.is_grounded,
+            );
+        }
         self.last_movement_timestamp
             .insert(alias, movement.timestamp);
         true

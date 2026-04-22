@@ -848,6 +848,9 @@ impl CommunicationManager {
         rise: bool,
         fall: bool,
         land: bool,
+        jump_count: i32,
+        glide_state: i32,
+        is_grounded: bool,
     ) -> bool {
         // Update archipelago position if connected via archipelago
         #[cfg(feature = "use_livekit")]
@@ -857,8 +860,14 @@ impl CommunicationManager {
 
         let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
 
+        // Our Temporal bitfield doesn't yet carry jump_count / glide_state
+        // (see Fase B follow-up). When either is non-default, force the
+        // uncompressed path so the remote receives authoritative state.
+        let needs_uncompressed = jump_count > 0 || glide_state != 0;
+        let use_compressed = compressed && !needs_uncompressed;
+
         let get_packet = || {
-            if compressed {
+            if use_compressed {
                 // Get elapsed time since start
                 let time = self.start_time.elapsed().as_secs_f64();
 
@@ -881,13 +890,16 @@ impl CommunicationManager {
                 };
 
                 // Temporal::with_rotation_f32 expects radians (quantizes over 0..TAU)
+                // Use the authoritative is_grounded flag, not the legacy `land`
+                // (which has a 0.2s coyote grace that stays true briefly mid-air).
+                let _ = land;  // silence unused warning — kept in signature for GDScript API stability
                 let temporal = Temporal::from_parts(
                     time,
                     false,
                     rotation_y, // radians from Godot
                     movement.velocity_tier(),
                     move_kind,
-                    !fall && !rise,
+                    is_grounded,
                 );
 
                 let movement_compressed = MovementCompressed { temporal, movement };
@@ -929,7 +941,11 @@ impl CommunicationManager {
                     rotation_y: -rotation_y,
                     movement_blend_value,
                     slide_blend_value: 0.0,
-                    is_grounded: land,
+                    // `is_grounded` reflects authoritative floor contact (from
+                    // CharacterBody3D.is_on_floor), not the legacy `land` flag
+                    // which is a 0.2s coyote-grace window that stays true
+                    // briefly after stepping off a ledge.
+                    is_grounded,
                     is_jumping: rise,
                     is_long_jump: false,
                     is_long_fall: false,
@@ -937,6 +953,10 @@ impl CommunicationManager {
                     is_stunned: false,
                     is_instant: false,
                     is_emoting: self.is_emoting,
+                    // New fields — gate double-jump + glide animations on the
+                    // remote side via jump_count delta (see avatar.gd).
+                    jump_count,
+                    glide_state,
                 };
 
                 rfc4::Packet {

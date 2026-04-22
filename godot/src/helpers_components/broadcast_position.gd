@@ -10,6 +10,15 @@ var last_position_sent: Vector3 = Vector3.ZERO
 var last_rotation_sent: float = INF
 var counter: int = 0
 
+# Animation-state delta tracking. Unity's PlayerMovementNetSendSystem emits an
+# immediate packet whenever jump_count, is_grounded, or glide_state changes —
+# zero-tolerance force-send, separate from the position/rotation thresholds.
+# We mirror that here so remote avatars transition into double-jump / glide
+# animations on the next frame instead of waiting for the 5cm position delta.
+var last_jump_count_sent: int = 0
+var last_is_grounded_sent: bool = true
+var last_glide_state_sent: int = 0
+
 
 func _on_timeout():
 	if not player_node or not player_node.avatar:
@@ -17,34 +26,50 @@ func _on_timeout():
 		return
 	var position: Vector3 = player_node.get_broadcast_position()
 	var rotation_y = player_node.get_broadcast_rotation_y()
+	var avatar = player_node.avatar
 
 	var position_changed: bool = position.distance_to(last_position_sent) >= POSITION_THRESHOLD
 	var rotation_changed: bool = (
 		absf(wrapf(rotation_y - last_rotation_sent, -PI, PI)) >= ROTATION_THRESHOLD
 	)
+	var anim_state_changed: bool = (
+		avatar.jump_count != last_jump_count_sent
+		or avatar.is_grounded != last_is_grounded_sent
+		or avatar.glide_state != last_glide_state_sent
+	)
 
-	# If neither changed significantly, delay broadcasting
-	if not position_changed and not rotation_changed:
+	# If nothing changed (position, rotation, or anim state), delay broadcasting.
+	# The anim-state path is zero-tolerance — any jump/glide/ground transition
+	# emits on the next timer tick regardless of position delta.
+	if not position_changed and not rotation_changed and not anim_state_changed:
 		counter += 1
 		if counter < 10:
 			return
 
-	counter = 0  # Reset counter when movement/rotation occurs
+	counter = 0  # Reset counter when movement/rotation/anim-state changes
 
-	# Use the new broadcast_movement function with compression enabled
-	var avatar = player_node.avatar
-	Global.comms.broadcast_movement(
-		false,
-		position,
-		rotation_y,
-		player_node.velocity,
-		avatar.walk,
-		avatar.run,
-		avatar.jog,
-		avatar.rise,
-		avatar.fall,
-		avatar.land
+	(
+		Global
+		. comms
+		. broadcast_movement(
+			false,
+			position,
+			rotation_y,
+			player_node.velocity,
+			avatar.walk,
+			avatar.run,
+			avatar.jog,
+			avatar.rise,
+			avatar.fall,
+			avatar.land,
+			avatar.jump_count,
+			avatar.glide_state,
+			avatar.is_grounded,
+		)
 	)
 
 	last_position_sent = position
 	last_rotation_sent = rotation_y
+	last_jump_count_sent = avatar.jump_count
+	last_is_grounded_sent = avatar.is_grounded
+	last_glide_state_sent = avatar.glide_state

@@ -207,6 +207,30 @@ impl DclAvatar {
         }
     }
 
+    // Authoritative animation-state setter used by the remote-avatar path
+    // (avatar_scene.rs) when a Movement packet arrives. Unlike set_target_position
+    // which infers rise/fall from position delta, these values come directly
+    // from the peer's local player.gd and are exactly what avatar.gd's edge
+    // detection (jump_rising_edge, glide_opening_edge) consumes to drive
+    // Double_Jump_Rise / Gliding_* animations for the remote view.
+    //
+    // Also overrides the inferred `land` flag with the wire's `is_grounded`.
+    // The inference computes `land = !rise && !fall` — a "mid-air zero-
+    // velocity" flag that fires at every jump apex and trips the `nfall`
+    // AnimationTree condition into Jump_End mid-air. Using the authoritative
+    // is_grounded keeps `nfall = self.land` correct for remote avatars too.
+    pub fn apply_wire_movement_state(
+        &mut self,
+        jump_count: i32,
+        glide_state: i32,
+        is_grounded: bool,
+    ) {
+        self.jump_count = jump_count;
+        self.glide_state = glide_state;
+        self.is_grounded = is_grounded;
+        self.land = is_grounded;
+    }
+
     #[func]
     pub fn update_parcel_position(&mut self, position: Vector3) -> bool {
         let godot_parcel_position = position / 16.0;
