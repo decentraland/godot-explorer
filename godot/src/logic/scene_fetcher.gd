@@ -1010,6 +1010,8 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 
 	# For teleports to the same position, we still want to reload the scene
 	var position_changed = current_position != new_position
+	if position_changed and not is_teleport:
+		_check_nearby_scene(new_position)
 	current_position = new_position
 
 	if is_teleport:
@@ -1486,3 +1488,22 @@ func _calculate_parcel_adjacency(
 	config.southeast = get_parcel_state.call(x + 1, z - 1)
 
 	return config
+
+
+func _check_nearby_scene(new_position: Vector2i) -> void:
+	var current_scene := get_current_scene_data()
+	if current_scene != null:
+		var parcels := current_scene.scene_entity_definition.get_parcels()
+		if parcels.has(new_position):
+			return
+
+	var result = await PlacesHelper.async_get_by_position(new_position)
+	if result is PromiseError:
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+	if json.get("data", []).is_empty():
+		return
+
+	var place: Dictionary = json["data"][0]
+	print("[NearbyScene] Stepped into: ", place.get("title", "Unknown"))
