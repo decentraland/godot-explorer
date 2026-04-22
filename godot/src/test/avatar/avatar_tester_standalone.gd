@@ -52,6 +52,10 @@ var option_button_library: OptionButton = anim_root.get_node("HBox_Library/Optio
 @onready var option_button_glider_anim: OptionButton = anim_root.get_node(
 	"HBox_GliderClip/OptionButton_GliderAnim"
 )
+@onready var spin_jump_count: SpinBox = anim_root.get_node("HBox_JumpCount/SpinBox_JumpCount")
+@onready var option_button_glide_state: OptionButton = anim_root.get_node(
+	"HBox_JumpCount/OptionButton_GlideState"
+)
 
 
 func _ready():
@@ -78,6 +82,7 @@ func _ready():
 	avatar.ready.connect(_refresh_animation_lists)
 	_refresh_animation_lists()
 	_populate_glider_anim_list()
+	_populate_glide_state_list()
 
 	# Check for CLI auto-run mode: --emote-test
 	if Global.cli.emote_test_mode:
@@ -595,3 +600,27 @@ func _on_play_glider_pressed() -> void:
 		return
 	if player.has_animation(clip):
 		player.play(clip)
+
+
+# ---------------------------------------------------------------------------
+# jump_count / glide_state toggles — drive avatar.gd's rising-edge detection
+# so we can rehearse the Double_Jump_* and Gliding_* state-machine paths
+# without running the full game.
+# ---------------------------------------------------------------------------
+
+
+func _populate_glide_state_list() -> void:
+	option_button_glide_state.clear()
+	option_button_glide_state.add_item("CLOSED (0)")
+	option_button_glide_state.add_item("OPENING (1)")
+	option_button_glide_state.add_item("GLIDING (2)")
+	option_button_glide_state.add_item("CLOSING (3)")
+	option_button_glide_state.select(0)
+
+
+func _on_jump_count_changed(value: float) -> void:
+	avatar.jump_count = int(value)
+
+
+func _on_glide_state_selected(index: int) -> void:
+	avatar.glide_state = index

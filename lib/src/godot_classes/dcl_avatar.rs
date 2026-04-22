@@ -61,6 +61,18 @@ pub struct DclAvatar {
     #[export]
     land: bool,
 
+    // Multi-jump + gliding state, written by the local player and by the
+    // remote-movement decoder. avatar.gd reads these to drive AnimationTree
+    // conditions (double_jump rising-edge, glide state transitions).
+    #[export]
+    jump_count: i32,
+    // 0 = CLOSED, 1 = OPENING, 2 = GLIDING, 3 = CLOSING. Mirrors Unity's
+    // rfc4.Movement.glide_state enum.
+    #[export]
+    glide_state: i32,
+    #[export]
+    is_grounded: bool,
+
     lerp_state: LerpState,
     base: Base<Node3D>,
 }
@@ -88,6 +100,9 @@ impl INode3D for DclAvatar {
             rise: false,
             fall: false,
             land: false,
+            jump_count: 0,
+            glide_state: 0,
+            is_grounded: true,
             avatar_data: DclAvatarWireFormat::from_gd(Default::default()),
             avatar_name: "".into(),
             blocked: false,

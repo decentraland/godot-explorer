@@ -9,6 +9,8 @@ const DEBUG_SAVE_AVATAR_DATA = false
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
+const GLIDER_PROP_SCENE = preload("res://src/decentraland_components/avatar/glider_prop.tscn")
+
 const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
 const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
 const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
@@ -61,6 +63,14 @@ var wearable_loader: WearableLoader = null
 
 # Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
 var _force_hide_name: bool = false
+
+# Previous-frame values for rising-edge detection of jump_count / glide_state.
+# AnimationTree conditions are triggered on transitions, not on levels.
+var _last_jump_count: int = 0
+var _last_glide_state: int = 0
+
+# Spawned GliderProp scene (instanced under the spine bone while glide_state != CLOSED).
+var _glider_prop_instance: Node = null
 
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
@@ -919,6 +929,80 @@ func _process(delta):
 	animation_tree.set("parameters/conditions/land", self.land)
 
 	animation_tree.set("parameters/conditions/nfall", !self.fall)
+
+	# Double-jump rising-edge: jump_count grew from 1 → 2 (or beyond). Fire the
+	# edge for a single frame so the state machine takes the transition once.
+	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
+	_last_jump_count = self.jump_count
+
+	# Glide state transitions. We surface the "opening" moment as a one-frame
+	# edge (so * → Gliding_Start fires) plus a level boolean `gliding` that
+	# holds throughout OPENING/GLIDING so intermediate transitions can depend
+	# on it. glide_state enum: 0=CLOSED, 1=OPENING, 2=GLIDING, 3=CLOSING.
+	var glide_opening_edge: bool = self.glide_state == 1 and _last_glide_state != 1
+	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
+	_last_glide_state = self.glide_state
+
+	animation_tree.set("parameters/conditions/double_jump", jump_rising_edge)
+	animation_tree.set("parameters/conditions/start_glide", glide_opening_edge)
+	animation_tree.set("parameters/conditions/gliding", gliding_now)
+	animation_tree.set("parameters/conditions/ngliding", not gliding_now)
+
+	_update_glider_prop()
+
+
+func _update_glider_prop() -> void:
+	# AvatarShape NPCs don't glide — skip the prop instantiation for them.
+	if is_avatar_shape:
+		return
+
+	var should_show: bool = self.glide_state != 0  # any state other than CLOSED
+
+	if should_show and _glider_prop_instance == null:
+		var socket := get_node_or_null("%GliderSocket")
+		if socket == null:
+			return
+		_glider_prop_instance = GLIDER_PROP_SCENE.instantiate()
+		socket.add_child(_glider_prop_instance)
+		_play_glider_clip("Glider_Start")
+	elif not should_show and _glider_prop_instance != null:
+		# Let Glider_End play out, then free. Using a one-shot timer so we don't
+		# block the state machine — if the avatar re-enters glide mid-teardown
+		# we just create a new prop (the old one has already been queue_freed).
+		_play_glider_clip("Glider_End")
+		var doomed: Node = _glider_prop_instance
+		_glider_prop_instance = null
+		var tree := get_tree()
+		if tree != null:
+			# Closing clip is ~0.3s; give it 0.4s to finish crossfade.
+			var timer := tree.create_timer(0.4)
+			timer.timeout.connect(doomed.queue_free)
+		else:
+			doomed.queue_free()
+	elif should_show and _glider_prop_instance != null:
+		# Once the Gliding_Idle phase is reached on the avatar side, tell the
+		# prop to loop its Glider_Idle clip so the wings stay open.
+		if self.glide_state == 2:  # GLIDING
+			_play_glider_clip_if_different("Glider_Idle")
+
+
+func _play_glider_clip(clip: String) -> void:
+	if _glider_prop_instance == null:
+		return
+	var ap := _glider_prop_instance.get_node_or_null("AnimationPlayer") as AnimationPlayer
+	if ap == null or not ap.has_animation(clip):
+		return
+	ap.play(clip)
+
+
+func _play_glider_clip_if_different(clip: String) -> void:
+	if _glider_prop_instance == null:
+		return
+	var ap := _glider_prop_instance.get_node_or_null("AnimationPlayer") as AnimationPlayer
+	if ap == null or not ap.has_animation(clip):
+		return
+	if ap.current_animation != clip:
+		ap.play(clip)
 
 
 func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):

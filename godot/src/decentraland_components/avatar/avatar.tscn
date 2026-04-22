@@ -292,6 +292,73 @@ xfade_time = 0.1
 advance_mode = 2
 advance_condition = &"nemix"
 
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_djbase"]
+animation = &"double_jump_and_glide/Double_Jump_Base"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_glstart"]
+animation = &"double_jump_and_glide/Gliding_Start"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_glidle"]
+animation = &"double_jump_and_glide/Gliding_Idle"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_glend"]
+animation = &"double_jump_and_glide/Gliding_End"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_jr2dj"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"double_jump"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_rjr2dj"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"double_jump"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_dj2jf"]
+xfade_time = 0.1
+switch_mode = 2
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_jr2gs"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"start_glide"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_jf2gs"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"start_glide"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_dj2gs"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"start_glide"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_rjr2gs"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"start_glide"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_rjf2gs"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"start_glide"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_gs2gi"]
+xfade_time = 0.1
+switch_mode = 2
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_gi2ge"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"ngliding"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_ge2idle"]
+xfade_time = 0.1
+switch_mode = 2
+advance_mode = 2
+
 [sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_dvr6n"]
 states/Emote/node = SubResource("AnimationNodeAnimation_v3xl2")
 states/Emote/position = Vector2(269, 417.098)
@@ -327,7 +394,15 @@ states/Run_Jump_Start/position = Vector2(859.878, -43.902)
 states/Start/position = Vector2(117, 200)
 states/Walk/node = SubResource("AnimationNodeAnimation_xcont")
 states/Walk/position = Vector2(528.878, 417.098)
-transitions = ["Start", "Idle", SubResource("AnimationNodeStateMachineTransition_sjeni"), "Idle", "Jog", SubResource("AnimationNodeStateMachineTransition_wtmx6"), "Jog", "Idle", SubResource("AnimationNodeStateMachineTransition_2mj4e"), "Idle", "Walk", SubResource("AnimationNodeStateMachineTransition_qnh1y"), "Walk", "Idle", SubResource("AnimationNodeStateMachineTransition_u27o3"), "Walk", "Jump_Start", SubResource("AnimationNodeStateMachineTransition_gdwh0"), "Jog", "Jump_Start", SubResource("AnimationNodeStateMachineTransition_tld2g"), "Jump_Start", "Jump_Rise", SubResource("AnimationNodeStateMachineTransition_dl5hj"), "Jump_Rise", "Jump_Mid", SubResource("AnimationNodeStateMachineTransition_j8j2x"), "Jump_Mid", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_ki230"), "Jump_Fall", "Jump_End", SubResource("AnimationNodeStateMachineTransition_prpyn"), "Jump_End", "Idle", SubResource("AnimationNodeStateMachineTransition_5wen6"), "Idle", "Jump_Start", SubResource("AnimationNodeStateMachineTransition_hxemm"), "Idle", "Run", SubResource("AnimationNodeStateMachineTransition_nmhcq"), "Run", "Idle", SubResource("AnimationNodeStateMachineTransition_3524b"), "Run", "Run_Jump_Start", SubResource("AnimationNodeStateMachineTransition_l7387"), "Jump_End", "Walk", SubResource("AnimationNodeStateMachineTransition_qidgv"), "Jump_End", "Jog", SubResource("AnimationNodeStateMachineTransition_wl2sx"), "Jump_End", "Run", SubResource("AnimationNodeStateMachineTransition_f2e5k"), "Run_Jump_End", "Jog", SubResource("AnimationNodeStateMachineTransition_6fd18"), "Run_Jump_End", "Run", SubResource("AnimationNodeStateMachineTransition_301s4"), "Run_Jump_End", "Walk", SubResource("AnimationNodeStateMachineTransition_kcvi8"), "Run_Jump_End", "Idle", SubResource("AnimationNodeStateMachineTransition_6lvlt"), "Run_Jump_Start", "Run_Jump_Rise", SubResource("AnimationNodeStateMachineTransition_p1koq"), "Run_Jump_Mid", "Run_Jump_Fall", SubResource("AnimationNodeStateMachineTransition_4il2s"), "Run_Jump_Rise", "Run_Jump_Mid", SubResource("AnimationNodeStateMachineTransition_tggp5"), "Run_Jump_Fall", "Run_Jump_End", SubResource("AnimationNodeStateMachineTransition_vdlve"), "Run", "Jog", SubResource("AnimationNodeStateMachineTransition_eev0w"), "Jog", "Run", SubResource("AnimationNodeStateMachineTransition_kthle"), "Jog", "Walk", SubResource("AnimationNodeStateMachineTransition_qrl20"), "Walk", "Jog", SubResource("AnimationNodeStateMachineTransition_r5bic"), "Run", "Walk", SubResource("AnimationNodeStateMachineTransition_pyd2w"), "Walk", "Run", SubResource("AnimationNodeStateMachineTransition_p4ag8"), "Jump_Rise", "Jump_End", SubResource("AnimationNodeStateMachineTransition_ihmew"), "Run_Jump_Rise", "Run_Jump_End", SubResource("AnimationNodeStateMachineTransition_3l313"), "Run", "Run_Jump_Fall", SubResource("AnimationNodeStateMachineTransition_8l6l8"), "Jog", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_j7ba3"), "Walk", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_gnida"), "Idle", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_vd3y3"), "Idle", "Emote", SubResource("AnimationNodeStateMachineTransition_8wh0r"), "Emote", "Idle", SubResource("AnimationNodeStateMachineTransition_3sg1c"), "Idle", "Emote_Mix", SubResource("AnimationNodeStateMachineTransition_qm8x3"), "Emote_Mix", "Idle", SubResource("AnimationNodeStateMachineTransition_sa8km")]
+states/Double_Jump_Rise/node = SubResource("AnimationNodeAnimation_djbase")
+states/Double_Jump_Rise/position = Vector2(1360, 80)
+states/Gliding_Start/node = SubResource("AnimationNodeAnimation_glstart")
+states/Gliding_Start/position = Vector2(1550, 340)
+states/Gliding_Idle/node = SubResource("AnimationNodeAnimation_glidle")
+states/Gliding_Idle/position = Vector2(1750, 340)
+states/Gliding_End/node = SubResource("AnimationNodeAnimation_glend")
+states/Gliding_End/position = Vector2(1950, 340)
+transitions = ["Start", "Idle", SubResource("AnimationNodeStateMachineTransition_sjeni"), "Idle", "Jog", SubResource("AnimationNodeStateMachineTransition_wtmx6"), "Jog", "Idle", SubResource("AnimationNodeStateMachineTransition_2mj4e"), "Idle", "Walk", SubResource("AnimationNodeStateMachineTransition_qnh1y"), "Walk", "Idle", SubResource("AnimationNodeStateMachineTransition_u27o3"), "Walk", "Jump_Start", SubResource("AnimationNodeStateMachineTransition_gdwh0"), "Jog", "Jump_Start", SubResource("AnimationNodeStateMachineTransition_tld2g"), "Jump_Start", "Jump_Rise", SubResource("AnimationNodeStateMachineTransition_dl5hj"), "Jump_Rise", "Jump_Mid", SubResource("AnimationNodeStateMachineTransition_j8j2x"), "Jump_Mid", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_ki230"), "Jump_Fall", "Jump_End", SubResource("AnimationNodeStateMachineTransition_prpyn"), "Jump_End", "Idle", SubResource("AnimationNodeStateMachineTransition_5wen6"), "Idle", "Jump_Start", SubResource("AnimationNodeStateMachineTransition_hxemm"), "Idle", "Run", SubResource("AnimationNodeStateMachineTransition_nmhcq"), "Run", "Idle", SubResource("AnimationNodeStateMachineTransition_3524b"), "Run", "Run_Jump_Start", SubResource("AnimationNodeStateMachineTransition_l7387"), "Jump_End", "Walk", SubResource("AnimationNodeStateMachineTransition_qidgv"), "Jump_End", "Jog", SubResource("AnimationNodeStateMachineTransition_wl2sx"), "Jump_End", "Run", SubResource("AnimationNodeStateMachineTransition_f2e5k"), "Run_Jump_End", "Jog", SubResource("AnimationNodeStateMachineTransition_6fd18"), "Run_Jump_End", "Run", SubResource("AnimationNodeStateMachineTransition_301s4"), "Run_Jump_End", "Walk", SubResource("AnimationNodeStateMachineTransition_kcvi8"), "Run_Jump_End", "Idle", SubResource("AnimationNodeStateMachineTransition_6lvlt"), "Run_Jump_Start", "Run_Jump_Rise", SubResource("AnimationNodeStateMachineTransition_p1koq"), "Run_Jump_Mid", "Run_Jump_Fall", SubResource("AnimationNodeStateMachineTransition_4il2s"), "Run_Jump_Rise", "Run_Jump_Mid", SubResource("AnimationNodeStateMachineTransition_tggp5"), "Run_Jump_Fall", "Run_Jump_End", SubResource("AnimationNodeStateMachineTransition_vdlve"), "Run", "Jog", SubResource("AnimationNodeStateMachineTransition_eev0w"), "Jog", "Run", SubResource("AnimationNodeStateMachineTransition_kthle"), "Jog", "Walk", SubResource("AnimationNodeStateMachineTransition_qrl20"), "Walk", "Jog", SubResource("AnimationNodeStateMachineTransition_r5bic"), "Run", "Walk", SubResource("AnimationNodeStateMachineTransition_pyd2w"), "Walk", "Run", SubResource("AnimationNodeStateMachineTransition_p4ag8"), "Jump_Rise", "Jump_End", SubResource("AnimationNodeStateMachineTransition_ihmew"), "Run_Jump_Rise", "Run_Jump_End", SubResource("AnimationNodeStateMachineTransition_3l313"), "Run", "Run_Jump_Fall", SubResource("AnimationNodeStateMachineTransition_8l6l8"), "Jog", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_j7ba3"), "Walk", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_gnida"), "Idle", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_vd3y3"), "Idle", "Emote", SubResource("AnimationNodeStateMachineTransition_8wh0r"), "Emote", "Idle", SubResource("AnimationNodeStateMachineTransition_3sg1c"), "Idle", "Emote_Mix", SubResource("AnimationNodeStateMachineTransition_qm8x3"), "Emote_Mix", "Idle", SubResource("AnimationNodeStateMachineTransition_sa8km"), "Jump_Rise", "Double_Jump_Rise", SubResource("AnimationNodeStateMachineTransition_jr2dj"), "Run_Jump_Rise", "Double_Jump_Rise", SubResource("AnimationNodeStateMachineTransition_rjr2dj"), "Double_Jump_Rise", "Jump_Fall", SubResource("AnimationNodeStateMachineTransition_dj2jf"), "Jump_Rise", "Gliding_Start", SubResource("AnimationNodeStateMachineTransition_jr2gs"), "Jump_Fall", "Gliding_Start", SubResource("AnimationNodeStateMachineTransition_jf2gs"), "Double_Jump_Rise", "Gliding_Start", SubResource("AnimationNodeStateMachineTransition_dj2gs"), "Run_Jump_Rise", "Gliding_Start", SubResource("AnimationNodeStateMachineTransition_rjr2gs"), "Run_Jump_Fall", "Gliding_Start", SubResource("AnimationNodeStateMachineTransition_rjf2gs"), "Gliding_Start", "Gliding_Idle", SubResource("AnimationNodeStateMachineTransition_gs2gi"), "Gliding_Idle", "Gliding_End", SubResource("AnimationNodeStateMachineTransition_gi2ge"), "Gliding_End", "Idle", SubResource("AnimationNodeStateMachineTransition_ge2idle")]
 graph_offset = Vector2(71.49706, 77.56363)
 
 [sub_resource type="Curve" id="Curve_m2nrn"]
@@ -836,6 +911,12 @@ size = Vector2i(1052, 310)
 
 [node name="NicknameUI" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad/NicknameViewport" instance=ExtResource("2_kjemr")]
 unique_name_in_owner = true
+
+[node name="GliderSocket" type="BoneAttachment3D" parent="Armature/Skeleton3D"]
+unique_name_in_owner = true
+transform = Transform3D(100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0)
+bone_name = "Avatar_Spine2"
+bone_idx = 11
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {

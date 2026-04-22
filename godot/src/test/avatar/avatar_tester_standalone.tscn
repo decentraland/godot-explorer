@@ -335,6 +335,26 @@ text = "Fall"
 layout_mode = 2
 text = "Land"
 
+[node name="HBox_JumpCount" type="HBoxContainer" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000040]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TabContainer/Animations/VBoxContainer/HBox_JumpCount" unique_id=1900000041]
+layout_mode = 2
+text = "jump_count:"
+
+[node name="SpinBox_JumpCount" type="SpinBox" parent="TabContainer/Animations/VBoxContainer/HBox_JumpCount" unique_id=1900000042]
+layout_mode = 2
+max_value = 3.0
+step = 1.0
+
+[node name="Label2" type="Label" parent="TabContainer/Animations/VBoxContainer/HBox_JumpCount" unique_id=1900000043]
+layout_mode = 2
+text = "   glide_state:"
+
+[node name="OptionButton_GlideState" type="OptionButton" parent="TabContainer/Animations/VBoxContainer/HBox_JumpCount" unique_id=1900000044]
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="HSep2" type="HSeparator" parent="TabContainer/Animations/VBoxContainer" unique_id=1900000026]
 layout_mode = 2
 
@@ -391,6 +411,8 @@ offset_bottom = 385.0
 [connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Rise" to="." method="_on_flag_rise_toggled"]
 [connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Fall" to="." method="_on_flag_fall_toggled"]
 [connection signal="toggled" from="TabContainer/Animations/VBoxContainer/Grid_Flags/CheckBox_Land" to="." method="_on_flag_land_toggled"]
+[connection signal="value_changed" from="TabContainer/Animations/VBoxContainer/HBox_JumpCount/SpinBox_JumpCount" to="." method="_on_jump_count_changed"]
+[connection signal="item_selected" from="TabContainer/Animations/VBoxContainer/HBox_JumpCount/OptionButton_GlideState" to="." method="_on_glide_state_selected"]
 [connection signal="toggled" from="TabContainer/Animations/VBoxContainer/CheckBox_ShowGlider" to="." method="_on_show_glider_toggled"]
 [connection signal="pressed" from="TabContainer/Animations/VBoxContainer/HBox_GliderClip/Button_PlayGlider" to="." method="_on_play_glider_pressed"]
 

@@ -5,6 +5,22 @@ const DEFAULT_CAMERA_FOV = 60.0
 const SPRINTING_CAMERA_FOV = 75.0
 const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
 
+# Double-jump + glide tuning. Values match Unity rfc4 defaults; PBAvatarLocomotionSettings
+# overrides will land here once the proto fields arrive (double_jump_height,
+# gliding_speed, gliding_falling_speed).
+const MAX_JUMP_COUNT := 2  # 1 ground jump + 1 air jump before glide opens
+const JUMP_BUFFER_WINDOW := 0.15
+const GLIDE_OPENING_TIME := 0.5
+const GLIDE_CLOSING_TIME := 0.3
+const GLIDE_MAX_FALL_SPEED := 3.0
+const GLIDE_HORIZONTAL_SPEED := 6.0
+
+# Glide FSM values — mirror DclAvatar.glide_state int and rfc4.Movement.glide_state enum.
+const GLIDE_CLOSED := 0
+const GLIDE_OPENING := 1
+const GLIDE_GLIDING := 2
+const GLIDE_CLOSING := 3
+
 var last_position: Vector3
 var actual_velocity_xz: float
 
@@ -19,6 +35,8 @@ var hard_landing_cooldown: float = 0.0
 var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
 var jump_time := 0.0
+var jump_count: int = 0
+var glide_state: int = GLIDE_CLOSED
 
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
@@ -31,6 +49,8 @@ var current_profile_version: int = -1
 # Private variables (prefixed with _)
 var _hard_landing_timer: float = 0.0
 var _locomotion_settings: DclLocomotionSettings = null
+var _jump_buffer: float = 0.0
+var _glide_timer: float = 0.0
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
@@ -200,6 +220,22 @@ func _physics_process(dt: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, 20 * dt)
 		velocity.z = move_toward(velocity.z, 0, 20 * dt)
 
+	# Jump input buffering: a just-pressed jump stays "armed" for JUMP_BUFFER_WINDOW
+	# seconds, covering cases like "press jump 0.1s before hitting the ground".
+	_jump_buffer = max(_jump_buffer - dt, 0.0)
+	if Global.explorer_has_focus() and Input.is_action_just_pressed("ia_jump"):
+		_jump_buffer = JUMP_BUFFER_WINDOW
+
+	# Tick glide FSM timers (actual transitions live in the grounded/airborne blocks).
+	if glide_state == GLIDE_OPENING:
+		_glide_timer -= dt
+		if _glide_timer <= 0.0:
+			glide_state = GLIDE_GLIDING
+	elif glide_state == GLIDE_CLOSING:
+		_glide_timer -= dt
+		if _glide_timer <= 0.0:
+			glide_state = GLIDE_CLOSED
+
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 	var input_magnitude := clampf(input_dir.length(), 0.0, 1.0)
 
@@ -247,20 +283,60 @@ func _physics_process(dt: float) -> void:
 			time_falling < .2 and !Input.is_action_pressed("ia_jump") and jump_time < 0
 		)
 		avatar.land = in_grace_time
-		avatar.rise = velocity.y > .3
-		avatar.fall = velocity.y < -.3 && !in_grace_time
+		avatar.rise = velocity.y > .3 and glide_state == GLIDE_CLOSED
+		avatar.fall = velocity.y < -.3 && !in_grace_time and glide_state == GLIDE_CLOSED
 		velocity.y -= gravity * dt
-	elif (
-		Input.is_action_pressed("ia_jump")
-		and jump_time < 0
-		and not jump_disabled
-		and _hard_landing_timer <= 0
-	):
-		# Use run_jump_height if sprinting
+
+		# Air-jump branch (double jump). Requires a buffered press, remaining
+		# jump budget, and no active glide. Glide triggers on the *next* press.
+		if (
+			_jump_buffer > 0.0
+			and jump_count > 0
+			and jump_count < MAX_JUMP_COUNT
+			and glide_state == GLIDE_CLOSED
+			and not jump_disabled
+			and _hard_landing_timer <= 0
+		):
+			var air_jump_height := jump_height
+			if Input.is_action_pressed("ia_sprint"):
+				air_jump_height = run_jump_height
+			velocity.y = sqrt(2 * air_jump_height * gravity)
+			jump_count += 1
+			_jump_buffer = 0.0
+			avatar.rise = true
+			avatar.fall = false
+		# Glide trigger: pressing jump again after spending the double-jump
+		# budget opens the glider. Only while still airborne and not already
+		# in some glide phase.
+		elif (
+			_jump_buffer > 0.0
+			and jump_count >= MAX_JUMP_COUNT
+			and glide_state == GLIDE_CLOSED
+			and not jump_disabled
+		):
+			glide_state = GLIDE_OPENING
+			_glide_timer = GLIDE_OPENING_TIME
+			_jump_buffer = 0.0
+			avatar.rise = false
+			avatar.fall = false
+		# Jumping out of an active glide cancels it (CLOSING handles the clip).
+		elif _jump_buffer > 0.0 and glide_state == GLIDE_GLIDING:
+			glide_state = GLIDE_CLOSING
+			_glide_timer = GLIDE_CLOSING_TIME
+			_jump_buffer = 0.0
+
+		# Glide flight modifiers.
+		if glide_state == GLIDE_GLIDING:
+			if velocity.y < -GLIDE_MAX_FALL_SPEED:
+				velocity.y = -GLIDE_MAX_FALL_SPEED
+	elif _jump_buffer > 0.0 and jump_time < 0 and not jump_disabled and _hard_landing_timer <= 0:
+		# Ground jump — consume the buffer instead of reading the key again.
 		var effective_jump_height := jump_height
 		if Input.is_action_pressed("ia_sprint"):
 			effective_jump_height = run_jump_height
 		velocity.y = sqrt(2 * effective_jump_height * gravity)
+		jump_count = 1
+		_jump_buffer = 0.0
 		avatar.land = false
 		avatar.rise = true
 		avatar.fall = false
@@ -275,6 +351,11 @@ func _physics_process(dt: float) -> void:
 		velocity.y = 0
 		avatar.rise = false
 		avatar.fall = false
+		# Landing resets the air-jump budget and force-closes the glider.
+		jump_count = 0
+		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+			glide_state = GLIDE_CLOSING
+			_glide_timer = GLIDE_CLOSING_TIME
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
 	if current_direction:
@@ -312,9 +393,23 @@ func _physics_process(dt: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, walk_speed)
 		velocity.z = move_toward(velocity.z, 0, walk_speed)
 
+	# While gliding, cap horizontal speed — overrides walk/jog/run speeds set above.
+	if glide_state == GLIDE_GLIDING:
+		var horizontal := Vector2(velocity.x, velocity.z)
+		if horizontal.length() > GLIDE_HORIZONTAL_SPEED:
+			horizontal = horizontal.normalized() * GLIDE_HORIZONTAL_SPEED
+			velocity.x = horizontal.x
+			velocity.z = horizontal.y
+
 	actual_velocity_xz = (to_xz(global_position) - to_xz(last_position)).length() / dt
 
 	update_avatar_movement_state(actual_velocity_xz)
+
+	# Mirror local physics state into DclAvatar so avatar.gd drives the
+	# AnimationTree off the same numbers for both local and remote avatars.
+	avatar.jump_count = jump_count
+	avatar.glide_state = glide_state
+	avatar.is_grounded = on_floor
 
 	last_position = global_position
 	move_and_slide()
