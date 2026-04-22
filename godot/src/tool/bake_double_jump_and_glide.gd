@@ -16,8 +16,8 @@ extends SceneTree
 
 const ANIM_DIR := "res://assets/animations/"
 const PROP_OUT_DIR := "res://assets/avatar/"
-const AVATAR_LIB_OUT := "res://assets/animations/double_jump_and_glide.tres"
-const PROP_LIB_OUT := "res://assets/avatar/glider_prop_anims.tres"
+const AVATAR_LIB_OUT := "res://assets/animations/double_jump_and_glide.res"
+const PROP_LIB_OUT := "res://assets/avatar/glider_prop_anims.res"
 # Self-contained prop scene: mesh + skin + materials + textures are all inlined,
 # so we don't need any of the source .glb files tracked in git.
 const PROP_BASE_SRC := "res://assets/animations/Gliding_PropIdle.glb"
