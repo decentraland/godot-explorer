@@ -912,12 +912,6 @@ size = Vector2i(1052, 310)
 [node name="NicknameUI" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad/NicknameViewport" instance=ExtResource("2_kjemr")]
 unique_name_in_owner = true
 
-[node name="GliderSocket" type="BoneAttachment3D" parent="Armature/Skeleton3D"]
-unique_name_in_owner = true
-transform = Transform3D(100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0)
-bone_name = "Avatar_Spine2"
-bone_idx = 11
-
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
 &"": ExtResource("3_piipk"),

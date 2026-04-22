@@ -959,11 +959,23 @@ func _update_glider_prop() -> void:
 	var should_show: bool = self.glide_state != 0  # any state other than CLOSED
 
 	if should_show and _glider_prop_instance == null:
-		var socket := get_node_or_null("%GliderSocket")
-		if socket == null:
-			return
+		# Unity parents GliderProp directly to the avatar root (not to any
+		# bone) with identity transform; the ~2.35m vertical offset that puts
+		# the handles overhead lives inside the prop's own skeleton
+		# (DEF_glider_main), and the Gliding_* avatar clips are authored to
+		# grip exactly that position — no IK. See Unity PR #7312,
+		# GliderPropControllerSystem.CreateProp.
+		#
+		# Godot imports the prop GLB keeping Unity's +X/+Z axes, but the
+		# avatar's skeleton has the Unity→Godot axis re-mapping baked into
+		# its Skeleton3D transform (scale 0.01, basis permutation). Result:
+		# Avatar_LeftHand ends up on world -X while DEF_glider_wing.L stays
+		# on world +X — mirrored — and the glider sits 0.5m behind the
+		# avatar instead of 0.5m in front. Rotating the prop 180° around Y
+		# negates both X and Z at once and re-aligns the contract.
 		_glider_prop_instance = GLIDER_PROP_SCENE.instantiate()
-		socket.add_child(_glider_prop_instance)
+		add_child(_glider_prop_instance)
+		(_glider_prop_instance as Node3D).rotate_y(PI)
 		_play_glider_clip("Glider_Start")
 	elif not should_show and _glider_prop_instance != null:
 		# Let Glider_End play out, then free. Using a one-shot timer so we don't
