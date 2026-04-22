@@ -1282,6 +1282,12 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 	# Handle friend request notification clicks - open friends panel on friends tab
 	var notif_type = notification_d.get("type", "")
 
+	if notif_type == "nearby_scene":
+		var pos: Vector2i = notification_d.get("parcel_position", Vector2i.ZERO)
+		if Global.modal_manager != null:
+			Global.modal_manager.async_show_teleport_modal(pos)
+		return
+
 	if ["social_service_friendship_request", "social_service_friendship_accepted"].has(notif_type):
 		# Open friends panel on friends tab
 		if not friends_panel.visible:

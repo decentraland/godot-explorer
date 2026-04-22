@@ -86,7 +86,7 @@ var _floating_islands_created: int = 0
 
 # Simple floor for large scenes (>100 empty parcels)
 var _large_scene_floor: Node3D = null
-var _last_entered_scene_entity_id: String = ""
+var _home_scene_entity_id: String = ""
 var _last_queried_parcel: Vector2i = INVALID_PARCEL
 
 # Preview WebSocket for hot reload
@@ -1017,6 +1017,8 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 	current_position = new_position
 
 	if is_teleport:
+		_home_scene_entity_id = ""
+		_last_queried_parcel = INVALID_PARCEL
 		_teleport_target_parcel = new_position
 
 		# Mark as reloading to show loading screen even in dynamic loading mode
@@ -1493,33 +1495,44 @@ func _calculate_parcel_adjacency(
 
 
 func _check_nearby_scene(new_position: Vector2i) -> void:
+	var loaded_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
+	var loaded_entity_id: String = Global.scene_runner.get_scene_entity_id(loaded_scene_id)
+	# Track home as the first loaded scene after spawn/teleport
+	if _home_scene_entity_id.is_empty() and not loaded_entity_id.is_empty():
+		_home_scene_entity_id = loaded_entity_id
+
+	# Player is back in the home scene — reset so nearby parcels can be queried again
+	if not loaded_entity_id.is_empty() and loaded_entity_id == _home_scene_entity_id:
+		_last_queried_parcel = INVALID_PARCEL
+
 	var new_entity_id := scene_entity_coordinator.get_scene_entity_id(new_position)
 
 	if new_entity_id.is_empty():
-		# Coordinator cache miss — fall back to Places API to check if a scene exists here
-		if new_position == _last_queried_parcel:
+		if _home_scene_entity_id.is_empty() or new_position == _last_queried_parcel:
 			return
 		_last_queried_parcel = new_position
-		var result = await PlacesHelper.async_get_by_position(new_position)
-		if result is PromiseError:
-			return
-		var json: Dictionary = result.get_string_response_as_json()
-		if json.get("data", []).is_empty():
-			return
-		# Scene exists but no entity ID yet — fall through to show the modal
 	else:
-		# Same scene as where the player currently stands (large multi-parcel scene,
-		# or coordinator cache just populated while player was already inside)
-		var current_entity_id := scene_entity_coordinator.get_scene_entity_id(current_position)
-		if new_entity_id == current_entity_id:
-			_last_entered_scene_entity_id = new_entity_id
+		if new_entity_id == loaded_entity_id:
+			return
+		if new_entity_id == _home_scene_entity_id:
 			return
 
-		if new_entity_id == _last_entered_scene_entity_id:
-			return
-
-		_last_entered_scene_entity_id = new_entity_id
-
-	if Global.modal_manager == null:
+	var result = await PlacesHelper.async_get_by_position(new_position)
+	if result is PromiseError:
 		return
-	Global.modal_manager.async_show_teleport_modal(new_position)
+	var json: Dictionary = result.get_string_response_as_json()
+	if json.get("data", []).is_empty():
+		return
+
+	var place: Dictionary = json["data"][0]
+	var title: String = "Teleport to " + place.get("title", "Unknown place")
+	var creator: String = place.get("contact_name", "")
+	var description: String = "by " + creator if not creator.is_empty() else "Tap to explore"
+
+	NotificationsManager.show_system_toast(
+		title,
+		description,
+		"nearby_scene",
+		"default",
+		{"parcel_position": new_position}
+	)
