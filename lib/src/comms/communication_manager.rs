@@ -889,14 +889,18 @@ impl CommunicationManager {
                     MoveKind::Idle
                 };
 
-                // Temporal::with_rotation_f32 expects radians (quantizes over 0..TAU)
+                // Wire convention matches Unity Foundation Client: rotation_y
+                // on the wire is a left-handed (Unity/DCL) yaw in radians.
+                // Godot is right-handed, so negate to cross the handedness
+                // boundary — analogous to position_z negation below.
+                //
                 // Use the authoritative is_grounded flag, not the legacy `land`
                 // (which has a 0.2s coyote grace that stays true briefly mid-air).
-                let _ = land;  // silence unused warning — kept in signature for GDScript API stability
+                let _ = land; // silence unused warning — kept in signature for GDScript API stability
                 let temporal = Temporal::from_parts(
                     time,
                     false,
-                    rotation_y, // radians from Godot
+                    -rotation_y,
                     movement.velocity_tier(),
                     move_kind,
                     is_grounded,
@@ -907,6 +911,8 @@ impl CommunicationManager {
                 let movement_packet = rfc4::MovementCompressed {
                     temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
                     movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
+                    head_sync_data: 0, // TODO: implement head sync compression
+                    point_at_data: 0,  // TODO: implement point-at compression
                 };
 
                 rfc4::Packet {
@@ -938,7 +944,11 @@ impl CommunicationManager {
                     velocity_x: velocity.x,
                     velocity_y: velocity.y,
                     velocity_z: velocity.z,
-                    rotation_y: -rotation_y,
+                    // Unity Foundation Client writes rfc4.Movement.rotation_y
+                    // as degrees in [0, 360) (from transform.eulerAngles.y).
+                    // Negate to cross the Godot→Unity handedness boundary,
+                    // then convert radians→degrees.
+                    rotation_y: (-rotation_y).to_degrees(),
                     movement_blend_value,
                     slide_blend_value: 0.0,
                     // `is_grounded` reflects authoritative floor contact (from
@@ -947,16 +957,27 @@ impl CommunicationManager {
                     // briefly after stepping off a ledge.
                     is_grounded,
                     is_jumping: rise,
+                    // jump_count / glide_state are authoritative — fed from
+                    // player.gd (local) or decoded on the remote side (see
+                    // avatar_scene.rs::apply_wire_movement_state). Drive the
+                    // Double_Jump_Rise + Gliding_* state-machine transitions
+                    // via avatar.gd's rising-edge detection.
+                    jump_count,
                     is_long_jump: false,
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
+                    glide_state,
                     is_instant: false,
                     is_emoting: self.is_emoting,
-                    // New fields — gate double-jump + glide animations on the
-                    // remote side via jump_count delta (see avatar.gd).
-                    jump_count,
-                    glide_state,
+                    head_ik_yaw_enabled: false, // TODO: implement head sync
+                    head_ik_pitch_enabled: false,
+                    head_yaw: 0.0,
+                    head_pitch: 0.0,
+                    point_at_x: 0.0, // TODO: implement point-at
+                    point_at_y: 0.0,
+                    point_at_z: 0.0,
+                    is_pointing_at: false,
                 };
 
                 rfc4::Packet {

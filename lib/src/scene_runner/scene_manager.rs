@@ -7,7 +7,7 @@ use crate::{
             proto_components::{
                 common::BorderRect,
                 sdk::components::{
-                    common::{InputAction, PointerEventType, RaycastHit},
+                    common::{InputAction, InteractionType, PointerEventType, RaycastHit},
                     PbAvatarEmoteCommand, PbUiCanvasInformation,
                 },
             },
@@ -40,7 +40,9 @@ use std::{
 };
 
 use super::{
-    components::pointer_events::{get_entity_pointer_event, pointer_events_system},
+    components::pointer_events::{
+        find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
+    },
     input::InputState,
     loading_session::LoadingSession,
     pool_manager::PoolManager,
@@ -102,6 +104,7 @@ pub struct SceneManager {
 
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
+    last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
     #[var]
     pointer_tooltips: VarArray,
@@ -1408,7 +1411,12 @@ impl SceneManager {
         if let Some(mut global) = DclGlobal::try_singleton() {
             let mut global_bind = global.bind_mut();
             global_bind.reset_input_modifiers();
+            let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
+            drop(global_bind);
+            if was_skybox_active {
+                global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
+            }
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
@@ -1716,6 +1724,7 @@ impl INode for SceneManager {
             console: Callable::invalid(),
             input_state: InputState::default(),
             last_raycast_result: None,
+            last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
             interactable_area: Rect2i::from_components(
                 0,
@@ -1853,11 +1862,26 @@ impl INode for SceneManager {
             }
         }
 
+        let player_position = self.player_avatar_node.get_global_position();
+        let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
+            let size = viewport.get_visible_rect().size;
+            viewport.get_camera_3d().map(|camera| (camera, size))
+        });
+        let pointing_at_cursor = current_pointer_raycast_result
+            .as_ref()
+            .is_some_and(|raycast| {
+                get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
+                    .is_some_and(|pe| pe.has_any_pointer_event_without_proximity())
+            });
+
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
             &self.last_raycast_result,
             &current_pointer_raycast_result,
+            player_position,
+            &camera_and_viewport,
+            &mut self.last_proximity_entity,
         );
 
         let mut tooltips = VarArray::new();
@@ -1866,6 +1890,10 @@ impl INode for SceneManager {
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
                 for pointer_event in pointer_events.pointer_events.iter() {
+                    if pointer_event.interaction_type == Some(i32::from(InteractionType::Proximity))
+                    {
+                        continue;
+                    }
                     if let Some(info) = pointer_event.event_info.as_ref() {
                         let show_feedback = info.show_feedback.as_ref().unwrap_or(&true);
                         let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
@@ -1915,6 +1943,48 @@ impl INode for SceneManager {
                                 tooltips.push(&dict.to_variant());
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Add proximity tooltip for the closest entity within max_player_distance
+        if !pointing_at_cursor {
+            if let Some((scene_id, entity_id)) =
+                find_active_proximity_entity(&self.scenes, player_position, &camera_and_viewport)
+            {
+                if let Some(pointer_events) =
+                    get_entity_pointer_event(&self.scenes, &scene_id, &entity_id)
+                {
+                    let proximity_type = i32::from(InteractionType::Proximity);
+                    for pe in pointer_events.pointer_events.iter() {
+                        if pe.interaction_type != Some(proximity_type) {
+                            continue;
+                        }
+                        let Some(ref info) = pe.event_info else {
+                            continue;
+                        };
+                        let show_feedback = info.show_feedback.unwrap_or(true);
+                        if !show_feedback {
+                            continue;
+                        }
+                        let is_pet_down = pe.event_type == PointerEventType::PetDown as i32;
+                        let is_pet_up = pe.event_type == PointerEventType::PetUp as i32;
+                        if !is_pet_down && !is_pet_up {
+                            continue;
+                        }
+                        let text = info.hover_text.as_deref().unwrap_or("Interact").to_godot();
+                        let input_action = InputAction::from_i32(info.button.unwrap_or(0))
+                            .unwrap_or(InputAction::IaAny);
+                        let mut dict = VarDictionary::new();
+                        if is_pet_down {
+                            dict.set("text_pet_down", text);
+                        } else {
+                            dict.set("text_pet_up", text);
+                        }
+                        dict.set("action", GString::from(input_action.as_str_name()));
+                        tooltips.push(&dict.to_variant());
+                        break;
                     }
                 }
             }
