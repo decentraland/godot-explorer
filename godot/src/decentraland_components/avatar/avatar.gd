@@ -9,8 +9,6 @@ const DEBUG_SAVE_AVATAR_DATA = false
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
-const DebugLog = preload("res://src/logic/player/debug_log.gd")
-
 const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
 const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
 const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
@@ -65,23 +63,13 @@ var wearable_loader: WearableLoader = null
 var _force_hide_name: bool = false
 
 # Previous-frame values for rising-edge detection of jump_count / glide_state.
-# AnimationTree conditions are triggered on transitions, not on levels.
 var _last_jump_count: int = 0
 var _last_glide_state: int = 0
-# Latched once the close sequence has been kicked off so we don't spam the
-# Close audio, Glider_End clip restart, and hide-timer-scheduling every
-# physics frame while the prop is still fading out.
+# Latched so we don't spam Close audio / Glider_End restart / hide-timer scheduling.
 var _glider_close_initiated: bool = false
-# Previous glide_state value used by _update_glider_prop for edge detection.
-# Separate from _last_glide_state above — that one is updated earlier in
-# _process (before _update_glider_prop runs) for the AnimationTree condition
-# edges, so we can't reuse it here.
+# Previous glide_state for _update_glider_prop's edge detection. Kept separate
+# from _last_glide_state above — that one is consumed earlier in _process.
 var _prop_last_glide_state: int = 0
-# Debug: previous-frame values so we can log only on transitions.
-var _dbg_prev_anim_state: StringName = &""
-var _dbg_prev_rise: bool = false
-var _dbg_prev_fall: bool = false
-var _dbg_prev_land: bool = false
 
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
@@ -941,25 +929,13 @@ func _process(delta):
 	animation_tree.set("parameters/conditions/rise", self.rise)
 	animation_tree.set("parameters/conditions/fall", self.fall)
 	animation_tree.set("parameters/conditions/land", self.land)
-
-	# nfall gates Jump_Fall → Jump_End. Originally this was `!self.fall`,
-	# but `self.fall` has a deadband at the jump apex (vy in [-0.3, 0.3]
-	# flips both rise and fall to false for 1-2 frames), causing the state
-	# machine to oscillate Jump_Fall → Jump_End → Jump_Fall — visible as a
-	# ghost "landing" pose mid-air during every double-jump transition.
-	# `land` is only true while on_floor (or within grace time after stepping
-	# off a ledge), so the transition fires only on actual landings.
+	# nfall = land (not !fall): fall has a 1-2 frame deadband at the jump
+	# apex that would otherwise oscillate Jump_Fall → Jump_End → Jump_Fall.
 	animation_tree.set("parameters/conditions/nfall", self.land)
 
-	# Double-jump rising-edge: jump_count grew from 1 → 2 (or beyond). Fire the
-	# edge for a single frame so the state machine takes the transition once.
+	# Rising-edge detection for one-frame AnimationTree condition pulses.
 	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
 	_last_jump_count = self.jump_count
-
-	# Glide state transitions. We surface the "opening" moment as a one-frame
-	# edge (so * → Gliding_Start fires) plus a level boolean `gliding` that
-	# holds throughout OPENING/GLIDING so intermediate transitions can depend
-	# on it. glide_state enum: 0=CLOSED, 1=OPENING, 2=GLIDING, 3=CLOSING.
 	var glide_opening_edge: bool = self.glide_state == 1 and _last_glide_state != 1
 	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
 	_last_glide_state = self.glide_state
@@ -969,93 +945,15 @@ func _process(delta):
 	animation_tree.set("parameters/conditions/gliding", gliding_now)
 	animation_tree.set("parameters/conditions/ngliding", not gliding_now)
 
-	if is_local_player:
-		# Log flag transitions: any of rise/fall/land flipping this frame.
-		if (
-			self.rise != _dbg_prev_rise
-			or self.fall != _dbg_prev_fall
-			or self.land != _dbg_prev_land
-		):
-			(
-				DebugLog
-				. log(
-					"AVATAR",
-					(
-						"flags  rise=%s fall=%s land=%s  (prev rise=%s fall=%s land=%s)"
-						% [
-							str(self.rise),
-							str(self.fall),
-							str(self.land),
-							str(_dbg_prev_rise),
-							str(_dbg_prev_fall),
-							str(_dbg_prev_land),
-						]
-					)
-				)
-			)
-			_dbg_prev_rise = self.rise
-			_dbg_prev_fall = self.fall
-			_dbg_prev_land = self.land
-
-		# Log AnimationTree state-machine transitions: shows what clip is
-		# actually playing frame-to-frame — the key signal for Bug 1.
-		var playback = animation_tree.get("parameters/playback")
-		if playback != null:
-			var current_state: StringName = playback.get_current_node()
-			if current_state != _dbg_prev_anim_state:
-				DebugLog.log(
-					"AVATAR",
-					(
-						"anim_state  %s  →  %s  (jc=%d glide=%d rise=%s fall=%s)"
-						% [
-							_dbg_prev_anim_state,
-							current_state,
-							self.jump_count,
-							self.glide_state,
-							str(self.rise),
-							str(self.fall)
-						]
-					)
-				)
-				_dbg_prev_anim_state = current_state
-
-		if jump_rising_edge:
-			DebugLog.log(
-				"AVATAR",
-				(
-					"double_jump EDGE — jc=%d walk=%s jog=%s run=%s rise=%s fall=%s"
-					% [
-						self.jump_count,
-						str(self.walk),
-						str(self.jog),
-						str(self.run),
-						str(self.rise),
-						str(self.fall)
-					]
-				)
-			)
-		if glide_opening_edge:
-			DebugLog.log("AVATAR", "start_glide EDGE — glide_state=%d" % self.glide_state)
-
 	if jump_rising_edge:
 		audio_player_double_jump.play()
 
 	_update_glider_prop()
 
 
-# The GliderProp is a persistent child of the avatar (rotated 180° Y to
-# compensate the Unity→Godot axis flip — see avatar.tscn). We toggle its
-# visibility instead of spawning/freeing so audio players and the prop's
-# AnimationPlayer stay warm and avoid per-glide setup cost.
-#
-# State transitions drive the prop:
-#   CLOSED   → OPENING: show prop, Glider_Start, Open + Idle audio
-#   OPENING  → GLIDING: keep Glider_Idle looping
-#   * (1/2)  → CLOSING: start Glider_End + Close audio *immediately* (Fix 1,
-#             so wings retract the moment the user toggles close, not 0.15s
-#             later when state reaches CLOSED).
-#   CLOSING  → CLOSED:  schedule hide timer (0.25s — roughly Glider_End clip
-#             length + small padding for the final pose to render).
+# Toggles GliderProp visibility based on glide_state transitions. The prop is
+# a persistent child (rotated 180° Y to compensate the Unity→Godot axis flip)
+# so audio and AnimationPlayer stay warm across glide cycles.
 func _update_glider_prop() -> void:
 	if is_avatar_shape:
 		if glider_prop.visible:
@@ -1067,42 +965,29 @@ func _update_glider_prop() -> void:
 	var curr_state: int = self.glide_state
 	_prop_last_glide_state = curr_state
 
-	# CLOSED → OPENING: open the prop.
 	if prev_state == 0 and curr_state == 1:
 		glider_prop.visible = true
 		_glider_close_initiated = false
 		_play_glider_audio("AudioPlayer_Open")
 		_play_glider_audio("AudioPlayer_Idle")
 		_play_glider_clip("Glider_Start")
-		if is_local_player:
-			DebugLog.log("AVATAR", "glider_prop VISIBLE (state=%d)" % curr_state)
-	# OPENING/GLIDING → CLOSING: begin close IMMEDIATELY.
 	elif (prev_state == 1 or prev_state == 2) and curr_state == 3:
+		# Start close immediately on CLOSING edge — don't wait for the FSM to
+		# reach CLOSED (0.15s later) or the user sees wings-open mid-close.
 		_glider_close_initiated = true
 		_stop_glider_audio("AudioPlayer_Idle")
 		_play_glider_audio("AudioPlayer_Close")
 		_play_glider_clip("Glider_End")
-		if is_local_player:
-			DebugLog.log("AVATAR", "glider_prop CLOSE_BEGIN (state=3)")
-	# CLOSING → CLOSED: schedule the hide. Close anim + audio were already
-	# fired at the CLOSING edge above.
 	elif prev_state == 3 and curr_state == 0 and glider_prop.visible:
 		_schedule_glider_hide()
-		if is_local_player:
-			DebugLog.log("AVATAR", "glider_prop HIDE_SCHEDULED")
-	# Fallback — state jumped directly to CLOSED without passing through
-	# CLOSING (e.g., set externally by the tester dropdown). Fire the full
-	# close sequence.
 	elif curr_state == 0 and glider_prop.visible and not _glider_close_initiated:
+		# Fallback: state jumped directly to CLOSED without passing CLOSING.
 		_glider_close_initiated = true
 		_stop_glider_audio("AudioPlayer_Idle")
 		_play_glider_audio("AudioPlayer_Close")
 		_play_glider_clip("Glider_End")
 		_schedule_glider_hide()
-		if is_local_player:
-			DebugLog.log("AVATAR", "glider_prop CLOSE_DIRECT (state=0)")
 
-	# Continuous: while GLIDING, keep the idle loop clip playing on the prop.
 	if curr_state == 2 and glider_prop.visible:
 		_play_glider_clip_if_different("Glider_Idle")
 
@@ -1117,14 +1002,9 @@ func _schedule_glider_hide() -> void:
 
 
 func _hide_glider_prop() -> void:
-	# Only hide if we're still in CLOSED — the user might have re-entered glide
-	# during the fade-out window, in which case we keep the prop visible.
+	# Skip the hide if the user re-opened glide during the fade-out window.
 	if self.glide_state == 0:
 		glider_prop.visible = false
-		if is_local_player:
-			DebugLog.log("AVATAR", "glider_prop HIDDEN")
-	elif is_local_player:
-		DebugLog.log("AVATAR", "glider_prop HIDE_SKIPPED (re-opened, state=%d)" % self.glide_state)
 
 
 func _play_glider_audio(node_name: String) -> void:

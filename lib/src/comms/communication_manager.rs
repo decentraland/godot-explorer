@@ -860,9 +860,8 @@ impl CommunicationManager {
 
         let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
 
-        // Our Temporal bitfield doesn't yet carry jump_count / glide_state
-        // (see Fase B follow-up). When either is non-default, force the
-        // uncompressed path so the remote receives authoritative state.
+        // The Temporal bitfield doesn't carry jump_count / glide_state yet, so
+        // force uncompressed whenever either is non-default to avoid dropping state.
         let needs_uncompressed = jump_count > 0 || glide_state != 0;
         let use_compressed = compressed && !needs_uncompressed;
 
@@ -889,14 +888,9 @@ impl CommunicationManager {
                     MoveKind::Idle
                 };
 
-                // Wire convention matches Unity Foundation Client: rotation_y
-                // on the wire is a left-handed (Unity/DCL) yaw in radians.
-                // Godot is right-handed, so negate to cross the handedness
-                // boundary — analogous to position_z negation below.
-                //
-                // Use the authoritative is_grounded flag, not the legacy `land`
-                // (which has a 0.2s coyote grace that stays true briefly mid-air).
-                let _ = land; // silence unused warning — kept in signature for GDScript API stability
+                // rotation_y on the wire is Unity left-handed yaw in radians;
+                // negate to cross into Godot's right-handed frame.
+                let _ = land; // kept in signature for GDScript API stability
                 let temporal = Temporal::from_parts(
                     time,
                     false,
@@ -944,24 +938,13 @@ impl CommunicationManager {
                     velocity_x: velocity.x,
                     velocity_y: velocity.y,
                     velocity_z: velocity.z,
-                    // Unity Foundation Client writes rfc4.Movement.rotation_y
-                    // as degrees in [0, 360) (from transform.eulerAngles.y).
-                    // Negate to cross the Godot→Unity handedness boundary,
-                    // then convert radians→degrees.
+                    // Negate + rad→deg to match Unity Foundation Client
+                    // (rfc4.Movement.rotation_y is degrees in [0, 360)).
                     rotation_y: (-rotation_y).to_degrees(),
                     movement_blend_value,
                     slide_blend_value: 0.0,
-                    // `is_grounded` reflects authoritative floor contact (from
-                    // CharacterBody3D.is_on_floor), not the legacy `land` flag
-                    // which is a 0.2s coyote-grace window that stays true
-                    // briefly after stepping off a ledge.
                     is_grounded,
                     is_jumping: rise,
-                    // jump_count / glide_state are authoritative — fed from
-                    // player.gd (local) or decoded on the remote side (see
-                    // avatar_scene.rs::apply_wire_movement_state). Drive the
-                    // Double_Jump_Rise + Gliding_* state-machine transitions
-                    // via avatar.gd's rising-edge detection.
                     jump_count,
                     is_long_jump: false,
                     is_long_fall: false,

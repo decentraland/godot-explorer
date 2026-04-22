@@ -61,13 +61,11 @@ pub struct DclAvatar {
     #[export]
     land: bool,
 
-    // Multi-jump + gliding state, written by the local player and by the
-    // remote-movement decoder. avatar.gd reads these to drive AnimationTree
-    // conditions (double_jump rising-edge, glide state transitions).
+    // Multi-jump + gliding state, driven by player.gd (local) or the remote-
+    // movement decoder. Consumed by avatar.gd edge detection. glide_state
+    // values: 0 CLOSED, 1 OPENING, 2 GLIDING, 3 CLOSING.
     #[export]
     jump_count: i32,
-    // 0 = CLOSED, 1 = OPENING, 2 = GLIDING, 3 = CLOSING. Mirrors Unity's
-    // rfc4.Movement.glide_state enum.
     #[export]
     glide_state: i32,
     #[export]
@@ -207,18 +205,10 @@ impl DclAvatar {
         }
     }
 
-    // Authoritative animation-state setter used by the remote-avatar path
-    // (avatar_scene.rs) when a Movement packet arrives. Unlike set_target_position
-    // which infers rise/fall from position delta, these values come directly
-    // from the peer's local player.gd and are exactly what avatar.gd's edge
-    // detection (jump_rising_edge, glide_opening_edge) consumes to drive
-    // Double_Jump_Rise / Gliding_* animations for the remote view.
-    //
-    // Also overrides the inferred `land` flag with the wire's `is_grounded`.
-    // The inference computes `land = !rise && !fall` — a "mid-air zero-
-    // velocity" flag that fires at every jump apex and trips the `nfall`
-    // AnimationTree condition into Jump_End mid-air. Using the authoritative
-    // is_grounded keeps `nfall = self.land` correct for remote avatars too.
+    // Applies authoritative movement state from the wire (remote avatars) to
+    // the DclAvatar fields consumed by avatar.gd's animation edge detection.
+    // Also overrides `land` with `is_grounded` so the nfall condition behaves
+    // consistently across local and remote avatars.
     pub fn apply_wire_movement_state(
         &mut self,
         jump_count: i32,

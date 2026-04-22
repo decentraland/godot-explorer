@@ -10,11 +10,8 @@ var last_position_sent: Vector3 = Vector3.ZERO
 var last_rotation_sent: float = INF
 var counter: int = 0
 
-# Animation-state delta tracking. Unity's PlayerMovementNetSendSystem emits an
-# immediate packet whenever jump_count, is_grounded, or glide_state changes —
-# zero-tolerance force-send, separate from the position/rotation thresholds.
-# We mirror that here so remote avatars transition into double-jump / glide
-# animations on the next frame instead of waiting for the 5cm position delta.
+# Zero-tolerance force-send tracking: any jump_count / is_grounded / glide_state
+# change emits on the next timer tick regardless of position delta.
 var last_jump_count_sent: int = 0
 var last_is_grounded_sent: bool = true
 var last_glide_state_sent: int = 0
@@ -38,15 +35,12 @@ func _on_timeout():
 		or avatar.glide_state != last_glide_state_sent
 	)
 
-	# If nothing changed (position, rotation, or anim state), delay broadcasting.
-	# The anim-state path is zero-tolerance — any jump/glide/ground transition
-	# emits on the next timer tick regardless of position delta.
 	if not position_changed and not rotation_changed and not anim_state_changed:
 		counter += 1
 		if counter < 10:
 			return
 
-	counter = 0  # Reset counter when movement/rotation/anim-state changes
+	counter = 0
 
 	(
 		Global
