@@ -1,7 +1,8 @@
 extends "res://addons/dcl_dev_tools/dev_tools/dcl_dev_tool.gd"
 
 # Captures the skybox at every hour from 5 directions to compare A/B against Unity reference
-# screenshots in color-lighting-test-scene/colortool/Screenshots/. Output naming matches:
+# screenshots from https://github.com/dcl-regenesislabs/color-lighting-test-scene (clone
+# locally and point "Unity ref dir" at <clone>/colortool/Screenshots/). Output naming matches
 # {N|E|S|W|U}{HH}.png so the existing colortool/index.html and skybox_analyzer.py work.
 
 const SKY_LIGHTS = preload("res://assets/environment/sky_lights.tscn")
@@ -26,7 +27,9 @@ const RESOLUTION_PRESETS: Array = [
 	["4480 × 2520 (Unity ref)", Vector2i(4480, 2520)],
 ]
 
-const DEFAULT_UNITY_REF_DIR := "/Users/lordmanuel/Projects/decentraland/color-lighting-test-scene/colortool/Screenshots/"
+# Default empty — clone https://github.com/dcl-regenesislabs/color-lighting-test-scene
+# locally and paste the absolute path to <clone>/colortool/Screenshots/ in the dialog.
+const DEFAULT_UNITY_REF_DIR := ""
 
 # Output goes OUTSIDE godot/ so the editor doesn't try to import each PNG (causes freeze).
 const DEFAULT_OUTPUT_REL := "../tmp/skybox_godot/"
@@ -100,6 +103,10 @@ func _create_dialog():
 	ref_hbox.add_child(ref_label)
 	unity_ref_input = LineEdit.new()
 	unity_ref_input.text = DEFAULT_UNITY_REF_DIR
+	unity_ref_input.placeholder_text = (
+		"Path to <clone>/colortool/Screenshots/ from "
+		+ "github.com/dcl-regenesislabs/color-lighting-test-scene"
+	)
 	unity_ref_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ref_hbox.add_child(unity_ref_input)
 	vbox.add_child(ref_hbox)
@@ -234,7 +241,7 @@ func _on_compare_pressed():
 	var out_dir := _report_dir()
 	DirAccess.make_dir_recursive_absolute(out_dir)
 
-	var script_path := ProjectSettings.globalize_path("res://../tools/skybox_compare.py")
+	var script_path := ProjectSettings.globalize_path("res://../scripts/skybox_compare.py")
 	var args := PackedStringArray(
 		[
 			script_path,
