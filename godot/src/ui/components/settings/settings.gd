@@ -3,6 +3,7 @@ extends Control
 signal request_debug_panel(enabled: bool)
 signal request_pause_scenes(enabled: bool)
 signal request_livekit_debug(enabled: bool)
+signal panel_closed
 
 enum SceneLogLevel {
 	LOG = 1,
@@ -10,8 +11,20 @@ enum SceneLogLevel {
 	SYSTEM_ERROR = 3,
 }
 
+const _SECTION_TITLE_SCRIPT = preload("res://src/ui/components/settings/section_title.gd")
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
+
+## When true, settings operates as a side panel inside the explorer:
+## orientation is not changed and the background texture is hidden.
+@export var panel_mode: bool = false:
+	set(value):
+		panel_mode = value
+		if is_node_ready():
+			_apply_panel_mode()
+
+@onready var label_title: Label = %Label_Title
+@onready var margin_container_nav: MarginContainer = %MarginContainer_Nav
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -20,7 +33,6 @@ const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
 @onready var container_storage: VBoxContainer = %VBoxContainer_Storage
 @onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
-@onready var button_back_to_explorer: Button = %Button_BackToExplorer
 
 #Storage items:
 @onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
@@ -45,17 +57,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var voice_chat_volume: SettingsSlider = %VoiceChatVolume
 @onready var mic_amplification: SettingsSlider = %MicAmplification
 
-#Graphics items:
-@onready var h_slider_rendering_scale = %HSlider_Resolution3DScale
-@onready var radio_selector_ui_zoom = %RadioSelector_UiZoom
-
-@onready var v_box_container_windowed = %VBoxContainer_Windowed
-@onready var radio_selector_windowed = %RadioSelector_Windowed
-
-@onready var box_container_custom = %VBoxContainer_Custom
-
-@onready var radio_selector_graphic_profile = %RadioSelector_GraphicProfile
-
 # Dynamic graphics toggle
 @onready var dynamic_graphics_container: HBoxContainer = %DynamicGraphics
 @onready var check_button_dynamic_graphics: CheckButton = %CheckButton_DynamicGraphics
@@ -63,16 +64,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 # Dynamic skybox toggle
 @onready var dynamic_skybox: HBoxContainer = %DynamicSkybox
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
-
-@onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
-@onready var radio_selector_skybox = %RadioSelector_Skybox
-@onready var radio_selector_shadow = %RadioSelector_Shadow
-@onready var radio_selector_bloom = %RadioSelector_Bloom
-@onready var radio_selector_aa = %RadioSelector_AA
-
-@onready var radio_selector_limit_fps = %RadioSelector_LimitFps
-@onready var container_limit_fps = %LimitFps
-@onready var container_resolution_3d_scale = %Resolution3DScale
+@onready var skybox_warning: VBoxContainer = %HBoxContainer_SkyboxWarning
 
 #Advanced items:
 @onready var content_scroll_container: ScrollContainer = %ContentScrollContainer
@@ -93,10 +85,12 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
 @onready var container_gamepad: MarginContainer = %Container_Gamepad
 
+@onready var button_sign_out: CustomButton = %CustomButton_SignOut
+@onready var margin_container_content: MarginContainer = %MarginContainer_Content
+
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
-	button_back_to_explorer.hide()
 	button_developer.visible = !Global.is_production()
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
@@ -192,51 +186,75 @@ func _ready():
 	dropdown_list_realm.add_item("https://sdilauro.github.io/dae-unit-tests/dae-unit-tests", 9)
 	dropdown_list_realm.add_item("https://realm-provider.decentraland.org/main", 10)
 
+	Global.connect("sdk_skybox_time_active_changed", _on_sdk_skybox_time_active_changed)
+	_on_sdk_skybox_time_active_changed(Global.sdk_skybox_time_active)
+
+	if label_title.label_settings:
+		label_title.label_settings = label_title.label_settings.duplicate()
+	resized.connect(_on_resized)
+	_on_resized()
+	_apply_panel_mode()
+
+
+func _on_resized() -> void:
+	_apply_layout(Global.is_orientation_portrait())
+
+
+func _apply_layout(is_orientation_portrait: bool) -> void:
+	var dropdown_max: int = 3
+	var section_title_font_size: int = 24
+	var section_v_separation: int = 56
+	var button_h: int = 74
+	var button_theme_variation: String = "SecondaryOutlinedButtonSmall"
+	var preview_h: int = 290
+	var margin_container_nav_v: int = 0
+	var margin_container_content_top: int = 12
+	label_title.label_settings.font_size = 44
+
+	if is_orientation_portrait:
+		margin_container_nav_v = 18
+		margin_container_content_top = 32
+		label_title.label_settings.font_size = 48
+		dropdown_max = 5
+		section_title_font_size = 26
+		section_v_separation = 72
+		button_h = 96
+		button_theme_variation = "SecondaryOutlinedButton"
+		preview_h = 351
+
+	container_gameplay.add_theme_constant_override("separation", section_v_separation)
+	container_graphics.add_theme_constant_override("separation", section_v_separation)
+	container_advanced.add_theme_constant_override("separation", section_v_separation)
+
+	button_clear_cache.custom_minimum_size.y = button_h
+	button_clear_cache.theme_type_variation = button_theme_variation
+	button_sign_out.custom_minimum_size.y = button_h
+	button_sign_out.theme_type_variation = button_theme_variation
+
+	preview_viewport_container.custom_minimum_size.y = preview_h
+
+	for node in find_children("*", "PanelContainer", true, false):
+		if node.get_script() == _SECTION_TITLE_SCRIPT:
+			node.set_font_size(section_title_font_size)
+
+	for node in find_children("*", "DropdownList", true, false):
+		node.max_visible_items = dropdown_max
+
+	margin_container_nav.add_theme_constant_override("margin_bottom", margin_container_nav_v)
+	margin_container_nav.add_theme_constant_override("margin_top", margin_container_nav_v)
+	margin_container_content.add_theme_constant_override("margin_top", margin_container_content_top)
+
 
 func refresh_graphic_settings():
 	var graphic_profile = Global.get_config().graphic_profile
-	var is_custom_profile: bool = graphic_profile == ConfigData.PROFILE_CUSTOM
-
-	# We only show the custom settings if the graphic profile is custom
-	box_container_custom.visible = is_custom_profile
 	dropdown_list_graphic_profiles.select(graphic_profile)
-
-	# Hide FPS limit and 3D resolution scale when using preset profiles
-	# These are controlled by the profile, not user-configurable
-	container_limit_fps.visible = is_custom_profile
-	container_resolution_3d_scale.visible = is_custom_profile
-
-	if Global.is_mobile():
-		v_box_container_windowed.hide()
-	else:
-		radio_selector_windowed.selected = Global.get_config().window_mode
-
-	# Maps limit_fps config to radio_selector_limit_fps index
-	const INVERSE_LIMIT_FPS_MAPPING: Dictionary[int, int] = {
-		ConfigData.FpsLimitMode.VSYNC: 0,
-		ConfigData.FpsLimitMode.NO_LIMIT: 1,
-		ConfigData.FpsLimitMode.FPS_30: 3,
-		ConfigData.FpsLimitMode.FPS_60: 4,
-		ConfigData.FpsLimitMode.FPS_18: 2,
-	}
-
-	radio_selector_limit_fps.selected = INVERSE_LIMIT_FPS_MAPPING.get(
-		Global.get_config().limit_fps, 0
-	)
-	radio_selector_texture_quality.selected = Global.get_config().texture_quality
-	radio_selector_skybox.selected = Global.get_config().skybox
-	radio_selector_shadow.selected = Global.get_config().shadow_quality
-	radio_selector_bloom.selected = Global.get_config().bloom_quality
-	radio_selector_aa.selected = Global.get_config().anti_aliasing
-
-	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
-	refresh_zooms()
 
 
 func show_control(control: Control):
 	for child in v_box_container_sections.get_children():
 		child.hide()
 	control.show()
+	content_scroll_container.scroll_vertical = 0
 
 
 func _async_scroll_to_tab_button(button: Button) -> void:
@@ -336,31 +354,6 @@ func _on_button_connect_preview_pressed():
 	Global.scene_fetcher.set_preview_url(url)
 
 
-func refresh_zooms():
-	var selected_index: int = -1
-	var i: int = 0
-	var options := GraphicSettings.get_ui_zoom_available(get_window())
-
-	var new_items: Array[String] = []
-	for ui_zoom_option in options.keys():
-		new_items.push_back(ui_zoom_option)
-		if options[ui_zoom_option] == get_window().content_scale_factor:
-			selected_index = i
-		i += 1
-	if selected_index == -1:
-		selected_index = i - 1
-
-	# Assign items array to trigger _refresh_list() and create children
-	radio_selector_ui_zoom.items = new_items
-	radio_selector_ui_zoom.selected = selected_index
-
-
-func _on_h_slider_rendering_scale_drag_ended(_value_changed):
-	Global.get_config().resolution_3d_scale = h_slider_rendering_scale.value
-	get_window().get_viewport().scaling_3d_scale = Global.get_config().resolution_3d_scale
-	Global.get_config().save_to_settings_file()
-
-
 func _on_h_slider_mic_amplification_value_changed(value):
 	Global.get_config().audio_mic_amplification = value
 	AudioSettings.apply_mic_amplification_settings()
@@ -391,81 +384,9 @@ func _on_h_slider_general_volume_value_changed(value):
 	Global.get_config().save_to_settings_file()
 
 
-func _on_radio_selector_ui_zoom_select_item(_index, item):
-	var options := GraphicSettings.get_ui_zoom_available(get_window())
-	var current_ui_zoom: String = item
-	if not options.has(current_ui_zoom):
-		current_ui_zoom = "Max"
-	Global.get_config().ui_zoom = options[current_ui_zoom]
-	GraphicSettings.apply_ui_zoom(get_window())
-	Global.get_config().save_to_settings_file()
-
-
-func _on_radio_selector_select_item(index, _item):
-	# Maps radio_selector_limit_fps index to limit_fps config
-	const LIMIT_FPS_MAPPING: Dictionary[int, int] = {
-		0: ConfigData.FpsLimitMode.VSYNC,
-		1: ConfigData.FpsLimitMode.NO_LIMIT,
-		2: ConfigData.FpsLimitMode.FPS_18,
-		3: ConfigData.FpsLimitMode.FPS_30,
-		4: ConfigData.FpsLimitMode.FPS_60
-	}
-
-	Global.get_config().limit_fps = LIMIT_FPS_MAPPING[index]
-	Global.get_config().save_to_settings_file()
-
-
-func _on_radio_selector_skybox_select_item(index, _item):
-	Global.get_config().skybox = index
-	Global.get_config().save_to_settings_file()
-
-
-func _on_radio_selector_shadow_select_item(index, _item):
-	Global.get_config().shadow_quality = index
-	Global.get_config().save_to_settings_file()
-
-
-func _on_radio_selector_bloom_select_item(index, _item):
-	Global.get_config().bloom_quality = index
-	Global.get_config().save_to_settings_file()
-
-
-# gdlint:ignore = async-function-name
-func _on_radio_selector_windowed_select_item(index, _item):
-	Global.get_config().window_mode = index
-	GraphicSettings.apply_window_config()
-	await get_tree().process_frame
-	refresh_zooms()
-
-
-func _on_radio_selector_aa_select_item(index, _item):
-	Global.get_config().anti_aliasing = index
-	Global.get_config().save_to_settings_file()
-
-
-func _on_radio_selector_graphic_profile_select_item(index, _item):
-	# Use centralized profile application (handles all parameters)
-	# 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
-	if index < ConfigData.PROFILE_CUSTOM:
-		GraphicSettings.apply_graphic_profile(index)
-	else:
-		Global.get_config().graphic_profile = index  # Custom - keep current settings
-
-	refresh_graphic_settings()
-	Global.get_config().save_to_settings_file()
-
-	# Notify dynamic graphics manager of manual profile change
-	Global.dynamic_graphics_manager.on_manual_profile_change(index)
-
-
 func _on_h_slider_music_volume_value_changed(value):
 	Global.get_config().audio_music_volume = value
 	AudioSettings.apply_music_volume_settings()
-	Global.get_config().save_to_settings_file()
-
-
-func _on_radio_selector_texture_quality_select_item(index, _item):
-	Global.get_config().texture_quality = index
 	Global.get_config().save_to_settings_file()
 
 
@@ -492,10 +413,22 @@ func _update_current_cache_size():
 
 
 func _on_container_storage_visibility_changed():
+	if not is_node_ready():
+		return
 	_update_current_cache_size()
 
 
+func _on_sdk_skybox_time_active_changed(is_active: bool) -> void:
+	skybox_warning.visible = is_active
+	check_button_dynamic_skybox.disabled = is_active
+	preview_viewport_container.visible = !is_active and Global.get_explorer() != null
+	dropdown_list_custom_skybox.disabled = is_active or check_button_dynamic_skybox.button_pressed
+
+
 func _on_check_button_dynamic_skybox_toggled(toggled_on: bool) -> void:
+	if Global.sdk_skybox_time_active:
+		check_button_dynamic_skybox.set_pressed_no_signal(not toggled_on)
+		return
 	dropdown_list_custom_skybox.disabled = toggled_on
 	if toggled_on:
 		dropdown_list_custom_skybox.select(-1)
@@ -735,8 +668,6 @@ func _update_dynamic_graphics_status() -> void:
 	var state_name: String = manager.get_state_name()
 	var profile_name: String = GraphicSettings.PROFILE_NAMES[current_profile]
 
-	print(profile_name, state_name)
-
 	match state_name:
 		"Disabled":
 			print("")
@@ -796,18 +727,28 @@ func _on_button_storage_pressed() -> void:
 	_async_scroll_to_tab_button(%Button_Storage)
 
 
-func _on_button_back_to_explorer_pressed() -> void:
-	if Global.get_explorer():
-		Global.close_menu.emit()
-		Global.set_orientation_landscape()
+func _apply_panel_mode() -> void:
+	set("texture", null if panel_mode else load("res://assets/ui/settings-background.png"))
+
+
+func show_panel() -> void:
+	show()
+
+
+func hide_panel() -> void:
+	hide()
+	panel_closed.emit()
 
 
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		Global.set_orientation_portrait()
-		if Global.get_explorer():
-			if button_back_to_explorer:
-				button_back_to_explorer.show()
+		for btn in button_graphics.button_group.get_buttons():
+			btn.set_pressed_no_signal(false)
+		button_graphics.set_pressed_no_signal(true)
+		_on_button_graphics_pressed()
+		tabs_scroll_container.scroll_horizontal = 0
+		if not panel_mode:
+			Global.set_orientation_portrait()
 		_refresh_hide_explorer_ui_row()
 
 

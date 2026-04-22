@@ -880,11 +880,14 @@ impl CommunicationManager {
                     MoveKind::Idle
                 };
 
-                // Temporal::with_rotation_f32 expects radians (quantizes over 0..TAU)
+                // Wire convention matches Unity Foundation Client: rotation_y
+                // on the wire is a left-handed (Unity/DCL) yaw in radians.
+                // Godot is right-handed, so negate to cross the handedness
+                // boundary — analogous to position_z negation below.
                 let temporal = Temporal::from_parts(
                     time,
                     false,
-                    rotation_y, // radians from Godot
+                    -rotation_y,
                     movement.velocity_tier(),
                     move_kind,
                     !fall && !rise,
@@ -895,6 +898,8 @@ impl CommunicationManager {
                 let movement_packet = rfc4::MovementCompressed {
                     temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
                     movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
+                    head_sync_data: 0, // TODO: implement head sync compression
+                    point_at_data: 0,  // TODO: implement point-at compression
                 };
 
                 rfc4::Packet {
@@ -926,17 +931,31 @@ impl CommunicationManager {
                     velocity_x: velocity.x,
                     velocity_y: velocity.y,
                     velocity_z: velocity.z,
-                    rotation_y: -rotation_y,
+                    // Unity Foundation Client writes rfc4.Movement.rotation_y
+                    // as degrees in [0, 360) (from transform.eulerAngles.y).
+                    // Negate to cross the Godot→Unity handedness boundary,
+                    // then convert radians→degrees.
+                    rotation_y: (-rotation_y).to_degrees(),
                     movement_blend_value,
                     slide_blend_value: 0.0,
                     is_grounded: land,
                     is_jumping: rise,
+                    jump_count: 0, // TODO: implement jump count
                     is_long_jump: false,
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
+                    glide_state: 0, // TODO: implement glide state
                     is_instant: false,
                     is_emoting: self.is_emoting,
+                    head_ik_yaw_enabled: false, // TODO: implement head sync
+                    head_ik_pitch_enabled: false,
+                    head_yaw: 0.0,
+                    head_pitch: 0.0,
+                    point_at_x: 0.0, // TODO: implement point-at
+                    point_at_y: 0.0,
+                    point_at_z: 0.0,
+                    is_pointing_at: false,
                 };
 
                 rfc4::Packet {
