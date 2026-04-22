@@ -121,9 +121,11 @@ shader_parameter/second_sun_speed = 0.1
 shader_parameter/second_sun_orbit = 0.90000004275
 shader_parameter/second_sun_size_factor = 0.16
 shader_parameter/moon_mask_offset = Vector2(0.007, 0.007)
-shader_parameter/floor_color_cycle = SubResource("GradientTexture1D_floor")
 shader_parameter/floor_horizon_blend = 0.15
-shader_parameter/floor_nadir_dim = 1.0
+shader_parameter/horizon_above_opacity = 1.0
+shader_parameter/horizon_above_spread = 65.0
+shader_parameter/horizon_below_opacity = 1.0
+shader_parameter/horizon_below_spread = 55.0
 
 [resource]
 sky_material = SubResource("ShaderMaterial_fx4kt")
