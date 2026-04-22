@@ -1,7 +1,10 @@
-[gd_scene format=3 uid="uid://cgldrproph001"]
+[gd_scene load_steps=6 format=3 uid="uid://cgldrproph001"]
 
 [ext_resource type="PackedScene" path="res://assets/avatar/glider_prop_base.scn" id="1_glbase"]
 [ext_resource type="AnimationLibrary" path="res://assets/avatar/glider_prop_anims.tres" id="2_glibn"]
+[ext_resource type="AudioStream" path="res://assets/avatar/audio/gliding_idle.ogg" id="3_gl_idle"]
+[ext_resource type="AudioStream" path="res://assets/avatar/audio/glider_open.ogg" id="4_gl_open"]
+[ext_resource type="AudioStream" path="res://assets/avatar/audio/glider_close.ogg" id="5_gl_close"]
 
 [node name="GliderProp" instance=ExtResource("1_glbase")]
 
@@ -10,3 +13,24 @@ libraries = {
 &"": ExtResource("2_glibn")
 }
 autoplay = "Glider_Idle"
+
+[node name="AudioPlayer_Idle" type="AudioStreamPlayer3D" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("3_gl_idle")
+max_distance = 50.0
+unit_size = 4.0
+bus = &"AvatarAndEmotes"
+
+[node name="AudioPlayer_Open" type="AudioStreamPlayer3D" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("4_gl_open")
+max_distance = 50.0
+unit_size = 4.0
+bus = &"AvatarAndEmotes"
+
+[node name="AudioPlayer_Close" type="AudioStreamPlayer3D" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("5_gl_close")
+max_distance = 50.0
+unit_size = 4.0
+bus = &"AvatarAndEmotes"
