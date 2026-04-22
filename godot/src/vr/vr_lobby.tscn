@@ -1,4 +1,4 @@
-[gd_scene load_steps=47 format=3 uid="uid://cuic8diqbxs83"]
+[gd_scene load_steps=45 format=3 uid="uid://cuic8diqbxs83"]
 
 [ext_resource type="Script" uid="uid://c8uwwssfiqy04" path="res://src/vr/vr_lobby.gd" id="1_my51n"]
 [ext_resource type="PackedScene" uid="uid://b228p8k6sonve" path="res://addons/godot-xr-tools/player/fade/fade_collision.tscn" id="2_inngf"]
@@ -15,6 +15,7 @@
 [ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="11_wgpw8"]
 [ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="14_hbw2f"]
 [ext_resource type="Shader" uid="uid://cpu82bv2y58bl" path="res://shaders/sky.gdshader" id="15_igl6k"]
+[ext_resource type="CompressedCubemap" uid="uid://dm7cqly71j3q8" path="res://assets/environment/horizon_clouds.png" id="16_clouds_vr"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_8wwks"]
 size = Vector3(4800, 0.1, 4800)
@@ -39,8 +40,13 @@ colors = PackedColorArray(0.339, 0.194, 1.059, 1, 0.298, 0.416, 1.153, 1, 0.72, 
 gradient = SubResource("Gradient_clouds_cycle_vr")
 width = 256
 
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_vykal"]
-load_path = "res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.bptc.ctex"
+[sub_resource type="Gradient" id="Gradient_cloud_highlights_vr"]
+offsets = PackedFloat32Array(0, 0.1, 0.3, 0.5, 0.738, 0.804, 1)
+colors = PackedColorArray(0.6, 0.6, 0.6, 1, 0.501, 0.501, 0.501, 1, 4, 4, 4, 1, 0.8, 0.8, 0.8, 1, 1.245, 1.245, 1.245, 1, 0.669, 0.669, 0.669, 1, 0.6, 0.6, 0.6, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_cloud_highlights_vr"]
+gradient = SubResource("Gradient_cloud_highlights_vr")
+use_hdr = true
 
 [sub_resource type="Gradient" id="Gradient_1bus3"]
 offsets = PackedFloat32Array(0, 0.725632)
@@ -64,14 +70,6 @@ colors = PackedColorArray(1, 1, 1, 1, 1, 0.458027, 0.205551, 1, 0.883214, 0, 0.0
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_ink5a"]
 gradient = SubResource("Gradient_jpfgw")
 width = 5
-
-[sub_resource type="Gradient" id="Gradient_skx88"]
-offsets = PackedFloat32Array(0.483755, 1)
-colors = PackedColorArray(0, 0.599795, 0.873399, 1, 0.121488, 0.000196012, 0.236836, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_40ch8"]
-gradient = SubResource("Gradient_skx88")
-width = 3
 
 [sub_resource type="Gradient" id="Gradient_mmwma"]
 offsets = PackedFloat32Array(0, 0.241877, 0.491639, 0.776173, 1)
@@ -99,14 +97,6 @@ colors = PackedColorArray(1, 1, 1, 1)
 gradient = SubResource("Gradient_okgco")
 width = 6
 
-[sub_resource type="Gradient" id="Gradient_floor_lobby"]
-offsets = PackedFloat32Array(0.0, 1.0)
-colors = PackedColorArray(0, 0.301978, 0.158083, 1, 0, 0.301978, 0.158083, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_floor_lobby"]
-gradient = SubResource("Gradient_floor_lobby")
-width = 2
-
 [sub_resource type="Gradient" id="Gradient_nadir_lobby"]
 offsets = PackedFloat32Array(0.0, 1.0)
 colors = PackedColorArray(0.05, 0.18, 0.1, 1, 0.05, 0.18, 0.1, 1)
@@ -126,26 +116,35 @@ width = 2
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_kbusk"]
 shader = ExtResource("15_igl6k")
 shader_parameter/milky_way_noise = SubResource("NoiseTexture2D_m2hf1")
-shader_parameter/clouds_panorama = SubResource("CompressedTexture2D_vykal")
-shader_parameter/sky_gradient = SubResource("GradientTexture1D_40ch8")
+shader_parameter/stars_energy = 1.0
+shader_parameter/clouds_cubemap = ExtResource("16_clouds_vr")
+shader_parameter/clouds_rotation_y_deg = 20.0
+shader_parameter/clouds_height_compress = 1.0
 shader_parameter/clouds_color_cycle = SubResource("GradientTexture1D_clouds_cycle_vr")
+shader_parameter/cloud_highlights_cycle = SubResource("GradientTexture1D_cloud_highlights_vr")
+shader_parameter/cloud_opacity = 1.0
+shader_parameter/clouds_scroll_speed = 0.0
 shader_parameter/energy = 0.7
 shader_parameter/gamma = 1.0
 shader_parameter/tint_color_cycle_top = SubResource("GradientTexture1D_rvum1")
 shader_parameter/tint_color_cycle_bottom = SubResource("GradientTexture1D_2wrxk")
+shader_parameter/tint_color_cycle_nadir = SubResource("GradientTexture1D_nadir_lobby")
 shader_parameter/sun_color_cycle = SubResource("GradientTexture1D_hiplr")
 shader_parameter/moon_color_cycle = SubResource("GradientTexture1D_ink5a")
-shader_parameter/dither_range = 0.1
-shader_parameter/dither_amount = 256.0
-shader_parameter/other_sun_rotation_offset = Vector2(0.3, 0.3)
-shader_parameter/floor_color_cycle = SubResource("GradientTexture1D_floor_lobby")
-shader_parameter/floor_horizon_blend = 0.15
-shader_parameter/floor_nadir_dim = 0.5
-shader_parameter/tint_color_cycle_nadir = SubResource("GradientTexture1D_nadir_lobby")
 shader_parameter/rim_color_cycle = SubResource("GradientTexture1D_rim_lobby")
 shader_parameter/sun_radiance_intensity = 0.0
 shader_parameter/sun_radiance_falloff = 4.0
-shader_parameter/clouds_scroll_speed = 0.0
+shader_parameter/dither_range = 0.1
+shader_parameter/dither_amount = 256.0
+shader_parameter/second_sun_speed = 0.1
+shader_parameter/second_sun_orbit = 0.9
+shader_parameter/second_sun_size_factor = 0.16
+shader_parameter/moon_mask_offset = Vector2(0.007, 0.007)
+shader_parameter/floor_horizon_blend = 0.15
+shader_parameter/horizon_above_opacity = 1.0
+shader_parameter/horizon_above_spread = 65.0
+shader_parameter/horizon_below_opacity = 1.0
+shader_parameter/horizon_below_spread = 55.0
 
 [sub_resource type="Sky" id="Sky_g8up3"]
 sky_material = SubResource("ShaderMaterial_kbusk")
