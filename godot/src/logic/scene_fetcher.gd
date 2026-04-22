@@ -1013,7 +1013,7 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 	# For teleports to the same position, we still want to reload the scene
 	var position_changed = current_position != new_position
 	if position_changed and not is_teleport:
-		_check_nearby_scene(new_position)
+		_async_check_nearby_scene(new_position)
 	current_position = new_position
 
 	if is_teleport:
@@ -1494,7 +1494,7 @@ func _calculate_parcel_adjacency(
 	return config
 
 
-func _check_nearby_scene(new_position: Vector2i) -> void:
+func _async_check_nearby_scene(new_position: Vector2i) -> void:
 	var loaded_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
 	var loaded_entity_id: String = Global.scene_runner.get_scene_entity_id(loaded_scene_id)
 	# Track home as the first loaded scene after spawn/teleport
@@ -1530,9 +1530,5 @@ func _check_nearby_scene(new_position: Vector2i) -> void:
 	var description: String = "by " + creator if not creator.is_empty() else "Tap to explore"
 
 	NotificationsManager.show_system_toast(
-		title,
-		description,
-		"nearby_scene",
-		"default",
-		{"parcel_position": new_position}
+		title, description, "nearby_scene", "default", {"parcel_position": new_position}
 	)
