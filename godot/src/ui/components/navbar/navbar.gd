@@ -32,6 +32,8 @@ func _ready() -> void:
 
 	Global.close_navbar.connect(_on_navbar_close)
 	Global.open_navbar_silently.connect(_on_navbar_open_silently_on_backpack)
+	Global.open_chat.connect(_on_size_changed.call_deferred)
+	Global.close_chat.connect(_on_size_changed.call_deferred)
 
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()

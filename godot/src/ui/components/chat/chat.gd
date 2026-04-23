@@ -138,7 +138,7 @@ func _on_button_send_pressed():
 	if message.begins_with("/") or Global.get_config().submit_message_closes_chat:
 		exit_chat()
 	else:
-		_close_write_mode()
+		line_edit_command.grab_focus()
 
 
 func _on_button_write_pressed():
@@ -163,7 +163,7 @@ func _on_line_edit_command_text_submitted(new_text):
 	if new_text.begins_with("/") or Global.get_config().submit_message_closes_chat:
 		exit_chat()
 	else:
-		_close_write_mode()
+		line_edit_command.grab_focus()
 
 
 func _close_write_mode() -> void:
