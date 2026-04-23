@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cmkghg4j2u8wi"]
+
+[ext_resource type="Script" uid="uid://dqh0ap5b50vlf" path="res://src/test/validate_all_scripts.gd" id="1_or4xl"]
+
+[node name="ValidateAllScripts" type="Node"]
+script = ExtResource("1_or4xl")
