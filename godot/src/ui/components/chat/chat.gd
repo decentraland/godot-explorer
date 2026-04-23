@@ -3,34 +3,47 @@ extends Control
 signal submit_message(message: String)
 signal on_exit_chat
 signal on_open_chat
-signal release_mouse
+signal on_enter_write_mode
+signal on_exit_write_mode
 
 const MAX_AUTOCOMPLETE_RESULTS: int = 3
-## MentionItem min height (56) + AutocompleteItems VBox separation (2).
 const AUTOCOMPLETE_ITEM_STRIDE: float = 58.0
-## MarginContainer top+bottom (16) minus one trailing VBox separation (2).
 const AUTOCOMPLETE_SCROLL_PADDING: float = 14.0
 
-var hide_tween = null
-var open_tween = null
-var close_tween = null
-var nearby_avatars = null
-var is_open: bool = false
+## Design specs — header landscape
+const HEADER_HEIGHT_LANDSCAPE := 53
+const HEADER_SEPARATION_LANDSCAPE := 8
+const HEADER_ICON_LANDSCAPE := 29
+const HEADER_FONT_LANDSCAPE := 17
+const HEADER_LABEL_LANDSCAPE := "NEARBY"
+
+## Design specs — header portrait
+const HEADER_HEIGHT_PORTRAIT := 66
+const HEADER_SEPARATION_PORTRAIT := 12
+const HEADER_ICON_PORTRAIT := 44
+const HEADER_FONT_PORTRAIT := 27
+const HEADER_LABEL_PORTRAIT := "Nearby"
+
+## Design specs — write button landscape
+const WRITE_HEIGHT_LANDSCAPE := 48
+const WRITE_FONT_LANDSCAPE := 21
+const WRITE_PADDING_LANDSCAPE := 10
+
+## Design specs — write button portrait
+const WRITE_HEIGHT_PORTRAIT := 66
+const WRITE_FONT_PORTRAIT := 29
+const WRITE_PADDING_PORTRAIT := 16
+
 var scrolled: bool = false
 var new_messages_count: int = 0
-
 var _mention_item_scene: PackedScene
 var _suppress_autocomplete: bool = false
 var _autocomplete_queued: bool = false
 
 @onready var panel_line_edit: PanelContainer = %PanelLineEdit
-@onready var h_box_container_line_edit = %HBoxContainer_LineEdit
-@onready var line_edit_command = %LineEdit_Command
-@onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
-@onready var texture_rect_logo: TextureRect = %TextureRect_Logo
+@onready var line_edit_command: LineEdit = %LineEdit_Command
 @onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
 @onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
-@onready var panel_container_navbar: PanelContainer = %PanelContainer_Navbar
 @onready var button_go_to_last: Button = %Button_GoToLast
 @onready var panel_container_new_messages: PanelContainer = %PanelContainer_NewMessages
 @onready var label_new_messages: Label = %Label_NewMessages
@@ -38,18 +51,19 @@ var _autocomplete_queued: bool = false
 @onready var button_write: Button = %Button_Write
 @onready var panel_messages: PanelContainer = $VBoxContainer/HBoxContainer/PanelContainer
 @onready var column_go_to_last: Control = $VBoxContainer/HBoxContainer/VSeparator
+@onready var _header: PanelContainer = %PanelContainer_Header
+@onready var _header_hbox: HBoxContainer = %PanelContainer_Header/HBoxContainer
+@onready var _header_icon: TextureRect = %PanelContainer_Header/HBoxContainer/TextureRect
+@onready var _header_label: Label = %PanelContainer_Header/HBoxContainer/Label
 @onready var _autocomplete_panel: PanelContainer = %AutocompletePanel
 @onready var _autocomplete_scroll: ScrollContainer = %AutocompleteScroll
 @onready var _autocomplete_container: VBoxContainer = %AutocompleteItems
 
 
 func _ready():
-	# Messages panel fills available width within Panel_Chat.
-	panel_messages.custom_minimum_size.x = 0
-	panel_messages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
 	Global.on_chat_message.connect(self._on_chat_message_arrived)
 	Global.change_virtual_keyboard.connect(self._async_on_change_virtual_keyboard)
+	Global.orientation_changed.connect(_on_orientation_changed)
 	submit_message.connect(self._on_submit_message)
 
 	exit_chat.call_deferred()
@@ -134,6 +148,10 @@ func _on_button_write_pressed():
 	button_send.disabled = true
 	line_edit_command.grab_focus()
 	DisplayServer.virtual_keyboard_show("")
+	if not Global.is_orientation_portrait():
+		_header.hide()
+	on_enter_write_mode.emit()
+	_relayout_all_messages()
 
 
 func _on_line_edit_command_text_submitted(new_text):
@@ -148,20 +166,15 @@ func _on_line_edit_command_text_submitted(new_text):
 		_close_write_mode()
 
 
-func toggle_chat_visibility(visibility: bool):
-	if visibility:
-		UiSounds.play_sound("widget_chat_open")
-	else:
-		Global.explorer_grab_focus()
-		UiSounds.play_sound("widget_chat_close")
-
-
 func _close_write_mode() -> void:
 	_hide_autocomplete()
 	panel_line_edit.hide()
 	button_write.show()
+	_header.show()
 	if Global.is_mobile():
 		DisplayServer.virtual_keyboard_hide()
+	on_exit_write_mode.emit()
+	_relayout_all_messages()
 
 
 func exit_chat() -> void:
@@ -174,15 +187,28 @@ func async_start_chat():
 	show()
 	panel_line_edit.hide()
 	on_open_chat.emit()
+	# Re-layout all messages now that we have a valid width
+	_relayout_all_messages()
 	if !scrolled:
 		await get_tree().process_frame
 		_scroll_to_bottom()
+
+
+func _relayout_all_messages() -> void:
+	var is_portrait := Global.is_orientation_portrait()
+	for child in v_box_container_chat.get_children():
+		if child.has_method("set_portrait"):
+			child.set_portrait(is_portrait)
+		if child.has_method("_update_layout"):
+			child._update_layout.call_deferred()
 
 
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
 	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
 	new_chat.reduce_text = false
+	if Global.is_orientation_portrait():
+		new_chat.set_portrait(true)
 	new_chat.set_chat(address, message, timestamp)
 
 	if !scrolled:
@@ -241,6 +267,66 @@ func _on_line_edit_command_text_changed(new_text: String) -> void:
 	if not _autocomplete_queued:
 		_autocomplete_queued = true
 		_update_autocomplete.call_deferred()
+
+
+# region Layout
+
+## Reading mode: panel_messages fixed width, separator expands
+func set_layout_reading(panel_width: int) -> void:
+	panel_messages.custom_minimum_size.x = panel_width
+	panel_messages.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	column_go_to_last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_go_to_last.show()
+
+
+## Writing mode: both panel_messages and separator expand 50/50
+func set_layout_writing() -> void:
+	panel_messages.custom_minimum_size.x = 0
+	panel_messages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_go_to_last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_go_to_last.show()
+
+
+## Portrait mode: panel_messages fills all, separator hidden
+func set_layout_portrait() -> void:
+	panel_messages.custom_minimum_size.x = 0
+	panel_messages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_go_to_last.hide()
+
+
+func _on_orientation_changed(is_portrait: bool) -> void:
+	if is_portrait:
+		_header.custom_minimum_size.y = HEADER_HEIGHT_PORTRAIT
+		_header_hbox.add_theme_constant_override("separation", HEADER_SEPARATION_PORTRAIT)
+		_header_icon.custom_minimum_size = Vector2(HEADER_ICON_PORTRAIT, HEADER_ICON_PORTRAIT)
+		_header_label.text = HEADER_LABEL_PORTRAIT
+		_header_label.label_settings.font_size = HEADER_FONT_PORTRAIT
+		button_write.custom_minimum_size.y = WRITE_HEIGHT_PORTRAIT
+		button_write.add_theme_font_size_override("font_size", WRITE_FONT_PORTRAIT)
+		_set_button_write_padding(WRITE_PADDING_PORTRAIT)
+	else:
+		_header.custom_minimum_size.y = HEADER_HEIGHT_LANDSCAPE
+		_header_hbox.add_theme_constant_override("separation", HEADER_SEPARATION_LANDSCAPE)
+		_header_icon.custom_minimum_size = Vector2(HEADER_ICON_LANDSCAPE, HEADER_ICON_LANDSCAPE)
+		_header_label.text = HEADER_LABEL_LANDSCAPE
+		_header_label.label_settings.font_size = HEADER_FONT_LANDSCAPE
+		button_write.custom_minimum_size.y = WRITE_HEIGHT_LANDSCAPE
+		button_write.add_theme_font_size_override("font_size", WRITE_FONT_LANDSCAPE)
+		_set_button_write_padding(WRITE_PADDING_LANDSCAPE)
+	if panel_line_edit.visible:
+		_close_write_mode()
+	_relayout_all_messages()
+
+
+func _set_button_write_padding(left: int) -> void:
+	var style: StyleBoxFlat = button_write.get_theme_stylebox("normal").duplicate()
+	style.content_margin_left = left
+	for state in ["normal", "pressed", "hover", "hover_pressed", "disabled", "focus",
+			"normal_mirrored", "pressed_mirrored", "hover_mirrored", "hover_pressed_mirrored",
+			"disabled_mirrored"]:
+		button_write.add_theme_stylebox_override(state, style)
+
+# endregion
 
 
 # region Mention Autocomplete

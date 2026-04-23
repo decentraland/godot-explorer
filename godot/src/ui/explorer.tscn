@@ -7,8 +7,8 @@
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="PackedScene" uid="uid://b7e8iko6dwv7p" path="res://src/ui/components/joypad/joypad.tscn" id="7_admxk"]
+[ext_resource type="PackedScene" uid="uid://bviu1proryfux" path="res://src/ui/components/chat/chat_panel.tscn" id="9_chatpanel"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
-[ext_resource type="PackedScene" uid="uid://chat_panel_001" path="res://src/ui/components/chat/chat_panel.tscn" id="9_chatpanel"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/notifications/notifications_panel.tscn" id="14_notif_panel"]
@@ -193,8 +193,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
-use_top = false
-use_bottom = false
 
 [node name="InteractableHUD" type="Control" parent="UI/SafeMarginContainerHUD" unique_id=1898741314]
 layout_mode = 2
@@ -202,7 +200,6 @@ mouse_filter = 2
 
 [node name="MobileUI" type="Control" parent="UI/SafeMarginContainerHUD/InteractableHUD" unique_id=1539864390]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -223,13 +220,12 @@ layout_mode = 1
 deadzone_size = 0.0
 margin_control = NodePath("../../..")
 
-[node name="ChatPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD" instance=ExtResource("9_chatpanel")]
+[node name="ChatPanel" parent="UI/SafeMarginContainerHUD/InteractableHUD" unique_id=1855059198 instance=ExtResource("9_chatpanel")]
 unique_name_in_owner = true
 layout_mode = 1
 
 [node name="HBoxContainer_RightPanels" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD" unique_id=2005524203]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -287,7 +283,6 @@ theme_override_constants/separation = 117
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c5h7v")
 
 [node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD" unique_id=193054843]
-visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -321,7 +316,6 @@ text = "FPS"
 
 [node name="Label_RAM" type="Label" parent="UI/SafeMarginContainerHUD/InteractableHUD" unique_id=1299140060]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -342,7 +336,6 @@ vertical_alignment = 1
 
 [node name="EmoteWheel" parent="UI/SafeMarginContainerHUD/InteractableHUD" unique_id=228992295 instance=ExtResource("21_pows0")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI" unique_id=926156601]
@@ -355,7 +348,6 @@ layout_mode = 1
 
 [node name="SafeMarginContainerNavbar" type="MarginContainer" parent="UI" unique_id=514795290]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -444,9 +436,9 @@ script = ExtResource("20_064cw")
 
 [node name="ChatHandler" parent="." unique_id=440307884 instance=ExtResource("32_cq187")]
 
-[connection signal="submit_message" from="UI/SafeMarginContainerHUD/InteractableHUD/ChatPanel" to="." method="_on_panel_chat_submit_message"]
 [connection signal="load_scenes_pressed" from="UI/SafeMarginContainerHUD/InteractableHUD/ChatPanel" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="share_place" from="UI/SafeMarginContainerHUD/InteractableHUD/ChatPanel" to="." method="_share_place"]
+[connection signal="submit_message" from="UI/SafeMarginContainerHUD/InteractableHUD/ChatPanel" to="." method="_on_panel_chat_submit_message"]
 [connection signal="gui_input" from="UI/SafeMarginContainerHUD/InteractableHUD/HBoxContainer_RightPanels" to="." method="_on_h_box_container_right_panels_gui_input"]
 [connection signal="emote_wheel_closed" from="UI/SafeMarginContainerHUD/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
 [connection signal="emote_wheel_opened" from="UI/SafeMarginContainerHUD/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]

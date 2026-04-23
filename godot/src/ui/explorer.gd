@@ -154,6 +154,8 @@ func _ready():
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
 
+	Global.orientation_changed.connect(_on_orientation_changed)
+
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
 	player.set_name("Player")
@@ -1185,6 +1187,19 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+
+
+func _on_orientation_changed(is_portrait: bool) -> void:
+	if is_portrait:
+		mobile_ui.hide()
+		emote_wheel.hide()
+		navbar.hide()
+	else:
+		if Global.is_mobile():
+			mobile_ui.show()
+			_update_virtual_controls_visibility()
+		emote_wheel.show()
+		navbar._on_size_changed()
 
 
 func _update_version_label() -> void:

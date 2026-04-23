@@ -7,33 +7,101 @@ signal load_scenes_pressed
 @onready var chat: Control = %Chat
 @onready var notifications: Control = %Notifications
 @onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
-@onready var button_load_scenes: Button = %Button_LoadScenes
+@onready var safe_bottom_area: PanelContainer = %Control_SafeBottomArea
 @onready var chatbar: Control = %Chatbar
+
+
+enum ChatState { CLOSED, OPEN, WRITING }
+
+const LANDSCAPE_MARGINS := { "left": 0, "top": 24, "right": 0, "bottom": 0 }
+const PORTRAIT_MARGINS := { "left": 40, "top": 0, "right": 40, "bottom": 64 }
+const WIDTH_OPEN := 420
+
+var _current_state: ChatState = ChatState.CLOSED
 
 
 func _ready() -> void:
 	Global.open_chat.connect(_on_global_open_chat)
 	Global.close_chat.connect(_on_global_close_chat)
 	Global.change_virtual_keyboard.connect(_on_change_virtual_keyboard)
+	Global.orientation_changed.connect(_on_orientation_changed)
 	chatbar.share_place.connect(func(): share_place.emit())
+	chatbar.load_scenes_pressed.connect(func(): load_scenes_pressed.emit())
+	_apply_closed_state()
+
+
+## State 1: Chat closed — only chatbar, notifications, safe area visible
+func _apply_closed_state() -> void:
+	_current_state = ChatState.CLOSED
+	chat.hide()
+	chatbar.show()
+	notifications.show()
+	if not Global.is_orientation_portrait():
+		safe_bottom_area.show()
+	virtual_keyboard_margin.custom_minimum_size.y = 0
+
+
+## State 2: Chat open — chat visible, notifications hidden, chatbar visible
+func _apply_open_state() -> void:
+	_current_state = ChatState.OPEN
+	chat.show()
+	chatbar.show()
+	notifications.hide()
+	if Global.is_orientation_portrait():
+		add_theme_constant_override("margin_bottom", PORTRAIT_MARGINS["bottom"])
+	else:
+		safe_bottom_area.show()
+	_update_chat_layout()
+
+
+## State 3: Writing — safe area hidden, chatbar visible in portrait
+func _apply_writing_state() -> void:
+	_current_state = ChatState.WRITING
+	notifications.hide()
+	safe_bottom_area.hide()
+	if Global.is_orientation_portrait():
+		add_theme_constant_override("margin_bottom", 5)
+	else:
+		chatbar.hide()
+	_update_chat_layout()
+
+
+func _update_chat_layout() -> void:
+	if Global.is_orientation_portrait():
+		chat.set_layout_portrait()
+		return
+
+	match _current_state:
+		ChatState.OPEN:
+			chat.set_layout_reading(WIDTH_OPEN)
+		ChatState.WRITING:
+			chat.set_layout_writing()
 
 
 func _on_global_open_chat() -> void:
-	notifications.hide()
 	chat.async_start_chat()
 
 
 func _on_global_close_chat() -> void:
 	chat.exit_chat()
-	notifications.show()
 
 
 func _on_panel_chat_on_open_chat() -> void:
-	notifications.hide()
+	_apply_open_state()
 
 
 func _on_panel_chat_on_exit_chat() -> void:
-	notifications.show()
+	_apply_closed_state()
+	if Global.is_orientation_portrait():
+		Global.set_orientation_landscape()
+
+
+func _on_chat_enter_write_mode() -> void:
+	_apply_writing_state()
+
+
+func _on_chat_exit_write_mode() -> void:
+	_apply_open_state()
 
 
 func _on_panel_chat_submit_message(message: String) -> void:
@@ -49,17 +117,23 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
 
 
-func _on_button_load_scenes_pressed() -> void:
-	load_scenes_pressed.emit()
-
-
 func show_load_scenes_button() -> void:
-	button_load_scenes.show()
+	chatbar.show_load_scenes_button()
 
 
 func hide_load_scenes_button() -> void:
-	button_load_scenes.hide()
+	chatbar.hide_load_scenes_button()
 
 
 func is_chat_visible() -> bool:
 	return chat.visible
+
+
+func _on_orientation_changed(is_portrait: bool) -> void:
+	var m := PORTRAIT_MARGINS if is_portrait else LANDSCAPE_MARGINS
+	add_theme_constant_override("margin_left", m["left"])
+	add_theme_constant_override("margin_top", m["top"])
+	add_theme_constant_override("margin_right", m["right"])
+	add_theme_constant_override("margin_bottom", m["bottom"])
+	safe_bottom_area.visible = not is_portrait
+	_update_chat_layout()
