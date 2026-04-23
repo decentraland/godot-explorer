@@ -295,10 +295,6 @@ func _get_separator_recurrent() -> VSeparator:
 	return _get_node_safe("VSeparator_Recurrent")
 
 
-func _get_separator_duration() -> VSeparator:
-	return _get_node_safe("VSeparator_Duration")
-
-
 func _get_container_views() -> Control:
 	return _get_node_safe("HBoxContainer_Views")
 
@@ -559,7 +555,7 @@ func set_data(item_data):
 		if timestamp > 0:
 			event_start_timestamp = timestamp
 
-	set_server_or_location()
+	set_server_or_location(true)
 
 	var reminder_btn = _get_reminder_button()
 	if reminder_btn:
@@ -758,17 +754,14 @@ func set_duration(_duration: int) -> void:
 func set_recurrent(_recurrent_frequency: String) -> void:
 	var label = _get_recurrent_label()
 	var separator_recurrent = _get_separator_recurrent()
-	var separator_duration = _get_separator_duration()
 	if label:
 		if _recurrent_frequency != "":
 			label.get_parent().show()
 			separator_recurrent.show()
-			separator_duration.show()
 			label.text = _recurrent_frequency.capitalize()
 		else:
 			label.get_parent().hide()
 			separator_recurrent.hide()
-			separator_duration.hide()
 
 
 func set_recurrent_dates(item_data: Dictionary) -> void:

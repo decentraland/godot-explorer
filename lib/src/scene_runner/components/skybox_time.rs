@@ -12,6 +12,7 @@ use crate::{
     godot_classes::dcl_global::DclGlobal,
     scene_runner::scene::{Scene, SceneType},
 };
+use godot::prelude::ToGodot;
 
 /// Updates the global SDK skybox time state based on the SkyboxTime component
 /// set on the ROOT entity in the current parcel scene.
@@ -49,14 +50,6 @@ pub fn update_skybox_time(
     };
     let mut global_bind = global.bind_mut();
 
-    // For parcel scenes: skip if already active and not dirty (optimization)
-    if matches!(scene.scene_type, SceneType::Parcel)
-        && global_bind.sdk_skybox_time_active
-        && !is_dirty
-    {
-        return;
-    }
-
     // Get the SkyboxTime component for the ROOT entity
     let skybox_time_component = SceneCrdtStateProtoComponents::get_skybox_time(crdt_state);
     let root_skybox_time = skybox_time_component.get(&SceneEntityId::ROOT);
@@ -66,7 +59,17 @@ pub fn update_skybox_time(
             let fixed_time = skybox_time.fixed_time;
             let transition_forward = skybox_time.transition_mode() != TransitionMode::TmBackward;
 
-            if !global_bind.sdk_skybox_time_active {
+            // Skip if already active with same values and not dirty (optimization)
+            if global_bind.sdk_skybox_time_active
+                && !is_dirty
+                && global_bind.sdk_skybox_fixed_time == fixed_time
+                && global_bind.sdk_skybox_transition_forward == transition_forward
+            {
+                return;
+            }
+
+            let became_active = !global_bind.sdk_skybox_time_active;
+            if became_active {
                 tracing::debug!(
                     "SkyboxTime SDK control changed: active=true, time={}, forward={}",
                     fixed_time,
@@ -84,12 +87,23 @@ pub fn update_skybox_time(
             global_bind.sdk_skybox_time_active = true;
             global_bind.sdk_skybox_fixed_time = fixed_time;
             global_bind.sdk_skybox_transition_forward = transition_forward;
+            drop(global_bind);
+
+            if became_active {
+                global.emit_signal("sdk_skybox_time_active_changed", &[true.to_variant()]);
+            }
         }
         None => {
-            if global_bind.sdk_skybox_time_active {
+            let was_active = global_bind.sdk_skybox_time_active;
+            if was_active {
                 tracing::debug!("SkyboxTime SDK control changed: active=false");
             }
             global_bind.reset_skybox_time();
+            drop(global_bind);
+
+            if was_active {
+                global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
+            }
         }
     }
 }
