@@ -31,8 +31,8 @@ var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
 ## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
 var _session_hide_main_hud: bool = false
 
-## True when the debug panel was auto-enabled by preview mode (not --debug-panel).
-var _debug_panel_from_preview: bool = false
+## True when the debug panel was enabled from settings toggle.
+var _debug_panel_from_settings: bool = false
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -44,7 +44,6 @@ var _debug_panel_from_preview: bool = false
 
 @onready var panel_chat = %Panel_Chat
 @onready var button_load_scenes: Button = %Button_LoadScenes
-@onready var button_reload_scene: Button = %Button_ReloadScene
 #@onready var url_popup = %UrlPopup
 #@onready var jump_in_popup = %JumpInPopup
 
@@ -149,6 +148,11 @@ func _ready():
 	# Connect settings panel button
 	Global.open_settings_panel.connect(_show_settings_panel)
 
+	# Connect debug panel signal from landscape settings panel
+	var settings_node = settings_panel.get_node("MarginContainer/Settings")
+	if settings_node:
+		settings_node.request_debug_panel.connect(_on_control_menu_request_debug_panel)
+
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
@@ -200,13 +204,12 @@ func _ready():
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
 		add_child(test_spawn_and_move_avatars)
 
-	# --debug-panel (automatically enabled with --preview or preview deeplink)
-	var is_preview_mode = Global.cli.preview_mode or not Global.deep_link_obj.preview.is_empty()
-	if Global.cli.debug_panel or is_preview_mode:
-		_on_control_menu_request_debug_panel(true)
-		_debug_panel_from_preview = not Global.cli.debug_panel and is_preview_mode
+	# --debug-panel flag acts like enabling from settings
+	if Global.cli.debug_panel:
+		_debug_panel_from_settings = true
 
-	# Reload button and debug panel visibility toggled in _on_change_scene_id for preview realm
+	# Show debug panel and reload button if in preview mode or --debug-panel
+	_update_debug_ui()
 
 	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
 	if Global.deep_link_obj.livekit_debug:
@@ -868,7 +871,14 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 
 
 func _on_control_menu_request_debug_panel(enabled):
-	if enabled:
+	_debug_panel_from_settings = enabled
+	_update_debug_ui()
+
+
+func _update_debug_ui():
+	var should_show = _debug_panel_from_settings or _is_in_preview_realm()
+
+	if should_show:
 		if not is_instance_valid(debug_panel):
 			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
 			safe_margin_container_debug.add_child(debug_panel)
@@ -878,7 +888,10 @@ func _on_control_menu_request_debug_panel(enabled):
 			debug_panel.queue_free()
 			debug_panel = null
 
-	Global.set_scene_log_enabled(enabled)
+	if is_instance_valid(debug_panel):
+		debug_panel.set_reload_scene_visible(should_show)
+
+	Global.set_scene_log_enabled(should_show)
 
 
 func _on_timer_fps_label_timeout():
@@ -975,13 +988,6 @@ func _on_button_load_scenes_pressed() -> void:
 	button_load_scenes.hide()
 
 
-func _on_button_reload_scene_pressed() -> void:
-	var current_scene = Global.scene_fetcher.get_current_scene_data()
-	if current_scene == null:
-		printerr("No current scene to reload")
-		return
-	Global.scene_fetcher.reload_scene(current_scene.id)
-
 
 func _is_in_preview_realm() -> bool:
 	var preview_url := Global.deep_link_obj.preview
@@ -990,10 +996,8 @@ func _is_in_preview_realm() -> bool:
 	return Global.cli.preview_mode
 
 
-func _update_preview_ui(in_preview: bool) -> void:
-	button_reload_scene.get_parent().visible = in_preview
-	if _debug_panel_from_preview:
-		_on_control_menu_request_debug_panel(in_preview)
+func _update_preview_ui(_in_preview: bool) -> void:
+	_update_debug_ui()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:

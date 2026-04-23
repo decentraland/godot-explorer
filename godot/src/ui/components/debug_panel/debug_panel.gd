@@ -28,6 +28,7 @@ var icon_visible: Texture2D = preload(
 @onready var tree_console: Tree = %Tree_Console
 @onready var tab_container_debug_panel: TabContainer = %TabContainer_DebugPanel
 @onready var button_show_hide: Button = %Button_ShowHide
+@onready var button_reload_scene: Button = %Button_ReloadScene
 @onready var popup_menu: PopupMenu = %PopupMenu
 @onready var button_debug_js = %Button_DebugJS
 @onready var button_open_source = %Button_OpenSource
@@ -142,6 +143,22 @@ func _on_line_edit_filter_text_changed(new_text):
 	for item: TreeItem in children:
 		var should_hide = item.get_text(1).find(new_text) == -1 and not new_text.is_empty()
 		item.visible = not should_hide
+
+
+func set_reload_scene_visible(visible: bool) -> void:
+	button_reload_scene.visible = visible
+
+
+func _on_button_reload_scene_pressed():
+	var current_scene = Global.scene_fetcher.get_current_scene_data()
+	if current_scene == null:
+		var scenes = Global.scene_fetcher.loaded_scenes
+		if not scenes.is_empty():
+			current_scene = scenes.values()[0]
+	if current_scene == null:
+		printerr("No current scene to reload")
+		return
+	Global.scene_fetcher.reload_scene(current_scene.id)
 
 
 func _on_button_show_hide_pressed():
