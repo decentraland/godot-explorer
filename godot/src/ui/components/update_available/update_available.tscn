@@ -1,0 +1,161 @@
+[gd_scene load_steps=11 format=3 uid="uid://bupdtav1l4bi5z"]
+
+[ext_resource type="Script" path="res://src/ui/components/update_available/update_available.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="2_logo"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_bold"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_semibold"]
+
+[sub_resource type="Gradient" id="Gradient_bg"]
+offsets = PackedFloat32Array(0.00296736, 1)
+colors = PackedColorArray(0.776471, 0.25098, 0.803922, 1, 0.411765, 0.121569, 0.662745, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_bg"]
+gradient = SubResource("Gradient_bg")
+fill_to = Vector2(0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_update"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+bg_color = Color(1, 0.176471, 0.333333, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_later"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+bg_color = Color(0.23, 0.07, 0.36, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("3_bold")
+font_size = 80
+font_color = Color(1, 1, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_desc"]
+font = ExtResource("4_semibold")
+font_size = 34
+font_color = Color(1, 1, 1, 1)
+
+[node name="UpdateAvailable" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "portrait"
+
+[node name="Bg" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_bg")
+expand_mode = 3
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 72
+theme_override_constants/margin_top = 72
+theme_override_constants/margin_right = 72
+theme_override_constants/margin_bottom = 72
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 24
+
+[node name="TopSpacer" type="Control" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 320)
+layout_mode = 2
+
+[node name="Brand" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Logo" type="TextureRect" parent="Margin/VBox/Brand"]
+custom_minimum_size = Vector2(42, 42)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("2_logo")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="BrandLabel" type="Label" parent="Margin/VBox/Brand"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_semibold")
+theme_override_font_sizes/font_size = 34
+text = "Decentraland"
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Update available"
+label_settings = SubResource("LabelSettings_title")
+autowrap_mode = 2
+
+[node name="Description" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "A new version of Decentraland is available. Update now for the latest fixes and improvements."
+label_settings = SubResource("LabelSettings_desc")
+autowrap_mode = 2
+
+[node name="ButtonSpacer" type="Control" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="UpdateButton" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_semibold")
+theme_override_font_sizes/font_size = 34
+theme_override_styles/normal = SubResource("StyleBoxFlat_update")
+theme_override_styles/hover = SubResource("StyleBoxFlat_update")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_update")
+theme_override_styles/focus = SubResource("StyleBoxFlat_update")
+text = "UPDATE"
+
+[node name="LaterButton" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_semibold")
+theme_override_font_sizes/font_size = 34
+theme_override_styles/normal = SubResource("StyleBoxFlat_later")
+theme_override_styles/hover = SubResource("StyleBoxFlat_later")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_later")
+theme_override_styles/focus = SubResource("StyleBoxFlat_later")
+text = "LATER"

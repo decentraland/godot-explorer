@@ -178,6 +178,12 @@ pub fn account_deletion() -> String {
         suffix(ServiceGroup::MobileBff)
     )
 }
+pub fn app_versions() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/app-versions",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
 
 // Notifications
 pub fn notifications_api() -> String {

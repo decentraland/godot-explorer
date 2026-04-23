@@ -23,6 +23,11 @@ func start():
 	if Global.cli.test_runner:
 		return
 
+	if Global.is_mobile() and not Global.cli.scene_test_mode:
+		var gate: Node = preload("res://src/version_gate.gd").new()
+		gate.name = "VersionGate"
+		get_tree().root.call_deferred("add_child", gate)
+
 	if not OS.has_feature("Server"):
 		print("Running from platform - version ", Global.renderer_version)
 
