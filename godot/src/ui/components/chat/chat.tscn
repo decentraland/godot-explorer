@@ -26,6 +26,8 @@ font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lt7hs"]
 bg_color = Color(0, 0, 0, 0.4)
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_euk1h"]
 
@@ -407,7 +409,6 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_rmgsi")
 placeholder_text = "Write a message..."
 max_length = 155
 keep_editing_on_text_submit = true
-clear_button_enabled = true
 deselect_on_focus_loss_enabled = false
 caret_blink = true
 

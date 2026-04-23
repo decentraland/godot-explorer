@@ -15,11 +15,7 @@ offset_bottom = 25.0
 size_flags_horizontal = 3
 script = ExtResource("1_ppxi6")
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=158168180]
-layout_mode = 2
-theme_override_constants/margin_right = 5
-
-[node name="PanelContainer_Message" type="PanelContainer" parent="MarginContainer" unique_id=31455447]
+[node name="PanelContainer_Message" type="PanelContainer" parent="." unique_id=31455447]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -27,7 +23,7 @@ size_flags_vertical = 4
 mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_fq752")
 
-[node name="MarginContainer_Content" type="MarginContainer" parent="MarginContainer/PanelContainer_Message" unique_id=704226817]
+[node name="MarginContainer_Content" type="MarginContainer" parent="PanelContainer_Message" unique_id=704226817]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_left = 10
@@ -35,7 +31,7 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 8
 
-[node name="RichTextLabel_Message" type="RichTextLabel" parent="MarginContainer/PanelContainer_Message/MarginContainer_Content" unique_id=1728710702]
+[node name="RichTextLabel_Message" type="RichTextLabel" parent="PanelContainer_Message/MarginContainer_Content" unique_id=1728710702]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
