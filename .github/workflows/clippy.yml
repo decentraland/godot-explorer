@@ -44,3 +44,6 @@ jobs:
 
       - name: Check asset imports
         run: python3 tests/check_asset_imports.py
+
+      - name: Check for unused .tscn/.tres resources
+        run: python3 scripts/find_unused_resources.py --check
