@@ -1,5 +1,5 @@
 use fastnoise_lite::{FastNoiseLite, FractalType, NoiseType};
-use godot::builtin::{PackedVector2Array, PackedVector3Array, Vector2, Vector3};
+use godot::builtin::{Vector2, Vector3};
 
 use super::{
     CornerConfig, ParcelState, SimpleRng, SpawnLocation, CELL_SIZE, CLIFF_NOISE_FREQUENCY,
@@ -30,9 +30,9 @@ fn configure_noise(seed: i32, frequency: f32) -> FastNoiseLite {
 }
 
 pub struct TerrainMeshData {
-    pub vertices: PackedVector3Array,
-    pub normals: PackedVector3Array,
-    pub uvs: PackedVector2Array,
+    pub vertices: Vec<Vector3>,
+    pub normals: Vec<Vector3>,
+    pub uvs: Vec<Vector2>,
     pub spawn_locations: Vec<SpawnLocation>,
 }
 
@@ -49,10 +49,11 @@ pub fn build_terrain_mesh(
     let world_origin_z = -(coord.1 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE);
 
     let cell_count = (GRID_SIZE * GRID_SIZE) as usize;
+    let capacity = cell_count * 6;
 
-    let mut vertices = PackedVector3Array::new();
-    let mut normals = PackedVector3Array::new();
-    let mut uvs = PackedVector2Array::new();
+    let mut vertices: Vec<Vector3> = Vec::with_capacity(capacity);
+    let mut normals: Vec<Vector3> = Vec::with_capacity(capacity);
+    let mut uvs: Vec<Vector2> = Vec::with_capacity(capacity);
 
     let mut spawn_locations = Vec::with_capacity(cell_count * 2);
     let mut rng = SimpleRng::new((coord.0 as u32, coord.1 as u32));
@@ -171,9 +172,9 @@ fn face_normal(a: Vector3, b: Vector3, c: Vector3) -> Vector3 {
 }
 
 fn push_triangle(
-    vertices: &mut PackedVector3Array,
-    normals: &mut PackedVector3Array,
-    uvs: &mut PackedVector2Array,
+    vertices: &mut Vec<Vector3>,
+    normals: &mut Vec<Vector3>,
+    uvs: &mut Vec<Vector2>,
     tri_vertices: [Vector3; 3],
     tri_uvs: [Vector2; 3],
     normal: Vector3,
@@ -331,9 +332,9 @@ fn smoothstep(t: f32) -> f32 {
 }
 
 fn append_loaded_edge_strips(
-    vertices: &mut PackedVector3Array,
-    normals: &mut PackedVector3Array,
-    uvs: &mut PackedVector2Array,
+    vertices: &mut Vec<Vector3>,
+    normals: &mut Vec<Vector3>,
+    uvs: &mut Vec<Vector2>,
     config: &CornerConfig,
 ) {
     let base_floor_y = -0.05_f32;
@@ -376,9 +377,9 @@ fn append_loaded_edge_strips(
 }
 
 fn push_quad(
-    vertices: &mut PackedVector3Array,
-    normals: &mut PackedVector3Array,
-    uvs: &mut PackedVector2Array,
+    vertices: &mut Vec<Vector3>,
+    normals: &mut Vec<Vector3>,
+    uvs: &mut Vec<Vector2>,
     v1: Vector3,
     v2: Vector3,
     v3: Vector3,

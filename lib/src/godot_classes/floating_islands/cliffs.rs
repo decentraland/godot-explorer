@@ -1,8 +1,5 @@
 use fastnoise_lite::FastNoiseLite;
-use godot::builtin::{
-    Color, PackedColorArray, PackedInt32Array, PackedVector2Array, PackedVector3Array, Vector2,
-    Vector3,
-};
+use godot::builtin::{Color, Vector2, Vector3};
 
 use super::{CornerConfig, ParcelState, GRID_SIZE, PARCEL_HALF_SIZE, PARCEL_SIZE, TERRAIN_HEIGHT};
 
@@ -52,10 +49,10 @@ pub fn nothing_sides(config: &CornerConfig) -> Vec<CliffSide> {
 }
 
 pub struct CliffMeshData {
-    pub vertices: PackedVector3Array,
-    pub normals: PackedVector3Array,
-    pub uvs: PackedVector2Array,
-    pub indices: PackedInt32Array,
+    pub vertices: Vec<Vector3>,
+    pub normals: Vec<Vector3>,
+    pub uvs: Vec<Vector2>,
+    pub indices: Vec<i32>,
 }
 
 pub fn build_cliff_mesh(
@@ -182,11 +179,11 @@ pub fn build_cliff_mesh(
 }
 
 pub struct OverhangMeshData {
-    pub vertices: PackedVector3Array,
-    pub normals: PackedVector3Array,
-    pub uvs: PackedVector2Array,
-    pub colors: PackedColorArray,
-    pub indices: PackedInt32Array,
+    pub vertices: Vec<Vector3>,
+    pub normals: Vec<Vector3>,
+    pub uvs: Vec<Vector2>,
+    pub colors: Vec<Color>,
+    pub indices: Vec<i32>,
 }
 
 pub fn build_overhang_mesh(

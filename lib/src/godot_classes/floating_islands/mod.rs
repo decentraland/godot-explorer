@@ -132,6 +132,14 @@ pub struct ParcelData {
     pub prop_bodies: Vec<Rid>,
 
     pub spawn_locations: Vec<SpawnLocation>,
+
+    /// When the parcel stopped being drawn. `None` means the parcel's render
+    /// instances are currently visible; `Some(msec)` means they are hidden
+    /// and the parcel is a candidate for real destruction once it has been
+    /// stale for longer than the deadline. Acts as a grace period so brief
+    /// camera rotations that push a parcel out and back into the frustum
+    /// don't pay the create/destroy cost.
+    pub stale_since_msec: Option<u64>,
 }
 
 impl Default for ParcelData {
@@ -145,6 +153,7 @@ impl Default for ParcelData {
             cliff_instances: Vec::new(),
             overhang_meshes: Vec::new(),
             overhang_instances: Vec::new(),
+            stale_since_msec: None,
             grass_multimesh: Rid::Invalid,
             grass_instance: Rid::Invalid,
             grass_visible: false,

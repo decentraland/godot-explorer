@@ -1,8 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::mpsc;
+use std::thread;
 
-use fastnoise_lite::FastNoiseLite;
 use godot::builtin::{
-    Array, PackedByteArray, PackedFloat32Array, Rid, Transform3D, VarArray, VarDictionary,
+    Array, Color, PackedByteArray, PackedColorArray, PackedFloat32Array, PackedInt32Array,
+    PackedVector2Array, PackedVector3Array, Rid, Transform3D, VarArray, VarDictionary, Vector2,
     Vector2i, Vector3,
 };
 use godot::classes::mesh::ArrayType;
@@ -56,8 +58,38 @@ pub struct DclFloatingIslandsManager {
     grass_blade_mesh: Option<Gd<Mesh>>,
     grass_material: Option<Gd<Material>>,
     prop_cache: props::PropCache,
-    terrain_noise: FastNoiseLite,
-    cliff_noise: FastNoiseLite,
+
+    worker: Option<WorkerHandle>,
+    /// Coords that were enqueued to the worker and haven't come back yet.
+    /// Prevents re-enqueueing the same coord on subsequent ticks while the
+    /// worker is still generating its mesh.
+    pending: HashSet<(i32, i32)>,
+}
+
+enum WorkerMsg {
+    Build(WorkerPayload),
+}
+
+struct WorkerPayload {
+    coord: (i32, i32),
+    config: CornerConfig,
+}
+
+struct BuiltCliffSide {
+    cliff: cliffs::CliffMeshData,
+    overhang: cliffs::OverhangMeshData,
+}
+
+struct BuiltParcelMeshes {
+    coord: (i32, i32),
+    config: CornerConfig,
+    terrain: terrain::TerrainMeshData,
+    sides: Vec<BuiltCliffSide>,
+}
+
+struct WorkerHandle {
+    tx: mpsc::Sender<WorkerMsg>,
+    rx: mpsc::Receiver<BuiltParcelMeshes>,
 }
 
 #[godot_api]
@@ -82,8 +114,8 @@ impl INode for DclFloatingIslandsManager {
             grass_blade_mesh: None,
             grass_material: None,
             prop_cache: props::PropCache::default(),
-            terrain_noise: terrain::build_terrain_noise(),
-            cliff_noise: terrain::build_cliff_noise(),
+            worker: None,
+            pending: HashSet::new(),
         }
     }
 
@@ -163,9 +195,16 @@ impl DclFloatingIslandsManager {
             Self::destroy_parcel_data(data);
         }
         self.candidates.clear();
+        self.pending.clear();
         self.generating = false;
         self.generated_so_far = 0;
         self.generation_total = 0;
+        // Drain any in-flight responses so they don't materialize after a
+        // clear (e.g. realm switch). They reference nothing in `active` but
+        // would still leak their Packed arrays otherwise.
+        if let Some(worker) = &self.worker {
+            while worker.rx.try_recv().is_ok() {}
+        }
     }
 
     #[func]
@@ -216,6 +255,9 @@ impl DclFloatingIslandsManager {
                 }
             }
         }
+        if self.worker.is_none() {
+            self.worker = Some(spawn_worker());
+        }
         if self.scenario.is_valid() && self.physics_space.is_valid() {
             Some(())
         } else {
@@ -230,6 +272,11 @@ impl DclFloatingIslandsManager {
         if self.ensure_world_resources().is_none() {
             return;
         }
+
+        // Drain anything the worker finished last frame BEFORE we evaluate
+        // the visible set — otherwise the same coords would be re-enqueued.
+        let submitted_this_frame = self.drain_worker_responses();
+        self.generated_so_far += submitted_this_frame;
 
         let player = self.player_parcel;
         let view = self.view_distance;
@@ -251,40 +298,86 @@ impl DclFloatingIslandsManager {
                     continue;
                 }
                 in_view_candidates += 1;
-                if !self.active.contains_key(&coord) {
+                if !self.active.contains_key(&coord) && !self.pending.contains(&coord) {
                     in_view_missing.push(coord);
                 }
             }
         }
 
-        let mut created_this_frame = 0;
+        let mut enqueued_this_frame = 0;
         for coord in in_view_missing.into_iter().take(budget) {
-            self.materialize_parcel(coord);
-            self.generated_so_far += 1;
-            created_this_frame += 1;
+            self.enqueue_parcel_build(coord);
+            enqueued_this_frame += 1;
         }
+        let created_this_frame = submitted_this_frame + enqueued_this_frame;
 
         // Hard floor: the 3x3 around the player is always kept so the ground
         // behind the camera never pops when turning around.
         let keep_radius = hyst.max(1);
+        let now_msec = godot::classes::Time::singleton().get_ticks_msec();
 
-        let doomed: Vec<(i32, i32)> = self
-            .active
-            .keys()
-            .copied()
-            .filter(|&(x, z)| {
-                let dist = (x - player.x).abs().max((z - player.y).abs());
-                if dist > view + hyst {
-                    return true;
+        // Classify each currently-active parcel into one of four buckets:
+        //   - `to_show`: it was stale but the camera came back; un-hide it.
+        //   - `to_hide`: it just dropped out of view; mark stale so we can
+        //     reclaim it later without paying the destroy/recreate cost now.
+        //   - `to_destroy_immediate`: it is so far from the player that
+        //     reviving it later would cost more than a fresh rebuild.
+        //   - `to_destroy_stale`: it has been hidden past the grace period.
+        let mut to_show: Vec<(i32, i32)> = Vec::new();
+        let mut to_hide: Vec<(i32, i32)> = Vec::new();
+        let mut to_destroy_immediate: Vec<(i32, i32)> = Vec::new();
+        let mut to_destroy_stale: Vec<(i32, i32)> = Vec::new();
+
+        for (&coord, data) in &self.active {
+            let (x, z) = coord;
+            let dist = (x - player.x).abs().max((z - player.y).abs());
+
+            if dist > view + hyst {
+                to_destroy_immediate.push(coord);
+                continue;
+            }
+
+            let stale = data.stale_since_msec.is_some();
+
+            if dist <= keep_radius {
+                if stale {
+                    to_show.push(coord);
                 }
-                if dist <= keep_radius {
-                    return false;
+                continue;
+            }
+
+            let in_frustum = Self::parcel_in_camera_view(&camera, coord);
+            if in_frustum {
+                if stale {
+                    to_show.push(coord);
                 }
-                !Self::parcel_in_camera_view(&camera, (x, z))
-            })
-            .take(budget)
-            .collect();
-        for coord in doomed {
+            } else if let Some(since) = data.stale_since_msec {
+                if now_msec.saturating_sub(since) > STALE_DEADLINE_MSEC {
+                    to_destroy_stale.push(coord);
+                }
+            } else {
+                to_hide.push(coord);
+            }
+        }
+
+        for coord in to_show {
+            if let Some(data) = self.active.get_mut(&coord) {
+                set_parcel_visible(data, true);
+                data.stale_since_msec = None;
+            }
+        }
+        for coord in to_hide {
+            if let Some(data) = self.active.get_mut(&coord) {
+                set_parcel_visible(data, false);
+                data.stale_since_msec = Some(now_msec);
+            }
+        }
+        for coord in to_destroy_immediate {
+            if let Some(data) = self.active.remove(&coord) {
+                Self::destroy_parcel_data(data);
+            }
+        }
+        for coord in to_destroy_stale.into_iter().take(budget) {
             if let Some(data) = self.active.remove(&coord) {
                 Self::destroy_parcel_data(data);
             }
@@ -377,21 +470,64 @@ impl DclFloatingIslandsManager {
         probes.iter().any(|p| camera.is_position_in_frustum(*p))
     }
 
-    fn materialize_parcel(&mut self, coord: (i32, i32)) {
-        if self.active.contains_key(&coord) {
+    /// Send a build request to the worker thread. The heavy mesh generation
+    /// happens off the main thread; the manager later picks up the result in
+    /// `drain_worker_responses` and does the RenderingServer + PhysicsServer
+    /// submits.
+    fn enqueue_parcel_build(&mut self, coord: (i32, i32)) {
+        if self.active.contains_key(&coord) || self.pending.contains(&coord) {
             return;
         }
         if self.ensure_world_resources().is_none() {
             return;
         }
-        let scenario = self.scenario;
-        let space = self.physics_space;
         let Some(config) = self.candidates.get(&coord).copied() else {
             return;
         };
+        let Some(worker) = &self.worker else {
+            return;
+        };
+        if worker
+            .tx
+            .send(WorkerMsg::Build(WorkerPayload { coord, config }))
+            .is_ok()
+        {
+            self.pending.insert(coord);
+        }
+    }
 
-        let terrain_data =
-            terrain::build_terrain_mesh(coord, &config, &self.terrain_noise, &self.cliff_noise);
+    /// Consume any meshes the worker finished last frame and submit them to
+    /// RenderingServer + PhysicsServer + spawn grass / props. Called at the
+    /// top of `tick_culling`.
+    fn drain_worker_responses(&mut self) -> i32 {
+        let mut ready: Vec<BuiltParcelMeshes> = Vec::new();
+        if let Some(worker) = self.worker.as_ref() {
+            while let Ok(built) = worker.rx.try_recv() {
+                ready.push(built);
+            }
+        }
+        let mut submitted = 0;
+        for built in ready {
+            self.pending.remove(&built.coord);
+            // The candidate set or `active` may have shifted while the worker
+            // was busy — only submit if still wanted and not already present.
+            if !self.candidates.contains_key(&built.coord) {
+                continue;
+            }
+            if self.active.contains_key(&built.coord) {
+                continue;
+            }
+            self.submit_built_parcel(built);
+            submitted += 1;
+        }
+        submitted
+    }
+
+    fn submit_built_parcel(&mut self, built: BuiltParcelMeshes) {
+        let scenario = self.scenario;
+        let space = self.physics_space;
+        let coord = built.coord;
+        let config = built.config;
 
         let world_x = coord.0 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE;
         let world_z = -(coord.1 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE);
@@ -399,20 +535,21 @@ impl DclFloatingIslandsManager {
 
         let mut rs = RenderingServer::singleton();
 
+        let terrain_vertices = packed_vector3_from_slice(&built.terrain.vertices);
+        let terrain_normals = packed_vector3_from_slice(&built.terrain.normals);
+        let terrain_uvs = packed_vector2_from_slice(&built.terrain.uvs);
+
         let mut arrays = VarArray::new();
         arrays.resize(ArrayType::MAX.ord() as usize, &Variant::nil());
         arrays.set(
             ArrayType::VERTEX.ord() as usize,
-            &terrain_data.vertices.to_variant(),
+            &terrain_vertices.to_variant(),
         );
         arrays.set(
             ArrayType::NORMAL.ord() as usize,
-            &terrain_data.normals.to_variant(),
+            &terrain_normals.to_variant(),
         );
-        arrays.set(
-            ArrayType::TEX_UV.ord() as usize,
-            &terrain_data.uvs.to_variant(),
-        );
+        arrays.set(ArrayType::TEX_UV.ord() as usize, &terrain_uvs.to_variant());
 
         let mesh_rid = rs.mesh_create();
         rs.mesh_add_surface_from_arrays(mesh_rid, RsPrimitiveType::TRIANGLES, &arrays);
@@ -425,49 +562,35 @@ impl DclFloatingIslandsManager {
         }
 
         let (collision_body, collision_shape) =
-            Self::build_terrain_collision(&terrain_data.vertices, space, transform);
+            Self::build_terrain_collision(&terrain_vertices, space, transform);
 
         let mut cliff_meshes: Vec<Rid> = Vec::new();
         let mut cliff_instances: Vec<Rid> = Vec::new();
         let mut overhang_meshes: Vec<Rid> = Vec::new();
         let mut overhang_instances: Vec<Rid> = Vec::new();
 
-        for side in cliffs::nothing_sides(&config) {
-            let cliff = cliffs::build_cliff_mesh(
-                &side,
-                coord,
-                &config,
-                &self.terrain_noise,
-                &self.cliff_noise,
-            );
+        for built_side in &built.sides {
             let (mesh_rid, inst_rid) = self.spawn_indexed_surface(
                 scenario,
                 transform,
-                &cliff.vertices,
-                &cliff.normals,
-                &cliff.uvs,
+                &built_side.cliff.vertices,
+                &built_side.cliff.normals,
+                &built_side.cliff.uvs,
                 None,
-                &cliff.indices,
+                &built_side.cliff.indices,
                 self.cliff_material.as_ref(),
             );
             cliff_meshes.push(mesh_rid);
             cliff_instances.push(inst_rid);
 
-            let overhang = cliffs::build_overhang_mesh(
-                &side,
-                coord,
-                &config,
-                &self.terrain_noise,
-                &self.cliff_noise,
-            );
             let (mesh_rid, inst_rid) = self.spawn_indexed_surface(
                 scenario,
                 transform,
-                &overhang.vertices,
-                &overhang.normals,
-                &overhang.uvs,
-                Some(&overhang.colors),
-                &overhang.indices,
+                &built_side.overhang.vertices,
+                &built_side.overhang.normals,
+                &built_side.overhang.uvs,
+                Some(&built_side.overhang.colors),
+                &built_side.overhang.indices,
                 self.overhang_material.as_ref(),
             );
             overhang_meshes.push(mesh_rid);
@@ -483,7 +606,7 @@ impl DclFloatingIslandsManager {
             cliff_instances,
             overhang_meshes,
             overhang_instances,
-            spawn_locations: terrain_data.spawn_locations,
+            spawn_locations: built.terrain.spawn_locations,
             ..ParcelData::default()
         };
 
@@ -545,23 +668,38 @@ impl DclFloatingIslandsManager {
         &self,
         scenario: Rid,
         transform: Transform3D,
-        vertices: &godot::builtin::PackedVector3Array,
-        normals: &godot::builtin::PackedVector3Array,
-        uvs: &godot::builtin::PackedVector2Array,
-        colors: Option<&godot::builtin::PackedColorArray>,
-        indices: &godot::builtin::PackedInt32Array,
+        vertices: &[Vector3],
+        normals: &[Vector3],
+        uvs: &[Vector2],
+        colors: Option<&[Color]>,
+        indices: &[i32],
         material: Option<&Gd<Material>>,
     ) -> (Rid, Rid) {
+        let packed_vertices = packed_vector3_from_slice(vertices);
+        let packed_normals = packed_vector3_from_slice(normals);
+        let packed_uvs = packed_vector2_from_slice(uvs);
+        let packed_indices = packed_int32_from_slice(indices);
+
         let mut rs = RenderingServer::singleton();
         let mut arrays = VarArray::new();
         arrays.resize(ArrayType::MAX.ord() as usize, &Variant::nil());
-        arrays.set(ArrayType::VERTEX.ord() as usize, &vertices.to_variant());
-        arrays.set(ArrayType::NORMAL.ord() as usize, &normals.to_variant());
-        arrays.set(ArrayType::TEX_UV.ord() as usize, &uvs.to_variant());
+        arrays.set(
+            ArrayType::VERTEX.ord() as usize,
+            &packed_vertices.to_variant(),
+        );
+        arrays.set(
+            ArrayType::NORMAL.ord() as usize,
+            &packed_normals.to_variant(),
+        );
+        arrays.set(ArrayType::TEX_UV.ord() as usize, &packed_uvs.to_variant());
         if let Some(c) = colors {
-            arrays.set(ArrayType::COLOR.ord() as usize, &c.to_variant());
+            let packed_colors = packed_color_from_slice(c);
+            arrays.set(ArrayType::COLOR.ord() as usize, &packed_colors.to_variant());
         }
-        arrays.set(ArrayType::INDEX.ord() as usize, &indices.to_variant());
+        arrays.set(
+            ArrayType::INDEX.ord() as usize,
+            &packed_indices.to_variant(),
+        );
 
         let mesh_rid = rs.mesh_create();
         rs.mesh_add_surface_from_arrays(mesh_rid, RsPrimitiveType::TRIANGLES, &arrays);
@@ -581,7 +719,7 @@ impl DclFloatingIslandsManager {
     }
 
     fn build_terrain_collision(
-        faces: &godot::builtin::PackedVector3Array,
+        faces: &PackedVector3Array,
         space: Rid,
         transform: Transform3D,
     ) -> (Rid, Rid) {
@@ -660,10 +798,106 @@ impl DclFloatingIslandsManager {
     }
 }
 
+/// A parcel that has been hidden (out of view) for longer than this is freed
+/// on the next `tick_culling`. Shorter values reclaim RIDs faster; longer
+/// values absorb more back-and-forth camera motion without paying the
+/// create/destroy cost. Chosen by eye against typical pan speeds.
+const STALE_DEADLINE_MSEC: u64 = 5000;
+
+/// Spawns the mesh-building worker. The worker builds its own noise configs
+/// (deterministic from the same seeds as the main thread's, so results
+/// match) and receives `(coord, config)` requests to produce terrain +
+/// cliff + overhang meshes off the main thread. Results are `Vec<T>` (Send)
+/// and the main thread converts them to Packed arrays at the RS submit
+/// boundary.
+fn spawn_worker() -> WorkerHandle {
+    let (tx_req, rx_req) = mpsc::channel::<WorkerMsg>();
+    let (tx_res, rx_res) = mpsc::channel::<BuiltParcelMeshes>();
+    thread::Builder::new()
+        .name("floating-islands-mesh-gen".into())
+        .spawn(move || {
+            let terrain_noise = terrain::build_terrain_noise();
+            let cliff_noise = terrain::build_cliff_noise();
+            loop {
+                let Ok(WorkerMsg::Build(payload)) = rx_req.recv() else {
+                    break;
+                };
+                let terrain = terrain::build_terrain_mesh(
+                    payload.coord,
+                    &payload.config,
+                    &terrain_noise,
+                    &cliff_noise,
+                );
+                let mut sides = Vec::new();
+                for side in cliffs::nothing_sides(&payload.config) {
+                    let cliff = cliffs::build_cliff_mesh(
+                        &side,
+                        payload.coord,
+                        &payload.config,
+                        &terrain_noise,
+                        &cliff_noise,
+                    );
+                    let overhang = cliffs::build_overhang_mesh(
+                        &side,
+                        payload.coord,
+                        &payload.config,
+                        &terrain_noise,
+                        &cliff_noise,
+                    );
+                    sides.push(BuiltCliffSide { cliff, overhang });
+                }
+                if tx_res
+                    .send(BuiltParcelMeshes {
+                        coord: payload.coord,
+                        config: payload.config,
+                        terrain,
+                        sides,
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        })
+        .expect("failed to spawn floating-islands mesh worker");
+    WorkerHandle {
+        tx: tx_req,
+        rx: rx_res,
+    }
+}
+
 fn parcel_world_transform(coord: (i32, i32)) -> Transform3D {
     let x = coord.0 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE;
     let z = -(coord.1 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE);
     Transform3D::IDENTITY.translated(Vector3::new(x, 0.0, z))
+}
+
+fn set_parcel_visible(data: &mut ParcelData, visible: bool) {
+    let mut rs = RenderingServer::singleton();
+    if data.terrain_instance.is_valid() {
+        rs.instance_set_visible(data.terrain_instance, visible);
+    }
+    for rid in &data.cliff_instances {
+        if rid.is_valid() {
+            rs.instance_set_visible(*rid, visible);
+        }
+    }
+    for rid in &data.overhang_instances {
+        if rid.is_valid() {
+            rs.instance_set_visible(*rid, visible);
+        }
+    }
+    for rid in &data.prop_instances {
+        if rid.is_valid() {
+            rs.instance_set_visible(*rid, visible);
+        }
+    }
+    if data.grass_instance.is_valid() {
+        rs.instance_set_visible(data.grass_instance, visible);
+        data.grass_visible = visible;
+    }
+    // Physics bodies stay active regardless so the player never falls through
+    // a parcel that was just hidden for a frame or two.
 }
 
 fn build_grass_for_parcel(
@@ -749,4 +983,32 @@ fn write_transform_3d_row_major(slot: &mut [f32], t: &Transform3D) {
     slot[9] = r2.y;
     slot[10] = r2.z;
     slot[11] = t.origin.z;
+}
+
+fn packed_vector3_from_slice(src: &[Vector3]) -> PackedVector3Array {
+    let mut arr = PackedVector3Array::new();
+    arr.resize(src.len());
+    arr.as_mut_slice().copy_from_slice(src);
+    arr
+}
+
+fn packed_vector2_from_slice(src: &[Vector2]) -> PackedVector2Array {
+    let mut arr = PackedVector2Array::new();
+    arr.resize(src.len());
+    arr.as_mut_slice().copy_from_slice(src);
+    arr
+}
+
+fn packed_int32_from_slice(src: &[i32]) -> PackedInt32Array {
+    let mut arr = PackedInt32Array::new();
+    arr.resize(src.len());
+    arr.as_mut_slice().copy_from_slice(src);
+    arr
+}
+
+fn packed_color_from_slice(src: &[Color]) -> PackedColorArray {
+    let mut arr = PackedColorArray::new();
+    arr.resize(src.len());
+    arr.as_mut_slice().copy_from_slice(src);
+    arr
 }
