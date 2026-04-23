@@ -26,6 +26,11 @@ const GLIDE_OPENING := 1
 const GLIDE_GLIDING := 2
 const GLIDE_CLOSING := 3
 
+# #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
+# world/terrain). Keeps the ground raycast from pinging avatar wearables,
+# triggers, or other non-ground CollisionObject3Ds.
+const GROUND_RAYCAST_MASK := 2
+
 var last_position: Vector3
 var actual_velocity_xz: float
 
@@ -60,7 +65,9 @@ var _time_since_glide_end: float = 1000.0
 var _air_jump_delay_timer: float = 0.0
 var _air_jump_direction: Vector3 = Vector3.ZERO
 var _ground_distance: float = INF
-var _raycast_exclude: Array = []
+# #b11: typed Array[RID] avoids per-element dynamic cast when passed to
+# PhysicsRayQueryParameters3D.exclude every physics frame.
+var _raycast_exclude: Array[RID] = []
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
@@ -573,13 +580,22 @@ func get_avatar_under_crosshair() -> Avatar:
 func move_to(target: Vector3, check_stuck: bool = true):
 	global_position = target
 	velocity = Vector3.ZERO
+	# #b15: teleports mid-glide (or mid-air-jump hover) must not carry the
+	# glider lift / frozen gravity into the destination. Reset everything to a
+	# grounded-idle baseline; _physics_process will re-derive on the next tick.
+	jump_count = 0
+	glide_state = GLIDE_CLOSED
+	_glide_timer = 0.0
+	_jump_buffer = 0.0
+	_air_jump_delay_timer = 0.0
 	if check_stuck and stuck_detector:
 		stuck_detector.check_stuck()
 
 
 # Distance from feet to ground for glide entry/close gating. Returns INF beyond
-# 20m. Excludes the player body and all avatar subtree CollisionObject3Ds
-# (TriggerDetector etc.) which would otherwise collapse the reading to ~0m.
+# 20m. Uses GROUND_RAYCAST_MASK (#b9) so it only sees the world/terrain layer;
+# the exclude list (#b10) is kept as a belt-and-suspenders for avatar colliders
+# that might briefly share the world mask.
 func _measure_ground_distance() -> float:
 	var space := get_world_3d().direct_space_state
 	if space == null:
@@ -587,6 +603,9 @@ func _measure_ground_distance() -> float:
 	var from := global_position + Vector3(0.0, 0.1, 0.0)  # above feet to avoid self-hit
 	var to := from + Vector3(0.0, -20.0, 0.0)
 	var query := PhysicsRayQueryParameters3D.create(from, to)
+	# #b9: restrict to terrain layer so wearables / triggers / scene gadgets
+	# don't collapse the distance reading.
+	query.collision_mask = GROUND_RAYCAST_MASK
 	query.exclude = _raycast_exclude
 	query.collide_with_bodies = true
 	query.collide_with_areas = false

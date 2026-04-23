@@ -21,6 +21,11 @@ var batch_test_timer: Timer = null
 # Animation tester state
 var _anim_library_keys: Array = []
 var _current_glider_prop: Node = null
+# #b4: track the loop_mode override so Stop / RestoreTree / next Play can undo
+# it. Previously we awaited animation_finished, which never fires for looping
+# clips, so loop_mode stayed mutated on the shared Animation resource.
+var _looped_anim: Animation = null
+var _looped_anim_prev_mode: int = Animation.LOOP_NONE
 
 @onready var sub_viewport_container = $SubViewportContainer
 @onready var avatar: Avatar = sub_viewport_container.avatar
@@ -471,7 +476,13 @@ func _suspend_state_machine() -> void:
 	avatar.animation_tree.active = false
 
 
-# gdlint:ignore = async-function-name
+func _restore_loop_override() -> void:
+	# #b4: undo any pending loop_mode override on the shared Animation resource.
+	if _looped_anim != null:
+		_looped_anim.loop_mode = _looped_anim_prev_mode
+		_looped_anim = null
+
+
 func _play_selected_animation(loop: bool) -> void:
 	var anim_path := _selected_animation_path()
 	if anim_path.is_empty():
@@ -483,18 +494,16 @@ func _play_selected_animation(loop: bool) -> void:
 		return
 
 	_suspend_state_machine()
+	# #b4: restore any previous override before mutating a new one.
+	_restore_loop_override()
 
 	var anim := player.get_animation(anim_path)
-	var prev_loop_mode := anim.loop_mode
 	if loop:
+		_looped_anim = anim
+		_looped_anim_prev_mode = anim.loop_mode
 		anim.loop_mode = Animation.LOOP_LINEAR
 	player.play(anim_path)
 	label_now_playing.text = "Now playing: %s%s" % [anim_path, " (looping)" if loop else ""]
-	# Restore loop mode after the clip finishes so we don't mutate the shared resource.
-	if loop:
-		# Defer restore to when animation actually stops.
-		await player.animation_finished
-		anim.loop_mode = prev_loop_mode
 
 
 func _on_anim_library_selected(index: int) -> void:
@@ -515,10 +524,14 @@ func _on_anim_play_loop_pressed() -> void:
 
 func _on_anim_stop_pressed() -> void:
 	avatar.animation_player.stop()
+	# #b4: undo the loop_mode override before the user walks away.
+	_restore_loop_override()
 	label_now_playing.text = "Now playing: —"
 
 
 func _on_anim_restore_tree_pressed() -> void:
+	# #b4: restore loop_mode before handing the AnimationPlayer back to the tree.
+	_restore_loop_override()
 	avatar.animation_tree.active = true
 	avatar.set_process(true)
 	label_now_playing.text = "Now playing: (state machine)"

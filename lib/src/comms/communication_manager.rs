@@ -861,8 +861,13 @@ impl CommunicationManager {
         let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
 
         // The Temporal bitfield doesn't carry jump_count / glide_state yet, so
-        // force uncompressed whenever either is non-default to avoid dropping state.
-        let needs_uncompressed = jump_count > 0 || glide_state != 0;
+        // force uncompressed when either carries info beyond what rise/fall/land
+        // already encode.
+        // #b8: jump_count == 1 is a plain ground jump that rise/fall covers, so
+        // no need to force uncompressed. A player that steps off a ledge keeps
+        // jump_count=1 until landing, so forcing on `> 0` would burn bandwidth
+        // during every long fall.
+        let needs_uncompressed = jump_count >= 2 || glide_state != 0;
         let use_compressed = compressed && !needs_uncompressed;
 
         let get_packet = || {

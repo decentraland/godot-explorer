@@ -65,11 +65,19 @@ var _force_hide_name: bool = false
 # Previous-frame values for rising-edge detection of jump_count / glide_state.
 var _last_jump_count: int = 0
 var _last_glide_state: int = 0
+# #b2: first _process tick should not treat wire-provided jump_count>=2 as a
+# rising edge — otherwise a remote avatar first seen mid-double-jump plays the
+# SFX from nothing. Cleared after the first frame where we seed _last_jump_count.
+var _jump_count_sync_pending: bool = true
 # Latched so we don't spam Close audio / Glider_End restart / hide-timer scheduling.
 var _glider_close_initiated: bool = false
 # Previous glide_state for _update_glider_prop's edge detection. Kept separate
 # from _last_glide_state above — that one is consumed earlier in _process.
 var _prop_last_glide_state: int = 0
+# #b1/#b12: first call to _update_glider_prop should adopt whatever curr_state
+# came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
+# of staying invisible because prev_state==0 doesn't match any branch.
+var _prop_sync_pending: bool = true
 
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
@@ -929,12 +937,20 @@ func _process(delta):
 	animation_tree.set("parameters/conditions/rise", self.rise)
 	animation_tree.set("parameters/conditions/fall", self.fall)
 	animation_tree.set("parameters/conditions/land", self.land)
-	# nfall = land (not !fall): fall has a 1-2 frame deadband at the jump
-	# apex that would otherwise oscillate Jump_Fall → Jump_End → Jump_Fall.
-	animation_tree.set("parameters/conditions/nfall", self.land)
+	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
+	# locally (in_grace_time) and was previously overridden to is_grounded for
+	# remotes, causing asymmetric behavior. is_grounded is the same shape on
+	# both sides, and fall's 1-2 frame deadband at apex is still avoided.
+	animation_tree.set("parameters/conditions/nfall", self.is_grounded)
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
 	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
+	# #b2: on first observation of this avatar (local or remote) suppress the
+	# rising edge so we don't retroactively play SFX for state that happened
+	# before we started watching.
+	if _jump_count_sync_pending:
+		jump_rising_edge = false
+		_jump_count_sync_pending = false
 	_last_jump_count = self.jump_count
 	var glide_opening_edge: bool = self.glide_state == 1 and _last_glide_state != 1
 	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
@@ -959,10 +975,33 @@ func _update_glider_prop() -> void:
 		if glider_prop.visible:
 			glider_prop.visible = false
 		_prop_last_glide_state = self.glide_state
+		_prop_sync_pending = false
+		return
+
+	var curr_state: int = self.glide_state
+
+	# #b1/#b12: first tick — adopt whatever state came in without firing open/close
+	# SFX, so a remote seen mid-glide actually shows wings and the idle loop.
+	if _prop_sync_pending:
+		_prop_sync_pending = false
+		_prop_last_glide_state = curr_state
+		if curr_state == 1 or curr_state == 2:
+			glider_prop.visible = true
+			_glider_close_initiated = false
+			# Jump straight to Glider_Idle; no Start/Open sfx for state we joined into.
+			_play_glider_clip_if_different("Glider_Idle")
+			if curr_state == 1:
+				_play_glider_audio("AudioPlayer_Idle")
+			else:
+				_play_glider_audio("AudioPlayer_Idle")
+		elif curr_state == 3:
+			# Joined during CLOSING: show prop, let the existing CLOSING→CLOSED
+			# transition scheduled by the next tick hide it naturally.
+			glider_prop.visible = true
+			_glider_close_initiated = true
 		return
 
 	var prev_state: int = _prop_last_glide_state
-	var curr_state: int = self.glide_state
 	_prop_last_glide_state = curr_state
 
 	if prev_state == 0 and curr_state == 1:

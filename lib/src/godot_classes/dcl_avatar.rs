@@ -207,8 +207,10 @@ impl DclAvatar {
 
     // Applies authoritative movement state from the wire (remote avatars) to
     // the DclAvatar fields consumed by avatar.gd's animation edge detection.
-    // Also overrides `land` with `is_grounded` so the nfall condition behaves
-    // consistently across local and remote avatars.
+    // #b3: do NOT override `land` here — `land` is a short pulse on the local
+    // side (in_grace_time) and overriding it with `is_grounded` produced an
+    // asymmetry vs remotes. `nfall` now reads `is_grounded` directly in
+    // avatar.gd, so `land` stays untouched.
     pub fn apply_wire_movement_state(
         &mut self,
         jump_count: i32,
@@ -218,7 +220,6 @@ impl DclAvatar {
         self.jump_count = jump_count;
         self.glide_state = glide_state;
         self.is_grounded = is_grounded;
-        self.land = is_grounded;
     }
 
     #[func]
