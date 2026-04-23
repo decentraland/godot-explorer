@@ -76,6 +76,7 @@ var _prop_last_glide_state: int = 0
 # came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
 # of staying invisible because prev_state==0 doesn't match any branch.
 var _prop_sync_pending: bool = true
+var _glide_forward_blend: float = 0.0
 
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
@@ -964,6 +965,11 @@ func _process(delta):
 	animation_tree.set("parameters/conditions/gliding", gliding_now)
 	animation_tree.set("parameters/conditions/ngliding", not gliding_now)
 
+	var glide_moving: bool = self.walk or self.jog or self.run
+	var glide_forward_target: float = 1.0 if glide_moving else 0.0
+	_glide_forward_blend = move_toward(_glide_forward_blend, glide_forward_target, delta * 4.0)
+	animation_tree.set("parameters/Gliding_Idle/Blend2/blend_amount", _glide_forward_blend)
+
 	if jump_rising_edge:
 		audio_player_double_jump.play()
 
@@ -1031,7 +1037,9 @@ func _update_glider_prop() -> void:
 		_schedule_glider_hide()
 
 	if curr_state == 2 and glider_prop.visible:
-		_play_glider_clip_if_different("Glider_Idle")
+		var glider_moving: bool = self.walk or self.jog or self.run
+		var glider_clip: String = "Glider_Forward" if glider_moving else "Glider_Idle"
+		_play_glider_clip_if_different(glider_clip, 0.25)
 
 
 func _schedule_glider_hide() -> void:
@@ -1068,12 +1076,12 @@ func _play_glider_clip(clip: String) -> void:
 	ap.play(clip)
 
 
-func _play_glider_clip_if_different(clip: String) -> void:
+func _play_glider_clip_if_different(clip: String, blend_time: float = -1.0) -> void:
 	var ap := glider_prop.get_node_or_null("AnimationPlayer") as AnimationPlayer
 	if ap == null or not ap.has_animation(clip):
 		return
 	if ap.current_animation != clip:
-		ap.play(clip)
+		ap.play(clip, blend_time)
 
 
 func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):

@@ -303,6 +303,22 @@ animation = &"double_jump_and_glide/Gliding_Start"
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_glidle"]
 animation = &"double_jump_and_glide/Gliding_Idle"
 
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_glfwd"]
+animation = &"double_jump_and_glide/Gliding_Forward"
+
+[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_glidle_fwd"]
+sync = true
+
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_glidle"]
+nodes/Idle/node = SubResource("AnimationNodeAnimation_glidle")
+nodes/Idle/position = Vector2(200, 100)
+nodes/Forward/node = SubResource("AnimationNodeAnimation_glfwd")
+nodes/Forward/position = Vector2(200, 260)
+nodes/Blend2/node = SubResource("AnimationNodeBlend2_glidle_fwd")
+nodes/Blend2/position = Vector2(500, 180)
+nodes/output/position = Vector2(720, 180)
+node_connections = [&"output", 0, &"Blend2", &"Blend2", 0, &"Idle", &"Blend2", 1, &"Forward"]
+
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_glend"]
 animation = &"double_jump_and_glide/Gliding_End"
 
@@ -438,7 +454,7 @@ states/Double_Jump_Rise/node = SubResource("AnimationNodeAnimation_djbase")
 states/Double_Jump_Rise/position = Vector2(1360, 80)
 states/Gliding_Start/node = SubResource("AnimationNodeAnimation_glstart")
 states/Gliding_Start/position = Vector2(1550, 340)
-states/Gliding_Idle/node = SubResource("AnimationNodeAnimation_glidle")
+states/Gliding_Idle/node = SubResource("AnimationNodeBlendTree_glidle")
 states/Gliding_Idle/position = Vector2(1750, 340)
 states/Gliding_End/node = SubResource("AnimationNodeAnimation_glend")
 states/Gliding_End/position = Vector2(1950, 340)
