@@ -308,6 +308,12 @@ func _ready():
 	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
 	print("[Startup] lobby.show_loading_screen: %dms" % startup_time_ms)
 
+	if Global.is_mobile():
+		var gate_decision := await _async_run_version_gate()
+		if gate_decision == "hard":
+			# Overlay blocks interaction; loading screen stays behind it.
+			return
+
 	# Track startup metric for analytics
 	var startup_data := {"startup_time_ms": startup_time_ms, "platform": OS.get_name()}
 	Global.metrics.track_screen_viewed("START", JSON.stringify(startup_data))
@@ -734,3 +740,14 @@ func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
 
 func _on_ftue_jump_in_world(realm_str: String) -> void:
 	Global.async_join_world(realm_str)
+
+
+func _async_run_version_gate() -> String:
+	var gate: Node = preload("res://src/version_gate.gd").new()
+	add_child(gate)
+	var result: String = await gate.async_check()
+	if result == "hard":
+		gate.show_overlay(false)
+	elif result == "soft":
+		gate.show_overlay(true)
+	return result

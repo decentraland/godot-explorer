@@ -30,6 +30,9 @@ func _on_update_pressed() -> void:
 func _on_later_pressed() -> void:
 	if not _allow_later:
 		return
+	var config := Global.get_config()
+	config.version_gate_snooze_until = int(Time.get_unix_time_from_system()) + 86400
+	config.save_to_settings_file()
 	if not _previous_portrait:
 		Global.set_orientation_landscape()
 	var wrapper := get_parent()
