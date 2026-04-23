@@ -1,20 +1,29 @@
-[gd_resource type="Sky" load_steps=21 format=3 uid="uid://l82r2nfrgcbx"]
+[gd_resource type="Sky" format=3 uid="uid://l82r2nfrgcbx"]
 
 [ext_resource type="Shader" uid="uid://cpu82bv2y58bl" path="res://shaders/sky.gdshader" id="1_bggni"]
-[ext_resource type="Texture2D" uid="uid://byoq8loywg516" path="res://assets/environment/panorama_image.png" id="2_ljc2v"]
+[ext_resource type="CompressedCubemap" uid="uid://dm7cqly71j3q8" path="res://assets/environment/horizon_clouds.png" id="2_ljc2v"]
 
-[sub_resource type="Gradient" id="Gradient_o4o57"]
-colors = PackedColorArray(0.740011, 0.848556, 0.999999, 1, 1, 1, 1, 1)
+[sub_resource type="Gradient" id="Gradient_cloud_highlights"]
+offsets = PackedFloat32Array(0, 0.1, 0.3, 0.5, 0.738, 0.804, 1)
+colors = PackedColorArray(0.6, 0.6, 0.6, 1, 0.501, 0.501, 0.501, 1, 4, 4, 4, 1, 0.8, 0.8, 0.8, 1, 1.245, 1.245, 1.245, 1, 0.669, 0.669, 0.669, 1, 0.6, 0.6, 0.6, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_7vh77"]
-gradient = SubResource("Gradient_o4o57")
-width = 2
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_cloud_highlights"]
+gradient = SubResource("Gradient_cloud_highlights")
+use_hdr = true
 
-[sub_resource type="Gradient" id="Gradient_gikcw"]
-colors = PackedColorArray(0.343792, 0.000684323, 0.483585, 1, 0.368376, 0.00165907, 0.662806, 1)
+[sub_resource type="Gradient" id="Gradient_clouds_cycle"]
+offsets = PackedFloat32Array(0.05, 0.14, 0.26, 0.5, 0.71, 0.85, 1)
+colors = PackedColorArray(0.339, 0.194, 1.059, 1, 0.298, 0.416, 1.153, 1, 0.72, 0.33, 0.024, 1, 1.423, 1.798, 2, 1, 1.498, 0.847, 0.664, 1, 0.759, 0.769, 1.553, 1, 0.336, 0.197, 1.061, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_33c0e"]
-gradient = SubResource("Gradient_gikcw")
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_clouds_cycle"]
+gradient = SubResource("Gradient_clouds_cycle")
+use_hdr = true
+
+[sub_resource type="Gradient" id="Gradient_floor"]
+colors = PackedColorArray(0.169958, 0.000345964, 0.313964, 1, 0.169958, 0.000345964, 0.313964, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_floor"]
+gradient = SubResource("Gradient_floor")
 width = 2
 
 [sub_resource type="Gradient" id="Gradient_5s28x"]
@@ -40,58 +49,75 @@ colors = PackedColorArray(1, 1, 1, 1, 1, 0.458027, 0.205551, 1, 0.883214, 0, 0.0
 gradient = SubResource("Gradient_fb67a")
 width = 5
 
-[sub_resource type="Gradient" id="Gradient_8yx6h"]
-offsets = PackedFloat32Array(0.483755, 1)
-colors = PackedColorArray(0, 0.599795, 0.873399, 1, 0.121488, 0.000196012, 0.236836, 1)
+[sub_resource type="Gradient" id="Gradient_rim"]
+offsets = PackedFloat32Array(0.05, 0.14, 0.318, 0.5, 0.701, 0.807, 0.915, 1)
+colors = PackedColorArray(0.012, 0.042, 0.151, 1, 0.041, 0.113, 0.29, 1, 3.66, 0.922, 0, 1, 0.457, 0.758, 0.61, 1, 1.75, 0.619, 0.182, 1, 0.727, 0.245, 0.447, 1, 0.057, 0.12, 0.381, 1, 0.012, 0.042, 0.151, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_8513b"]
-gradient = SubResource("Gradient_8yx6h")
-width = 3
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_rim"]
+gradient = SubResource("Gradient_rim")
+use_hdr = true
 
-[sub_resource type="Gradient" id="Gradient_paq02"]
-offsets = PackedFloat32Array(0, 0.241877, 0.491639, 0.776173, 1)
-colors = PackedColorArray(1, 0.54902, 0.176471, 1, 0.629251, 0.0174917, 1.92523e-07, 1, 0, 0, 0, 1, 0.559215, 0, 0.146574, 1, 0.999999, 0.5475, 0.178287, 1)
+[sub_resource type="Gradient" id="Gradient_sun"]
+offsets = PackedFloat32Array(0.072, 0.18, 0.3, 0.519, 0.75, 0.86, 1)
+colors = PackedColorArray(2.142, 1.365, 2.996, 1, 0.345, 0.395, 0.749, 1, 23.969, 2.772, 0, 1, 12.437, 23.969, 13.217, 1, 4.978, 1.981, 0.667, 1, 1.125, 1.145, 2.996, 1, 2.142, 1.365, 2.996, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_c4tp5"]
-gradient = SubResource("Gradient_paq02")
-width = 5
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_sun"]
+gradient = SubResource("Gradient_sun")
+use_hdr = true
 
-[sub_resource type="Gradient" id="Gradient_dn7ne"]
-interpolation_mode = 2
-interpolation_color_space = 2
-offsets = PackedFloat32Array(0, 0.288809, 0.79661, 1)
-colors = PackedColorArray(1, 1, 1, 1, 0.839233, 0.509745, 3.85046e-07, 1, 0.791751, 0, 0.111045, 1, 1, 1, 1, 1)
+[sub_resource type="Gradient" id="Gradient_zenit"]
+offsets = PackedFloat32Array(0.05, 0.2, 0.3, 0.5, 0.75, 1)
+colors = PackedColorArray(0.259, 0.197, 0.507, 1, 0.369, 0.399, 0.792, 1, 0.52, 0.538, 0.896, 1, 0.187, 0.601, 0.933, 1, 0.49, 0.414, 0.887, 1, 0.261, 0.199, 0.51, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_g2lqa"]
-gradient = SubResource("Gradient_dn7ne")
-width = 6
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_zenit"]
+gradient = SubResource("Gradient_zenit")
 
-[sub_resource type="Gradient" id="Gradient_og5o5"]
-offsets = PackedFloat32Array(0.537906)
-colors = PackedColorArray(1, 1, 1, 1)
+[sub_resource type="Gradient" id="Gradient_nadir"]
+offsets = PackedFloat32Array(0.047, 0.253, 0.503, 0.7, 1)
+colors = PackedColorArray(0, 0, 0, 1, 0.858, 0.442, 0.433, 1, 0.267, 0.795, 0.851, 1, 0.887, 0.345, 0.953, 1, 0, 0, 0, 1)
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_xttk3"]
-gradient = SubResource("Gradient_og5o5")
-width = 6
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_nadir"]
+gradient = SubResource("Gradient_nadir")
+
+[sub_resource type="Gradient" id="Gradient_horizon"]
+offsets = PackedFloat32Array(0.05, 0.194, 0.3, 0.38, 0.503, 0.75, 0.844, 1)
+colors = PackedColorArray(0.293, 0, 0.44, 1, 0.414, 0.372, 0.589, 1, 1, 0.561, 0.524, 1, 0.573, 0.792, 0.772, 1, 0.676, 0.828, 0.962, 1, 0.953, 0.499, 0.563, 1, 0.256, 0.165, 0.457, 1, 0.291, 0, 0.44, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_horizon"]
+gradient = SubResource("Gradient_horizon")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fx4kt"]
 shader = ExtResource("1_bggni")
 shader_parameter/milky_way_noise = SubResource("NoiseTexture2D_8yx6h")
 shader_parameter/stars_energy = 1.0
-shader_parameter/clouds_panorama = ExtResource("2_ljc2v")
-shader_parameter/sky_gradient = SubResource("GradientTexture1D_8513b")
-shader_parameter/clouds_gradient_day = SubResource("GradientTexture1D_7vh77")
-shader_parameter/clouds_gradient_night = SubResource("GradientTexture1D_33c0e")
+shader_parameter/clouds_cubemap = ExtResource("2_ljc2v")
+shader_parameter/clouds_rotation_y_deg = 20.000009500000004
+shader_parameter/clouds_height_compress = 1.00000004424012
+shader_parameter/clouds_color_cycle = SubResource("GradientTexture1D_clouds_cycle")
 shader_parameter/energy = 1.0
 shader_parameter/gamma = 0.90000004275
-shader_parameter/tint_color_cycle_top = SubResource("GradientTexture1D_xttk3")
-shader_parameter/tint_color_cycle_bottom = SubResource("GradientTexture1D_g2lqa")
-shader_parameter/sun_color_cycle = SubResource("GradientTexture1D_c4tp5")
+shader_parameter/tint_color_cycle_top = SubResource("GradientTexture1D_horizon")
+shader_parameter/tint_color_cycle_bottom = SubResource("GradientTexture1D_zenit")
+shader_parameter/tint_color_cycle_nadir = SubResource("GradientTexture1D_nadir")
+shader_parameter/sun_color_cycle = SubResource("GradientTexture1D_sun")
 shader_parameter/moon_color_cycle = SubResource("GradientTexture1D_nrrql")
+shader_parameter/rim_color_cycle = SubResource("GradientTexture1D_rim")
+shader_parameter/sun_radiance_intensity = 0.05
+shader_parameter/sun_radiance_falloff = 12.0
+shader_parameter/cloud_highlights_cycle = SubResource("GradientTexture1D_cloud_highlights")
+shader_parameter/cloud_opacity = 1.0
+shader_parameter/clouds_scroll_speed = 0.0
 shader_parameter/dither_range = 0.1
 shader_parameter/dither_amount = 128.0
-shader_parameter/other_sun_rotation_offset = Vector2(0.3, 0.3)
-shader_parameter/floor_color = Color(0.169958, 0.000345964, 0.313964, 1)
+shader_parameter/second_sun_speed = 0.1
+shader_parameter/second_sun_orbit = 0.90000004275
+shader_parameter/second_sun_size_factor = 0.16
+shader_parameter/moon_mask_offset = Vector2(0.007, 0.007)
+shader_parameter/floor_horizon_blend = 0.15
+shader_parameter/horizon_above_opacity = 1.0
+shader_parameter/horizon_above_spread = 65.0
+shader_parameter/horizon_below_opacity = 1.0
+shader_parameter/horizon_below_spread = 55.0
 
 [resource]
 sky_material = SubResource("ShaderMaterial_fx4kt")
