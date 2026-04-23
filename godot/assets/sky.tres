@@ -19,13 +19,6 @@ colors = PackedColorArray(0.339, 0.194, 1.059, 1, 0.298, 0.416, 1.153, 1, 0.72, 
 gradient = SubResource("Gradient_clouds_cycle")
 use_hdr = true
 
-[sub_resource type="Gradient" id="Gradient_floor"]
-colors = PackedColorArray(0.169958, 0.000345964, 0.313964, 1, 0.169958, 0.000345964, 0.313964, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_floor"]
-gradient = SubResource("Gradient_floor")
-width = 2
-
 [sub_resource type="Gradient" id="Gradient_5s28x"]
 offsets = PackedFloat32Array(0, 0.725632)
 

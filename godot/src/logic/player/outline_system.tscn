@@ -1,8 +1,11 @@
-[gd_scene load_steps=9 format=3 uid="uid://qyi7gcf7tphy"]
+[gd_scene format=3 uid="uid://qyi7gcf7tphy"]
 
 [ext_resource type="Shader" uid="uid://c1amtn82m0opc" path="res://assets/shaders/avatar_outline_sobel.gdshader" id="1_outline"]
 [ext_resource type="Script" uid="uid://cypaj0ak7monu" path="res://src/logic/player/outline_system.gd" id="2_script"]
 [ext_resource type="Shader" uid="uid://dtv68tkplbgac" path="res://assets/shaders/depth_extraction.gdshader" id="3_depth"]
+
+[sub_resource type="Environment" id="Environment_depth_clean"]
+background_mode = 1
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_xigdd"]
 resource_local_to_scene = true
@@ -20,34 +23,27 @@ resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("1_outline")
 shader_parameter/extracted_texture = SubResource("ViewportTexture_layer20")
+shader_parameter/viewport_size = Vector2(256, 500)
 shader_parameter/max_distance = 10.0
 shader_parameter/outline_thickness = 1.0
 shader_parameter/hue_rotation_speed = 1.0
 shader_parameter/saturation = 1.0
 shader_parameter/value = 1.0
 
-[sub_resource type="Environment" id="Environment_depth_clean"]
-background_mode = 1
-background_color = Color(0, 0, 0, 1)
-ambient_light_source = 0
-tonemap_mode = 0
-glow_enabled = false
-adjustment_enabled = false
-
-[node name="OutlineSystem" type="Node3D"]
+[node name="OutlineSystem" type="Node3D" unique_id=1070540192]
 script = ExtResource("2_script")
 
-[node name="SubViewport" type="SubViewport" parent="."]
+[node name="SubViewport" type="SubViewport" parent="." unique_id=330316131]
 size = Vector2i(1920, 1080)
 render_target_update_mode = 4
 
-[node name="DepthCamera" type="Camera3D" parent="SubViewport"]
+[node name="DepthCamera" type="Camera3D" parent="SubViewport" unique_id=1825757701]
 cull_mask = 524288
 environment = SubResource("Environment_depth_clean")
 current = true
 far = 100.0
 
-[node name="DepthQuad" type="MeshInstance3D" parent="SubViewport/DepthCamera"]
+[node name="DepthQuad" type="MeshInstance3D" parent="SubViewport/DepthCamera" unique_id=471629089]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.25)
 visible = false
 layers = 524288
@@ -56,7 +52,7 @@ cast_shadow = 0
 mesh = SubResource("QuadMesh_1")
 skeleton = NodePath("")
 
-[node name="OutlineQuad" type="MeshInstance3D" parent="."]
+[node name="OutlineQuad" type="MeshInstance3D" parent="." unique_id=570226129]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.25)
 visible = false
 material_override = SubResource("ShaderMaterial_1")
@@ -64,5 +60,5 @@ cast_shadow = 0
 mesh = SubResource("QuadMesh_1")
 skeleton = NodePath("")
 
-[node name="RemoteTransform3D" type="RemoteTransform3D" parent="."]
+[node name="RemoteTransform3D" type="RemoteTransform3D" parent="." unique_id=1207924638]
 remote_path = NodePath("../SubViewport/DepthCamera")

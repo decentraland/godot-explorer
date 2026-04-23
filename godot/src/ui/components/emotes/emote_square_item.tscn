@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://blc0mna12dsxo"]
+[gd_scene format=3 uid="uid://blc0mna12dsxo"]
 
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="1_hlkld"]
 [ext_resource type="Texture2D" uid="uid://drpjhk4w1jscd" path="res://assets/ui/CommonThumbnail.png" id="2_k7hq0"]
@@ -35,7 +35,7 @@ bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8)
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="EmoteSquareItem" type="TextureButton"]
+[node name="EmoteSquareItem" type="TextureButton" unique_id=1890392802]
 custom_minimum_size = Vector2(192, 192)
 offset_right = 118.0
 offset_bottom = 118.0
@@ -44,7 +44,7 @@ mouse_filter = 1
 toggle_mode = true
 script = ExtResource("1_hlkld")
 
-[node name="Control_Inner" type="Control" parent="."]
+[node name="Control_Inner" type="Control" parent="." unique_id=1277506693]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -54,7 +54,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Equiped" type="TextureRect" parent="Control_Inner"]
+[node name="Equiped" type="TextureRect" parent="Control_Inner" unique_id=411121729]
 unique_name_in_owner = true
 editor_description = "Using a texture because it properly scales (Panels dont, the border radius remains)"
 visible = false
@@ -71,7 +71,7 @@ grow_vertical = 2
 texture = ExtResource("2_oumy4")
 expand_mode = 1
 
-[node name="Pressed" type="TextureRect" parent="Control_Inner"]
+[node name="Pressed" type="TextureRect" parent="Control_Inner" unique_id=835701547]
 unique_name_in_owner = true
 editor_description = "Using a texture because it properly scales (Panels dont, the border radius remains)"
 visible = false
@@ -88,7 +88,7 @@ grow_vertical = 2
 texture = ExtResource("3_7fnr5")
 expand_mode = 1
 
-[node name="Pressed_bold" type="TextureRect" parent="Control_Inner"]
+[node name="Pressed_bold" type="TextureRect" parent="Control_Inner" unique_id=165823631]
 unique_name_in_owner = true
 editor_description = "Using a texture because it properly scales (Panels dont, the border radius remains)"
 visible = false
@@ -105,7 +105,7 @@ grow_vertical = 2
 texture = ExtResource("4_lu2c6")
 expand_mode = 1
 
-[node name="TextureRect_Background" type="TextureRect" parent="Control_Inner"]
+[node name="TextureRect_Background" type="TextureRect" parent="Control_Inner" unique_id=815937054]
 unique_name_in_owner = true
 visible = false
 texture_filter = 2
@@ -119,7 +119,7 @@ pivot_offset = Vector2(32, 32)
 texture = ExtResource("2_k7hq0")
 expand_mode = 1
 
-[node name="TextureRect_Picture" type="TextureRect" parent="Control_Inner"]
+[node name="TextureRect_Picture" type="TextureRect" parent="Control_Inner" unique_id=355921855]
 unique_name_in_owner = true
 texture_filter = 2
 layout_mode = 1
@@ -131,7 +131,7 @@ grow_vertical = 2
 pivot_offset = Vector2(32, 32)
 expand_mode = 1
 
-[node name="TextureRect_Equiped" type="PanelContainer" parent="Control_Inner/TextureRect_Picture"]
+[node name="TextureRect_Equiped" type="PanelContainer" parent="Control_Inner/TextureRect_Picture" unique_id=84208742]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 40)
@@ -149,7 +149,7 @@ grow_vertical = 0
 mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_7fnr5")
 
-[node name="TextureRect_EquipedB" type="TextureRect" parent="Control_Inner/TextureRect_Picture/TextureRect_Equiped"]
+[node name="TextureRect_EquipedB" type="TextureRect" parent="Control_Inner/TextureRect_Picture/TextureRect_Equiped" unique_id=846206058]
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -158,7 +158,7 @@ texture = ExtResource("3_oumy4")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="Button_Equiped" type="Button" parent="Control_Inner/TextureRect_Picture"]
+[node name="Button_Equiped" type="Button" parent="Control_Inner/TextureRect_Picture" unique_id=1265520218]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 40)
@@ -187,7 +187,7 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_8g21o")
 toggle_mode = true
 text = "EQUIP"
 
-[node name="TextureRect_Skeleton" type="TextureRect" parent="Control_Inner"]
+[node name="TextureRect_Skeleton" type="TextureRect" parent="Control_Inner" unique_id=1131253374]
 unique_name_in_owner = true
 material = ExtResource("6_bfs1b")
 layout_mode = 0

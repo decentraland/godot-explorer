@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://y5q8yolbxvfv"]
+[gd_scene format=3 uid="uid://y5q8yolbxvfv"]
 
 [ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="2_5v3h1"]
 [ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="2_duxmw"]
@@ -10,7 +10,7 @@
 [ext_resource type="Curve" path="res://assets/environment/sun_size_curve.tres" id="8_sunsz"]
 [ext_resource type="Curve" path="res://assets/environment/moon_mask_size_curve.tres" id="9_moonmsk"]
 
-[node name="SkyMedium" type="Node"]
+[node name="SkyMedium" type="Node" unique_id=333596275]
 script = ExtResource("2_5v3h1")
 directional_light_gradient = ExtResource("4_dir")
 ambient_light_gradient = ExtResource("5_amb")
@@ -19,7 +19,7 @@ sun_opacity_curve = ExtResource("7_sunop")
 sun_size_curve = ExtResource("8_sunsz")
 moon_mask_size_curve = ExtResource("9_moonmsk")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1568625352]
 environment = ExtResource("2_duxmw")
 
-[node name="SkyLights" parent="." instance=ExtResource("3_lights")]
+[node name="SkyLights" parent="." unique_id=1149414462 instance=ExtResource("3_lights")]
