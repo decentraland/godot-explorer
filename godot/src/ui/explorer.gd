@@ -988,7 +988,6 @@ func _on_button_load_scenes_pressed() -> void:
 	button_load_scenes.hide()
 
 
-
 func _is_in_preview_realm() -> bool:
 	var preview_url := Global.deep_link_obj.preview
 	if not preview_url.is_empty():
