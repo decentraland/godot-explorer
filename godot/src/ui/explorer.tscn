@@ -286,12 +286,14 @@ theme_override_constants/margin_right = 10
 [node name="HBoxContainer_LeftSide" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel" unique_id=638530900]
 layout_mode = 2
 size_flags_horizontal = 0
+mouse_filter = 2
 
 [node name="VBoxContainer_LeftSide" type="VBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide" unique_id=1894880525]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(370, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 
 [node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide" unique_id=189776595]
 unique_name_in_owner = true
@@ -339,8 +341,8 @@ expand_icon = true
 
 [node name="Notifications" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide" unique_id=1778619093 instance=ExtResource("15_ky6fv")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 400)
 layout_mode = 2
+size_flags_vertical = 3
 
 [node name="Control_SafeBottomArea" type="PanelContainer" parent="UI/SafeMarginContainerHUD/InteractableHUD/MarginContainer_ChatPanel/HBoxContainer_LeftSide/VBoxContainer_LeftSide" unique_id=1654635117]
 custom_minimum_size = Vector2(0, 200)
