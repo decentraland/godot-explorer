@@ -12,6 +12,12 @@ var combo_opened: bool = false
 	%Button_Combo4,
 ]
 
+const GLIDER_ICON_MAX_WIDTH = 85
+const GLIDER_ICON = preload("uid://dnosnq2stqu11") # "res://assets/themes/dark_dcl_theme/icons/Glider.svg"
+
+const DOUBLE_JUMP_ICON_MAX_WIDTH = 52
+const DOUBLE_JUMP_ICON = preload("uid://euvimxirt85b") # "res://assets/themes/dark_dcl_theme/icons/DoubleJump.svg"
+
 
 func _ready() -> void:
 	for btn in _combo_action_buttons:
