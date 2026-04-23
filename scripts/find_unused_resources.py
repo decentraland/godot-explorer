@@ -41,7 +41,12 @@ Limitations:
 
 Modes:
   default        : report only, exit 0
-  --check        : exit 1 if any orphan or broken found (for CI)
+  --check        : exit 1 if a gated orphan or any broken file is found (CI mode)
+  --check-types  : which types make --check fail. Default 'scene,resource,gd,
+                   shader' — the types the static analyzer resolves confidently.
+                   Pass 'all' to gate on every type (image/audio/font/model/
+                   data too — likely noisy because those can be loaded by
+                   dynamic path construction).
   --delete       : delete orphan .tscn/.tres (and their .uid sidecars)
   --delete-types : comma-separated list of asset types to also delete (e.g.
                    "gd,shader,image"). Requires --delete. Use with care.
@@ -460,6 +465,13 @@ def main():
              "(e.g. 'gd,shader,image,audio,font,model,data'). Use with care.",
     )
     parser.add_argument("--check", action="store_true", help="Exit non-zero if any orphan or broken file is found (for CI)")
+    parser.add_argument(
+        "--check-types",
+        default="scene,resource,gd,shader",
+        help="Comma-separated asset types that cause --check to fail. Default: "
+             "scene,resource,gd,shader — the types the analyzer can resolve "
+             "confidently. Pass 'all' to fail on any orphan type.",
+    )
     args = parser.parse_args()
 
     assets = collect_assets()
@@ -529,13 +541,22 @@ def main():
             removed = delete_files(assets, to_delete)
             print(f"\nremoved {removed} file(s). broken files were NOT auto-deleted.")
 
-    if args.check and (orphans or broken):
-        print(
-            f"\n::error::{len(orphans)} orphan and {len(broken)} broken asset(s) found. "
-            "Run `python3 scripts/find_unused_resources.py` locally to inspect.",
-            file=sys.stderr,
-        )
-        return 1
+    if args.check:
+        if args.check_types.strip().lower() == "all":
+            gating_orphans = orphans
+            gating_label = "any type"
+        else:
+            gating_types = {t.strip() for t in args.check_types.split(",") if t.strip()}
+            gating_orphans = {rp for rp in orphans if assets[rp]["type"] in gating_types}
+            gating_label = ",".join(sorted(gating_types))
+        if gating_orphans or broken:
+            print(
+                f"\n::error::{len(gating_orphans)} orphan ({gating_label}) and "
+                f"{len(broken)} broken asset(s) found. Run "
+                "`python3 scripts/find_unused_resources.py` locally to inspect.",
+                file=sys.stderr,
+            )
+            return 1
 
     return 0
 
