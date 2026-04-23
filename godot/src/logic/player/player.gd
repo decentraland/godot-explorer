@@ -577,6 +577,41 @@ func get_avatar_under_crosshair() -> Avatar:
 	return null
 
 
+func can_toggle_glide() -> bool:
+	# True while the next jump press would open or close the glider. Used by
+	# the mobile Joypad to swap the jump-button icon between double-jump and
+	# glider glyphs.
+	if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+		return true
+	if glide_state != GLIDE_CLOSED:
+		return false
+	# Mirror the `on_floor` mix used in _physics_process (is_on_floor +
+	# position.y clamp), plus time_falling as a belt-and-suspenders so the
+	# icon doesn't flip to glider on idle if is_on_floor() momentarily
+	# reports false between physics ticks.
+	if is_on_floor() or position.y <= 0.0 or time_falling <= 0.0:
+		return false
+	if Global.is_jump_disabled() or Global.is_all_input_disabled():
+		return false
+	if _hard_landing_timer > 0.0:
+		return false
+	# Air-jump takes priority over glide-open in _physics_process: while
+	# jump_count is inside the air-jump window, the next press consumes the
+	# buffer as a double-jump, not as a glide-open. Keep the icon on
+	# double-jump in that range (jump_count == 0 for a ledge walk-off, or
+	# jump_count > MAX_AIR_JUMPS after the air-jump was already spent, both
+	# bypass the air-jump gate and can open glide).
+	if jump_count >= 1 and jump_count <= MAX_AIR_JUMPS:
+		return false
+	if _ground_distance <= GLIDE_MIN_GROUND_DISTANCE:
+		return false
+	if _time_since_last_jump < JUMP_TO_GLIDE_INTERVAL:
+		return false
+	if _time_since_glide_end < GLIDE_COOLDOWN:
+		return false
+	return true
+
+
 func move_to(target: Vector3, check_stuck: bool = true):
 	global_position = target
 	velocity = Vector3.ZERO
