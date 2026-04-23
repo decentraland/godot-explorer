@@ -33,6 +33,15 @@ func run_benchmark():
 	# Create camera to see the parcels
 	setup_camera()
 
+	# Fake player at (0, 0) BEFORE generating so the Rust manager materialises
+	# parcels around the expected centre — otherwise `current_position`
+	# is INVALID_PARCEL and nothing is ever considered in-view.
+	log_msg("FI Benchmark: Setting fake player position at center...")
+	Global.scene_fetcher.current_position = Vector2i(0, 0)
+	Global.scene_fetcher.player_parcel_changed.emit(Vector2i(0, 0))
+	if Global.scene_fetcher.islands_manager != null:
+		Global.scene_fetcher.islands_manager.set_player_parcel(Vector2i(0, 0))
+
 	# Measure baseline
 	log_msg("FI Benchmark: Collecting baseline metrics...")
 	var baseline = collect_metrics()
@@ -48,11 +57,6 @@ func run_benchmark():
 
 	var generation_time = Time.get_ticks_msec() - start_time
 	log_msg("FI Benchmark: Generation completed in %d ms" % generation_time)
-
-	# Set fake player at center (0,0) so grass renders within culling range
-	log_msg("FI Benchmark: Setting fake player position at center...")
-	Global.scene_fetcher.current_position = Vector2i(0, 0)
-	Global.scene_fetcher.player_parcel_changed.emit(Vector2i(0, 0))
 
 	# Wait additional time for memory to stabilize
 	log_msg("FI Benchmark: Waiting for memory to stabilize...")
@@ -170,10 +174,22 @@ func generate_floating_islands():
 	# Call the REAL floating island generation
 	sf._regenerate_floating_islands()
 
-	# Wait for the Rust manager's initial generation to finish. Use the signal
-	# if the manager is available, otherwise fall through (no-op).
+	# Wait until the active parcel count stabilises or we hit a hard timeout.
+	# Using the `generation_complete` signal directly is fragile in benchmark
+	# mode because the manager emits it only when `in_view_candidates > 0`,
+	# which in turn depends on camera + player position being set up first.
 	if sf.islands_manager != null:
-		await sf.islands_manager.generation_complete
+		var last = -1
+		var stable = 0
+		var t0 = Time.get_ticks_msec()
+		while stable < 30 and Time.get_ticks_msec() - t0 < 30000:
+			await get_tree().process_frame
+			var count = sf.islands_manager.get_active_parcel_count()
+			if count == last:
+				stable += 1
+			else:
+				stable = 0
+				last = count
 
 	var active = 0
 	if sf.islands_manager != null:
