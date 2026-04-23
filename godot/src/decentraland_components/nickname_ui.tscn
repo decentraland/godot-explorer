@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://d1i02k5nxmje6"]
+[gd_scene format=3 uid="uid://d1i02k5nxmje6"]
 
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="1_8amxb"]
 [ext_resource type="Script" uid="uid://n63ru00fl7lr" path="res://src/decentraland_components/nickname_ui.gd" id="1_stx67"]
@@ -19,7 +19,7 @@ corner_radius_top_right = 75
 corner_radius_bottom_right = 75
 corner_radius_bottom_left = 75
 
-[node name="NicknameUI" type="MarginContainer"]
+[node name="NicknameUI" type="MarginContainer" unique_id=1431825349]
 offset_right = 130.0
 offset_bottom = 70.0
 size_flags_horizontal = 4
@@ -31,37 +31,37 @@ theme_override_constants/margin_bottom = 35
 script = ExtResource("1_stx67")
 message_container_scene = ExtResource("2_cu2t2")
 
-[node name="Panel" type="Panel" parent="."]
+[node name="Panel" type="Panel" parent="." unique_id=1209667483]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_wgo06")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=110408299]
 layout_mode = 2
 theme_override_constants/margin_left = 60
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 50
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=883379465]
 layout_mode = 2
 
-[node name="NicknameTag" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="NicknameTag" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=28611547]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 
-[node name="MicEnabled" type="MarginContainer" parent="MarginContainer/VBoxContainer/NicknameTag"]
+[node name="MicEnabled" type="MarginContainer" parent="MarginContainer/VBoxContainer/NicknameTag" unique_id=776532974]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/margin_right = 10
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/NicknameTag/MicEnabled"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/NicknameTag/MicEnabled" unique_id=1123801899]
 layout_mode = 2
 texture = ExtResource("1_8amxb")
 stretch_mode = 4
 
-[node name="Nickname" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag"]
+[node name="Nickname" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag" unique_id=1982821028]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -69,21 +69,21 @@ theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 70
 text = "nickname"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/NicknameTag"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/NicknameTag" unique_id=24497140]
 layout_mode = 2
 
-[node name="Hash" type="HBoxContainer" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer"]
+[node name="Hash" type="HBoxContainer" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer" unique_id=1280496641]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HashTag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash"]
+[node name="HashTag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash" unique_id=529487923]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 70
 text = "#"
 
-[node name="Tag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash"]
+[node name="Tag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash" unique_id=189931629]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
@@ -91,19 +91,19 @@ theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 70
 text = "xxxx"
 
-[node name="ClaimedCheckmark" type="MarginContainer" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer"]
+[node name="ClaimedCheckmark" type="MarginContainer" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer" unique_id=674118287]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 10
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/ClaimedCheckmark"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/ClaimedCheckmark" unique_id=314582578]
 layout_mode = 2
 texture = ExtResource("3_tj4hi")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="VersionLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="VersionLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1564379537]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -112,17 +112,17 @@ theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 30
 horizontal_alignment = 1
 
-[node name="RoomDebugLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="RoomDebugLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1287301537]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.9, 0.3, 1)
 theme_override_fonts/font = ExtResource("4_wgh2x")
 theme_override_font_sizes/font_size = 42
-uppercase = true
 horizontal_alignment = 1
+uppercase = true
 
-[node name="MessageClip" type="Control" parent="MarginContainer/VBoxContainer"]
+[node name="MessageClip" type="Control" parent="MarginContainer/VBoxContainer" unique_id=1237877190]
 unique_name_in_owner = true
 clip_contents = true
 layout_mode = 2

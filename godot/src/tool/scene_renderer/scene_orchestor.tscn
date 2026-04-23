@@ -1,11 +1,11 @@
-[gd_scene load_steps=2 format=3 uid="uid://cm7kmfoxdq31o"]
+[gd_scene format=3 uid="uid://cm7kmfoxdq31o"]
 
 [ext_resource type="Script" uid="uid://c5oaug7nlmr44" path="res://src/tool/scene_renderer/scene_orchestor.gd" id="1_nee4c"]
 
-[node name="SceneOrchestor" type="Node"]
+[node name="SceneOrchestor" type="Node" unique_id=1646203721]
 script = ExtResource("1_nee4c")
 
-[node name="Timer_Process" type="Timer" parent="."]
+[node name="Timer_Process" type="Timer" parent="." unique_id=1108265720]
 autostart = true
 
 [connection signal="timeout" from="Timer_Process" to="." method="_on_timer_timeout"]

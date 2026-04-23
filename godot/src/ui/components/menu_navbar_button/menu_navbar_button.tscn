@@ -1,19 +1,19 @@
-[gd_scene load_steps=6 format=3 uid="uid://bx6bkg1gcp1tv"]
+[gd_scene format=3 uid="uid://bx6bkg1gcp1tv"]
 
 [ext_resource type="ButtonGroup" uid="uid://bxbiah4vi02n2" path="res://src/ui/components/menu/button_group_menu.tres" id="1_71anv"]
 [ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="2_csupi"]
-[ext_resource type="Script" path="res://src/ui/components/menu_navbar_button/menu_navbar_button.gd" id="3_g7f1u"]
+[ext_resource type="Script" uid="uid://b1cexory4fl5b" path="res://src/ui/components/menu_navbar_button/menu_navbar_button.gd" id="3_g7f1u"]
 [ext_resource type="Texture2D" uid="uid://in6jrkrtptfk" path="res://assets/ui/nav-bar-icons/explorer-on.svg" id="4_xewur"]
 [ext_resource type="PackedScene" uid="uid://jghhunhm5355" path="res://src/ui/components/menu_navbar_button/menu_navbar_highlight.tscn" id="5_stdkh"]
 
-[node name="Menu_Navbar_Button" type="Button"]
+[node name="Menu_Navbar_Button" type="Button" unique_id=1844129487]
 custom_minimum_size = Vector2(120, 100)
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 80
@@ -30,8 +30,12 @@ script = ExtResource("3_g7f1u")
 button_pressed_icon = ExtResource("4_xewur")
 metadata/disable_ui_sounds = true
 
-[node name="Highlight" parent="." instance=ExtResource("5_stdkh")]
+[node name="Highlight" parent="." unique_id=1393783224 instance=ExtResource("5_stdkh")]
 layout_mode = 0
 anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+grow_horizontal = 1
+grow_vertical = 1
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]
