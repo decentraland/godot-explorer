@@ -29,7 +29,7 @@ func _on_button_jump_in_cancel_pressed() -> void:
 	close()
 
 
-func _async_on_button_jump_in_pressed() -> void:
+func _on_button_jump_in_pressed() -> void:
 	close()
 	await Global.async_teleport_to(location, realm)
 

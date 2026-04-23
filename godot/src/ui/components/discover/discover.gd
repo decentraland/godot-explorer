@@ -31,10 +31,10 @@ func _ready():
 	event_details.hide()
 	search_bar.close_searchbar()
 
-	jump_in.jump_in.connect(_async_on_jump_in_jump_in)
-	jump_in.jump_in_world.connect(_async_on_jump_in_world)
-	event_details.jump_in.connect(_async_on_event_details_jump_in)
-	event_details.jump_in_world.connect(_async_on_event_details_jump_in_world)
+	jump_in.jump_in.connect(_on_jump_in_jump_in)
+	jump_in.jump_in_world.connect(_on_jump_in_world)
+	event_details.jump_in.connect(_on_event_details_jump_in)
+	event_details.jump_in_world.connect(_on_event_details_jump_in_world)
 
 	Global.notification_clicked.connect(_on_notification_clicked)
 
@@ -89,12 +89,12 @@ func async_open_place_by_id(place_id: String) -> void:
 	on_item_pressed(place_data)
 
 
-func _async_on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
+func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 	jump_in.hide()
 	await Global.async_teleport_to(parcel_position, realm)
 
 
-func _async_on_jump_in_world(realm: String):
+func _on_jump_in_world(realm: String):
 	jump_in.hide()
 	await Global.async_join_world(realm)
 
@@ -223,12 +223,12 @@ func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	container_content.show()
 
 
-func _async_on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
+func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
 	event_details.hide()
 	await Global.async_teleport_to(parcel_position, realm)
 
 
-func _async_on_event_details_jump_in_world(realm: String) -> void:
+func _on_event_details_jump_in_world(realm: String) -> void:
 	event_details.hide()
 	await Global.async_join_world(realm)
 

@@ -728,9 +728,9 @@ func _on_ftue_ftue_completed() -> void:
 	async_close_sign_in()
 
 
-func _async_on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
+func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
 	await Global.async_teleport_to(parcel_position, realm_str)
 
 
-func _async_on_ftue_jump_in_world(realm_str: String) -> void:
+func _on_ftue_jump_in_world(realm_str: String) -> void:
 	await Global.async_join_world(realm_str)
