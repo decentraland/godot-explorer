@@ -62,17 +62,15 @@ var wearable_loader: WearableLoader = null
 # Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
 var _force_hide_name: bool = false
 
-# Previous-frame values for rising-edge detection of jump_count / glide_state.
+# Previous-frame jump_count for rising-edge detection of double-jump SFX.
 var _last_jump_count: int = 0
-var _last_glide_state: int = 0
 # #b2: first _process tick should not treat wire-provided jump_count>=2 as a
 # rising edge — otherwise a remote avatar first seen mid-double-jump plays the
 # SFX from nothing. Cleared after the first frame where we seed _last_jump_count.
 var _jump_count_sync_pending: bool = true
 # Latched so we don't spam Close audio / Glider_End restart / hide-timer scheduling.
 var _glider_close_initiated: bool = false
-# Previous glide_state for _update_glider_prop's edge detection. Kept separate
-# from _last_glide_state above — that one is consumed earlier in _process.
+# Previous glide_state for _update_glider_prop's edge detection.
 var _prop_last_glide_state: int = 0
 # #b1/#b12: first call to _update_glider_prop should adopt whatever curr_state
 # came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
@@ -952,12 +950,17 @@ func _process(delta):
 		jump_rising_edge = false
 		_jump_count_sync_pending = false
 	_last_jump_count = self.jump_count
-	var glide_opening_edge: bool = self.glide_state == 1 and _last_glide_state != 1
+	# #b16: start_glide is sustained for the whole OPENING window, not a one-
+	# frame edge. An edge pulse is lost when the AnimationTree sits in a state
+	# without an outgoing `start_glide` transition (Jump_Mid, Run_Jump_Mid,
+	# Idle, Jump_Start, …), leaving the avatar stuck in Jump_Fall while
+	# glide_state == GLIDING. Holding the condition for the full 0.5s window
+	# gives the state machine time to pass through a source state.
+	var glide_opening: bool = self.glide_state == 1
 	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
-	_last_glide_state = self.glide_state
 
 	animation_tree.set("parameters/conditions/double_jump", jump_rising_edge)
-	animation_tree.set("parameters/conditions/start_glide", glide_opening_edge)
+	animation_tree.set("parameters/conditions/start_glide", glide_opening)
 	animation_tree.set("parameters/conditions/gliding", gliding_now)
 	animation_tree.set("parameters/conditions/ngliding", not gliding_now)
 
