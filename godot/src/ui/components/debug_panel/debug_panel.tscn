@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://c0x4ssitmbcrg" path="res://src/ui/components/debug_panel/icons/GuiVisibilityHidden.svg" id="5_34smo"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="7_nlnrl"]
 
-[node name="DebugPanel" type="Control" unique_id=1950613909]
+[node name="DebugPanel" type="Control" unique_id=1737764806]
 custom_minimum_size = Vector2(500, 300)
 layout_mode = 3
 anchors_preset = 15
@@ -20,11 +20,11 @@ mouse_filter = 2
 theme = ExtResource("1_c8oen")
 script = ExtResource("2_juhlr")
 
-[node name="PopupMenu" type="PopupMenu" parent="." unique_id=718223094]
+[node name="PopupMenu" type="PopupMenu" parent="." unique_id=361082937]
 unique_name_in_owner = true
 oversampling_override = 1.0
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=810764020]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=423347625]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -46,7 +46,7 @@ layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 8
 
-[node name="Button_ShowHide" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer_TopButtons" unique_id=1359141729]
+[node name="Button_ShowHide" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer_TopButtons" unique_id=1347699769]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
@@ -63,14 +63,14 @@ theme = ExtResource("7_nlnrl")
 theme_type_variation = &"SecondaryLittle"
 text = "Reload Scene"
 
-[node name="Control_Panel" type="Control" parent="MarginContainer/VBoxContainer" unique_id=580179294]
+[node name="Control_Panel" type="Control" parent="MarginContainer/VBoxContainer" unique_id=1510580662]
 custom_minimum_size = Vector2(500, 280)
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
 mouse_filter = 2
 
-[node name="TabContainer_DebugPanel" type="TabContainer" parent="MarginContainer/VBoxContainer/Control_Panel" unique_id=1488712112]
+[node name="TabContainer_DebugPanel" type="TabContainer" parent="MarginContainer/VBoxContainer/Control_Panel" unique_id=746749719]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(500, 250)
 layout_mode = 1
@@ -83,19 +83,19 @@ theme = ExtResource("1_c8oen")
 current_tab = 2
 tab_focus_mode = 0
 
-[node name="Console" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=1080070321]
+[node name="Console" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=859584269]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console" unique_id=1395100714]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console" unique_id=352400936]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=1311880255]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=846602549]
 layout_mode = 2
 text = "Filter:"
 
-[node name="LineEdit_Filter" type="LineEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=883065666]
+[node name="LineEdit_Filter" type="LineEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=815906912]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -103,17 +103,17 @@ focus_mode = 1
 placeholder_text = "Filter Messages"
 right_icon = ExtResource("3_nth2r")
 
-[node name="Button_Clear" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=1855277613]
+[node name="Button_Clear" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=2609653]
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("4_k7442")
 
-[node name="Button_Copy" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=1540196463]
+[node name="Button_Copy" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=268697916]
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("5_0aohs")
 
-[node name="Tree_Console" type="Tree" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console" unique_id=1207249318]
+[node name="Tree_Console" type="Tree" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console" unique_id=1202255006]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -132,46 +132,46 @@ allow_rmb_select = true
 hide_root = true
 select_mode = 1
 
-[node name="Expression" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=1310523508]
+[node name="Expression" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=1525805381]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="TextEdit_Expression" type="TextEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Expression" unique_id=1213866239]
+[node name="TextEdit_Expression" type="TextEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Expression" unique_id=1912460038]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Label_Expression" type="TextEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Expression" unique_id=1192185172]
+[node name="Label_Expression" type="TextEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Expression" unique_id=1163594485]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Misc&Debugger" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=293664580]
+[node name="Misc&Debugger" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=798233632]
 layout_mode = 2
 metadata/_tab_index = 2
 
-[node name="Button_ShowNetwork" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=944345061]
+[node name="Button_ShowNetwork" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=1965621359]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Open Network Inpector"
 
-[node name="Button_DebugJS" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=1597601267]
+[node name="Button_DebugJS" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=904865193]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "JS Debugger not available"
 
-[node name="Button_OpenSource" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=1670179607]
+[node name="Button_OpenSource" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=480276084]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Open Scene Source Code"
 
-[node name="Label_DebugInfo" type="Label" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=1424117168]
+[node name="Label_DebugInfo" type="Label" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=1806635216]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2

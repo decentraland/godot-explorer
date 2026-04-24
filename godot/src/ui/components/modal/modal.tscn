@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://cwa2ufu3umupb"]
+[gd_scene format=3 uid="uid://cwa2ufu3umupb"]
 
 [ext_resource type="Script" uid="uid://cqguabv2a1c7f" path="res://src/ui/components/modal/modal.gd" id="1_146x8"]
 [ext_resource type="Script" uid="uid://b5n8gac80dncv" path="res://src/ui/components/utils/responsive_container.gd" id="2_5cdoh"]
@@ -40,7 +40,7 @@ corner_radius_bottom_left = 24
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_figov"]
 
-[node name="Modal" type="ColorRect"]
+[node name="Modal" type="ColorRect" unique_id=1180006042]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -51,7 +51,7 @@ color = Color(0, 0, 0, 0.33333334)
 script = ExtResource("1_146x8")
 metadata/mobile_preview_orientation = "both"
 
-[node name="Blur" type="ColorRect" parent="."]
+[node name="Blur" type="ColorRect" parent="." unique_id=1659820059]
 material = SubResource("ShaderMaterial_tquji")
 layout_mode = 1
 anchors_preset = 15
@@ -62,15 +62,15 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.63529414)
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=491869972]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 440.0
-offset_top = 85.5
-offset_right = -440.0
-offset_bottom = -85.5
+offset_left = 82.600006
+offset_top = 351.5
+offset_right = -82.600006
+offset_bottom = -351.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_figov")
@@ -79,23 +79,23 @@ portrait_width = 0.72
 portrait_min_height = 0.1
 landscape_min_height = 0.1
 
-[node name="PanelContainer_Background" type="PanelContainer" parent="PanelContainer"]
+[node name="PanelContainer_Background" type="PanelContainer" parent="PanelContainer" unique_id=683046633]
 clip_children = 1
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ijrai")
 
-[node name="TextureRect" type="TextureRect" parent="PanelContainer/PanelContainer_Background"]
+[node name="TextureRect" type="TextureRect" parent="PanelContainer/PanelContainer_Background" unique_id=1033118527]
 layout_mode = 2
 texture = ExtResource("3_ijrai")
 expand_mode = 1
 
-[node name="MarginContainer_Content" type="MarginContainer" parent="PanelContainer"]
+[node name="MarginContainer_Content" type="MarginContainer" parent="PanelContainer" unique_id=131929422]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/margin_left = 80
-theme_override_constants/margin_top = 80
-theme_override_constants/margin_right = 80
-theme_override_constants/margin_bottom = 70
+theme_override_constants/margin_left = 44
+theme_override_constants/margin_top = 51
+theme_override_constants/margin_right = 44
+theme_override_constants/margin_bottom = 48
 script = ExtResource("3_146x8")
 height_portrait = 1600.0
 top_portrait = 64.0
@@ -107,11 +107,11 @@ right_landscape = 80.0
 bottom_landscape = 70.0
 left_landscape = 80.0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer_Content"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer_Content" unique_id=1082425933]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=342739014]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 10)
 layout_mode = 2
@@ -120,12 +120,12 @@ label_settings = ExtResource("2_ijrai")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=1777896246]
 layout_mode = 2
 theme_override_constants/separation = 14
 theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
-[node name="Label_Body" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="Label_Body" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=1955833636]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 10)
 layout_mode = 2
@@ -134,13 +134,13 @@ label_settings = ExtResource("3_tquji")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HSeparator_Url" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="HSeparator_Url" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=1834330553]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 14
 theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
-[node name="Label_Url" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="Label_Url" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=1342742156]
 unique_name_in_owner = true
 clip_contents = true
 custom_minimum_size = Vector2(50, 10)
@@ -155,18 +155,18 @@ max_lines_visible = 2
 visible_characters = 106
 visible_ratio = 1.0707071
 
-[node name="HSeparator_ButtonsSeparator" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="HSeparator_ButtonsSeparator" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=389612546]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 53
 theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
-[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="PanelContainer/MarginContainer_Content/VBoxContainer"]
+[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=523248150]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 21
 
-[node name="Button_Secondary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons"]
+[node name="Button_Secondary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons" unique_id=305884220]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
@@ -175,7 +175,7 @@ theme = ExtResource("5_bdjpj")
 theme_type_variation = &"SecondaryButton"
 text = "SECONDARY"
 
-[node name="Button_Primary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons"]
+[node name="Button_Primary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons" unique_id=1926265071]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
@@ -183,12 +183,12 @@ size_flags_horizontal = 3
 theme = ExtResource("5_bdjpj")
 text = "PRIMARY"
 
-[node name="Control" type="Control" parent="PanelContainer"]
+[node name="Control" type="Control" parent="PanelContainer" unique_id=457213197]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0
 
-[node name="Icon" type="TextureRect" parent="PanelContainer/Control"]
+[node name="Icon" type="TextureRect" parent="PanelContainer/Control" unique_id=1441157263]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(82.667, 66.667)
 layout_mode = 0

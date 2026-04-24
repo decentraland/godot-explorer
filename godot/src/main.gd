@@ -58,11 +58,7 @@ func _start():
 	if Global.cli.fi_benchmark_size >= 0:
 		return
 
-	if Global.is_xr():
-		print("Running in XR mode")
-		Global.set_orientation_landscape()
-		get_tree().change_scene_to_file("res://src/vr/vr_lobby.tscn")
-	elif Global.cli.emote_test_mode:
+	if Global.cli.emote_test_mode:
 		print("Running in Emote Test mode")
 		get_tree().change_scene_to_file("res://src/test/emote/emote_tester_standalone.tscn")
 	elif Global.cli.avatar_renderer_mode:

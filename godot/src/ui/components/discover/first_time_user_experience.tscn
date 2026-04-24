@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://5x6lss2vy1x0"]
+[gd_scene format=3 uid="uid://5x6lss2vy1x0"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_7ysho"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_voa0q"]
@@ -71,7 +71,7 @@ content_margin_bottom = 0.0
 color = Color(1, 1, 1, 0.69803923)
 thickness = 2
 
-[node name="MarginContainer" type="MarginContainer"]
+[node name="MarginContainer" type="MarginContainer" unique_id=1115903713]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -82,41 +82,41 @@ theme_override_constants/margin_left = 85
 theme_override_constants/margin_right = 85
 script = ExtResource("1_7ysho")
 
-[node name="FTUE" type="VBoxContainer" parent="."]
+[node name="FTUE" type="VBoxContainer" parent="." unique_id=403816244]
 layout_mode = 2
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="Label" type="Label" parent="FTUE"]
+[node name="Label" type="Label" parent="FTUE" unique_id=534641393]
 layout_mode = 2
 text = "Welcome"
 label_settings = SubResource("LabelSettings_q2sj0")
 horizontal_alignment = 1
 
-[node name="Label_NickNameFTUE" type="Label" parent="FTUE"]
+[node name="Label_NickNameFTUE" type="Label" parent="FTUE" unique_id=402401865]
 unique_name_in_owner = true
 layout_mode = 2
 text = "{UserName}"
 label_settings = SubResource("LabelSettings_g4fdo")
 horizontal_alignment = 1
 
-[node name="Label3" type="Label" parent="FTUE"]
+[node name="Label3" type="Label" parent="FTUE" unique_id=1662017759]
 layout_mode = 2
 text = "start here"
 label_settings = SubResource("LabelSettings_q2sj0")
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="FTUE"]
+[node name="HSeparator" type="HSeparator" parent="FTUE" unique_id=1633899769]
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
-[node name="Control" type="Control" parent="FTUE"]
+[node name="Control" type="Control" parent="FTUE" unique_id=219733710]
 custom_minimum_size = Vector2(550, 440)
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="Panel_Container_NoImage" type="PanelContainer" parent="FTUE/Control"]
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="FTUE/Control" unique_id=557519150]
 unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(0, 368)
@@ -129,7 +129,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_uk8f2")
 
-[node name="TextureRect_NoImage" type="TextureRect" parent="FTUE/Control/Panel_Container_NoImage"]
+[node name="TextureRect_NoImage" type="TextureRect" parent="FTUE/Control/Panel_Container_NoImage" unique_id=1930553846]
 custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -140,7 +140,7 @@ texture = ExtResource("2_7ysho")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Panel_Container_Image" type="Panel" parent="FTUE/Control"]
+[node name="Panel_Container_Image" type="Panel" parent="FTUE/Control" unique_id=949595681]
 unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(0, 368)
@@ -153,7 +153,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_cpcvp")
 
-[node name="TextureRect_Image" type="TextureRect" parent="FTUE/Control/Panel_Container_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="FTUE/Control/Panel_Container_Image" unique_id=1406632354]
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 1
 anchors_preset = 15
@@ -168,7 +168,7 @@ texture = ExtResource("5_uk8f2")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="PanelContainer2" type="PanelContainer" parent="FTUE/Control"]
+[node name="PanelContainer2" type="PanelContainer" parent="FTUE/Control" unique_id=963367755]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -178,17 +178,17 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_yb3pm")
 
-[node name="DownloadWarning" parent="FTUE/Control/PanelContainer2" instance=ExtResource("5_0p8pw")]
+[node name="DownloadWarning" parent="FTUE/Control/PanelContainer2" unique_id=776996039 instance=ExtResource("5_0p8pw")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 8
 
-[node name="HSeparator2" type="HSeparator" parent="FTUE"]
+[node name="HSeparator2" type="HSeparator" parent="FTUE" unique_id=2062078784]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
-[node name="RichTextLabel_Title" type="RichTextLabel" parent="FTUE"]
+[node name="RichTextLabel_Title" type="RichTextLabel" parent="FTUE" unique_id=1658246529]
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
@@ -209,40 +209,40 @@ horizontal_alignment = 1
 justification_flags = 131
 script = ExtResource("5_l4c7q")
 
-[node name="HSeparator3" type="HSeparator" parent="FTUE"]
+[node name="HSeparator3" type="HSeparator" parent="FTUE" unique_id=1211298957]
 layout_mode = 2
 theme_override_constants/separation = 6
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="FTUE"]
+[node name="HBoxContainer" type="HBoxContainer" parent="FTUE" unique_id=889090242]
 layout_mode = 2
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="Label_by" type="Label" parent="FTUE/HBoxContainer"]
+[node name="Label_by" type="Label" parent="FTUE/HBoxContainer" unique_id=54648311]
 layout_mode = 2
 text = "by "
 label_settings = SubResource("LabelSettings_86ojj")
 horizontal_alignment = 1
 
-[node name="Label_Creator" type="Label" parent="FTUE/HBoxContainer"]
+[node name="Label_Creator" type="Label" parent="FTUE/HBoxContainer" unique_id=2111230558]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Decentraland Foundation"
 label_settings = SubResource("LabelSettings_umltx")
 horizontal_alignment = 1
 
-[node name="HSeparator4" type="HSeparator" parent="FTUE"]
+[node name="HSeparator4" type="HSeparator" parent="FTUE" unique_id=1516007918]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
-[node name="HSeparator5" type="HSeparator" parent="FTUE"]
+[node name="HSeparator5" type="HSeparator" parent="FTUE" unique_id=1376386191]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
-[node name="Button_JumpIn_FTUE" type="Button" parent="FTUE"]
+[node name="Button_JumpIn_FTUE" type="Button" parent="FTUE" unique_id=1801794333]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
@@ -254,7 +254,7 @@ theme_override_font_sizes/font_size = 14
 icon_alignment = 2
 expand_icon = true
 
-[node name="HBoxContainer_Content" type="HBoxContainer" parent="FTUE/Button_JumpIn_FTUE"]
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="FTUE/Button_JumpIn_FTUE" unique_id=228087885]
 layout_mode = 1
 anchors_preset = 14
 anchor_top = 0.5
@@ -267,12 +267,12 @@ grow_vertical = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Label" type="Label" parent="FTUE/Button_JumpIn_FTUE/HBoxContainer_Content"]
+[node name="Label" type="Label" parent="FTUE/Button_JumpIn_FTUE/HBoxContainer_Content" unique_id=790392425]
 layout_mode = 2
 text = "JUMP IN"
 label_settings = SubResource("LabelSettings_ndv83")
 
-[node name="MarginContainer" type="MarginContainer" parent="FTUE/Button_JumpIn_FTUE/HBoxContainer_Content"]
+[node name="MarginContainer" type="MarginContainer" parent="FTUE/Button_JumpIn_FTUE/HBoxContainer_Content" unique_id=292054101]
 custom_minimum_size = Vector2(34, 34)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -280,7 +280,7 @@ size_flags_vertical = 4
 theme_override_constants/margin_top = 2
 theme_override_constants/margin_bottom = 2
 
-[node name="TextureRect_Add" type="TextureRect" parent="FTUE/Button_JumpIn_FTUE/HBoxContainer_Content/MarginContainer"]
+[node name="TextureRect_Add" type="TextureRect" parent="FTUE/Button_JumpIn_FTUE/HBoxContainer_Content/MarginContainer" unique_id=1475366820]
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 mouse_filter = 2
@@ -288,12 +288,12 @@ texture = ExtResource("5_2dr64")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="HSeparator7" type="HSeparator" parent="FTUE"]
+[node name="HSeparator7" type="HSeparator" parent="FTUE" unique_id=1841980136]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_73ifx")
 
-[node name="Button_Skip" type="Button" parent="FTUE"]
+[node name="Button_Skip" type="Button" parent="FTUE" unique_id=708223110]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -306,7 +306,7 @@ theme_override_font_sizes/font_size = 30
 text = "Skip and explore"
 flat = true
 
-[node name="HSeparator" type="HSeparator" parent="FTUE/Button_Skip"]
+[node name="HSeparator" type="HSeparator" parent="FTUE/Button_Skip" unique_id=1970118741]
 custom_minimum_size = Vector2(245, 25)
 layout_mode = 1
 anchors_preset = 7

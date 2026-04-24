@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://b8x5k4qfnvjhp"]
+[gd_scene format=3 uid="uid://b8x5k4qfnvjhp"]
 
-[ext_resource type="Script" uid="uid://ds6vk0gmqtvkn" path="res://src/decentraland_components/exo_player.gd" id="1_exo"]
+[ext_resource type="Script" uid="uid://bdr40ebn54033" path="res://src/decentraland_components/exo_player.gd" id="1_exo"]
 
-[node name="ExoPlayer" type="Node"]
+[node name="ExoPlayer" type="Node" unique_id=409536295]
 script = ExtResource("1_exo")

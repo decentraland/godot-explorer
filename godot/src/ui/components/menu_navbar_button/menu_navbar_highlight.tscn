@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://jghhunhm5355"]
+[gd_scene format=3 uid="uid://jghhunhm5355"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_60l1n"]
 bg_color = Color(0.262745, 0.25098, 0.290196, 1)
@@ -7,7 +7,7 @@ corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
-[node name="Highlight" type="Panel"]
+[node name="Highlight" type="Panel" unique_id=1699433230]
 visible = false
 show_behind_parent = true
 anchors_preset = 15

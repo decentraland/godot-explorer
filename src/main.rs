@@ -191,6 +191,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("strip debug symbols from iOS templates to save disk space (default: keep debug symbols)")
                         .takes_value(false),
                 )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("download Godot editor and templates from a branch build (e.g. `fix-ios-screen-orientation-swiftui-host`) instead of the stable release")
+                        .takes_value(true),
+                )
         )
         .subcommand(Command::new("clean-cache").about("Clean the cache to re-download external files."))
         .subcommand(Command::new("strip-ios-templates").about("Strip debug symbols from installed iOS templates (macOS only)"))
@@ -510,9 +516,15 @@ fn main() -> Result<(), anyhow::Error> {
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
             let use_cache = sm.is_present("cache");
             let strip_ios = sm.is_present("strip-ios");
+            let branch = sm.value_of("branch").map(String::from);
             // Call your install function and pass the templates
-            let result =
-                install_dependency::install(no_templates, &platforms, use_cache, strip_ios);
+            let result = install_dependency::install(
+                no_templates,
+                &platforms,
+                use_cache,
+                strip_ios,
+                branch.as_deref(),
+            );
             if result.is_ok() {
                 dependencies::suggest_next_steps("install", None);
             }
