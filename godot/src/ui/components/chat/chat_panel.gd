@@ -4,20 +4,19 @@ signal submit_message(message: String)
 signal share_place
 signal load_scenes_pressed
 
+enum ChatState { CLOSED, OPEN, WRITING }
+
+const LANDSCAPE_MARGINS := {"left": 0, "top": 24, "right": 0, "bottom": 0}
+const PORTRAIT_MARGINS := {"left": 40, "top": 0, "right": 40, "bottom": 64}
+const WIDTH_OPEN := 420
+
+var _current_state: ChatState = ChatState.CLOSED
+
 @onready var chat: Control = %Chat
 @onready var notifications: Control = %Notifications
 @onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
 @onready var safe_bottom_area: PanelContainer = %Control_SafeBottomArea
 @onready var chatbar: Control = %Chatbar
-
-
-enum ChatState { CLOSED, OPEN, WRITING }
-
-const LANDSCAPE_MARGINS := { "left": 0, "top": 24, "right": 0, "bottom": 0 }
-const PORTRAIT_MARGINS := { "left": 40, "top": 0, "right": 40, "bottom": 64 }
-const WIDTH_OPEN := 420
-
-var _current_state: ChatState = ChatState.CLOSED
 
 
 func _ready() -> void:

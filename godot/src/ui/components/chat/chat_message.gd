@@ -417,8 +417,10 @@ func _update_layout() -> void:
 
 	var content_width := rich_text.get_content_width()
 	var available_width := int(rich_text.size.x)
-	var h_padding := (content_margin.get_theme_constant("margin_left")
-		+ content_margin.get_theme_constant("margin_right"))
+	var h_padding := (
+		content_margin.get_theme_constant("margin_left")
+		+ content_margin.get_theme_constant("margin_right")
+	)
 
 	if content_width < available_width:
 		message_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

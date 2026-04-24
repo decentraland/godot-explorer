@@ -271,6 +271,7 @@ func _on_line_edit_command_text_changed(new_text: String) -> void:
 
 # region Layout
 
+
 ## Reading mode: panel_messages fixed width, separator expands
 func set_layout_reading(panel_width: int) -> void:
 	panel_messages.custom_minimum_size.x = panel_width
@@ -321,13 +322,23 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 func _set_button_write_padding(left: int) -> void:
 	var style: StyleBoxFlat = button_write.get_theme_stylebox("normal").duplicate()
 	style.content_margin_left = left
-	for state in ["normal", "pressed", "hover", "hover_pressed", "disabled", "focus",
-			"normal_mirrored", "pressed_mirrored", "hover_mirrored", "hover_pressed_mirrored",
-			"disabled_mirrored"]:
+	for state in [
+		"normal",
+		"pressed",
+		"hover",
+		"hover_pressed",
+		"disabled",
+		"focus",
+		"normal_mirrored",
+		"pressed_mirrored",
+		"hover_mirrored",
+		"hover_pressed_mirrored",
+		"disabled_mirrored"
+	]:
 		button_write.add_theme_stylebox_override(state, style)
 
-# endregion
 
+# endregion
 
 # region Mention Autocomplete
 
