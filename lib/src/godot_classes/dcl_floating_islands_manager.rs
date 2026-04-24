@@ -20,10 +20,10 @@ use godot::obj::{Base, Gd};
 use godot::prelude::*;
 
 use crate::godot_classes::floating_islands::{
-    self, cliffs, props, terrain, CornerConfig, ParcelData, SimpleRng, CLIFF_MATERIAL_PATH,
-    GRASS_BASE_SCALE, GRASS_BLADES_MATERIAL_PATH, GRASS_BLADE_MESH_PATH, GRASS_CULLING_RANGE,
-    OVERHANG_MATERIAL_PATH, PARCEL_HALF_SIZE, PARCEL_HEIGHT_BOUND, PARCEL_SIZE,
-    TERRAIN_MATERIAL_PATH,
+    self, cliffs, props, terrain, CornerConfig, ParcelData, PendingPhysicsGeometry, SimpleRng,
+    CLIFF_MATERIAL_PATH, GRASS_BASE_SCALE, GRASS_BLADES_MATERIAL_PATH, GRASS_BLADE_MESH_PATH,
+    GRASS_CULLING_RANGE, OVERHANG_MATERIAL_PATH, PARCEL_HALF_SIZE, PARCEL_HEIGHT_BOUND,
+    PARCEL_SIZE, TERRAIN_MATERIAL_PATH,
 };
 
 #[derive(GodotClass)]
@@ -383,15 +383,41 @@ impl DclFloatingIslandsManager {
             }
         }
 
+        let mut to_promote_physics: Vec<(i32, i32)> = Vec::new();
+        let mut to_demote_physics: Vec<(i32, i32)> = Vec::new();
         let mut to_promote_grass: Vec<(i32, i32)> = Vec::new();
         let mut to_demote_grass: Vec<(i32, i32)> = Vec::new();
         for (coord, data) in &self.active {
+            let dist = (coord.0 - player.x).abs().max((coord.1 - player.y).abs());
+            let has_physics = data.collision_body.is_valid();
+            if dist <= PHYSICS_RANGE && !has_physics && data.pending_physics_geometry.is_some() {
+                to_promote_physics.push(*coord);
+            } else if dist > PHYSICS_RANGE && has_physics {
+                to_demote_physics.push(*coord);
+            }
             let should_have = Self::grass_should_be_visible(*coord, player);
             let has_grass = data.grass_instance.is_valid();
             if should_have && !has_grass {
                 to_promote_grass.push(*coord);
             } else if !should_have && has_grass {
                 to_demote_grass.push(*coord);
+            }
+        }
+        let space = self.physics_space;
+        for coord in to_promote_physics {
+            if let Some(data) = self.active.get_mut(&coord) {
+                if let Some(geom) = data.pending_physics_geometry.as_ref() {
+                    let transform = parcel_world_transform(coord);
+                    let faces = expand_indexed_faces(&geom.vertices, &geom.indices);
+                    let (body, shape) = Self::build_terrain_collision(&faces, space, transform);
+                    data.collision_body = body;
+                    data.collision_shape = shape;
+                }
+            }
+        }
+        for coord in to_demote_physics {
+            if let Some(data) = self.active.get_mut(&coord) {
+                free_parcel_physics(data);
             }
         }
         let blade_rid = self.grass_blade_mesh.as_ref().map(|m| m.get_rid());
@@ -526,8 +552,19 @@ impl DclFloatingIslandsManager {
     fn submit_built_parcel(&mut self, built: BuiltParcelMeshes) {
         let scenario = self.scenario;
         let space = self.physics_space;
-        let coord = built.coord;
-        let config = built.config;
+        let BuiltParcelMeshes {
+            coord,
+            config,
+            terrain,
+            sides,
+        } = built;
+        let terrain::TerrainMeshData {
+            vertices: terrain_vertices_vec,
+            normals: terrain_normals_vec,
+            uvs: terrain_uvs_vec,
+            indices: terrain_indices_vec,
+            spawn_locations,
+        } = terrain;
 
         let world_x = coord.0 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE;
         let world_z = -(coord.1 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE);
@@ -535,25 +572,28 @@ impl DclFloatingIslandsManager {
 
         let mut rs = RenderingServer::singleton();
 
-        let terrain_vertices = packed_vector3_from_slice(&built.terrain.vertices);
-        let terrain_normals = packed_vector3_from_slice(&built.terrain.normals);
-        let terrain_uvs = packed_vector2_from_slice(&built.terrain.uvs);
-        let terrain_indices = packed_int32_from_slice(&built.terrain.indices);
+        let terrain_vertices_packed = packed_vector3_from_slice(&terrain_vertices_vec);
+        let terrain_normals_packed = packed_vector3_from_slice(&terrain_normals_vec);
+        let terrain_uvs_packed = packed_vector2_from_slice(&terrain_uvs_vec);
+        let terrain_indices_packed = packed_int32_from_slice(&terrain_indices_vec);
 
         let mut arrays = VarArray::new();
         arrays.resize(ArrayType::MAX.ord() as usize, &Variant::nil());
         arrays.set(
             ArrayType::VERTEX.ord() as usize,
-            &terrain_vertices.to_variant(),
+            &terrain_vertices_packed.to_variant(),
         );
         arrays.set(
             ArrayType::NORMAL.ord() as usize,
-            &terrain_normals.to_variant(),
+            &terrain_normals_packed.to_variant(),
         );
-        arrays.set(ArrayType::TEX_UV.ord() as usize, &terrain_uvs.to_variant());
+        arrays.set(
+            ArrayType::TEX_UV.ord() as usize,
+            &terrain_uvs_packed.to_variant(),
+        );
         arrays.set(
             ArrayType::INDEX.ord() as usize,
-            &terrain_indices.to_variant(),
+            &terrain_indices_packed.to_variant(),
         );
 
         let mesh_rid = rs.mesh_create();
@@ -566,16 +606,27 @@ impl DclFloatingIslandsManager {
             rs.instance_geometry_set_material_override(instance, material.get_rid());
         }
 
-        let collision_faces = expand_indexed_faces(&built.terrain.vertices, &built.terrain.indices);
-        let (collision_body, collision_shape) =
-            Self::build_terrain_collision(&collision_faces, space, transform);
+        let dist_to_player = (coord.0 - self.player_parcel.x)
+            .abs()
+            .max((coord.1 - self.player_parcel.y).abs());
+        let (collision_body, collision_shape) = if dist_to_player <= PHYSICS_RANGE {
+            let collision_faces = expand_indexed_faces(&terrain_vertices_vec, &terrain_indices_vec);
+            Self::build_terrain_collision(&collision_faces, space, transform)
+        } else {
+            (Rid::Invalid, Rid::Invalid)
+        };
+
+        let pending_physics_geometry = Some(PendingPhysicsGeometry {
+            vertices: terrain_vertices_vec,
+            indices: terrain_indices_vec,
+        });
 
         let mut cliff_meshes: Vec<Rid> = Vec::new();
         let mut cliff_instances: Vec<Rid> = Vec::new();
         let mut overhang_meshes: Vec<Rid> = Vec::new();
         let mut overhang_instances: Vec<Rid> = Vec::new();
 
-        for built_side in &built.sides {
+        for built_side in &sides {
             let (mesh_rid, inst_rid) = self.spawn_indexed_surface(
                 scenario,
                 transform,
@@ -608,11 +659,12 @@ impl DclFloatingIslandsManager {
             terrain_instance: instance,
             collision_body,
             collision_shape,
+            pending_physics_geometry,
             cliff_meshes,
             cliff_instances,
             overhang_meshes,
             overhang_instances,
-            spawn_locations: built.terrain.spawn_locations,
+            spawn_locations,
             ..ParcelData::default()
         };
 
@@ -810,6 +862,11 @@ impl DclFloatingIslandsManager {
 /// create/destroy cost. Chosen by eye against typical pan speeds.
 const STALE_DEADLINE_MSEC: u64 = 5000;
 
+/// Chebyshev distance (in parcels) within which terrain collision is kept
+/// alive. Only the player collides with the ground; anything past this is
+/// guaranteed to be a parcel the player cannot be standing on this frame.
+const PHYSICS_RANGE: i32 = 1;
+
 /// Spawns the mesh-building worker. The worker builds its own noise configs
 /// (deterministic from the same seeds as the main thread's, so results
 /// match) and receives `(coord, config)` requests to produce terrain +
@@ -956,6 +1013,18 @@ fn build_grass_for_parcel(
     data.grass_multimesh = multimesh;
     data.grass_instance = instance;
     data.grass_visible = true;
+}
+
+fn free_parcel_physics(data: &mut ParcelData) {
+    let mut physics = PhysicsServer3D::singleton();
+    if data.collision_body.is_valid() {
+        physics.free_rid(data.collision_body);
+        data.collision_body = Rid::Invalid;
+    }
+    if data.collision_shape.is_valid() {
+        physics.free_rid(data.collision_shape);
+        data.collision_shape = Rid::Invalid;
+    }
 }
 
 fn destroy_parcel_grass(data: &mut ParcelData) {

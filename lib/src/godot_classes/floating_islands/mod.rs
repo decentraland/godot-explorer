@@ -110,6 +110,16 @@ pub struct SpawnLocation {
     pub falloff: f32,
 }
 
+/// Terrain vertices + indices retained on a parcel so physics can be built
+/// lazily when the player walks within collision range (Chebyshev distance
+/// ≤ 1). Concave polygon shapes cost ~72 KB each; the retained Vec form is
+/// ~37 KB and is shared by every candidate regardless of whether the parcel
+/// is currently within physics range.
+pub struct PendingPhysicsGeometry {
+    pub vertices: Vec<Vector3>,
+    pub indices: Vec<i32>,
+}
+
 /// RIDs and bookkeeping owned by a single materialized parcel. Shared
 /// resources (prop meshes, collision shapes reused across parcels) are NOT
 /// stored here — they belong to the cache and outlive individual parcels.
@@ -118,6 +128,12 @@ pub struct ParcelData {
     pub terrain_instance: Rid,
     pub collision_body: Rid,
     pub collision_shape: Rid,
+
+    /// Source geometry for deferred physics creation. Kept for as long as
+    /// the parcel lives; `collision_body` + `collision_shape` are
+    /// (re)built from this when the parcel enters physics range, and freed
+    /// when it leaves. `None` only if a build error produced no geometry.
+    pub pending_physics_geometry: Option<PendingPhysicsGeometry>,
 
     pub cliff_meshes: Vec<Rid>,
     pub cliff_instances: Vec<Rid>,
@@ -149,6 +165,7 @@ impl Default for ParcelData {
             terrain_instance: Rid::Invalid,
             collision_body: Rid::Invalid,
             collision_shape: Rid::Invalid,
+            pending_physics_geometry: None,
             cliff_meshes: Vec::new(),
             cliff_instances: Vec::new(),
             overhang_meshes: Vec::new(),
