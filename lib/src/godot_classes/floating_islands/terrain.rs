@@ -33,6 +33,7 @@ pub struct TerrainMeshData {
     pub vertices: Vec<Vector3>,
     pub normals: Vec<Vector3>,
     pub uvs: Vec<Vector2>,
+    pub indices: Vec<i32>,
     pub spawn_locations: Vec<SpawnLocation>,
 }
 
@@ -48,24 +49,22 @@ pub fn build_terrain_mesh(
     let world_origin_x = coord.0 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE;
     let world_origin_z = -(coord.1 as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE);
 
-    let cell_count = (GRID_SIZE * GRID_SIZE) as usize;
-    let capacity = cell_count * 6;
+    let grid = GRID_SIZE;
+    let side = (grid + 1) as usize;
+    let grid_vert_count = side * side;
+    let quad_count = (grid * grid) as usize;
+    let grid_index_count = quad_count * 6;
 
-    let mut vertices: Vec<Vector3> = Vec::with_capacity(capacity);
-    let mut normals: Vec<Vector3> = Vec::with_capacity(capacity);
-    let mut uvs: Vec<Vector2> = Vec::with_capacity(capacity);
+    let mut vertices: Vec<Vector3> = Vec::with_capacity(grid_vert_count + 16);
+    let mut normals: Vec<Vector3> = Vec::with_capacity(grid_vert_count + 16);
+    let mut uvs: Vec<Vector2> = Vec::with_capacity(grid_vert_count + 16);
+    let mut indices: Vec<i32> = Vec::with_capacity(grid_index_count + 24);
 
-    let mut spawn_locations = Vec::with_capacity(cell_count * 2);
-    let mut rng = SimpleRng::new((coord.0 as u32, coord.1 as u32));
-
-    for z in 0..GRID_SIZE {
-        for x in 0..GRID_SIZE {
+    for z in 0..=grid {
+        for x in 0..=grid {
             let x_pos = -PARCEL_HALF_SIZE + x as f32 * CELL_SIZE;
             let z_pos = -PARCEL_HALF_SIZE + z as f32 * CELL_SIZE;
-            let x_pos_n = x_pos + CELL_SIZE;
-            let z_pos_n = z_pos + CELL_SIZE;
-
-            let v1 = displaced_vertex(
+            let v = displaced_vertex(
                 x_pos,
                 z_pos,
                 world_origin_x + x_pos,
@@ -76,74 +75,51 @@ pub fn build_terrain_mesh(
                 terrain_noise,
                 cliff_noise,
             );
-            let v2 = displaced_vertex(
-                x_pos_n,
-                z_pos,
-                world_origin_x + x_pos_n,
-                world_origin_z + z_pos,
-                x + 1,
-                z,
-                config,
-                terrain_noise,
-                cliff_noise,
-            );
-            let v3 = displaced_vertex(
-                x_pos_n,
-                z_pos_n,
-                world_origin_x + x_pos_n,
-                world_origin_z + z_pos_n,
-                x + 1,
-                z + 1,
-                config,
-                terrain_noise,
-                cliff_noise,
-            );
-            let v4 = displaced_vertex(
-                x_pos,
-                z_pos_n,
-                world_origin_x + x_pos,
-                world_origin_z + z_pos_n,
-                x,
-                z + 1,
-                config,
-                terrain_noise,
-                cliff_noise,
-            );
+            vertices.push(v);
+            normals.push(Vector3::ZERO);
+            uvs.push(Vector2::new(x as f32 / grid as f32, z as f32 / grid as f32));
+        }
+    }
 
-            let u1 = x as f32 / GRID_SIZE as f32;
-            let v1_uv = z as f32 / GRID_SIZE as f32;
-            let u2 = (x + 1) as f32 / GRID_SIZE as f32;
-            let v2_uv = (z + 1) as f32 / GRID_SIZE as f32;
-            let uv1 = Vector2::new(u1, v1_uv);
-            let uv2 = Vector2::new(u2, v1_uv);
-            let uv3 = Vector2::new(u2, v2_uv);
-            let uv4 = Vector2::new(u1, v2_uv);
+    let idx_of = |x: i32, z: i32| (z as usize * side + x as usize) as i32;
 
-            let normal1 = face_normal(v1, v2, v3);
-            let normal2 = face_normal(v1, v3, v4);
+    let mut spawn_locations = Vec::with_capacity(quad_count * 2);
+    let mut rng = SimpleRng::new((coord.0 as u32, coord.1 as u32));
 
-            push_triangle(
-                &mut vertices,
-                &mut normals,
-                &mut uvs,
-                [v1, v2, v3],
-                [uv1, uv2, uv3],
-                normal1,
-            );
-            push_triangle(
-                &mut vertices,
-                &mut normals,
-                &mut uvs,
-                [v1, v3, v4],
-                [uv1, uv3, uv4],
-                normal2,
-            );
+    for z in 0..grid {
+        for x in 0..grid {
+            let i1 = idx_of(x, z);
+            let i2 = idx_of(x + 1, z);
+            let i3 = idx_of(x + 1, z + 1);
+            let i4 = idx_of(x, z + 1);
+
+            let v1 = vertices[i1 as usize];
+            let v2 = vertices[i2 as usize];
+            let v3 = vertices[i3 as usize];
+            let v4 = vertices[i4 as usize];
+
+            let n1 = face_normal(v1, v2, v3);
+            let n2 = face_normal(v1, v3, v4);
+
+            normals[i1 as usize] += n1;
+            normals[i2 as usize] += n1;
+            normals[i3 as usize] += n1;
+            normals[i1 as usize] += n2;
+            normals[i3 as usize] += n2;
+            normals[i4 as usize] += n2;
+
+            indices.push(i1);
+            indices.push(i2);
+            indices.push(i3);
+            indices.push(i1);
+            indices.push(i3);
+            indices.push(i4);
 
             let point1 = random_point_in_triangle(&mut rng, v1, v2, v3);
             let falloff1 = sample_falloff_at(point1.x, point1.z, config);
             spawn_locations.push(SpawnLocation {
                 position: point1,
-                normal: normal1,
+                normal: n1,
                 falloff: falloff1,
             });
 
@@ -151,39 +127,33 @@ pub fn build_terrain_mesh(
             let falloff2 = sample_falloff_at(point2.x, point2.z, config);
             spawn_locations.push(SpawnLocation {
                 position: point2,
-                normal: normal2,
+                normal: n2,
                 falloff: falloff2,
             });
         }
     }
 
-    append_loaded_edge_strips(&mut vertices, &mut normals, &mut uvs, config);
+    for n in normals.iter_mut() {
+        *n = if n.length_squared() > 0.0 {
+            n.normalized()
+        } else {
+            Vector3::UP
+        };
+    }
+
+    append_loaded_edge_strips(&mut vertices, &mut normals, &mut uvs, &mut indices, config);
 
     TerrainMeshData {
         vertices,
         normals,
         uvs,
+        indices,
         spawn_locations,
     }
 }
 
 fn face_normal(a: Vector3, b: Vector3, c: Vector3) -> Vector3 {
     (c - a).cross(b - a).normalized()
-}
-
-fn push_triangle(
-    vertices: &mut Vec<Vector3>,
-    normals: &mut Vec<Vector3>,
-    uvs: &mut Vec<Vector2>,
-    tri_vertices: [Vector3; 3],
-    tri_uvs: [Vector2; 3],
-    normal: Vector3,
-) {
-    for i in 0..3 {
-        vertices.push(tri_vertices[i]);
-        normals.push(normal);
-        uvs.push(tri_uvs[i]);
-    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -335,6 +305,7 @@ fn append_loaded_edge_strips(
     vertices: &mut Vec<Vector3>,
     normals: &mut Vec<Vector3>,
     uvs: &mut Vec<Vector2>,
+    indices: &mut Vec<i32>,
     config: &CornerConfig,
 ) {
     let base_floor_y = -0.05_f32;
@@ -348,7 +319,7 @@ fn append_loaded_edge_strips(
         let br = Vector3::new(end, base_floor_y, z);
         let tr = Vector3::new(end, terrain_top_y, z);
         let tl = Vector3::new(start, terrain_top_y, z);
-        push_quad(vertices, normals, uvs, bl, br, tr, tl);
+        push_quad(vertices, normals, uvs, indices, bl, br, tr, tl);
     }
     if config.south == ParcelState::Loaded {
         let z = end;
@@ -356,7 +327,7 @@ fn append_loaded_edge_strips(
         let br = Vector3::new(end, base_floor_y, z);
         let tr = Vector3::new(end, terrain_top_y, z);
         let tl = Vector3::new(start, terrain_top_y, z);
-        push_quad(vertices, normals, uvs, tl, tr, br, bl);
+        push_quad(vertices, normals, uvs, indices, tl, tr, br, bl);
     }
     if config.east == ParcelState::Loaded {
         let x = end;
@@ -364,7 +335,9 @@ fn append_loaded_edge_strips(
         let far_b = Vector3::new(x, base_floor_y, end);
         let far_t = Vector3::new(x, terrain_top_y, end);
         let near_t = Vector3::new(x, terrain_top_y, start);
-        push_quad(vertices, normals, uvs, near_b, far_b, far_t, near_t);
+        push_quad(
+            vertices, normals, uvs, indices, near_b, far_b, far_t, near_t,
+        );
     }
     if config.west == ParcelState::Loaded {
         let x = start;
@@ -372,14 +345,18 @@ fn append_loaded_edge_strips(
         let far_b = Vector3::new(x, base_floor_y, end);
         let far_t = Vector3::new(x, terrain_top_y, end);
         let near_t = Vector3::new(x, terrain_top_y, start);
-        push_quad(vertices, normals, uvs, near_t, far_t, far_b, near_b);
+        push_quad(
+            vertices, normals, uvs, indices, near_t, far_t, far_b, near_b,
+        );
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_quad(
     vertices: &mut Vec<Vector3>,
     normals: &mut Vec<Vector3>,
     uvs: &mut Vec<Vector2>,
+    indices: &mut Vec<i32>,
     v1: Vector3,
     v2: Vector3,
     v3: Vector3,
@@ -391,21 +368,20 @@ fn push_quad(
             (v.z + PARCEL_HALF_SIZE) / PARCEL_SIZE,
         )
     };
-    let n1 = face_normal(v1, v2, v3);
-    let n2 = face_normal(v1, v3, v4);
 
-    for (vert, n, u) in [
-        (v1, n1, uv(v1)),
-        (v2, n1, uv(v2)),
-        (v3, n1, uv(v3)),
-        (v1, n2, uv(v1)),
-        (v3, n2, uv(v3)),
-        (v4, n2, uv(v4)),
-    ] {
+    // Flat normals on the vertical edge strips: the two triangles share a
+    // plane, so averaging gives the same vector — store the face normal
+    // directly on each unique vertex.
+    let n = face_normal(v1, v2, v3);
+    let base = vertices.len() as i32;
+
+    for vert in [v1, v2, v3, v4] {
         vertices.push(vert);
         normals.push(n);
-        uvs.push(u);
+        uvs.push(uv(vert));
     }
+
+    indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
 }
 
 fn random_point_in_triangle(rng: &mut SimpleRng, v1: Vector3, v2: Vector3, v3: Vector3) -> Vector3 {

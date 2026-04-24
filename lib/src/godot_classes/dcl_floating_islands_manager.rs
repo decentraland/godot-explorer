@@ -538,6 +538,7 @@ impl DclFloatingIslandsManager {
         let terrain_vertices = packed_vector3_from_slice(&built.terrain.vertices);
         let terrain_normals = packed_vector3_from_slice(&built.terrain.normals);
         let terrain_uvs = packed_vector2_from_slice(&built.terrain.uvs);
+        let terrain_indices = packed_int32_from_slice(&built.terrain.indices);
 
         let mut arrays = VarArray::new();
         arrays.resize(ArrayType::MAX.ord() as usize, &Variant::nil());
@@ -550,6 +551,10 @@ impl DclFloatingIslandsManager {
             &terrain_normals.to_variant(),
         );
         arrays.set(ArrayType::TEX_UV.ord() as usize, &terrain_uvs.to_variant());
+        arrays.set(
+            ArrayType::INDEX.ord() as usize,
+            &terrain_indices.to_variant(),
+        );
 
         let mesh_rid = rs.mesh_create();
         rs.mesh_add_surface_from_arrays(mesh_rid, RsPrimitiveType::TRIANGLES, &arrays);
@@ -561,8 +566,9 @@ impl DclFloatingIslandsManager {
             rs.instance_geometry_set_material_override(instance, material.get_rid());
         }
 
+        let collision_faces = expand_indexed_faces(&built.terrain.vertices, &built.terrain.indices);
         let (collision_body, collision_shape) =
-            Self::build_terrain_collision(&terrain_vertices, space, transform);
+            Self::build_terrain_collision(&collision_faces, space, transform);
 
         let mut cliff_meshes: Vec<Rid> = Vec::new();
         let mut cliff_instances: Vec<Rid> = Vec::new();
@@ -983,6 +989,20 @@ fn write_transform_3d_row_major(slot: &mut [f32], t: &Transform3D) {
     slot[9] = r2.y;
     slot[10] = r2.z;
     slot[11] = t.origin.z;
+}
+
+/// Expand an indexed triangle list back to a flat face list suitable for
+/// `concave_polygon_shape_create`. The physics shape doesn't support indexed
+/// data, so we re-expand at submit time — it's still a net RAM win because
+/// the expanded face list is ephemeral (dropped after the shape is built).
+fn expand_indexed_faces(vertices: &[Vector3], indices: &[i32]) -> PackedVector3Array {
+    let mut faces = PackedVector3Array::new();
+    faces.resize(indices.len());
+    let slice = faces.as_mut_slice();
+    for (i, idx) in indices.iter().enumerate() {
+        slice[i] = vertices[*idx as usize];
+    }
+    faces
 }
 
 fn packed_vector3_from_slice(src: &[Vector3]) -> PackedVector3Array {

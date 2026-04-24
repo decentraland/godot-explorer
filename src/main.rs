@@ -659,14 +659,14 @@ fn main() -> Result<(), anyhow::Error> {
                     if result.is_ok() {
                         // 4. Install and run on device
                         let device_extras: Vec<String> = sm
-                        .values_of("extras")
-                        .map(|v| v.map(|it| it.into()).collect())
-                        .unwrap_or_default();
-                    run::deploy_and_run_on_device(
-                        platform,
-                        sm.is_present("release"),
-                        device_extras,
-                    )?;
+                            .values_of("extras")
+                            .map(|v| v.map(|it| it.into()).collect())
+                            .unwrap_or_default();
+                        run::deploy_and_run_on_device(
+                            platform,
+                            sm.is_present("release"),
+                            device_extras,
+                        )?;
                     }
 
                     return result;
