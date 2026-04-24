@@ -4,6 +4,7 @@ pub mod props_pool;
 pub mod terrain;
 
 use std::f32::consts::TAU;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use godot::builtin::{Basis, PackedByteArray, Rid, Transform3D, Vector3};
 use godot::global::godot_warn;
@@ -32,6 +33,8 @@ pub const GRASS_BLADES_MATERIAL_PATH: &str = "res://assets/empty-scenes/grass_bl
 pub const GRASS_BASE_SCALE: f32 = 1.5;
 pub const GRASS_CULLING_RANGE: i32 = 1;
 
+pub const OBSTACLE_LAYER: u32 = 1 << 1;
+
 /// Values MUST stay 0/1/2 to match `CornerConfiguration.ParcelState` in GDScript.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
@@ -53,7 +56,7 @@ impl ParcelState {
 }
 
 /// Packed layout when received from GDScript: [N, S, E, W, NW, NE, SW, SE].
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CornerConfig {
     pub north: ParcelState,
     pub south: ParcelState,
@@ -81,13 +84,6 @@ impl Default for CornerConfig {
 }
 
 impl CornerConfig {
-    pub fn has_any_out_of_bounds_neighbor(&self) -> bool {
-        self.north == ParcelState::Nothing
-            || self.south == ParcelState::Nothing
-            || self.east == ParcelState::Nothing
-            || self.west == ParcelState::Nothing
-    }
-
     pub fn from_packed(buffer: &PackedByteArray, offset: usize) -> Option<Self> {
         Some(Self {
             north: ParcelState::from_u8(buffer.get(offset)?)?,
@@ -116,6 +112,14 @@ pub struct PendingPhysicsGeometry {
     pub indices: Vec<i32>,
 }
 
+/// Captures everything needed to (re)build a single prop's collision body
+/// without holding a live `Gd<Shape3D>` (the shape RID is borrowed from the
+/// shared `PropCache`).
+pub struct PropPhysicsBlueprint {
+    pub world_transform: Transform3D,
+    pub shapes: Vec<(Rid, Transform3D)>,
+}
+
 pub struct ParcelData {
     pub terrain_mesh: Rid,
     pub terrain_instance: Rid,
@@ -133,6 +137,7 @@ pub struct ParcelData {
 
     pub prop_slots: Vec<props_pool::PropSlotId>,
     pub prop_bodies: Vec<Rid>,
+    pub prop_physics_blueprints: Vec<PropPhysicsBlueprint>,
 
     pub config: CornerConfig,
 
@@ -155,6 +160,7 @@ impl Default for ParcelData {
             grass_visible: false,
             prop_slots: Vec::new(),
             prop_bodies: Vec::new(),
+            prop_physics_blueprints: Vec::new(),
             config: CornerConfig::default(),
         }
     }
@@ -220,9 +226,16 @@ impl SimpleRng {
     }
 }
 
+/// Latches on the first invalid byte so a fully-malformed buffer doesn't
+/// flood the console with thousands of duplicate warnings.
+static INVALID_CORNER_CONFIG_WARNED: AtomicBool = AtomicBool::new(false);
+
 pub fn warn_invalid_corner_config(index: usize) {
+    if INVALID_CORNER_CONFIG_WARNED.swap(true, Ordering::Relaxed) {
+        return;
+    }
     godot_warn!(
         "[DclFloatingIslandsManager] invalid ParcelState byte in corner_configs near parcel \
-         index {index}, skipping"
+         index {index}, skipping (further warnings suppressed)"
     );
 }

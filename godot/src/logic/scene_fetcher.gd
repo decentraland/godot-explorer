@@ -31,7 +31,6 @@ var current_scene_entity_id: String = ""
 
 var islands_manager: DclFloatingIslandsManager = null
 var loaded_scenes: Dictionary = {}
-var current_edge_parcels: Array[Vector2i] = []
 var wall_manager: FloatingIslandWalls = null
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
@@ -77,6 +76,11 @@ var _coordinator_configured: bool = false
 # querying Rust.
 var _candidate_set: Dictionary = {}
 var _last_candidate_parcels: Array[Vector2i] = []
+
+# Coalesces multiple `_regenerate_floating_islands.call_deferred()` requests
+# into a single regen pass — without this, spawning N scenes in one frame
+# triggers N rebuild cycles back-to-back.
+var _regen_scheduled: bool = false
 
 # If set, the manager's next `generation_complete` should teleport the player
 # onto this parcel (empty-parcel spawn flow). Cleared after use.
@@ -256,8 +260,7 @@ func _process(_dt):
 
 
 func is_scene_loaded(x: int, z: int) -> bool:
-	var parcel_str = "%d,%d" % [x, z]
-	return get_parcel_scene_id(x, z) != -1 or _candidate_set.has(parcel_str)
+	return get_parcel_scene_id(x, z) != -1 or _candidate_set.has(Vector2i(x, z))
 
 
 func get_parcel_scene_id(x: int, z: int) -> int:
@@ -572,7 +575,17 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 		loaded_scenes.erase(scene_id)
 
 
+## Coalesced entry point for callers that may fire several regen requests in
+## the same frame (e.g. spawning multiple scenes via `call_deferred`).
+func _request_regenerate_floating_islands() -> void:
+	if _regen_scheduled:
+		return
+	_regen_scheduled = true
+	_regenerate_floating_islands.call_deferred()
+
+
 func _regenerate_floating_islands() -> void:
+	_regen_scheduled = false
 	# Guard against overlapping generation
 	if islands_manager == null:
 		return
@@ -665,7 +678,6 @@ func _regenerate_floating_islands() -> void:
 
 	var total := candidates.size()
 
-	current_edge_parcels.clear()
 	if wall_manager:
 		wall_manager.clear_walls()
 		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
@@ -673,7 +685,7 @@ func _regenerate_floating_islands() -> void:
 	_candidate_set.clear()
 	_last_candidate_parcels = candidates.duplicate()
 	for coord in candidates:
-		_candidate_set["%d,%d" % [coord.x, coord.y]] = true
+		_candidate_set[coord] = true
 
 	_pending_empty_parcel_spawn = empty_parcel_center if is_empty_parcel_mode else INVALID_PARCEL
 
@@ -711,7 +723,6 @@ func _clear_floating_islands_state() -> void:
 	_candidate_set.clear()
 	_last_candidate_parcels.clear()
 	_pending_empty_parcel_spawn = INVALID_PARCEL
-	current_edge_parcels.clear()
 	if wall_manager:
 		wall_manager.clear_walls()
 
@@ -1073,7 +1084,7 @@ func _on_try_spawn_scene(
 	# Regenerate floating islands after scene spawns (deferred to ensure scene is fully initialized)
 	# Skip in dynamic loading mode - we use simple base floors instead
 	if is_using_floating_islands() and not _use_dynamic_loading:
-		_regenerate_floating_islands.call_deferred()
+		_request_regenerate_floating_islands()
 
 	return true
 
@@ -1112,10 +1123,6 @@ func _on_preview_scene_update(scene_id: String) -> void:
 
 func set_debugging_js_scene_id(id: String) -> void:
 	_debugging_js_scene_id = id
-
-
-func get_edge_parcels() -> Array[Vector2i]:
-	return current_edge_parcels
 
 
 func _calculate_parcel_adjacency(

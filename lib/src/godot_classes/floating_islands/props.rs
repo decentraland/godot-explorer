@@ -5,10 +5,10 @@ use godot::obj::Gd;
 use godot::prelude::*;
 
 use super::props_pool::{PropPoolManager, PropSlotId};
-use super::{CornerConfig, ParcelState, SimpleRng, SpawnLocation};
-use super::{PARCEL_FULL_HEIGHT, PARCEL_HALF_SIZE, PARCEL_HEIGHT_BOUND, PARCEL_SIZE};
-
-const OBSTACLE_LAYER: u32 = 1 << 1;
+use super::{CornerConfig, ParcelState, PropPhysicsBlueprint, SimpleRng, SpawnLocation};
+use super::{
+    OBSTACLE_LAYER, PARCEL_FULL_HEIGHT, PARCEL_HALF_SIZE, PARCEL_HEIGHT_BOUND, PARCEL_SIZE,
+};
 
 const ROCK_MIN_FALLOFF: f32 = 0.5;
 const ROCK_MIN: i32 = 0;
@@ -180,7 +180,30 @@ pub struct SpawnContext<'a> {
     pub include_physics: bool,
     pub prop_slots: &'a mut Vec<PropSlotId>,
     pub prop_bodies: &'a mut Vec<Rid>,
+    pub prop_blueprints: &'a mut Vec<PropPhysicsBlueprint>,
     pub pool: &'a mut PropPoolManager,
+}
+
+/// Builds a `StaticBody3D` with the same shapes/transforms a blueprint
+/// describes. Returned RID must be tracked for later `free_rid`.
+pub fn build_prop_body_from_blueprint(blueprint: &PropPhysicsBlueprint, space: Rid) -> Rid {
+    let mut physics = PhysicsServer3D::singleton();
+    let body = physics.body_create();
+    physics.body_set_mode(body, BodyMode::STATIC);
+    physics.body_set_space(body, space);
+    for (shape_rid, transform) in &blueprint.shapes {
+        physics
+            .body_add_shape_ex(body, *shape_rid)
+            .transform(*transform)
+            .done();
+    }
+    physics.body_set_state(
+        body,
+        BodyState::TRANSFORM,
+        &blueprint.world_transform.to_variant(),
+    );
+    physics.body_set_collision_layer(body, OBSTACLE_LAYER);
+    body
 }
 
 pub fn spawn_rocks(
@@ -346,22 +369,26 @@ fn instantiate_prop(prop: &CachedProp, local_transform: Transform3D, ctx: &mut S
         }
     }
 
-    if !ctx.include_physics || prop.collisions.is_empty() {
+    if prop.collisions.is_empty() {
         return;
     }
-    let mut physics = PhysicsServer3D::singleton();
-    let body = physics.body_create();
-    physics.body_set_mode(body, BodyMode::STATIC);
-    physics.body_set_space(body, ctx.space);
-    for collision in &prop.collisions {
-        physics
-            .body_add_shape_ex(body, collision.shape.get_rid())
-            .transform(collision.transform)
-            .done();
+
+    // Always retain the blueprint so physics can be promoted later when the
+    // player walks into the parcel; the actual body is only created up-front
+    // when we're already in physics range.
+    let blueprint = PropPhysicsBlueprint {
+        world_transform,
+        shapes: prop
+            .collisions
+            .iter()
+            .map(|c| (c.shape.get_rid(), c.transform))
+            .collect(),
+    };
+    if ctx.include_physics {
+        let body = build_prop_body_from_blueprint(&blueprint, ctx.space);
+        ctx.prop_bodies.push(body);
     }
-    physics.body_set_state(body, BodyState::TRANSFORM, &world_transform.to_variant());
-    physics.body_set_collision_layer(body, OBSTACLE_LAYER);
-    ctx.prop_bodies.push(body);
+    ctx.prop_blueprints.push(blueprint);
 }
 
 fn tree_would_overlap(

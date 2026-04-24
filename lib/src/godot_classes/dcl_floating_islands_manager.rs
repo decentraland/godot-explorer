@@ -22,8 +22,8 @@ use godot::prelude::*;
 use crate::godot_classes::floating_islands::{
     self, cliffs, props, props_pool, terrain, CornerConfig, ParcelData, PendingPhysicsGeometry,
     SimpleRng, CLIFF_MATERIAL_PATH, GRASS_BASE_SCALE, GRASS_BLADES_MATERIAL_PATH,
-    GRASS_BLADE_MESH_PATH, GRASS_CULLING_RANGE, OVERHANG_MATERIAL_PATH, PARCEL_HALF_SIZE,
-    PARCEL_HEIGHT_BOUND, PARCEL_SIZE, TERRAIN_MATERIAL_PATH,
+    GRASS_BLADE_MESH_PATH, GRASS_CULLING_RANGE, OBSTACLE_LAYER, OVERHANG_MATERIAL_PATH,
+    PARCEL_HALF_SIZE, PARCEL_HEIGHT_BOUND, PARCEL_SIZE, TERRAIN_MATERIAL_PATH,
 };
 
 #[derive(GodotClass)]
@@ -51,6 +51,8 @@ pub struct DclFloatingIslandsManager {
     overhang_material: Option<Gd<Material>>,
     grass_blade_mesh: Option<Gd<Mesh>>,
     grass_material: Option<Gd<Material>>,
+    grass_blade_mesh_rid: Rid,
+    grass_material_rid: Rid,
     prop_cache: props::PropCache,
     prop_pool: props_pool::PropPoolManager,
 
@@ -105,6 +107,8 @@ impl INode for DclFloatingIslandsManager {
             overhang_material: None,
             grass_blade_mesh: None,
             grass_material: None,
+            grass_blade_mesh_rid: Rid::Invalid,
+            grass_material_rid: Rid::Invalid,
             prop_cache: props::PropCache::default(),
             prop_pool: props_pool::PropPoolManager::default(),
             worker: None,
@@ -114,6 +118,18 @@ impl INode for DclFloatingIslandsManager {
 
     fn process(&mut self, _delta: f64) {
         self.tick_culling();
+    }
+
+    fn exit_tree(&mut self) {
+        // The node is being removed; release every Godot RID we own so they
+        // don't outlive the manager. `clear_all` also drains the worker queue
+        // and clears the prop pool; dropping the manager later closes the
+        // mpsc channel, which lets the worker thread exit on its next `recv`.
+        self.clear_all();
+        self.scenario = Rid::Invalid;
+        self.physics_space = Rid::Invalid;
+        self.grass_blade_mesh_rid = Rid::Invalid;
+        self.grass_material_rid = Rid::Invalid;
     }
 }
 
@@ -155,6 +171,25 @@ impl DclFloatingIslandsManager {
                 continue;
             };
             self.candidates.insert((coord.x, coord.y), cfg);
+        }
+
+        // Stale active parcels whose corner configuration changed must be
+        // rebuilt — otherwise we'd be left with cliff/overhang geometry that
+        // no longer matches the surrounding scenes (T-junctions, overhangs
+        // pointing at a now-loaded neighbor, etc.). Drop them now and let
+        // `tick_culling` re-enqueue with the fresh config.
+        let stale_actives: Vec<(i32, i32)> = self
+            .active
+            .iter()
+            .filter_map(|(coord, data)| match self.candidates.get(coord) {
+                Some(new_cfg) if new_cfg != &data.config => Some(*coord),
+                _ => None,
+            })
+            .collect();
+        for coord in stale_actives {
+            if let Some(data) = self.active.remove(&coord) {
+                self.destroy_parcel_data(data);
+            }
         }
 
         self.generating = true;
@@ -231,11 +266,17 @@ impl DclFloatingIslandsManager {
         }
         if self.grass_material.is_none() {
             self.grass_material = Self::load_material(GRASS_BLADES_MATERIAL_PATH);
+            self.grass_material_rid = self
+                .grass_material
+                .as_ref()
+                .map(|m| m.get_rid())
+                .unwrap_or(Rid::Invalid);
         }
         if self.grass_blade_mesh.is_none() {
             let mut loader = ResourceLoader::singleton();
             if let Some(resource) = loader.load(GRASS_BLADE_MESH_PATH) {
                 if let Ok(mesh) = resource.try_cast::<Mesh>() {
+                    self.grass_blade_mesh_rid = mesh.get_rid();
                     self.grass_blade_mesh = Some(mesh);
                 }
             }
@@ -367,6 +408,8 @@ impl DclFloatingIslandsManager {
 
         let mut to_promote_physics: Vec<(i32, i32)> = Vec::new();
         let mut to_demote_physics: Vec<(i32, i32)> = Vec::new();
+        let mut to_promote_prop_physics: Vec<(i32, i32)> = Vec::new();
+        let mut to_demote_prop_physics: Vec<(i32, i32)> = Vec::new();
         let mut to_promote_grass: Vec<(i32, i32)> = Vec::new();
         let mut to_demote_grass: Vec<(i32, i32)> = Vec::new();
         for (coord, data) in &self.active {
@@ -376,6 +419,14 @@ impl DclFloatingIslandsManager {
                 to_promote_physics.push(*coord);
             } else if dist > PHYSICS_RANGE && has_physics {
                 to_demote_physics.push(*coord);
+            }
+            let prop_physics_wanted = dist <= PHYSICS_RANGE;
+            let has_prop_physics = !data.prop_bodies.is_empty();
+            if prop_physics_wanted && !has_prop_physics && !data.prop_physics_blueprints.is_empty()
+            {
+                to_promote_prop_physics.push(*coord);
+            } else if !prop_physics_wanted && has_prop_physics {
+                to_demote_prop_physics.push(*coord);
             }
             let should_have = Self::grass_should_be_visible(*coord, player);
             let has_grass = data.grass_instance.is_valid();
@@ -402,10 +453,23 @@ impl DclFloatingIslandsManager {
                 free_parcel_physics(data);
             }
         }
-        let blade_rid = self.grass_blade_mesh.as_ref().map(|m| m.get_rid());
-        let mat_rid = self.grass_material.as_ref().map(|m| m.get_rid());
+        for coord in to_promote_prop_physics {
+            if let Some(data) = self.active.get_mut(&coord) {
+                for blueprint in &data.prop_physics_blueprints {
+                    let body = props::build_prop_body_from_blueprint(blueprint, space);
+                    data.prop_bodies.push(body);
+                }
+            }
+        }
+        for coord in to_demote_prop_physics {
+            if let Some(data) = self.active.get_mut(&coord) {
+                free_parcel_prop_physics(data);
+            }
+        }
+        let blade = self.grass_blade_mesh_rid;
+        let mat = self.grass_material_rid;
         let scenario = self.scenario;
-        if let (Some(blade), Some(mat)) = (blade_rid, mat_rid) {
+        if blade.is_valid() && mat.is_valid() {
             for coord in to_promote_grass {
                 if let Some(data) = self.active.get_mut(&coord) {
                     let Some(geom) = data.pending_physics_geometry.as_ref() else {
@@ -527,7 +591,13 @@ impl DclFloatingIslandsManager {
                 break;
             };
             self.pending.remove(&built.coord);
-            if !self.candidates.contains_key(&built.coord) {
+            // The candidate set may have changed (or vanished) while this
+            // build was in flight. Discard the result if it no longer applies;
+            // `tick_culling` will re-enqueue with the current config.
+            let Some(current_cfg) = self.candidates.get(&built.coord).copied() else {
+                continue;
+            };
+            if current_cfg != built.config {
                 continue;
             }
             if self.active.contains_key(&built.coord) {
@@ -618,9 +688,9 @@ impl DclFloatingIslandsManager {
 
         let player = self.player_parcel;
         if Self::grass_should_be_visible(coord, player) {
-            let blade_rid = self.grass_blade_mesh.as_ref().map(|m| m.get_rid());
-            let mat_rid = self.grass_material.as_ref().map(|m| m.get_rid());
-            if let (Some(blade), Some(mat)) = (blade_rid, mat_rid) {
+            let blade = self.grass_blade_mesh_rid;
+            let mat = self.grass_material_rid;
+            if blade.is_valid() && mat.is_valid() {
                 build_grass_for_parcel(
                     &mut data,
                     coord,
@@ -671,6 +741,7 @@ impl DclFloatingIslandsManager {
             include_physics,
             prop_slots: &mut data.prop_slots,
             prop_bodies: &mut data.prop_bodies,
+            prop_blueprints: &mut data.prop_physics_blueprints,
             pool: &mut self.prop_pool,
         };
         props::spawn_rocks(&self.prop_cache, spawn_locations, &mut rng, &mut ctx);
@@ -739,8 +810,6 @@ impl DclFloatingIslandsManager {
         space: Rid,
         transform: Transform3D,
     ) -> (Rid, Rid) {
-        const OBSTACLE_LAYER: u32 = 1 << 1;
-
         let mut physics = PhysicsServer3D::singleton();
 
         let shape = physics.concave_polygon_shape_create();
@@ -952,6 +1021,15 @@ fn free_parcel_physics(data: &mut ParcelData) {
     if data.collision_shape.is_valid() {
         physics.free_rid(data.collision_shape);
         data.collision_shape = Rid::Invalid;
+    }
+}
+
+fn free_parcel_prop_physics(data: &mut ParcelData) {
+    let mut physics = PhysicsServer3D::singleton();
+    for body in data.prop_bodies.drain(..) {
+        if body.is_valid() {
+            physics.free_rid(body);
+        }
     }
 }
 

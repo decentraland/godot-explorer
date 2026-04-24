@@ -149,6 +149,10 @@ pub fn build_cliff_mesh(
         }
     }
 
+    // The base (h, v) loop emits CCW triangles when the cliff face is viewed
+    // from -z (north) or +x (east); for the opposite cardinal sides the
+    // outward direction is flipped, so we reverse the index winding to keep
+    // backface culling consistent.
     let needs_reversed = side.outward_normal.z > 0.5 || side.outward_normal.x < -0.5;
 
     let mut indices_raw: Vec<i32> =
@@ -168,13 +172,13 @@ pub fn build_cliff_mesh(
         }
     }
 
-    let normals_raw = averaged_normals(&positions, &indices_raw);
+    let normals = averaged_normals(&positions, &indices_raw);
 
     CliffMeshData {
-        vertices: positions.into_iter().collect(),
-        normals: normals_raw.into_iter().collect(),
-        uvs: uvs_raw.into_iter().collect(),
-        indices: indices_raw.into_iter().collect(),
+        vertices: positions,
+        normals,
+        uvs: uvs_raw,
+        indices: indices_raw,
     }
 }
 
@@ -303,14 +307,14 @@ pub fn build_overhang_mesh(
         indices_raw.extend_from_slice(&[idx, idx + 3, idx + 1]);
     }
 
-    let normals_raw = averaged_normals(&positions, &indices_raw);
+    let normals = averaged_normals(&positions, &indices_raw);
 
     OverhangMeshData {
-        vertices: positions.into_iter().collect(),
-        normals: normals_raw.into_iter().collect(),
-        uvs: uvs_raw.into_iter().collect(),
-        colors: colors_raw.into_iter().collect(),
-        indices: indices_raw.into_iter().collect(),
+        vertices: positions,
+        normals,
+        uvs: uvs_raw,
+        colors: colors_raw,
+        indices: indices_raw,
     }
 }
 
