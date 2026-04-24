@@ -1,5 +1,6 @@
 pub mod cliffs;
 pub mod props;
+pub mod props_pool;
 pub mod terrain;
 
 use std::f32::consts::TAU;
@@ -130,8 +131,9 @@ pub struct ParcelData {
     pub grass_instance: Rid,
     pub grass_visible: bool,
 
-    pub prop_instances: Vec<Rid>,
+    pub prop_slots: Vec<props_pool::PropSlotId>,
     pub prop_bodies: Vec<Rid>,
+    pub props_spawned: bool,
 
     pub config: CornerConfig,
 
@@ -152,8 +154,9 @@ impl Default for ParcelData {
             grass_multimesh: Rid::Invalid,
             grass_instance: Rid::Invalid,
             grass_visible: false,
-            prop_instances: Vec::new(),
+            prop_slots: Vec::new(),
             prop_bodies: Vec::new(),
+            props_spawned: false,
             config: CornerConfig::default(),
         }
     }

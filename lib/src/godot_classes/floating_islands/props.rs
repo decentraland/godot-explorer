@@ -1,11 +1,10 @@
 use godot::builtin::{Aabb, Basis, Rid, Transform3D, Vector3};
 use godot::classes::physics_server_3d::{BodyMode, BodyState};
-use godot::classes::{
-    CollisionShape3D, MeshInstance3D, Node, PhysicsServer3D, RenderingServer, SceneTree, Shape3D,
-};
+use godot::classes::{CollisionShape3D, MeshInstance3D, Node, PhysicsServer3D, SceneTree, Shape3D};
 use godot::obj::Gd;
 use godot::prelude::*;
 
+use super::props_pool::{PropPoolManager, PropSlotId};
 use super::{CornerConfig, ParcelState, SimpleRng, SpawnLocation};
 use super::{PARCEL_FULL_HEIGHT, PARCEL_HALF_SIZE, PARCEL_HEIGHT_BOUND, PARCEL_SIZE};
 
@@ -178,8 +177,10 @@ pub struct SpawnContext<'a> {
     pub space: Rid,
     pub parcel_world: Transform3D,
     pub parcel_world_origin: Vector3,
-    pub prop_instances: &'a mut Vec<Rid>,
+    pub include_physics: bool,
+    pub prop_slots: &'a mut Vec<PropSlotId>,
     pub prop_bodies: &'a mut Vec<Rid>,
+    pub pool: &'a mut PropPoolManager,
 }
 
 pub fn spawn_rocks(
@@ -335,14 +336,17 @@ pub fn spawn_cliff_rocks(
 fn instantiate_prop(prop: &CachedProp, local_transform: Transform3D, ctx: &mut SpawnContext) {
     let world_transform = ctx.parcel_world * local_transform;
 
-    let mut rs = RenderingServer::singleton();
     for visual in &prop.visuals {
-        let inst = rs.instance_create2(visual.mesh.get_rid(), ctx.scenario);
-        rs.instance_set_transform(inst, world_transform * visual.transform);
-        ctx.prop_instances.push(inst);
+        if let Some(slot) = ctx.pool.allocate_slot(
+            &visual.mesh,
+            ctx.scenario,
+            world_transform * visual.transform,
+        ) {
+            ctx.prop_slots.push(slot);
+        }
     }
 
-    if prop.collisions.is_empty() {
+    if !ctx.include_physics || prop.collisions.is_empty() {
         return;
     }
     let mut physics = PhysicsServer3D::singleton();
