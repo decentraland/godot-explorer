@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://djuo7hndjhpas"]
+[gd_scene format=3 uid="uid://djuo7hndjhpas"]
 
 [ext_resource type="Script" uid="uid://bwjejb33e52wo" path="res://src/ui/color_picker/color_picker_panel.gd" id="1_vgcr1"]
 [ext_resource type="PackedScene" uid="uid://c0wiiuanid2fw" path="res://src/ui/components/custom_slider/custom_background_slider.tscn" id="2_h35qg"]
@@ -19,10 +19,10 @@ shadow_offset = Vector2(2, 2)
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n4u5d"]
 bg_color = Color(1, 1, 1, 1)
 
-[node name="Control" type="CanvasLayer"]
+[node name="Control" type="CanvasLayer" unique_id=1654566398]
 script = ExtResource("1_vgcr1")
 
-[node name="Control" type="Control" parent="."]
+[node name="Control" type="Control" parent="." unique_id=558776178]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -30,53 +30,53 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Color_Picker_Panel" type="PanelContainer" parent="Control"]
+[node name="Color_Picker_Panel" type="PanelContainer" parent="Control" unique_id=2118043841]
 layout_mode = 0
 offset_right = 280.0
 offset_bottom = 456.0
 mouse_force_pass_scroll_events = false
 theme_override_styles/panel = SubResource("StyleBoxFlat_xl22q")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control/Color_Picker_Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/Color_Picker_Panel" unique_id=1062594216]
 layout_mode = 2
 
-[node name="Label_Presets" type="Label" parent="Control/Color_Picker_Panel/VBoxContainer"]
+[node name="Label_Presets" type="Label" parent="Control/Color_Picker_Panel/VBoxContainer" unique_id=1228545767]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 13
 text = "PRESETS
 "
 
-[node name="VBoxContainer_Hair" type="VBoxContainer" parent="Control/Color_Picker_Panel/VBoxContainer"]
+[node name="VBoxContainer_Hair" type="VBoxContainer" parent="Control/Color_Picker_Panel/VBoxContainer" unique_id=987638537]
 layout_mode = 2
 
-[node name="GridContainer_Hair" type="GridContainer" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair"]
+[node name="GridContainer_Hair" type="GridContainer" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" unique_id=120828918]
 custom_minimum_size = Vector2(0, 65)
 layout_mode = 2
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 6
 
-[node name="ColorSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+[node name="ColorSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" unique_id=1489649198 instance=ExtResource("2_h35qg")]
 layout_mode = 2
 slider_type = 0
 value = 50
 
-[node name="SaturationSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+[node name="SaturationSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" unique_id=188502666 instance=ExtResource("2_h35qg")]
 layout_mode = 2
 value = 50
 
-[node name="BrightnessSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+[node name="BrightnessSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" unique_id=632054510 instance=ExtResource("2_h35qg")]
 layout_mode = 2
 slider_type = 1
 value = 50
 
-[node name="Panel_Preview" type="Panel" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair"]
+[node name="Panel_Preview" type="Panel" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" unique_id=868963687]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_n4u5d")
 
-[node name="GridContainer_Skin" type="GridContainer" parent="Control/Color_Picker_Panel/VBoxContainer"]
+[node name="GridContainer_Skin" type="GridContainer" parent="Control/Color_Picker_Panel/VBoxContainer" unique_id=439112667]
 custom_minimum_size = Vector2(0, 65)
 layout_mode = 2
 theme_override_constants/h_separation = 10

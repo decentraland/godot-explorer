@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cf4f5teas815x"]
+[gd_scene format=3 uid="uid://cf4f5teas815x"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_mfuy6"]
 [ext_resource type="Script" uid="uid://msvarpv6qbfo" path="res://src/ui/components/color_carrousel/color_carrousel.gd" id="1_wr7xx"]
@@ -14,7 +14,7 @@ draw_center = false
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8hv1p"]
 
-[node name="VBoxContainer2" type="VBoxContainer"]
+[node name="VBoxContainer2" type="VBoxContainer" unique_id=1822883885]
 custom_minimum_size = Vector2(0, 100)
 offset_left = -5.0
 offset_right = 720.0
@@ -23,7 +23,7 @@ theme_override_constants/separation = 0
 script = ExtResource("1_wr7xx")
 metadata/_edit_horizontal_guides_ = [168.0, 224.0]
 
-[node name="ColorSwatchTitle" type="Button" parent="."]
+[node name="ColorSwatchTitle" type="Button" parent="." unique_id=1118852477]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 56
@@ -38,13 +38,13 @@ icon = ExtResource("3_8hv1p")
 flat = true
 alignment = 0
 
-[node name="TitleSeparator" type="HSeparator" parent="."]
+[node name="TitleSeparator" type="HSeparator" parent="." unique_id=884754486]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 36
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6c3l5")
 
-[node name="MarginContainer_Aligment" type="MarginContainer" parent="."]
+[node name="MarginContainer_Aligment" type="MarginContainer" parent="." unique_id=917142941]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3

@@ -112,15 +112,15 @@ func _route_teleport() -> void:
 		and Realm.is_dcl_ens(realm)
 		and not Global.deep_link_obj.is_location_defined()
 	):
-		Global.async_join_world(realm, "", true)
+		Global.async_join_world(realm)
 		return
 
 	if Global.deep_link_obj.is_location_defined():
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.async_teleport_to(Global.deep_link_obj.location, realm, "", true)
+		Global.async_teleport_to(Global.deep_link_obj.location, realm)
 	elif not realm.is_empty():
-		Global.async_teleport_to(Vector2i.ZERO, realm, "", true)
+		Global.async_teleport_to(Vector2i.ZERO, realm)
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:

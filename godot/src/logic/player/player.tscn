@@ -1,10 +1,10 @@
-[gd_scene load_steps=8 format=3 uid="uid://blv7r5folt1d5"]
+[gd_scene format=3 uid="uid://blv7r5folt1d5"]
 
 [ext_resource type="Script" uid="uid://bwfhs05dq8dhm" path="res://src/logic/player/player.gd" id="1_5bfm2"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="2_n22nx"]
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
 [ext_resource type="PackedScene" uid="uid://qyi7gcf7tphy" path="res://src/logic/player/outline_system.tscn" id="3_sxiuh"]
-[ext_resource type="PackedScene" uid="uid://c3stuckdetector" path="res://src/logic/player/stuck_detector.tscn" id="4_stuck"]
+[ext_resource type="PackedScene" uid="uid://biigqf0xvnrcj" path="res://src/logic/player/stuck_detector.tscn" id="4_stuck"]
 
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
 length = 1.0779
@@ -14,49 +14,49 @@ margin = 0.05
 radius = 0.25
 height = 1.5
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="CharacterBody3D" unique_id=1845110250]
 collision_layer = 4
 collision_mask = 2
 script = ExtResource("1_5bfm2")
 
-[node name="CollisionShape3D_ContactPoint" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D_ContactPoint" type="CollisionShape3D" parent="." unique_id=1589303221]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 1.1, 0)
 shape = SubResource("SeparationRayShape3D_3217e")
 
-[node name="CollisionShape3D_Body" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D_Body" type="CollisionShape3D" parent="." unique_id=546537198]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("CapsuleShape3D_pxti1")
 
-[node name="camera_mode_area_detector" parent="." instance=ExtResource("2_rco65")]
+[node name="camera_mode_area_detector" parent="." unique_id=115193772 instance=ExtResource("2_rco65")]
 collision_layer = 2147483908
 collision_mask = 2147483908
 
-[node name="StuckDetector" parent="." instance=ExtResource("4_stuck")]
+[node name="StuckDetector" parent="." unique_id=770046332 instance=ExtResource("4_stuck")]
 
-[node name="Mount" type="SpringArm3D" parent="."]
+[node name="Mount" type="SpringArm3D" parent="." unique_id=185943615]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
 
-[node name="Camera3D" type="DclCamera3D" parent="Mount"]
+[node name="Camera3D" type="DclCamera3D" parent="Mount" unique_id=172558912]
 smoothing_speed = 2.0
 target_fov = 60.0
 cull_mask = 524287
 current = true
 far = 100.0
 
-[node name="AvatarRaycast" type="RayCast3D" parent="Mount/Camera3D"]
+[node name="AvatarRaycast" type="RayCast3D" parent="Mount/Camera3D" unique_id=313603251]
 target_position = Vector3(0, 0, -10)
 collision_mask = 536870912
 collide_with_areas = true
 collide_with_bodies = false
 
-[node name="OutlineSystem" parent="Mount/Camera3D" instance=ExtResource("3_sxiuh")]
+[node name="OutlineSystem" parent="Mount/Camera3D" unique_id=110737000 instance=ExtResource("3_sxiuh")]
 
-[node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
+[node name="Avatar" parent="." unique_id=1332077066 instance=ExtResource("2_n22nx")]
 top_level = true
 skip_process = true
 
-[node name="AudioStreamPlayer_Camera" type="AudioStreamPlayer" parent="."]
+[node name="AudioStreamPlayer_Camera" type="AudioStreamPlayer" parent="." unique_id=901349121]
 bus = &"UI"
 
 [connection signal="block_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_block_camera_mode"]
