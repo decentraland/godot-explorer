@@ -50,7 +50,7 @@ const LOW_SPEC_IPHONE_PRIMARY = "OK"
 
 var current_modal: Modal = null
 var modal_scene: PackedScene = null
-var _ban_pre_check_active: bool = false
+var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
 var _canvas_layer: CanvasLayer = null
@@ -61,7 +61,6 @@ func _ready() -> void:
 	if not modal_scene:
 		push_error("ModalManager: Could not load modal scene at: " + MODAL_SCENE_PATH)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
-	Global.loading_started.connect(_on_loading_started_clear_ban)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
 
@@ -227,6 +226,8 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 
 ## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
 func async_show_ban_pre_check_modal() -> void:
+	_force_hide_loading_screen()
+
 	if not current_modal:
 		if not await _async_create_modal():
 			return
@@ -457,11 +458,13 @@ func _on_ban_pre_check_go_to_discover() -> void:
 		Global.open_discover.emit()
 		# Activate the loop AFTER opening discover, so any on_menu_close signals
 		# fired during the transition don't trigger a premature reshow.
-		_ban_pre_check_active = true
+		ban_pre_check_active = true
 	elif not Global.is_orientation_portrait():
 		# Case 2: In-game command (/world, /goto) — open discover
+		_force_hide_loading_screen()
 		Global.set_orientation_portrait()
 		Global.open_discover.emit()
+		ban_pre_check_active = true
 	# Case 3: Already in discover — modal closed, discover is already behind
 
 
@@ -493,22 +496,10 @@ func _force_hide_loading_screen() -> void:
 
 
 func _on_menu_close_ban_recheck() -> void:
-	if not _ban_pre_check_active:
+	if not ban_pre_check_active:
 		return
-	# If a realm is already connected, the user has a scene to return to — clear the flag
-	if not Global.realm.get_realm_string().is_empty():
-		_ban_pre_check_active = false
-		return
-	# No realm to go back to — re-show modal and re-open discover (deferred so close finishes first)
-	_deferred_reshow_ban_loop.call_deferred()
-
-
-func _deferred_reshow_ban_loop() -> void:
-	async_show_ban_pre_check_modal()
-
-
-func _on_loading_started_clear_ban() -> void:
-	_ban_pre_check_active = false
+	# Re-show the ban modal and re-open discover
+	async_show_ban_pre_check_modal.call_deferred()
 
 
 ## Clear suppress flag after loading finishes.
