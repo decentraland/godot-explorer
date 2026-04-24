@@ -1,4 +1,4 @@
-[gd_scene load_steps=80 format=3 uid="uid://dvu5i0n51gph3"]
+[gd_scene format=3 uid="uid://dvu5i0n51gph3"]
 
 [ext_resource type="Script" uid="uid://du2j4yjo5etlb" path="res://src/decentraland_components/avatar/avatar.gd" id="1_mwwx3"]
 [ext_resource type="PackedScene" uid="uid://d1i02k5nxmje6" path="res://src/decentraland_components/nickname_ui.tscn" id="2_kjemr"]
@@ -496,12 +496,12 @@ height = 1.5
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mwwx3"]
 
-[node name="Avatar" type="DclAvatar"]
+[node name="Avatar" type="DclAvatar" unique_id=1256778777]
 script = ExtResource("1_mwwx3")
 
-[node name="Armature" type="Node3D" parent="."]
+[node name="Armature" type="Node3D" parent="." unique_id=721179065]
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Armature"]
+[node name="Skeleton3D" type="Skeleton3D" parent="Armature" unique_id=2134236145]
 transform = Transform3D(-0.01, -8.74228e-10, 3.82137e-17, 0, -4.37114e-10, -0.01, 8.74228e-10, -0.01, 4.37114e-10, 0, 0, 0)
 bones/0/name = "Avatar_Hips"
 bones/0/parent = -1
@@ -938,12 +938,12 @@ bones/61/position = Vector3(0, 24.2356, -3.6379805e-12)
 bones/61/rotation = Quaternion(0.006306621, 0.07520201, -0.0007853811, 0.9971481)
 bones/61/scale = Vector3(1, 1, 1)
 
-[node name="BoneAttachment3D_Name" type="BoneAttachment3D" parent="Armature/Skeleton3D"]
+[node name="BoneAttachment3D_Name" type="BoneAttachment3D" parent="Armature/Skeleton3D" unique_id=1777578443]
 transform = Transform3D(0.9999999, 2.3820279e-07, 3.149032e-08, -2.8221425e-08, -0.01371074, 0.99990594, 2.3861205e-07, -0.99990594, -0.01371074, -0.031418767, -2.9575758, -171.90161)
 bone_name = "Avatar_Head"
 bone_idx = 61
 
-[node name="NicknameQuad" type="Sprite3D" parent="Armature/Skeleton3D/BoneAttachment3D_Name"]
+[node name="NicknameQuad" type="Sprite3D" parent="Armature/Skeleton3D/BoneAttachment3D_Name" unique_id=586265523]
 unique_name_in_owner = true
 transform = Transform3D(1, 0.00020682, -1.83739e-05, -0.000206452, 0.999844, 0.0176546, 2.20121e-05, -0.0176548, 0.999844, 0, 75, 0)
 visible = false
@@ -958,17 +958,17 @@ script = ExtResource("2_mwwx3")
 fade_end = 15.0
 fade_start = 10.0
 
-[node name="NicknameViewport" type="SubViewport" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad"]
+[node name="NicknameViewport" type="SubViewport" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad" unique_id=620833679]
 unique_name_in_owner = true
 disable_3d = true
 transparent_bg = true
 canvas_item_default_texture_filter = 2
 size = Vector2i(1052, 310)
 
-[node name="NicknameUI" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad/NicknameViewport" instance=ExtResource("2_kjemr")]
+[node name="NicknameUI" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad/NicknameViewport" unique_id=176097891 instance=ExtResource("2_kjemr")]
 unique_name_in_owner = true
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=22491980]
 libraries = {
 &"": ExtResource("3_piipk"),
 &"default_actions": ExtResource("5_qy44m"),
@@ -977,7 +977,7 @@ libraries = {
 }
 autoplay = "Idle"
 
-[node name="AnimationTree" type="AnimationTree" parent="."]
+[node name="AnimationTree" type="AnimationTree" parent="." unique_id=615662943]
 callback_mode_discrete = 1
 tree_root = SubResource("AnimationNodeStateMachine_dvr6n")
 anim_player = NodePath("../AnimationPlayer")
@@ -995,7 +995,7 @@ parameters/conditions/run = false
 parameters/conditions/walk = false
 parameters/Emote_Mix/Add2/add_amount = 1.0
 
-[node name="GPUParticles3D_Move" type="GPUParticles3D" parent="."]
+[node name="GPUParticles3D_Move" type="GPUParticles3D" parent="." unique_id=54791294]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.02931, -0.00253904)
 amount = 2
 lifetime = 0.5
@@ -1003,7 +1003,7 @@ visibility_aabb = AABB(-4, -3.88281, -4, 8, 8, 8)
 process_material = SubResource("ParticleProcessMaterial_al8aw")
 draw_pass_1 = SubResource("SphereMesh_2nc0h")
 
-[node name="GPUParticles3D_Jump" type="GPUParticles3D" parent="."]
+[node name="GPUParticles3D_Jump" type="GPUParticles3D" parent="." unique_id=1632124530]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.02931, -0.00253904)
 emitting = false
 amount = 10
@@ -1014,7 +1014,7 @@ visibility_aabb = AABB(-4, -3.88281, -4, 8, 8, 8)
 process_material = SubResource("ParticleProcessMaterial_al8aw")
 draw_pass_1 = SubResource("SphereMesh_2nc0h")
 
-[node name="GPUParticles3D_Land" type="GPUParticles3D" parent="."]
+[node name="GPUParticles3D_Land" type="GPUParticles3D" parent="." unique_id=1443081643]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.02931, -0.00253904)
 emitting = false
 amount = 10
@@ -1025,18 +1025,18 @@ visibility_aabb = AABB(-4, -3.88281, -4, 8, 8, 8)
 process_material = SubResource("ParticleProcessMaterial_al8aw")
 draw_pass_1 = SubResource("SphereMesh_2nc0h")
 
-[node name="avatar_modifier_area_detector" parent="." node_paths=PackedStringArray("avatar") instance=ExtResource("6_yae5p")]
+[node name="avatar_modifier_area_detector" parent="." unique_id=809930024 node_paths=PackedStringArray("avatar") instance=ExtResource("6_yae5p")]
 avatar = NodePath("..")
 
-[node name="Timer_HideMic" type="Timer" parent="."]
+[node name="Timer_HideMic" type="Timer" parent="." unique_id=1262814384]
 unique_name_in_owner = true
 one_shot = true
 
-[node name="AudioPlayer_Emote" type="AudioStreamPlayer3D" parent="."]
+[node name="AudioPlayer_Emote" type="AudioStreamPlayer3D" parent="." unique_id=43658955]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
 bus = &"AvatarAndEmotes"
 
-[node name="Avatar_SFXs" parent="." instance=ExtResource("7_xt6ge")]
+[node name="Avatar_SFXs" parent="." unique_id=1309443920 instance=ExtResource("7_xt6ge")]
 
 [node name="GliderProp" parent="." instance=ExtResource("9_glprop")]
 unique_name_in_owner = true
@@ -1051,22 +1051,22 @@ max_distance = 50.0
 unit_size = 4.0
 bus = &"AvatarAndEmotes"
 
-[node name="TriggerDetector" type="StaticBody3D" parent="."]
+[node name="TriggerDetector" type="StaticBody3D" parent="." unique_id=863967537]
 unique_name_in_owner = true
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerDetector"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerDetector" unique_id=126944514]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("CapsuleShape3D_trigger")
 disabled = true
 
-[node name="ClickArea" type="Area3D" parent="."]
+[node name="ClickArea" type="Area3D" parent="." unique_id=1677996242]
 unique_name_in_owner = true
 collision_layer = 536870912
 collision_mask = 0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ClickArea"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ClickArea" unique_id=1614823099]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("CapsuleShape3D_mwwx3")
 

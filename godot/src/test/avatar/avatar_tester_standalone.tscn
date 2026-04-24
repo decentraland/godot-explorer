@@ -10,7 +10,7 @@
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_684t6"]
 number_color = Color(0, 0.670588, 0, 1)
 
-[node name="AvatarTesterStandalone" type="Control" unique_id=1415635946]
+[node name="AvatarTesterStandalone" type="Control" unique_id=911374769]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -19,7 +19,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_l1th6")
 
-[node name="SubViewportContainer" parent="." unique_id=570381552 instance=ExtResource("1_1eenv")]
+[node name="SubViewportContainer" parent="." unique_id=1125467801 instance=ExtResource("1_1eenv")]
 layout_mode = 0
 anchors_preset = 0
 anchor_right = 0.0
@@ -35,7 +35,7 @@ custom_environment = ExtResource("3_2n2br")
 [node name="SubViewport" parent="SubViewportContainer" index="0"]
 transparent_bg = false
 
-[node name="TabContainer" type="TabContainer" parent="." unique_id=1433755907]
+[node name="TabContainer" type="TabContainer" parent="." unique_id=725126438]
 layout_mode = 0
 offset_left = 33.0
 offset_top = 24.0
@@ -43,19 +43,19 @@ offset_right = 633.0
 offset_bottom = 688.0
 current_tab = 0
 
-[node name="Avatars" type="Panel" parent="TabContainer" unique_id=549458347]
+[node name="Avatars" type="Panel" parent="TabContainer" unique_id=1222209589]
 custom_minimum_size = Vector2(600, 600)
 layout_mode = 2
 metadata/_tab_index = 0
 
-[node name="OptionButton_AvatarList" type="OptionButton" parent="TabContainer/Avatars" unique_id=2083991348]
+[node name="OptionButton_AvatarList" type="OptionButton" parent="TabContainer/Avatars" unique_id=840751912]
 layout_mode = 0
 offset_left = 14.0
 offset_top = 10.0
 offset_right = 526.0
 offset_bottom = 47.0
 
-[node name="Button_DownloadWearables" type="Button" parent="TabContainer/Avatars" unique_id=384753154]
+[node name="Button_DownloadWearables" type="Button" parent="TabContainer/Avatars" unique_id=1133779513]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 512.0
@@ -63,7 +63,7 @@ offset_right = 581.0
 offset_bottom = 559.0
 text = "Download wearables"
 
-[node name="Button_CopyWearableData" type="Button" parent="TabContainer/Avatars" unique_id=1957324525]
+[node name="Button_CopyWearableData" type="Button" parent="TabContainer/Avatars" unique_id=1715437753]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 568.0
@@ -71,7 +71,7 @@ offset_right = 581.0
 offset_bottom = 615.0
 text = "Copy wearables data"
 
-[node name="Button_Refresh" type="Button" parent="TabContainer/Avatars" unique_id=191992833]
+[node name="Button_Refresh" type="Button" parent="TabContainer/Avatars" unique_id=1294439144]
 layout_mode = 0
 offset_left = 535.0
 offset_top = 9.0
@@ -79,7 +79,7 @@ offset_right = 575.0
 offset_bottom = 48.0
 icon = ExtResource("4_wetld")
 
-[node name="LineEdit_ProfileEntity" type="LineEdit" parent="TabContainer/Avatars" unique_id=1901535536]
+[node name="LineEdit_ProfileEntity" type="LineEdit" parent="TabContainer/Avatars" unique_id=347638837]
 layout_mode = 0
 offset_left = 24.0
 offset_top = 88.0
@@ -87,7 +87,7 @@ offset_right = 575.0
 offset_bottom = 127.0
 placeholder_text = "Profile Adress(0xff...) or Entity ID (bafk...)"
 
-[node name="Button_Fetch" type="Button" parent="TabContainer/Avatars" unique_id=1480589123]
+[node name="Button_Fetch" type="Button" parent="TabContainer/Avatars" unique_id=1849769499]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 136.0
@@ -95,7 +95,7 @@ offset_right = 583.0
 offset_bottom = 174.0
 text = "Render Avatar"
 
-[node name="OutlineCheckBox" type="CheckBox" parent="TabContainer/Avatars" unique_id=936788339]
+[node name="OutlineCheckBox" type="CheckBox" parent="TabContainer/Avatars" unique_id=1114022614]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 16.0
@@ -104,13 +104,13 @@ offset_right = 200.0
 offset_bottom = 225.0
 text = "Enable Outline"
 
-[node name="Emotes" type="Panel" parent="TabContainer" unique_id=330026678]
+[node name="Emotes" type="Panel" parent="TabContainer" unique_id=1548332072]
 visible = false
 custom_minimum_size = Vector2(600, 600)
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="EmoteWheel" parent="TabContainer/Emotes" unique_id=329225951 node_paths=PackedStringArray("avatar_node") instance=ExtResource("3_ubmva")]
+[node name="EmoteWheel" parent="TabContainer/Emotes" unique_id=1010350875 node_paths=PackedStringArray("avatar_node") instance=ExtResource("3_ubmva")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -121,7 +121,7 @@ offset_top = -24.0
 offset_bottom = -24.0
 avatar_node = NodePath("../../../SubViewportContainer/SubViewport/Avatar")
 
-[node name="Button_OpenWheel" type="Button" parent="TabContainer/Emotes" unique_id=13209792]
+[node name="Button_OpenWheel" type="Button" parent="TabContainer/Emotes" unique_id=1868704871]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -134,7 +134,7 @@ grow_horizontal = 2
 text = "Open wheel
 "
 
-[node name="Button_PlayCustom" type="Button" parent="TabContainer/Emotes" unique_id=1754044785]
+[node name="Button_PlayCustom" type="Button" parent="TabContainer/Emotes" unique_id=274338715]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -147,7 +147,7 @@ grow_horizontal = 2
 text = "Play emote
 "
 
-[node name="Button_Clear" type="Button" parent="TabContainer/Emotes" unique_id=1556267786]
+[node name="Button_Clear" type="Button" parent="TabContainer/Emotes" unique_id=1537823013]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -159,7 +159,7 @@ offset_bottom = 630.0
 grow_horizontal = 2
 text = "Clear"
 
-[node name="LineEdit_Custom" type="LineEdit" parent="TabContainer/Emotes" unique_id=251028106]
+[node name="LineEdit_Custom" type="LineEdit" parent="TabContainer/Emotes" unique_id=2077020620]
 layout_mode = 1
 anchors_preset = 14
 anchor_top = 0.5
@@ -170,15 +170,15 @@ offset_bottom = 267.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Expression" type="PanelContainer" parent="TabContainer" unique_id=1777812611]
+[node name="Expression" type="PanelContainer" parent="TabContainer" unique_id=1179804810]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Expression" unique_id=1435227602]
+[node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Expression" unique_id=1444830418]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=1213524555]
+[node name="Label" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=634043734]
 modulate = Color(1, 0, 0.211765, 1)
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
@@ -186,13 +186,13 @@ text = "Notepad"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TextEdit_Notepad" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=668589128]
+[node name="TextEdit_Notepad" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=1668956596]
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 text = "get_node(\"/root/AvatarTesterStandalone/SubViewportContainer/SubViewport/Avatar\").animation_player.get_animation_list()"
 wrap_mode = 1
 
-[node name="Label2" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=1356089182]
+[node name="Label2" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=1968347483]
 modulate = Color(1, 0, 0.211765, 1)
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
@@ -201,7 +201,7 @@ text = "Expression
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TextEdit_Expr" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=1725544538]
+[node name="TextEdit_Expr" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=600799998]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 text = "get_node(\"/root/AvatarTesterStandalone/SubViewportContainer/SubViewport/Avatar\").animation_player.get_animation_list()"
@@ -211,7 +211,7 @@ draw_control_chars = true
 draw_tabs = true
 draw_spaces = true
 
-[node name="Label3" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=2113673350]
+[node name="Label3" type="Label" parent="TabContainer/Expression/VBoxContainer" unique_id=1885000530]
 modulate = Color(1, 0, 0.211765, 1)
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
@@ -219,7 +219,7 @@ text = "Result"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TextEdit_Result" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=1269088280]
+[node name="TextEdit_Result" type="TextEdit" parent="TabContainer/Expression/VBoxContainer" unique_id=1041277484]
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 text = "asdasd"
@@ -382,7 +382,7 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Play"
 
-[node name="Spinner" parent="." unique_id=937463934 instance=ExtResource("6_wsp5b")]
+[node name="Spinner" parent="." unique_id=339749764 instance=ExtResource("6_wsp5b")]
 layout_mode = 0
 offset_left = 875.0
 offset_top = 257.0

@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://biapgh26sgkca"]
+[gd_scene format=3 uid="uid://biapgh26sgkca"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_oyqjs"]
 [ext_resource type="Script" uid="uid://c7ktnujnnsko8" path="res://src/ui/components/profile/profile_link_button.gd" id="2_j0r87"]
@@ -7,7 +7,7 @@
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_3knha"]
 [ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/components/discover/icons/close.svg" id="5_j0r87"]
 
-[node name="PofileLinkButton" type="Button"]
+[node name="PofileLinkButton" type="Button" unique_id=2141351039]
 custom_minimum_size = Vector2(0, 64)
 offset_right = 133.0
 offset_bottom = 42.0
@@ -32,7 +32,7 @@ text = "LINK LABEL"
 icon = ExtResource("2_oyqjs")
 script = ExtResource("2_j0r87")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1755097941]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -43,7 +43,7 @@ mouse_filter = 2
 theme_override_constants/margin_right = 8
 metadata/_edit_lock_ = true
 
-[node name="TextureRect_Remove" type="TextureRect" parent="MarginContainer"]
+[node name="TextureRect_Remove" type="TextureRect" parent="MarginContainer" unique_id=1461453910]
 unique_name_in_owner = true
 modulate = Color(0.627451, 0.67058825, 1, 1)
 custom_minimum_size = Vector2(35, 35)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://drq5jh5xpenw1"]
+[gd_scene format=3 uid="uid://drq5jh5xpenw1"]
 
 [ext_resource type="Script" uid="uid://dkt5n7cdnupm4" path="res://src/ui/components/item_preview/item_preview.gd" id="1_rugyg"]
 [ext_resource type="Texture2D" uid="uid://c0qx68m7rge52" path="res://assets/ui/MythicThumbnail.png" id="2_xicoh"]
@@ -24,7 +24,7 @@ corner_radius_top_right = 7
 corner_radius_bottom_right = 7
 corner_radius_bottom_left = 7
 
-[node name="ItemPreview" type="Control"]
+[node name="ItemPreview" type="Control" unique_id=549008042]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 150.0
@@ -32,7 +32,7 @@ offset_bottom = 150.0
 mouse_filter = 1
 script = ExtResource("1_rugyg")
 
-[node name="PanelContainer_Border" type="PanelContainer" parent="."]
+[node name="PanelContainer_Border" type="PanelContainer" parent="." unique_id=162944433]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -43,14 +43,14 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_6655i")
 
-[node name="PanelContainer" type="PanelContainer" parent="PanelContainer_Border"]
+[node name="PanelContainer" type="PanelContainer" parent="PanelContainer_Border" unique_id=314130740]
 clip_children = 2
 clip_contents = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_j1cet")
 
-[node name="TextureRect_Background" type="TextureRect" parent="PanelContainer_Border/PanelContainer"]
+[node name="TextureRect_Background" type="TextureRect" parent="PanelContainer_Border/PanelContainer" unique_id=1026486299]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_stretch_ratio = 0.0
@@ -58,14 +58,14 @@ mouse_filter = 2
 texture = ExtResource("2_xicoh")
 expand_mode = 1
 
-[node name="TextureRect_Preview" type="TextureRect" parent="PanelContainer_Border/PanelContainer"]
+[node name="TextureRect_Preview" type="TextureRect" parent="PanelContainer_Border/PanelContainer" unique_id=229944351]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 expand_mode = 3
 stretch_mode = 5
 
-[node name="TextureRect_Triangle" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview"]
+[node name="TextureRect_Triangle" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview" unique_id=589732255]
 unique_name_in_owner = true
 self_modulate = Color(0.28485, 0.28485, 0.28485, 1)
 custom_minimum_size = Vector2(60, 60)
@@ -80,7 +80,7 @@ texture = ExtResource("3_j1cet")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="TextureRect_Preview4" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview/TextureRect_Triangle"]
+[node name="TextureRect_Preview4" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview/TextureRect_Triangle" unique_id=8595515]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 1
 offset_top = 1.0
@@ -92,7 +92,7 @@ texture = ExtResource("5_0rbuu")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="TextureRect_Category" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview/TextureRect_Triangle"]
+[node name="TextureRect_Category" type="TextureRect" parent="PanelContainer_Border/PanelContainer/TextureRect_Preview/TextureRect_Triangle" unique_id=145776377]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 1
@@ -111,7 +111,7 @@ texture = ExtResource("6_g7el2")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="TextureProgressBar_Loading" parent="." instance=ExtResource("7_ph8vs")]
+[node name="TextureProgressBar_Loading" parent="." unique_id=1328538268 instance=ExtResource("7_ph8vs")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
