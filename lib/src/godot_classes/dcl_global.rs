@@ -251,6 +251,10 @@ pub struct DclGlobal {
     pub input_modifier_disable_jump: bool,
     #[var]
     pub input_modifier_disable_emote: bool,
+    #[var]
+    pub input_modifier_disable_double_jump: bool,
+    #[var]
+    pub input_modifier_disable_gliding: bool,
 
     // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
     #[var]
@@ -440,6 +444,8 @@ impl INode for DclGlobal {
             input_modifier_disable_run: false,
             input_modifier_disable_jump: false,
             input_modifier_disable_emote: false,
+            input_modifier_disable_double_jump: false,
+            input_modifier_disable_gliding: false,
 
             // SDK skybox time starts as inactive
             sdk_skybox_time_active: false,
@@ -614,6 +620,8 @@ impl DclGlobal {
         self.input_modifier_disable_run = false;
         self.input_modifier_disable_jump = false;
         self.input_modifier_disable_emote = false;
+        self.input_modifier_disable_double_jump = false;
+        self.input_modifier_disable_gliding = false;
     }
 
     /// Reset SDK skybox time to inactive state
@@ -651,6 +659,26 @@ impl DclGlobal {
     #[func]
     pub fn is_emote_disabled(&self) -> bool {
         self.input_modifier_disable_all || self.input_modifier_disable_emote
+    }
+
+    /// Check if double-jump is disabled in the current scene. A blanket
+    /// disable_jump or disable_all also suppresses double-jump, since the
+    /// trigger (jump input) itself is unavailable.
+    #[func]
+    pub fn is_double_jump_disabled(&self) -> bool {
+        self.input_modifier_disable_all
+            || self.input_modifier_disable_jump
+            || self.input_modifier_disable_double_jump
+    }
+
+    /// Check if glide is disabled in the current scene. A blanket disable_jump
+    /// or disable_all also suppresses glide, since opening the glider is a
+    /// jump-press gesture.
+    #[func]
+    pub fn is_glide_disabled(&self) -> bool {
+        self.input_modifier_disable_all
+            || self.input_modifier_disable_jump
+            || self.input_modifier_disable_gliding
     }
 
     /// Check if all movement input is disabled

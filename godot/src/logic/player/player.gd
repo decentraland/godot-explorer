@@ -287,6 +287,8 @@ func _physics_process(dt: float) -> void:
 	var jog_disabled := Global.is_jog_disabled()
 	var run_disabled := Global.is_run_disabled()
 	var jump_disabled := Global.is_jump_disabled()
+	var double_jump_disabled := Global.is_double_jump_disabled()
+	var glide_disabled := Global.is_glide_disabled()
 
 	# If all input is disabled or during hard landing cooldown, clear input direction
 	if all_disabled or _hard_landing_timer > 0:
@@ -355,6 +357,7 @@ func _physics_process(dt: float) -> void:
 			and jump_count <= MAX_AIR_JUMPS
 			and glide_state == GLIDE_CLOSED
 			and not jump_disabled
+			and not double_jump_disabled
 			and _hard_landing_timer <= 0
 			and _time_since_last_jump >= JUMP_COOLDOWN
 		):
@@ -367,7 +370,7 @@ func _physics_process(dt: float) -> void:
 		# let a stepped-off-a-ledge player open glide without first double-jumping.
 		# Air-jump still takes priority (above) because it consumes the buffer first.
 		if _jump_buffer > 0.0 and glide_state == GLIDE_CLOSED:
-			var gate_enabled := not jump_disabled
+			var gate_enabled := not jump_disabled and not glide_disabled
 			var gate_altitude := _ground_distance > GLIDE_MIN_GROUND_DISTANCE
 			var gate_jump_interval := _time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL
 			var gate_cooldown := _time_since_glide_end >= GLIDE_COOLDOWN
@@ -379,10 +382,13 @@ func _physics_process(dt: float) -> void:
 				avatar.fall = false
 
 		# Glide close: re-press (toggle), altitude too low, or input disabled.
+		# glide_disabled covers scene→scene transitions where the destination
+		# forbids gliding: the force-close fires on the next tick after the
+		# InputModifier update lands.
 		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
 			var exit_toggle := _jump_buffer > 0.0
 			var exit_altitude := _ground_distance <= GLIDE_MIN_GROUND_DISTANCE
-			var exit_disabled := jump_disabled
+			var exit_disabled := jump_disabled or glide_disabled
 			if exit_toggle or exit_altitude or exit_disabled:
 				glide_state = GLIDE_CLOSING
 				_glide_timer = GLIDE_CLOSING_TIME
@@ -590,16 +596,25 @@ func get_jump_action() -> int:
 		return JUMP_ACTION_NONE
 	if is_on_floor() or position.y <= 0.0:
 		return JUMP_ACTION_JUMP
-	# Airborne.
+	# Airborne. Report GLIDE_TOGGLE while the glider is open even if the
+	# current scene disables gliding — the force-close in _physics_process
+	# will transition to CLOSING on the next tick, and reporting NONE here
+	# would flicker the icon in the intervening frame.
 	if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
 		return JUMP_ACTION_GLIDE_TOGGLE
 	if glide_state == GLIDE_CLOSING:
 		return JUMP_ACTION_NONE
 	# glide_state == GLIDE_CLOSED. Air-jump takes priority over glide-open.
-	if jump_count >= 1 and jump_count <= MAX_AIR_JUMPS and _time_since_last_jump >= JUMP_COOLDOWN:
+	if (
+		jump_count >= 1
+		and jump_count <= MAX_AIR_JUMPS
+		and not Global.is_double_jump_disabled()
+		and _time_since_last_jump >= JUMP_COOLDOWN
+	):
 		return JUMP_ACTION_JUMP
 	if (
-		_ground_distance > GLIDE_MIN_GROUND_DISTANCE
+		not Global.is_glide_disabled()
+		and _ground_distance > GLIDE_MIN_GROUND_DISTANCE
 		and _time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL
 		and _time_since_glide_end >= GLIDE_COOLDOWN
 	):
@@ -613,20 +628,24 @@ func can_toggle_glide() -> bool:
 		return true
 	if glide_state != GLIDE_CLOSED:
 		return false
-	if is_on_floor() or position.y <= 0.0 or time_falling <= 0.0:
-		return false
-	if Global.is_jump_disabled() or Global.is_all_input_disabled():
-		return false
-	if _hard_landing_timer > 0.0:
-		return false
 	# jump_count in [1..MAX_AIR_JUMPS] => next press fires air-jump, not glide-open.
-	if jump_count >= 1 and jump_count <= MAX_AIR_JUMPS:
-		return false
-	if _ground_distance <= GLIDE_MIN_GROUND_DISTANCE:
-		return false
-	if _time_since_last_jump < JUMP_TO_GLIDE_INTERVAL:
-		return false
-	if _time_since_glide_end < GLIDE_COOLDOWN:
+	var grounded := is_on_floor() or position.y <= 0.0 or time_falling <= 0.0
+	var input_blocked := (
+		Global.is_jump_disabled() or Global.is_all_input_disabled() or Global.is_glide_disabled()
+	)
+	var air_jump_consumes_press := jump_count >= 1 and jump_count <= MAX_AIR_JUMPS
+	var too_low := _ground_distance <= GLIDE_MIN_GROUND_DISTANCE
+	var on_cooldown := (
+		_time_since_last_jump < JUMP_TO_GLIDE_INTERVAL or _time_since_glide_end < GLIDE_COOLDOWN
+	)
+	if (
+		grounded
+		or input_blocked
+		or _hard_landing_timer > 0.0
+		or air_jump_consumes_press
+		or too_low
+		or on_cooldown
+	):
 		return false
 	return true
 

@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="1_81cx4"]
 [ext_resource type="Script" uid="uid://dwlnsnbe4h0b0" path="res://src/ui/components/joypad/joypad.gd" id="1_il1fe"]
 [ext_resource type="Texture2D" uid="uid://72xpjysoxgwo" path="res://assets/themes/icons/InteractiveIcon.svg" id="2_6enwl"]
-[ext_resource type="Texture2D" uid="uid://euvimxirt85b" path="res://assets/themes/dark_dcl_theme/icons/DoubleJump.svg" id="3_il1fe"]
+[ext_resource type="Texture2D" uid="uid://ck3atqpytstpo" path="res://assets/themes/dark_dcl_theme/icons/Jump.svg" id="3_il1fe"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_8at3g"]
 [ext_resource type="Texture2D" uid="uid://doi4r1nh7rtr7" path="res://assets/themes/dark_dcl_theme/icons/multi_action.svg" id="5_il1fe"]
 
@@ -429,7 +429,7 @@ offset_bottom = -50.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_force_pass_scroll_events = false
-theme_override_constants/icon_max_width = 52
+theme_override_constants/icon_max_width = 85
 text = ""
 icon = ExtResource("3_il1fe")
 expand_icon = true
