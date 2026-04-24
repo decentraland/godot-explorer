@@ -24,7 +24,8 @@ Reference discovery:
   - #include "relative.gdshaderinc" in shaders
   - class_name X declared in a .gd → reached if any other .gd/.tscn/.tres
     uses the bare token X (Godot global class resolution)
-  - Convention roots: res://default_bus_layout.tres, res://default_env.tres
+  - Convention roots: res://default_bus_layout.tres, res://default_env.tres,
+    and everything under res://tests/ (opened directly by humans in the editor)
 
 Source files scanned for references:
   - godot/project.godot, godot/export_presets.cfg, godot/dclgodot.gdextension
@@ -102,6 +103,14 @@ CONVENTION_ROOTS = {
     "res://default_env.tres",
     "res://google-services.json",  # Firebase config, loaded natively by Android
 }
+
+# res:// path prefixes whose contents are entry points: every asset under
+# them is treated as a reachability root. Useful for test/demo scenes the
+# team opens in the editor to run in isolation — they legitimately have no
+# inbound code reference.
+CONVENTION_ROOT_PREFIXES = (
+    "res://tests/",
+)
 
 # res:// path prefixes whose contents are third-party payloads — addon
 # binaries, vendored framework metadata, etc. Skip from orphan tracking.
@@ -380,6 +389,10 @@ def compute_reachability(assets, refs):
     for rp in CONVENTION_ROOTS:
         if rp in assets:
             roots.add(rp)
+    if CONVENTION_ROOT_PREFIXES:
+        for rp in assets:
+            if any(rp.startswith(prefix) for prefix in CONVENTION_ROOT_PREFIXES):
+                roots.add(rp)
 
     # Phase 2: transitive closure via scene/script/shader outgoing edges.
     reachable = set(roots)
