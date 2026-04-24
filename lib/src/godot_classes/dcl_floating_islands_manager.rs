@@ -369,8 +369,6 @@ impl DclFloatingIslandsManager {
         let mut to_demote_physics: Vec<(i32, i32)> = Vec::new();
         let mut to_promote_grass: Vec<(i32, i32)> = Vec::new();
         let mut to_demote_grass: Vec<(i32, i32)> = Vec::new();
-        let mut to_promote_props: Vec<(i32, i32)> = Vec::new();
-        let mut to_demote_props: Vec<(i32, i32)> = Vec::new();
         for (coord, data) in &self.active {
             let dist = (coord.0 - player.x).abs().max((coord.1 - player.y).abs());
             let has_physics = data.collision_body.is_valid();
@@ -385,12 +383,6 @@ impl DclFloatingIslandsManager {
                 to_promote_grass.push(*coord);
             } else if !should_have && has_grass {
                 to_demote_grass.push(*coord);
-            }
-            let props_should_exist = prop_spawn_in_range(*coord, player);
-            if props_should_exist && !data.props_spawned {
-                to_promote_props.push(*coord);
-            } else if !props_should_exist && data.props_spawned {
-                to_demote_props.push(*coord);
             }
         }
         let space = self.physics_space;
@@ -442,38 +434,6 @@ impl DclFloatingIslandsManager {
             if let Some(data) = self.active.get_mut(&coord) {
                 destroy_parcel_grass(data);
             }
-        }
-
-        for coord in to_promote_props {
-            let Some(data) = self.active.remove(&coord) else {
-                continue;
-            };
-            let mut data = data;
-            let Some(geom) = data.pending_physics_geometry.as_ref() else {
-                self.active.insert(coord, data);
-                continue;
-            };
-            let spawn_locations =
-                terrain::derive_spawn_locations(coord, &data.config, &geom.vertices, &geom.indices);
-            let transform = parcel_world_transform(coord);
-            let config = data.config;
-            self.spawn_parcel_props(
-                coord,
-                &config,
-                &spawn_locations,
-                &mut data,
-                scenario,
-                space,
-                transform,
-            );
-            self.active.insert(coord, data);
-        }
-        for coord in to_demote_props {
-            let Some(mut data) = self.active.remove(&coord) else {
-                continue;
-            };
-            self.despawn_parcel_props(&mut data);
-            self.active.insert(coord, data);
         }
 
         if created_this_frame > 0 {
@@ -673,17 +633,15 @@ impl DclFloatingIslandsManager {
             }
         }
 
-        if prop_spawn_in_range(coord, self.player_parcel) {
-            self.spawn_parcel_props(
-                coord,
-                &config,
-                &spawn_locations,
-                &mut data,
-                scenario,
-                space,
-                transform,
-            );
-        }
+        self.spawn_parcel_props(
+            coord,
+            &config,
+            &spawn_locations,
+            &mut data,
+            scenario,
+            space,
+            transform,
+        );
 
         self.active.insert(coord, data);
     }
@@ -699,7 +657,7 @@ impl DclFloatingIslandsManager {
         space: Rid,
         parcel_world: Transform3D,
     ) {
-        if !self.prop_cache.is_populated() || data.props_spawned {
+        if !self.prop_cache.is_populated() {
             return;
         }
         let include_physics = prop_physics_in_range(coord, self.player_parcel);
@@ -725,20 +683,6 @@ impl DclFloatingIslandsManager {
         );
         props::spawn_generic_props(&self.prop_cache, spawn_locations, &mut rng, &mut ctx);
         props::spawn_cliff_rocks(&self.prop_cache, config, &mut rng, &mut ctx);
-        data.props_spawned = true;
-    }
-
-    fn despawn_parcel_props(&mut self, data: &mut ParcelData) {
-        for slot in data.prop_slots.drain(..) {
-            self.prop_pool.release_slot(slot);
-        }
-        let mut physics = PhysicsServer3D::singleton();
-        for rid in data.prop_bodies.drain(..) {
-            if rid.is_valid() {
-                physics.free_rid(rid);
-            }
-        }
-        data.props_spawned = false;
     }
 
     fn grass_should_be_visible(coord: (i32, i32), player: Vector2i) -> bool {
@@ -861,17 +805,10 @@ impl DclFloatingIslandsManager {
 const STALE_DEADLINE_MSEC: u64 = 5000;
 
 const PHYSICS_RANGE: i32 = 1;
-const PROP_SPAWN_RANGE: i32 = 4;
-const PROP_PHYSICS_RANGE: i32 = 1;
-
-fn prop_spawn_in_range(coord: (i32, i32), player: Vector2i) -> bool {
-    let dist = (coord.0 - player.x).abs().max((coord.1 - player.y).abs());
-    dist <= PROP_SPAWN_RANGE
-}
 
 fn prop_physics_in_range(coord: (i32, i32), player: Vector2i) -> bool {
     let dist = (coord.0 - player.x).abs().max((coord.1 - player.y).abs());
-    dist <= PROP_PHYSICS_RANGE
+    dist <= PHYSICS_RANGE
 }
 
 fn spawn_worker() -> WorkerHandle {

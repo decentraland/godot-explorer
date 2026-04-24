@@ -133,7 +133,6 @@ pub struct ParcelData {
 
     pub prop_slots: Vec<props_pool::PropSlotId>,
     pub prop_bodies: Vec<Rid>,
-    pub props_spawned: bool,
 
     pub config: CornerConfig,
 
@@ -156,7 +155,6 @@ impl Default for ParcelData {
             grass_visible: false,
             prop_slots: Vec::new(),
             prop_bodies: Vec::new(),
-            props_spawned: false,
             config: CornerConfig::default(),
         }
     }
