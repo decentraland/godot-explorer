@@ -7,9 +7,6 @@ use super::{
     TERRAIN_NOISE_FREQUENCY, TERRAIN_NOISE_SEED,
 };
 
-/// Godot's `FastNoiseLite` defaults to `TYPE_SIMPLEX_SMOOTH` with FBm fractal
-/// (octaves=5, lacunarity=2.0, gain=0.5); the Rust crate doesn't, so every
-/// parameter that matters for output parity must be set explicitly.
 pub fn build_terrain_noise() -> FastNoiseLite {
     configure_noise(TERRAIN_NOISE_SEED, TERRAIN_NOISE_FREQUENCY)
 }
@@ -23,7 +20,7 @@ fn configure_noise(seed: i32, frequency: f32) -> FastNoiseLite {
     noise.set_noise_type(Some(NoiseType::OpenSimplex2S));
     noise.set_frequency(Some(frequency));
     noise.set_fractal_type(Some(FractalType::FBm));
-    noise.set_fractal_octaves(Some(5));
+    noise.set_fractal_octaves(Some(3));
     noise.set_fractal_lacunarity(Some(2.0));
     noise.set_fractal_gain(Some(0.5));
     noise
@@ -154,6 +151,41 @@ pub fn build_terrain_mesh(
 
 fn face_normal(a: Vector3, b: Vector3, c: Vector3) -> Vector3 {
     (c - a).cross(b - a).normalized()
+}
+
+/// Regenerates the grass/prop spawn locations from the stored terrain grid
+/// using the same RNG seed as `build_terrain_mesh`, so lazy re-promotion
+/// produces identical placements. Only iterates the first `GRID_SIZE²` quads —
+/// edge strip triangles are appended after and never seed grass/props.
+pub fn derive_spawn_locations(
+    coord: (i32, i32),
+    config: &CornerConfig,
+    vertices: &[Vector3],
+    indices: &[i32],
+) -> Vec<SpawnLocation> {
+    let grid = GRID_SIZE as usize;
+    let grid_index_count = grid * grid * 6;
+    if indices.len() < grid_index_count {
+        return Vec::new();
+    }
+
+    let mut rng = SimpleRng::new((coord.0 as u32, coord.1 as u32));
+    let mut out = Vec::with_capacity(grid * grid * 2);
+
+    for tri in indices[..grid_index_count].chunks_exact(3) {
+        let a = vertices[tri[0] as usize];
+        let b = vertices[tri[1] as usize];
+        let c = vertices[tri[2] as usize];
+        let normal = face_normal(a, b, c);
+        let position = random_point_in_triangle(&mut rng, a, b, c);
+        let falloff = sample_falloff_at(position.x, position.z, config);
+        out.push(SpawnLocation {
+            position,
+            normal,
+            falloff,
+        });
+    }
+    out
 }
 
 #[allow(clippy::too_many_arguments)]

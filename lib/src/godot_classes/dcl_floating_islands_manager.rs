@@ -36,16 +36,10 @@ pub struct DclFloatingIslandsManager {
 
     player_parcel: Vector2i,
     view_distance: i32,
-    /// Extra ring (past `view_distance`) kept alive to avoid pop-in when the
-    /// camera rotates along the boundary.
     destroy_hysteresis: i32,
-    /// Cap for creates-per-frame AND destroys-per-frame (applied separately,
-    /// not combined).
+    /// Applied separately as a creates-per-frame cap AND a destroys-per-frame cap (not combined).
     frame_budget: i32,
 
-    /// True from `set_candidate_parcels` until the first tick in which every
-    /// in-view candidate is materialized. `generation_complete` fires on the
-    /// falling edge.
     generating: bool,
     generated_so_far: i32,
     generation_total: i32,
@@ -60,9 +54,6 @@ pub struct DclFloatingIslandsManager {
     prop_cache: props::PropCache,
 
     worker: Option<WorkerHandle>,
-    /// Coords that were enqueued to the worker and haven't come back yet.
-    /// Prevents re-enqueueing the same coord on subsequent ticks while the
-    /// worker is still generating its mesh.
     pending: HashSet<(i32, i32)>,
 }
 
@@ -102,7 +93,7 @@ impl INode for DclFloatingIslandsManager {
             player_parcel: Vector2i::new(0, 0),
             view_distance: 5,
             destroy_hysteresis: 2,
-            frame_budget: 2,
+            frame_budget: 4,
             generating: false,
             generated_so_far: 0,
             generation_total: 0,
@@ -132,9 +123,9 @@ impl DclFloatingIslandsManager {
     #[signal]
     fn generation_complete();
 
-    /// `corner_configs` must have length `parcels.len() * 8`. Each 8-byte
-    /// window is `[N, S, E, W, NW, NE, SW, SE]`, values matching
-    /// `CornerConfiguration.ParcelState` (0=EMPTY, 1=NOTHING, 2=LOADED).
+    /// `corner_configs`: `parcels.len() * 8` bytes, laid out per parcel as
+    /// `[N, S, E, W, NW, NE, SW, SE]` with values 0=EMPTY, 1=NOTHING, 2=LOADED
+    /// (matches GDScript `CornerConfiguration.ParcelState`).
     #[func]
     pub fn set_candidate_parcels(
         &mut self,
@@ -199,9 +190,6 @@ impl DclFloatingIslandsManager {
         self.generating = false;
         self.generated_so_far = 0;
         self.generation_total = 0;
-        // Drain any in-flight responses so they don't materialize after a
-        // clear (e.g. realm switch). They reference nothing in `active` but
-        // would still leak their Packed arrays otherwise.
         if let Some(worker) = &self.worker {
             while worker.rx.try_recv().is_ok() {}
         }
@@ -273,8 +261,7 @@ impl DclFloatingIslandsManager {
             return;
         }
 
-        // Drain anything the worker finished last frame BEFORE we evaluate
-        // the visible set — otherwise the same coords would be re-enqueued.
+        // Drain before the visibility pass so freshly-submitted coords aren't re-enqueued.
         let submitted_this_frame = self.drain_worker_responses();
         self.generated_so_far += submitted_this_frame;
 
@@ -311,18 +298,9 @@ impl DclFloatingIslandsManager {
         }
         let created_this_frame = submitted_this_frame + enqueued_this_frame;
 
-        // Hard floor: the 3x3 around the player is always kept so the ground
-        // behind the camera never pops when turning around.
         let keep_radius = hyst.max(1);
         let now_msec = godot::classes::Time::singleton().get_ticks_msec();
 
-        // Classify each currently-active parcel into one of four buckets:
-        //   - `to_show`: it was stale but the camera came back; un-hide it.
-        //   - `to_hide`: it just dropped out of view; mark stale so we can
-        //     reclaim it later without paying the destroy/recreate cost now.
-        //   - `to_destroy_immediate`: it is so far from the player that
-        //     reviving it later would cost more than a fresh rebuild.
-        //   - `to_destroy_stale`: it has been hidden past the grace period.
         let mut to_show: Vec<(i32, i32)> = Vec::new();
         let mut to_hide: Vec<(i32, i32)> = Vec::new();
         let mut to_destroy_immediate: Vec<(i32, i32)> = Vec::new();
@@ -426,8 +404,25 @@ impl DclFloatingIslandsManager {
         if let (Some(blade), Some(mat)) = (blade_rid, mat_rid) {
             for coord in to_promote_grass {
                 if let Some(data) = self.active.get_mut(&coord) {
+                    let Some(geom) = data.pending_physics_geometry.as_ref() else {
+                        continue;
+                    };
+                    let spawn_locations = terrain::derive_spawn_locations(
+                        coord,
+                        &data.config,
+                        &geom.vertices,
+                        &geom.indices,
+                    );
                     let transform = parcel_world_transform(coord);
-                    build_grass_for_parcel(data, coord, scenario, transform, blade, mat);
+                    build_grass_for_parcel(
+                        data,
+                        coord,
+                        &spawn_locations,
+                        scenario,
+                        transform,
+                        blade,
+                        mat,
+                    );
                 }
             }
         }
@@ -496,10 +491,6 @@ impl DclFloatingIslandsManager {
         probes.iter().any(|p| camera.is_position_in_frustum(*p))
     }
 
-    /// Send a build request to the worker thread. The heavy mesh generation
-    /// happens off the main thread; the manager later picks up the result in
-    /// `drain_worker_responses` and does the RenderingServer + PhysicsServer
-    /// submits.
     fn enqueue_parcel_build(&mut self, coord: (i32, i32)) {
         if self.active.contains_key(&coord) || self.pending.contains(&coord) {
             return;
@@ -522,9 +513,6 @@ impl DclFloatingIslandsManager {
         }
     }
 
-    /// Consume any meshes the worker finished last frame and submit them to
-    /// RenderingServer + PhysicsServer + spawn grass / props. Called at the
-    /// top of `tick_culling`.
     fn drain_worker_responses(&mut self) -> i32 {
         let mut ready: Vec<BuiltParcelMeshes> = Vec::new();
         if let Some(worker) = self.worker.as_ref() {
@@ -535,8 +523,6 @@ impl DclFloatingIslandsManager {
         let mut submitted = 0;
         for built in ready {
             self.pending.remove(&built.coord);
-            // The candidate set or `active` may have shifted while the worker
-            // was busy — only submit if still wanted and not already present.
             if !self.candidates.contains_key(&built.coord) {
                 continue;
             }
@@ -664,7 +650,7 @@ impl DclFloatingIslandsManager {
             cliff_instances,
             overhang_meshes,
             overhang_instances,
-            spawn_locations,
+            config,
             ..ParcelData::default()
         };
 
@@ -673,19 +659,37 @@ impl DclFloatingIslandsManager {
             let blade_rid = self.grass_blade_mesh.as_ref().map(|m| m.get_rid());
             let mat_rid = self.grass_material.as_ref().map(|m| m.get_rid());
             if let (Some(blade), Some(mat)) = (blade_rid, mat_rid) {
-                build_grass_for_parcel(&mut data, coord, scenario, transform, blade, mat);
+                build_grass_for_parcel(
+                    &mut data,
+                    coord,
+                    &spawn_locations,
+                    scenario,
+                    transform,
+                    blade,
+                    mat,
+                );
             }
         }
 
-        self.spawn_parcel_props(coord, &config, &mut data, scenario, space, transform);
+        self.spawn_parcel_props(
+            coord,
+            &config,
+            &spawn_locations,
+            &mut data,
+            scenario,
+            space,
+            transform,
+        );
 
         self.active.insert(coord, data);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn spawn_parcel_props(
         &self,
         coord: (i32, i32),
         config: &CornerConfig,
+        spawn_locations: &[floating_islands::SpawnLocation],
         data: &mut ParcelData,
         scenario: Rid,
         space: Rid,
@@ -704,15 +708,15 @@ impl DclFloatingIslandsManager {
             prop_instances: &mut data.prop_instances,
             prop_bodies: &mut data.prop_bodies,
         };
-        props::spawn_rocks(&self.prop_cache, &data.spawn_locations, &mut rng, &mut ctx);
+        props::spawn_rocks(&self.prop_cache, spawn_locations, &mut rng, &mut ctx);
         props::spawn_trees(
             &self.prop_cache,
             config,
-            &data.spawn_locations,
+            spawn_locations,
             &mut rng,
             &mut ctx,
         );
-        props::spawn_generic_props(&self.prop_cache, &data.spawn_locations, &mut rng, &mut ctx);
+        props::spawn_generic_props(&self.prop_cache, spawn_locations, &mut rng, &mut ctx);
         props::spawn_cliff_rocks(&self.prop_cache, config, &mut rng, &mut ctx);
     }
 
@@ -856,23 +860,10 @@ impl DclFloatingIslandsManager {
     }
 }
 
-/// A parcel that has been hidden (out of view) for longer than this is freed
-/// on the next `tick_culling`. Shorter values reclaim RIDs faster; longer
-/// values absorb more back-and-forth camera motion without paying the
-/// create/destroy cost. Chosen by eye against typical pan speeds.
 const STALE_DEADLINE_MSEC: u64 = 5000;
 
-/// Chebyshev distance (in parcels) within which terrain collision is kept
-/// alive. Only the player collides with the ground; anything past this is
-/// guaranteed to be a parcel the player cannot be standing on this frame.
 const PHYSICS_RANGE: i32 = 1;
 
-/// Spawns the mesh-building worker. The worker builds its own noise configs
-/// (deterministic from the same seeds as the main thread's, so results
-/// match) and receives `(coord, config)` requests to produce terrain +
-/// cliff + overhang meshes off the main thread. Results are `Vec<T>` (Send)
-/// and the main thread converts them to Packed arrays at the RS submit
-/// boundary.
 fn spawn_worker() -> WorkerHandle {
     let (tx_req, rx_req) = mpsc::channel::<WorkerMsg>();
     let (tx_res, rx_res) = mpsc::channel::<BuiltParcelMeshes>();
@@ -959,22 +950,22 @@ fn set_parcel_visible(data: &mut ParcelData, visible: bool) {
         rs.instance_set_visible(data.grass_instance, visible);
         data.grass_visible = visible;
     }
-    // Physics bodies stay active regardless so the player never falls through
-    // a parcel that was just hidden for a frame or two.
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_grass_for_parcel(
     data: &mut ParcelData,
     coord: (i32, i32),
+    spawn_locations: &[floating_islands::SpawnLocation],
     scenario: Rid,
     transform: Transform3D,
     blade_mesh_rid: Rid,
     grass_material_rid: Rid,
 ) {
-    if data.spawn_locations.is_empty() {
+    if spawn_locations.is_empty() {
         return;
     }
-    let instance_count = data.spawn_locations.len() as i32;
+    let instance_count = spawn_locations.len() as i32;
 
     let mut rs = RenderingServer::singleton();
     let multimesh = rs.multimesh_create();
@@ -988,10 +979,10 @@ fn build_grass_for_parcel(
 
     let mut rng = SimpleRng::new((coord.0 as u32, coord.1 as u32));
     let mut buffer = PackedFloat32Array::new();
-    buffer.resize(data.spawn_locations.len() * 12);
+    buffer.resize(spawn_locations.len() * 12);
     {
         let slice = buffer.as_mut_slice();
-        for (i, loc) in data.spawn_locations.iter().enumerate() {
+        for (i, loc) in spawn_locations.iter().enumerate() {
             let random_variation = 0.8 + rng.next_f32() * 0.4;
             let grass_scale_falloff = loc.falloff.powf(0.3);
             let final_scale = GRASS_BASE_SCALE * grass_scale_falloff * random_variation;
@@ -1040,8 +1031,8 @@ fn destroy_parcel_grass(data: &mut ParcelData) {
     data.grass_visible = false;
 }
 
-/// Writes the 12 floats expected by Godot's `multimesh_set_buffer` for a
-/// TRANSFORM_3D instance: three rows of `[basis_row.x, .y, .z, origin.component]`.
+/// Row-major `[basis_row.x, .y, .z, origin.component] × 3` — the layout
+/// Godot's `multimesh_set_buffer` expects for TRANSFORM_3D.
 fn write_transform_3d_row_major(slot: &mut [f32], t: &Transform3D) {
     let r0 = t.basis.rows[0];
     let r1 = t.basis.rows[1];
@@ -1060,10 +1051,6 @@ fn write_transform_3d_row_major(slot: &mut [f32], t: &Transform3D) {
     slot[11] = t.origin.z;
 }
 
-/// Expand an indexed triangle list back to a flat face list suitable for
-/// `concave_polygon_shape_create`. The physics shape doesn't support indexed
-/// data, so we re-expand at submit time — it's still a net RAM win because
-/// the expanded face list is ephemeral (dropped after the shape is built).
 fn expand_indexed_faces(vertices: &[Vector3], indices: &[i32]) -> PackedVector3Array {
     let mut faces = PackedVector3Array::new();
     faces.resize(indices.len());

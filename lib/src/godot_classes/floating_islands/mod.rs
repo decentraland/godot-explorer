@@ -110,29 +110,17 @@ pub struct SpawnLocation {
     pub falloff: f32,
 }
 
-/// Terrain vertices + indices retained on a parcel so physics can be built
-/// lazily when the player walks within collision range (Chebyshev distance
-/// ≤ 1). Concave polygon shapes cost ~72 KB each; the retained Vec form is
-/// ~37 KB and is shared by every candidate regardless of whether the parcel
-/// is currently within physics range.
 pub struct PendingPhysicsGeometry {
     pub vertices: Vec<Vector3>,
     pub indices: Vec<i32>,
 }
 
-/// RIDs and bookkeeping owned by a single materialized parcel. Shared
-/// resources (prop meshes, collision shapes reused across parcels) are NOT
-/// stored here — they belong to the cache and outlive individual parcels.
 pub struct ParcelData {
     pub terrain_mesh: Rid,
     pub terrain_instance: Rid,
     pub collision_body: Rid,
     pub collision_shape: Rid,
 
-    /// Source geometry for deferred physics creation. Kept for as long as
-    /// the parcel lives; `collision_body` + `collision_shape` are
-    /// (re)built from this when the parcel enters physics range, and freed
-    /// when it leaves. `None` only if a build error produced no geometry.
     pub pending_physics_geometry: Option<PendingPhysicsGeometry>,
 
     pub cliff_meshes: Vec<Rid>,
@@ -147,14 +135,8 @@ pub struct ParcelData {
     pub prop_instances: Vec<Rid>,
     pub prop_bodies: Vec<Rid>,
 
-    pub spawn_locations: Vec<SpawnLocation>,
+    pub config: CornerConfig,
 
-    /// When the parcel stopped being drawn. `None` means the parcel's render
-    /// instances are currently visible; `Some(msec)` means they are hidden
-    /// and the parcel is a candidate for real destruction once it has been
-    /// stale for longer than the deadline. Acts as a grace period so brief
-    /// camera rotations that push a parcel out and back into the frustum
-    /// don't pay the create/destroy cost.
     pub stale_since_msec: Option<u64>,
 }
 
@@ -176,7 +158,7 @@ impl Default for ParcelData {
             grass_visible: false,
             prop_instances: Vec::new(),
             prop_bodies: Vec::new(),
-            spawn_locations: Vec::new(),
+            config: CornerConfig::default(),
         }
     }
 }
