@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://cdd521b6pi2ki"]
+[gd_scene format=3 uid="uid://cdd521b6pi2ki"]
 
 [ext_resource type="Texture2D" uid="uid://dex63la24a6n0" path="res://assets/ui/ArrowRight.png" id="1_ei2bc"]
 
-[node name="Right_Arrow" type="TextureRect"]
+[node name="Right_Arrow" type="TextureRect" unique_id=1799023029]
 modulate = Color(0, 0, 0, 1)
 offset_right = 7.0
 offset_bottom = 12.0

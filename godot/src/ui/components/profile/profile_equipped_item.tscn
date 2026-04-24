@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://cc14rtphm0sjh"]
+[gd_scene format=3 uid="uid://cc14rtphm0sjh"]
 
 [ext_resource type="Script" uid="uid://cha42k205r6lq" path="res://src/ui/components/profile/profile_equipped_item.gd" id="1_2saji"]
 [ext_resource type="ButtonGroup" uid="uid://c1dh04f5u2ojq" path="res://src/ui/components/profile/equipped_button_group.tres" id="1_mktc3"]
@@ -56,7 +56,7 @@ corner_radius_bottom_left = 6
 font = ExtResource("5_2saji")
 font_size = 12
 
-[node name="ProfileEquippedItem" type="Button"]
+[node name="ProfileEquippedItem" type="Button" unique_id=66269864]
 custom_minimum_size = Vector2(152, 265)
 anchors_preset = 5
 anchor_left = 0.5
@@ -83,7 +83,7 @@ button_group = ExtResource("1_mktc3")
 flat = true
 script = ExtResource("1_2saji")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=2022883251]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -91,47 +91,47 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PanelContainer" type="PanelContainer" parent="MarginContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer" unique_id=925138721]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_7lhdd")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer" unique_id=498276807]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer" unique_id=1635714982]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="ItemPreview" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer" instance=ExtResource("2_7lhdd")]
+[node name="ItemPreview" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=2004503337 instance=ExtResource("2_7lhdd")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 150)
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 20.0
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=378225876]
 layout_mode = 2
 theme_override_constants/margin_left = 11
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 11
 theme_override_constants/margin_bottom = 12
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer" unique_id=114474702]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="MarqueeLabel_Name" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_uq8ip")]
+[node name="MarqueeLabel_Name" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1973997046 instance=ExtResource("4_uq8ip")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(130, 20)
 layout_mode = 2
 label_settings = SubResource("LabelSettings_3nubj")
 
-[node name="PanelContainer_Rarity" type="PanelContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="PanelContainer_Rarity" type="PanelContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=479240383]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
@@ -139,7 +139,7 @@ size_flags_vertical = 4
 mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_4co5n")
 
-[node name="Label_Rarity" type="Label" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer_Rarity"]
+[node name="Label_Rarity" type="Label" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer_Rarity" unique_id=1893910749]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -150,7 +150,7 @@ label_settings = SubResource("LabelSettings_2saji")
 horizontal_alignment = 1
 uppercase = true
 
-[node name="MarginContainer_ButtonView" type="MarginContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="MarginContainer_ButtonView" type="MarginContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1941939111]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -158,7 +158,7 @@ theme_override_constants/margin_left = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="Button_View" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ButtonView"]
+[node name="Button_View" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ButtonView" unique_id=1754916396]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

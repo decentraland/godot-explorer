@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://b4tld1cqcvql5"]
+[gd_scene format=3 uid="uid://b4tld1cqcvql5"]
 
 [ext_resource type="Script" uid="uid://b1miida8jhyjh" path="res://src/decentraland_components/player_collider_filter.gd" id="1_pn4dy"]
 
-[node name="PlayerColliderFilter" type="Node"]
+[node name="PlayerColliderFilter" type="Node" unique_id=529856868]
 script = ExtResource("1_pn4dy")

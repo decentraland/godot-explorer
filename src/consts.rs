@@ -9,6 +9,8 @@ pub const SENTRY_ADDON_URL: &str = "https://github.com/getsentry/sentry-godot/re
 pub const PROTOC_BASE_URL: &str =
     "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
 
+pub const GODOT_ENGINE_RELEASES_BASE_URL: &str = "https://godot-engine-releases.dclexplorer.com/";
+
 pub const GODOT4_BIN_BASE_URL: &str =
     "https://godot-engine-releases.dclexplorer.com/4.6.2.stable/editors/";
 
@@ -16,6 +18,27 @@ pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 
 pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
     "https://godot-engine-releases.dclexplorer.com/4.6.2.stable/compressed-templates/";
+
+/// Sanitizes a git branch name for use in the release artifact URL path.
+/// Slashes (e.g. `fix/foo`) are replaced with dashes (`fix-foo`) to match how
+/// branch builds are published under `/branches/<sanitized>/`.
+pub fn sanitize_branch_for_url(branch: &str) -> String {
+    branch.replace('/', "-")
+}
+
+/// Returns the editor base URL for a given branch build, e.g.
+/// `https://godot-engine-releases.dclexplorer.com/branches/<branch>/editors/`
+pub fn godot_editor_base_url_for_branch(branch: &str) -> String {
+    let slug = sanitize_branch_for_url(branch);
+    format!("{GODOT_ENGINE_RELEASES_BASE_URL}branches/{slug}/editors/")
+}
+
+/// Returns the compressed-templates base URL for a given branch build, e.g.
+/// `https://godot-engine-releases.dclexplorer.com/branches/<branch>/compressed-templates/`
+pub fn godot_templates_base_url_for_branch(branch: &str) -> String {
+    let slug = sanitize_branch_for_url(branch);
+    format!("{GODOT_ENGINE_RELEASES_BASE_URL}branches/{slug}/compressed-templates/")
+}
 
 pub const GODOT_PLATFORM_FILES: &[(&str, &[&str])] = &[
     ("ios", &["ios.zip"]),

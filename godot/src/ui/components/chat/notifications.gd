@@ -9,6 +9,17 @@ var notifications: Array[Control] = []
 
 func _ready() -> void:
 	Global.on_chat_message.connect(self._async_on_chat_message_arrived)
+	notifications_container.resized.connect(self._update_mouse_filter)
+	resized.connect(self._update_mouse_filter)
+
+
+func _update_mouse_filter() -> void:
+	# IGNORE when content fits so scene UI (DclUiControl/base_ui) receives touch events through
+	# the empty notification area. Switch to STOP only when content overflows and scrolling is needed.
+	if notifications_container.size.y > size.y:
+		mouse_filter = MOUSE_FILTER_STOP
+	else:
+		mouse_filter = MOUSE_FILTER_IGNORE
 
 
 func _async_on_chat_message_arrived(address: String, message: String, timestamp: float):

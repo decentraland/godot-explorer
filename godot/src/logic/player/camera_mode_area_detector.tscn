@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://cbtq7kaarx6mp"]
+[gd_scene format=3 uid="uid://cbtq7kaarx6mp"]
 
 [ext_resource type="Script" uid="uid://bcvdbc4b5iya0" path="res://src/logic/player/camera_mode_area_detector.gd" id="1_wchgk"]
 
@@ -7,14 +7,14 @@ margin = 0.05
 radius = 0.25
 height = 1.5
 
-[node name="camera_mode_area_detector" type="Area3D"]
+[node name="camera_mode_area_detector" type="Area3D" unique_id=830678283]
 collision_layer = 2147483648
 collision_mask = 2147483648
 input_ray_pickable = false
 monitorable = false
 script = ExtResource("1_wchgk")
 
-[node name="CollisionShape3D_Body" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D_Body" type="CollisionShape3D" parent="." unique_id=1878372857]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.153, 0)
 shape = SubResource("CapsuleShape3D_aqpo3")
 

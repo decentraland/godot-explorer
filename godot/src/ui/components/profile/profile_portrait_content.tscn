@@ -1,10 +1,10 @@
-[gd_scene load_steps=20 format=3 uid="uid://0icleo1x2y07"]
+[gd_scene format=3 uid="uid://0icleo1x2y07"]
 
 [ext_resource type="Script" uid="uid://ry6j54iml4ww" path="res://src/ui/components/profile/profile_portrait_content.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_7gsml"]
 [ext_resource type="PackedScene" uid="uid://ddgiwkq38wjib" path="res://src/ui/components/profile/profile_about.tscn" id="2_about"]
 [ext_resource type="Texture2D" uid="uid://cxrkry4lwh1a4" path="res://assets/ui/edit-icon.svg" id="3_lhp2a"]
-[ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_links.tscn" id="3_links"]
+[ext_resource type="PackedScene" uid="uid://d2i7uk87vqea0" path="res://src/ui/components/profile/profile_links.tscn" id="3_links"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_xqjxo"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_5mqkx"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="6_ganaq"]
@@ -53,7 +53,7 @@ Color(1, 1, 1, 1): Color(0.9098039, 0.7254902, 1, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lhp2a"]
 
-[node name="ProfilePortraitContent" type="VBoxContainer"]
+[node name="ProfilePortraitContent" type="VBoxContainer" unique_id=443505677]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -65,32 +65,32 @@ script = ExtResource("1_script")
 metadata/mobile_preview_orientation = "portrait"
 metadata/_edit_horizontal_guides_ = [48.0]
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1655289042]
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_right = 48
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1450772016]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="ProfileHeader" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="ProfileHeader" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1162635414]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader" unique_id=615522270]
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 24
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer" unique_id=166124438]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="Label_Nickname" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
+[node name="Label_Nickname" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer" unique_id=1467094266]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 0
@@ -103,13 +103,13 @@ text = "Maxcharacter"
 label_settings = SubResource("LabelSettings_lhp2a")
 vertical_alignment = 2
 
-[node name="MarginContainer_Tag" type="MarginContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
+[node name="MarginContainer_Tag" type="MarginContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer" unique_id=135660451]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/margin_bottom = -10
 
-[node name="Label_Tag" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer/MarginContainer_Tag"]
+[node name="Label_Tag" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer/MarginContainer_Tag" unique_id=717866534]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 8
@@ -123,11 +123,11 @@ text = "#1234"
 label_settings = SubResource("LabelSettings_xqjxo")
 vertical_alignment = 2
 
-[node name="MarginContainer2" type="MarginContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer"]
+[node name="MarginContainer2" type="MarginContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer" unique_id=1708762888]
 layout_mode = 2
 theme_override_constants/margin_bottom = 3
 
-[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer/MarginContainer2"]
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer/HBoxContainer/MarginContainer2" unique_id=1104468662]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
@@ -136,7 +136,7 @@ texture = ExtResource("7_bktpr")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Button_CopyName" type="TextureButton" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer"]
+[node name="Button_CopyName" type="TextureButton" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer" unique_id=1873586495]
 unique_name_in_owner = true
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 custom_minimum_size = Vector2(64, 64)
@@ -154,15 +154,15 @@ texture_focused = ExtResource("8_7le3q")
 ignore_texture_size = true
 stretch_mode = 5
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader" unique_id=688134394]
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2" unique_id=650542056]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="Label_Address" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2/HBoxContainer"]
+[node name="Label_Address" type="Label" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2/HBoxContainer" unique_id=1954919583]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 0
@@ -175,7 +175,7 @@ theme_override_font_sizes/font_size = 18
 text = "0x4e1...1c13B"
 label_settings = SubResource("LabelSettings_5mqkx")
 
-[node name="Button_CopyAddress" type="TextureButton" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2/HBoxContainer"]
+[node name="Button_CopyAddress" type="TextureButton" parent="MarginContainer/VBoxContainer/ProfileHeader/HBoxContainer2/HBoxContainer" unique_id=512140275]
 unique_name_in_owner = true
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 custom_minimum_size = Vector2(50, 50)
@@ -193,12 +193,12 @@ texture_focused = ExtResource("8_7le3q")
 ignore_texture_size = true
 stretch_mode = 5
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer" unique_id=1671455512]
 layout_mode = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
 
-[node name="CustomButton_EditProfile" parent="MarginContainer/VBoxContainer" instance=ExtResource("10_lhp2a")]
+[node name="CustomButton_EditProfile" parent="MarginContainer/VBoxContainer" unique_id=82788018 instance=ExtResource("10_lhp2a")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(312, 92)
 layout_mode = 2
@@ -208,51 +208,52 @@ custom_icon = ExtResource("3_lhp2a")
 custom_icon_pressed = ExtResource("3_lhp2a")
 custom_text = "EDIT PROFILE"
 
-[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer" unique_id=454747124]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 60
 theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
 
-[node name="ProfileAbout" parent="MarginContainer/VBoxContainer" instance=ExtResource("2_about")]
+[node name="ProfileAbout" parent="MarginContainer/VBoxContainer" unique_id=257873576 instance=ExtResource("2_about")]
 unique_name_in_owner = true
 layout_mode = 2
 is_portrait = true
 
-[node name="HSeparator3" type="HSeparator" parent="."]
+[node name="HSeparator3" type="HSeparator" parent="." unique_id=507793574]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 60
 theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
 
-[node name="ProfileEquipped" parent="." instance=ExtResource("12_xqjxo")]
+[node name="ProfileEquipped" parent="." unique_id=89466071 instance=ExtResource("12_xqjxo")]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 
-[node name="MarginContainer2" type="MarginContainer" parent="."]
+[node name="MarginContainer2" type="MarginContainer" parent="." unique_id=633013890]
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_right = 48
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2" unique_id=1836527749]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="HSeparator4" type="HSeparator" parent="MarginContainer2/VBoxContainer"]
+[node name="HSeparator4" type="HSeparator" parent="MarginContainer2/VBoxContainer" unique_id=1777884723]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 60
 theme_override_styles/separator = SubResource("StyleBoxEmpty_lhp2a")
 
-[node name="ProfileLinks" parent="MarginContainer2/VBoxContainer" instance=ExtResource("3_links")]
+[node name="ProfileLinks" parent="MarginContainer2/VBoxContainer" unique_id=1519788553 instance=ExtResource("3_links")]
 unique_name_in_owner = true
+layout_mode = 2
 mouse_filter = 2
 
-[node name="HSeparator5" type="HSeparator" parent="MarginContainer2/VBoxContainer"]
+[node name="HSeparator5" type="HSeparator" parent="MarginContainer2/VBoxContainer" unique_id=1945103738]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
