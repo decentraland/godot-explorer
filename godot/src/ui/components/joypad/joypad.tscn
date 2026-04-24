@@ -581,7 +581,6 @@ text = "F"
 trigger_action = "ia_secondary"
 
 [node name="Control" type="Control" parent="." unique_id=410081327]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

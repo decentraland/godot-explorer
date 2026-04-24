@@ -26,6 +26,12 @@ const GLIDE_OPENING := 1
 const GLIDE_GLIDING := 2
 const GLIDE_CLOSING := 3
 
+# What the jump button would do if pressed right now. Used by the UI to pick
+# the matching icon. Mirrors the decision tree in _physics_process.
+const JUMP_ACTION_NONE := 0
+const JUMP_ACTION_JUMP := 1  # ground jump or air (double) jump
+const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
+
 # #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
 # triggers, or other non-ground CollisionObject3Ds.
@@ -575,6 +581,30 @@ func get_avatar_under_crosshair() -> Avatar:
 			node = node.get_parent()
 
 	return null
+
+
+func get_jump_action() -> int:
+	if Global.is_jump_disabled() or Global.is_all_input_disabled():
+		return JUMP_ACTION_NONE
+	if _hard_landing_timer > 0.0:
+		return JUMP_ACTION_NONE
+	if is_on_floor() or position.y <= 0.0:
+		return JUMP_ACTION_JUMP
+	# Airborne.
+	if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+		return JUMP_ACTION_GLIDE_TOGGLE
+	if glide_state == GLIDE_CLOSING:
+		return JUMP_ACTION_NONE
+	# glide_state == GLIDE_CLOSED. Air-jump takes priority over glide-open.
+	if jump_count >= 1 and jump_count <= MAX_AIR_JUMPS and _time_since_last_jump >= JUMP_COOLDOWN:
+		return JUMP_ACTION_JUMP
+	if (
+		_ground_distance > GLIDE_MIN_GROUND_DISTANCE
+		and _time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL
+		and _time_since_glide_end >= GLIDE_COOLDOWN
+	):
+		return JUMP_ACTION_GLIDE_TOGGLE
+	return JUMP_ACTION_NONE
 
 
 # True while the next jump press would open or close the glider.
