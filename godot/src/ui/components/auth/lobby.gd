@@ -25,6 +25,7 @@ extends Control
 signal change_scene(new_scene_path: String)
 
 const FTUE_PLACE_ID: String = "780f04dd-eba1-41a8-b109-74896c87e98b"
+const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
 
 var is_creating_account: bool = false
 
@@ -41,6 +42,8 @@ var _skip_lobby: bool = false
 var _skip_lobby_to_menu: bool = false
 var _last_panel: Control = null
 var _playing: String
+var _logo_tap_count: int = 0
+var _logo_tap_timer: float = 0.0
 
 @onready var control_main = %Main
 
@@ -83,6 +86,7 @@ var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/R
 @onready var button_enter_as_guest: Button = %Button_EnterAsGuest
 @onready var button_back: Button = %Button_Back
 @onready var sign_in_title: Label = %SignInTitle
+@onready var sign_in_logo: TextureRect = %SignInLogo
 
 @onready var checkbox_eula: CheckBox = %CheckBox_Eula
 @onready var button_accept_eula: Button = %Button_AcceptEula
@@ -285,7 +289,10 @@ func async_close_sign_in():
 func _ready():
 	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
 	label_version.set_text(DclGlobal.get_version_with_env())
-	button_enter_as_guest.visible = DclGlobal.is_dev()
+	button_enter_as_guest.visible = false
+
+	# Secret guest mode: double-tap logo when not in prod
+	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
 
 	Global.music_player.play.call_deferred("music_builder")
 
@@ -376,6 +383,29 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		if current_screen_name == "AUTH_BROWSER_OPEN":
 			label_step2_title.text = label_step2_title.text.replace("Opening", "Waiting")
+
+
+func _process(delta: float) -> void:
+	# Reset logo tap count after timeout
+	if _logo_tap_count > 0:
+		_logo_tap_timer += delta
+		if _logo_tap_timer >= LOGO_TAP_TIMEOUT:
+			_logo_tap_count = 0
+			_logo_tap_timer = 0.0
+
+
+func _on_sign_in_logo_gui_input(event: InputEvent) -> void:
+	# Secret guest mode: double-tap logo when not in prod
+	if DclGlobal.is_production():
+		return
+
+	if event is InputEventScreenTouch and event.pressed:
+		_logo_tap_timer = 0.0
+		_logo_tap_count += 1
+
+		if _logo_tap_count >= 2:
+			_logo_tap_count = 0
+			button_enter_as_guest.visible = true
 
 
 func go_to_explorer():
@@ -522,7 +552,6 @@ func _on_button_continue_pressed():
 
 func _on_button_start_pressed():
 	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	button_enter_as_guest.visible = DclGlobal.is_dev()
 	sign_in_title.text = "Create your account"
 	is_creating_account = true
 	show_auth_home_screen()
@@ -559,7 +588,6 @@ func _on_button_random_name_pressed():
 
 func _on_button_go_to_sign_in_pressed():
 	Global.metrics.track_click_button("sign_in", current_screen_name, "")
-	button_enter_as_guest.visible = DclGlobal.is_dev()
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
 	show_auth_home_screen()

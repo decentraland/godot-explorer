@@ -1,15 +1,14 @@
+use godot::{classes::Node3D, obj::Gd};
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::Ordering,
 };
 
-use godot::{classes::Node3D, obj::Gd};
-
 use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                common::{InputAction, PointerEventType},
+                common::{InputAction, InteractionType, PointerEventType},
                 PbPointerEvents, PbPointerEventsResult,
             },
             SceneComponentId, SceneEntityId,
@@ -133,6 +132,19 @@ impl PbPointerEvents {
     pub fn has_pointer_event(&self, pet: PointerEventType) -> bool {
         self.pointer_events.iter().any(|pe| pe.event_type() == pet)
     }
+
+    pub fn has_pointer_event_without_proximity(&self, pet: PointerEventType) -> bool {
+        self.pointer_events.iter().any(|pe| {
+            pe.event_type() == pet
+                && pe.interaction_type != Some(i32::from(InteractionType::Proximity))
+        })
+    }
+
+    pub fn has_any_pointer_event_without_proximity(&self) -> bool {
+        self.pointer_events
+            .iter()
+            .any(|pe| pe.interaction_type != Some(i32::from(InteractionType::Proximity)))
+    }
 }
 
 pub fn get_entity_pointer_event<'a>(
@@ -146,20 +158,219 @@ pub fn get_entity_pointer_event<'a>(
     Some(pointer_events)
 }
 
+pub fn find_active_proximity_entity(
+    scenes: &HashMap<SceneId, Scene>,
+    player_position: godot::prelude::Vector3,
+    camera_and_viewport: &Option<(
+        godot::prelude::Gd<godot::classes::Camera3D>,
+        godot::prelude::Vector2,
+    )>,
+) -> Option<(SceneId, SceneEntityId)> {
+    let proximity_type = i32::from(InteractionType::Proximity);
+    let mut best_priority = i64::MIN;
+    let mut best_distance = f32::MAX;
+    let mut best_entity: Option<(SceneId, SceneEntityId)> = None;
+
+    for (scene_id, scene) in scenes.iter() {
+        for (entity_id, entity_node) in scene.godot_dcl_scene.entities.iter() {
+            let Some(ref pointer_events) = entity_node.pointer_events else {
+                continue;
+            };
+            let Some(ref node_3d) = entity_node.base_3d else {
+                continue;
+            };
+            for pe in pointer_events.pointer_events.iter() {
+                if pe.interaction_type != Some(proximity_type) {
+                    continue;
+                }
+                let Some(ref info) = pe.event_info else {
+                    continue;
+                };
+                let max_player_distance = info.max_player_distance.unwrap_or(0.0);
+                let entity_position = node_3d.get_global_position();
+                let distance = player_position.distance_to(entity_position);
+                if distance > max_player_distance {
+                    continue;
+                }
+                if let Some((ref camera, viewport_size)) = camera_and_viewport {
+                    if camera.is_position_behind(entity_position) {
+                        continue;
+                    }
+                    let screen_pos = camera.unproject_position(entity_position);
+                    let screen_center = *viewport_size / 2.0;
+                    let threshold = viewport_size.x.min(viewport_size.y) / 3.0;
+                    if screen_pos.distance_to(screen_center) >= threshold {
+                        continue;
+                    }
+                }
+                let priority = info.priority.unwrap_or(0) as i64;
+                if priority < best_priority
+                    || (priority == best_priority && distance >= best_distance)
+                {
+                    continue;
+                }
+                best_priority = priority;
+                best_distance = distance;
+                best_entity = Some((*scene_id, *entity_id));
+            }
+        }
+    }
+
+    best_entity
+}
+
 pub fn pointer_events_system(
     scenes: &mut HashMap<SceneId, Scene>,
     changed_inputs: &HashSet<(InputAction, bool)>,
     previous_raycast: &Option<GodotDclRaycastResult>,
     current_raycast: &Option<GodotDclRaycastResult>,
+    player_position: godot::prelude::Vector3,
+    camera_and_viewport: &Option<(
+        godot::prelude::Gd<godot::classes::Camera3D>,
+        godot::prelude::Vector2,
+    )>,
+    last_proximity_entity: &mut Option<(SceneId, SceneEntityId)>,
 ) {
     let global_tick_number = GLOBAL_TICK_NUMBER.load(Ordering::Relaxed);
 
+    let pointing_at_cursor = current_raycast.as_ref().is_some_and(|raycast| {
+        get_entity_pointer_event(scenes, &raycast.scene_id, &raycast.entity_id)
+            .is_some_and(|pe| pe.has_any_pointer_event_without_proximity())
+    });
+
+    proximity_events_system(
+        scenes,
+        changed_inputs,
+        player_position,
+        camera_and_viewport,
+        last_proximity_entity,
+        pointing_at_cursor,
+        global_tick_number,
+    );
+
+    pointer_events_system_without_proximity(
+        scenes,
+        changed_inputs,
+        previous_raycast,
+        current_raycast,
+        global_tick_number,
+    );
+}
+
+fn proximity_events_system(
+    scenes: &mut HashMap<SceneId, Scene>,
+    changed_inputs: &HashSet<(InputAction, bool)>,
+    player_position: godot::prelude::Vector3,
+    camera_and_viewport: &Option<(
+        godot::prelude::Gd<godot::classes::Camera3D>,
+        godot::prelude::Vector2,
+    )>,
+    last_proximity_entity: &mut Option<(SceneId, SceneEntityId)>,
+    pointing_at_cursor: bool,
+    global_tick_number: u32,
+) {
+    let proximity_type = i32::from(InteractionType::Proximity);
+
+    let current_proximity_entity = if pointing_at_cursor {
+        None
+    } else {
+        find_active_proximity_entity(scenes, player_position, camera_and_viewport)
+    };
+
+    if *last_proximity_entity != current_proximity_entity {
+        if let Some((scene_id, entity_id)) = *last_proximity_entity {
+            if let Some(pointer_events) = get_entity_pointer_event(scenes, &scene_id, &entity_id) {
+                if pointer_events.has_pointer_event(PointerEventType::PetHoverLeave) {
+                    let result = PbPointerEventsResult {
+                        button: InputAction::IaAny as i32,
+                        hit: None,
+                        state: PointerEventType::PetHoverLeave as i32,
+                        timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
+                        analog: None,
+                        tick_number: global_tick_number,
+                    };
+                    if let Some(scene) = scenes.get_mut(&scene_id) {
+                        scene.pointer_events_result.push((entity_id, result));
+                    }
+                }
+            }
+        }
+
+        if let Some((scene_id, entity_id)) = current_proximity_entity {
+            if let Some(pointer_events) = get_entity_pointer_event(scenes, &scene_id, &entity_id) {
+                if pointer_events.has_pointer_event(PointerEventType::PetHoverEnter) {
+                    let result = PbPointerEventsResult {
+                        button: InputAction::IaAny as i32,
+                        hit: None,
+                        state: PointerEventType::PetHoverEnter as i32,
+                        timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
+                        analog: None,
+                        tick_number: global_tick_number,
+                    };
+                    if let Some(scene) = scenes.get_mut(&scene_id) {
+                        scene.pointer_events_result.push((entity_id, result));
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some((scene_id, entity_id)) = current_proximity_entity {
+        if let Some(pointer_events) = get_entity_pointer_event(scenes, &scene_id, &entity_id) {
+            let pointer_events = pointer_events.clone();
+            for pe in pointer_events.pointer_events.iter() {
+                if pe.interaction_type != Some(proximity_type) {
+                    continue;
+                }
+                let Some(ref info) = pe.event_info else {
+                    continue;
+                };
+                let pe_button = info.button.unwrap_or(InputAction::IaAny as i32);
+                for (input_action, state) in changed_inputs.iter() {
+                    let matches_button = *input_action as i32 == pe_button
+                        || pe_button == InputAction::IaAny as i32
+                        || *input_action == InputAction::IaAny;
+                    if !matches_button {
+                        continue;
+                    }
+                    let match_state = (*state && pe.event_type == PointerEventType::PetDown as i32)
+                        || (!state && pe.event_type == PointerEventType::PetUp as i32);
+                    if match_state {
+                        let result = PbPointerEventsResult {
+                            button: *input_action as i32,
+                            hit: None,
+                            state: pe.event_type,
+                            timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
+                            analog: None,
+                            tick_number: global_tick_number,
+                        };
+                        if let Some(scene) = scenes.get_mut(&scene_id) {
+                            scene.pointer_events_result.push((entity_id, result));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    *last_proximity_entity = current_proximity_entity;
+}
+
+fn pointer_events_system_without_proximity(
+    scenes: &mut HashMap<SceneId, Scene>,
+    changed_inputs: &HashSet<(InputAction, bool)>,
+    previous_raycast: &Option<GodotDclRaycastResult>,
+    current_raycast: &Option<GodotDclRaycastResult>,
+    global_tick_number: u32,
+) {
     if !GodotDclRaycastResult::eq_key(current_raycast, previous_raycast) {
         if let Some(raycast) = previous_raycast.as_ref() {
             if let Some(pointer_event) =
                 get_entity_pointer_event(scenes, &raycast.scene_id, &raycast.entity_id)
             {
-                if pointer_event.has_pointer_event(PointerEventType::PetHoverLeave) {
+                if pointer_event
+                    .has_pointer_event_without_proximity(PointerEventType::PetHoverLeave)
+                {
                     let pointer_event_result = PbPointerEventsResult {
                         button: InputAction::IaAny as i32,
                         hit: None,
@@ -169,7 +380,6 @@ pub fn pointer_events_system(
                         tick_number: global_tick_number,
                     };
 
-                    // Append pointer event result
                     scenes
                         .get_mut(&raycast.scene_id)
                         .unwrap()
@@ -183,7 +393,9 @@ pub fn pointer_events_system(
             if let Some(pointer_event) =
                 get_entity_pointer_event(scenes, &raycast.scene_id, &raycast.entity_id)
             {
-                if pointer_event.has_pointer_event(PointerEventType::PetHoverEnter) {
+                if pointer_event
+                    .has_pointer_event_without_proximity(PointerEventType::PetHoverEnter)
+                {
                     let pointer_event_result = PbPointerEventsResult {
                         button: InputAction::IaAny as i32,
                         hit: None,
@@ -193,7 +405,6 @@ pub fn pointer_events_system(
                         tick_number: global_tick_number,
                     };
 
-                    // Append pointer event result
                     scenes
                         .get_mut(&raycast.scene_id)
                         .unwrap()
@@ -267,6 +478,10 @@ pub fn pointer_events_system(
     let pointer_event = pointer_event.unwrap().clone();
 
     for pointer_event in pointer_event.pointer_events.iter() {
+        if pointer_event.interaction_type == Some(i32::from(InteractionType::Proximity)) {
+            continue;
+        }
+
         if pointer_event.event_info.is_none() {
             continue;
         }
@@ -300,7 +515,6 @@ pub fn pointer_events_system(
                         tick_number: global_tick_number,
                     };
 
-                    // Append pointer event result
                     scenes
                         .get_mut(&current_raycast_scene_id)
                         .unwrap()

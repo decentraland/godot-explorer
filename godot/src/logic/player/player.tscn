@@ -39,7 +39,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
 
 [node name="Camera3D" type="DclCamera3D" parent="Mount"]
 smoothing_speed = 2.0
-target_fov = 75.0
+target_fov = 60.0
 cull_mask = 524287
 current = true
 far = 100.0
@@ -53,6 +53,7 @@ collide_with_bodies = false
 [node name="OutlineSystem" parent="Mount/Camera3D" instance=ExtResource("3_sxiuh")]
 
 [node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
+top_level = true
 skip_process = true
 
 [node name="AudioStreamPlayer_Camera" type="AudioStreamPlayer" parent="."]

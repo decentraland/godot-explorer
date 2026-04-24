@@ -1,4 +1,4 @@
-[gd_scene load_steps=50 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_ggr1j"]
@@ -15,7 +15,6 @@
 [ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="7_7t5hv"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_cpvjm"]
 [ext_resource type="LabelSettings" uid="uid://3jaxrloree20" path="res://src/ui/components/discover/jump_in/jump_in_stats.tres" id="11_2e4jp"]
-[ext_resource type="Texture2D" uid="uid://dpljrb0u30btt" path="res://src/ui/components/discover/icons/player-outlined.svg" id="14_2e4jp"]
 [ext_resource type="PackedScene" uid="uid://cmarw81knjomw" path="res://src/ui/components/engagement_bar/engagement_bar.tscn" id="14_nmmsr"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="15_nmmsr"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="16_j63ba"]
@@ -91,23 +90,6 @@ corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
-[sub_resource type="StyleBoxLine" id="StyleBoxLine_i8f38"]
-content_margin_left = 0.0
-content_margin_top = 4.0
-content_margin_right = 0.0
-content_margin_bottom = 4.0
-color = Color(0.9254902, 0.92156863, 0.92941177, 1)
-thickness = 2
-vertical = true
-
-[sub_resource type="StyleBoxLine" id="StyleBoxLine_7t5hv"]
-content_margin_left = 0.0
-content_margin_top = 4.0
-content_margin_right = 0.0
-content_margin_bottom = 4.0
-color = Color(0.9254902, 0.92156863, 0.92941177, 1)
-vertical = true
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2e4jp"]
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_4wgrb"]
@@ -134,7 +116,7 @@ line_spacing = 0.0
 font = ExtResource("16_j63ba")
 font_size = 30
 
-[node name="PanelJumpInPortrait" type="VBoxContainer"]
+[node name="PanelJumpInPortrait" type="VBoxContainer" unique_id=309235942]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -143,29 +125,30 @@ grow_vertical = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 0
 script = ExtResource("1_ggr1j")
+metadata/mobile_preview_orientation = "portrait"
 
-[node name="PanelContainer_Header" type="PanelContainer" parent="."]
+[node name="PanelContainer_Header" type="PanelContainer" parent="." unique_id=1603065338]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 176)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_4wgrb")
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Header"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Header" unique_id=456868355]
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer_Header/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer_Header/MarginContainer" unique_id=277797819]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Header/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Header/MarginContainer/HBoxContainer" unique_id=1131902633]
 layout_mode = 2
 alignment = 2
 
-[node name="TextureButton_Close" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="TextureButton_Close" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer" unique_id=1530007666]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(55, 55)
 layout_mode = 2
@@ -180,12 +163,12 @@ ignore_texture_size = true
 stretch_mode = 6
 flip_h = true
 
-[node name="Control_Card" type="Control" parent="."]
+[node name="Control_Card" type="Control" parent="." unique_id=303147587]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="PanelContainer_Card" type="PanelContainer" parent="Control_Card"]
+[node name="PanelContainer_Card" type="PanelContainer" parent="Control_Card" unique_id=688454143]
 unique_name_in_owner = true
 layout_mode = 0
 offset_top = 262.0
@@ -194,23 +177,23 @@ offset_bottom = 862.0
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_2dyqy")
 
-[node name="Control_Background" type="Control" parent="Control_Card/PanelContainer_Card"]
+[node name="Control_Background" type="Control" parent="Control_Card/PanelContainer_Card" unique_id=1780870672]
 layout_mode = 2
 
-[node name="TextureRect_Background" type="TextureRect" parent="Control_Card/PanelContainer_Card/Control_Background"]
+[node name="TextureRect_Background" type="TextureRect" parent="Control_Card/PanelContainer_Card/Control_Background" unique_id=518942456]
 visible = false
 layout_mode = 0
 offset_right = 720.0
 offset_bottom = 572.0
 texture = SubResource("GradientTexture1D_8ey4u")
 
-[node name="PanelContainer_Content" type="PanelContainer" parent="Control_Card/PanelContainer_Card"]
+[node name="PanelContainer_Content" type="PanelContainer" parent="Control_Card/PanelContainer_Card" unique_id=1764862727]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_vq3of")
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content" unique_id=1549465046]
 layout_mode = 2
 script = ExtResource("2_7t5hv")
 use_left = false
@@ -219,13 +202,13 @@ use_top = false
 use_bottom = false
 metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
-[node name="MarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer" unique_id=2054233813]
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 48
 
-[node name="ScrollDescription" type="ScrollContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer"]
+[node name="ScrollDescription" type="ScrollContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer" unique_id=778726662]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
@@ -233,17 +216,17 @@ size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription" unique_id=1258659331]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="MarginContainer_ShowMore" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="MarginContainer_ShowMore" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1519428086]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_top = 16
 
-[node name="Button_ShowMore" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/MarginContainer_ShowMore"]
+[node name="Button_ShowMore" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/MarginContainer_ShowMore" unique_id=390989514]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 8)
 layout_mode = 2
@@ -261,26 +244,26 @@ theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_rjvsq")
 theme_override_styles/focus = SubResource("StyleBoxFlat_rjvsq")
 toggle_mode = true
 
-[node name="HSeparator" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1215470506]
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=2135345927]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 14
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer" unique_id=112465819]
 layout_mode = 2
 alignment = 1
 
-[node name="HBoxContainer2" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="HBoxContainer2" type="MarginContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer" unique_id=1032783571]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 
-[node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer/HBoxContainer2"]
+[node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer/HBoxContainer2" unique_id=1894746059]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
@@ -301,23 +284,23 @@ autowrap_mode = 2
 justification_flags = 131
 script = ExtResource("5_elce2")
 
-[node name="FavButton" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer" instance=ExtResource("6_i8f38")]
+[node name="FavButton" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer" unique_id=218432200 instance=ExtResource("6_i8f38")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 texture_normal = ExtResource("7_2e4jp")
 
-[node name="HBoxContainer_Creator" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer"]
+[node name="HBoxContainer_Creator" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer" unique_id=1876780436]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=1656743858]
 layout_mode = 2
 text = "by"
 label_settings = SubResource("LabelSettings_i8f38")
 
-[node name="Label_Creator" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_Creator" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=693197006]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -326,16 +309,16 @@ label_settings = SubResource("LabelSettings_7t5hv")
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1511669457]
 layout_mode = 2
 theme_override_constants/separation = 32
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="Control" type="Control" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="Control" type="Control" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1967023338]
 custom_minimum_size = Vector2(0, 368)
 layout_mode = 2
 
-[node name="Panel_Container_NoImage" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control"]
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control" unique_id=736941098]
 unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(0, 368)
@@ -348,7 +331,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_db46w")
 
-[node name="TextureRect_NoImage" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/Panel_Container_NoImage"]
+[node name="TextureRect_NoImage" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/Panel_Container_NoImage" unique_id=1556967100]
 custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -359,7 +342,7 @@ texture = ExtResource("7_7t5hv")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Panel_Container_Image" type="Panel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control"]
+[node name="Panel_Container_Image" type="Panel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control" unique_id=493842471]
 unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(0, 368)
@@ -372,7 +355,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_u7byp")
 
-[node name="TextureRect_Image" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/Panel_Container_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/Panel_Container_Image" unique_id=309673259]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 0
@@ -384,7 +367,7 @@ theme = ExtResource("1_fg6xg")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="PanelContainer2" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control"]
+[node name="PanelContainer2" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control" unique_id=319145159]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -394,60 +377,64 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_irfc2")
 
-[node name="DownloadWarning" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/PanelContainer2" instance=ExtResource("18_nmmsr")]
+[node name="DownloadWarning" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/PanelContainer2" unique_id=641772574 instance=ExtResource("18_nmmsr")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 8
 
-[node name="HSeparator4" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="HSeparator4" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1704338959]
 layout_mode = 2
 theme_override_constants/separation = 28
 theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 
-[node name="HBoxContainer_Stats" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="HBoxContainer_Stats" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1003597918]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Container_Online" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats"]
+[node name="HBoxContainer_Location" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats" unique_id=344119067]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 0
+size_flags_horizontal = 3
+theme_override_constants/separation = 5
 
-[node name="TextureRect" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/Container_Online"]
+[node name="TextureRect_Server" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Location" unique_id=1278256704]
+unique_name_in_owner = true
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+layout_mode = 2
+texture = ExtResource("18_2dyqy")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="TextureRect_Location" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Location" unique_id=1794417252]
+unique_name_in_owner = true
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
-texture = ExtResource("14_2e4jp")
+texture = ExtResource("19_7l6qr")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Online" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/Container_Online"]
+[node name="Label_Location" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Location" unique_id=1259360647]
 unique_name_in_owner = true
 layout_mode = 2
-theme = ExtResource("5_jnv06")
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("3_3inh7")
-theme_override_font_sizes/font_size = 18
-text = "000"
+theme_override_fonts/font = ExtResource("10_cpvjm")
+theme_override_font_sizes/font_size = 17
+text = "-000,-000"
 label_settings = ExtResource("11_2e4jp")
-horizontal_alignment = 2
-vertical_alignment = 1
+clip_text = true
 
-[node name="VSeparator_Online" type="VSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats"]
+[node name="HBoxContainer_Likes" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats" unique_id=235671420]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 6
-theme_override_constants/separation = 1
-theme_override_styles/separator = SubResource("StyleBoxLine_i8f38")
-
-[node name="HBoxContainer_Likes" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats"]
-unique_name_in_owner = true
-layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 0
+size_flags_stretch_ratio = 0.0
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Likes"]
+[node name="TextureRect" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Likes" unique_id=1494847987]
 modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
@@ -455,7 +442,7 @@ texture = ExtResource("17_rpsre")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Likes" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Likes"]
+[node name="Label_Likes" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Likes" unique_id=945315326]
 unique_name_in_owner = true
 layout_mode = 2
 theme = ExtResource("5_jnv06")
@@ -467,73 +454,32 @@ label_settings = ExtResource("11_2e4jp")
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="VSeparator_Likes" type="VSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 6
-theme_override_constants/separation = 1
-theme_override_styles/separator = SubResource("StyleBoxLine_7t5hv")
-
-[node name="HBoxContainer_Location" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 0.0
-theme_override_constants/separation = 5
-alignment = 2
-
-[node name="TextureRect_Server" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Location"]
-unique_name_in_owner = true
-modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
-layout_mode = 2
-texture = ExtResource("18_2dyqy")
-expand_mode = 3
-stretch_mode = 5
-
-[node name="TextureRect_Location" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Location"]
-unique_name_in_owner = true
-modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
-custom_minimum_size = Vector2(32, 32)
-layout_mode = 2
-texture = ExtResource("19_7l6qr")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Label_Location" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Location"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("10_cpvjm")
-theme_override_font_sizes/font_size = 17
-text = "-000,-000"
-label_settings = ExtResource("11_2e4jp")
-
-[node name="HSeparator5" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="HSeparator5" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=542271408]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 5
 theme_override_styles/separator = SubResource("StyleBoxEmpty_2e4jp")
 
-[node name="HSeparator_HideFromHere" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="HSeparator_HideFromHere" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1452542722]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 70
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="HSeparator6" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="HSeparator6" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=325416879]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 5
 theme_override_styles/separator = SubResource("StyleBoxEmpty_2e4jp")
 
-[node name="VBoxContainer_Description" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer"]
+[node name="VBoxContainer_Description" type="VBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1300514824]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 397)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Label_DescriptionTitle" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description"]
+[node name="Label_DescriptionTitle" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=45943552]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("4_wln2f")
@@ -542,13 +488,13 @@ text = "DESCRIPTION"
 label_settings = SubResource("LabelSettings_4wgrb")
 clip_text = true
 
-[node name="HSeparator3" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description"]
+[node name="HSeparator3" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=1834678294]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_4wgrb")
 
-[node name="Label_Description" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description"]
+[node name="Label_Description" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=841829180]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -566,43 +512,43 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description"]
+[node name="HSeparator2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=1547975514]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 80
 theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
-[node name="CategoriesBar" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" instance=ExtResource("19_7t5hv")]
+[node name="CategoriesBar" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=748967130 instance=ExtResource("19_7t5hv")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 size_flags_vertical = 1
 
-[node name="HSeparator4" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description"]
+[node name="HSeparator4" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=1208215381]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 56
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vaiub")
 
-[node name="PanelContainer_Footer" type="PanelContainer" parent="."]
+[node name="PanelContainer_Footer" type="PanelContainer" parent="." unique_id=1573313102]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 142)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_elce2")
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Footer"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Footer" unique_id=622445655]
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 18
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 86
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="PanelContainer_Footer/MarginContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="PanelContainer_Footer/MarginContainer" unique_id=995267812]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="Button_Share" type="Button" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3"]
+[node name="Button_Share" type="Button" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3" unique_id=800284029]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
@@ -614,11 +560,11 @@ icon = ExtResource("25_2e4jp")
 icon_alignment = 1
 expand_icon = true
 
-[node name="EngagementBar" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3" instance=ExtResource("14_nmmsr")]
+[node name="EngagementBar" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3" unique_id=1343710213 instance=ExtResource("14_nmmsr")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Button_JumpIn" type="Button" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3"]
+[node name="Button_JumpIn" type="Button" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3" unique_id=1207904903]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
@@ -630,7 +576,7 @@ theme_override_font_sizes/font_size = 14
 icon_alignment = 2
 expand_icon = true
 
-[node name="HBoxContainer_Content" type="HBoxContainer" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn"]
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn" unique_id=888744757]
 layout_mode = 1
 anchors_preset = 14
 anchor_top = 0.5
@@ -643,12 +589,12 @@ grow_vertical = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label" type="Label" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content"]
+[node name="Label" type="Label" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content" unique_id=888049014]
 layout_mode = 2
 text = "JUMP IN"
 label_settings = SubResource("LabelSettings_db46w")
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content" unique_id=2077763562]
 custom_minimum_size = Vector2(34, 34)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -656,7 +602,7 @@ size_flags_vertical = 4
 theme_override_constants/margin_top = 2
 theme_override_constants/margin_bottom = 2
 
-[node name="TextureRect_Add" type="TextureRect" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content/MarginContainer"]
+[node name="TextureRect_Add" type="TextureRect" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content/MarginContainer" unique_id=841004152]
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 mouse_filter = 2

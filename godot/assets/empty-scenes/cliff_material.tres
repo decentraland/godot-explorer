@@ -1,4 +1,4 @@
-[gd_resource type="ShaderMaterial" load_steps=5 format=3 uid="uid://di3pn11i2lssn"]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://di3pn11i2lssn"]
 
 [ext_resource type="Shader" uid="uid://c6dcw4v1iv4o5" path="res://assets/shaders/cliff.gdshader" id="1_shader"]
 [ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="2_texture"]

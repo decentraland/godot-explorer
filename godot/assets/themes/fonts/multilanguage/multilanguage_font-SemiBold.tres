@@ -1,4 +1,4 @@
-[gd_resource type="FontVariation" load_steps=5 format=3 uid="uid://buop40k3e4u13"]
+[gd_resource type="FontVariation" format=3 uid="uid://buop40k3e4u13"]
 
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="1_2wb2u"]
 [ext_resource type="FontFile" uid="uid://dfx6banyqu12e" path="res://assets/themes/fonts/nato_sc/NotoSansSC-VariableFont_wght.ttf" id="2_3g7s0"]

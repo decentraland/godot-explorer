@@ -15,6 +15,7 @@ signal open_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
+signal open_settings_panel
 signal open_backpack
 signal open_discover
 signal open_own_profile
@@ -57,6 +58,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 
 const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
+#const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -232,6 +234,11 @@ func _ready():
 	if env != "org":
 		print("[GLOBAL] Environment set to: ", env)
 
+	# Dev/testing: disable profile deploys so fake-owned wearables never publish.
+	if deep_link_obj.disable_profile_deploy:
+		ProfileService.set_deploy_disabled(true)
+		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
+
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
@@ -332,6 +339,7 @@ func _ready():
 			self.config.install_referrer_sent = true
 			self.config.save_to_settings_file()
 	get_tree().root.add_child.call_deferred(self.network_inspector)
+	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
 
@@ -977,6 +985,15 @@ func _notification(what: int) -> void:
 			# data set by the iOS signal path (process_deep_link).
 			if new_url.is_empty():
 				return
+
+			# On cold start (NOTIFICATION_READY), pre-set the environment from the deeplink
+			# BEFORE processing it. This prevents _check_dclenv_change() from seeing a
+			# difference (default "org" vs deeplink env) and calling sign_out() prematurely,
+			# which would skip the orientation/UI zoom setup in main.gd.
+			if what == NOTIFICATION_READY:
+				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
+				if not parsed.dclenv.is_empty():
+					DclGlobal.set_dcl_environment(parsed.dclenv)
 
 			deep_link_router.process_deep_link(new_url)
 

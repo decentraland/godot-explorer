@@ -41,10 +41,12 @@ func _ready() -> void:
 	_poll_timer.wait_time = FAST_POLL_SECONDS
 	_poll_timer.timeout.connect(_on_poll_timeout)
 	add_child(_poll_timer)
-	_poll_timer.start()
-	# Before a realm is set (lobby / backpack / discover), _get_health_url() falls
-	# back to peer_base() so we still detect real connection loss on those screens.
+	# Timer is started in _connect_signals after Global is fully initialized.
 
+	_connect_signals.call_deferred()
+
+
+func _connect_signals() -> void:
 	Global.modal_manager.connection_lost_retry.connect(_on_retry)
 	Global.modal_manager.connection_lost_exit.connect(_on_exit)
 
@@ -53,6 +55,10 @@ func _ready() -> void:
 	Global.realm.realm_changing.connect(_on_realm_changing)
 	Global.realm.realm_changed.connect(_on_realm_changed)
 	Global.realm.realm_change_failed.connect(_on_realm_change_failed)
+
+	# Before a realm is set (lobby / backpack / discover), _get_health_url() falls
+	# back to peer_base() so we still detect real connection loss on those screens.
+	_poll_timer.start()
 
 
 func _on_poll_timeout() -> void:

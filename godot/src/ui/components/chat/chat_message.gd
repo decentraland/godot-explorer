@@ -214,7 +214,8 @@ func make_urls_clickable(text: String) -> String:
 			)
 
 	var url_regex = RegEx.new()
-	url_regex.compile(r"(https://[^\s]+|www\.[^\s]+)")
+	# Match https://, http://, www., or bare domains (e.g., amazon.com, example.co.uk)
+	url_regex.compile(r"(https?://[^\s]+|www\.[^\s]+|[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}[^\s]*)")
 
 	var url_results = url_regex.search_all(processed_text)
 	for i in range(url_results.size() - 1, -1, -1):
@@ -223,9 +224,13 @@ func make_urls_clickable(text: String) -> String:
 		var start_pos = url_match.get_start()
 		var end_pos = url_match.get_end()
 
-		var full_url = url
-		if url.begins_with("www."):
-			full_url = "https://" + url
+		# Strip trailing punctuation that's likely not part of the URL
+		var trailing_punct = [".", ",", "!", "?", ")", ";", ":"]
+		while url.length() > 0 and url[-1] in trailing_punct:
+			url = url.substr(0, url.length() - 1)
+			end_pos -= 1
+
+		var full_url = Realm.ensure_starts_with_https(url)
 
 		if _is_safe_url(full_url):
 			var sanitized_url = _sanitize_url(full_url)
