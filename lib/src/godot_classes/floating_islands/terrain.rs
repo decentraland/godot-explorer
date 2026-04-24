@@ -34,9 +34,8 @@ pub struct TerrainMeshData {
     pub spawn_locations: Vec<SpawnLocation>,
 }
 
-/// Build a parcel's ground mesh in LOCAL space (range `-8..8`). World coords
-/// are still used for noise sampling so adjacent parcels line up at their
-/// shared boundary.
+/// LOCAL space (range `-8..8`); noise is sampled in world space so adjacent
+/// parcels line up at shared edges.
 pub fn build_terrain_mesh(
     coord: (i32, i32),
     config: &CornerConfig,
@@ -153,10 +152,9 @@ fn face_normal(a: Vector3, b: Vector3, c: Vector3) -> Vector3 {
     (c - a).cross(b - a).normalized()
 }
 
-/// Regenerates the grass/prop spawn locations from the stored terrain grid
-/// using the same RNG seed as `build_terrain_mesh`, so lazy re-promotion
-/// produces identical placements. Only iterates the first `GRID_SIZE²` quads —
-/// edge strip triangles are appended after and never seed grass/props.
+/// Reuses the same RNG seed as `build_terrain_mesh` so re-derived locations
+/// are identical. Only walks the first `GRID_SIZE² × 6` indices; edge-strip
+/// triangles live past that slice and must not seed grass/props.
 pub fn derive_spawn_locations(
     coord: (i32, i32),
     config: &CornerConfig,
@@ -401,9 +399,6 @@ fn push_quad(
         )
     };
 
-    // Flat normals on the vertical edge strips: the two triangles share a
-    // plane, so averaging gives the same vector — store the face normal
-    // directly on each unique vertex.
     let n = face_normal(v1, v2, v3);
     let base = vertices.len() as i32;
 

@@ -123,10 +123,8 @@ pub struct ParcelData {
 
     pub pending_physics_geometry: Option<PendingPhysicsGeometry>,
 
-    pub cliff_meshes: Vec<Rid>,
-    pub cliff_instances: Vec<Rid>,
-    pub overhang_meshes: Vec<Rid>,
-    pub overhang_instances: Vec<Rid>,
+    pub cliff_side_meshes: Vec<Rid>,
+    pub cliff_side_instances: Vec<Rid>,
 
     pub grass_multimesh: Rid,
     pub grass_instance: Rid,
@@ -148,10 +146,8 @@ impl Default for ParcelData {
             collision_body: Rid::Invalid,
             collision_shape: Rid::Invalid,
             pending_physics_geometry: None,
-            cliff_meshes: Vec::new(),
-            cliff_instances: Vec::new(),
-            overhang_meshes: Vec::new(),
-            overhang_instances: Vec::new(),
+            cliff_side_meshes: Vec::new(),
+            cliff_side_instances: Vec::new(),
             stale_since_msec: None,
             grass_multimesh: Rid::Invalid,
             grass_instance: Rid::Invalid,

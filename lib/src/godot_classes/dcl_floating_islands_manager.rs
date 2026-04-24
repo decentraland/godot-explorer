@@ -91,7 +91,7 @@ impl INode for DclFloatingIslandsManager {
             candidates: HashMap::new(),
             active: HashMap::new(),
             player_parcel: Vector2i::new(0, 0),
-            view_distance: 5,
+            view_distance: 7,
             destroy_hysteresis: 2,
             frame_budget: 4,
             generating: false,
@@ -261,14 +261,14 @@ impl DclFloatingIslandsManager {
             return;
         }
 
-        // Drain before the visibility pass so freshly-submitted coords aren't re-enqueued.
-        let submitted_this_frame = self.drain_worker_responses();
-        self.generated_so_far += submitted_this_frame;
-
         let player = self.player_parcel;
         let view = self.view_distance;
         let hyst = self.destroy_hysteresis;
         let budget = self.frame_budget.max(1) as usize;
+
+        // Drain before the visibility pass so freshly-submitted coords aren't re-enqueued.
+        let submitted_this_frame = self.drain_worker_responses(budget);
+        self.generated_so_far += submitted_this_frame;
 
         let mut in_view_candidates = 0;
         let mut in_view_missing: Vec<(i32, i32)> = Vec::new();
@@ -350,7 +350,7 @@ impl DclFloatingIslandsManager {
                 data.stale_since_msec = Some(now_msec);
             }
         }
-        for coord in to_destroy_immediate {
+        for coord in to_destroy_immediate.into_iter().take(budget) {
             if let Some(data) = self.active.remove(&coord) {
                 Self::destroy_parcel_data(data);
             }
@@ -513,15 +513,15 @@ impl DclFloatingIslandsManager {
         }
     }
 
-    fn drain_worker_responses(&mut self) -> i32 {
-        let mut ready: Vec<BuiltParcelMeshes> = Vec::new();
-        if let Some(worker) = self.worker.as_ref() {
-            while let Ok(built) = worker.rx.try_recv() {
-                ready.push(built);
-            }
-        }
+    fn drain_worker_responses(&mut self, budget: usize) -> i32 {
         let mut submitted = 0;
-        for built in ready {
+        while submitted < budget as i32 {
+            let Some(worker) = self.worker.as_ref() else {
+                break;
+            };
+            let Ok(built) = worker.rx.try_recv() else {
+                break;
+            };
             self.pending.remove(&built.coord);
             if !self.candidates.contains_key(&built.coord) {
                 continue;
@@ -558,28 +558,12 @@ impl DclFloatingIslandsManager {
 
         let mut rs = RenderingServer::singleton();
 
-        let terrain_vertices_packed = packed_vector3_from_slice(&terrain_vertices_vec);
-        let terrain_normals_packed = packed_vector3_from_slice(&terrain_normals_vec);
-        let terrain_uvs_packed = packed_vector2_from_slice(&terrain_uvs_vec);
-        let terrain_indices_packed = packed_int32_from_slice(&terrain_indices_vec);
-
-        let mut arrays = VarArray::new();
-        arrays.resize(ArrayType::MAX.ord() as usize, &Variant::nil());
-        arrays.set(
-            ArrayType::VERTEX.ord() as usize,
-            &terrain_vertices_packed.to_variant(),
-        );
-        arrays.set(
-            ArrayType::NORMAL.ord() as usize,
-            &terrain_normals_packed.to_variant(),
-        );
-        arrays.set(
-            ArrayType::TEX_UV.ord() as usize,
-            &terrain_uvs_packed.to_variant(),
-        );
-        arrays.set(
-            ArrayType::INDEX.ord() as usize,
-            &terrain_indices_packed.to_variant(),
+        let arrays = build_surface_arrays(
+            &terrain_vertices_vec,
+            &terrain_normals_vec,
+            &terrain_uvs_vec,
+            None,
+            &terrain_indices_vec,
         );
 
         let mesh_rid = rs.mesh_create();
@@ -607,37 +591,13 @@ impl DclFloatingIslandsManager {
             indices: terrain_indices_vec,
         });
 
-        let mut cliff_meshes: Vec<Rid> = Vec::new();
-        let mut cliff_instances: Vec<Rid> = Vec::new();
-        let mut overhang_meshes: Vec<Rid> = Vec::new();
-        let mut overhang_instances: Vec<Rid> = Vec::new();
+        let mut cliff_side_meshes: Vec<Rid> = Vec::with_capacity(sides.len());
+        let mut cliff_side_instances: Vec<Rid> = Vec::with_capacity(sides.len());
 
         for built_side in &sides {
-            let (mesh_rid, inst_rid) = self.spawn_indexed_surface(
-                scenario,
-                transform,
-                &built_side.cliff.vertices,
-                &built_side.cliff.normals,
-                &built_side.cliff.uvs,
-                None,
-                &built_side.cliff.indices,
-                self.cliff_material.as_ref(),
-            );
-            cliff_meshes.push(mesh_rid);
-            cliff_instances.push(inst_rid);
-
-            let (mesh_rid, inst_rid) = self.spawn_indexed_surface(
-                scenario,
-                transform,
-                &built_side.overhang.vertices,
-                &built_side.overhang.normals,
-                &built_side.overhang.uvs,
-                Some(&built_side.overhang.colors),
-                &built_side.overhang.indices,
-                self.overhang_material.as_ref(),
-            );
-            overhang_meshes.push(mesh_rid);
-            overhang_instances.push(inst_rid);
+            let (mesh_rid, inst_rid) = self.spawn_cliff_side(scenario, transform, built_side);
+            cliff_side_meshes.push(mesh_rid);
+            cliff_side_instances.push(inst_rid);
         }
 
         let mut data = ParcelData {
@@ -646,10 +606,8 @@ impl DclFloatingIslandsManager {
             collision_body,
             collision_shape,
             pending_physics_geometry,
-            cliff_meshes,
-            cliff_instances,
-            overhang_meshes,
-            overhang_instances,
+            cliff_side_meshes,
+            cliff_side_instances,
             config,
             ..ParcelData::default()
         };
@@ -725,51 +683,40 @@ impl DclFloatingIslandsManager {
         dist <= GRASS_CULLING_RANGE
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn spawn_indexed_surface(
+    fn spawn_cliff_side(
         &self,
         scenario: Rid,
         transform: Transform3D,
-        vertices: &[Vector3],
-        normals: &[Vector3],
-        uvs: &[Vector2],
-        colors: Option<&[Color]>,
-        indices: &[i32],
-        material: Option<&Gd<Material>>,
+        side: &BuiltCliffSide,
     ) -> (Rid, Rid) {
-        let packed_vertices = packed_vector3_from_slice(vertices);
-        let packed_normals = packed_vector3_from_slice(normals);
-        let packed_uvs = packed_vector2_from_slice(uvs);
-        let packed_indices = packed_int32_from_slice(indices);
-
         let mut rs = RenderingServer::singleton();
-        let mut arrays = VarArray::new();
-        arrays.resize(ArrayType::MAX.ord() as usize, &Variant::nil());
-        arrays.set(
-            ArrayType::VERTEX.ord() as usize,
-            &packed_vertices.to_variant(),
-        );
-        arrays.set(
-            ArrayType::NORMAL.ord() as usize,
-            &packed_normals.to_variant(),
-        );
-        arrays.set(ArrayType::TEX_UV.ord() as usize, &packed_uvs.to_variant());
-        if let Some(c) = colors {
-            let packed_colors = packed_color_from_slice(c);
-            arrays.set(ArrayType::COLOR.ord() as usize, &packed_colors.to_variant());
-        }
-        arrays.set(
-            ArrayType::INDEX.ord() as usize,
-            &packed_indices.to_variant(),
-        );
-
         let mesh_rid = rs.mesh_create();
-        rs.mesh_add_surface_from_arrays(mesh_rid, RsPrimitiveType::TRIANGLES, &arrays);
+
+        let cliff_arrays = build_surface_arrays(
+            &side.cliff.vertices,
+            &side.cliff.normals,
+            &side.cliff.uvs,
+            None,
+            &side.cliff.indices,
+        );
+        rs.mesh_add_surface_from_arrays(mesh_rid, RsPrimitiveType::TRIANGLES, &cliff_arrays);
+
+        let overhang_arrays = build_surface_arrays(
+            &side.overhang.vertices,
+            &side.overhang.normals,
+            &side.overhang.uvs,
+            Some(&side.overhang.colors),
+            &side.overhang.indices,
+        );
+        rs.mesh_add_surface_from_arrays(mesh_rid, RsPrimitiveType::TRIANGLES, &overhang_arrays);
 
         let instance = rs.instance_create2(mesh_rid, scenario);
         rs.instance_set_transform(instance, transform);
-        if let Some(material) = material {
-            rs.instance_geometry_set_material_override(instance, material.get_rid());
+        if let Some(material) = &self.cliff_material {
+            rs.instance_set_surface_override_material(instance, 0, material.get_rid());
+        }
+        if let Some(material) = &self.overhang_material {
+            rs.instance_set_surface_override_material(instance, 1, material.get_rid());
         }
         (mesh_rid, instance)
     }
@@ -814,22 +761,12 @@ impl DclFloatingIslandsManager {
         if data.terrain_mesh.is_valid() {
             rs.free_rid(data.terrain_mesh);
         }
-        for rid in data.cliff_instances {
+        for rid in data.cliff_side_instances {
             if rid.is_valid() {
                 rs.free_rid(rid);
             }
         }
-        for rid in data.cliff_meshes {
-            if rid.is_valid() {
-                rs.free_rid(rid);
-            }
-        }
-        for rid in data.overhang_instances {
-            if rid.is_valid() {
-                rs.free_rid(rid);
-            }
-        }
-        for rid in data.overhang_meshes {
+        for rid in data.cliff_side_meshes {
             if rid.is_valid() {
                 rs.free_rid(rid);
             }
@@ -931,12 +868,7 @@ fn set_parcel_visible(data: &mut ParcelData, visible: bool) {
     if data.terrain_instance.is_valid() {
         rs.instance_set_visible(data.terrain_instance, visible);
     }
-    for rid in &data.cliff_instances {
-        if rid.is_valid() {
-            rs.instance_set_visible(*rid, visible);
-        }
-    }
-    for rid in &data.overhang_instances {
+    for rid in &data.cliff_side_instances {
         if rid.is_valid() {
             rs.instance_set_visible(*rid, visible);
         }
@@ -1049,6 +981,40 @@ fn write_transform_3d_row_major(slot: &mut [f32], t: &Transform3D) {
     slot[9] = r2.y;
     slot[10] = r2.z;
     slot[11] = t.origin.z;
+}
+
+fn build_surface_arrays(
+    vertices: &[Vector3],
+    normals: &[Vector3],
+    uvs: &[Vector2],
+    colors: Option<&[Color]>,
+    indices: &[i32],
+) -> VarArray {
+    let mut arrays = VarArray::new();
+    arrays.resize(ArrayType::MAX.ord() as usize, &Variant::nil());
+    arrays.set(
+        ArrayType::VERTEX.ord() as usize,
+        &packed_vector3_from_slice(vertices).to_variant(),
+    );
+    arrays.set(
+        ArrayType::NORMAL.ord() as usize,
+        &packed_vector3_from_slice(normals).to_variant(),
+    );
+    arrays.set(
+        ArrayType::TEX_UV.ord() as usize,
+        &packed_vector2_from_slice(uvs).to_variant(),
+    );
+    if let Some(c) = colors {
+        arrays.set(
+            ArrayType::COLOR.ord() as usize,
+            &packed_color_from_slice(c).to_variant(),
+        );
+    }
+    arrays.set(
+        ArrayType::INDEX.ord() as usize,
+        &packed_int32_from_slice(indices).to_variant(),
+    );
+    arrays
 }
 
 fn expand_indexed_faces(vertices: &[Vector3], indices: &[i32]) -> PackedVector3Array {
