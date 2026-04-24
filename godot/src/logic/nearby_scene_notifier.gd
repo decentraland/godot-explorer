@@ -10,6 +10,7 @@ var _pending_toast_entity_id: String = ""
 var _pending_toast_scene_parcels: Array[Vector2i] = []
 var _toast_shown_scene_parcels: Array[Vector2i] = []
 var _scene_toast_timer: Timer = null
+var _scene_modal_timer: Timer = null
 var _scene_toast_cache: Dictionary = {}
 
 
@@ -23,6 +24,12 @@ func _ready() -> void:
 	_scene_toast_timer.wait_time = 3.0
 	_scene_toast_timer.timeout.connect(_async_on_scene_toast_timer_timeout)
 	add_child(_scene_toast_timer)
+
+	_scene_modal_timer = Timer.new()
+	_scene_modal_timer.one_shot = true
+	_scene_modal_timer.wait_time = 8.0
+	_scene_modal_timer.timeout.connect(_async_on_scene_modal_timer_timeout)
+	add_child(_scene_modal_timer)
 
 	Global.notification_clicked.connect(_on_notification_clicked)
 
@@ -39,6 +46,7 @@ func on_teleport() -> void:
 	_pending_toast_scene_parcels = []
 	_toast_shown_scene_parcels = []
 	_scene_toast_timer.stop()
+	_scene_modal_timer.stop()
 
 
 func on_realm_changed() -> void:
@@ -60,6 +68,13 @@ func _async_on_scene_toast_timer_timeout() -> void:
 	await _async_show_scene_toast(_scene_fetcher.current_position)
 
 
+func _async_on_scene_modal_timer_timeout() -> void:
+	if _home_scene_entity_id.is_empty() or _scene_fetcher.current_position in _home_scene_parcels:
+		return
+	if Global.modal_manager != null:
+		Global.modal_manager.async_show_teleport_modal(_scene_fetcher.current_position)
+
+
 func _async_check_nearby_scene(new_position: Vector2i) -> void:
 	var loaded_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
 	var loaded_entity_id: String = Global.scene_runner.get_scene_entity_id(loaded_scene_id)
@@ -73,13 +88,14 @@ func _async_check_nearby_scene(new_position: Vector2i) -> void:
 		if home_data != null:
 			_home_scene_parcels = home_data.parcels.duplicate()
 
-	# Player stepped back into home — cancel any pending toast
+	# Player stepped back into home — cancel any pending toast/modal
 	if new_position in _home_scene_parcels:
 		_pending_toast_parcel = SceneFetcher.INVALID_PARCEL
 		_pending_toast_entity_id = ""
 		_pending_toast_scene_parcels = []
 		_toast_shown_scene_parcels = []
 		_scene_toast_timer.stop()
+		_scene_modal_timer.stop()
 		return
 
 	# Home not established yet — can't determine context
@@ -128,6 +144,7 @@ func _async_check_nearby_scene(new_position: Vector2i) -> void:
 		if scene_data != null:
 			_pending_toast_scene_parcels = scene_data.parcels.duplicate()
 	_scene_toast_timer.start()
+	_scene_modal_timer.start()
 
 
 func _async_show_scene_toast(parcel: Vector2i) -> void:
