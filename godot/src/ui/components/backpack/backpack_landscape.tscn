@@ -146,7 +146,7 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 60.0
 grow_horizontal = 2
-theme_override_constants/margin_right = 30
+theme_override_constants/margin_right = 10
 
 [node name="PanelContainer_Navbar" type="PanelContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer"]
 unique_name_in_owner = true
@@ -222,11 +222,10 @@ text = "Emotes"
 icon = ExtResource("7_pjbir")
 
 [node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer/PanelContainer_Navbar/HBoxContainer/HBoxContainer2/HBoxContainer"]
-visible = false
 layout_mode = 2
 theme = ExtResource("5_imvcg")
 theme_type_variation = &"HiddenVSeparator"
-theme_override_constants/separation = 68
+theme_override_constants/separation = 20
 
 [node name="CheckBox_OnlyCollectibles" type="Button" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer/PanelContainer_Navbar/HBoxContainer/HBoxContainer2/HBoxContainer"]
 unique_name_in_owner = true
@@ -827,6 +826,7 @@ unique_name_in_owner = true
 editor_description = "Used only to estimate size and position of UI. This info is then used to determine if the Screen is too narrow to accomodate the full UI. If not the number of wearable collumns in the grid is reduced to 2."
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 0
 
 [node name="ControlContainer_Canary" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary"]
 unique_name_in_owner = true
