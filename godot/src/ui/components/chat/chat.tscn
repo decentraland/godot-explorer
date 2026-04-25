@@ -378,23 +378,29 @@ label_settings = SubResource("LabelSettings_bhyuy")
 horizontal_alignment = 1
 vertical_alignment = 2
 
-[node name="PanelLineEdit" type="PanelContainer" parent="VBoxContainer" unique_id=133145994]
+[node name="MarginContainer_LineEditSafeArea" type="MarginContainer" parent="VBoxContainer" unique_id=1100066028]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="PanelLineEdit" type="PanelContainer" parent="VBoxContainer/MarginContainer_LineEditSafeArea" unique_id=133145994]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_askrr")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelLineEdit" unique_id=917645293]
+[node name="MarginContainer_ForKeyboard" type="MarginContainer" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit" unique_id=917645293]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 14
+theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer_LineEdit" type="HBoxContainer" parent="VBoxContainer/PanelLineEdit/MarginContainer" unique_id=1555914194]
+[node name="HBoxContainer_LineEdit" type="HBoxContainer" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard" unique_id=1555914194]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="LineEdit_Command" type="LineEdit" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit" unique_id=1450378077]
+[node name="LineEdit_Command" type="LineEdit" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit" unique_id=1450378077]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -412,7 +418,7 @@ keep_editing_on_text_submit = true
 deselect_on_focus_loss_enabled = false
 caret_blink = true
 
-[node name="Button_Send" type="Button" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit" unique_id=1485754093]
+[node name="Button_Send" type="Button" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit" unique_id=1485754093]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(108, 0)
 layout_mode = 2
@@ -437,7 +443,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_ttgy1")
 
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat/MarginContainer_Chat/VBoxContainer/Button_Write" to="." method="_on_button_write_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_go_to_last_pressed"]
-[connection signal="focus_exited" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
-[connection signal="text_changed" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_changed"]
-[connection signal="text_submitted" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
-[connection signal="pressed" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]
+[connection signal="focus_exited" from="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
+[connection signal="text_changed" from="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_changed"]
+[connection signal="text_submitted" from="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]

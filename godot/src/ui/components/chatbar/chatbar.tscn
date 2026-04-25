@@ -5,7 +5,6 @@
 [ext_resource type="Texture2D" uid="uid://cytpdlax4ble0" path="res://src/ui/components/menu/icons/discover-outlined.svg" id="3_2fmgn"]
 [ext_resource type="Texture2D" uid="uid://dk5w8vi7brgtt" path="res://assets/button-chat-selected.svg" id="3_tw2ns"]
 [ext_resource type="Texture2D" uid="uid://bhiwoh5dwudbo" path="res://assets/sharehud.svg" id="4_o1l3x"]
-[ext_resource type="Texture2D" uid="uid://l1iy66567r20" path="res://assets/button-chat-on-click.svg" id="4_vm240"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_coord"]
 [ext_resource type="Texture2D" uid="uid://cfncbhirsbuo" path="res://assets/flip-button-default.svg" id="5_grvqo"]
 [ext_resource type="Texture2D" uid="uid://l2psogj3gtew" path="res://assets/flip-button-pressed.svg" id="6_akf1h"]
@@ -36,18 +35,17 @@ corner_radius_bottom_left = 24
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2fmgn"]
 
-[node name="Chatbar" type="Control" unique_id=486144832]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vm240"]
+
+[node name="Chatbar" type="VBoxContainer" unique_id=2109166818]
 custom_minimum_size = Vector2(328, 66)
-layout_mode = 3
-anchors_preset = 0
-offset_right = 228.0
+offset_right = 610.0
 offset_bottom = 66.0
+theme_override_constants/separation = 0
 script = ExtResource("1_8wxvk")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1972815801]
-layout_mode = 1
-offset_right = 610.0
-offset_bottom = 66.0
+layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="Button_Chat" type="TextureButton" parent="HBoxContainer" unique_id=1791709263]
@@ -60,8 +58,6 @@ focus_mode = 0
 toggle_mode = true
 texture_normal = ExtResource("2_8t8cm")
 texture_pressed = ExtResource("3_tw2ns")
-texture_hover = ExtResource("4_vm240")
-texture_focused = ExtResource("4_vm240")
 ignore_texture_size = true
 stretch_mode = 5
 
@@ -195,6 +191,11 @@ icon = ExtResource("9_reset")
 flat = true
 icon_alignment = 1
 expand_icon = true
+
+[node name="HSeparator" type="HSeparator" parent="." unique_id=730482792]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vm240")
 
 [connection signal="pressed" from="HBoxContainer/Button_Chat" to="." method="_on_button_chat_pressed"]
 [connection signal="pressed" from="HBoxContainer/Button_Flip" to="." method="_on_button_flip_pressed"]

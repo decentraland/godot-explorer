@@ -32,6 +32,7 @@ signal session_hide_ui_toggle_sync(pressed: bool)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal favorite_destination_set
 signal orientation_changed(is_portrait: bool)
+signal chat_write_mode_changed(is_writing: bool)
 
 enum CameraMode {
 	FIRST_PERSON = 0,

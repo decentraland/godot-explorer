@@ -155,6 +155,7 @@ func _ready():
 	Global.loading_finished.connect(_on_loading_finished)
 
 	Global.orientation_changed.connect(_on_orientation_changed)
+	Global.chat_write_mode_changed.connect(_on_chat_write_mode_changed)
 
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
@@ -1191,15 +1192,44 @@ func _on_loading_finished() -> void:
 
 func _on_orientation_changed(is_portrait: bool) -> void:
 	if is_portrait:
+		# Portrait: hide all HUD and scene UI, only chat visible
 		mobile_ui.hide()
 		emote_wheel.hide()
 		navbar.hide()
+		_set_scene_ui_visible(false)
 	else:
+		# Landscape: restore all UI
 		if Global.is_mobile():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
 		navbar._on_size_changed()
+		_set_scene_ui_visible(true)
+
+
+func _on_chat_write_mode_changed(is_writing: bool) -> void:
+	if Global.is_orientation_portrait():
+		return  # Portrait hides everything already
+	if is_writing:
+		# Landscape writing: hide all UI
+		mobile_ui.hide()
+		emote_wheel.hide()
+		navbar.hide()
+		_set_scene_ui_visible(false)
+	else:
+		# Landscape reading: restore all UI
+		if Global.is_mobile():
+			mobile_ui.show()
+			_update_virtual_controls_visibility()
+		emote_wheel.show()
+		navbar._on_size_changed()
+		_set_scene_ui_visible(true)
+
+
+func _set_scene_ui_visible(is_visible: bool) -> void:
+	var base_ui = Global.scene_runner.base_ui
+	if is_instance_valid(base_ui):
+		base_ui.visible = is_visible
 
 
 func _update_version_label() -> void:

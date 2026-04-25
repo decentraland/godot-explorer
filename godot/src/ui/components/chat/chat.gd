@@ -51,6 +51,8 @@ var _autocomplete_queued: bool = false
 @onready var button_write: Button = %Button_Write
 @onready var panel_messages: PanelContainer = $VBoxContainer/HBoxContainer/PanelContainer
 @onready var column_go_to_last: Control = $VBoxContainer/HBoxContainer/VSeparator
+
+@onready var _line_edit_safe_area: MarginContainer = %MarginContainer_LineEditSafeArea
 @onready var _header: PanelContainer = %PanelContainer_Header
 @onready var _header_hbox: HBoxContainer = %PanelContainer_Header/HBoxContainer
 @onready var _header_icon: TextureRect = %PanelContainer_Header/HBoxContainer/TextureRect
@@ -68,6 +70,7 @@ func _ready():
 
 	exit_chat.call_deferred()
 	button_go_to_last.hide()
+	_apply_system_bar_insets()
 
 	scroll_container_chats_list.get_v_scroll_bar().scrolling.connect(
 		self._on_chat_scrollbar_scrolling
@@ -203,6 +206,11 @@ func _relayout_all_messages() -> void:
 			child._update_layout.call_deferred()
 
 
+func _deferred_relayout_all_messages() -> void:
+	await get_tree().process_frame
+	_relayout_all_messages()
+
+
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
 	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
@@ -248,9 +256,47 @@ func _on_button_go_to_last_pressed() -> void:
 
 func _async_on_change_virtual_keyboard(keyboard_height: int) -> void:
 	if keyboard_height <= 0:
+		if panel_line_edit.visible:
+			_close_write_mode()
+		_line_edit_safe_area.add_theme_constant_override("margin_right", 0)
+		_line_edit_safe_area.add_theme_constant_override("margin_left", 0)
 		return
+	_apply_system_bar_insets()
 	await get_tree().process_frame
 	_scroll_to_bottom()
+
+
+func _apply_system_bar_insets() -> void:
+	if not OS.get_name() == "Android":
+		return
+	await get_tree().process_frame
+	var insets := _get_android_system_bar_insets()
+	var win_size := DisplayServer.window_get_size()
+	var viewport_size := get_viewport().get_visible_rect().size
+	var x_factor: float = viewport_size.x / max(float(win_size.x), 1.0)
+	var nav_right: int = int(ceil(float(insets.get("right", 0)) * x_factor))
+	var nav_left: int = int(ceil(float(insets.get("left", 0)) * x_factor))
+	_line_edit_safe_area.add_theme_constant_override("margin_right", nav_right)
+	_line_edit_safe_area.add_theme_constant_override("margin_left", nav_left)
+
+
+func _get_android_system_bar_insets() -> Dictionary:
+	var result := {"left": 0, "top": 0, "right": 0, "bottom": 0}
+	if not Engine.has_singleton("AndroidRuntime"):
+		return result
+	var android_runtime: Object = Engine.get_singleton("AndroidRuntime")
+	var activity: Object = android_runtime.getActivity()
+	var window: Object = activity.getWindow()
+	var window_insets_types: Object = JavaClassWrapper.wrap("android.view.WindowInsets$Type")
+	var root_insets: Object = window.getDecorView().getRootWindowInsets()
+	var nav_bars: int = window_insets_types.navigationBars()
+	var insets_ignoring: Object = root_insets.getInsetsIgnoringVisibility(nav_bars)
+	var insets_str: String = insets_ignoring.toString()
+	var regex := RegEx.new()
+	regex.compile("(\\w+)=(\\d+)")
+	for m in regex.search_all(insets_str):
+		result[m.get_string(1)] = int(m.get_string(2))
+	return result
 
 
 func _on_line_edit_command_focus_exited() -> void:
@@ -316,7 +362,8 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		_set_button_write_padding(WRITE_PADDING_LANDSCAPE)
 	if panel_line_edit.visible:
 		_close_write_mode()
-	_relayout_all_messages()
+	_apply_system_bar_insets()
+	_deferred_relayout_all_messages()
 
 
 func _set_button_write_padding(left: int) -> void:

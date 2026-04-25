@@ -46,6 +46,7 @@ func _apply_open_state() -> void:
 	chat.show()
 	chatbar.show()
 	notifications.hide()
+	add_theme_constant_override("margin_top", LANDSCAPE_MARGINS["top"])
 	if Global.is_orientation_portrait():
 		add_theme_constant_override("margin_bottom", PORTRAIT_MARGINS["bottom"])
 	else:
@@ -62,6 +63,7 @@ func _apply_writing_state() -> void:
 		add_theme_constant_override("margin_bottom", 5)
 	else:
 		chatbar.hide()
+		add_theme_constant_override("margin_top", 0)
 	_update_chat_layout()
 
 
@@ -97,10 +99,16 @@ func _on_panel_chat_on_exit_chat() -> void:
 
 func _on_chat_enter_write_mode() -> void:
 	_apply_writing_state()
+	Global.chat_write_mode_changed.emit(true)
 
 
 func _on_chat_exit_write_mode() -> void:
+	# Hide during transition to avoid layout flicker
+	chat.modulate.a = 0
 	_apply_open_state()
+	Global.chat_write_mode_changed.emit(false)
+	await get_tree().process_frame
+	chat.modulate.a = 1
 
 
 func _on_panel_chat_submit_message(message: String) -> void:
@@ -126,6 +134,14 @@ func hide_load_scenes_button() -> void:
 
 func is_chat_visible() -> bool:
 	return chat.visible
+
+
+func is_interactive_area_at(position: Vector2) -> bool:
+	if chatbar.visible and chatbar.get_global_rect().has_point(position):
+		return true
+	if chat.visible and chat.get_global_rect().has_point(position):
+		return true
+	return false
 
 
 func _on_orientation_changed(is_portrait: bool) -> void:

@@ -32,8 +32,6 @@ func _ready() -> void:
 
 	Global.close_navbar.connect(_on_navbar_close)
 	Global.open_navbar_silently.connect(_on_navbar_open_silently_on_backpack)
-	Global.open_chat.connect(_on_size_changed.call_deferred)
-	Global.close_chat.connect(_on_size_changed.call_deferred)
 
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -54,10 +52,6 @@ func _on_size_changed():
 			and explorer.control_menu.control_discover.instance.visible
 		):
 			# If discover is open, keep hidden
-			hide()
-			return
-		if explorer.chat_panel != null and explorer.chat_panel.is_chat_visible():
-			# If chat is open, keep hidden
 			hide()
 			return
 	var window_size: Vector2i = DisplayServer.window_get_size()
@@ -129,9 +123,6 @@ func set_manually_hidden(is_hidden: bool) -> void:
 			):
 				# If discover is open, keep hidden
 				return
-			if explorer.chat_panel != null and explorer.chat_panel.is_chat_visible():
-				# If chat is open, keep hidden
-				return
-		# Restore visibility based on window size only if discover or chat are open
+		# Restore visibility based on window size
 		var window_size: Vector2i = DisplayServer.window_get_size()
 		visible = window_size.x > window_size.y
