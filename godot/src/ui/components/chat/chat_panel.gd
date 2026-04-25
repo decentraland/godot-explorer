@@ -103,12 +103,13 @@ func _on_chat_enter_write_mode() -> void:
 
 
 func _on_chat_exit_write_mode() -> void:
-	# Hide during transition to avoid layout flicker
-	chat.modulate.a = 0
+	# Apply state but keep chat invisible for one frame to avoid layout flicker
 	_apply_open_state()
+	chat.modulate = Color.TRANSPARENT
 	Global.chat_write_mode_changed.emit(false)
 	await get_tree().process_frame
-	chat.modulate.a = 1
+	await get_tree().process_frame
+	chat.modulate = Color.WHITE
 
 
 func _on_panel_chat_submit_message(message: String) -> void:
@@ -137,9 +138,9 @@ func is_chat_visible() -> bool:
 
 
 func is_interactive_area_at(position: Vector2) -> bool:
-	if chatbar.visible and chatbar.get_global_rect().has_point(position):
+	if chatbar.visible and chatbar.is_point_inside(position):
 		return true
-	if chat.visible and chat.get_global_rect().has_point(position):
+	if chat.visible and chat.is_interactive_area_at(position):
 		return true
 	return false
 

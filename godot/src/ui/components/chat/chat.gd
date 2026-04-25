@@ -315,6 +315,16 @@ func _on_line_edit_command_text_changed(new_text: String) -> void:
 		_update_autocomplete.call_deferred()
 
 
+func is_interactive_area_at(position: Vector2) -> bool:
+	if panel_messages.visible and panel_messages.get_global_rect().has_point(position):
+		return true
+	if panel_line_edit.visible and panel_line_edit.get_global_rect().has_point(position):
+		return true
+	if button_go_to_last.visible and button_go_to_last.get_global_rect().has_point(position):
+		return true
+	return false
+
+
 # region Layout
 
 

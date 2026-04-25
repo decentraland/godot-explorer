@@ -6,6 +6,7 @@ signal load_scenes_pressed
 var _tooltip_tween: Tween = null
 var _tooltip_shown: bool = false
 
+@onready var hbox: HBoxContainer = $HBoxContainer
 @onready var button_chat: TextureButton = %Button_Chat
 @onready var button_flip: TextureButton = %Button_Flip
 @onready var tooltip: HBoxContainer = %HBoxContainer_Tooltip
@@ -100,3 +101,7 @@ func show_load_scenes_button() -> void:
 
 func hide_load_scenes_button() -> void:
 	panel_load_scenes.hide()
+
+
+func is_point_inside(position: Vector2) -> bool:
+	return hbox.get_global_rect().has_point(position)
