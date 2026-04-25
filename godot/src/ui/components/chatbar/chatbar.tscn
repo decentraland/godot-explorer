@@ -38,14 +38,15 @@ corner_radius_bottom_left = 24
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vm240"]
 
 [node name="Chatbar" type="VBoxContainer" unique_id=2109166818]
-custom_minimum_size = Vector2(328, 66)
-offset_right = 610.0
-offset_bottom = 66.0
+offset_right = 328.0
+offset_bottom = 76.0
+size_flags_horizontal = 0
 theme_override_constants/separation = 0
 script = ExtResource("1_8wxvk")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1972815801]
 layout_mode = 2
+size_flags_horizontal = 0
 theme_override_constants/separation = 12
 
 [node name="Button_Chat" type="TextureButton" parent="HBoxContainer" unique_id=1791709263]
