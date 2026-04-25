@@ -92,7 +92,7 @@ func set_chat(address: String, message: String, _timestamp: float) -> void:
 
 	var processed_message = make_urls_clickable(new_text)
 	rich_text.text = _build_chat_rich_text(processed_message)
-	_update_layout.call_deferred()
+	_async_update_layout.call_deferred()
 
 
 func _build_chat_rich_text(processed_message: String) -> String:
@@ -404,7 +404,7 @@ func _handle_mention_click(mention_str: String) -> void:
 					break
 
 
-func _update_layout() -> void:
+func _async_update_layout() -> void:
 	await get_tree().process_frame
 	if rich_text.size.x <= 0:
 		return  # Chat hidden, will be re-layouted on open

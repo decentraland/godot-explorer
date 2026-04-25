@@ -102,7 +102,7 @@ func _on_chat_enter_write_mode() -> void:
 	Global.chat_write_mode_changed.emit(true)
 
 
-func _on_chat_exit_write_mode() -> void:
+func _async_on_chat_exit_write_mode() -> void:
 	# Apply state but keep chat invisible for one frame to avoid layout flicker
 	_apply_open_state()
 	chat.modulate = Color.TRANSPARENT

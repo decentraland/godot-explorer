@@ -58,6 +58,6 @@ mouse_filter = 2
 
 [connection signal="on_enter_write_mode" from="VBoxContainer_LeftSide/Chat" to="." method="_on_chat_enter_write_mode"]
 [connection signal="on_exit_chat" from="VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_on_exit_chat"]
-[connection signal="on_exit_write_mode" from="VBoxContainer_LeftSide/Chat" to="." method="_on_chat_exit_write_mode"]
+[connection signal="on_exit_write_mode" from="VBoxContainer_LeftSide/Chat" to="." method="_async_on_chat_exit_write_mode"]
 [connection signal="on_open_chat" from="VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_on_open_chat"]
 [connection signal="submit_message" from="VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_submit_message"]

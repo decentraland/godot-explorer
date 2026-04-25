@@ -70,7 +70,7 @@ func _ready():
 
 	exit_chat.call_deferred()
 	button_go_to_last.hide()
-	_apply_system_bar_insets()
+	_async_apply_system_bar_insets()
 
 	scroll_container_chats_list.get_v_scroll_bar().scrolling.connect(
 		self._on_chat_scrollbar_scrolling
@@ -202,11 +202,11 @@ func _relayout_all_messages() -> void:
 	for child in v_box_container_chat.get_children():
 		if child.has_method("set_portrait"):
 			child.set_portrait(is_portrait)
-		if child.has_method("_update_layout"):
-			child._update_layout.call_deferred()
+		if child.has_method("_async_update_layout"):
+			child._async_update_layout.call_deferred()
 
 
-func _deferred_relayout_all_messages() -> void:
+func _async_deferred_relayout_all_messages() -> void:
 	await get_tree().process_frame
 	_relayout_all_messages()
 
@@ -261,12 +261,12 @@ func _async_on_change_virtual_keyboard(keyboard_height: int) -> void:
 		_line_edit_safe_area.add_theme_constant_override("margin_right", 0)
 		_line_edit_safe_area.add_theme_constant_override("margin_left", 0)
 		return
-	_apply_system_bar_insets()
+	_async_apply_system_bar_insets()
 	await get_tree().process_frame
 	_scroll_to_bottom()
 
 
-func _apply_system_bar_insets() -> void:
+func _async_apply_system_bar_insets() -> void:
 	if not OS.get_name() == "Android":
 		return
 	await get_tree().process_frame
@@ -372,8 +372,8 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		_set_button_write_padding(WRITE_PADDING_LANDSCAPE)
 	if panel_line_edit.visible:
 		_close_write_mode()
-	_apply_system_bar_insets()
-	_deferred_relayout_all_messages()
+	_async_apply_system_bar_insets()
+	_async_deferred_relayout_all_messages()
 
 
 func _set_button_write_padding(left: int) -> void:
