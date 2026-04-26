@@ -443,7 +443,7 @@ func _async_subscribe_to_friendship_updates() -> void:
 	if promise.is_rejected():
 		push_error(
 			(
-				"[Explorer] Failed to subscribe to friendship updates: "
+				"[FriendsPanel.SubscriptionState] friendship subscribe rejected (initial): "
 				+ str(PromiseUtils.get_error_message(promise))
 			)
 		)
@@ -463,7 +463,7 @@ func _async_subscribe_to_connectivity_updates() -> void:
 	if promise.is_rejected():
 		push_error(
 			(
-				"[Explorer] Failed to subscribe to connectivity updates: "
+				"[FriendsPanel.SubscriptionState] connectivity subscribe rejected: "
 				+ str(PromiseUtils.get_error_message(promise))
 			)
 		)
@@ -496,7 +496,7 @@ func _async_on_subscription_dropped() -> void:
 	if _subscription_reconnecting:
 		return
 	_subscription_reconnecting = true
-	print("[Explorer] Subscription dropped - reconnecting in 2s...")
+	print("[FriendsPanel.SubscriptionState] subscription dropped — reconnecting in 2s")
 	await get_tree().create_timer(2.0).timeout
 	_subscription_reconnecting = false
 	Global.social_service.subscribe_to_block_updates()
@@ -510,7 +510,7 @@ func _async_subscribe_to_friendship_updates_refresh() -> void:
 	if promise.is_rejected():
 		push_error(
 			(
-				"[Explorer] Failed to re-subscribe to friendship updates: "
+				"[FriendsPanel.SubscriptionState] friendship re-subscribe rejected (after drop): "
 				+ str(PromiseUtils.get_error_message(promise))
 			)
 		)

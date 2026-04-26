@@ -165,6 +165,8 @@ func hide_panel() -> void:
 
 
 func set_streaming_subscription_failed(failed: bool) -> void:
+	if failed and not _streaming_subscription_failed:
+		printerr("[FriendsPanel.SubscriptionState] flipped failed=true (warning visible to user)")
 	_streaming_subscription_failed = failed
 	_update_dropdown_visibility()
 
