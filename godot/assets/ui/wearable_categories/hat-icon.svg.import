@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/hat-icon.svg-bc8c7a39200a61be58a683589687084d
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

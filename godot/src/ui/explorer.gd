@@ -15,15 +15,24 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
+var _int_regex := RegEx.create_from_string(r"^-?\d+$")
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
 var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
+var _ban_check_generation: int = 0
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 var _subscription_reconnecting: bool = false  # Debounce for subscription_dropped
 var _resubscribe_timer: Timer = null
+var _gamepad_connected: bool = false
+
+## Children of %UI hidden while "hide explorer UI" is on; restored when toggled off.
+var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
+
+## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
+var _session_hide_main_hud: bool = false
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -40,6 +49,7 @@ var _resubscribe_timer: Timer = null
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
+@onready var settings_panel: Control = %SettingsPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -56,12 +66,12 @@ var _resubscribe_timer: Timer = null
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
 @onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
-@onready var control_safe_bottom_area: Control = %Control_SafeBottomArea
 @onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
 @onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
 @onready var notifications: Control = %Notifications
 
 @onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
+@onready var chat_safe_margin: SafeMarginContainer = %SafeMarginContainer_Chat
 
 @onready var chat_container: Control = %ChatContainer
 @onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
@@ -69,6 +79,9 @@ var _resubscribe_timer: Timer = null
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
 @onready var chatbar: Control = %Chatbar
+@onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
+@onready var button_show_ui: Button = %Button_ShowUI
+@onready var margin_container_show_ui: MarginContainer = %MarginContainer_ShowUI
 
 
 func _process(_dt):
@@ -112,6 +125,11 @@ func _ready():
 	Global.change_parcel.connect(_on_change_parcel)
 
 	label_version.set_text(DclGlobal.get_version_with_env())
+
+	if DclGlobal.is_production():
+		label_fps.visible = false
+		label_ram.visible = false
+
 	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
@@ -128,9 +146,13 @@ func _ready():
 	Global.open_friends_panel.connect(_show_friends_panel)
 	friends_panel.reload_requested.connect(_async_reload_friends)
 
+	# Connect settings panel button
+	Global.open_settings_panel.connect(_show_settings_panel)
+
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
+	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
@@ -140,6 +162,11 @@ func _ready():
 
 	# Connect on open emotes backpack
 	Global.open_backpack.connect(_on_backpack_emote_opened)
+
+	# Connect deep link router signals for path-based actions
+	Global.deep_link_router.deep_link_jump.connect(_on_deep_link_jump)
+	Global.deep_link_router.deep_link_open_event.connect(_on_deep_link_open_event)
+	Global.deep_link_router.deep_link_open_place.connect(_on_deep_link_open_place)
 
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
@@ -181,8 +208,28 @@ func _ready():
 	if Global.deep_link_obj.livekit_debug:
 		_on_control_menu_request_livekit_debug(true)
 
+	# Scene Inspector: activate bridge if --scene-inspector or ?scene-inspector= is set
+	var scene_inspector_target := ""
+	if not Global.deep_link_obj.scene_inspector.is_empty():
+		scene_inspector_target = Global.deep_link_obj.scene_inspector
+	elif not Global.cli.scene_inspector.is_empty():
+		scene_inspector_target = Global.cli.scene_inspector
+	if not scene_inspector_target.is_empty():
+		# Activate Rust-side instrumentation before any scene is spawned
+		Global.scene_inspector_active = true
+		var bridge = SceneInspectorBridge.new()
+		bridge.set_name("scene_inspector_bridge")
+		add_child(bridge)
+		bridge.setup(scene_inspector_target)
+	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
+	var scene_inspector_file: bool = (
+		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
+	)
+	if scene_inspector_file:
+		Global.scene_inspector_dispatcher.set_file_logging(true)
+
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
-	Global._clear_deep_link()
+	Global.deep_link_router._clear_deep_link()
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
@@ -195,6 +242,10 @@ func _ready():
 		label_crosshair.show()
 		reset_cursor_position()
 		ui_root.gui_input.connect(self._on_ui_root_gui_input)
+		# Detect physical gamepad to hide virtual controls
+		Input.joy_connection_changed.connect(_on_joy_connection_changed)
+		_gamepad_connected = Input.get_connected_joypads().size() > 0
+		_update_virtual_controls_visibility()
 	else:
 		mobile_ui.hide()
 
@@ -216,6 +267,9 @@ func _ready():
 	Global.scene_runner.console = self._on_scene_console_message
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
 	player.avatar.emote_triggered.connect(Global.scene_runner.on_primary_player_trigger_emote)
+	# Recreate base_ui before use: the previous instance is freed when the Explorer
+	# scene is torn down (logout/change_scene_to_file), leaving a dangling reference.
+	Global.scene_runner.recreate_base_ui()
 	ui_safe_area.add_child(Global.scene_runner.base_ui)
 	ui_safe_area.move_child(Global.scene_runner.base_ui, 0)
 
@@ -232,8 +286,12 @@ func _ready():
 	Global.scene_fetcher.update_position(start_parcel_position, true)
 
 	if cmd_realm != null:
-		Global.realm.async_set_realm(cmd_realm)
-		Global.scene_fetcher.set_preview_url(cmd_realm)
+		if Realm.is_dcl_ens(cmd_realm) and Global.deep_link_obj.preview.is_empty():
+			Global.async_join_world(cmd_realm)
+		else:
+			Global.realm.async_set_realm(cmd_realm)
+			if not Global.deep_link_obj.preview.is_empty():
+				Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
 		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
@@ -246,6 +304,14 @@ func _ready():
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
+
+	# Keep avatar nicknames in sync with the session "Hide UI" setting.
+	# This is session-only (no config persistence) and must apply to existing + newly added avatars.
+	if Global.avatars and Global.avatars.avatar_added:
+		if not Global.avatars.avatar_added.is_connected(_on_avatar_added_apply_hide_ui):
+			Global.avatars.avatar_added.connect(_on_avatar_added_apply_hide_ui)
+	# Apply current state once at startup (in case something toggled early).
+	_apply_hide_ui_to_avatar_nicks(_session_hide_main_hud)
 
 	# Initialize social service for non-guest accounts
 	if not Global.player_identity.is_guest:
@@ -267,6 +333,7 @@ func _ready():
 
 	Global.open_profile_by_address.connect(_async_open_profile_by_address)
 	Global.open_profile_by_avatar.connect(_async_open_profile_by_avatar)
+	Global.open_own_profile.connect(_on_global_open_own_profile)
 
 	ui_root.grab_focus.call_deferred()
 
@@ -280,6 +347,10 @@ func _ready():
 		load("res://src/decentraland_components/dcl_global_camera_controller.tscn").instantiate()
 	)
 	add_child(dcl_global_camera_controller)
+
+	button_show_ui.pressed.connect(_on_button_show_ui_pressed)
+	_session_hide_main_hud = false
+	set_visible_ui(true, true)
 
 
 func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:
@@ -518,15 +589,17 @@ func _on_control_minimap_request_open_map():
 
 func _on_control_menu_jump_to(parcel: Vector2i):
 	teleport_to(parcel)
-	control_menu.close()
+	control_menu.async_close()
 
 
 func _on_control_menu_hide_menu():
-	control_menu.close()
+	control_menu.async_close()
 	ui_root.grab_focus()
 
 
 func _on_control_menu_toggle_fps(visibility):
+	if DclGlobal.is_production():
+		return
 	label_fps.visible = visibility
 
 
@@ -546,6 +619,14 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
+func _is_coordinate_string(text: String) -> bool:
+	var cleaned = text.strip_edges().replace("(", "").replace(")", "").replace(" ", "")
+	var parts = cleaned.split(",")
+	if parts.size() < 2:
+		return false
+	return _int_regex.search(parts[0]) != null and _int_regex.search(parts[1]) != null
+
+
 func _parse_coordinates(coord_string: String) -> Vector2i:
 	# Remove parentheses if present
 	var cleaned = coord_string.strip_edges()
@@ -561,10 +642,7 @@ func _parse_coordinates(coord_string: String) -> Vector2i:
 		var y_str = parts[1].strip_edges()
 
 		# Validate and parse integers (including negative values)
-		var int_regex = RegEx.new()
-		int_regex.compile(r"^-?\d+$")
-
-		if int_regex.search(x_str) != null and int_regex.search(y_str) != null:
+		if _int_regex.search(x_str) != null and _int_regex.search(y_str) != null:
 			return Vector2i(int(x_str), int(y_str))
 
 	return Vector2i(0, 0)
@@ -577,50 +655,29 @@ func _on_panel_chat_submit_message(message: String):
 	var params := message.split(" ")
 	var command_str := params[0].to_lower()
 	if command_str.begins_with("/"):
-		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
-			# Join all params after the command to handle spaces properly
-			var coord_string = ""
-			if params.size() > 1:
-				coord_string = " ".join(params.slice(1))
-
-			var dest_vector = _parse_coordinates(coord_string)
-
-			Global.on_chat_message.emit(
-				"system",
-				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
-				Time.get_unix_time_from_system()
-			)
-			_on_control_menu_jump_to(dest_vector)
+		if (command_str == "/go" or command_str == "/goto") and params.size() > 1:
+			var arg_string = " ".join(params.slice(1)).strip_edges()
+			if _is_coordinate_string(arg_string):
+				var dest_vector = _parse_coordinates(arg_string)
+				Global.on_chat_message.emit(
+					"system",
+					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
+					Time.get_unix_time_from_system()
+				)
+				_on_control_menu_jump_to(dest_vector)
+			elif Realm.is_dcl_ens(arg_string) or not arg_string.contains("."):
+				var world_realm = (
+					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
+				)
+				Global.async_join_world(world_realm)
+			else:
+				_async_try_change_realm(arg_string, "on_goto_realm")
 		elif command_str == "/changerealm" and params.size() > 1:
-			Global.on_chat_message.emit(
-				"system",
-				"[color=#ccc]Trying to change to realm " + params[1] + "[/color]",
-				Time.get_unix_time_from_system()
-			)
-			Global.realm.async_set_realm(params[1], true)
-			loading_ui.enable_loading_screen()
-			# LOADING_START metric
-			var loading_data = {
-				"position": str(Global.scene_fetcher.current_position),
-				"realm": params[1],
-				"when": "on_changerealm"
-			}
-			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
-
-		elif command_str == "/world" and params.size() > 1:
-			var world_realm = params[1] + ".dcl.eth"
-			Global.on_chat_message.emit(
-				"system",
-				"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
-				Time.get_unix_time_from_system()
-			)
-			Global.realm.async_set_realm(world_realm, true)
-			var loading_data = {
-				"position": str(Global.scene_fetcher.current_position),
-				"realm": world_realm,
-				"when": "on_world"
-			}
-			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+			var target_realm = params[1]
+			if Realm.is_dcl_ens(target_realm):
+				Global.async_join_world(target_realm)
+			else:
+				_async_try_change_realm(target_realm, "on_changerealm")
 
 		elif command_str == "/pos":
 			_emit_pos_command_message()
@@ -628,6 +685,8 @@ func _on_panel_chat_submit_message(message: String):
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
+		elif command_str == "/scenecrash":
+			Global.scene_runner.debug_force_crash_current_scene()
 		elif command_str == "/godotcrash":
 			OS.crash("User crashed on purpose")
 		elif command_str == "/instantcrash":
@@ -797,14 +856,33 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
+func _async_try_change_realm(realm_string: String, when: String) -> void:
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#ccc]Trying to change to realm " + realm_string + "[/color]",
+		Time.get_unix_time_from_system()
+	)
+	var success = await Global.realm.async_set_realm(realm_string, true)
+	if success:
+		loading_ui.enable_loading_screen()
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm": realm_string,
+			"when": when
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+
 func teleport_to(parcel: Vector2i, realm: String = ""):
 	_async_teleport_to(parcel, realm)
 
 
 func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 	if not realm.is_empty() and realm != Global.realm.get_realm_string():
+		var success = await Global.realm.async_set_realm(realm)
+		if not success:
+			return
 		loading_ui.enable_loading_screen()
-		await Global.realm.async_set_realm(realm)
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
@@ -844,7 +922,17 @@ func release_mouse():
 			label_crosshair.hide()
 
 
-func set_visible_ui(value: bool):
+func set_visible_ui(value: bool, use_hud_mode: bool = false):
+	if use_hud_mode:
+		_set_explorer_hud_elements_visible(value)
+		return
+
+	# External callers (e.g. scene capture): if session "hide UI" is on, restoring the
+	# root must reapply minimized HUD + show-UI button, not only ui_root.show().
+	if value and _session_hide_main_hud:
+		_set_explorer_hud_elements_visible(false)
+		return
+
 	if value == ui_root.visible:
 		return
 
@@ -852,6 +940,41 @@ func set_visible_ui(value: bool):
 		ui_root.show()
 	else:
 		ui_root.hide()
+
+	if value:
+		margin_container_show_ui.hide()
+
+
+func _is_ui_hud_mode_exception(node: Node) -> bool:
+	return (
+		node == ui_safe_area
+		or node == control_menu
+		or node == margin_container_show_ui
+		or node == profile_container
+	)
+
+
+func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
+	ui_root.show()
+	if full_hud:
+		for node in _ui_children_hidden_for_hud_mode:
+			if is_instance_valid(node):
+				node.show()
+		_ui_children_hidden_for_hud_mode.clear()
+		margin_container_show_ui.hide()
+		return
+
+	for child in ui_root.get_children():
+		if _is_ui_hud_mode_exception(child):
+			continue
+		if not child is CanvasItem:
+			continue
+		var canvas_child := child as CanvasItem
+		if canvas_child.visible:
+			_ui_children_hidden_for_hud_mode.append(canvas_child)
+			canvas_child.hide()
+
+	margin_container_show_ui.show()
 
 
 func _on_control_menu_request_debug_panel(enabled):
@@ -906,7 +1029,7 @@ func _on_timer_fps_label_timeout():
 
 
 func hide_menu():
-	control_menu.close()
+	control_menu.async_close()
 	release_mouse()
 
 
@@ -937,6 +1060,20 @@ func _on_ui_root_gui_input(event: InputEvent):
 				Input.action_press("ia_pointer")
 			else:
 				Input.action_release("ia_pointer")
+
+
+func _on_chat_container_gui_input(event: InputEvent) -> void:
+	if not chat_container.visible:
+		return
+
+	var should_close := false
+	if event is InputEventScreenTouch:
+		should_close = event.pressed
+	elif event is InputEventMouseButton:
+		should_close = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+
+	if should_close:
+		panel_chat.exit_chat()
 
 
 func _on_panel_profile_open_profile():
@@ -973,6 +1110,15 @@ func _open_profile(dcl_user_profile: DclUserProfile):
 	release_mouse()
 
 
+func _on_profile_container_visibility_changed() -> void:
+	if _session_hide_main_hud:
+		# Keep profile visibility controlled by its own open/close flow in Hide UI mode.
+		# Avoid forcing hide/show here to prevent visibility_changed re-entrancy loops.
+		return
+	if not profile_container.visible and not _gamepad_connected:
+		joypad.show()
+
+
 func _open_friends_panel() -> void:
 	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
@@ -996,6 +1142,9 @@ func _async_open_profile_by_avatar(avatar: DclAvatar):
 		var avatar_instance = avatar as Avatar
 		var avatar_id = avatar_instance.avatar_id
 		if not avatar_id.is_empty():
+			# Don't open profile for blocked users
+			if Global.social_blacklist.is_blocked(avatar_id):
+				return
 			await _async_open_profile_by_address(avatar_id)
 		else:
 			printerr(
@@ -1023,9 +1172,23 @@ func _on_control_menu_open_profile() -> void:
 	_open_own_profile()
 
 
+func _on_global_open_own_profile() -> void:
+	if Global.is_orientation_portrait():
+		return
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
+	navbar.collapse()
+	_open_own_profile()
+
+
 func _open_own_profile() -> void:
-	control_menu.async_show_own_profile()
-	release_mouse()
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
+		_open_profile(profile)
 
 
 func _get_viewport_scale_factors() -> Vector2:
@@ -1052,9 +1215,16 @@ func _on_panel_chat_on_open_chat() -> void:
 	# Hide navbar when chat opens to prevent it from showing when virtual keyboard appears
 	if Global.is_mobile():
 		navbar.set_manually_hidden(true)
+		if chat_safe_margin != null:
+			chat_safe_margin.refresh_margins()
 
 
 func _on_panel_chat_on_exit_chat() -> void:
+	if _session_hide_main_hud:
+		# Keep strict hidden HUD when profile/chat transitions occur while Hide UI is active.
+		chat_container.hide()
+		_set_explorer_hud_elements_visible(false)
+		return
 	safe_margin_container_hud.show()
 	chat_container.hide()
 	if Global.is_mobile():
@@ -1064,13 +1234,22 @@ func _on_panel_chat_on_exit_chat() -> void:
 
 
 func _on_change_virtual_keyboard(virtual_keyboard_height: int):
-	if virtual_keyboard_height != 0:
-		var window_size: Vector2i = DisplayServer.window_get_size()
-		var viewport_size = get_viewport().get_visible_rect().size
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var safe_window_height: float = max(float(window_size.y), 1.0)
+	var y_factor: float = viewport_size.y / safe_window_height
+	var keyboard_height_scaled: float = ceil(max(float(virtual_keyboard_height) * y_factor, 0.0))
+	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
 
-		var y_factor: float = viewport_size.y / window_size.y
-		virtual_keyboard_margin.custom_minimum_size.y = virtual_keyboard_height * y_factor
-	elif virtual_keyboard_height == 0:
+	if Global.is_mobile() and chat_safe_margin != null:
+		# Keep margin_left (notch); when keyboard is open, align width with keyboard by removing only right inset.
+		if virtual_keyboard_height > 0:
+			chat_safe_margin.add_theme_constant_override("margin_right", 0)
+		else:
+			chat_safe_margin.remove_theme_constant_override("margin_right")
+			chat_safe_margin.refresh_margins()
+
+	if virtual_keyboard_height == 0:
 		panel_chat.exit_chat()
 
 
@@ -1081,6 +1260,9 @@ func _show_friends_panel() -> void:
 	friends_panel.show_panel_on_friends_tab()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1092,6 +1274,27 @@ func _on_friends_panel_closed() -> void:
 	capture_mouse()
 
 
+func _show_settings_panel() -> void:
+	if settings_panel.visible:
+		return
+	joypad.hide()
+	settings_panel.show()
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
+
+
+func _on_settings_panel_closed() -> void:
+	settings_panel.hide()
+	Global.explorer_grab_focus()
+	capture_mouse()
+
+
 func _show_notifications_panel() -> void:
 	if notifications_panel.visible:
 		return
@@ -1099,6 +1302,9 @@ func _show_notifications_panel() -> void:
 	notifications_panel.show_panel()
 	if friends_panel.visible:
 		friends_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1137,7 +1343,11 @@ func _show_notification_toast(notification_d: Dictionary) -> void:
 			return
 
 	# Create and show toast notification
-	var toast_scene = load("res://src/ui/components/notifications/notification_toast.tscn")
+	var style = notification_d.get("toast_style", "default")
+	var scene_path := "res://src/ui/components/notifications/notification_toast.tscn"
+	if style == "alert":
+		scene_path = "res://src/ui/components/notifications/alert_toast.tscn"
+	var toast_scene = load(scene_path)
 	var toast = toast_scene.instantiate()
 	ui_root.add_child(toast)
 
@@ -1163,15 +1373,55 @@ func _on_toast_mark_as_read(notification_d: Dictionary) -> void:
 
 func _on_loading_started() -> void:
 	_is_loading = true
+	_ban_check_generation += 1
+	Global.modal_manager.ban_pre_check_active = false
 	_pending_notification_toast = {}  # Clear any pending notification
+	_session_hide_main_hud = false
+	set_visible_ui(true, true)
+	Global.session_hide_ui_toggle_sync.emit(false)
+	_apply_hide_ui_to_avatar_nicks(false)
 
 
 func _on_loading_finished() -> void:
 	_is_loading = false
+	_update_version_label()
 	# Show pending notification if there was one queued during loading
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+	if not Global.modal_manager.ban_pre_check_active:
+		_async_run_ban_check()
+
+
+func _async_run_ban_check() -> void:
+	_ban_check_generation += 1
+	var generation = _ban_check_generation
+
+	var realm_name = Global.realm.get_realm_string()
+	if realm_name.is_empty():
+		return
+
+	var scene_id: String
+	if Realm.is_dcl_ens(realm_name):
+		scene_id = await Global.async_resolve_world_scene_id(realm_name)
+	else:
+		var parcel = Global.scene_fetcher.current_position
+		scene_id = await Global.async_resolve_scene_entity_id(parcel)
+
+	if scene_id.is_empty() or generation != _ban_check_generation:
+		return
+
+	var allowed = await Global.async_check_scene_access(scene_id, realm_name)
+	if not allowed and generation == _ban_check_generation:
+		Global.modal_manager.ban_pre_check_active = true
+		Global.modal_manager.async_show_ban_pre_check_modal()
+
+
+func _update_version_label() -> void:
+	var version_text = DclGlobal.get_version_with_env()
+	if not DclGlobal.is_production() and Global.content_provider.get_optimized_scene_count() > 0:
+		version_text += " - Opt"
+	label_version.set_text(version_text)
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
@@ -1184,9 +1434,11 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 			friends_panel.show_panel_on_friends_tab()
 			navbar.open_navbar_silently()
 			navbar.set_button_pressed(navbar.BUTTON.FRIENDS)
-			# Close notifications panel if open
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()
+			if settings_panel.visible:
+				settings_panel.hide()
+			h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
 			if Global.is_mobile():
@@ -1202,15 +1454,56 @@ func _notification(what: int) -> void:
 		# Resync notification queue to clean up fired notifications and reschedule next batch
 		NotificationsManager.force_queue_sync()
 
-		Global.check_deep_link_teleport_to()
+		Global.deep_link_router.route()
+
+
+func _on_deep_link_jump() -> void:
+	control_menu.async_show_discover()
+	if is_instance_valid(control_menu.control_discover.instance):
+		control_menu.control_discover.instance.jump_in.open_panel()
+
+
+func _on_deep_link_open_event(event_id: String) -> void:
+	control_menu.async_show_discover()
+	if is_instance_valid(control_menu.control_discover.instance):
+		control_menu.control_discover.instance.async_open_event_by_id(event_id)
+
+
+func _on_deep_link_open_place(place_id: String) -> void:
+	control_menu.async_show_discover()
+	if is_instance_valid(control_menu.control_discover.instance):
+		control_menu.control_discover.instance.async_open_place_by_id(place_id)
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	virtual_joystick.show()
+	if not _gamepad_connected:
+		virtual_joystick.show()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
+
+
+func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
+	_gamepad_connected = Input.get_connected_joypads().size() > 0
+	_update_virtual_controls_visibility()
+
+
+func _update_virtual_controls_visibility() -> void:
+	if _gamepad_connected:
+		joypad.hide()
+		virtual_joystick.hide()
+	else:
+		# Only restore if no panel is covering them
+		var panel_open := (
+			friends_panel.visible
+			or notifications_panel.visible
+			or settings_panel.visible
+			or profile_container.visible
+		)
+		if not panel_open:
+			joypad.show()
+		virtual_joystick.show()
 
 
 func _on_backpack_emote_opened(on_emotes := false) -> void:
@@ -1221,22 +1514,32 @@ func _on_backpack_emote_opened(on_emotes := false) -> void:
 
 
 func _close_all_panels():
-	control_menu.close()
+	control_menu.async_close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
-	joypad.show()
+	_on_settings_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if not _gamepad_connected:
+		joypad.show()
 
 
 func _on_discover_open():
-	navbar.close_from_discover_button()
-	joypad.show()
+	navbar.collapse()
+	if not _gamepad_connected:
+		joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
 
 func _on_menu_open():
+	_on_friends_panel_closed()
+	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	release_mouse()
 
 
@@ -1304,3 +1607,51 @@ func _on_change_scene_id(scene_id: int):
 
 func _on_change_parcel(_position: Vector2i):
 	parcel_position = _position
+
+
+func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
+	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
+		_close_all_panels()
+		navbar.collapse()
+		capture_mouse()
+
+
+func _on_button_show_ui_pressed() -> void:
+	_session_hide_main_hud = false
+	set_visible_ui(true, true)
+	Global.session_hide_ui_toggle_sync.emit(false)
+	_apply_hide_ui_to_avatar_nicks(false)
+
+
+func set_hide_main_hud_from_settings(minimized: bool) -> void:
+	_session_hide_main_hud = minimized
+	set_visible_ui(not minimized, true)
+	_apply_hide_ui_to_avatar_nicks(minimized)
+
+
+func is_session_hide_main_hud() -> bool:
+	return _session_hide_main_hud
+
+
+func _on_avatar_added_apply_hide_ui(avatar = null) -> void:
+	# Called when a new avatar is spawned; ensure its nickname obeys current Hide UI state.
+	if not _session_hide_main_hud:
+		return
+	if avatar != null and avatar is Avatar:
+		(avatar as Avatar).set_force_hide_name(true)
+	else:
+		_apply_hide_ui_to_avatar_nicks(true)
+
+
+func _apply_hide_ui_to_avatar_nicks(hide: bool) -> void:
+	# Remote avatars
+	if Global.avatars:
+		var avatars = Global.avatars.get_avatars() if "get_avatars" in Global.avatars else []
+		for a in avatars:
+			if a is Avatar:
+				(a as Avatar).set_force_hide_name(hide)
+	# Local player avatar
+	if Global.scene_runner and is_instance_valid(Global.scene_runner.player_avatar_node):
+		var p = Global.scene_runner.player_avatar_node
+		if p is Avatar:
+			(p as Avatar).set_force_hide_name(hide)

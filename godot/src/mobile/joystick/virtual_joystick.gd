@@ -57,7 +57,7 @@ var output := Vector2.ZERO
 
 # PRIVATE VARIABLES
 
-var _touch_index: int = -1
+var touch_index: int = -1
 var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
 var _joystick_visible := false
@@ -86,6 +86,7 @@ func _ready() -> void:
 	_active_area.connect("input_received", _on_input)
 
 	Global.loading_started.connect(_on_loading_scene)
+	Global.camera_mode_set.connect(_on_camera_mode_set)
 	var connect_explorer_signals := func():
 		Global.get_explorer().navbar.navbar_opened.connect(_on_navbar_opened)
 		Global.get_explorer().navbar.navbar_closed.connect(_on_navbar_closed)
@@ -102,14 +103,20 @@ func _on_navbar_opened() -> void:
 
 
 func _on_navbar_closed() -> void:
-	_button_camera.show()
+	if Global.current_camera_mode != Global.CameraMode.CINEMATIC:
+		_button_camera.show()
+
+
+func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
+	prints(camera_mode, Global.CameraMode.CINEMATIC, camera_mode != Global.CameraMode.CINEMATIC)
+	_button_camera.visible = camera_mode != Global.CameraMode.CINEMATIC
 
 
 func _on_input(event: InputEvent) -> void:
 	if Global.is_mobile():
 		if event is InputEventScreenTouch:
 			if event.pressed:
-				if _is_point_inside_joystick_area(event.position) and _touch_index == -1:
+				if _is_point_inside_joystick_area(event.position) and touch_index == -1:
 					if (
 						joystick_mode == JoystickMode.DYNAMIC
 						or (
@@ -120,14 +127,14 @@ func _on_input(event: InputEvent) -> void:
 						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
 							get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
-						_touch_index = event.index
+						touch_index = event.index
 						_update_joystick(event.position)
 						if (
 							not Global.scene_runner.raycast_use_cursor_position
 							and not _is_scene_ui_at_position(event.position)
 						):
 							get_viewport().set_input_as_handled()
-			elif event.index == _touch_index:
+			elif event.index == touch_index:
 				_reset()
 				if _joystick_visible:
 					_dynamic_material.set_shader_parameter("state", 2)
@@ -136,13 +143,13 @@ func _on_input(event: InputEvent) -> void:
 				if not Global.scene_runner.raycast_use_cursor_position:
 					get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
-			if event.index == _touch_index:
+			if event.index == touch_index:
 				_update_joystick(event.position)
 				get_viewport().set_input_as_handled()
 
 
 func _on_show_joystick_timer() -> void:
-	if _touch_index != -1:
+	if touch_index != -1:
 		_dynamic_material.set_shader_parameter("state", 1)
 		_joystick_visible = true
 
@@ -242,7 +249,7 @@ func _reset():
 	is_pressed = false
 	emit_signal("is_holded", false)
 	output = Vector2.ZERO
-	_touch_index = -1
+	touch_index = -1
 
 	var base_position := _joystick_default_position
 	base_position.y = size.y - base_position.y

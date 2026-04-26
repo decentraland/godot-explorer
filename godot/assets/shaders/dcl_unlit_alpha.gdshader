@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, cull_back, depth_prepass_alpha;
+render_mode unshaded, cull_back;
 
 uniform sampler2D albedo_texture : source_color, filter_linear_mipmap, hint_default_white, repeat_disable;
 uniform sampler2D alpha_texture : filter_linear_mipmap, repeat_disable;
@@ -12,5 +12,6 @@ void fragment() {
     vec3 albedo = texture(albedo_texture, uv).rgb * diffuse_color.rgb;
 
     ALBEDO = albedo;
-    ALPHA = texture(albedo_texture, uv).a;
+    vec4 alpha_sample = texture(alpha_texture, uv);
+    ALPHA = alpha_sample.a * clamp(length(alpha_sample.rgb), 0.0, 1.0);
 }

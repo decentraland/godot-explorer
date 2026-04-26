@@ -98,6 +98,9 @@ func async_save_profile() -> void:
 	# Deploy profile to server (ADR-290: no snapshots in deployment)
 	await ProfileService.async_deploy_profile(_mutable_profile)
 
+	# Update the immutable profile so other screens (e.g. profile portrait) see the latest data
+	set_profile(_mutable_profile)
+
 
 ## Check both profile changes AND avatar changes
 ## Avatar is a clone, so changes to mutable_avatar don't affect mutable_profile directly
@@ -113,8 +116,11 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	_current_profile = new_profile.duplicated()
 	_mutable_avatar = _mutable_profile.get_avatar()
 
-	# Update social blacklist from the profile
-	Global.social_blacklist.init_from_profile(new_profile)
+	# Blocked users are managed by the Social Service (get_blocking_status), not the profile.
+	# Only load muted users from profile (no Social Service RPC for muted).
+	var muted_list = new_profile.get_muted()
+	if muted_list.size() > 0:
+		Global.social_blacklist.append_muted(muted_list)
 
 
 func get_mutable_avatar() -> DclAvatarWireFormat:

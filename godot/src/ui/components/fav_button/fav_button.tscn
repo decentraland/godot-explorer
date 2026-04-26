@@ -1,11 +1,11 @@
-[gd_scene load_steps=5 format=3 uid="uid://d34drip3k5oc4"]
+[gd_scene format=3 uid="uid://d34drip3k5oc4"]
 
 [ext_resource type="Texture2D" uid="uid://ba11hrmvgrth1" path="res://assets/ui/heart-outlined.svg" id="1_ippe3"]
 [ext_resource type="Texture2D" uid="uid://dr2whjr8r1yvj" path="res://assets/ui/heart-color.svg" id="2_2eil8"]
 [ext_resource type="Script" uid="uid://yo35b316fjjd" path="res://src/ui/components/fav_button/fav_button.gd" id="3_prvw4"]
 [ext_resource type="Texture2D" uid="uid://bevnklj01pdyp" path="res://src/ui/components/discover/icons/fav-solid.svg" id="4_prvw4"]
 
-[node name="FavButton" type="TextureButton"]
+[node name="FavButton" type="TextureButton" unique_id=1260062719]
 custom_minimum_size = Vector2(72, 72)
 focus_mode = 0
 toggle_mode = true
@@ -15,7 +15,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("3_prvw4")
 
-[node name="TextureRect_Pressed" type="TextureRect" parent="."]
+[node name="TextureRect_Pressed" type="TextureRect" parent="." unique_id=496961756]
 unique_name_in_owner = true
 visible = false
 modulate = Color(0.7529412, 0.10980392, 0.22352941, 1)

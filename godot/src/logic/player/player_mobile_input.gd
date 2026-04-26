@@ -5,6 +5,7 @@ const VERTICAL_SENS: float = 0.5
 const HORIZONTAL_SENS: float = 0.5
 
 var _player: Player = null
+var _virtual_joystick: VirtualJoystick = null
 
 var _touch_position = Vector2(0.0, 0.0)
 var _positions: Array = [Vector2(), Vector2()]
@@ -15,6 +16,17 @@ var _two_fingers = false
 func _init(player: Player):
 	_player = player
 	Global.camera_mode_set.connect(_on_camera_mode_set)
+	_resolve_joystick.call_deferred()
+
+
+func _resolve_joystick() -> void:
+	var explorer = Global.get_explorer()
+	if explorer:
+		_virtual_joystick = explorer.virtual_joystick
+
+
+func _is_joystick_finger(index: int) -> bool:
+	return _virtual_joystick and _virtual_joystick.touch_index == index
 
 
 func _input(event):
@@ -26,6 +38,9 @@ func _input(event):
 
 	# Receives touchscreen motion
 	if Global.is_mobile() and (event is InputEventScreenTouch or event is InputEventScreenDrag):
+		if _is_joystick_finger(event.index):
+			return
+
 		var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 		if input_dir == Vector2.ZERO and event.index < 2 and Global.explorer_has_focus():  # Not walking
 			if event is InputEventScreenTouch:
@@ -39,12 +54,12 @@ func _input(event):
 
 		if event is InputEventScreenDrag and !_two_fingers:
 			_touch_position = event.relative
-			# Only rotate the player on Y-axis, camera mount Y offset is preserved in local space
+			# Avatar is top-level, so player Y rotation does not propagate to it
 			_player.rotate_y(deg_to_rad(-_touch_position.x) * HORIZONTAL_SENS)
-			_player.avatar.rotate_y(deg_to_rad(_touch_position.x) * HORIZONTAL_SENS)
 			_player.mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * VERTICAL_SENS)
 			_player.clamp_camera_rotation()
 
 
 func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
-	_player.set_camera_mode(camera_mode)
+	if camera_mode != Global.CameraMode.CINEMATIC:
+		_player.set_camera_mode(camera_mode)

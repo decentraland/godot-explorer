@@ -165,6 +165,9 @@ func stop_emote():
 
 ## Play an emote by ID or URN (supports both wearable and scene emotes).
 func play_emote(id: String):
+	# Return if its an empty emote
+	if id == "":
+		return
 	# If animation system is being modified, queue this request
 	if _is_modifying_animations:
 		_queued_emote_urn = id
@@ -189,6 +192,8 @@ func play_emote(id: String):
 		triggered = _play_loaded_emote(id)
 
 	if triggered:
+		if avatar != null and avatar.is_local_player:
+			_track_emote(id)
 		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop)
 
 
@@ -366,6 +371,9 @@ func _reset_skeleton_to_rest_pose():
 ## Load and play an emote (supports both wearable and scene emotes).
 ## Scene emotes are detected by URN pattern and loaded via unified path.
 func async_play_emote(emote_id_or_urn: String) -> void:
+	# Return if empty emote
+	if emote_id_or_urn == "":
+		return
 	# Cooldown check to prevent rapid emote spam
 	var current_time = Time.get_ticks_msec() / 1000.0
 	if current_time - _last_emote_time < EMOTE_COOLDOWN_SECONDS:
@@ -821,3 +829,11 @@ func process(idle: bool):
 						playing_mixed = false
 						# Hide props when emote ends
 						_hide_all_props()
+
+
+func _track_emote(id: String) -> void:
+	var is_base := Emotes.is_emote_default(id) or Emotes.is_base_emote_urn(id)
+	var source := "scene" if id.contains("scene-emote") else "user"
+	var screen_name := "SCENE" if source == "scene" else "EMOTE_WHEEL"
+	var payload = JSON.stringify({"emote_urn": id, "is_base": is_base, "source": source})
+	Global.metrics.track_click_button("USED EMOTE", screen_name, payload)

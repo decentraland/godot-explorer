@@ -9,6 +9,8 @@
 #ifdef __OBJC__
 @class ASWebAuthenticationSession;
 @class WebKitAuthenticationDelegate;
+@class SafariAuthDelegate;
+@class SFSafariViewController;
 @class CalendarEventDelegate;
 @class UNUserNotificationCenter;
 @class NotificationDatabase;
@@ -16,6 +18,8 @@
 #else
 typedef void ASWebAuthenticationSession;
 typedef void WebKitAuthenticationDelegate;
+typedef void SafariAuthDelegate;
+typedef void SFSafariViewController;
 typedef void CalendarEventDelegate;
 typedef void UNUserNotificationCenter;
 typedef void NotificationDatabase;
@@ -32,6 +36,7 @@ class DclGodotiOS : public Object {
 
     ASWebAuthenticationSession *authSession;
     WebKitAuthenticationDelegate *authDelegate;
+    SafariAuthDelegate *safariAuthDelegate;
     CalendarEventDelegate *calendarDelegate;
     NotificationDatabase *notificationDatabase;
 
@@ -44,6 +49,7 @@ public:
 
     void print_version();
     void open_auth_url(String url);
+    void open_safari_auth_url(String url);
     void open_webview_url(String url);
     String get_deeplink_url();
     Dictionary get_mobile_device_info();

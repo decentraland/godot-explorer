@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://cy43hvd5bivso"]
+[gd_scene format=3 uid="uid://cy43hvd5bivso"]
 
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="1_dtjd5"]
 [ext_resource type="Script" uid="uid://cajm3jjqosrt1" path="res://src/ui/components/backpack/avatar_preview.gd" id="1_sayag"]
@@ -21,7 +21,7 @@ ambient_light_sky_contribution = 0.6
 adjustment_enabled = true
 adjustment_brightness = 1.4
 
-[node name="AvatarPreview" type="SubViewportContainer"]
+[node name="AvatarPreview" type="SubViewportContainer" unique_id=1871875129]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -30,7 +30,7 @@ grow_vertical = 2
 size_flags_horizontal = 4
 script = ExtResource("1_sayag")
 
-[node name="SubViewport" type="SubViewport" parent="."]
+[node name="SubViewport" type="SubViewport" parent="." unique_id=677482808]
 unique_name_in_owner = true
 own_world_3d = true
 transparent_bg = true
@@ -38,31 +38,32 @@ handle_input_locally = false
 size = Vector2i(256, 500)
 render_target_update_mode = 4
 
-[node name="Avatar" parent="SubViewport" instance=ExtResource("1_dtjd5")]
+[node name="Avatar" parent="SubViewport" unique_id=644824029 instance=ExtResource("1_dtjd5")]
 unique_name_in_owner = true
 non_3d_audio = true
 
-[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+[node name="Camera3D" type="Camera3D" parent="SubViewport" unique_id=483905790]
 unique_name_in_owner = true
-transform = Transform3D(-1, -5.16436e-08, 1.4189e-07, 0, 0.939693, 0.34202, -1.50996e-07, 0.34202, -0.939693, 0, 2.3, -3.5)
+transform = Transform3D(-1, -5.164368e-08, 1.4188981e-07, -4.137693e-08, 0.9974458, 0.07142756, -1.4521618e-07, 0.07142756, -0.9974458, 0, 1.7318428, -3.5)
 cull_mask = 524287
+projection = 1
 fov = 40.0
 size = 3.0
 far = 100.0
 
-[node name="OutlineSystem" parent="SubViewport/Camera3D" instance=ExtResource("4_outline")]
+[node name="OutlineSystem" parent="SubViewport/Camera3D" unique_id=1572032427 instance=ExtResource("4_outline")]
 unique_name_in_owner = true
 transform = Transform3D(1, -3.55271e-15, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
-[node name="Platform" parent="SubViewport" instance=ExtResource("3_i62gc")]
+[node name="Platform" parent="SubViewport" unique_id=974836078 instance=ExtResource("3_i62gc")]
 unique_name_in_owner = true
 transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, -0.09, 0)
 visible = false
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="SubViewport"]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="SubViewport" unique_id=1478021451]
 environment = SubResource("Environment_lhy6q")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="SubViewport"]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="SubViewport" unique_id=857589977]
 transform = Transform3D(0.0960608, 0.992181, 0.0796824, 0.912549, -0.0558139, -0.405142, -0.397526, 0.111632, -0.910775, 2.56907, 1.93138, 0.840671)
 light_color = Color(1, 0.988235, 0.768627, 1)
 light_energy = 0.05

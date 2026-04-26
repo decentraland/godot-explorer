@@ -64,8 +64,7 @@ func _on_size_changed():
 
 
 func _on_navbar_close() -> void:
-	close_from_discover_button()
-	navbar_closed.emit()
+	collapse()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
@@ -96,9 +95,10 @@ func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
-func close_from_discover_button():
+func collapse():
 	button.set_pressed_no_signal(false)
 	animation_player.play("close")
+	navbar_closed.emit()
 
 
 func _on_navbar_open_silently_on_backpack() -> void:
@@ -121,12 +121,14 @@ func set_manually_hidden(is_hidden: bool) -> void:
 		if explorer != null:
 			# Check if discover or chat are open before restoring visibility
 			if (
-				explorer.control_menu.visible
+				explorer.control_menu != null
+				and explorer.control_menu.visible
+				and explorer.control_menu.control_discover.instance != null
 				and explorer.control_menu.control_discover.instance.visible
 			):
 				# If discover is open, keep hidden
 				return
-			if explorer.chat_container.visible:
+			if explorer.chat_container != null and explorer.chat_container.visible:
 				# If chat is open, keep hidden
 				return
 

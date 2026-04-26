@@ -1,16 +1,13 @@
 class_name AvatarPreview
 extends SubViewportContainer
 
-const MIN_CAMERA_Z = -3.5
-const MAX_CAMERA_Z = -1.25
+const MIN_CAMERA_SIZE = 1.0
+const MAX_CAMERA_SIZE = 5.0
 
-const MIN_CAMERA_Y = 0.8
-const MAX_CAMERA_Y = 2.3
-
-const DEFAULT_ROTATION = Vector3(-20, 180, 0)
-const BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.0)
+const DEFAULT_ROTATION = Vector3(-5, 180, 0)
+const BODY_CAMERA_POSITION = Vector3(0, 1.25, -3.0)
 const BODY_CAMERA_POSITION_WITH_PLATFORM = Vector3(0, 2.15, -3.3)
-const HEAD_CAMERA_POSITION = Vector3(0, 2.2, -1.15)
+const HEAD_CAMERA_POSITION = Vector3(0, 1.8, -1.15)
 
 @export var hide_name: bool = false
 @export var show_platform: bool = false
@@ -18,10 +15,10 @@ const HEAD_CAMERA_POSITION = Vector3(0, 2.2, -1.15)
 @export var custom_environment: Environment = null
 @export var with_light: bool = true
 
-var start_camera_transform
 var start_angle
 var start_dragging_position
 var dirty_is_dragging
+var on_head := false
 
 @onready var avatar = %Avatar
 @onready var camera_3d: Camera3D = %Camera3D
@@ -51,8 +48,9 @@ func _ready():
 	if outline_system:
 		outline_system.setup(camera_3d)
 
-	if can_move:
-		gui_input.connect(self._on_gui_input)
+	#if can_move:
+	#	gui_input.connect(self._on_gui_input)
+	set_process_input(true)
 
 	if Global.standalone:
 		Global.player_identity.set_default_profile()
@@ -72,18 +70,27 @@ func focus_camera_on(type):
 	match type:
 		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
 			tween.tween_property(camera_3d, "position", HEAD_CAMERA_POSITION, 0.5)
+			tween.set_parallel().tween_property(camera_3d, "size", 1.3, 0.5)
+			on_head = true
 		_:
 			tween.tween_property(camera_3d, "position", get_body_camera_position(), 0.5)
+			tween.set_parallel().tween_property(camera_3d, "size", 4.25, 0.5)
+			on_head = false
 	tween.play()
 
 
-func _on_gui_input(event):
+func _input(event: InputEvent):
+	if not can_move:
+		return
+	if get_parent_control() and event is InputEventMouseButton:
+		if not get_parent_control().get_global_rect().has_point(event.position):
+			return
+
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
 				dirty_is_dragging = true
 				start_dragging_position = get_global_mouse_position()
-				start_camera_transform = camera_3d.transform
 				start_angle = avatar.rotation.y
 			else:
 				dirty_is_dragging = false
@@ -91,31 +98,17 @@ func _on_gui_input(event):
 		if not event.pressed:
 			var dir: float = 0.0
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				dir = 0.1
+				dir = -0.2
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				dir = -0.1
+				dir = 0.2
 
 			if dir != 0.0:
-				camera_3d.transform.origin.z = clampf(
-					camera_3d.transform.origin.z + dir, MIN_CAMERA_Z, MAX_CAMERA_Z
-				)
+				camera_3d.size = clampf(camera_3d.size + dir, MIN_CAMERA_SIZE, MAX_CAMERA_SIZE)
 
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging:
 			var diff = 0.005 * (get_global_mouse_position() - start_dragging_position)
-			var changed_transform = Transform3D(start_camera_transform)
-			var min_y = (
-				MAX_CAMERA_Y
-				- (
-					((camera_3d.transform.origin.z - MIN_CAMERA_Z) / (MAX_CAMERA_Z - MIN_CAMERA_Z))
-					* (MAX_CAMERA_Y - MIN_CAMERA_Y)
-				)
-			)
-			changed_transform.origin.y = clampf(
-				start_camera_transform.origin.y + diff.y, min_y, MAX_CAMERA_Y
-			)
 			avatar.rotation.y = start_angle + diff.x
-			camera_3d.transform = changed_transform
 
 
 func reset_avatar_rotation() -> void:
@@ -132,14 +125,14 @@ func disable_outline():
 		outline_system.set_outlined_avatar(null)
 
 
-func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: float = 40) -> Image:
+func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float = 2.5) -> Image:
 	avatar.emote_controller.freeze_on_idle()
 	avatar.rotation.y = 0.0
-	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.5)
-	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.7, -1.25)
+	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 1.25, -3.5)
+	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.70, -1.25)
 	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION
 	camera_3d.rotation_degrees = DEFAULT_ROTATION if not face else Vector3(0.0, 180.0, 0.0)
-	camera_3d.fov = fov
+	camera_3d.size = ortho_size
 
 	# Store original values to restore after capture
 	var original_stretch = stretch

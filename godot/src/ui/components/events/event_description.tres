@@ -1,4 +1,4 @@
-[gd_resource type="LabelSettings" load_steps=4 format=3 uid="uid://dj8crtu0eembr"]
+[gd_resource type="LabelSettings" format=3 uid="uid://dj8crtu0eembr"]
 
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="1_qnuo4"]
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="2_2pg2k"]

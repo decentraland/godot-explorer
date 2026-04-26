@@ -11,20 +11,23 @@ signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
-signal deep_link_received
 signal open_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
+signal open_settings_panel
 signal open_backpack
 signal open_discover
 signal open_own_profile
+signal open_profile_editor
 signal open_navbar_silently
 signal close_menu
 signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
+signal session_hide_ui_toggle_sync(pressed: bool)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal favorite_destination_set
 
@@ -55,6 +58,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 
 const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
+#const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -94,8 +98,10 @@ var previous_height_2: int = -1
 
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
+var deep_link_router := DeepLinkRouter.new()
 
 var player_camera_node: DclCamera3D
+var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var session_id: String
 
 var _is_portrait: bool = true
@@ -141,9 +147,9 @@ func _instantiate_phone_frame_overlay() -> void:
 
 
 ## Vibrate handheld device
-func send_haptic_feedback() -> void:
+func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> void:
 	if is_mobile():
-		Input.vibrate_handheld(20)
+		Input.vibrate_handheld(duration_ms, amplitude)
 
 
 # gdlint: ignore=async-function-name
@@ -201,7 +207,7 @@ func _ready():
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
 		if dcl_ios_singleton:
-			dcl_ios_singleton.deeplink_received.connect(_on_deeplink_received)
+			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	# Setup
 	nft_frame_loader = NftFrameStyleLoader.new()
@@ -228,8 +234,14 @@ func _ready():
 	if env != "org":
 		print("[GLOBAL] Environment set to: ", env)
 
+	# Dev/testing: disable profile deploys so fake-owned wearables never publish.
+	if deep_link_obj.disable_profile_deploy:
+		ProfileService.set_deploy_disabled(true)
+		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
+
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
+	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
@@ -291,13 +303,6 @@ func _ready():
 		sentry_user.id = self.config.analytics_user_id
 		SentrySDK.set_tag("dcl_session_id", session_id)
 
-		# Emit test messages to verify Sentry integration (all builds except production)
-		# Note: Rust messages must come BEFORE GDScript ones because push_error() captures an event
-		# and we want Rust breadcrumbs to be included in that event
-		if not DclGlobal.is_production():
-			DclGlobal.emit_sentry_rust_test_messages()
-			_emit_sentry_godot_test_messages()
-
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
@@ -328,7 +333,13 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.testing_tools)
 	if self.metrics != null:
 		get_tree().root.add_child.call_deferred(self.metrics)
+		# Fire install attribution once per install (Android only).
+		if self.is_android() and not self.config.install_referrer_sent:
+			self.metrics.track_install_referrer.call_deferred()
+			self.config.install_referrer_sent = true
+			self.config.save_to_settings_file()
 	get_tree().root.add_child.call_deferred(self.network_inspector)
+	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
 
@@ -601,7 +612,7 @@ func open_webview_url(url):
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit and not Global.is_xr():
 		if DclIosPlugin.is_available():
-			DclIosPlugin.open_auth_url(url)
+			DclIosPlugin.open_safari_auth_url(url)
 		elif DclAndroidPlugin.is_available():
 			if "provider=wallet-connect" in url:
 				DclAndroidPlugin.open_webview(url, "")  # FOR WALLET CONNECT
@@ -723,10 +734,82 @@ func set_orientation_portrait():
 		get_window().move_to_center()
 
 
-func teleport_to(parcel_position: Vector2i, new_realm: String):
-	Global.set_orientation_landscape()
+func async_resolve_scene_entity_id(coord: Vector2i) -> String:
+	# Try cache first
+	var cached = Global.scene_fetcher.scene_entity_coordinator.get_scene_entity_id(coord)
+	if not cached.is_empty():
+		return cached
+
+	# Make HTTP request to entities/active
+	var content_url = Global.realm.content_base_url
+	if content_url.is_empty():
+		return ""
+
+	var url = content_url.trim_suffix("/") + "/entities/active"
+	var body = JSON.stringify({"pointers": [str(coord.x) + "," + str(coord.y)]})
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_POST, body, headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_warning("Failed to resolve scene entity ID: " + result.get_error())
+		return ""
+
+	var json = result.get_string_response_as_json()
+	if json is Array and not json.is_empty():
+		return json[0].get("id", "")
+	return ""
+
+
+func async_resolve_world_scene_id(world_realm: String) -> String:
+	var scenes_url = Realm.dcl_world_url(world_realm) + "/scenes"
+	var promise: Promise = Global.http_requester.request_json(
+		scenes_url, HTTPClient.METHOD_GET, "", {}
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_warning("Failed to resolve world scene ID: " + result.get_error())
+		return ""
+
+	var json = result.get_string_response_as_json()
+	if json is Dictionary:
+		var scenes = json.get("scenes", [])
+		if not scenes.is_empty():
+			return scenes[0].get("entityId", "")
+	return ""
+
+
+func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
+	if scene_id.is_empty():
+		return true  # fail-open
+
+	Global.comms.check_scene_access(scene_id, realm_name)
+
+	# Loop until we get the result for OUR scene_id (discard stale results from
+	# earlier navigations that may still be in-flight).
+	while true:
+		var result = await Global.comms.scene_access_checked
+		# result = [scene_id, allowed, error_message]
+		if str(result[0]) != scene_id:
+			continue
+
+		if not str(result[2]).is_empty():
+			push_warning("Ban check failed, allowing navigation: " + str(result[2]))
+			return true  # fail-open on error
+
+		return result[1]
+
+	return true  # unreachable, keeps compiler happy
+
+
+func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
+		# Show loading screen before orientation change to avoid flashing the scene
+		explorer.loading_ui.enable_loading_screen()
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
@@ -735,32 +818,34 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 			Time.get_unix_time_from_system()
 		)
 	else:
+		Global.set_orientation_landscape()
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func join_world(world_realm: String) -> void:
-	Global.set_orientation_landscape()
-	Global.on_chat_message.emit(
-		"system",
-		"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
-		Time.get_unix_time_from_system()
-	)
-	var loading_data = {
-		"position": str(Global.scene_fetcher.current_position),
-		"realm": world_realm,
-		"when": "on_world"
-	}
-	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
-
+func async_join_world(world_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
+		# Show loading screen before orientation change to avoid flashing the scene
+		explorer.loading_ui.enable_loading_screen()
+		Global.on_chat_message.emit(
+			"system",
+			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+			Time.get_unix_time_from_system()
+		)
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm": world_realm,
+			"when": "on_world"
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 		Global.realm.async_set_realm(world_realm, true)
 		explorer.hide_menu()
 		Global.close_menu.emit()
 	else:
+		Global.set_orientation_landscape()
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = world_realm
 		Global.get_config().last_parcel_position = Vector2i.ZERO
@@ -844,99 +929,22 @@ func _process(_delta: float) -> void:
 			change_virtual_keyboard.emit(last_emitted_height)
 
 
-func _emit_sentry_godot_test_messages() -> void:
-	print("[Sentry Test] GDScript: print() - breadcrumb")
-	print_rich("[Sentry Test] GDScript: print_rich() - breadcrumb")
-	push_warning("[Sentry Test] GDScript: push_warning() - breadcrumb")
-	push_error("[Sentry Test] GDScript: push_error() - event")
-	# Also test SentrySDK.capture_message directly
-	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: capture_message INFO - breadcrumb", SentrySDK.LEVEL_INFO
-	)
-	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: capture_message WARNING - breadcrumb", SentrySDK.LEVEL_WARNING
-	)
-	SentrySDK.capture_message(
-		"[Sentry Test] GDScript: capture_message ERROR - event", SentrySDK.LEVEL_ERROR
-	)
+## Check if the deep link contains a dclenv change. If it does, apply the new
+## environment and restart back to the lobby (sign out). Returns true if a
+## restart was triggered so the caller can skip further deep-link processing.
+func _check_dclenv_change() -> bool:
+	var new_env := deep_link_obj.dclenv as String
+	if new_env.is_empty():
+		return false
 
+	var current_env := DclGlobal.get_dcl_environment() as String
+	if new_env == current_env:
+		return false
 
-func check_deep_link_teleport_to():
-	# Only process deep links on real mobile devices (not emulation/desktop)
-	# This prevents re-teleporting on every focus change with --fake-deeplink
-	if not Global.is_mobile() or Global.is_virtual_mobile():
-		return
-
-	# Skip if no pending deep link (already consumed or none received)
-	if deep_link_url.is_empty():
-		return
-
-	# Ignore WalletConnect callbacks
-	if Global.deep_link_obj.is_walletconnect_callback:
-		_clear_deep_link()
-		return
-
-	if Global.deep_link_obj.is_location_defined():
-		# Use preview URL as realm if specified, otherwise use realm, otherwise main
-		var realm = Global.deep_link_obj.preview
-		if realm.is_empty():
-			realm = Global.deep_link_obj.realm
-		if realm.is_empty():
-			realm = DclUrls.main_realm()
-
-		Global.teleport_to(Global.deep_link_obj.location, realm)
-	elif not Global.deep_link_obj.preview.is_empty():
-		# Preview without location - just set realm, don't teleport
-		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
-	elif not Global.deep_link_obj.realm.is_empty():
-		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
-
-	# Clear deep link after processing to prevent re-teleporting on app resume
-	_clear_deep_link()
-
-
-func _on_deeplink_received(url: String) -> void:
-	if not url.is_empty():
-		# Consume receivedUrl from the iOS plugin so that _notification(FOCUS_IN)
-		# doesn't re-read the same URL via get_deeplink_url() on the next resume.
-		# This signal already provides the URL, so the polling fallback isn't needed.
-		if DclIosPlugin.is_available():
-			DclIosPlugin.get_deeplink_args()
-
-		deep_link_url = url
-		deep_link_obj = DclParseDeepLink.parse_decentraland_link(url)
-		print("[DEEPLINK] _on_deeplink_received params: ", deep_link_obj.params)
-
-		# Apply rust-log from deeplink params
-		var rust_log_value = deep_link_obj.params.get("rust-log", "")
-		if not rust_log_value.is_empty():
-			print("[DEEPLINK] Found rust-log param: ", rust_log_value)
-			DclGlobal.set_rust_log_filter(rust_log_value)
-
-		# Ignore WalletConnect callbacks (decentraland://walletconnect)
-		if deep_link_obj.is_walletconnect_callback:
-			print("[DEEPLINK] Ignoring WalletConnect callback")
-			return
-
-		# Handle signin deep link for mobile auth flow
-		if deep_link_obj.is_signin_request():
-			_handle_signin_deep_link(deep_link_obj.signin_identity_id)
-		else:
-			deep_link_received.emit.call_deferred()
-
-
-func _handle_signin_deep_link(identity_id: String) -> void:
-	if Global.player_identity.has_pending_mobile_auth():
-		Global.player_identity.complete_mobile_connect_account(identity_id)
-	else:
-		printerr("[DEEPLINK] Received signin deep link but no pending mobile auth")
-
-
-func _clear_deep_link() -> void:
-	# Only clear the URL flag, not deep_link_obj.
-	# deep_link_obj is still needed by scene_fetcher (preview mode)
-	# and other systems that check deep link parameters.
-	deep_link_url = ""
+	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
+	DclGlobal.set_dcl_environment(new_env)
+	sign_out()
+	return true
 
 
 func _notification(what: int) -> void:
@@ -950,29 +958,20 @@ func _notification(what: int) -> void:
 
 			# Only process if a new deep link URL was received.
 			# Don't overwrite deep_link_url with empty to avoid clobbering
-			# data set by the iOS signal path (_on_deeplink_received).
+			# data set by the iOS signal path (process_deep_link).
 			if new_url.is_empty():
 				return
 
-			deep_link_url = new_url
-			deep_link_obj = DclParseDeepLink.parse_decentraland_link(deep_link_url)
-			print("[DEEPLINK] _notification focus-in params: ", deep_link_obj.params)
+			# On cold start (NOTIFICATION_READY), pre-set the environment from the deeplink
+			# BEFORE processing it. This prevents _check_dclenv_change() from seeing a
+			# difference (default "org" vs deeplink env) and calling sign_out() prematurely,
+			# which would skip the orientation/UI zoom setup in main.gd.
+			if what == NOTIFICATION_READY:
+				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
+				if not parsed.dclenv.is_empty():
+					DclGlobal.set_dcl_environment(parsed.dclenv)
 
-			# Apply rust-log from deeplink params
-			var rust_log_value = deep_link_obj.params.get("rust-log", "")
-			if not rust_log_value.is_empty():
-				print("[DEEPLINK] Found rust-log param: ", rust_log_value)
-				DclGlobal.set_rust_log_filter(rust_log_value)
-
-			# Ignore WalletConnect callbacks
-			if deep_link_obj.is_walletconnect_callback:
-				return
-
-			# Handle signin deep link for mobile auth flow
-			if deep_link_obj.is_signin_request():
-				_handle_signin_deep_link(deep_link_obj.signin_identity_id)
-			else:
-				deep_link_received.emit.call_deferred()
+			deep_link_router.process_deep_link(new_url)
 
 
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
@@ -980,5 +979,19 @@ func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	NotificationsManager.async_sync_attended_events()
 
 
+func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> void:
+	# User-visible feedback when a requested realm cannot be loaded (e.g. /world
+	# pointing at a non-existent world). Only fires for Global.realm — transient
+	# Realm instances created elsewhere (e.g. portable experiences) are not wired
+	# to this handler.
+	NotificationsManager.show_system_toast(
+		"World unavailable",
+		'Could not load "%s": %s' % [new_realm_string, reason],
+		"error",
+		"alert"
+	)
+
+
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
+	current_camera_mode = camera_mode
 	camera_mode_set.emit(camera_mode)

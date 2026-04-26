@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://c6jl46ahx31ud"]
+[gd_scene format=3 uid="uid://c6jl46ahx31ud"]
 
 [ext_resource type="Script" uid="uid://05w073ui6sec" path="res://src/ui/components/profile_picture/profile_picture.gd" id="1_xkyte"]
 [ext_resource type="Texture2D" uid="uid://c3y600q1cirt5" path="res://assets/ui/ProfileExample.png" id="2_q0svu"]
@@ -29,17 +29,18 @@ expand_margin_top = 1.0
 expand_margin_right = 1.0
 expand_margin_bottom = 1.0
 
-[node name="ProfilePicture" type="Control"]
-custom_minimum_size = Vector2(32, 32)
+[node name="ProfilePicture" type="Control" unique_id=916442602]
+custom_minimum_size = Vector2(40, 40)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 32.0
-offset_bottom = 32.0
+offset_right = 40.0
+offset_bottom = 40.0
 size_flags_horizontal = 4
 size_flags_vertical = 4
 script = ExtResource("1_xkyte")
+picture_size = 2
 
-[node name="ProfilePicture" type="PanelContainer" parent="."]
+[node name="ProfilePicture" type="PanelContainer" parent="." unique_id=980945521]
 clip_children = 2
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 1
@@ -51,7 +52,7 @@ grow_vertical = 2
 mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_h41qx")
 
-[node name="TextureRect_Profile" type="TextureRect" parent="ProfilePicture"]
+[node name="TextureRect_Profile" type="TextureRect" parent="ProfilePicture" unique_id=414527700]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
@@ -59,13 +60,13 @@ texture = ExtResource("2_q0svu")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Panel_Border" type="PanelContainer" parent="ProfilePicture"]
+[node name="Panel_Border" type="PanelContainer" parent="ProfilePicture" unique_id=65252985]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_wm7ac")
 
-[node name="TextureRect_Status" type="TextureRect" parent="."]
+[node name="TextureRect_Status" type="TextureRect" parent="." unique_id=508969151]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(13, 13)
@@ -83,7 +84,7 @@ size_flags_vertical = 0
 texture = ExtResource("3_q0svu")
 expand_mode = 2
 
-[node name="TextureRect_Friendship" type="TextureRect" parent="."]
+[node name="TextureRect_Friendship" type="TextureRect" parent="." unique_id=626847656]
 unique_name_in_owner = true
 visible = false
 modulate = Color(1, 0, 0, 1)

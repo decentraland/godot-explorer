@@ -31,6 +31,7 @@ var is_local_player: bool = false
 # Public
 var avatar_id: String = ""
 var hidden: bool = false
+var passport_disabled: bool = false
 var avatar_ready: bool = false
 var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
@@ -58,8 +59,20 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
+# Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
+var _force_hide_name: bool = false
+
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
+
+# Indices of bones added to body_shape_skeleton_3d by _merge_extra_wearable_bones_into_base
+# and currently in use by the active wearables.
+var _active_extra_bone_indices: Array[int] = []
+# Slots recycled from previous merges (renamed + disabled) waiting to be reused by the next
+# merge. Skeleton3D has no remove_bone() in Godot 4.6, so reusing slots is the only way to
+# keep bone_count bounded across outfit / body-shape changes.
+var _free_bone_pool: Array[int] = []
+var _stale_bone_counter: int = 0
 
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
@@ -110,6 +123,7 @@ func _ready():
 	# Hide mic when the avatar is spawned
 	nickname_ui.mic_enabled = false
 	Global.on_chat_message.connect(on_chat_message)
+	_apply_nickname_visibility()
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
@@ -148,9 +162,9 @@ func on_chat_message(address: String, message: String, _timestamp: float):
 
 func _input(event):
 	if event.is_action_pressed("ia_pointer"):
-		# Only handle input if this avatar is currently selected
+		# Only handle input if this avatar is currently selected and not blocked/hidden
 		var selected = Global.get_selected_avatar()
-		if selected and selected == self and avatar_id:
+		if selected and selected == self and avatar_id and not hidden and not passport_disabled:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				Global.open_profile_by_avatar.emit(self)
 
@@ -170,7 +184,7 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 		if modifier == 0:  # hide avatar
 			hide()
 		elif modifier == 1:  # disable passport
-			pass  # TODO: Passport (disable functionality)
+			passport_disabled = true
 
 
 func set_hidden(value):
@@ -195,7 +209,7 @@ func _set_click_area_enabled(enabled: bool) -> void:
 func _unset_avatar_modifier_area():
 	if not hidden:
 		show()
-	# TODO: Passport (enable functionality)
+	passport_disabled = false
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
@@ -291,13 +305,7 @@ func async_update_avatar(
 	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 	nickname_ui.mic_enabled = false
 
-	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
-	if is_avatar_shape:
-		nickname_quad.hide()
-	elif hide_name:
-		nickname_quad.hide()
-	else:
-		nickname_quad.show()
+	_apply_nickname_visibility()
 
 	wearable_to_request.append_array(avatar_data.get_wearables())
 
@@ -349,6 +357,25 @@ func async_update_avatar(
 	)
 	await PromiseUtils.async_all(promise)
 	await async_fetch_wearables_dependencies()
+
+
+func set_force_hide_name(value: bool) -> void:
+	if _force_hide_name == value:
+		return
+	_force_hide_name = value
+	if is_inside_tree():
+		_apply_nickname_visibility()
+
+
+func _apply_nickname_visibility() -> void:
+	if nickname_quad == null:
+		return
+	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
+	var should_hide := is_avatar_shape or hide_name or _force_hide_name
+	if should_hide:
+		nickname_quad.hide()
+	else:
+		nickname_quad.show()
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
@@ -411,6 +438,10 @@ func async_try_to_set_body_shape(body_shape_hash):
 			body_shape_skeleton_3d.remove_child(child)
 			child.queue_free()
 
+	# Recycle any extra bones merged in the previous assembly so the upcoming
+	# _merge_extra_wearable_bones_into_base pass starts from a clean slate.
+	_recycle_extra_wearable_bones()
+
 	# Reparent children directly (no need to duplicate since wearable_loader
 	# returns a fresh instantiated scene that we'll discard anyway)
 	for child in new_skeleton.get_children():
@@ -422,6 +453,103 @@ func async_try_to_set_body_shape(body_shape_hash):
 	# Free the now-empty body shape container
 	body_shape.queue_free()
 	_add_attach_points()
+
+
+# Renames bones previously merged via _merge_extra_wearable_bones_into_base to a
+# unique stale sentinel, disables them, detaches them from the active hierarchy
+# (parent=-1, rest=identity), and pushes their indices into the free pool so the
+# next merge can reuse them instead of growing the skeleton. Detaching keeps the
+# per-frame skeleton transform walk cheap by leaving stale slots as flat roots.
+func _recycle_extra_wearable_bones() -> void:
+	if _active_extra_bone_indices.is_empty():
+		return
+	for bone_idx in _active_extra_bone_indices:
+		if bone_idx < 0 or bone_idx >= body_shape_skeleton_3d.get_bone_count():
+			continue
+		var stale_name = "__stale_bone_%d" % _stale_bone_counter
+		_stale_bone_counter += 1
+		body_shape_skeleton_3d.set_bone_name(bone_idx, stale_name)
+		body_shape_skeleton_3d.set_bone_enabled(bone_idx, false)
+		body_shape_skeleton_3d.set_bone_parent(bone_idx, -1)
+		body_shape_skeleton_3d.set_bone_rest(bone_idx, Transform3D.IDENTITY)
+		body_shape_skeleton_3d.reset_bone_pose(bone_idx)
+		_free_bone_pool.push_back(bone_idx)
+	_active_extra_bone_indices.clear()
+
+
+# Copies bones that exist in the wearable's Skeleton3D but not in body_shape_skeleton_3d
+# (typically ADR-316 spring bones for hair, earrings, capes, etc.). Parents are added
+# before children so parent-by-name resolution always succeeds. Without this, mesh
+# skins referencing indices beyond body_shape_skeleton_3d.get_bone_count() log
+# `Skin bind #N contains bone index bind: N, which is greater than the skeleton bone count`.
+func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
+	var wearable_bone_count = wearable_skel.get_bone_count()
+	if wearable_bone_count == 0:
+		return
+
+	# Collect missing bones along with their depth in the wearable hierarchy so we
+	# can add parents before children.
+	var missing: Array = []  # Array of [depth, wearable_idx, name]
+	for i in wearable_bone_count:
+		var bone_name = wearable_skel.get_bone_name(i)
+		if body_shape_skeleton_3d.find_bone(bone_name) != -1:
+			continue
+		var depth = 0
+		var cursor = wearable_skel.get_bone_parent(i)
+		while cursor != -1:
+			depth += 1
+			cursor = wearable_skel.get_bone_parent(cursor)
+		missing.push_back([depth, i, bone_name])
+
+	if missing.is_empty():
+		return
+
+	missing.sort_custom(func(a, b): return a[0] < b[0])
+
+	for entry in missing:
+		var wearable_idx: int = entry[1]
+		var bone_name: String = entry[2]
+		var new_idx: int
+		if not _free_bone_pool.is_empty():
+			new_idx = _free_bone_pool.pop_back()
+			body_shape_skeleton_3d.set_bone_name(new_idx, bone_name)
+			body_shape_skeleton_3d.set_bone_enabled(new_idx, true)
+		else:
+			new_idx = body_shape_skeleton_3d.add_bone(bone_name)
+		body_shape_skeleton_3d.set_bone_rest(new_idx, wearable_skel.get_bone_rest(wearable_idx))
+		body_shape_skeleton_3d.reset_bone_pose(new_idx)
+		_active_extra_bone_indices.push_back(new_idx)
+		# Always reset parent: a recycled slot may have been linked to a stale
+		# parent from its previous use.
+		var parent_wearable_idx = wearable_skel.get_bone_parent(wearable_idx)
+		var parent_base_idx = -1
+		if parent_wearable_idx != -1:
+			var parent_name = wearable_skel.get_bone_name(parent_wearable_idx)
+			parent_base_idx = body_shape_skeleton_3d.find_bone(parent_name)
+			if parent_base_idx == -1:
+				push_warning(
+					(
+						"[AVATAR] Extra bone '%s' parent '%s' not found in base skeleton; leaving as root"
+						% [bone_name, parent_name]
+					)
+				)
+		body_shape_skeleton_3d.set_bone_parent(new_idx, parent_base_idx)
+
+
+# Rewrites a MeshInstance3D's Skin so every bind references its target bone by name.
+# Godot resolves named binds against the attached skeleton at runtime, so once the
+# mesh is reparented to body_shape_skeleton_3d (which may have been extended with
+# extra wearable bones) every joint resolves correctly, including ADR-316 spring bones.
+func _rebind_skin_by_name(mesh: MeshInstance3D, wearable_skel: Skeleton3D) -> void:
+	if mesh.skin == null:
+		return
+	var skin: Skin = mesh.skin.duplicate()
+	var wearable_bone_count = wearable_skel.get_bone_count()
+	for i in skin.get_bind_count():
+		var bone_idx = skin.get_bind_bone(i)
+		if bone_idx >= 0 and bone_idx < wearable_bone_count:
+			skin.set_bind_name(i, wearable_skel.get_bone_name(bone_idx))
+	mesh.skin = skin
 
 
 func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
@@ -544,7 +672,14 @@ func async_load_wearables():
 		# returns a fresh instantiated scene that we'll discard anyway)
 		var wearable_skeletons = obj.find_children("Skeleton3D")
 		for skeleton_3d in wearable_skeletons:
+			# Spring bones (ADR-316) and other extra bones not in the base armature
+			# must be copied into body_shape_skeleton_3d before meshes are reparented,
+			# otherwise mesh skins reference bone indices that don't exist here.
+			_merge_extra_wearable_bones_into_base(skeleton_3d)
+
 			for child in skeleton_3d.get_children():
+				if child is MeshInstance3D:
+					_rebind_skin_by_name(child, skeleton_3d)
 				skeleton_3d.remove_child(child)
 				child.set_owner(null)  # Clear owner since we're reparenting
 				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts

@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://bhmbr0xh4h188"]
+[gd_scene format=3 uid="uid://bhmbr0xh4h188"]
 
 [ext_resource type="Script" uid="uid://c3gb41r3lvg7o" path="res://src/ui/components/dropdown_list/dropdown_list.gd" id="1_script"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="3_regular"]
@@ -36,7 +36,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="DropdownList" type="Control"]
+[node name="DropdownList" type="Control" unique_id=1973191162]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 3
 anchors_preset = 0
@@ -46,7 +46,7 @@ mouse_filter = 2
 script = ExtResource("1_script")
 title = "Title"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=396696068]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -56,7 +56,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer"]
+[node name="Label_Title" type="Label" parent="VBoxContainer" unique_id=1919591347]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -65,22 +65,25 @@ theme_override_font_sizes/font_size = 14
 text = "Title"
 label_settings = ExtResource("3_tiq7w")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1688174912]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_4fa15")
 
-[node name="PanelContainer_Button" type="PanelContainer" parent="VBoxContainer"]
+[node name="PanelContainer_Button" type="PanelContainer" parent="VBoxContainer" unique_id=1264013874]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
+focus_mode = 2
+mouse_filter = 1
 theme_override_styles/panel = ExtResource("4_ymsf1")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Button"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Button" unique_id=1025473977]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Label_Selected" type="Label" parent="VBoxContainer/PanelContainer_Button/HBoxContainer"]
+[node name="Label_Selected" type="Label" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=1393568308]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -92,7 +95,7 @@ label_settings = ExtResource("6_4fa15")
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="TextureRect_Arrow" type="TextureRect" parent="VBoxContainer/PanelContainer_Button/HBoxContainer"]
+[node name="TextureRect_Arrow" type="TextureRect" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=2085570171]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
@@ -102,12 +105,13 @@ texture = ExtResource("6_ymsf1")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer" unique_id=989223255]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_4fa15")
 
-[node name="Label_Description" type="Label" parent="VBoxContainer"]
+[node name="Label_Description" type="Label" parent="VBoxContainer" unique_id=1937002167]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -117,14 +121,14 @@ theme_override_font_sizes/font_size = 12
 label_settings = ExtResource("6_f66t4")
 text_overrun_behavior = 4
 
-[node name="PopupLayer" type="Control" parent="."]
+[node name="PopupLayer" type="Control" parent="." unique_id=586335895]
 unique_name_in_owner = true
 visible = false
 top_level = true
 z_index = 100
 anchors_preset = 0
 
-[node name="ColorRect_Shadow" type="ColorRect" parent="PopupLayer"]
+[node name="ColorRect_Shadow" type="ColorRect" parent="PopupLayer" unique_id=221271387]
 unique_name_in_owner = true
 visible = false
 z_index = -1
@@ -133,19 +137,19 @@ layout_mode = 0
 offset_right = 200.0
 offset_bottom = 100.0
 
-[node name="PanelContainer_Popup" type="PanelContainer" parent="PopupLayer"]
+[node name="PanelContainer_Popup" type="PanelContainer" parent="PopupLayer" unique_id=754203701]
 unique_name_in_owner = true
 layout_mode = 0
 offset_right = 200.0
 offset_bottom = 100.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_ymsf1")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="PopupLayer/PanelContainer_Popup"]
+[node name="ScrollContainer" type="ScrollContainer" parent="PopupLayer/PanelContainer_Popup" unique_id=119850285]
 unique_name_in_owner = true
 layout_mode = 2
 horizontal_scroll_mode = 0
 
-[node name="VBoxContainer_Items" type="VBoxContainer" parent="PopupLayer/PanelContainer_Popup/ScrollContainer"]
+[node name="VBoxContainer_Items" type="VBoxContainer" parent="PopupLayer/PanelContainer_Popup/ScrollContainer" unique_id=651706736]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

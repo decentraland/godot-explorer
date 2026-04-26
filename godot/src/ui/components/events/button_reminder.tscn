@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cm0sccjf036pe"]
+[gd_scene format=3 uid="uid://cm0sccjf036pe"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_k4u78"]
 [ext_resource type="StyleBox" uid="uid://c38cofu2ty3bv" path="res://assets/themes/remind_me_normal.tres" id="2_1umtk"]
@@ -13,7 +13,7 @@
 font = ExtResource("7_kix6m")
 font_size = 30
 
-[node name="Button_Reminder" type="Button"]
+[node name="Button_Reminder" type="Button" unique_id=1444093212]
 custom_minimum_size = Vector2(300, 96)
 offset_right = 420.0
 offset_bottom = 96.0
@@ -48,7 +48,7 @@ toggle_mode = true
 expand_icon = true
 script = ExtResource("5_0dsnb")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=102960614]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -58,7 +58,7 @@ grow_vertical = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="TextureRect_Icon" type="TextureRect" parent="HBoxContainer"]
+[node name="TextureRect_Icon" type="TextureRect" parent="HBoxContainer" unique_id=361676533]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
@@ -67,14 +67,14 @@ size_flags_vertical = 4
 texture = ExtResource("5_kix6m")
 expand_mode = 3
 
-[node name="Label" type="Label" parent="HBoxContainer"]
+[node name="Label" type="Label" parent="HBoxContainer" unique_id=719965217]
 unique_name_in_owner = true
 layout_mode = 2
 text = "remind me"
 label_settings = SubResource("LabelSettings_1umtk")
 uppercase = true
 
-[node name="LoadingSpinner" parent="." instance=ExtResource("8_spinner")]
+[node name="LoadingSpinner" parent="." unique_id=48971338 instance=ExtResource("8_spinner")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8

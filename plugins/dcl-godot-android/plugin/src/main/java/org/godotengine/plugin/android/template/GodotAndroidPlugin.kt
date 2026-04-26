@@ -39,6 +39,9 @@ import java.io.File
 import java.io.FileOutputStream
 
 // Reown/WalletConnect Sign SDK imports (without Compose UI)
+import com.android.installreferrer.api.InstallReferrerClient
+import com.android.installreferrer.api.InstallReferrerStateListener
+import com.android.installreferrer.api.ReferrerDetails
 import com.reown.android.Core
 import com.reown.android.CoreClient
 import com.reown.android.relay.ConnectionType
@@ -2025,6 +2028,135 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         sb.appendLine("Graphics: %.1f MB".format(memInfo.getOrDefault("graphics_pss_mb", 0.0)))
         sb.appendLine("System Available: %.1f MB".format(memInfo.getOrDefault("system_available_mb", 0.0)))
         return sb.toString()
+    }
+
+    // Install Referrer state (volatile for cross-thread visibility from InstallReferrerClient callback)
+    @Volatile private var installReferrerData: Dictionary? = null
+    @Volatile private var installReferrerFetched = false
+
+    /**
+     * Fetches install referrer data from the Google Play Store.
+     * This should be called once at app startup. The result is cached.
+     * Returns a Dictionary with:
+     *   - referrer: String (UTM params, e.g. "utm_source=youtube&utm_campaign=xyz")
+     *   - click_timestamp: Long (seconds since epoch when the referrer click happened)
+     *   - install_timestamp: Long (seconds since epoch when the install began)
+     *   - google_play_instant: Boolean (whether the app was launched as a Google Play Instant app)
+     *   - status: String ("ok", "pending", "error", "not_available")
+     *   - error: String (error message if status is "error")
+     */
+    @UsedByGodot
+    fun getInstallReferrer(): Dictionary {
+        Log.i(pluginName, "[IR] getInstallReferrer() called - cached=${installReferrerData != null}, fetched=$installReferrerFetched")
+
+        // Return cached data if already fetched
+        installReferrerData?.let {
+            Log.i(pluginName, "[IR] Returning cached data: status=${it["status"]}, referrer=${it["referrer"]}")
+            return it
+        }
+
+        // If already in progress, return pending
+        if (installReferrerFetched) {
+            Log.i(pluginName, "[IR] Already fetching, returning pending")
+            val pending = Dictionary()
+            pending["status"] = "pending"
+            return pending
+        }
+
+        installReferrerFetched = true
+        Log.i(pluginName, "[IR] First call - starting connection")
+
+        val act = activity
+        Log.i(pluginName, "[IR] activity=$act")
+        val ctx = act?.applicationContext
+        Log.i(pluginName, "[IR] applicationContext=$ctx")
+        if (ctx == null) {
+            Log.e(pluginName, "[IR] Context is null - cannot start")
+            val errorDict = Dictionary()
+            errorDict["status"] = "error"
+            errorDict["error"] = "Context is null"
+            installReferrerData = errorDict
+            return errorDict
+        }
+
+        try {
+            Log.i(pluginName, "[IR] Building InstallReferrerClient...")
+            val referrerClient = InstallReferrerClient.newBuilder(ctx).build()
+            Log.i(pluginName, "[IR] Client built: $referrerClient. Calling startConnection()...")
+            referrerClient.startConnection(object : InstallReferrerStateListener {
+                override fun onInstallReferrerSetupFinished(responseCode: Int) {
+                    Log.i(pluginName, "[IR] onInstallReferrerSetupFinished: responseCode=$responseCode")
+                    val result = Dictionary()
+                    when (responseCode) {
+                        InstallReferrerClient.InstallReferrerResponse.OK -> {
+                            Log.i(pluginName, "[IR] Response OK - reading referrer")
+                            try {
+                                val response: ReferrerDetails = referrerClient.installReferrer
+                                result["status"] = "ok"
+                                result["referrer"] = response.installReferrer ?: ""
+                                result["click_timestamp"] = response.referrerClickTimestampSeconds
+                                result["install_timestamp"] = response.installBeginTimestampSeconds
+                                result["google_play_instant"] = response.googlePlayInstantParam
+                                Log.i(pluginName, "[IR] Install referrer fetched OK: '${response.installReferrer}', click_ts=${response.referrerClickTimestampSeconds}, install_ts=${response.installBeginTimestampSeconds}, instant=${response.googlePlayInstantParam}")
+                            } catch (e: Exception) {
+                                result["status"] = "error"
+                                result["error"] = "Failed to read referrer: ${e.message}"
+                                Log.e(pluginName, "[IR] Error reading install referrer", e)
+                            }
+                        }
+                        InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED -> {
+                            result["status"] = "not_available"
+                            result["error"] = "Install referrer not supported on this device"
+                            Log.w(pluginName, "[IR] FEATURE_NOT_SUPPORTED")
+                        }
+                        InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE -> {
+                            result["status"] = "not_available"
+                            result["error"] = "Google Play Store service unavailable"
+                            Log.w(pluginName, "[IR] SERVICE_UNAVAILABLE")
+                        }
+                        else -> {
+                            result["status"] = "error"
+                            result["error"] = "Unknown response code: $responseCode"
+                            Log.e(pluginName, "[IR] Unknown response code: $responseCode")
+                        }
+                    }
+                    installReferrerData = result
+                    Log.i(pluginName, "[IR] installReferrerData set, status=${result["status"]}")
+                    try {
+                        referrerClient.endConnection()
+                        Log.i(pluginName, "[IR] Connection ended")
+                    } catch (e: Exception) {
+                        Log.w(pluginName, "[IR] Error ending install referrer connection", e)
+                    }
+                }
+
+                override fun onInstallReferrerServiceDisconnected() {
+                    Log.w(pluginName, "[IR] onInstallReferrerServiceDisconnected called (data=${installReferrerData != null})")
+                    if (installReferrerData == null) {
+                        val result = Dictionary()
+                        result["status"] = "error"
+                        result["error"] = "Service disconnected before data was received"
+                        installReferrerData = result
+                        Log.w(pluginName, "[IR] Service disconnected prematurely - storing error")
+                    }
+                }
+            })
+            Log.i(pluginName, "[IR] startConnection() returned (async, waiting for callback)")
+        } catch (e: Throwable) {
+            // Catch Throwable (not just Exception) to also catch NoClassDefFoundError
+            // which happens if the installreferrer library isn't bundled in the APK
+            Log.e(pluginName, "[IR] Throwable in InstallReferrerClient setup: ${e.javaClass.name}: ${e.message}", e)
+            val errorDict = Dictionary()
+            errorDict["status"] = "error"
+            errorDict["error"] = "Setup ${e.javaClass.simpleName}: ${e.message}"
+            installReferrerData = errorDict
+            return errorDict
+        }
+
+        val pending = Dictionary()
+        pending["status"] = "pending"
+        Log.i(pluginName, "[IR] Returning pending (callback will fire later)")
+        return pending
     }
 
 }

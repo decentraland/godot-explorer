@@ -118,13 +118,23 @@ impl DclIosPlugin {
         true
     }
 
-    /// Open a URL for authentication
+    /// Open a URL for authentication (uses ASWebAuthenticationSession)
     #[func]
     pub fn open_auth_url(url: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
             return false;
         };
         singleton.call("open_auth_url", &[url.to_variant()]);
+        true
+    }
+
+    /// Open a URL for authentication using SFSafariViewController (for Apple Sign In)
+    #[func]
+    pub fn open_safari_auth_url(url: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.call("open_safari_auth_url", &[url.to_variant()]);
         true
     }
 
@@ -178,6 +188,37 @@ impl DclIosPlugin {
         Self::get_mobile_device_info_internal()
             .map(|info| info.total_ram_mb)
             .unwrap_or(-1)
+    }
+
+    /// Check if this iPhone is below minimum spec (iPhone 13 / SE 3rd gen 2022).
+    /// Returns true for iPhones with hw.machine major identifier <= 13 (iPhone 12 and below).
+    /// Returns false for non-iOS, non-iPhone devices (iPad/iPod), or unrecognized formats.
+    /// Unknown/future models pass through as non-low-spec.
+    #[func]
+    pub fn is_low_spec_iphone() -> bool {
+        let Some(info) = Self::get_mobile_device_info_internal() else {
+            return false;
+        };
+
+        let model = &info.device_model;
+
+        // Only flag iPhones — iPads, iPods, simulators pass through
+        let Some(rest) = model.strip_prefix("iPhone") else {
+            return false;
+        };
+
+        // Parse major number from "XX,Y" format
+        let Some(major_str) = rest.split(',').next() else {
+            return false;
+        };
+
+        let Ok(major) = major_str.parse::<u32>() else {
+            return false;
+        };
+
+        // Major <= 13 means iPhone 12 or below
+        // Major >= 14 means iPhone 13 / SE 3rd gen or newer
+        major <= 13
     }
 
     /// Add a calendar event with title, description, start time, end time, and location

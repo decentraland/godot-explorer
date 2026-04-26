@@ -91,6 +91,10 @@ var _large_scene_floor: Node3D = null
 var _preview_ws := PreviewWebSocket.new()
 
 
+func get_preview_ws() -> PreviewWebSocket:
+	return _preview_ws
+
+
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 
@@ -115,6 +119,7 @@ func _ready():
 	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
+	Global.scene_runner.scene_crashed.connect(self._on_scene_crashed)
 	Global.loading_finished.connect(self.on_loading_finished)
 
 
@@ -147,6 +152,14 @@ func on_scene_killed(killed_scene_id, _entity_id):
 		if scene.scene_number_id == killed_scene_id:
 			loaded_scenes.erase(scene_entity_id)
 			return
+
+
+func _on_scene_crashed(crashed_scene_id: int, entity_id: String) -> void:
+	var current_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
+	if crashed_scene_id != current_scene_id:
+		return
+	if Global.modal_manager != null:
+		Global.modal_manager.async_show_scene_crash_modal(entity_id)
 
 
 func get_current_scene_data() -> SceneItem:
@@ -460,7 +473,11 @@ func _async_on_desired_scene_changed():
 		# Only emit if:
 		# - Coordinator was busy at some point (meaning it fetched and found no scenes), OR
 		# - We're not in a reloading state (normal update, not teleport/realm change)
-		if not loading_session_started and (coordinator_was_busy or not is_reloading_now):
+		if (
+			not loading_session_started
+			and not Global.scene_runner.has_active_loading_session()
+			and (coordinator_was_busy or not is_reloading_now)
+		):
 			Global.scene_runner.loading_complete.emit(-1)
 
 	var empty_parcels_coords = []

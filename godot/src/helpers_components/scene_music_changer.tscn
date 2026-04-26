@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://75a0brb4fw2g"]
+[gd_scene format=3 uid="uid://75a0brb4fw2g"]
 
 [ext_resource type="Script" uid="uid://b24ti6m8234h3" path="res://src/helpers_components/scene_music_changer.gd" id="1_eofas"]
 
-[node name="SceneMusicChanger" type="Node"]
+[node name="SceneMusicChanger" type="Node" unique_id=1887634079]
 script = ExtResource("1_eofas")

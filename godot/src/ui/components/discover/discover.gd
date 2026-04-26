@@ -8,7 +8,6 @@ var _generator_statuses: Dictionary = {}
 @onready var event_details: SidePanelWrapper = %EventDetails
 
 @onready var search_bar: SearchBar = %SearchBar
-@onready var timer_search_debounce: Timer = %Timer_SearchDebounce
 
 @onready var last_visited: VBoxContainer = %LastVisited
 @onready var places_featured: VBoxContainer = %PlacesFeatured
@@ -20,6 +19,9 @@ var _generator_statuses: Dictionary = {}
 @onready var button_back_to_explorer: Button = %Button_BackToExplorer
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
+#@onready var discover_content: VBoxContainer = %DiscoverContent
+
+static var _low_spec_warning_shown: bool = false
 
 
 func _ready():
@@ -70,14 +72,31 @@ func on_event_pressed(data):
 	event_details.open_panel()
 
 
+func async_open_event_by_id(event_id: String) -> void:
+	_async_handle_event_notification(event_id)
+
+
+func async_open_place_by_id(place_id: String) -> void:
+	var response = await PlacesHelper.async_get_place_by_id(place_id)
+	if response is PromiseError:
+		printerr("[Discover] Failed to fetch place data: ", response.get_error())
+		return
+	var json: Dictionary = response.get_string_response_as_json()
+	var place_data: Dictionary = json.get("data", json)
+	if place_data.is_empty():
+		printerr("[Discover] Empty place data for id: ", place_id)
+		return
+	on_item_pressed(place_data)
+
+
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
 	jump_in.hide()
-	Global.teleport_to(parcel_position, realm)
+	Global.async_teleport_to(parcel_position, realm)
 
 
 func _on_jump_in_world(realm: String):
 	jump_in.hide()
-	Global.join_world(realm)
+	Global.async_join_world(realm)
 
 
 func _get_ui_location() -> String:
@@ -91,9 +110,34 @@ func _on_visibility_changed():
 		Global.metrics.track_screen_viewed(
 			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
 		)
+		_show_low_spec_warning_if_needed()
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+
+
+func _show_low_spec_warning_if_needed():
+	# Skip if already shown this session
+	if _low_spec_warning_shown:
+		return
+
+	var deeplink_warning = Global.deep_link_obj and Global.deep_link_obj.low_spec_warning
+	var is_ftue = not Global.get_config().low_spec_warning_shown
+	var is_low_spec = DclIosPlugin.is_available() and DclIosPlugin.is_low_spec_iphone()
+
+	# Show if: deep link forces it OR (FTUE and low-spec device)
+	if not deeplink_warning and not (is_ftue and is_low_spec):
+		return
+
+	_low_spec_warning_shown = true
+
+	# Persist FTUE flag (not for deep link bypass)
+	if is_ftue and is_low_spec:
+		Global.get_config().low_spec_warning_shown = true
+		Global.get_config().save_to_settings_file()
+
+	Global.metrics.track_screen_viewed("MINSPEC_PROMPT", "")
+	Global.modal_manager.async_show_low_spec_iphone_modal()
 
 
 func _on_search_bar_opened() -> void:
@@ -108,9 +152,9 @@ func _on_search_bar_opened() -> void:
 func _on_search_bar_cleared() -> void:
 	search_text = ""
 	set_search_filter_text("")
-	timer_search_debounce.stop()
-	search_container.hide()
-	container_content.show()
+	search_container.stop_suggestions()
+	search_container.show()
+	search_container.set_keyword_search_text("")
 	Global.metrics.track_click_button("SEARCH_ERASE", "SEARCH_CLICK", "")
 
 
@@ -174,22 +218,19 @@ func _async_on_line_edit_search_bar_text_submitted(new_text: String) -> void:
 	new_text = new_text.rstrip(" .")
 	search_text = new_text
 	set_search_filter_text(search_text)
+	search_container.stop_suggestions()
 	search_container.hide()
 	container_content.show()
 
 
-func _on_timer_search_debounce_timeout() -> void:
-	search_container.set_keyword_search_text(search_text)
-
-
 func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void:
 	event_details.hide()
-	Global.teleport_to(parcel_position, realm)
+	Global.async_teleport_to(parcel_position, realm)
 
 
 func _on_event_details_jump_in_world(realm: String) -> void:
 	event_details.hide()
-	Global.join_world(realm)
+	Global.async_join_world(realm)
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
@@ -392,6 +433,7 @@ func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 	search_bar.text = search_keyword
 	search_text = search_keyword
 	set_search_filter_text(search_keyword)
+	search_container.stop_suggestions()
 	search_container.hide()
 	container_content.show()
 
@@ -402,6 +444,7 @@ func _on_button_back_to_explorer_pressed() -> void:
 		search_bar.close_searchbar()
 		search_text = ""
 		set_search_filter_text("")
+		search_container.stop_suggestions()
 		search_container.hide()
 		container_content.show()
 		label_title.show()
@@ -409,5 +452,8 @@ func _on_button_back_to_explorer_pressed() -> void:
 			button_back_to_explorer.hide()
 		return
 	if Global.get_explorer():
+		if Global.modal_manager.ban_pre_check_active:
+			Global.modal_manager.async_show_ban_pre_check_modal()
+			return
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()

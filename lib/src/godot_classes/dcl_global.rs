@@ -206,6 +206,9 @@ pub struct DclGlobal {
     pub network_inspector: Gd<NetworkInspector>,
 
     #[var]
+    pub scene_inspector_dispatcher: Gd<crate::tools::scene_inspector::SceneInspectorDispatcher>,
+
+    #[var]
     pub social_blacklist: Gd<DclSocialBlacklist>,
 
     #[var]
@@ -229,6 +232,11 @@ pub struct DclGlobal {
     pub dynamic_graphics_manager: Gd<DclDynamicGraphicsManager>,
 
     pub selected_avatar: Option<Gd<DclAvatar>>,
+
+    // Scene Inspector active flag — set from GDScript when deeplink/CLI activates the Scene Inspector.
+    // Checked by scene_manager when spawning scenes to decide if they should be instrumented.
+    #[var]
+    pub scene_inspector_active: bool,
 
     // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
     #[var]
@@ -275,6 +283,9 @@ impl INode for DclGlobal {
 
         log_panics::init();
 
+        // Scene Inspector is initialized lazily when the first scene with
+        // --scene-inspector enabled is spawned (see scene_thread in dcl/js/mod.rs).
+
         // Initialize Rust classes
         let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();
         let mut comms: Gd<CommunicationManager> = CommunicationManager::new_alloc();
@@ -282,6 +293,9 @@ impl INode for DclGlobal {
         let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
         let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
+        let mut scene_inspector_dispatcher: Gd<
+            crate::tools::scene_inspector::SceneInspectorDispatcher,
+        > = crate::tools::scene_inspector::SceneInspectorDispatcher::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
         let mut social_service: Gd<DclSocialService> = DclSocialService::new_alloc();
 
@@ -316,6 +330,12 @@ impl INode for DclGlobal {
         content_provider.set_name("content_provider");
         portable_experience_controller.set_name("portable_experience_controller");
         network_inspector.set_name("network_inspector");
+        scene_inspector_dispatcher.set_name("scene_inspector_dispatcher");
+
+        // Register the global Scene Inspector sender so Rust scene threads can push entries
+        let _ = crate::tools::scene_inspector::set_global_sender(
+            scene_inspector_dispatcher.bind().get_sender(),
+        );
         social_blacklist.set_name("social_blacklist");
         social_service.set_name("social_service");
 
@@ -391,6 +411,7 @@ impl INode for DclGlobal {
             metrics,
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector,
+            scene_inspector_dispatcher,
             social_blacklist,
             social_service,
 
@@ -410,6 +431,8 @@ impl INode for DclGlobal {
             dynamic_graphics_manager,
             selected_avatar: None,
 
+            scene_inspector_active: false,
+
             // Input modifiers start as false (no modification)
             input_modifier_disable_all: false,
             input_modifier_disable_walk: false,
@@ -428,6 +451,9 @@ impl INode for DclGlobal {
 
 #[godot_api]
 impl DclGlobal {
+    #[signal]
+    fn sdk_skybox_time_active_changed(is_active: bool);
+
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
         set_scene_log_enabled(enabled);
@@ -441,6 +467,11 @@ impl DclGlobal {
     #[func]
     fn is_android(&self) -> bool {
         self.is_android
+    }
+
+    #[func]
+    fn is_android_or_emulating(&self) -> bool {
+        self.is_android || self.cli.bind().emulate_android
     }
 
     #[func]
@@ -497,15 +528,17 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").into()
     }
 
-    /// Get version string with environment suffix (e.g., "v1.0.0 - ZONE")
+    /// Get version string with environment suffix (e.g., "v1.0.0 - zone")
+    /// Hidden when environment is plain "org" (production default).
     #[func]
     pub fn get_version_with_env() -> GString {
         let version = format!("v{}", env!("GODOT_EXPLORER_VERSION"));
-        let env = crate::env::get_environment();
-        match env.suffix() {
-            "zone" => GString::from(&format!("{} - ZONE", version)),
-            "today" => GString::from(&format!("{} - TODAY", version)),
-            _ => GString::from(&version),
+        let config = crate::env::get_config();
+        let repr = config.to_string_repr();
+        if repr == "org" {
+            GString::from(&version)
+        } else {
+            GString::from(&format!("{} - {}", version, repr))
         }
     }
 
@@ -626,29 +659,22 @@ impl DclGlobal {
         self.input_modifier_disable_all
     }
 
-    /// Emits test messages at various Rust tracing levels to verify Sentry integration.
-    #[func]
-    pub fn emit_sentry_rust_test_messages() {
-        use crate::tools::godot_logger::emit_sentry_test_messages;
-        emit_sentry_test_messages();
-    }
-
     /// Set the Decentraland environment for URL transformation.
-    /// Valid values: "org", "zone", "today"
+    /// Supports per-group overrides: "zone", "auth::zone,org", "auth::zone,comms::today,org"
     #[func]
     pub fn set_dcl_environment(env: GString) {
-        if let Some(dcl_env) = crate::env::DclEnvironment::parse(&env.to_string()) {
-            crate::env::set_environment(dcl_env);
+        if let Some(config) = crate::env::DclEnvConfig::parse(&env.to_string()) {
+            crate::env::set_environment_config(config);
         } else {
             tracing::warn!("Invalid environment value: {}", env);
         }
     }
 
-    /// Get the current Decentraland environment suffix.
-    /// Returns: "org", "zone", or "today"
+    /// Get the current Decentraland environment string.
+    /// Returns the full config string if overrides are present, otherwise just the suffix.
     #[func]
     pub fn get_dcl_environment() -> GString {
-        GString::from(crate::env::get_environment().suffix())
+        GString::from(&crate::env::get_config().to_string_repr())
     }
 
     /// Change the Rust log filter at runtime.

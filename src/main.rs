@@ -18,6 +18,7 @@ mod doctor;
 mod download_file;
 mod export;
 mod fi_benchmark;
+mod full_tests;
 mod helpers;
 mod image_comparison;
 mod install_dependency;
@@ -26,6 +27,7 @@ mod keystore;
 mod path;
 mod platform;
 mod run;
+mod sentry_metrics;
 mod tests;
 mod ui;
 mod update_snapshots;
@@ -124,6 +126,34 @@ fn main() -> Result<(), anyhow::Error> {
                 ),
         )
         .subcommand(
+            Command::new("full-tests")
+                .about("Run ALL test workflows locally in sequence with timing information")
+                .arg(
+                    Arg::new("continue-on-failure")
+                        .long("continue-on-failure")
+                        .help("Continue running steps even if one fails")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("skip-visual")
+                        .long("skip-visual")
+                        .help("Skip visual/GPU tests (scene, client, test-tools)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("update-snapshots")
+                        .long("update-snapshots")
+                        .help("After visual tests, accept new output as baseline snapshots")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("report")
+                        .long("report")
+                        .help("Generate an HTML report with snapshot diffs and open in browser")
+                        .takes_value(false),
+                ),
+        )
+        .subcommand(
             Command::new("explorer-version")
                 .about("Get Godot Explorer version (reads from .build.version created during build)")
                 .arg(
@@ -160,6 +190,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("strip-ios")
                         .help("strip debug symbols from iOS templates to save disk space (default: keep debug symbols)")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("download Godot editor and templates from a branch build (e.g. `fix-ios-screen-orientation-swiftui-host`) instead of the stable release")
+                        .takes_value(true),
                 )
         )
         .subcommand(Command::new("clean-cache").about("Clean the cache to re-download external files."))
@@ -314,6 +350,36 @@ fn main() -> Result<(), anyhow::Error> {
                         .default_value("8080"),
                 ),
         ).subcommand(
+            Command::new("get-metrics")
+                .about("(TEMPORARY) Get Sentry metrics for godot-explorer and auth-mobile")
+                .arg(
+                    Arg::new("from")
+                        .help("Start date (YYYY-MM-DD)")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::new("to")
+                        .help("End date (YYYY-MM-DD, inclusive)")
+                        .required(true)
+                        .index(2),
+                ),
+        ).subcommand(
+            Command::new("push-metrics")
+                .about("(TEMPORARY) Push Sentry metrics to Slack")
+                .arg(
+                    Arg::new("from")
+                        .help("Start date (YYYY-MM-DD)")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::new("to")
+                        .help("End date (YYYY-MM-DD, inclusive)")
+                        .required(true)
+                        .index(2),
+                ),
+        ).subcommand(
             Command::new("update-ios-xcode")
                 .about("Update iOS Xcode project with latest builds (macOS only)")
                 .arg(
@@ -450,9 +516,15 @@ fn main() -> Result<(), anyhow::Error> {
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
             let use_cache = sm.is_present("cache");
             let strip_ios = sm.is_present("strip-ios");
+            let branch = sm.value_of("branch").map(String::from);
             // Call your install function and pass the templates
-            let result =
-                install_dependency::install(no_templates, &platforms, use_cache, strip_ios);
+            let result = install_dependency::install(
+                no_templates,
+                &platforms,
+                use_cache,
+                strip_ios,
+                branch.as_deref(),
+            );
             if result.is_ok() {
                 dependencies::suggest_next_steps("install", None);
             }
@@ -744,17 +816,32 @@ fn main() -> Result<(), anyhow::Error> {
         ("update-libgodot-android", sm) => {
             android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
-        ("update-docker-snapshots", sm) => update_snapshots::update_docker_snapshots(
-            sm.value_of("run-id"),
-            sm.value_of("branch"),
-        ),
+        ("update-docker-snapshots", sm) => {
+            update_snapshots::update_docker_snapshots(sm.value_of("run-id"), sm.value_of("branch"))
+        }
         ("update-coverage-snapshots", sm) => update_snapshots::update_coverage_snapshots(
             sm.value_of("run-id"),
             sm.value_of("branch"),
         ),
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
+        ("get-metrics", sm) => {
+            let from = sm.value_of("from").unwrap();
+            let to = sm.value_of("to").unwrap();
+            sentry_metrics::get_metrics(from, to)
+        }
+        ("push-metrics", sm) => {
+            let from = sm.value_of("from").unwrap();
+            let to = sm.value_of("to").unwrap();
+            sentry_metrics::push_metrics(from, to)
+        }
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
+        ("full-tests", sm) => full_tests::run_full_tests(
+            sm.is_present("continue-on-failure"),
+            sm.is_present("skip-visual"),
+            sm.is_present("update-snapshots"),
+            sm.is_present("report"),
+        ),
         _ => unreachable!("unreachable branch"),
     };
 

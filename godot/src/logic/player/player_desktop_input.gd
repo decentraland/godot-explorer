@@ -38,13 +38,12 @@ func _input(event):
 		if _is_macos:
 			_mouse_position = _mouse_position * 0.8
 
-		# Only rotate the player on Y-axis, let avatar handle its own rotation
-		# Camera mount Y offset (from teleport) is preserved in local space
+		# Avatar is top-level, so player Y rotation does not propagate to it
 		_player.rotate_y(deg_to_rad(-_mouse_position.x) * h_sens)
-		_player.avatar.rotate_y(deg_to_rad(_mouse_position.x) * h_sens)
 		_player.mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * v_sens)
 		_player.clamp_camera_rotation()
 
 
 func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
-	_player.set_camera_mode(camera_mode)
+	if camera_mode != Global.CameraMode.CINEMATIC:
+		_player.set_camera_mode(camera_mode)

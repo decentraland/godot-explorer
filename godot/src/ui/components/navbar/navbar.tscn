@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://btl8ag3s7oanm"]
+[gd_scene format=3 uid="uid://btl8ag3s7oanm"]
 
 [ext_resource type="Script" uid="uid://cmhycf7qy54n5" path="res://src/ui/components/navbar/navbar.gd" id="1_40xfh"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="2_1xf7s"]
@@ -168,7 +168,7 @@ resource_name = "Tabs"
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xbtqw"]
 
-[node name="Navbar" type="Control"]
+[node name="Navbar" type="Control" unique_id=1103853487]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -178,15 +178,13 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_40xfh")
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=2004698123]
 unique_name_in_owner = true
-libraries = {
-&"": SubResource("AnimationLibrary_lur8b")
-}
-autoplay = "close"
+libraries/ = SubResource("AnimationLibrary_lur8b")
+autoplay = &"close"
 speed_scale = 0.5
 
-[node name="Control" type="Control" parent="."]
+[node name="Control" type="Control" parent="." unique_id=634999954]
 custom_minimum_size = Vector2(120, 100)
 layout_mode = 1
 anchors_preset = 1
@@ -197,7 +195,7 @@ offset_right = -8.0
 offset_bottom = 136.0
 grow_horizontal = 0
 
-[node name="Control" type="Control" parent="Control"]
+[node name="Control" type="Control" parent="Control" unique_id=2089287654]
 clip_contents = true
 custom_minimum_size = Vector2(80, 500)
 layout_mode = 1
@@ -211,7 +209,7 @@ offset_bottom = 568.0
 grow_horizontal = 2
 mouse_filter = 2
 
-[node name="PanelContainer" type="PanelContainer" parent="Control/Control"]
+[node name="PanelContainer" type="PanelContainer" parent="Control/Control" unique_id=2146671690]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 0
@@ -219,17 +217,17 @@ offset_right = 80.0
 offset_bottom = 404.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_5wifw")
 
-[node name="VBoxContainer_Buttons" type="VBoxContainer" parent="Control/Control/PanelContainer"]
+[node name="VBoxContainer_Buttons" type="VBoxContainer" parent="Control/Control/PanelContainer" unique_id=568324077]
 unique_name_in_owner = true
 layout_mode = 2
 alignment = 1
 
-[node name="Separator" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
+[node name="Separator" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=124456420]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_n2t8a")
 
-[node name="StaticButton_Friends" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Friends" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=845596369 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("3_voda5")
@@ -238,7 +236,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("3_lur8b")
 
-[node name="StaticButton_Notifications" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Notifications" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=425783197 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("6_ih2cn")
@@ -247,7 +245,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("5_ly2kd")
 
-[node name="StaticButton_Backpack" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Backpack" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=408963304 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("8_voda5")
@@ -256,7 +254,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("7_ly2kd")
 
-[node name="StaticButton_Settings" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Settings" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=908925018 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("12_ih2cn")
@@ -265,11 +263,11 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("8_fmmda")
 
-[node name="Control" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
+[node name="Control" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=1770223894]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 
-[node name="Portrait_Button_Profile" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/Control" instance=ExtResource("9_ria76")]
+[node name="Portrait_Button_Profile" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/Control" unique_id=426752335 instance=ExtResource("9_ria76")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -286,12 +284,12 @@ grow_vertical = 2
 button_group = SubResource("ButtonGroup_ckthm")
 metadata/_edit_group_ = true
 
-[node name="Separator2" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons"]
+[node name="Separator2" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=244196032]
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xbtqw")
 
-[node name="Panel_Profile" parent="Control" instance=ExtResource("2_1xf7s")]
+[node name="Panel_Profile" parent="Control" unique_id=404304726 instance=ExtResource("2_1xf7s")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 1
@@ -307,7 +305,7 @@ offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Button" type="Button" parent="Control"]
+[node name="Button" type="Button" parent="Control" unique_id=1319177368]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -318,5 +316,4 @@ grow_vertical = 2
 toggle_mode = true
 flat = true
 
-[connection signal="pressed" from="Control/Control/PanelContainer/VBoxContainer_Buttons/Control/Portrait_Button_Profile" to="." method="_on_portrait_button_profile_pressed"]
 [connection signal="toggled" from="Control/Button" to="." method="_on_button_toggled"]

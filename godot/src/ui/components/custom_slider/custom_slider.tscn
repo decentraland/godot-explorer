@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://15ogbh1jx2ig"]
+[gd_scene format=3 uid="uid://15ogbh1jx2ig"]
 
 [ext_resource type="Script" uid="uid://qqf1p7s1fq0f" path="res://src/ui/components/custom_slider/custom_slider.gd" id="1_2slg6"]
 [ext_resource type="StyleBox" uid="uid://c7w8klqwa0ok1" path="res://assets/themes/custom_slider/grabber_area.tres" id="2_oxnsr"]
@@ -6,7 +6,7 @@
 [ext_resource type="StyleBox" uid="uid://cucuu3npiu754" path="res://assets/themes/custom_slider/grabber_area_highlight.tres" id="4_pdbun"]
 [ext_resource type="StyleBox" uid="uid://ghkbqasu22be" path="res://assets/themes/custom_slider/grabber.tres" id="5_mdbfs"]
 
-[node name="Control_DclSlider" type="Control"]
+[node name="Control_DclSlider" type="Control" unique_id=1872268407]
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_2slg6")
@@ -16,7 +16,7 @@ value = 20
 lenght = 100
 heigth = 20
 
-[node name="Label_GrabberValue2" type="Label" parent="."]
+[node name="Label_GrabberValue2" type="Label" parent="." unique_id=349078496]
 layout_mode = 1
 offset_left = 8.0
 offset_right = 140.0
@@ -25,7 +25,7 @@ theme_override_colors/font_color = Color(0.192157, 0.192157, 0.192157, 1)
 theme_override_font_sizes/font_size = 12
 text = "CUSTOM SLIDER NAME"
 
-[node name="Panel_GrabberArea" type="Panel" parent="."]
+[node name="Panel_GrabberArea" type="Panel" parent="." unique_id=822780944]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -38,7 +38,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = ExtResource("2_oxnsr")
 
-[node name="Panel_GrabberAreaHighlight" type="Panel" parent="."]
+[node name="Panel_GrabberAreaHighlight" type="Panel" parent="." unique_id=1110214691]
 custom_minimum_size = Vector2(10, 15)
 layout_mode = 1
 anchors_preset = 15
@@ -54,7 +54,7 @@ mouse_filter = 2
 theme = ExtResource("3_sboqa")
 theme_override_styles/panel = ExtResource("4_pdbun")
 
-[node name="Panel_Grabber" type="Panel" parent="."]
+[node name="Panel_Grabber" type="Panel" parent="." unique_id=1716642323]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -70,7 +70,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = ExtResource("5_mdbfs")
 
-[node name="Label_GrabberValue" type="Label" parent="Panel_Grabber"]
+[node name="Label_GrabberValue" type="Label" parent="Panel_Grabber" unique_id=718501366]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
