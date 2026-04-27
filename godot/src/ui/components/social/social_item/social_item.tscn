@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://d30nejywxmhpn"]
+[gd_scene format=3 uid="uid://d30nejywxmhpn"]
 
 [ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/social/social_item/social_item.gd" id="1_qmekl"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="2_wvdds"]
@@ -115,7 +115,7 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="SocialItem" type="Button"]
+[node name="SocialItem" type="Button" unique_id=1909289064]
 custom_minimum_size = Vector2(280, 53)
 offset_right = 280.0
 offset_bottom = 53.0
@@ -124,7 +124,7 @@ mouse_filter = 1
 flat = true
 script = ExtResource("1_qmekl")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1672624557]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -134,7 +134,7 @@ grow_vertical = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="Panel_NearbyPlayerItem" type="Panel" parent="MarginContainer"]
+[node name="Panel_NearbyPlayerItem" type="Panel" parent="MarginContainer" unique_id=1848183150]
 unique_name_in_owner = true
 self_modulate = Color(1, 1, 1, 0)
 layout_mode = 2
@@ -143,7 +143,7 @@ mouse_filter = 1
 theme = ExtResource("2_wvdds")
 theme_override_styles/panel = SubResource("StyleBoxFlat_66h5u")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem" unique_id=1684517967]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -156,36 +156,35 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer" unique_id=2091937006]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 9
 
-[node name="Data" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+[node name="Data" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer" unique_id=1964961984]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 9
 
-[node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" instance=ExtResource("3_yus00")]
+[node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=896502818 instance=ExtResource("3_yus00")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 
-[node name="VBoxContainer_Nickname" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data"]
+[node name="VBoxContainer_Nickname" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=368797677]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = -1
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname" unique_id=1953585844]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer"]
+[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer" unique_id=1906278426]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -197,7 +196,7 @@ theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("5_iy8au")
 theme_override_font_sizes/font_size = 18
 
-[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer"]
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer" unique_id=596596572]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(15, 15)
@@ -208,7 +207,7 @@ texture = ExtResource("6_b8cqn")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Label_Place" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname"]
+[node name="Label_Place" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname" unique_id=983667723]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -220,7 +219,7 @@ theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("7_m2rwh")
 theme_override_font_sizes/font_size = 16
 
-[node name="HBoxContainer_Online" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data"]
+[node name="HBoxContainer_Online" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=1942524608]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -228,7 +227,7 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_DM" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Online"]
+[node name="Button_DM" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Online" unique_id=724915179]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(40, 40)
@@ -253,7 +252,7 @@ icon = ExtResource("14_lm8sy")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_JumpIn" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Online"]
+[node name="Button_JumpIn" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Online" unique_id=725921928]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
@@ -268,7 +267,7 @@ text = "JUMP"
 icon = ExtResource("14_pm4ta")
 expand_icon = true
 
-[node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data"]
+[node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=253896926]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -276,7 +275,7 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_AddFriend" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby"]
+[node name="Button_AddFriend" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby" unique_id=1107805977]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -301,20 +300,20 @@ toggle_mode = true
 text = "ADD FRIEND"
 icon = ExtResource("13_5r2pa")
 
-[node name="PanelContainer_Request" type="PanelContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby"]
+[node name="PanelContainer_Request" type="PanelContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby" unique_id=2018177859]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(139, 36)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_40r3o")
 
-[node name="Label_PendingRequest" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby/PanelContainer_Request"]
+[node name="Label_PendingRequest" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby/PanelContainer_Request" unique_id=46806490]
 unique_name_in_owner = true
 layout_mode = 2
 text = "PENDING"
 label_settings = SubResource("LabelSettings_m2rwh")
 horizontal_alignment = 1
 
-[node name="HBoxContainer_Request" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data"]
+[node name="HBoxContainer_Request" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=229025307]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -322,7 +321,7 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_Reject" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Request"]
+[node name="Button_Reject" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Request" unique_id=1374089667]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
@@ -338,7 +337,7 @@ icon = ExtResource("15_40r3o")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Accept" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Request"]
+[node name="Button_Accept" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Request" unique_id=296695721]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(139, 36)
 layout_mode = 2
@@ -353,7 +352,7 @@ theme_override_font_sizes/font_size = 16
 text = "ACCEPT"
 icon = ExtResource("15_0guw6")
 
-[node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data"]
+[node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=735645496]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -361,7 +360,7 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_Unblock" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Blocked"]
+[node name="Button_Unblock" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Blocked" unique_id=1387481875]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(139, 36)
 layout_mode = 2
@@ -376,20 +375,20 @@ text = "UNBLOCK"
 icon_alignment = 1
 expand_icon = true
 
-[node name="Skeleton" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer"]
+[node name="Skeleton" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer" unique_id=74286863]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 9
 
-[node name="Avatar" type="Panel" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/Skeleton"]
+[node name="Avatar" type="Panel" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/Skeleton" unique_id=1368434441]
 material = ExtResource("16_m2rwh")
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_m2rwh")
 
-[node name="Name" type="Panel" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/Skeleton"]
+[node name="Name" type="Panel" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/Skeleton" unique_id=1267082171]
 material = ExtResource("16_m2rwh")
 custom_minimum_size = Vector2(140, 28)
 layout_mode = 2

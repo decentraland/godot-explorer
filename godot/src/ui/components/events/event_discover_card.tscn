@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://dj4nqjjptw0th"]
+[gd_scene format=3 uid="uid://dj4nqjjptw0th"]
 
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_kyirg"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gwscp"]
@@ -53,7 +53,7 @@ font = ExtResource("8_0y7ny")
 font_size = 24
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
-[node name="EventDiscoverCard" type="TextureButton"]
+[node name="EventDiscoverCard" type="TextureButton" unique_id=177387972]
 custom_minimum_size = Vector2(406, 359)
 offset_right = 290.0
 offset_bottom = 250.0
@@ -63,7 +63,7 @@ mouse_filter = 1
 mouse_force_pass_scroll_events = false
 script = ExtResource("1_kyirg")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=159030165]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -73,12 +73,12 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Control_Image" type="Control" parent="VBoxContainer"]
+[node name="Control_Image" type="Control" parent="VBoxContainer" unique_id=1457350440]
 custom_minimum_size = Vector2(406, 240)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Panel_Container_Image" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+[node name="Panel_Container_Image" type="PanelContainer" parent="VBoxContainer/Control_Image" unique_id=335276531]
 unique_name_in_owner = true
 clip_children = 2
 layout_mode = 1
@@ -90,7 +90,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0xa1v")
 
-[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_Image" unique_id=723510244]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -100,7 +100,7 @@ texture = SubResource("GradientTexture1D_xxfdn")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="Panel_Container_NoImage" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+[node name="Panel_Container_NoImage" type="PanelContainer" parent="VBoxContainer/Control_Image" unique_id=147680526]
 unique_name_in_owner = true
 clip_children = 2
 layout_mode = 0
@@ -111,7 +111,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0y7ny")
 
-[node name="TextureRect_NoImage" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_NoImage"]
+[node name="TextureRect_NoImage" type="TextureRect" parent="VBoxContainer/Control_Image/Panel_Container_NoImage" unique_id=1304944505]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -122,7 +122,7 @@ texture = ExtResource("3_0xa1v")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/Control_Image"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/Control_Image" unique_id=1709742026]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -132,23 +132,23 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_hq8br")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Control_Image/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Control_Image/PanelContainer" unique_id=2024714002]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 12
 
-[node name="EventPillsBar" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer" instance=ExtResource("5_gwscp")]
+[node name="EventPillsBar" parent="VBoxContainer/Control_Image/PanelContainer/MarginContainer" unique_id=830548845 instance=ExtResource("5_gwscp")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1822344036]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xxfdn")
 
-[node name="RichTextLabel_EventName" type="RichTextLabel" parent="VBoxContainer"]
+[node name="RichTextLabel_EventName" type="RichTextLabel" parent="VBoxContainer" unique_id=223887812]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -170,20 +170,20 @@ justification_flags = 131
 script = ExtResource("8_qwmgv")
 max_lines = 1
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer" unique_id=1150390089]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0xa1v")
 
-[node name="HBoxContainer_UserName" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer_UserName" type="HBoxContainer" parent="VBoxContainer" unique_id=1866160523]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Label_by" type="Label" parent="VBoxContainer/HBoxContainer_UserName"]
+[node name="Label_by" type="Label" parent="VBoxContainer/HBoxContainer_UserName" unique_id=1376451054]
 layout_mode = 2
 text = "by"
 label_settings = SubResource("LabelSettings_mwxpt")
 
-[node name="Label_UserName" type="Label" parent="VBoxContainer/HBoxContainer_UserName"]
+[node name="Label_UserName" type="Label" parent="VBoxContainer/HBoxContainer_UserName" unique_id=148179250]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

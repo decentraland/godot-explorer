@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://bitcxwef48476"]
+[gd_scene format=3 uid="uid://bitcxwef48476"]
 
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_mareq"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_q3hly"]
@@ -13,7 +13,6 @@
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="11_iftyd"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="12_p2tlx"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="13_8d42r"]
-[ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="14_hsf8p"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="15_q2qub"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="16_y218i"]
 [ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_qu57d"]
@@ -21,7 +20,7 @@
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="19_o1epa"]
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="20_v2bd6"]
 
-[node name="ui" type="Control"]
+[node name="ui" type="Control" unique_id=1268212921]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,7 +31,7 @@ focus_mode = 1
 mouse_filter = 1
 theme = ExtResource("1_mareq")
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="."]
+[node name="SafeMarginContainer" type="MarginContainer" parent="." unique_id=427566254]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -42,11 +41,11 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2_q3hly")
 
-[node name="InteractableHUD" type="Control" parent="SafeMarginContainer"]
+[node name="InteractableHUD" type="Control" parent="SafeMarginContainer" unique_id=107726243]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="MobileUI" type="Control" parent="SafeMarginContainer/InteractableHUD"]
+[node name="MobileUI" type="Control" parent="SafeMarginContainer/InteractableHUD" unique_id=491837796]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -55,7 +54,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Button_PrimaryAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("3_b0mrq")]
+[node name="Button_PrimaryAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" unique_id=2008271426 instance=ExtResource("3_b0mrq")]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -69,7 +68,7 @@ offset_bottom = -197.0
 grow_horizontal = 0
 grow_vertical = 0
 
-[node name="Button_Mic" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("3_b0mrq")]
+[node name="Button_Mic" parent="SafeMarginContainer/InteractableHUD/MobileUI" unique_id=539610316 instance=ExtResource("3_b0mrq")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 3
@@ -83,11 +82,10 @@ offset_right = -49.0
 offset_bottom = -245.0
 grow_horizontal = 0
 grow_vertical = 0
-text_letter = "T"
 icon = ExtResource("4_jxeax")
 trigger_action = "ia_record_mic"
 
-[node name="Button_SecondaryAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("3_b0mrq")]
+[node name="Button_SecondaryAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" unique_id=763447519 instance=ExtResource("3_b0mrq")]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -100,10 +98,9 @@ offset_right = -194.0
 offset_bottom = -121.0
 grow_horizontal = 0
 grow_vertical = 0
-text_letter = "F"
 trigger_action = "ia_secondary"
 
-[node name="Button_EmoteAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("3_b0mrq")]
+[node name="Button_EmoteAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" unique_id=543196077 instance=ExtResource("3_b0mrq")]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -116,11 +113,10 @@ offset_right = -227.0
 offset_bottom = -31.0
 grow_horizontal = 0
 grow_vertical = 0
-text_letter = "F"
 icon = ExtResource("5_otyuu")
 trigger_action = "ia_open_emote_wheel"
 
-[node name="Button_Jump" type="TextureButton" parent="SafeMarginContainer/InteractableHUD/MobileUI"]
+[node name="Button_Jump" type="TextureButton" parent="SafeMarginContainer/InteractableHUD/MobileUI" unique_id=1326955353]
 modulate = Color(1, 1, 1, 0.501961)
 layout_mode = 1
 anchors_preset = 3
@@ -140,7 +136,7 @@ texture_normal = ExtResource("6_7k0vh")
 ignore_texture_size = true
 stretch_mode = 4
 
-[node name="ShadowOutter" type="TextureRect" parent="SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
+[node name="ShadowOutter" type="TextureRect" parent="SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" unique_id=1913730528]
 modulate = Color(0, 0, 0, 1)
 show_behind_parent = true
 layout_mode = 1
@@ -156,7 +152,7 @@ grow_vertical = 2
 texture = ExtResource("6_7k0vh")
 expand_mode = 2
 
-[node name="ShadowInner" type="TextureRect" parent="SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
+[node name="ShadowInner" type="TextureRect" parent="SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" unique_id=1667459335]
 modulate = Color(0, 0, 0, 1)
 show_behind_parent = true
 layout_mode = 1
@@ -172,7 +168,7 @@ grow_vertical = 2
 texture = ExtResource("6_7k0vh")
 expand_mode = 2
 
-[node name="VirtualJoystick_Left" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_ttv1c")]
+[node name="VirtualJoystick_Left" parent="SafeMarginContainer/InteractableHUD/MobileUI" unique_id=1484282129 instance=ExtResource("7_ttv1c")]
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 0.352
@@ -180,7 +176,7 @@ offset_top = -327.0
 offset_right = -0.560028
 deadzone_size = 0.0
 
-[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="SafeMarginContainer/InteractableHUD"]
+[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="SafeMarginContainer/InteractableHUD" unique_id=723884414]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 20.0
@@ -189,10 +185,10 @@ offset_bottom = 80.0
 theme = ExtResource("1_mareq")
 theme_override_constants/separation = 10
 
-[node name="MiniMap" parent="SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu" instance=ExtResource("8_o55tr")]
+[node name="MiniMap" parent="SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu" unique_id=1066281876 instance=ExtResource("8_o55tr")]
 layout_mode = 2
 
-[node name="Button_OpenChat" type="Button" parent="SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
+[node name="Button_OpenChat" type="Button" parent="SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu" unique_id=638719502]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 focus_mode = 0
@@ -201,17 +197,17 @@ icon = ExtResource("9_udy0g")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Panel_Profile" parent="SafeMarginContainer/InteractableHUD" instance=ExtResource("10_dxi8v")]
+[node name="Panel_Profile" parent="SafeMarginContainer/InteractableHUD" unique_id=815883498 instance=ExtResource("10_dxi8v")]
 layout_mode = 1
 
-[node name="Panel_Chat" parent="SafeMarginContainer/InteractableHUD" instance=ExtResource("11_iftyd")]
+[node name="Panel_Chat" parent="SafeMarginContainer/InteractableHUD" unique_id=419379204 instance=ExtResource("11_iftyd")]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 90.0
 offset_right = 320.0
 offset_bottom = 390.0
 
-[node name="Label_FPS" type="Label" parent="SafeMarginContainer/InteractableHUD"]
+[node name="Label_FPS" type="Label" parent="SafeMarginContainer/InteractableHUD" unique_id=1400538230]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 2
@@ -226,7 +222,7 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 text = "ALPHA - FPS"
 
-[node name="Label_RAM" type="Label" parent="SafeMarginContainer/InteractableHUD"]
+[node name="Label_RAM" type="Label" parent="SafeMarginContainer/InteractableHUD" unique_id=1259137902]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -240,14 +236,14 @@ grow_horizontal = 0
 text = "RAM"
 horizontal_alignment = 2
 
-[node name="Timer_FPSLabel" type="Timer" parent="."]
+[node name="Timer_FPSLabel" type="Timer" parent="." unique_id=384199212]
 autostart = true
 
-[node name="Control_PointerTooltip" parent="." instance=ExtResource("12_p2tlx")]
+[node name="Control_PointerTooltip" parent="." unique_id=1737408591 instance=ExtResource("12_p2tlx")]
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="Label_Crosshair" type="Label" parent="."]
+[node name="Label_Crosshair" type="Label" parent="." unique_id=1096229525]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -270,21 +266,11 @@ text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Control_Minimap" parent="." instance=ExtResource("14_hsf8p")]
-visible = false
-anchors_preset = 0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 15.0
-offset_bottom = 15.0
-
-[node name="Control_Menu" parent="." instance=ExtResource("15_q2qub")]
+[node name="Control_Menu" parent="." unique_id=886194045 instance=ExtResource("15_q2qub")]
 visible = false
 layout_mode = 1
 
-[node name="DialogStack" parent="." instance=ExtResource("16_y218i")]
+[node name="DialogStack" parent="." unique_id=515556490 instance=ExtResource("16_y218i")]
 visible = false
 layout_mode = 1
 offset_left = -180.0
@@ -292,11 +278,11 @@ offset_top = -140.0
 offset_right = 180.0
 offset_bottom = 140.0
 
-[node name="Loading" parent="." instance=ExtResource("17_qu57d")]
+[node name="Loading" parent="." unique_id=14637508 instance=ExtResource("17_qu57d")]
 visible = false
 layout_mode = 1
 
-[node name="RecordingNotification" parent="." instance=ExtResource("18_xraa8")]
+[node name="RecordingNotification" parent="." unique_id=1261005527 instance=ExtResource("18_xraa8")]
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -310,11 +296,11 @@ offset_bottom = -72.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="EmoteWheel" parent="." instance=ExtResource("19_o1epa")]
+[node name="EmoteWheel" parent="." unique_id=1807533863 instance=ExtResource("19_o1epa")]
 visible = false
 layout_mode = 1
 
-[node name="WarningMessages" parent="." instance=ExtResource("20_v2bd6")]
+[node name="WarningMessages" parent="." unique_id=992461895 instance=ExtResource("20_v2bd6")]
 unique_name_in_owner = true
 layout_mode = 1
 mouse_filter = 2

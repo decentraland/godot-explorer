@@ -452,5 +452,8 @@ func _on_button_back_to_explorer_pressed() -> void:
 			button_back_to_explorer.hide()
 		return
 	if Global.get_explorer():
+		if Global.modal_manager.ban_pre_check_active:
+			Global.modal_manager.async_show_ban_pre_check_modal()
+			return
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()

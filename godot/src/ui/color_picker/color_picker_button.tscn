@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://cyf8k77w3gdih"]
+[gd_scene format=3 uid="uid://cyf8k77w3gdih"]
 
 [ext_resource type="Script" uid="uid://c8n6muw5ymhkw" path="res://src/ui/color_picker/color_picker_button.gd" id="1_vxb5w"]
 [ext_resource type="Texture2D" uid="uid://bd7q2ux12a72q" path="res://assets/ui/ColorPalette.svg" id="2_yi1yq"]
@@ -11,7 +11,7 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="Button_ColorPicker" type="Button"]
+[node name="Button_ColorPicker" type="Button" unique_id=1575116988]
 custom_minimum_size = Vector2(60, 60)
 offset_right = 60.0
 offset_bottom = 60.0
@@ -25,7 +25,7 @@ icon_alignment = 1
 expand_icon = true
 script = ExtResource("1_vxb5w")
 
-[node name="Panel_Color" type="Panel" parent="."]
+[node name="Panel_Color" type="Panel" parent="." unique_id=1211244804]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
