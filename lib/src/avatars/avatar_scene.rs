@@ -36,7 +36,9 @@ type AvatarAlias = u32;
 const IMPOSTOR_MAX_LAYERS: u32 = 256;
 const IMPOSTOR_TEX_WIDTH: i32 = 256;
 const IMPOSTOR_TEX_HEIGHT: i32 = 512;
-const IMPOSTOR_QUAD_WIDTH: f32 = 2.0;
+// Quad world-space size matches the AvatarPreview ortho capture
+// (256x512 px @ ortho_size=2.5 → 1.25m W × 2.5m H).
+const IMPOSTOR_QUAD_WIDTH: f32 = 1.25;
 const IMPOSTOR_QUAD_HEIGHT: f32 = 2.5;
 const IMPOSTOR_VERTICAL_OFFSET: f32 = 1.0;
 const IMPOSTOR_SHADER_PATH: &str = "res://assets/avatar/impostor.gdshader";

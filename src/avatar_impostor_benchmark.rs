@@ -1,6 +1,6 @@
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -10,7 +10,7 @@ use crate::path::get_godot_path;
 use crate::ui::{create_spinner, print_message, print_section, MessageType};
 
 const IOS_BUNDLE_ID: &str = "org.decentraland.godotexplorer";
-const BENCHMARK_TIMEOUT_SECS: u64 = 240;
+const BENCHMARK_TIMEOUT_SECS: u64 = 600;
 const BENCHMARK_RESULT_END_MARKER: &str = "Delta FPS:";
 const BENCHMARK_RESULT_START_MARKER: &str = "=== Avatar Impostor Benchmark ===";
 
@@ -98,61 +98,30 @@ fn run_ios() -> anyhow::Result<()> {
         anyhow::bail!("iOS benchmark is only supported on macOS");
     }
 
-    if !command_exists("idevicesyslog") {
-        anyhow::bail!(
-            "`idevicesyslog` not found. Install with `brew install libimobiledevice`."
-        );
-    }
-
     let device_id = detect_ios_device()?;
-    print_message(MessageType::Info, &format!("Using device: {}", device_id));
+    print_message(
+        MessageType::Info,
+        &format!("Using device (devicectl UDID): {}", device_id),
+    );
 
     let output_dir = output_dir_abs()?;
     let result_file = output_dir.join("avatar-impostor-benchmark-ios.txt");
-    let raw_log_file = output_dir.join("avatar-impostor-benchmark-ios.raw.log");
+    let pulled_log = output_dir.join("avatar-impostor-benchmark-ios.godot.log");
     if result_file.exists() {
         let _ = fs::remove_file(&result_file);
     }
-    if raw_log_file.exists() {
-        let _ = fs::remove_file(&raw_log_file);
+    if pulled_log.exists() {
+        let _ = fs::remove_file(&pulled_log);
     }
 
-    // Terminate any running instance so we capture a clean run.
-    let _ = Command::new("xcrun")
-        .args([
-            "devicectl",
-            "device",
-            "process",
-            "terminate",
-            "--device",
-            &device_id,
-            "--bundle-identifier",
-            IOS_BUNDLE_ID,
-        ])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-
-    // Start idevicesyslog → raw log file.
-    let log_handle = File::create(&raw_log_file)?;
-    let mut syslog_proc = Command::new("idevicesyslog")
-        .args(["-u", &device_id])
-        .stdout(log_handle)
-        .stderr(Stdio::null())
-        .spawn()?;
+    // Launch the app with the benchmark deeplink. The benchmark scene writes
+    // results into the app's user://logs/godot.log; we poll that file via
+    // `xcrun devicectl device copy from` because GDScript prints don't reach
+    // devicectl --console on iOS.
     print_message(
         MessageType::Step,
-        &format!(
-            "idevicesyslog streaming to {} (pid {})",
-            raw_log_file.display(),
-            syslog_proc.id()
-        ),
+        "Launching app on iOS device with --payload-url decentraland://open?benchmark=avatar-impostors",
     );
-
-    // Give syslog a moment to attach.
-    sleep(Duration::from_secs(2));
-
-    // Launch the app with the benchmark flag.
     let launch_status = Command::new("xcrun")
         .args([
             "devicectl",
@@ -161,40 +130,56 @@ fn run_ios() -> anyhow::Result<()> {
             "launch",
             "--device",
             &device_id,
+            "--terminate-existing",
+            "--payload-url",
+            "decentraland://open?benchmark=avatar-impostors",
             IOS_BUNDLE_ID,
-            "--avatar-impostor-benchmark",
         ])
         .status()?;
     if !launch_status.success() {
-        let _ = syslog_proc.kill();
         anyhow::bail!("Failed to launch app on device (status {})", launch_status);
     }
-    print_message(
-        MessageType::Success,
-        "App launched on iOS device with --avatar-impostor-benchmark",
-    );
 
-    // Poll the raw log for the result block.
+    // Poll the device's log file every few seconds.
     let spinner = create_spinner("Waiting for benchmark to finish (up to 4 min)...");
     let start = Instant::now();
     let mut found = false;
     while start.elapsed() < Duration::from_secs(BENCHMARK_TIMEOUT_SECS) {
-        if let Ok(contents) = fs::read_to_string(&raw_log_file) {
+        sleep(Duration::from_secs(8));
+        let _ = fs::remove_file(&pulled_log);
+        let copy_status = Command::new("xcrun")
+            .args([
+                "devicectl",
+                "device",
+                "copy",
+                "from",
+                "--device",
+                &device_id,
+                "--source",
+                "Documents/logs/godot.log",
+                "--destination",
+                pulled_log.to_str().unwrap(),
+                "--domain-type",
+                "appDataContainer",
+                "--domain-identifier",
+                IOS_BUNDLE_ID,
+            ])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        if !copy_status.map(|s| s.success()).unwrap_or(false) {
+            continue;
+        }
+        if let Ok(contents) = fs::read_to_string(&pulled_log) {
             if contents.contains(BENCHMARK_RESULT_END_MARKER) {
                 found = true;
                 break;
             }
         }
-        sleep(Duration::from_secs(2));
     }
     spinner.finish();
 
-    // Give syslog a beat to flush, then stop it.
-    sleep(Duration::from_secs(2));
-    let _ = syslog_proc.kill();
-    let _ = syslog_proc.wait();
-
-    let raw_log = fs::read_to_string(&raw_log_file).unwrap_or_default();
+    let raw_log = fs::read_to_string(&pulled_log).unwrap_or_default();
     let extracted = extract_benchmark_block(&raw_log);
 
     if !found || extracted.is_none() {
@@ -202,13 +187,13 @@ fn run_ios() -> anyhow::Result<()> {
             MessageType::Warning,
             &format!(
                 "Did not find a complete benchmark block in {}.",
-                raw_log_file.display()
+                pulled_log.display()
             ),
         );
         anyhow::bail!(
             "Benchmark timed out after {}s. Raw log preserved at {}",
             BENCHMARK_TIMEOUT_SECS,
-            raw_log_file.display()
+            pulled_log.display()
         );
     }
 
@@ -244,14 +229,6 @@ fn detect_ios_device() -> anyhow::Result<String> {
         }
     }
     anyhow::bail!("No connected iOS device found")
-}
-
-fn command_exists(cmd: &str) -> bool {
-    Command::new("which")
-        .arg(cmd)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
 }
 
 /// Extract the benchmark result block from the raw idevicesyslog stream.

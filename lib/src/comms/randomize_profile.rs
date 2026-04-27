@@ -1,5 +1,6 @@
 use rand::distributions::Alphanumeric;
-use rand::Rng;
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 
 use crate::comms::profile::{
     AvatarColor, AvatarColor3, AvatarEmote, AvatarSnapshots, AvatarWireFormat, SerializedProfile,
@@ -8,18 +9,28 @@ use crate::comms::profile::{
 
 impl UserProfile {
     pub fn randomize() -> Self {
+        Self::randomize_with_rng(&mut rand::thread_rng())
+    }
+
+    pub fn randomize_with_seed(seed: u64) -> Self {
+        Self::randomize_with_rng(&mut StdRng::seed_from_u64(seed))
+    }
+
+    pub fn randomize_with_rng(rng: &mut impl Rng) -> Self {
         Self {
             base_url: format!("{}contents/", crate::urls::peer_content()),
             version: 1,
-            content: SerializedProfile::randomize(),
+            content: SerializedProfile::randomize_with_rng(rng),
         }
     }
 }
 
 impl SerializedProfile {
     pub fn randomize() -> Self {
-        let mut rng = rand::thread_rng();
+        Self::randomize_with_rng(&mut rand::thread_rng())
+    }
 
+    pub fn randomize_with_rng(rng: &mut impl Rng) -> Self {
         // Generate random name (8-15 alphanumeric characters)
         let name_length = rng.gen_range(8..=15);
         let name: String = (0..name_length)
@@ -43,7 +54,7 @@ impl SerializedProfile {
         let description = descriptions[rng.gen_range(0..descriptions.len())].to_string();
 
         // Use AvatarWireFormat::randomize() for the avatar
-        let avatar = AvatarWireFormat::randomize();
+        let avatar = AvatarWireFormat::randomize_with_rng(rng);
 
         // Create profile with randomized name, description, avatar, and address
         Self {
@@ -59,8 +70,10 @@ impl SerializedProfile {
 
 impl AvatarWireFormat {
     pub fn randomize() -> Self {
-        let mut rng = rand::thread_rng();
+        Self::randomize_with_rng(&mut rand::thread_rng())
+    }
 
+    pub fn randomize_with_rng(rng: &mut impl Rng) -> Self {
         // Avatar configurations from paste.txt
         let avatar_configs = vec![
             // Config 1: Female with cat eyes
@@ -224,7 +237,7 @@ impl AvatarWireFormat {
         let (body_snapshot, face_snapshot) = snapshot_ids[rng.gen_range(0..snapshot_ids.len())];
 
         Self {
-            emotes: Some(Self::random_emotes(&mut rng)),
+            emotes: Some(Self::random_emotes(rng)),
             body_shape: Some(body_shape.to_string()),
             wearables: wearables.iter().map(|s| s.to_string()).collect(),
             snapshots: Some(AvatarSnapshots {

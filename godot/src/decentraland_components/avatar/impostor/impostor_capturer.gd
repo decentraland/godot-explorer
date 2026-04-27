@@ -75,6 +75,10 @@ func _async_capture_local(avatar) -> Image:
 	preview.show_platform = false
 	preview.hide_name = true
 	preview.can_move = false
+	# Capture without a directional light so the snapshot matches the scene
+	# baseline once we render unshaded; the toon shader still emits its
+	# baked floor color, giving the impostor its visible silhouette.
+	preview.with_light = false
 
 	var root = get_tree().root
 	root.add_child(preview)

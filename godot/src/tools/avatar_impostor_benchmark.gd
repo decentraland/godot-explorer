@@ -3,11 +3,18 @@ extends Node3D
 enum Phase { INIT, LOADING, OFF, ON, DONE }
 
 const AVATAR_SCENE = preload("res://src/decentraland_components/avatar/avatar.tscn")
-const NUM_AVATARS: int = 100
-const SPAWN_RADIUS_MIN: float = 5.0
-const SPAWN_RADIUS_MAX: float = 50.0
+const NUM_AVATARS: int = 50
+# All avatars beyond DISTANCE_FAR (30m) so they all transition to FAR
+# (impostor) in ON, and remain full skeletal in OFF. This isolates the
+# impostor's win: 100 full meshes vs 100 multimesh quads.
+const SPAWN_RADIUS_MIN: float = 30.0
+const SPAWN_RADIUS_MAX: float = 60.0
 const PHASE_WARMUP_SEC: float = 5.0
 const PHASE_MEASURE_SEC: float = 15.0
+# Each capture instantiates an off-screen AvatarPreview and waits ~3 process
+# frames; on iPhone with 100 avatars we want ~30s of headroom so the captures
+# finish before the measurement starts.
+const PRECAPTURE_SETTLE_SEC: float = 30.0
 const CAMERA_ROTATION_SPEED_RAD: float = 0.3
 const OUTPUT_PATH: String = "user://impostor_benchmark.log"
 
@@ -37,14 +44,9 @@ func _ready() -> void:
 
 # gdlint:ignore = async-function-name
 func _async_setup_avatars() -> void:
+	# Need at least the local player's profile to be set so async paths work.
 	if Global.player_identity.get_profile_or_null() == null:
 		Global.player_identity.set_default_profile()
-
-	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
-	if profile == null:
-		_log("benchmark: error - no profile available")
-		_phase = Phase.DONE
-		return
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 42
@@ -58,10 +60,27 @@ func _async_setup_avatars() -> void:
 		add_child(avatar)
 		_avatars.append(avatar)
 		_label.text = "Loading avatar %d/%d..." % [i + 1, NUM_AVATARS]
-		await avatar.async_update_avatar_from_profile(profile)
+		_log("benchmark: loading avatar %d/%d" % [i + 1, NUM_AVATARS])
+		# Yield once before the heavy load so the label actually paints.
+		await get_tree().process_frame
+
+		# Each avatar gets a randomized profile (varied wearables/colors)
+		# so we exercise the full mesh + material path. Per-avatar seed keeps
+		# the benchmark fully reproducible across runs.
+		var rand_profile: DclUserProfile = DclUserProfile.randomized_with_seed(1000 + i)
+		await avatar.async_update_avatar_from_profile(rand_profile)
 		await get_tree().process_frame
 
 	_log("benchmark: %d avatars loaded" % _avatars.size())
+
+	# Pre-capture all impostors so the captures don't pollute the ON phase.
+	# Force impostors enabled briefly to trigger LOD → request_impostor_layer
+	# → ImpostorCapturer for every avatar, then settle.
+	_label.text = "Pre-capturing impostors..."
+	Global.get_config().avatar_impostors_enabled = true
+	_log("benchmark: pre-capturing impostors (settle %.0fs)" % PRECAPTURE_SETTLE_SEC)
+	await get_tree().create_timer(PRECAPTURE_SETTLE_SEC).timeout
+
 	_start_phase(Phase.OFF, false)
 
 
@@ -188,9 +207,14 @@ func _output_results() -> void:
 		else:
 			_log("benchmark: failed to open CLI output path %s" % cli_output)
 
-	# When launched via CLI flag, exit so the host script can collect results.
-	if Global.cli.avatar_impostor_benchmark:
-		_log("benchmark: quitting (CLI mode)")
+	# When launched via CLI flag or deeplink, exit so the host script can
+	# collect results.
+	var auto_quit: bool = (
+		Global.cli.avatar_impostor_benchmark
+		or Global.has_meta("avatar_impostor_benchmark_auto_quit")
+	)
+	if auto_quit:
+		_log("benchmark: quitting (auto-quit mode)")
 		await get_tree().create_timer(0.5).timeout
 		get_tree().quit(0)
 
