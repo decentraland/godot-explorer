@@ -497,8 +497,7 @@ mod test {
             .unwrap()
             .value
             .is_none());
-        let player_identity =
-            SceneCrdtStateProtoComponents::get_player_identity_data(&crdt_state);
+        let player_identity = SceneCrdtStateProtoComponents::get_player_identity_data(&crdt_state);
         assert!(player_identity.get(&target_entity).unwrap().value.is_none());
 
         // Other entity must remain untouched
