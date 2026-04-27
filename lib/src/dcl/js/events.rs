@@ -498,6 +498,8 @@ pub fn process_events_players_stateful(
 
     let player_connected_sender = op_state.try_take::<EventSender<PlayerConnected>>();
     let player_disconnected_sender = op_state.try_take::<EventSender<PlayerDisconnected>>();
+    let player_entered_scene_sender = op_state.try_take::<EventSender<PlayerEnteredScene>>();
+    let player_left_scene_sender = op_state.try_take::<EventSender<PlayerLeftScene>>();
 
     if let Some(player_identity_data_component_dirty) = player_identity_data_component_dirty {
         for entity_id in player_identity_data_component_dirty {
@@ -532,6 +534,25 @@ pub fn process_events_players_stateful(
                 let address = events_state.current_players.remove(entity_id);
 
                 if let Some(user_id) = address {
+                    // If the player was still inside the scene, fire LeftScene
+                    // before disconnect. The INTERNAL_PLAYER_DATA pass below
+                    // can no longer resolve the user_id once we drop it from
+                    // current_players, so it must happen here.
+                    if events_state.inside_scene.remove(entity_id) {
+                        if let Some(player_left_scene_sender) =
+                            player_left_scene_sender.as_ref()
+                        {
+                            player_left_scene_sender
+                                .inner
+                                .send(
+                                    serde_json::to_string(&EventBodyUserId {
+                                        user_id: user_id.clone(),
+                                    })
+                                    .expect("fail json serialize"),
+                                )
+                                .unwrap();
+                        }
+                    }
                     if let Some(player_disconnected_sender) = player_disconnected_sender.as_ref() {
                         player_disconnected_sender
                             .inner
@@ -552,9 +573,6 @@ pub fn process_events_players_stateful(
     if let Some(player_disconnected_sender) = player_disconnected_sender {
         op_state.put(player_disconnected_sender);
     }
-
-    let player_entered_scene_sender = op_state.try_take::<EventSender<PlayerEnteredScene>>();
-    let player_left_scene_sender = op_state.try_take::<EventSender<PlayerLeftScene>>();
 
     let internal_player_data_dirty = dirty_crdt_state
         .lww
