@@ -171,9 +171,9 @@ func _async_show_scene_toast(parcel: Vector2i) -> void:
 		if parts.size() == 2:
 			_toast_shown_scene_parcels.append(Vector2i(int(parts[0]), int(parts[1])))
 
-	var title: String = "Teleport to " + place.get("title", "Unknown place")
+	var title: String = "You're entering " + place.get("title", "Unknown place")
 	var creator: String = place.get("contact_name", "")
-	var description: String = "by " + creator if not creator.is_empty() else "Tap to explore"
+	var description: String = "By " + creator if not creator.is_empty() else "Tap to explore"
 
 	NotificationsManager.show_system_toast(
 		title, description, "nearby_scene", "default", {"parcel_position": parcel}

@@ -122,6 +122,8 @@ func _set_default_notification_image(_notif_type: String) -> void:
 			image_path = "res://assets/ui/notifications/ProposalFinishedNotification.png"
 		"social_service_friendship_request", "social_service_friendship_accepted":
 			image_path = "res://assets/ui/notifications/FriendNotification.png"
+		"nearby_scene":
+			image_path = "res://assets/ui/notifications/TeleportNotification.png"
 		_:
 			image_path = "res://assets/ui/notifications/DefaultNotification.png"
 
