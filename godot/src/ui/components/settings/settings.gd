@@ -639,6 +639,15 @@ func _setup_avatar_impostors_toggle() -> void:
 	row.add_child(toggle)
 	container_graphics.add_child(row)
 
+	var bench_button := Button.new()
+	bench_button.name = "Button_RunImpostorBenchmark"
+	bench_button.text = "Run Avatar Impostor Benchmark"
+	bench_button.pressed.connect(
+		func() -> void:
+			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
+	)
+	container_graphics.add_child(bench_button)
+
 
 func _setup_dynamic_graphics() -> void:
 	# Only show on mobile platforms
