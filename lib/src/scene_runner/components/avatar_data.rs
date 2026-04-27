@@ -8,10 +8,6 @@ use crate::{
 };
 
 pub fn update_avatar_scene_updates(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
-    for entity_id in scene.avatar_scene_updates.deleted_entities.drain() {
-        crdt_state.clear_entity_components(&entity_id);
-    }
-
     {
         let transform_component = crdt_state.get_transform_mut();
         for (entity_id, value) in scene.avatar_scene_updates.transform.drain() {
@@ -67,5 +63,12 @@ pub fn update_avatar_scene_updates(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 avatar_emote_command_component.append(entity_id, value);
             }
         }
+    }
+
+    // Clear last so a disconnect always wins over a concurrent profile/transform
+    // update for the same entity in the same tick — otherwise the puts above
+    // would resurrect components on a player that just left.
+    for entity_id in scene.avatar_scene_updates.deleted_entities.drain() {
+        crdt_state.clear_entity_components(&entity_id);
     }
 }
