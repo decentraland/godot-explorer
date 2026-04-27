@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://cse8fx0ei572e"]
+[gd_scene format=3 uid="uid://cse8fx0ei572e"]
 
 [ext_resource type="Script" uid="uid://qv75d4qodnwj" path="res://src/ui/components/emote_editor/emote_editor.gd" id="1_xxj75"]
 [ext_resource type="PackedScene" uid="uid://c6t7jqpx38nxd" path="res://src/ui/components/emote_editor/emote_editor_item.tscn" id="2_3uk1s"]
@@ -32,23 +32,23 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_5ejwy")
 script = ExtResource("1_xxj75")
 metadata/mobile_preview_orientation = "both"
 
-[node name="ExternalMarginContainer" type="MarginContainer" parent="."]
+[node name="ExternalMarginContainer" type="MarginContainer" parent="." unique_id=858561604]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_bottom = 0
 
-[node name="HBoxContainer" type="BoxContainer" parent="ExternalMarginContainer"]
+[node name="HBoxContainer" type="BoxContainer" parent="ExternalMarginContainer" unique_id=157313442]
 layout_mode = 2
 script = ExtResource("2_7jnql")
 
-[node name="OutterMarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer"]
+[node name="OutterMarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer" unique_id=43638052]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="ScrollContainer_AvatarEmotes" type="ScrollContainer" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer"]
+[node name="ScrollContainer_AvatarEmotes" type="ScrollContainer" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer" unique_id=1256390300]
 unique_name_in_owner = true
 clip_contents = false
 custom_minimum_size = Vector2(112, 112)
@@ -58,13 +58,13 @@ size_flags_stretch_ratio = 0.5
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 3
 
-[node name="InnerMarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes"]
+[node name="InnerMarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes" unique_id=899743054]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_right = 40
 
-[node name="VBoxContainer_AvatarEmotes" type="BoxContainer" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer"]
+[node name="VBoxContainer_AvatarEmotes" type="BoxContainer" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer" unique_id=1745755579]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -74,74 +74,74 @@ vertical = true
 script = ExtResource("2_7jnql")
 invert = true
 
-[node name="EmoteEditorItem1" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem1" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=437499027 instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator1" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator1" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=901122008]
 layout_mode = 2
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
 
-[node name="EmoteEditorItem2" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem2" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1876360783 instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
-
-[node name="EmoteEditorItem3" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
-layout_mode = 2
-
-[node name="HSeparator3" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator2" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1836035610]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
 
-[node name="EmoteEditorItem4" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem3" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1593675367 instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator4" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
-
-[node name="EmoteEditorItem5" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
-layout_mode = 2
-
-[node name="HSeparator5" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator3" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1020442732]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
 
-[node name="EmoteEditorItem6" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem4" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=501040443 instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator6" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
-
-[node name="EmoteEditorItem7" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
-layout_mode = 2
-
-[node name="HSeparator7" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator4" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1674902215]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
 
-[node name="EmoteEditorItem8" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem5" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=705118894 instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator8" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
-
-[node name="EmoteEditorItem9" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
-layout_mode = 2
-
-[node name="HSeparator9" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator5" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1322158900]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
 
-[node name="EmoteEditorItem0" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem6" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=280365455 instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="EmoteGridOutterMarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer"]
+[node name="HSeparator6" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1716294383]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
+
+[node name="EmoteEditorItem7" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1523920152 instance=ExtResource("2_3uk1s")]
+layout_mode = 2
+
+[node name="HSeparator7" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=768255183]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
+
+[node name="EmoteEditorItem8" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=480694628 instance=ExtResource("2_3uk1s")]
+layout_mode = 2
+
+[node name="HSeparator8" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1566801526]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
+
+[node name="EmoteEditorItem9" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1999044016 instance=ExtResource("2_3uk1s")]
+layout_mode = 2
+
+[node name="HSeparator9" type="HSeparator" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=632677027]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xdeik")
+
+[node name="EmoteEditorItem0" parent="ExternalMarginContainer/HBoxContainer/OutterMarginContainer/ScrollContainer_AvatarEmotes/InnerMarginContainer/VBoxContainer_AvatarEmotes" unique_id=1382071625 instance=ExtResource("2_3uk1s")]
+layout_mode = 2
+
+[node name="EmoteGridOutterMarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer" unique_id=296940871]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(494, 0)
 layout_mode = 2
@@ -152,16 +152,16 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 0
 theme_override_constants/margin_bottom = 0
 
-[node name="PanelContainer" type="PanelContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer" unique_id=191219118]
 custom_minimum_size = Vector2(0, 504)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_xdeik")
 
-[node name="MarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer" unique_id=69046921]
 layout_mode = 2
 theme_override_constants/margin_top = 38
 
-[node name="ScrollContainer_Grid" type="ScrollContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer"]
+[node name="ScrollContainer_Grid" type="ScrollContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer" unique_id=2116054104]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -170,7 +170,7 @@ follow_focus = true
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid"]
+[node name="MarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid" unique_id=1960837465]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -179,14 +179,14 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 38
 
-[node name="GridContainer_Emotes" type="GridContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer"]
+[node name="GridContainer_Emotes" type="GridContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer" unique_id=614091418]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/h_separation = 30
 theme_override_constants/v_separation = 28
 columns = 3
 
-[node name="Control_NoEmotes" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer" instance=ExtResource("4_noitems")]
+[node name="Control_NoEmotes" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer" unique_id=1677704674 instance=ExtResource("4_noitems")]
 unique_name_in_owner = true
 layout_mode = 2
 marketplace_section = "emotes"

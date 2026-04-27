@@ -243,6 +243,10 @@ func _on_visibility_changed() -> void:
 		scroll_container_grid.scroll_vertical = 0
 
 
+func on_narrow(is_narrow: bool) -> void:
+	emote_grid_outter_margin_container.custom_minimum_size.x = 274.0 if is_narrow else 494.0
+
+
 func _on_landscape() -> void:
 	outter_margin_container.add_theme_constant_override("margin_right", 48)
 	outter_margin_container.add_theme_constant_override("margin_left", 60)

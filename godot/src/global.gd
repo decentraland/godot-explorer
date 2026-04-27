@@ -16,7 +16,7 @@ signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
 signal open_settings_panel
-signal open_backpack
+signal open_backpack(on_emotes: bool)
 signal open_discover
 signal open_own_profile
 signal open_profile_editor

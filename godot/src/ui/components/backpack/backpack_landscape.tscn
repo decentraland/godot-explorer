@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3 uid="uid://gdgamqboy6v5"]
+[gd_scene format=3 uid="uid://gdgamqboy6v5"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_2eknj"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="2_ran1e"]
@@ -221,7 +221,7 @@ button_group = SubResource("ButtonGroup_wyk6q")
 text = "Emotes"
 icon = ExtResource("7_pjbir")
 
-[node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer/PanelContainer_Navbar/HBoxContainer/HBoxContainer2/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer/PanelContainer_Navbar/HBoxContainer/HBoxContainer2/HBoxContainer" unique_id=1952390763]
 layout_mode = 2
 theme = ExtResource("5_imvcg")
 theme_type_variation = &"HiddenVSeparator"
@@ -344,8 +344,9 @@ hide_name = true
 
 [node name="EmoteNameAnim" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=948887334 instance=ExtResource("12_qqh12")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
+offset_top = -70.5
+offset_bottom = -14.5
 
 [node name="AvatarVFX" type="TextureRect" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1428612249]
 unique_name_in_owner = true
@@ -377,12 +378,13 @@ theme_override_constants/margin_right = 20
 
 [node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer" unique_id=1641560549]
 layout_mode = 2
+alignment = 1
 
 [node name="WearableEditor" type="HBoxContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" unique_id=122937690]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor"]
+[node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor" unique_id=3486751]
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 110
@@ -805,7 +807,7 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 60
 
-[node name="Control_NoItems" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer" instance=ExtResource("20_noitems")]
+[node name="Control_NoItems" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer" unique_id=2048815347 instance=ExtResource("20_noitems")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -821,22 +823,22 @@ layout_mode = 2
 theme_override_constants/separation = 110
 theme_override_styles/separator = SubResource("StyleBoxEmpty_18vfg")
 
-[node name="HBoxContainer_SizeCanary" type="HBoxContainer" parent="SafeMarginContainer"]
+[node name="HBoxContainer_SizeCanary" type="HBoxContainer" parent="SafeMarginContainer" unique_id=791622353]
 unique_name_in_owner = true
 editor_description = "Used only to estimate size and position of UI. This info is then used to determine if the Screen is too narrow to accomodate the full UI. If not the number of wearable collumns in the grid is reduced to 2."
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="ControlContainer_Canary" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary"]
+[node name="ControlContainer_Canary" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary" unique_id=1817011288]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="ControlContent_Canary" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary/ControlContainer_Canary"]
+[node name="ControlContent_Canary" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary/ControlContainer_Canary" unique_id=643450929]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 60)
+custom_minimum_size = Vector2(450, 60)
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -844,7 +846,7 @@ offset_bottom = 60.0
 grow_horizontal = 2
 mouse_filter = 2
 
-[node name="ColorRect" type="ColorRect" parent="SafeMarginContainer/HBoxContainer_SizeCanary/ControlContainer_Canary/ControlContent_Canary"]
+[node name="ColorRect" type="ColorRect" parent="SafeMarginContainer/HBoxContainer_SizeCanary/ControlContainer_Canary/ControlContent_Canary" unique_id=544564548]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -855,13 +857,13 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 1, 1, 1)
 
-[node name="Control2" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary"]
+[node name="Control2" type="Control" parent="SafeMarginContainer/HBoxContainer_SizeCanary" unique_id=847089274]
 custom_minimum_size = Vector2(870, 0)
 layout_mode = 2
 size_flags_stretch_ratio = 0.0
 mouse_filter = 2
 
-[node name="ColorRect" type="ColorRect" parent="SafeMarginContainer/HBoxContainer_SizeCanary/Control2"]
+[node name="ColorRect" type="ColorRect" parent="SafeMarginContainer/HBoxContainer_SizeCanary/Control2" unique_id=1932922255]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -870,9 +872,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(1, 1, 1, 0.7254902)
+color = Color(1, 1, 1, 0.40392157)
 
-[node name="TextureProgressBar_BackpackLoading" parent="." instance=ExtResource("15_623dt")]
+[node name="TextureProgressBar_BackpackLoading" parent="." unique_id=10614915 instance=ExtResource("15_623dt")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
