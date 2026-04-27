@@ -9,7 +9,7 @@ use crate::{
 
 pub fn update_avatar_scene_updates(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     for entity_id in scene.avatar_scene_updates.deleted_entities.drain() {
-        crdt_state.entities.kill(entity_id);
+        crdt_state.clear_entity_components(&entity_id);
     }
 
     {

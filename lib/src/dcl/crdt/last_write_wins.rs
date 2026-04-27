@@ -48,6 +48,12 @@ pub trait GenericLastWriteWinsComponent {
 
     fn remove(&mut self, entity: SceneEntityId);
     fn remove_without_dirty(&mut self, entity: SceneEntityId);
+
+    /// Marks the entity's component as deleted (None value) with a bumped
+    /// timestamp and marks dirty, so the change propagates as a
+    /// DELETE_COMPONENT message to the scene's JS runtime. No-op if the entity
+    /// never had a value or is already None.
+    fn delete(&mut self, entity: SceneEntityId) -> bool;
 }
 
 impl<T> LastWriteWins<T> {
@@ -153,6 +159,17 @@ impl<T: 'static + FromDclReader + ToDclWriter> GenericLastWriteWinsComponent for
     fn remove(&mut self, entity: SceneEntityId) {
         self.values.remove(&entity);
         self.dirty.insert(entity);
+    }
+
+    fn delete(&mut self, entity: SceneEntityId) -> bool {
+        let Some(entry) = self.values.get(&entity) else {
+            return false;
+        };
+        if entry.value.is_none() {
+            return false;
+        }
+        let new_timestamp = SceneCrdtTimestamp(entry.timestamp.0 + 1);
+        self.set(entity, new_timestamp, None)
     }
 }
 
@@ -262,6 +279,53 @@ mod test {
         let dirty_set = i32_component.take_dirty();
         assert_eq!(dirty_set.len(), 1);
         assert!(dirty_set.contains(&entity));
+    }
+
+    #[test]
+    fn test_delete_marks_dirty_with_bumped_timestamp() {
+        let (mut i32_component, entity, a_value, _, _, _) = get_i32_component_and_helper();
+
+        // Seed a value at timestamp 5
+        assert!(i32_component.set(entity, SceneCrdtTimestamp(5), Some(a_value)));
+        assert!(!i32_component.take_dirty().is_empty()); // clear the dirty flag
+
+        // Delete should return true, set value to None and bump timestamp
+        assert!(i32_component.delete(entity));
+        let entry = i32_component.get(&entity).unwrap();
+        assert_eq!(entry.value, None);
+        assert_eq!(entry.timestamp, SceneCrdtTimestamp(6));
+
+        // Entity should be marked dirty so a DELETE_COMPONENT message is emitted
+        let dirty_set = i32_component.take_dirty();
+        assert_eq!(dirty_set.len(), 1);
+        assert!(dirty_set.contains(&entity));
+    }
+
+    #[test]
+    fn test_delete_noop_when_entity_never_had_value() {
+        let (mut i32_component, entity, _, _, _, _) = get_i32_component_and_helper();
+
+        // No prior set — delete is a no-op (no DELETE_COMPONENT to emit)
+        assert!(!i32_component.delete(entity));
+        assert!(i32_component.get(&entity).is_none());
+        assert!(i32_component.take_dirty().is_empty());
+    }
+
+    #[test]
+    fn test_delete_noop_when_already_none() {
+        let (mut i32_component, entity, a_value, _, _, _) = get_i32_component_and_helper();
+
+        // Set then delete to land at None
+        assert!(i32_component.set(entity, SceneCrdtTimestamp(0), Some(a_value)));
+        assert!(i32_component.delete(entity));
+        assert!(!i32_component.take_dirty().is_empty()); // clear dirty
+
+        // Second delete on a None value should be a no-op
+        assert!(!i32_component.delete(entity));
+        let entry = i32_component.get(&entity).unwrap();
+        assert_eq!(entry.value, None);
+        assert_eq!(entry.timestamp, SceneCrdtTimestamp(1));
+        assert!(i32_component.take_dirty().is_empty());
     }
 
     #[test]
