@@ -6,6 +6,8 @@ signal on_open_chat
 signal on_enter_write_mode
 signal on_exit_write_mode
 
+const ChatMessage := preload("res://src/ui/components/chat/chat_message.gd")
+
 const MAX_AUTOCOMPLETE_RESULTS: int = 3
 const AUTOCOMPLETE_ITEM_STRIDE: float = 58.0
 const AUTOCOMPLETE_SCROLL_PADDING: float = 14.0
@@ -26,12 +28,10 @@ const HEADER_LABEL_PORTRAIT := "Nearby"
 
 ## Design specs — write button landscape
 const WRITE_HEIGHT_LANDSCAPE := 48
-const WRITE_FONT_LANDSCAPE := 21
 const WRITE_PADDING_LANDSCAPE := 10
 
 ## Design specs — write button portrait
 const WRITE_HEIGHT_PORTRAIT := 66
-const WRITE_FONT_PORTRAIT := 29
 const WRITE_PADDING_PORTRAIT := 16
 
 var scrolled: bool = false
@@ -226,8 +226,7 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
 	new_chat.reduce_text = false
-	if Global.is_orientation_portrait():
-		new_chat.set_portrait(true)
+	new_chat.set_portrait(Global.is_orientation_portrait())
 	new_chat.set_chat(address, message, timestamp)
 
 	if !scrolled:
@@ -370,8 +369,10 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		_header_label.text = HEADER_LABEL_PORTRAIT
 		_header_label.label_settings.font_size = HEADER_FONT_PORTRAIT
 		button_write.custom_minimum_size.y = WRITE_HEIGHT_PORTRAIT
-		button_write.add_theme_font_size_override("font_size", WRITE_FONT_PORTRAIT)
+		button_write.add_theme_font_size_override("font_size", ChatMessage.PORTRAIT_BOLD_SIZE)
 		_set_button_write_padding(WRITE_PADDING_PORTRAIT)
+		line_edit_command.add_theme_font_size_override("font_size", ChatMessage.PORTRAIT_BOLD_SIZE)
+		button_send.add_theme_font_size_override("font_size", ChatMessage.PORTRAIT_BOLD_SIZE)
 	else:
 		_header.custom_minimum_size.y = HEADER_HEIGHT_LANDSCAPE
 		_header_hbox.add_theme_constant_override("separation", HEADER_SEPARATION_LANDSCAPE)
@@ -379,8 +380,10 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		_header_label.text = HEADER_LABEL_LANDSCAPE
 		_header_label.label_settings.font_size = HEADER_FONT_LANDSCAPE
 		button_write.custom_minimum_size.y = WRITE_HEIGHT_LANDSCAPE
-		button_write.add_theme_font_size_override("font_size", WRITE_FONT_LANDSCAPE)
+		button_write.add_theme_font_size_override("font_size", ChatMessage.LANDSCAPE_BOLD_SIZE)
 		_set_button_write_padding(WRITE_PADDING_LANDSCAPE)
+		line_edit_command.add_theme_font_size_override("font_size", ChatMessage.LANDSCAPE_BOLD_SIZE)
+		button_send.add_theme_font_size_override("font_size", ChatMessage.LANDSCAPE_BOLD_SIZE)
 	if panel_line_edit.visible:
 		_close_write_mode()
 	_async_apply_system_bar_insets()

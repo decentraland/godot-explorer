@@ -12,8 +12,8 @@ const LANDSCAPE_BOLD_SIZE := 20
 
 ## Design specs — portrait
 const PORTRAIT_MARGIN := 16
-const PORTRAIT_FONT_SIZE := 27
-const PORTRAIT_BOLD_SIZE := 30
+const PORTRAIT_FONT_SIZE := 24
+const PORTRAIT_BOLD_SIZE := 26
 
 ## Bold header ~22pt (theme). Small separator: nick<->tag, tag<->icon, nick<->icon (~4px).
 const SEP_HEADER_SMALL := "[font_size=22]\u200a\u200a[/font_size]"
