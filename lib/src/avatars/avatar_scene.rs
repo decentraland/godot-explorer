@@ -608,6 +608,14 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform);
+        // Wire-authoritative animation state for remote double-jump / glide.
+        if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
+            avatar.bind_mut().apply_wire_movement_state(
+                movement.jump_count,
+                movement.glide_state,
+                movement.is_grounded,
+            );
+        }
         self.last_movement_timestamp
             .insert(alias, movement.timestamp);
         true
