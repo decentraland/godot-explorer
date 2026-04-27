@@ -21,6 +21,8 @@ use crate::{
 /// - disable_run: Disables run input
 /// - disable_jump: Disables jump input
 /// - disable_emote: Disables emote input
+/// - disable_double_jump: Disables only the second (air) jump; ground jump still works
+/// - disable_gliding: Disables the glider; mid-glide entries force-close on the next tick
 ///
 /// All booleans are false by default (no modification).
 /// This component is only processed when set on the PLAYER entity (entity ID 1).
@@ -88,6 +90,10 @@ pub fn update_input_modifier(
                             standard_input.disable_jump.unwrap_or(false);
                         global_bind.input_modifier_disable_emote =
                             standard_input.disable_emote.unwrap_or(false);
+                        global_bind.input_modifier_disable_double_jump =
+                            standard_input.disable_double_jump.unwrap_or(false);
+                        global_bind.input_modifier_disable_gliding =
+                            standard_input.disable_gliding.unwrap_or(false);
                     }
                 }
             } else {
