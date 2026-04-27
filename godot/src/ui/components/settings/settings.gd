@@ -138,6 +138,7 @@ func _ready():
 			i += 1
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
+	_setup_avatar_impostors_toggle()
 	refresh_graphic_settings()
 
 	var j = 0
@@ -618,6 +619,25 @@ func _on_button_report_content_pressed() -> void:
 		url += "?" + "&".join(params)
 
 	Global.open_url(url)
+
+
+func _setup_avatar_impostors_toggle() -> void:
+	var row := HBoxContainer.new()
+	row.name = "AvatarImpostorsRow"
+	var label := Label.new()
+	label.text = "Avatar Impostors"
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	var toggle := CheckButton.new()
+	toggle.name = "CheckButton_AvatarImpostors"
+	toggle.button_pressed = Global.get_config().avatar_impostors_enabled
+	toggle.toggled.connect(
+		func(on: bool) -> void:
+			Global.get_config().avatar_impostors_enabled = on
+			Global.get_config().save_to_settings_file()
+	)
+	row.add_child(toggle)
+	container_graphics.add_child(row)
 
 
 func _setup_dynamic_graphics() -> void:
