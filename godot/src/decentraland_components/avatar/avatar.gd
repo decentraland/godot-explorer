@@ -931,7 +931,7 @@ func _update_lod() -> void:
 	var config = Global.get_config()
 	if config == null or not config.avatar_impostors_enabled:
 		if _lod_state != LODState.FULL:
-			_apply_lod_state(LODState.FULL, 1.0, 0.0, 0.0)
+			_apply_lod_state(LODState.FULL, 1.0, 0.0, 0.0, 0.0)
 		return
 
 	var camera = get_viewport().get_camera_3d()
@@ -971,11 +971,11 @@ func _update_lod() -> void:
 			)
 			tint_strength = clamp((dist - AvatarImpostorConfig.DISTANCE_FAR) / tint_span, 0.0, 1.0)
 
-	_apply_lod_state(new_state, dither_alpha, fade_alpha, tint_strength)
+	_apply_lod_state(new_state, dither_alpha, fade_alpha, tint_strength, dist)
 
 
 func _apply_lod_state(
-	state: int, dither_alpha: float, fade_alpha: float, tint_strength: float
+	state: int, dither_alpha: float, fade_alpha: float, tint_strength: float, distance: float
 ) -> void:
 	var state_changed: bool = state != _lod_state
 	var prev_state: int = _lod_state
@@ -984,9 +984,11 @@ func _apply_lod_state(
 	_set_dither_alpha(dither_alpha)
 
 	if state == LODState.FAR or state == LODState.CROSSFADE:
-		_ensure_impostor_layer()
+		_ensure_impostor_layer(distance)
 		if _impostor_layer >= 0 and Global.avatars != null:
-			Global.avatars.set_impostor_state(get_instance_id(), fade_alpha, tint_strength)
+			Global.avatars.set_impostor_state(
+				get_instance_id(), fade_alpha, tint_strength, distance
+			)
 	elif _impostor_layer >= 0:
 		_release_impostor()
 
@@ -994,10 +996,10 @@ func _apply_lod_state(
 		_on_lod_state_changed(state, prev_state)
 
 
-func _ensure_impostor_layer() -> void:
+func _ensure_impostor_layer(distance: float) -> void:
 	if _impostor_layer >= 0 or Global.avatars == null:
 		return
-	_impostor_layer = Global.avatars.request_impostor_layer(get_instance_id(), self)
+	_impostor_layer = Global.avatars.request_impostor_layer(get_instance_id(), self, distance)
 	if _impostor_layer >= 0:
 		ImpostorCapturer.request_capture(self)
 

@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, depth_draw_opaque, cull_disabled, blend_mix;
+render_mode unshaded, cull_disabled, depth_prepass_alpha;
 
 uniform sampler2DArray impostor_array : source_color, filter_linear, repeat_disable;
 uniform vec3 tint_color : source_color = vec3(0.0, 0.0, 0.0);
@@ -18,25 +18,30 @@ float dither_threshold(vec2 frag_coord) {
 }
 
 void vertex() {
-	vec3 model_pos = MODEL_MATRIX[3].xyz;
-	vec3 cam_pos = INV_VIEW_MATRIX[3].xyz;
-	vec3 forward_xz = vec3(cam_pos.x - model_pos.x, 0.0, cam_pos.z - model_pos.z);
-	if (length(forward_xz) < 0.0001) {
-		forward_xz = vec3(0.0, 0.0, 1.0);
+	// QuadMesh's default mesh sits in the local XY plane facing +Z. We
+	// rebuild the vertex in object space so it always points at the camera
+	// in the XZ world plane (Y-axis billboard) while keeping its world Y
+	// upright. Assumes the instance transform has identity rotation and
+	// only a translation, which is what AvatarScene writes per frame.
+	vec3 inst_pos_world = MODEL_MATRIX[3].xyz;
+	vec3 cam_pos_world = INV_VIEW_MATRIX[3].xyz;
+
+	vec3 forward = vec3(
+		cam_pos_world.x - inst_pos_world.x,
+		0.0,
+		cam_pos_world.z - inst_pos_world.z
+	);
+	if (length(forward) < 0.0001) {
+		forward = vec3(0.0, 0.0, 1.0);
 	} else {
-		forward_xz = normalize(forward_xz);
+		forward = normalize(forward);
 	}
 	vec3 up = vec3(0.0, 1.0, 0.0);
-	vec3 right = normalize(cross(up, forward_xz));
+	vec3 right = normalize(cross(up, forward));
 
-	mat4 billboard_basis = mat4(
-		vec4(right, 0.0),
-		vec4(up, 0.0),
-		vec4(forward_xz, 0.0),
-		vec4(model_pos, 1.0)
-	);
-
-	MODELVIEW_MATRIX = VIEW_MATRIX * billboard_basis;
+	vec3 local = VERTEX;
+	VERTEX = right * local.x + up * local.y;
+	NORMAL = forward;
 }
 
 void fragment() {
@@ -44,6 +49,7 @@ void fragment() {
 	float fade_alpha = INSTANCE_CUSTOM.g;
 	float layer_index = INSTANCE_CUSTOM.b;
 
+	// Slot inactive — invisible.
 	if (fade_alpha <= 0.001) {
 		discard;
 	}
@@ -53,10 +59,12 @@ void fragment() {
 		discard;
 	}
 
+	// Dither cross-fade between full avatar and impostor.
 	if (dither_threshold(FRAGCOORD.xy) > fade_alpha) {
 		discard;
 	}
 
 	ALBEDO = mix(tex_color.rgb, tint_color, clamp(tint_strength, 0.0, 1.0));
 	ALPHA = tex_color.a;
+	ALPHA_SCISSOR_THRESHOLD = 0.5;
 }

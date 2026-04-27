@@ -129,13 +129,19 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(
             Command::new("avatar-impostor-benchmark")
                 .about(
-                    "Run avatar impostor benchmark (50 avatars, OFF then ON phases) and write results to benchmark-results/avatar-impostor-benchmark.txt",
+                    "Run avatar impostor benchmark (100 avatars, OFF then ON phases) and write results to benchmark-results/. Use --target ios to launch on a connected iPhone (assumes the app has been deployed via `cargo run -- run --target ios`).",
                 )
                 .arg(
                     Arg::new("headless")
                         .long("headless")
-                        .help("Run headless (no window). Note: skinning still uses GPU; FPS may differ from windowed mode.")
+                        .help("Run headless (host only). Skinning still uses GPU; FPS may differ from windowed mode.")
                         .action(clap::ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("target")
+                        .long("target")
+                        .help("Target platform: host (default) or ios.")
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -850,7 +856,14 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
         ("avatar-impostor-benchmark", sm) => {
-            avatar_impostor_benchmark::run_avatar_impostor_benchmark(sm.get_flag("headless"))
+            let target: &str = sm
+                .get_one::<String>("target")
+                .map(|s| s.as_str())
+                .unwrap_or("");
+            avatar_impostor_benchmark::run_avatar_impostor_benchmark(
+                sm.get_flag("headless"),
+                target,
+            )
         }
         ("full-tests", sm) => full_tests::run_full_tests(
             sm.is_present("continue-on-failure"),

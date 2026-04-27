@@ -48,6 +48,7 @@ struct ImpostorSlot {
     tint_strength: f32,
     texture_loaded: bool,
     avatar_instance_id: InstanceId,
+    distance_sq: f32,
 }
 
 #[derive(GodotClass)]
@@ -141,14 +142,25 @@ impl AvatarScene {
     fn avatar_removed(address: GString);
 
     fn setup_impostor_renderer(&mut self) {
-        let mut quad = QuadMesh::new_gd();
-        quad.set_size(Vector2::new(IMPOSTOR_QUAD_WIDTH, IMPOSTOR_QUAD_HEIGHT));
-
-        let mut multimesh = MultiMesh::new_gd();
-        multimesh.set_transform_format(TransformFormat::TRANSFORM_3D);
-        multimesh.set_use_custom_data(true);
-        multimesh.set_mesh(&quad.upcast::<godot::classes::Mesh>());
-        multimesh.set_instance_count(IMPOSTOR_MAX_LAYERS as i32);
+        // Load shader first; if it fails we bail out so we don't render
+        // default-white quads that mask the failure.
+        let Some(shader_resource) = ResourceLoader::singleton().load(IMPOSTOR_SHADER_PATH) else {
+            tracing::warn!(
+                "Impostor shader not found at {} — impostor renderer disabled",
+                IMPOSTOR_SHADER_PATH
+            );
+            return;
+        };
+        let shader = match shader_resource.try_cast::<godot::classes::Shader>() {
+            Ok(s) => s,
+            Err(_) => {
+                tracing::error!(
+                    "Impostor resource at {} is not a Shader — disabled",
+                    IMPOSTOR_SHADER_PATH
+                );
+                return;
+            }
+        };
 
         let mut blank_images: Array<Gd<Image>> = Array::new();
         for _ in 0..IMPOSTOR_MAX_LAYERS {
@@ -173,20 +185,20 @@ impl AvatarScene {
         }
 
         let mut shader_material = ShaderMaterial::new_gd();
-        let shader_resource = ResourceLoader::singleton().load(IMPOSTOR_SHADER_PATH);
-        if let Some(res) = shader_resource {
-            if let Ok(shader) = res.try_cast::<godot::classes::Shader>() {
-                shader_material.set_shader(&shader);
-            } else {
-                tracing::error!("Impostor shader resource is not a Shader");
-            }
-        } else {
-            tracing::warn!(
-                "Impostor shader not found at {} (impostor renderer disabled)",
-                IMPOSTOR_SHADER_PATH
-            );
-        }
+        shader_material.set_shader(&shader);
         shader_material.set_shader_parameter("impostor_array", &texture_array.to_variant());
+
+        // Set the material on the QuadMesh surface (more reliable for
+        // MultiMesh than relying solely on MMI3D.material_override).
+        let mut quad = QuadMesh::new_gd();
+        quad.set_size(Vector2::new(IMPOSTOR_QUAD_WIDTH, IMPOSTOR_QUAD_HEIGHT));
+        quad.set_material(&shader_material.clone().upcast::<godot::classes::Material>());
+
+        let mut multimesh = MultiMesh::new_gd();
+        multimesh.set_transform_format(TransformFormat::TRANSFORM_3D);
+        multimesh.set_use_custom_data(true);
+        multimesh.set_mesh(&quad.upcast::<godot::classes::Mesh>());
+        multimesh.set_instance_count(IMPOSTOR_MAX_LAYERS as i32);
 
         let mut mmi = MultiMeshInstance3D::new_alloc();
         mmi.set_name("impostor_multimesh");
@@ -196,7 +208,6 @@ impl AvatarScene {
             godot::classes::geometry_instance_3d::ShadowCastingSetting::OFF,
         );
 
-        // All instances start invisible (fade_alpha=0).
         for i in 0..IMPOSTOR_MAX_LAYERS as i32 {
             multimesh.set_instance_transform(i, Transform3D::IDENTITY);
             multimesh.set_instance_custom_data(i, Color::from_rgba(0.0, 0.0, 0.0, 0.0));
@@ -205,6 +216,12 @@ impl AvatarScene {
         self.base_mut().add_child(&mmi);
         self.impostor_multimesh = Some(mmi);
         self.impostor_texture_array = Some(texture_array);
+        tracing::info!(
+            "Impostor renderer initialized: {} layers, {}x{} px",
+            IMPOSTOR_MAX_LAYERS,
+            IMPOSTOR_TEX_WIDTH,
+            IMPOSTOR_TEX_HEIGHT
+        );
     }
 
     fn update_impostor_transforms(&mut self) {
@@ -249,13 +266,45 @@ impl AvatarScene {
     }
 
     #[func]
-    fn request_impostor_layer(&mut self, impostor_id: i64, avatar: Gd<DclAvatar>) -> i32 {
+    fn request_impostor_layer(
+        &mut self,
+        impostor_id: i64,
+        avatar: Gd<DclAvatar>,
+        distance: f32,
+    ) -> i32 {
         if let Some(slot) = self.impostor_slots.get(&impostor_id) {
             return slot.layer_index as i32;
         }
-        let Some(layer) = self.impostor_free_layers.pop() else {
-            return -1;
+        let distance_sq = distance * distance;
+
+        let layer = match self.impostor_free_layers.pop() {
+            Some(l) => l,
+            None => {
+                // Pool full — evict the farthest slot if the requester is closer.
+                let Some((farthest_id, farthest_distance_sq, farthest_layer)) = self
+                    .impostor_slots
+                    .iter()
+                    .map(|(id, slot)| (*id, slot.distance_sq, slot.layer_index))
+                    .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+                else {
+                    return -1;
+                };
+                if distance_sq >= farthest_distance_sq {
+                    return -1;
+                }
+                self.impostor_slots.remove(&farthest_id);
+                if let Some(mmi) = self.impostor_multimesh.as_ref().cloned() {
+                    if let Some(mut multimesh) = mmi.get_multimesh() {
+                        multimesh.set_instance_custom_data(
+                            farthest_layer as i32,
+                            Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+                        );
+                    }
+                }
+                farthest_layer
+            }
         };
+
         self.impostor_slots.insert(
             impostor_id,
             ImpostorSlot {
@@ -264,6 +313,7 @@ impl AvatarScene {
                 tint_strength: 0.0,
                 texture_loaded: false,
                 avatar_instance_id: avatar.instance_id(),
+                distance_sq,
             },
         );
         layer as i32
@@ -295,10 +345,17 @@ impl AvatarScene {
     }
 
     #[func]
-    fn set_impostor_state(&mut self, impostor_id: i64, fade_alpha: f32, tint_strength: f32) {
+    fn set_impostor_state(
+        &mut self,
+        impostor_id: i64,
+        fade_alpha: f32,
+        tint_strength: f32,
+        distance: f32,
+    ) {
         if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
             slot.fade_alpha = fade_alpha.clamp(0.0, 1.0);
             slot.tint_strength = tint_strength.clamp(0.0, 1.0);
+            slot.distance_sq = distance * distance;
         }
     }
 
