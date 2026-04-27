@@ -15,7 +15,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 0
-theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 0
 script = ExtResource("1_script")
 metadata/mobile_preview_orientation = "both"
@@ -30,6 +29,7 @@ theme_override_constants/separation = 0
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/margin_top = 24
 
 [node name="Chat" parent="VBoxContainer_LeftSide" unique_id=602589676 instance=ExtResource("5_chat")]
 unique_name_in_owner = true
@@ -38,9 +38,10 @@ size_flags_horizontal = 1
 
 [node name="Notifications" parent="VBoxContainer_LeftSide" unique_id=1410228761 instance=ExtResource("6_notif")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(328, 400)
+custom_minimum_size = Vector2(328, 0)
 layout_mode = 2
 size_flags_horizontal = 0
+size_flags_vertical = 3
 mouse_filter = 2
 
 [node name="Control_SafeBottomArea" type="PanelContainer" parent="VBoxContainer_LeftSide" unique_id=115199345]

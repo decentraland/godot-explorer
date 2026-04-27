@@ -35,13 +35,13 @@ corner_radius_bottom_left = 24
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2fmgn"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vm240"]
-
-[node name="Chatbar" type="VBoxContainer" unique_id=2109166818]
+[node name="Chatbar" type="MarginContainer" unique_id=1474819563]
 offset_right = 328.0
-offset_bottom = 76.0
+offset_bottom = 66.0
 size_flags_horizontal = 0
-theme_override_constants/separation = 0
+size_flags_vertical = 4
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 10
 script = ExtResource("1_8wxvk")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1972815801]
@@ -192,11 +192,6 @@ icon = ExtResource("9_reset")
 flat = true
 icon_alignment = 1
 expand_icon = true
-
-[node name="HSeparator" type="HSeparator" parent="." unique_id=730482792]
-layout_mode = 2
-theme_override_constants/separation = 10
-theme_override_styles/separator = SubResource("StyleBoxEmpty_vm240")
 
 [connection signal="pressed" from="HBoxContainer/Button_Chat" to="." method="_on_button_chat_pressed"]
 [connection signal="pressed" from="HBoxContainer/Button_Flip" to="." method="_on_button_flip_pressed"]

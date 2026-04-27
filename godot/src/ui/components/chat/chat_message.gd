@@ -7,13 +7,13 @@ const TAG_COLOR := "#716B7C"
 ## Design specs — landscape
 const LANDSCAPE_MARGIN_H := 10
 const LANDSCAPE_MARGIN_V := 8
-const LANDSCAPE_FONT_SIZE := 20
-const LANDSCAPE_BOLD_SIZE := 24
+const LANDSCAPE_FONT_SIZE := 18
+const LANDSCAPE_BOLD_SIZE := 20
 
 ## Design specs — portrait
 const PORTRAIT_MARGIN := 16
-const PORTRAIT_FONT_SIZE := 29
-const PORTRAIT_BOLD_SIZE := 33
+const PORTRAIT_FONT_SIZE := 27
+const PORTRAIT_BOLD_SIZE := 30
 
 ## Bold header ~22pt (theme). Small separator: nick<->tag, tag<->icon, nick<->icon (~4px).
 const SEP_HEADER_SMALL := "[font_size=22]\u200a\u200a[/font_size]"

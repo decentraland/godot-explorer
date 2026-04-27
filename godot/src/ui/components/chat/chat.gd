@@ -116,6 +116,10 @@ func _scroll_to_bottom() -> void:
 
 
 func _async_scroll_to_bottom_after_layout() -> void:
+	# Wait enough frames for message _async_update_layout to finish
+	# (it resets sizes after 1 frame, then measures after another)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	await get_tree().process_frame
 	if not scroll_container_chats_list or not is_instance_valid(scroll_container_chats_list):
 		return
@@ -138,8 +142,10 @@ func _on_button_send_pressed():
 	button_send.disabled = true
 
 	_scroll_to_bottom()
-	if message.begins_with("/") or Global.get_config().submit_message_closes_chat:
+	if message.begins_with("/"):
 		exit_chat()
+	elif Global.get_config().submit_message_closes_chat:
+		_close_write_mode()
 	else:
 		line_edit_command.grab_focus()
 
@@ -163,8 +169,10 @@ func _on_line_edit_command_text_submitted(new_text):
 	line_edit_command.text = ""
 	button_send.disabled = true
 	_scroll_to_bottom()
-	if new_text.begins_with("/") or Global.get_config().submit_message_closes_chat:
+	if new_text.begins_with("/"):
 		exit_chat()
+	elif Global.get_config().submit_message_closes_chat:
+		_close_write_mode()
 	else:
 		line_edit_command.grab_focus()
 
@@ -207,6 +215,9 @@ func _relayout_all_messages() -> void:
 
 
 func _async_deferred_relayout_all_messages() -> void:
+	# iOS needs extra frames for orientation change to propagate window size
+	await get_tree().process_frame
+	await get_tree().process_frame
 	await get_tree().process_frame
 	_relayout_all_messages()
 

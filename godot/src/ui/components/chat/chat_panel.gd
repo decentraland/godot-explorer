@@ -6,7 +6,7 @@ signal load_scenes_pressed
 
 enum ChatState { CLOSED, OPEN, WRITING }
 
-const LANDSCAPE_MARGINS := {"left": 0, "top": 24, "right": 0, "bottom": 0}
+const LANDSCAPE_MARGINS := {"left": 0, "top": 0, "right": 0, "bottom": 0}
 const PORTRAIT_MARGINS := {"left": 40, "top": 0, "right": 40, "bottom": 64}
 const WIDTH_OPEN := 420
 
@@ -35,6 +35,7 @@ func _apply_closed_state() -> void:
 	chat.hide()
 	chatbar.show()
 	notifications.show()
+	_apply_default_margins()
 	if not Global.is_orientation_portrait():
 		safe_bottom_area.show()
 	virtual_keyboard_margin.custom_minimum_size.y = 0
@@ -46,10 +47,8 @@ func _apply_open_state() -> void:
 	chat.show()
 	chatbar.show()
 	notifications.hide()
-	add_theme_constant_override("margin_top", LANDSCAPE_MARGINS["top"])
-	if Global.is_orientation_portrait():
-		add_theme_constant_override("margin_bottom", PORTRAIT_MARGINS["bottom"])
-	else:
+	_apply_default_margins()
+	if not Global.is_orientation_portrait():
 		safe_bottom_area.show()
 	_update_chat_layout()
 
@@ -59,12 +58,20 @@ func _apply_writing_state() -> void:
 	_current_state = ChatState.WRITING
 	notifications.hide()
 	safe_bottom_area.hide()
+	_apply_default_margins()
 	if Global.is_orientation_portrait():
 		add_theme_constant_override("margin_bottom", 5)
 	else:
 		chatbar.hide()
-		add_theme_constant_override("margin_top", 0)
 	_update_chat_layout()
+
+
+func _apply_default_margins() -> void:
+	var m := PORTRAIT_MARGINS if Global.is_orientation_portrait() else LANDSCAPE_MARGINS
+	add_theme_constant_override("margin_left", m["left"])
+	add_theme_constant_override("margin_top", m["top"])
+	add_theme_constant_override("margin_right", m["right"])
+	add_theme_constant_override("margin_bottom", m["bottom"])
 
 
 func _update_chat_layout() -> void:
@@ -103,13 +110,12 @@ func _on_chat_enter_write_mode() -> void:
 
 
 func _async_on_chat_exit_write_mode() -> void:
-	# Apply state but keep chat invisible for one frame to avoid layout flicker
 	_apply_open_state()
-	chat.modulate = Color.TRANSPARENT
 	Global.chat_write_mode_changed.emit(false)
 	await get_tree().process_frame
-	await get_tree().process_frame
-	chat.modulate = Color.WHITE
+	# Now that layout settled, truly hide the panel_line_edit and restore modulates
+	chat.panel_line_edit.hide()
+	chat.panel_line_edit.modulate = Color.WHITE
 
 
 func _on_panel_chat_submit_message(message: String) -> void:
@@ -121,7 +127,14 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var safe_window_height: float = max(float(window_size.y), 1.0)
 	var y_factor: float = viewport_size.y / safe_window_height
-	var keyboard_height_scaled: float = ceil(max(float(virtual_keyboard_height) * y_factor, 0.0))
+	var adjusted_height: int = virtual_keyboard_height
+	# iOS keyboard height includes the bottom safe area, but SafeMarginContainerHUD
+	# already accounts for it — subtract to avoid double-counting
+	if OS.get_name() == "iOS":
+		var safe_area := Global.get_safe_area()
+		var bottom_inset: int = window_size.y - safe_area.position.y - safe_area.size.y
+		adjusted_height = max(virtual_keyboard_height - bottom_inset, 0)
+	var keyboard_height_scaled: float = ceil(max(float(adjusted_height) * y_factor, 0.0))
 	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
 
 
@@ -146,10 +159,6 @@ func is_interactive_area_at(position: Vector2) -> bool:
 
 
 func _on_orientation_changed(is_portrait: bool) -> void:
-	var m := PORTRAIT_MARGINS if is_portrait else LANDSCAPE_MARGINS
-	add_theme_constant_override("margin_left", m["left"])
-	add_theme_constant_override("margin_top", m["top"])
-	add_theme_constant_override("margin_right", m["right"])
-	add_theme_constant_override("margin_bottom", m["bottom"])
+	_apply_default_margins()
 	safe_bottom_area.visible = not is_portrait
 	_update_chat_layout()
