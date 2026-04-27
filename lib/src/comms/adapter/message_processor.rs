@@ -128,6 +128,7 @@ struct Peer {
     profile_fetch_failures: u8,              // Count consecutive failures
     profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
     peer_version: Option<String>,            // Client version for staging/dev builds
+    catalyst_lambda_url: Option<String>,     // Catalyst lambda URL from LiveKit metadata
     last_movement_timestamp: f32,            // Dedup: last movement timestamp received
     last_emote_incremental_id: u32,          // Dedup: last emote incremental ID received
 }
@@ -781,6 +782,7 @@ impl MessageProcessor {
                     profile_fetch_failures: 0,
                     profile_fetch_banned_until: None,
                     peer_version: None,
+                    catalyst_lambda_url: None,
                     last_movement_timestamp: f32::NEG_INFINITY,
                     last_emote_incremental_id: 0,
                 },
@@ -901,7 +903,7 @@ impl MessageProcessor {
                 }
             }
             MessageType::PeerMetadata(ref metadata) => {
-                // Parse metadata JSON to extract version info
+                // Parse metadata JSON to extract version and catalyst info
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(metadata) {
                     if let Some(version) = json.get("dcl_version").and_then(|v| v.as_str()) {
                         tracing::debug!(
@@ -922,6 +924,22 @@ impl MessageProcessor {
                                         GString::from(version).to_variant(),
                                     ],
                                 );
+                            }
+                        }
+                    }
+                    if let Some(catalyst) = json.get("catalyst").and_then(|v| v.as_str()) {
+                        if let Some(peer) = self.peer_identities.get_mut(&message.address) {
+                            if peer.catalyst_lambda_url.as_deref() != Some(catalyst) {
+                                tracing::debug!(
+                                    "Peer {:#x} catalyst lambda URL: {}",
+                                    message.address,
+                                    catalyst
+                                );
+                                peer.catalyst_lambda_url = Some(catalyst.to_string());
+                                // Reset fetch state so we retry with the new catalyst URL
+                                peer.profile_fetch_attempted = false;
+                                peer.profile_fetch_failures = 0;
+                                peer.profile_fetch_banned_until = None;
                             }
                         }
                     }
@@ -1241,14 +1259,60 @@ impl MessageProcessor {
                     let (lamda_server_base_url, profile_base_url, http_requester) =
                         prepare_request_requirements();
 
+                    // Use the peer's announced catalyst lambda URL as the primary endpoint.
+                    // This avoids the 20+ second delay caused by waiting for profile propagation
+                    // across catalysts — we go directly to the one the peer deployed to.
+                    let peer_catalyst_lambda_url = self
+                        .peer_identities
+                        .get(&address)
+                        .and_then(|p| p.catalyst_lambda_url.clone());
+
                     TokioRuntime::spawn(async move {
+                        // Try the peer's own catalyst first (if known), then fall back to realm lambda
+                        let (primary_url, fallback_url) = match peer_catalyst_lambda_url.as_deref()
+                        {
+                            Some(catalyst) if catalyst != lamda_server_base_url => {
+                                tracing::debug!(
+                                    "Fetching profile for {:#x} from peer catalyst: {}",
+                                    address,
+                                    catalyst
+                                );
+                                (catalyst.to_string(), Some(lamda_server_base_url.clone()))
+                            }
+                            _ => (lamda_server_base_url.clone(), None),
+                        };
+
                         let result = request_lambda_profile(
                             address,
-                            lamda_server_base_url.as_str(),
+                            primary_url.as_str(),
                             profile_base_url.as_str(),
-                            http_requester,
+                            http_requester.clone(),
                         )
                         .await;
+
+                        // If the primary fetch failed or returned an outdated version, try the fallback
+                        let result = match &result {
+                            Ok(profile) if profile.version >= announced_version_for_retry => result,
+                            Ok(_) | Err(_) => {
+                                if let Some(fallback) = &fallback_url {
+                                    tracing::debug!(
+                                        "Primary catalyst fetch for {:#x} returned outdated/missing profile, trying realm lambda: {}",
+                                        address,
+                                        fallback
+                                    );
+                                    request_lambda_profile(
+                                        address,
+                                        fallback.as_str(),
+                                        profile_base_url.as_str(),
+                                        http_requester,
+                                    )
+                                    .await
+                                } else {
+                                    result
+                                }
+                            }
+                        };
+
                         if let Ok(profile) = result {
                             tracing::debug!(
                                 "Fetched profile from lambda for {:#x}: version {}",
