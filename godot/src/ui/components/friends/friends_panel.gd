@@ -1,7 +1,6 @@
 extends PanelContainer
 
 signal panel_closed
-signal reload_requested
 
 # ConnectivityStatus enum values from proto
 const CONNECTIVITY_ONLINE: int = 0
@@ -85,17 +84,6 @@ func _ready() -> void:
 	# Connect to error signals
 	request_list.load_error.connect(_on_load_error)
 	online_list.load_error.connect(_on_load_error)
-
-	# Add reload button for non-production builds (staging/dev)
-	if not DclGlobal.is_production():
-		var reload_button = Button.new()
-		reload_button.text = "Reload Friends (re-subscribe)"
-		reload_button.flat = true
-		reload_button.focus_mode = Control.FOCUS_NONE
-		reload_button.add_theme_color_override("font_color", Color(1, 0.7, 0.3))
-		reload_button.add_theme_font_size_override("font_size", 12)
-		reload_button.pressed.connect(func(): reload_requested.emit())
-		v_box_container_no_service.add_child(reload_button)
 
 	# Initial state: hide all containers - will show loading when panel opens
 	v_box_container_request.hide()
