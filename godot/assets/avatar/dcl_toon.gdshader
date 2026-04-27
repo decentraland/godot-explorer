@@ -4,6 +4,9 @@ render_mode ambient_light_disabled, cull_back;
 #include "dcl_toon.gdshaderinc"
 
 void fragment() {
+	if (toon_dither_threshold(FRAGCOORD.xy) > dither_alpha) {
+		discard;
+	}
 	vec4 albedo_tex = texture(albedo_texture, UV);
 	ALBEDO = albedo_tex.rgb * albedo_color.rgb;
 

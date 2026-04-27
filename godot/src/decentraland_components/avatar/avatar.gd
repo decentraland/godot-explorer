@@ -3,6 +3,9 @@ extends DclAvatar
 
 signal avatar_loaded
 
+# LOD state: FULL (close), MID (15-25m), CROSSFADE (25-30m), FAR (>=30m)
+enum LODState { FULL, MID, CROSSFADE, FAR }
+
 # Debug to store each avatar loaded in user://avatars
 const DEBUG_SAVE_AVATAR_DATA = false
 
@@ -90,6 +93,11 @@ var _active_extra_bone_indices: Array[int] = []
 var _free_bone_pool: Array[int] = []
 var _stale_bone_counter: int = 0
 
+var _lod_state: int = LODState.FULL
+var _impostor_layer: int = -1
+var _lod_phase: int = 0
+var _mesh_lod_visibility_captured: bool = false
+
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
 
@@ -143,6 +151,8 @@ func _ready():
 	nickname_ui.mic_enabled = false
 	Global.on_chat_message.connect(on_chat_message)
 	_apply_nickname_visibility()
+
+	_lod_phase = int(self.unique_id) % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
@@ -404,6 +414,9 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 
 	if finish_loading:
 		apply_color_and_facial()
+		if _impostor_layer >= 0 and Global.avatars != null:
+			Global.avatars.invalidate_impostor_texture(get_instance_id())
+			ImpostorCapturer.request_capture(self)
 
 
 func async_fetch_wearables_dependencies():
@@ -818,6 +831,12 @@ func async_load_wearables():
 
 	emote_controller.clean_unused_emotes()
 
+	# Refresh LOD-related state since meshes were re-created.
+	_mesh_lod_visibility_captured = false
+	if _impostor_layer >= 0 and Global.avatars != null:
+		Global.avatars.invalidate_impostor_texture(get_instance_id())
+		ImpostorCapturer.request_capture(self)
+
 	avatar_ready = true
 	avatar_loaded.emit()
 
@@ -900,12 +919,192 @@ func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color,
 	mesh.mesh.surface_set_material(0, current_material)
 
 
+func _maybe_update_lod() -> void:
+	if not avatar_ready or is_local_player or hidden:
+		return
+	if Engine.get_frames_drawn() % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES != _lod_phase:
+		return
+	_update_lod()
+
+
+func _update_lod() -> void:
+	var config = Global.get_config()
+	if config == null or not config.avatar_impostors_enabled:
+		if _lod_state != LODState.FULL:
+			_apply_lod_state(LODState.FULL, 1.0, 0.0, 0.0)
+		return
+
+	var camera = get_viewport().get_camera_3d()
+	if camera == null:
+		return
+
+	var dist: float = camera.global_position.distance_to(global_position)
+	var emoting: bool = emote_controller != null and emote_controller.is_playing()
+
+	var new_state: int = _lod_state
+	var dither_alpha: float = 1.0
+	var fade_alpha: float = 0.0
+	var tint_strength: float = 0.0
+
+	if dist < AvatarImpostorConfig.MID_RANGE_NEAR:
+		new_state = LODState.FULL
+	elif dist < AvatarImpostorConfig.DISTANCE_NEAR:
+		new_state = LODState.MID
+	elif dist < AvatarImpostorConfig.DISTANCE_FAR:
+		if emoting:
+			new_state = LODState.MID
+		else:
+			new_state = LODState.CROSSFADE
+			var span: float = AvatarImpostorConfig.DISTANCE_FAR - AvatarImpostorConfig.DISTANCE_NEAR
+			var t: float = (dist - AvatarImpostorConfig.DISTANCE_NEAR) / span
+			dither_alpha = 1.0 - t
+			fade_alpha = t
+	else:
+		if emoting:
+			new_state = LODState.MID
+		else:
+			new_state = LODState.FAR
+			dither_alpha = 0.0
+			fade_alpha = 1.0
+			var tint_span: float = (
+				AvatarImpostorConfig.TINT_FULL_DISTANCE - AvatarImpostorConfig.DISTANCE_FAR
+			)
+			tint_strength = clamp((dist - AvatarImpostorConfig.DISTANCE_FAR) / tint_span, 0.0, 1.0)
+
+	_apply_lod_state(new_state, dither_alpha, fade_alpha, tint_strength)
+
+
+func _apply_lod_state(
+	state: int, dither_alpha: float, fade_alpha: float, tint_strength: float
+) -> void:
+	var state_changed: bool = state != _lod_state
+	var prev_state: int = _lod_state
+	_lod_state = state
+
+	_set_dither_alpha(dither_alpha)
+
+	if state == LODState.FAR or state == LODState.CROSSFADE:
+		_ensure_impostor_layer()
+		if _impostor_layer >= 0 and Global.avatars != null:
+			Global.avatars.set_impostor_state(get_instance_id(), fade_alpha, tint_strength)
+	elif _impostor_layer >= 0:
+		_release_impostor()
+
+	if state_changed:
+		_on_lod_state_changed(state, prev_state)
+
+
+func _ensure_impostor_layer() -> void:
+	if _impostor_layer >= 0 or Global.avatars == null:
+		return
+	_impostor_layer = Global.avatars.request_impostor_layer(get_instance_id(), self)
+	if _impostor_layer >= 0:
+		ImpostorCapturer.request_capture(self)
+
+
+func _release_impostor() -> void:
+	if _impostor_layer < 0:
+		return
+	if Global.avatars != null:
+		Global.avatars.clear_impostor(get_instance_id())
+	_impostor_layer = -1
+
+
+func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
+	match new_state:
+		LODState.FULL:
+			_set_lod_meshes_visible(true)
+			_set_lod_animation_active(true)
+			_set_lod_animation_speed(1.0)
+			_set_lod_particles_visible(true)
+			_set_lod_click_active(true)
+		LODState.MID:
+			_set_lod_meshes_visible(true)
+			_set_lod_animation_active(true)
+			_set_lod_animation_speed(AvatarImpostorConfig.MID_ANIMATION_PLAYBACK_SPEED)
+			_set_lod_particles_visible(false)
+			_set_lod_click_active(false)
+		LODState.CROSSFADE:
+			_set_lod_meshes_visible(true)
+			_set_lod_animation_active(true)
+			_set_lod_animation_speed(AvatarImpostorConfig.MID_ANIMATION_PLAYBACK_SPEED)
+			_set_lod_particles_visible(false)
+			_set_lod_click_active(false)
+		LODState.FAR:
+			_set_lod_meshes_visible(false)
+			_set_lod_animation_active(false)
+			_set_lod_animation_speed(1.0)
+			_set_lod_particles_visible(false)
+			_set_lod_click_active(false)
+
+
+func _set_dither_alpha(value: float) -> void:
+	if body_shape_skeleton_3d == null:
+		return
+	for child in body_shape_skeleton_3d.get_children():
+		if child is MeshInstance3D and child.mesh != null:
+			for i in range(child.mesh.get_surface_count()):
+				var mat = child.mesh.surface_get_material(i)
+				if mat is ShaderMaterial:
+					mat.set_shader_parameter("dither_alpha", value)
+
+
+func _capture_lod_mesh_visibility() -> void:
+	if _mesh_lod_visibility_captured or body_shape_skeleton_3d == null:
+		return
+	for child in body_shape_skeleton_3d.get_children():
+		if child is MeshInstance3D:
+			child.set_meta("lod_visible", child.visible)
+	_mesh_lod_visibility_captured = true
+
+
+func _set_lod_meshes_visible(visible: bool) -> void:
+	if not _mesh_lod_visibility_captured:
+		_capture_lod_mesh_visibility()
+	if body_shape_skeleton_3d == null:
+		return
+	for child in body_shape_skeleton_3d.get_children():
+		if child is MeshInstance3D:
+			var orig: bool = child.get_meta("lod_visible", true)
+			child.visible = visible and orig
+
+
+func _set_lod_animation_active(active: bool) -> void:
+	if animation_tree != null:
+		animation_tree.active = active
+
+
+func _set_lod_animation_speed(speed: float) -> void:
+	if animation_player != null:
+		animation_player.speed_scale = speed
+
+
+func _set_lod_particles_visible(visible: bool) -> void:
+	for node_name in ["GPUParticles3D_Move", "GPUParticles3D_Jump", "GPUParticles3D_Land"]:
+		var node = get_node_or_null(node_name)
+		if node != null:
+			node.visible = visible
+
+
+func _set_lod_click_active(active: bool) -> void:
+	if click_area == null:
+		return
+	var collision_shape = click_area.get_node_or_null("CollisionShape3D")
+	if collision_shape != null:
+		collision_shape.disabled = not active
+
+
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
 
 	if nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
+
+	_maybe_update_lod()
+
+	if _lod_state == LODState.FAR:
+		return
 
 	# Skip animations for show_only_wearables avatars (no body to animate)
 	if is_avatar_shape and avatar_data != null and avatar_data.get_show_only_wearables():
