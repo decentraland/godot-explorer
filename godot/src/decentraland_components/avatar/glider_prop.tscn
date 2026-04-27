@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://cgldrproph001"]
+[gd_scene format=3 uid="uid://cgldrproph001"]
 
 [ext_resource type="PackedScene" path="res://assets/avatar/glider_prop_base.scn" id="1_glbase"]
 [ext_resource type="AnimationLibrary" path="res://assets/avatar/glider_prop_anims.res" id="2_glibn"]

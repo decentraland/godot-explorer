@@ -109,13 +109,9 @@ func _on_chat_enter_write_mode() -> void:
 	Global.chat_write_mode_changed.emit(true)
 
 
-func _async_on_chat_exit_write_mode() -> void:
+func _on_chat_exit_write_mode() -> void:
 	_apply_open_state()
 	Global.chat_write_mode_changed.emit(false)
-	await get_tree().process_frame
-	# Now that layout settled, truly hide the panel_line_edit and restore modulates
-	chat.panel_line_edit.hide()
-	chat.panel_line_edit.modulate = Color.WHITE
 
 
 func _on_panel_chat_submit_message(message: String) -> void:
@@ -136,6 +132,13 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 		adjusted_height = max(virtual_keyboard_height - bottom_inset, 0)
 	var keyboard_height_scaled: float = ceil(max(float(adjusted_height) * y_factor, 0.0))
 	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
+
+	if virtual_keyboard_height <= 0:
+		chat.close_write_mode_if_active()
+		chat.reset_safe_area_insets()
+		return
+	chat.async_apply_system_bar_insets()
+	chat.scroll_to_bottom_deferred()
 
 
 func show_load_scenes_button() -> void:
@@ -159,6 +162,16 @@ func is_interactive_area_at(position: Vector2) -> bool:
 
 
 func _on_orientation_changed(is_portrait: bool) -> void:
-	_apply_default_margins()
-	safe_bottom_area.visible = not is_portrait
-	_update_chat_layout()
+	# Delegate layout/font updates and write-mode close to chat first.
+	# If chat was in write mode, _close_write_mode emits on_exit_write_mode
+	# which synchronously transitions us to OPEN before we continue here.
+	chat.apply_orientation(is_portrait)
+	# Re-apply the full current state so visibility (chatbar, notifications,
+	# safe_bottom_area) is correct for the new orientation.
+	match _current_state:
+		ChatState.CLOSED:
+			_apply_closed_state()
+		ChatState.OPEN:
+			_apply_open_state()
+		ChatState.WRITING:
+			_apply_writing_state()

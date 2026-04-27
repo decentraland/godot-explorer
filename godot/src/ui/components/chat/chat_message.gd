@@ -429,6 +429,11 @@ func _async_update_layout() -> void:
 	rich_text.custom_minimum_size.y = rich_text.get_content_height()
 
 
+func relayout(is_portrait: bool) -> void:
+	set_portrait(is_portrait)
+	_async_update_layout.call_deferred()
+
+
 func set_portrait(is_portrait: bool) -> void:
 	if is_portrait:
 		content_margin.add_theme_constant_override("margin_left", PORTRAIT_MARGIN)

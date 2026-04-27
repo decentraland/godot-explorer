@@ -64,13 +64,11 @@ var _autocomplete_queued: bool = false
 
 func _ready():
 	Global.on_chat_message.connect(self._on_chat_message_arrived)
-	Global.change_virtual_keyboard.connect(self._async_on_change_virtual_keyboard)
-	Global.orientation_changed.connect(_on_orientation_changed)
 	submit_message.connect(self._on_submit_message)
 
 	exit_chat.call_deferred()
 	button_go_to_last.hide()
-	_async_apply_system_bar_insets()
+	async_apply_system_bar_insets()
 
 	scroll_container_chats_list.get_v_scroll_bar().scrolling.connect(
 		self._on_chat_scrollbar_scrolling
@@ -100,6 +98,10 @@ func _on_submit_message(message: String):
 		UiSounds.play_sound("widget_chat_message_private_send")
 
 
+func scroll_to_bottom_deferred() -> void:
+	_scroll_to_bottom.call_deferred()
+
+
 func _scroll_to_bottom() -> void:
 	if not scroll_container_chats_list:
 		return
@@ -116,8 +118,8 @@ func _scroll_to_bottom() -> void:
 
 
 func _async_scroll_to_bottom_after_layout() -> void:
-	# Wait enough frames for message _async_update_layout to finish
-	# (it resets sizes after 1 frame, then measures after another)
+	# _async_update_layout needs 3 frames: (1) reset sizes, (2) measure content,
+	# (3) Godot applies min sizes. If scroll is still off, increase frame count here.
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -156,7 +158,8 @@ func _on_button_write_pressed():
 	line_edit_command.text = ""
 	button_send.disabled = true
 	line_edit_command.grab_focus()
-	DisplayServer.virtual_keyboard_show("")
+	if Global.is_mobile():
+		DisplayServer.virtual_keyboard_show("")
 	if not Global.is_orientation_portrait():
 		_header.hide()
 	on_enter_write_mode.emit()
@@ -178,6 +181,8 @@ func _on_line_edit_command_text_submitted(new_text):
 
 
 func _close_write_mode() -> void:
+	if not panel_line_edit.visible:
+		return
 	_hide_autocomplete()
 	panel_line_edit.hide()
 	button_write.show()
@@ -208,14 +213,14 @@ func async_start_chat():
 func _relayout_all_messages() -> void:
 	var is_portrait := Global.is_orientation_portrait()
 	for child in v_box_container_chat.get_children():
-		if child.has_method("set_portrait"):
-			child.set_portrait(is_portrait)
-		if child.has_method("_async_update_layout"):
-			child._async_update_layout.call_deferred()
+		if child.has_method("relayout"):
+			child.relayout(is_portrait)
 
 
 func _async_deferred_relayout_all_messages() -> void:
-	# iOS needs extra frames for orientation change to propagate window size
+	# iOS needs 3 frames for orientation change to propagate the new window size
+	# before relayout can measure correctly. If layout glitches on orientation
+	# change, increase the frame count here.
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -264,19 +269,17 @@ func _on_button_go_to_last_pressed() -> void:
 	_scroll_to_bottom()
 
 
-func _async_on_change_virtual_keyboard(keyboard_height: int) -> void:
-	if keyboard_height <= 0:
-		if panel_line_edit.visible:
-			_close_write_mode()
-		_line_edit_safe_area.add_theme_constant_override("margin_right", 0)
-		_line_edit_safe_area.add_theme_constant_override("margin_left", 0)
-		return
-	_async_apply_system_bar_insets()
-	await get_tree().process_frame
-	_scroll_to_bottom()
+func close_write_mode_if_active() -> void:
+	if panel_line_edit.visible:
+		_close_write_mode()
 
 
-func _async_apply_system_bar_insets() -> void:
+func reset_safe_area_insets() -> void:
+	_line_edit_safe_area.add_theme_constant_override("margin_right", 0)
+	_line_edit_safe_area.add_theme_constant_override("margin_left", 0)
+
+
+func async_apply_system_bar_insets() -> void:
 	if not OS.get_name() == "Android":
 		return
 	await get_tree().process_frame
@@ -300,17 +303,23 @@ func _get_android_system_bar_insets() -> Dictionary:
 	var window_insets_types: Object = JavaClassWrapper.wrap("android.view.WindowInsets$Type")
 	var root_insets: Object = window.getDecorView().getRootWindowInsets()
 	var nav_bars: int = window_insets_types.navigationBars()
-	var insets_ignoring: Object = root_insets.getInsetsIgnoringVisibility(nav_bars)
-	var insets_str: String = insets_ignoring.toString()
+	var insets: Object = root_insets.getInsetsIgnoringVisibility(nav_bars)
+	# android.graphics.Insets has public fields (left/top/right/bottom) but Godot's
+	# JNI bridge only exposes methods. toString() format is stable since API 28:
+	# "Insets{left=0, top=0, right=84, bottom=0}"
+	var insets_str: String = insets.toString()
 	var regex := RegEx.new()
-	regex.compile("(\\w+)=(\\d+)")
+	regex.compile("(left|top|right|bottom)=(\\d+)")
 	for m in regex.search_all(insets_str):
 		result[m.get_string(1)] = int(m.get_string(2))
 	return result
 
 
 func _on_line_edit_command_focus_exited() -> void:
-	_close_write_mode()
+	# On mobile, write mode is closed by the virtual keyboard dismiss callback
+	# (via chat_panel). On desktop, focus_exited is the only close trigger.
+	if not Global.is_mobile():
+		_close_write_mode()
 
 
 func _on_line_edit_command_text_changed(new_text: String) -> void:
@@ -361,7 +370,7 @@ func set_layout_portrait() -> void:
 	column_go_to_last.hide()
 
 
-func _on_orientation_changed(is_portrait: bool) -> void:
+func apply_orientation(is_portrait: bool) -> void:
 	if is_portrait:
 		_header.custom_minimum_size.y = HEADER_HEIGHT_PORTRAIT
 		_header_hbox.add_theme_constant_override("separation", HEADER_SEPARATION_PORTRAIT)
@@ -386,7 +395,7 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		button_send.add_theme_font_size_override("font_size", ChatMessage.LANDSCAPE_BOLD_SIZE)
 	if panel_line_edit.visible:
 		_close_write_mode()
-	_async_apply_system_bar_insets()
+	async_apply_system_bar_insets()
 	_async_deferred_relayout_all_messages()
 
 
