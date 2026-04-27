@@ -61,6 +61,16 @@ pub struct DclAvatar {
     #[export]
     land: bool,
 
+    // Multi-jump + gliding state, driven by player.gd (local) or the remote-
+    // movement decoder. Consumed by avatar.gd edge detection. glide_state
+    // values: 0 CLOSED, 1 OPENING, 2 GLIDING, 3 CLOSING.
+    #[export]
+    jump_count: i32,
+    #[export]
+    glide_state: i32,
+    #[export]
+    is_grounded: bool,
+
     lerp_state: LerpState,
     base: Base<Node3D>,
 }
@@ -88,6 +98,9 @@ impl INode3D for DclAvatar {
             rise: false,
             fall: false,
             land: false,
+            jump_count: 0,
+            glide_state: 0,
+            is_grounded: true,
             avatar_data: DclAvatarWireFormat::from_gd(Default::default()),
             avatar_name: "".into(),
             blocked: false,
@@ -190,6 +203,23 @@ impl DclAvatar {
                 ],
             );
         }
+    }
+
+    // Applies authoritative movement state from the wire (remote avatars) to
+    // the DclAvatar fields consumed by avatar.gd's animation edge detection.
+    // #b3: do NOT override `land` here — `land` is a short pulse on the local
+    // side (in_grace_time) and overriding it with `is_grounded` produced an
+    // asymmetry vs remotes. `nfall` now reads `is_grounded` directly in
+    // avatar.gd, so `land` stays untouched.
+    pub fn apply_wire_movement_state(
+        &mut self,
+        jump_count: i32,
+        glide_state: i32,
+        is_grounded: bool,
+    ) {
+        self.jump_count = jump_count;
+        self.glide_state = glide_state;
+        self.is_grounded = is_grounded;
     }
 
     #[func]
