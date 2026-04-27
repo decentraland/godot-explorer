@@ -58,7 +58,14 @@ func _start():
 	if Global.cli.fi_benchmark_size >= 0:
 		return
 
-	if Global.cli.emote_test_mode:
+	if Global.cli.avatar_impostor_benchmark:
+		print("Running in Avatar Impostor Benchmark mode")
+		Global.get_config().guest_profile = {}
+		Global.get_config().save_to_settings_file()
+		Global.player_identity.set_default_profile()
+		Global.player_identity.create_guest_account()
+		get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
+	elif Global.cli.emote_test_mode:
 		print("Running in Emote Test mode")
 		get_tree().change_scene_to_file("res://src/test/emote/emote_tester_standalone.tscn")
 	elif Global.cli.avatar_renderer_mode:

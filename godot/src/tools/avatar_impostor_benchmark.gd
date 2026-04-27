@@ -3,11 +3,12 @@ extends Node3D
 enum Phase { INIT, LOADING, OFF, ON, DONE }
 
 const AVATAR_SCENE = preload("res://src/decentraland_components/avatar/avatar.tscn")
-const NUM_AVATARS: int = 50
+const NUM_AVATARS: int = 100
 const SPAWN_RADIUS_MIN: float = 5.0
 const SPAWN_RADIUS_MAX: float = 50.0
 const PHASE_WARMUP_SEC: float = 5.0
 const PHASE_MEASURE_SEC: float = 15.0
+const CAMERA_ROTATION_SPEED_RAD: float = 0.3
 const OUTPUT_PATH: String = "user://impostor_benchmark.log"
 
 var _avatars: Array = []
@@ -21,6 +22,9 @@ var _results: Dictionary = {}
 
 
 func _ready() -> void:
+	# Uncap FPS so we measure raw render time, not display refresh rate.
+	Engine.max_fps = 0
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_log(
 		(
 			"benchmark: starting (N=%d, warmup=%ss, measure=%ss)"
@@ -80,6 +84,9 @@ func _phase_name(phase: int) -> String:
 
 
 func _process(delta: float) -> void:
+	if _camera != null:
+		_camera.rotate_y(CAMERA_ROTATION_SPEED_RAD * delta)
+
 	if _phase != Phase.OFF and _phase != Phase.ON:
 		return
 
@@ -130,6 +137,7 @@ func _finish_phase() -> void:
 		_output_results()
 
 
+# gdlint:ignore = async-function-name
 func _output_results() -> void:
 	var off: Dictionary = _results.get("OFF", {})
 	var on: Dictionary = _results.get("ON", {})
@@ -162,11 +170,29 @@ func _output_results() -> void:
 	print(text)
 	_label.text = text
 
-	var file := FileAccess.open(OUTPUT_PATH, FileAccess.WRITE)
-	if file != null:
-		file.store_string(text)
-		file.close()
+	# Default user:// log
+	var user_file := FileAccess.open(OUTPUT_PATH, FileAccess.WRITE)
+	if user_file != null:
+		user_file.store_string(text)
+		user_file.close()
 		_log("benchmark: results written to %s" % OUTPUT_PATH)
+
+	# Optional CLI-provided absolute path
+	var cli_output: String = String(Global.cli.avatar_impostor_benchmark_output)
+	if not cli_output.is_empty():
+		var cli_file := FileAccess.open(cli_output, FileAccess.WRITE)
+		if cli_file != null:
+			cli_file.store_string(text)
+			cli_file.close()
+			_log("benchmark: results written to %s" % cli_output)
+		else:
+			_log("benchmark: failed to open CLI output path %s" % cli_output)
+
+	# When launched via CLI flag, exit so the host script can collect results.
+	if Global.cli.avatar_impostor_benchmark:
+		_log("benchmark: quitting (CLI mode)")
+		await get_tree().create_timer(0.5).timeout
+		get_tree().quit(0)
 
 
 func _avg(arr: Array[float]) -> float:

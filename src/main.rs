@@ -17,6 +17,7 @@ mod dependencies;
 mod doctor;
 mod download_file;
 mod export;
+mod avatar_impostor_benchmark;
 mod fi_benchmark;
 mod full_tests;
 mod helpers;
@@ -122,6 +123,18 @@ fn main() -> Result<(), anyhow::Error> {
                     Arg::new("headless")
                         .long("headless")
                         .help("Run in headless mode (faster, no screenshots)")
+                        .action(clap::ArgAction::SetTrue),
+                ),
+        )
+        .subcommand(
+            Command::new("avatar-impostor-benchmark")
+                .about(
+                    "Run avatar impostor benchmark (50 avatars, OFF then ON phases) and write results to benchmark-results/avatar-impostor-benchmark.txt",
+                )
+                .arg(
+                    Arg::new("headless")
+                        .long("headless")
+                        .help("Run headless (no window). Note: skinning still uses GPU; FPS may differ from windowed mode.")
                         .action(clap::ArgAction::SetTrue),
                 ),
         )
@@ -836,6 +849,9 @@ fn main() -> Result<(), anyhow::Error> {
             sentry_metrics::push_metrics(from, to)
         }
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
+        ("avatar-impostor-benchmark", sm) => {
+            avatar_impostor_benchmark::run_avatar_impostor_benchmark(sm.get_flag("headless"))
+        }
         ("full-tests", sm) => full_tests::run_full_tests(
             sm.is_present("continue-on-failure"),
             sm.is_present("skip-visual"),
