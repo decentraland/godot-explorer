@@ -248,7 +248,7 @@ layout_mode = 2
 generator = NodePath("FriendsGenerator")
 skeleton_scene = ExtResource("21_fskel")
 skeleton_height = 225.0
-title = "Friends Online"
+title = "Friends"
 item_separation = 20
 
 [node name="FriendsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/FriendsOnline" unique_id=1004775239 node_paths=PackedStringArray("discover") instance=ExtResource("19_fgen")]

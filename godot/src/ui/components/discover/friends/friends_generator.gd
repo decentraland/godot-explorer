@@ -7,10 +7,12 @@ const FRIEND_DISCOVER_CARD = preload(
 const REFRESH_INTERVAL: float = 15.0
 
 var _loading: bool = false
+var _dirty: bool = false
 var _place_cache: Dictionary = {}  # "x,y" -> place_data
 var _current_addresses: Dictionary = {}  # address_lower -> card node
 var _connected_signals: bool = false
 var _refresh_timer: Timer = null
+var _debounce_timer: Timer = null
 var _first_load: bool = true
 var _count_label: Label = null
 
@@ -21,6 +23,11 @@ func _ready() -> void:
 	_refresh_timer.wait_time = REFRESH_INTERVAL
 	_refresh_timer.timeout.connect(_on_refresh_timer)
 	add_child(_refresh_timer)
+	_debounce_timer = Timer.new()
+	_debounce_timer.wait_time = 1.0
+	_debounce_timer.one_shot = true
+	_debounce_timer.timeout.connect(_on_debounce_timeout)
+	add_child(_debounce_timer)
 
 
 func _connect_realtime_signals() -> void:
@@ -31,8 +38,14 @@ func _connect_realtime_signals() -> void:
 
 
 func _on_friend_connectivity_updated(_address: String, _status: int) -> void:
-	if not _loading:
-		on_request(0, 10)
+	if _loading:
+		_dirty = true
+		return
+	_debounce_timer.start()
+
+
+func _on_debounce_timeout() -> void:
+	on_request(0, 10)
 
 
 func _on_refresh_timer() -> void:
@@ -79,6 +92,9 @@ func on_request(_offset: int, _limit: int) -> void:
 	# Fetch peers from Archipelago to find friends in Genesis City
 	Global.locations.fetch_peers()
 	await Global.locations.in_genesis_city_changed
+	if not is_instance_valid(item_container):
+		_loading = false
+		return
 
 	var peers = Global.locations.in_genesis_city
 
@@ -125,6 +141,10 @@ func on_request(_offset: int, _limit: int) -> void:
 
 	_loading = false
 
+	if _dirty:
+		_dirty = false
+		_debounce_timer.start()
+
 
 func _create_friend_card(friend: Dictionary) -> void:
 	var parcel = friend["parcel"]
@@ -138,6 +158,8 @@ func _create_friend_card(friend: Dictionary) -> void:
 		place_name = place_data.get("title", "")
 	else:
 		var result = await PlacesHelper.async_get_by_position(parcel_pos)
+		if not is_instance_valid(item_container):
+			return
 		if result and not (result is PromiseError):
 			var json: Dictionary = result.get_string_response_as_json()
 			if not json.data.is_empty():

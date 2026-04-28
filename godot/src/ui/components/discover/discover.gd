@@ -80,11 +80,15 @@ func on_friend_pressed(data):
 
 
 func _async_set_friend_info_on_panel(data: Dictionary) -> void:
-	# Wait a frame for the panel to be instantiated
-	await get_tree().process_frame
-	var panel: PlaceItem = friend_jump_in.portrait_panel
-	if not panel:
-		panel = friend_jump_in.landscape_panel
+	# Wait up to a few frames for the panel to be instantiated
+	var panel: PlaceItem = null
+	for i in range(5):
+		await get_tree().process_frame
+		panel = friend_jump_in.portrait_panel
+		if not panel:
+			panel = friend_jump_in.landscape_panel
+		if panel:
+			break
 	if not panel:
 		return
 
