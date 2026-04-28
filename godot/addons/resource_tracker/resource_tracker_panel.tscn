@@ -1,11 +1,11 @@
-[gd_scene load_steps=4 format=3 uid="uid://brb47xgf4juex"]
+[gd_scene format=3 uid="uid://brb47xgf4juex"]
 
 [ext_resource type="Script" uid="uid://cw5stjt3o6pty" path="res://addons/resource_tracker/resource_tracker_panel.gd" id="1_recoy"]
-[ext_resource type="Script" path="res://addons/resource_tracker/waterfall_chart.gd" id="2_waterfall"]
+[ext_resource type="Script" uid="uid://mr61rw2wx11k" path="res://addons/resource_tracker/waterfall_chart.gd" id="2_waterfall"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_u0lyc"]
 
-[node name="ResourceTrackerPanel" type="Control"]
+[node name="ResourceTrackerPanel" type="Control" unique_id=1774970181]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -14,7 +14,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_recoy")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=849285581]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -22,47 +22,47 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HBoxContainer_Row1" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer_Row1" type="HBoxContainer" parent="VBoxContainer" unique_id=1575022552]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer_Row1" unique_id=25401598]
 layout_mode = 2
 text = "Resource Tracker"
 
-[node name="LabelInfo" type="Label" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="LabelInfo" type="Label" parent="VBoxContainer/HBoxContainer_Row1" unique_id=738721923]
 unique_name_in_owner = true
 layout_mode = 2
 text = "(compile with -F use_resource_tracking)"
 
-[node name="VSeparator1" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="VSeparator1" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row1" unique_id=83741408]
 layout_mode = 2
 
-[node name="LabelView" type="Label" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="LabelView" type="Label" parent="VBoxContainer/HBoxContainer_Row1" unique_id=2068317313]
 layout_mode = 2
 text = "View:"
 
-[node name="OptionButton_ViewMode" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="OptionButton_ViewMode" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row1" unique_id=435646291]
 unique_name_in_owner = true
 layout_mode = 2
-item_count = 2
 selected = 1
+item_count = 2
 popup/item_0/text = "Table"
 popup/item_0/id = 0
 popup/item_1/text = "Waterfall"
 popup/item_1/id = 1
 
-[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row1" unique_id=1200127188]
 layout_mode = 2
 
-[node name="Label3" type="Label" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="Label3" type="Label" parent="VBoxContainer/HBoxContainer_Row1" unique_id=10297888]
 layout_mode = 2
 text = "Filter:"
 
-[node name="OptionBox_Filter" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="OptionBox_Filter" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row1" unique_id=745592052]
 unique_name_in_owner = true
 layout_mode = 2
-item_count = 9
 selected = 0
+item_count = 9
 popup/item_0/text = "None"
 popup/item_0/id = 0
 popup/item_1/text = "Started"
@@ -82,33 +82,33 @@ popup/item_7/id = 7
 popup/item_8/text = "Timeout"
 popup/item_8/id = 8
 
-[node name="HSeparator1" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="HSeparator1" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row1" unique_id=1872827953]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_u0lyc")
 
-[node name="Button_Clear" type="Button" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="Button_Clear" type="Button" parent="VBoxContainer/HBoxContainer_Row1" unique_id=1717815188]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Clear"
 
-[node name="Button_ExportReport" type="Button" parent="VBoxContainer/HBoxContainer_Row1"]
+[node name="Button_ExportReport" type="Button" parent="VBoxContainer/HBoxContainer_Row1" unique_id=913882563]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Export Report"
 
-[node name="HBoxContainer_Row2" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer_Row2" type="HBoxContainer" parent="VBoxContainer" unique_id=1847882937]
 layout_mode = 2
 
-[node name="LabelTimelineMode" type="Label" parent="VBoxContainer/HBoxContainer_Row2"]
+[node name="LabelTimelineMode" type="Label" parent="VBoxContainer/HBoxContainer_Row2" unique_id=167097960]
 layout_mode = 2
 text = "Timeline:"
 
-[node name="OptionButton_TimelineMode" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row2"]
+[node name="OptionButton_TimelineMode" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row2" unique_id=408261878]
 unique_name_in_owner = true
 layout_mode = 2
-item_count = 3
 selected = 2
+item_count = 3
 popup/item_0/text = "Fit"
 popup/item_0/id = 0
 popup/item_1/text = "Explore"
@@ -116,19 +116,19 @@ popup/item_1/id = 1
 popup/item_2/text = "Live"
 popup/item_2/id = 2
 
-[node name="VSeparator3" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row2"]
+[node name="VSeparator3" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row2" unique_id=771418293]
 layout_mode = 2
 
-[node name="LabelPeriod" type="Label" parent="VBoxContainer/HBoxContainer_Row2"]
+[node name="LabelPeriod" type="Label" parent="VBoxContainer/HBoxContainer_Row2" unique_id=1803141048]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Period:"
 
-[node name="OptionButton_Period" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row2"]
+[node name="OptionButton_Period" type="OptionButton" parent="VBoxContainer/HBoxContainer_Row2" unique_id=113611556]
 unique_name_in_owner = true
 layout_mode = 2
-item_count = 4
 selected = 1
+item_count = 4
 popup/item_0/text = "15s"
 popup/item_0/id = 0
 popup/item_1/text = "30s"
@@ -138,21 +138,21 @@ popup/item_2/id = 2
 popup/item_3/text = "2min"
 popup/item_3/id = 3
 
-[node name="HSeparator2" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row2"]
+[node name="HSeparator2" type="VSeparator" parent="VBoxContainer/HBoxContainer_Row2" unique_id=1711335103]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_u0lyc")
 
-[node name="Label2" type="Label" parent="VBoxContainer/HBoxContainer_Row2"]
+[node name="Label2" type="Label" parent="VBoxContainer/HBoxContainer_Row2" unique_id=452391247]
 layout_mode = 2
 text = "Speed:"
 
-[node name="Label_Speed" type="Label" parent="VBoxContainer/HBoxContainer_Row2"]
+[node name="Label_Speed" type="Label" parent="VBoxContainer/HBoxContainer_Row2" unique_id=517315108]
 unique_name_in_owner = true
 layout_mode = 2
 text = "0mb/s"
 
-[node name="Tree" type="Tree" parent="VBoxContainer"]
+[node name="Tree" type="Tree" parent="VBoxContainer" unique_id=800911660]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -162,8 +162,9 @@ column_titles_visible = true
 allow_rmb_select = true
 hide_root = true
 
-[node name="WaterfallChart" type="Control" parent="VBoxContainer"]
+[node name="WaterfallChart" type="Control" parent="VBoxContainer" unique_id=1104761731]
 unique_name_in_owner = true
+clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("2_waterfall")

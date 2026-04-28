@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://dpr7n8jvh7k4y"]
+[gd_scene format=3 uid="uid://dpr7n8jvh7k4y"]
 
 [ext_resource type="Script" uid="uid://bka3ybfk1troc" path="res://src/ui/components/notifications/notification_item.gd" id="1_notification_item"]
 [ext_resource type="PackedScene" uid="uid://bkst8nn51e4iu" path="res://src/ui/components/notifications/notification_content.tscn" id="2_content"]
@@ -25,13 +25,13 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="NotificationItem" type="PanelContainer"]
+[node name="NotificationItem" type="PanelContainer" unique_id=1020598395]
 custom_minimum_size = Vector2(280, 83)
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_notif_panel")
 script = ExtResource("1_notification_item")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1626130664]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 10
@@ -39,26 +39,26 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=1708681351]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="NotificationContent" parent="MarginContainer/HBoxContainer" instance=ExtResource("2_content")]
+[node name="NotificationContent" parent="MarginContainer/HBoxContainer" unique_id=394749074 instance=ExtResource("2_content")]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 
-[node name="ImageContainerWrapper" parent="MarginContainer/HBoxContainer/NotificationContent" index="0"]
+[node name="ImageContainerWrapper" parent="MarginContainer/HBoxContainer/NotificationContent" index="0" unique_id=128714356]
 custom_minimum_size = Vector2(50, 50)
 
-[node name="ImageContainer" parent="MarginContainer/HBoxContainer/NotificationContent/ImageContainerWrapper" index="0"]
+[node name="ImageContainer" parent="MarginContainer/HBoxContainer/NotificationContent/ImageContainerWrapper" index="0" unique_id=134717449]
 theme_override_styles/panel = SubResource("StyleBoxFlat_item_image")
 
-[node name="VBoxContainer" parent="MarginContainer/HBoxContainer/NotificationContent" index="1"]
+[node name="VBoxContainer" parent="MarginContainer/HBoxContainer/NotificationContent" index="1" unique_id=1170504368]
 size_flags_vertical = 4
 
-[node name="LabelTitle" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="0"]
+[node name="LabelTitle" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="0" unique_id=2082664271]
 custom_minimum_size = Vector2(0, 0)
 size_flags_vertical = 1
 theme_override_font_sizes/normal_font_size = 14
@@ -68,14 +68,14 @@ theme_override_font_sizes/italics_font_size = 14
 theme_override_font_sizes/mono_font_size = 14
 fit_content = true
 
-[node name="LabelDescription" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="1"]
+[node name="LabelDescription" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="1" unique_id=1103578988]
 clip_contents = false
 custom_minimum_size = Vector2(0, 0)
 size_flags_vertical = 2
 theme_override_font_sizes/mono_font_size = 14
 fit_content = true
 
-[node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2"]
+[node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2" unique_id=808828855]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
@@ -90,13 +90,13 @@ text = "[b]5m ago[/b]"
 fit_content = true
 scroll_active = false
 
-[node name="RightContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+[node name="RightContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer" unique_id=1662610435]
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 5
 
-[node name="UnreadDot" type="Panel" parent="MarginContainer/HBoxContainer/RightContainer"]
+[node name="UnreadDot" type="Panel" parent="MarginContainer/HBoxContainer/RightContainer" unique_id=760950720]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(8, 8)
 layout_mode = 2

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://18n0y7iu0obv"]
+[gd_scene format=3 uid="uid://18n0y7iu0obv"]
 
 [ext_resource type="Script" uid="uid://cu6sgdwwqisn6" path="res://src/ui/components/dcl_text_edit.gd" id="1_iibrq"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_tjywf"]
@@ -17,7 +17,7 @@ font = ExtResource("3_tjywf")
 font_size = 20
 font_color = Color(1, 0.1764706, 0.33333334, 1)
 
-[node name="DclTextEdit" type="VBoxContainer"]
+[node name="DclTextEdit" type="VBoxContainer" unique_id=1583726089]
 custom_minimum_size = Vector2(100, 0)
 offset_right = 333.0
 offset_bottom = 97.0
@@ -26,12 +26,12 @@ size_flags_vertical = 0
 theme_override_constants/separation = 8
 script = ExtResource("1_iibrq")
 
-[node name="TextEditContainer" type="Control" parent="."]
+[node name="TextEditContainer" type="Control" parent="." unique_id=1976220458]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TextEdit" type="TextEdit" parent="TextEditContainer"]
+[node name="TextEdit" type="TextEdit" parent="TextEditContainer" unique_id=861440361]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 1
@@ -49,7 +49,7 @@ placeholder_text = "Type text here..."
 wrap_mode = 1
 caret_blink = true
 
-[node name="ClearButton" type="TextureButton" parent="TextEditContainer"]
+[node name="ClearButton" type="TextureButton" parent="TextEditContainer" unique_id=887865242]
 unique_name_in_owner = true
 visible = false
 self_modulate = Color(0.9098039, 0.7254902, 1, 1)
@@ -67,16 +67,16 @@ texture_normal = ExtResource("5_nhry5")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=264687002]
 layout_mode = 2
 
-[node name="Label_Length" type="Label" parent="HBoxContainer"]
+[node name="Label_Length" type="Label" parent="HBoxContainer" unique_id=397930972]
 unique_name_in_owner = true
 layout_mode = 2
 text = "0/15"
 label_settings = SubResource("LabelSettings_evgii")
 
-[node name="Label_Error" type="Label" parent="HBoxContainer"]
+[node name="Label_Error" type="Label" parent="HBoxContainer" unique_id=1623370836]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2

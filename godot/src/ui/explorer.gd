@@ -22,6 +22,7 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
+var _ban_check_generation: int = 0
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 var _gamepad_connected: bool = false
 
@@ -1255,6 +1256,8 @@ func _on_toast_mark_as_read(notification_d: Dictionary) -> void:
 
 func _on_loading_started() -> void:
 	_is_loading = true
+	_ban_check_generation += 1
+	Global.modal_manager.ban_pre_check_active = false
 	_pending_notification_toast = {}  # Clear any pending notification
 	_session_hide_main_hud = false
 	set_visible_ui(true, true)
@@ -1269,6 +1272,32 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+	if not Global.modal_manager.ban_pre_check_active:
+		_async_run_ban_check()
+
+
+func _async_run_ban_check() -> void:
+	_ban_check_generation += 1
+	var generation = _ban_check_generation
+
+	var realm_name = Global.realm.get_realm_string()
+	if realm_name.is_empty():
+		return
+
+	var scene_id: String
+	if Realm.is_dcl_ens(realm_name):
+		scene_id = await Global.async_resolve_world_scene_id(realm_name)
+	else:
+		var parcel = Global.scene_fetcher.current_position
+		scene_id = await Global.async_resolve_scene_entity_id(parcel)
+
+	if scene_id.is_empty() or generation != _ban_check_generation:
+		return
+
+	var allowed = await Global.async_check_scene_access(scene_id, realm_name)
+	if not allowed and generation == _ban_check_generation:
+		Global.modal_manager.ban_pre_check_active = true
+		Global.modal_manager.async_show_ban_pre_check_modal()
 
 
 func _update_version_label() -> void:

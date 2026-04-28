@@ -14,6 +14,7 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 
 @export var hide_background: bool = false
 @export var hide_navbar: bool = false
+@export var default_main_category: String = Wearables.Categories.ALL
 
 var wearable_button_group_per_category: Dictionary = {}
 var filtered_data: Array
@@ -24,7 +25,7 @@ var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
 
 var wearable_filter_buttons: Array[WearableFilterButton] = []
-var main_category_selected: String = "body"
+var main_category_selected: String
 var request_update_avatar: bool = false  # debounce
 var request_show_wearables: bool = false  # debounce
 
@@ -70,16 +71,19 @@ var _is_currently_narrow: bool = false
 @onready var subcategories_separator := %SubcategoriesSeparator
 @onready var maincategories_container := %MainCategoriesContainer
 @onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
-@onready var open_marketplace_label := %RichTextBox_OpenMarketplace
 @onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
 @onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
 @onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
 @onready var hseparator_size_maintainer: HSeparator = get_node_or_null("%HSeparator_SizeMaintainer")
 @onready var control_left_bar: Control = get_node_or_null("%Control_LeftBar")
+@onready var canary_container: Control = get_node_or_null("%ControlContainer_Canary")
+@onready var canary_content: Control = get_node_or_null("%ControlContent_Canary")
+@onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
 
 
 # gdlint:ignore = async-function-name
 func _ready():
+	main_category_selected = default_main_category
 	UiSounds.install_audio_recusirve(self)
 	color_rect_background.visible = !hide_background
 	texture_rect_background.visible = !hide_background
@@ -90,6 +94,9 @@ func _ready():
 
 	if hide_navbar:
 		container_navbar.hide()
+
+	if size_canary != null:
+		size_canary.show()
 
 	emote_editor.avatar = avatar_preview.avatar
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
@@ -109,11 +116,7 @@ func _ready():
 	subcategories_separator.show()
 	maincategories_container.show()
 	hseparator_extra_space.hide()
-	hseparator_extra_space_b.hide()
-
-	open_marketplace_label.show()
-	if Global.is_ios():
-		open_marketplace_label.hide()
+	hseparator_extra_space_b.show()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -196,6 +199,7 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
 		emote_editor._on_landscape()
+		color_carrousel.on_landscape()
 
 	_update_grid_columns()
 
@@ -210,39 +214,27 @@ func _update_grid_columns() -> void:
 	var is_narrow := _is_wearables_button_clipped()
 	var columns := 2 if is_narrow else 3
 
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var is_portrait := window_size.x < window_size.y
 	grid_container_wearables_list.columns = columns
-	if emote_editor.container_all_emotes != null:
-		emote_editor.container_all_emotes.columns = columns
+	#if emote_editor.container_all_emotes != null:
+	emote_editor.container_all_emotes.columns = columns if is_portrait else columns - 1
 
 	if hseparator_size_maintainer != null:
-		hseparator_size_maintainer.visible = not is_narrow
+		hseparator_size_maintainer.custom_minimum_size.x = 410.0 if is_narrow else 630.0
+
+	emote_editor.on_narrow(is_narrow)
 
 
 func _is_wearables_button_clipped() -> bool:
-	if button_wearables == null or control_left_bar == null:
+	if canary_container == null or canary_content == null:
 		return _is_currently_narrow
 
-	# Check if the button extends outside the Control_LeftBar bounds (left or right)
-	var button_rect: Rect2 = button_wearables.get_global_rect()
-	var container_rect: Rect2 = control_left_bar.get_global_rect()
-
-	var button_left := button_rect.position.x
-	var button_right := button_rect.position.x + button_rect.size.x
-	var container_left := container_rect.position.x
-	var container_right := container_rect.position.x + container_rect.size.x
-
-	# Hysteresis: require margin before switching back to 3 columns
-	const HYSTERESIS_MARGIN := 100.0
-	var is_clipped: bool
-	if _is_currently_narrow:
-		# Currently narrow - only switch back if button has enough margin on both sides
-		is_clipped = button_left < container_left + HYSTERESIS_MARGIN
-	else:
-		# Currently wide - switch to narrow if button is clipped at all
-		is_clipped = button_left < container_left or button_right > container_right
-
-	_is_currently_narrow = is_clipped
-	return is_clipped
+	# Compare canary container width vs canary content width
+	# These nodes are not affected by column changes, providing stable measurement
+	var is_narrow := canary_container.size.x < canary_content.size.x
+	_is_currently_narrow = is_narrow
+	return is_narrow
 
 
 func _update_visible_categories():
@@ -276,6 +268,7 @@ func _update_visible_categories():
 		hseparator_extra_space.hide()
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
+		_on_wearable_filter_button_filter_type(first_wearable_filter_button.get_category_name())
 	elif main_category_selected == Wearables.Categories.ALL:
 		_on_wearable_filter_button_filter_type(Wearables.Categories.ALL)
 
@@ -535,10 +528,6 @@ func _on_color_picker_panel_pick_color(color: Color):
 
 func _on_color_set() -> void:
 	request_update_avatar = true
-
-
-func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
-	Global.open_url(DclUrls.marketplace() + "/browse?section=wearables")
 
 
 func _on_button_wearables_pressed():

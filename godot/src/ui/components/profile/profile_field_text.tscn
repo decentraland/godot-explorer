@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://cib31p07gwaj5"]
+[gd_scene format=3 uid="uid://cib31p07gwaj5"]
 
 [ext_resource type="Script" uid="uid://bqkafqxgd5r7p" path="res://src/ui/components/profile/profile_field_text.gd" id="1_4w3st"]
 [ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_cfjxh"]
@@ -17,7 +17,7 @@ corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
 
-[node name="ProfileFieldText" type="MarginContainer"]
+[node name="ProfileFieldText" type="MarginContainer" unique_id=1271198998]
 custom_minimum_size = Vector2(50, 0)
 offset_right = 100.0
 offset_bottom = 70.0
@@ -26,18 +26,18 @@ size_flags_vertical = 0
 script = ExtResource("1_4w3st")
 icon = ExtResource("2_nrrmi")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=824073576]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=912577087]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="TextureRect_Icon" type="TextureRect" parent="VBoxContainer/HBoxContainer"]
+[node name="TextureRect_Icon" type="TextureRect" parent="VBoxContainer/HBoxContainer" unique_id=430864998]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(25, 25)
 layout_mode = 2
@@ -46,7 +46,7 @@ size_flags_vertical = 12
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/HBoxContainer"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/HBoxContainer" unique_id=838143893]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -59,11 +59,11 @@ text = "Title"
 label_settings = ExtResource("3_gnik5")
 uppercase = true
 
-[node name="Control" type="Control" parent="VBoxContainer/HBoxContainer"]
+[node name="Control" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=889309679]
 custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
 
-[node name="Button_Erase" type="Button" parent="VBoxContainer/HBoxContainer/Control"]
+[node name="Button_Erase" type="Button" parent="VBoxContainer/HBoxContainer/Control" unique_id=944434444]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(35, 35)
 layout_mode = 1
@@ -79,7 +79,7 @@ theme_override_constants/icon_max_width = 15
 icon = ExtResource("2_cfjxh")
 icon_alignment = 1
 
-[node name="TextEdit_Value" type="TextEdit" parent="VBoxContainer"]
+[node name="TextEdit_Value" type="TextEdit" parent="VBoxContainer" unique_id=82009045]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(125, 35)
 layout_direction = 4
@@ -100,7 +100,7 @@ empty_selection_clipboard_enabled = false
 wrap_mode = 1
 caret_blink = true
 
-[node name="Label_Value" type="Label" parent="VBoxContainer"]
+[node name="Label_Value" type="Label" parent="VBoxContainer" unique_id=1338730589]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(100, 0)

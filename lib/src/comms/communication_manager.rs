@@ -848,6 +848,9 @@ impl CommunicationManager {
         rise: bool,
         fall: bool,
         land: bool,
+        jump_count: i32,
+        glide_state: i32,
+        is_grounded: bool,
     ) -> bool {
         // Update archipelago position if connected via archipelago
         #[cfg(feature = "use_livekit")]
@@ -857,8 +860,18 @@ impl CommunicationManager {
 
         let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
 
+        // The Temporal bitfield doesn't carry jump_count / glide_state yet, so
+        // force uncompressed when either carries info beyond what rise/fall/land
+        // already encode.
+        // #b8: jump_count == 1 is a plain ground jump that rise/fall covers, so
+        // no need to force uncompressed. A player that steps off a ledge keeps
+        // jump_count=1 until landing, so forcing on `> 0` would burn bandwidth
+        // during every long fall.
+        let needs_uncompressed = jump_count >= 2 || glide_state != 0;
+        let use_compressed = compressed && !needs_uncompressed;
+
         let get_packet = || {
-            if compressed {
+            if use_compressed {
                 // Get elapsed time since start
                 let time = self.start_time.elapsed().as_secs_f64();
 
@@ -880,17 +893,16 @@ impl CommunicationManager {
                     MoveKind::Idle
                 };
 
-                // Wire convention matches Unity Foundation Client: rotation_y
-                // on the wire is a left-handed (Unity/DCL) yaw in radians.
-                // Godot is right-handed, so negate to cross the handedness
-                // boundary — analogous to position_z negation below.
+                // rotation_y on the wire is Unity left-handed yaw in radians;
+                // negate to cross into Godot's right-handed frame.
+                let _ = land; // kept in signature for GDScript API stability
                 let temporal = Temporal::from_parts(
                     time,
                     false,
                     -rotation_y,
                     movement.velocity_tier(),
                     move_kind,
-                    !fall && !rise,
+                    is_grounded,
                 );
 
                 let movement_compressed = MovementCompressed { temporal, movement };
@@ -931,21 +943,19 @@ impl CommunicationManager {
                     velocity_x: velocity.x,
                     velocity_y: velocity.y,
                     velocity_z: velocity.z,
-                    // Unity Foundation Client writes rfc4.Movement.rotation_y
-                    // as degrees in [0, 360) (from transform.eulerAngles.y).
-                    // Negate to cross the Godot→Unity handedness boundary,
-                    // then convert radians→degrees.
+                    // Negate + rad→deg to match Unity Foundation Client
+                    // (rfc4.Movement.rotation_y is degrees in [0, 360)).
                     rotation_y: (-rotation_y).to_degrees(),
                     movement_blend_value,
                     slide_blend_value: 0.0,
-                    is_grounded: land,
+                    is_grounded,
                     is_jumping: rise,
-                    jump_count: 0, // TODO: implement jump count
+                    jump_count,
                     is_long_jump: false,
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
-                    glide_state: 0, // TODO: implement glide state
+                    glide_state,
                     is_instant: false,
                     is_emoting: self.is_emoting,
                     head_ik_yaw_enabled: false, // TODO: implement head sync

@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://ec0egfeyv5fm"]
+[gd_scene format=3 uid="uid://ec0egfeyv5fm"]
 
 [ext_resource type="Script" uid="uid://bly6o82m2sh7x" path="res://src/ui/components/emotes/emote_wheel.gd" id="1_jcqth"]
 [ext_resource type="PackedScene" uid="uid://c7bnh6p6qygxu" path="res://src/ui/components/emotes/emote_wheel_item.tscn" id="2_h3qru"]
@@ -74,7 +74,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="EmoteWheel" type="Control"]
+[node name="EmoteWheel" type="Control" unique_id=1128991434]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -85,7 +85,7 @@ focus_mode = 1
 mouse_filter = 2
 script = ExtResource("1_jcqth")
 
-[node name="Control_Wheel" type="Control" parent="."]
+[node name="Control_Wheel" type="Control" parent="." unique_id=1881242977]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(520, 520)
 layout_mode = 1
@@ -96,7 +96,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 
-[node name="TextureRect_Background" type="TextureRect" parent="Control_Wheel"]
+[node name="TextureRect_Background" type="TextureRect" parent="Control_Wheel" unique_id=458251650]
 custom_minimum_size = Vector2(520, 520)
 layout_mode = 1
 anchors_preset = 2
@@ -108,7 +108,7 @@ grow_vertical = 0
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_2pwr0")
 
-[node name="EmoteWheelContainer" type="Control" parent="Control_Wheel/TextureRect_Background"]
+[node name="EmoteWheelContainer" type="Control" parent="Control_Wheel/TextureRect_Background" unique_id=622816860]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(520, 520)
 layout_mode = 1
@@ -121,7 +121,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="EmoteWheelItem1" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem1" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=855664452 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -136,7 +136,7 @@ grow_horizontal = 2
 grow_vertical = 2
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem2" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem2" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=417920524 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -152,7 +152,7 @@ grow_vertical = 2
 rotation = 0.615341
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem3" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem3" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=707135462 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -168,7 +168,7 @@ grow_vertical = 2
 rotation = 1.23913
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem4" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem4" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=2129879118 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -184,7 +184,7 @@ grow_vertical = 2
 rotation = 1.8656
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem5" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem5" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=1830036623 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -200,7 +200,7 @@ grow_vertical = 2
 rotation = 2.51246
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem6" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem6" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=598904763 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -216,7 +216,7 @@ grow_vertical = 2
 rotation = -3.12851
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem7" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem7" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=611697357 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -232,7 +232,7 @@ grow_vertical = 2
 rotation = -2.49585
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem8" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem8" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=1270024619 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -248,7 +248,7 @@ grow_vertical = 2
 rotation = -1.87016
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem9" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem9" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=1984680268 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -264,7 +264,7 @@ grow_vertical = 2
 rotation = -1.25254
 picture = ExtResource("3_poid4")
 
-[node name="EmoteWheelItem10" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
+[node name="EmoteWheelItem10" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=1910266065 instance=ExtResource("2_h3qru")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -280,7 +280,7 @@ grow_vertical = 2
 rotation = -0.625233
 picture = ExtResource("3_poid4")
 
-[node name="Label" type="Label" parent="Control_Wheel/TextureRect_Background"]
+[node name="Label" type="Label" parent="Control_Wheel/TextureRect_Background" unique_id=749110177]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -294,7 +294,7 @@ offset_bottom = 10.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control_Wheel/TextureRect_Background"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Wheel/TextureRect_Background" unique_id=1133714283]
 custom_minimum_size = Vector2(180, 200)
 layout_mode = 1
 anchors_preset = -1
@@ -311,7 +311,7 @@ grow_vertical = 2
 alignment = 1
 metadata/_edit_use_anchors_ = true
 
-[node name="Label_EmoteName" type="Label" parent="Control_Wheel/TextureRect_Background/VBoxContainer"]
+[node name="Label_EmoteName" type="Label" parent="Control_Wheel/TextureRect_Background/VBoxContainer" unique_id=1821808245]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
@@ -322,18 +322,17 @@ text = "Emotes"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="HSeparator2" type="HSeparator" parent="Control_Wheel/TextureRect_Background/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="Control_Wheel/TextureRect_Background/VBoxContainer" unique_id=32443719]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_hlcl2")
 
-[node name="Button_Edit" type="Button" parent="Control_Wheel/TextureRect_Background/VBoxContainer"]
+[node name="Button_Edit" type="Button" parent="Control_Wheel/TextureRect_Background/VBoxContainer" unique_id=454735300]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 5
 focus_mode = 0
-mouse_filter = 1
 theme = ExtResource("7_0irnm")
 theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0.00566115, 0.005661152, 0.005661148, 1)
@@ -349,7 +348,7 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_33uqc")
 text = "Edit"
 alignment = 0
 
-[node name="Button_Emotes" type="Button" parent="."]
+[node name="Button_Emotes" type="Button" parent="." unique_id=357823938]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(65, 65)
 layout_mode = 1

@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://4rudebe1w754"]
+[gd_scene format=3 uid="uid://4rudebe1w754"]
 
 [ext_resource type="Script" uid="uid://drvkii605eum2" path="res://src/ui/components/chat/mention_item.gd" id="1_script"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="2_profile"]
@@ -9,13 +9,15 @@
 font = ExtResource("4_tpv4r")
 font_size = 22
 
-[node name="MentionItem" type="Control"]
+[node name="MentionItem" type="Control" unique_id=1469431168]
 custom_minimum_size = Vector2(200, 56)
+layout_mode = 3
+anchors_preset = 0
 size_flags_horizontal = 3
 mouse_filter = 1
 script = ExtResource("1_script")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1422728908]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,26 +28,26 @@ mouse_filter = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_right = 16
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=618218758]
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="ProfilePicture" parent="MarginContainer/HBoxContainer" instance=ExtResource("2_profile")]
+[node name="ProfilePicture" parent="MarginContainer/HBoxContainer" unique_id=1767700884 instance=ExtResource("2_profile")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Nickname" type="Label" parent="MarginContainer/HBoxContainer"]
+[node name="Nickname" type="Label" parent="MarginContainer/HBoxContainer" unique_id=40381969]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 label_settings = SubResource("LabelSettings_8iu80")
 
-[node name="TextureRect_Checkmark" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+[node name="TextureRect_Checkmark" type="TextureRect" parent="MarginContainer/HBoxContainer" unique_id=190021123]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 2
