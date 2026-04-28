@@ -555,6 +555,9 @@ func sign_out() -> void:
 	social_blacklist.clear_muted()
 	get_config().session_account = {}
 	get_config().save_to_settings_file()
+	# Lobby/login is portrait-only; reset orientation so logging out from a
+	# landscape screen (e.g. settings panel) doesn't strand the user there.
+	set_orientation_portrait()
 	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
 
 
