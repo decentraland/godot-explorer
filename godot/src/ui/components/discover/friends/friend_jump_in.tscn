@@ -1,8 +1,9 @@
 [gd_scene format=3 uid="uid://c7n3k8p2xq4rf"]
 
 [ext_resource type="Script" uid="uid://d22htbtk8w5kn" path="res://src/ui/components/panels/side_panel.gd" id="1_panel"]
-[ext_resource type="PackedScene" uid="uid://dp4m8v2kxn5qf" path="res://src/ui/components/discover/friends/panel_friend_detail_portrait.tscn" id="2_portrait"]
-[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="3_spinner"]
+[ext_resource type="Script" uid="uid://dkpoy3en6rfhc" path="res://src/logic/metrics/place_details_screen_tracking_handler.gd" id="2_track"]
+[ext_resource type="PackedScene" uid="uid://dp4m8v2kxn5qf" path="res://src/ui/components/discover/friends/panel_friend_detail_portrait.tscn" id="3_portrait"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_spinner"]
 
 [sub_resource type="Shader" id="Shader_ijrai"]
 code = "shader_type canvas_item;
@@ -20,6 +21,10 @@ void fragment() {
 shader = SubResource("Shader_ijrai")
 shader_parameter/blur_amount = 3.0000001425
 
+[sub_resource type="Resource" id="Resource_track"]
+script = ExtResource("2_track")
+metadata/_custom_type_script = "uid://dkpoy3en6rfhc"
+
 [node name="FriendJumpIn" type="ColorRect" unique_id=1891064806]
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,8 +33,9 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
 script = ExtResource("1_panel")
-portrait_panel_resource = ExtResource("2_portrait")
-landscape_panel_resource = ExtResource("2_portrait")
+portrait_panel_resource = ExtResource("3_portrait")
+landscape_panel_resource = ExtResource("3_portrait")
+tracking_handler = SubResource("Resource_track")
 
 [node name="Blur" type="ColorRect" parent="." unique_id=2113524309]
 material = SubResource("ShaderMaterial_mabji")
@@ -42,7 +48,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.63529414)
 
-[node name="TextureProgressBar" parent="Blur" unique_id=1502019966 instance=ExtResource("3_spinner")]
+[node name="TextureProgressBar" parent="Blur" unique_id=1502019966 instance=ExtResource("4_spinner")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

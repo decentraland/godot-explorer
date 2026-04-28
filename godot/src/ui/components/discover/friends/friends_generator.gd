@@ -12,6 +12,7 @@ var _current_addresses: Dictionary = {}  # address_lower -> card node
 var _connected_signals: bool = false
 var _refresh_timer: Timer = null
 var _first_load: bool = true
+var _count_label: Label = null
 
 
 func _ready() -> void:
@@ -103,6 +104,9 @@ func on_request(_offset: int, _limit: int) -> void:
 			card.queue_free()
 		_current_addresses.erase(address)
 
+	if not to_remove.is_empty():
+		_update_title()
+
 	# Add cards for new friends not yet displayed
 	for address in desired.keys():
 		if _current_addresses.has(address):
@@ -110,7 +114,8 @@ func on_request(_offset: int, _limit: int) -> void:
 		var friend = desired[address]
 		await _create_friend_card(friend)
 
-	# Update visibility
+	# Update title with count and visibility
+	_update_title()
 	_first_load = false
 	if _current_addresses.is_empty():
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
@@ -149,6 +154,7 @@ func _create_friend_card(friend: Dictionary) -> void:
 			"base_position": "%d,%d" % [parcel_pos.x, parcel_pos.y],
 		}
 
+	place_data = place_data.duplicate()
 	place_data["_friend_name"] = friend.get("name", friend["address"])
 	place_data["_friend_address"] = friend["address"]
 	place_data["_friend_profile_picture_url"] = friend.get("profile_picture_url", "")
@@ -182,6 +188,42 @@ func _create_friend_card(friend: Dictionary) -> void:
 	item.item_pressed.connect(discover.on_friend_pressed)
 
 	_current_addresses[friend["address"].to_lower()] = item
+	_update_title()
+
+
+func _update_title() -> void:
+	var carousel = get_parent()
+	if not carousel or not "title" in carousel:
+		return
+
+	var count := _current_addresses.size()
+	carousel.title = "Friends"
+
+	# Create or update the count label next to the title
+	var title_label = carousel.get_node_or_null("%Label_Title")
+	if not title_label:
+		return
+
+	if _count_label == null:
+		_count_label = Label.new()
+		_count_label.add_theme_color_override("font_color", Color("E8B9FF"))
+		_count_label.add_theme_font_override("font", title_label.get_theme_font("font"))
+		_count_label.add_theme_font_size_override(
+			"font_size", title_label.get_theme_font_size("font_size")
+		)
+		if title_label.label_settings:
+			var ls = title_label.label_settings.duplicate()
+			ls.font_color = Color("E8B9FF")
+			_count_label.label_settings = ls
+		var hbox = title_label.get_parent()
+		hbox.add_theme_constant_override("separation", 10)
+		hbox.add_child(_count_label)
+
+	if count > 0:
+		_count_label.text = "%d" % count
+		_count_label.show()
+	else:
+		_count_label.hide()
 
 
 func _remove_all() -> void:

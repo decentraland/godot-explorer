@@ -59,7 +59,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer" unique_id=1556672257]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 14
 theme_override_styles/separator = SubResource("StyleBoxEmpty_7mp4e")
 
 [node name="PlaceBar" type="PanelContainer" parent="VBoxContainer" unique_id=1314781149]
