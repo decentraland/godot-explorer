@@ -18,6 +18,20 @@ func _notification(what: int) -> void:
 		async_handle_screen_resize()
 
 
+func _get_active_manager() -> PlaceholderManager:
+	var rect_size := get_viewport_rect().size
+	if rect_size.x < rect_size.y:
+		return backpack_portrait
+	return backpack_landscape
+
+
+func async_show_emotes() -> void:
+	var manager := _get_active_manager()
+	await manager._async_instantiate()
+	manager.instance.show_emotes()
+	manager.instance.press_button_emotes()
+
+
 func async_handle_screen_resize() -> void:
 	if not is_node_ready():
 		return
