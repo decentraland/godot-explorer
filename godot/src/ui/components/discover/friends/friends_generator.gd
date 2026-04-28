@@ -54,6 +54,10 @@ func _on_refresh_timer() -> void:
 
 
 func on_request(_offset: int, _limit: int) -> void:
+	_async_on_request(_offset, _limit)
+
+
+func _async_on_request(_offset: int, _limit: int) -> void:
 	if Global.player_identity.is_guest:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 		return
@@ -128,7 +132,7 @@ func on_request(_offset: int, _limit: int) -> void:
 		if _current_addresses.has(address):
 			continue
 		var friend = desired[address]
-		await _create_friend_card(friend)
+		await _async_create_friend_card(friend)
 
 	# Update title with count and visibility
 	_update_title()
@@ -146,7 +150,7 @@ func on_request(_offset: int, _limit: int) -> void:
 		_debounce_timer.start()
 
 
-func _create_friend_card(friend: Dictionary) -> void:
+func _async_create_friend_card(friend: Dictionary) -> void:
 	var parcel = friend["parcel"]
 	var parcel_pos = Vector2i(int(parcel[0]), int(parcel[1]))
 	var cache_key := "%d,%d" % [parcel_pos.x, parcel_pos.y]
