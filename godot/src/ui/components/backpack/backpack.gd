@@ -24,7 +24,7 @@ var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
 
 var wearable_filter_buttons: Array[WearableFilterButton] = []
-var main_category_selected: String = "body"
+var main_category_selected: String = "all"
 var request_update_avatar: bool = false  # debounce
 var request_show_wearables: bool = false  # debounce
 
@@ -114,7 +114,7 @@ func _ready():
 	subcategories_separator.show()
 	maincategories_container.show()
 	hseparator_extra_space.hide()
-	hseparator_extra_space_b.hide()
+	hseparator_extra_space_b.show()
 
 	# Setup blacklist change timer
 	blacklist_deploy_timer = Timer.new()
@@ -264,6 +264,7 @@ func _update_visible_categories():
 		hseparator_extra_space.hide()
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
+		_on_wearable_filter_button_filter_type(first_wearable_filter_button.get_category_name())
 	elif main_category_selected == Wearables.Categories.ALL:
 		_on_wearable_filter_button_filter_type(Wearables.Categories.ALL)
 
