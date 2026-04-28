@@ -553,6 +553,10 @@ func sign_out() -> void:
 	social_service.unsubscribe_from_updates()
 	social_service.unsubscribe_from_connectivity_updates()
 	social_service.unsubscribe_from_block_updates()
+	# Drop the gRPC manager so the signed-out session doesn't keep streams open
+	# under the old identity. Next login's initialize_from_player_identity will
+	# recreate it.
+	social_service.disconnect()
 	social_blacklist.clear_blocked()
 	social_blacklist.clear_muted()
 	get_config().session_account = {}

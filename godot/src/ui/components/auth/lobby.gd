@@ -537,6 +537,9 @@ func _on_button_different_account_pressed():
 	Global.social_service.unsubscribe_from_updates()
 	Global.social_service.unsubscribe_from_connectivity_updates()
 	Global.social_service.unsubscribe_from_block_updates()
+	# Drop the gRPC manager so the previous identity's streams don't leak into
+	# the next account. initialize_from_player_identity rebuilds it on login.
+	Global.social_service.disconnect()
 
 	# Clear the current social blacklist when switching accounts
 	Global.social_blacklist.clear_blocked()
