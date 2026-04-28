@@ -30,6 +30,7 @@ func _async_on_chat_message_arrived(address: String, message: String, timestamp:
 	notifications.push_back(new_chat)
 	notifications_container.add_child(new_chat)
 	new_chat.reduce_text = true
+	new_chat.set_portrait(Global.is_orientation_portrait())
 	new_chat.set_chat(address, message, timestamp)
 
 	await get_tree().create_timer(6.5).timeout

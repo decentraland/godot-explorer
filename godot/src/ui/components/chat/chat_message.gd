@@ -410,6 +410,7 @@ func _async_update_layout() -> void:
 		return  # Chat hidden, will be re-layouted on open
 
 	# Reset to full width so we measure against the real available space
+	rich_text.fit_content = false
 	message_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	message_panel.custom_minimum_size = Vector2.ZERO
 	rich_text.custom_minimum_size = Vector2.ZERO
@@ -426,7 +427,7 @@ func _async_update_layout() -> void:
 		message_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		message_panel.custom_minimum_size.x = content_width + h_padding
 
-	rich_text.custom_minimum_size.y = rich_text.get_content_height()
+	rich_text.fit_content = true
 
 
 func relayout(is_portrait: bool) -> void:
