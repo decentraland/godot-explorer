@@ -51,6 +51,10 @@ struct ImpostorSlot {
     texture_loaded: bool,
     avatar_instance_id: InstanceId,
     distance_sq: f32,
+    // Frame index of the last time this slot rendered with fade_alpha>0. Used
+    // by LRU eviction so that slots that are no longer being shown (e.g., the
+    // user moved away or turned around) are evicted before recently-seen ones.
+    last_seen_frame: u64,
 }
 
 #[derive(GodotClass)]
@@ -166,13 +170,11 @@ impl AvatarScene {
 
         let mut blank_images: Array<Gd<Image>> = Array::new();
         for _ in 0..IMPOSTOR_MAX_LAYERS {
-            let img = Image::create(
-                IMPOSTOR_TEX_WIDTH,
-                IMPOSTOR_TEX_HEIGHT,
-                false,
-                Format::RGBA8,
-            )
-            .expect("Failed to create blank impostor image");
+            // mipmaps=true so the GPU can pick a smaller mip for distant
+            // impostors. The data is zero-initialized; mip chain layout still
+            // has to match what update_layer will upload later.
+            let img = Image::create(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT, true, Format::RGBA8)
+                .expect("Failed to create blank impostor image");
             blank_images.push(&img);
         }
 
@@ -274,7 +276,9 @@ impl AvatarScene {
         avatar: Gd<DclAvatar>,
         distance: f32,
     ) -> i32 {
-        if let Some(slot) = self.impostor_slots.get(&impostor_id) {
+        let now = godot::classes::Engine::singleton().get_frames_drawn() as u64;
+        if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
+            slot.last_seen_frame = now;
             return slot.layer_index as i32;
         }
         let distance_sq = distance * distance;
@@ -282,28 +286,28 @@ impl AvatarScene {
         let layer = match self.impostor_free_layers.pop() {
             Some(l) => l,
             None => {
-                // Pool full — evict the farthest slot if the requester is closer.
-                let Some((farthest_id, farthest_distance_sq, farthest_layer)) = self
+                // Pool full — evict the LRU slot (oldest last_seen_frame). This
+                // keeps slots that are actively rendered and frees the ones that
+                // haven't been touched in a while (e.g., player walked away).
+                let Some((lru_id, lru_layer)) = self
                     .impostor_slots
                     .iter()
-                    .map(|(id, slot)| (*id, slot.distance_sq, slot.layer_index))
-                    .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+                    .map(|(id, slot)| (*id, slot.last_seen_frame, slot.layer_index))
+                    .min_by_key(|(_, last_seen, _)| *last_seen)
+                    .map(|(id, _, layer)| (id, layer))
                 else {
                     return -1;
                 };
-                if distance_sq >= farthest_distance_sq {
-                    return -1;
-                }
-                self.impostor_slots.remove(&farthest_id);
+                self.impostor_slots.remove(&lru_id);
                 if let Some(mmi) = self.impostor_multimesh.as_ref().cloned() {
                     if let Some(mut multimesh) = mmi.get_multimesh() {
                         multimesh.set_instance_custom_data(
-                            farthest_layer as i32,
+                            lru_layer as i32,
                             Color::from_rgba(0.0, 0.0, 0.0, 0.0),
                         );
                     }
                 }
-                farthest_layer
+                lru_layer
             }
         };
 
@@ -316,6 +320,7 @@ impl AvatarScene {
                 texture_loaded: false,
                 avatar_instance_id: avatar.instance_id(),
                 distance_sq,
+                last_seen_frame: now,
             },
         );
         layer as i32
@@ -341,6 +346,16 @@ impl AvatarScene {
         if img.get_format() != Format::RGBA8 {
             img.convert(Format::RGBA8);
         }
+        // The texture array was created with mipmaps; the layer upload must
+        // include the same mip chain or update_layer rejects it.
+        let mip_err = img.generate_mipmaps();
+        if mip_err != godot::global::Error::OK {
+            tracing::warn!(
+                "Failed to generate impostor mipmaps for slot {}: {:?}",
+                impostor_id,
+                mip_err
+            );
+        }
 
         tex_array.update_layer(&img, slot.layer_index as i32);
         slot.texture_loaded = true;
@@ -355,9 +370,17 @@ impl AvatarScene {
         distance: f32,
     ) {
         if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
-            slot.fade_alpha = fade_alpha.clamp(0.0, 1.0);
+            let clamped = fade_alpha.clamp(0.0, 1.0);
+            slot.fade_alpha = clamped;
             slot.tint_strength = tint_strength.clamp(0.0, 1.0);
             slot.distance_sq = distance * distance;
+            // Only mark the slot as recently-seen when it's actually rendering.
+            // A slot at fade_alpha=0 is allocated-but-hidden; LRU eviction
+            // should pick those before slots that are currently visible.
+            if clamped > 0.0 {
+                slot.last_seen_frame =
+                    godot::classes::Engine::singleton().get_frames_drawn() as u64;
+            }
         }
     }
 
@@ -386,6 +409,27 @@ impl AvatarScene {
     #[func]
     fn has_impostor_capacity(&self) -> bool {
         !self.impostor_free_layers.is_empty()
+    }
+
+    #[func]
+    fn impostor_diagnostics(&self) -> VarDictionary {
+        let total = self.impostor_slots.len() as i64;
+        let loaded = self
+            .impostor_slots
+            .values()
+            .filter(|s| s.texture_loaded)
+            .count() as i64;
+        let visible = self
+            .impostor_slots
+            .values()
+            .filter(|s| s.texture_loaded && s.fade_alpha > 0.0)
+            .count() as i64;
+        let mut dict = VarDictionary::new();
+        dict.set("total_slots", total);
+        dict.set("texture_loaded", loaded);
+        dict.set("currently_visible", visible);
+        dict.set("free_layers", self.impostor_free_layers.len() as i64);
+        dict
     }
 
     #[func]
