@@ -116,6 +116,7 @@ focus_mode = 2
 mouse_force_pass_scroll_events = false
 theme = ExtResource("1_0pkvk")
 script = ExtResource("1_a5ql5")
+default_main_category = "body"
 metadata/mobile_preview_orientation = "portrait"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1909251923]
@@ -495,6 +496,7 @@ button_group = SubResource("ButtonGroup_30sbq")
 text = "BODY"
 icon = null
 alignment = 0
+filter_category = 1
 uppercase = true
 
 [node name="VSeparator2" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1222448922]

@@ -14,6 +14,7 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 
 @export var hide_background: bool = false
 @export var hide_navbar: bool = false
+@export var default_main_category: String = Wearables.Categories.ALL
 
 var wearable_button_group_per_category: Dictionary = {}
 var filtered_data: Array
@@ -24,7 +25,7 @@ var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
 
 var wearable_filter_buttons: Array[WearableFilterButton] = []
-var main_category_selected: String = "all"
+var main_category_selected: String
 var request_update_avatar: bool = false  # debounce
 var request_show_wearables: bool = false  # debounce
 
@@ -82,6 +83,7 @@ var _is_currently_narrow: bool = false
 
 # gdlint:ignore = async-function-name
 func _ready():
+	main_category_selected = default_main_category
 	UiSounds.install_audio_recusirve(self)
 	color_rect_background.visible = !hide_background
 	texture_rect_background.visible = !hide_background
@@ -212,9 +214,11 @@ func _update_grid_columns() -> void:
 	var is_narrow := _is_wearables_button_clipped()
 	var columns := 2 if is_narrow else 3
 
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var is_portrait := window_size.x < window_size.y
 	grid_container_wearables_list.columns = columns
 	#if emote_editor.container_all_emotes != null:
-	emote_editor.container_all_emotes.columns = columns - 1
+	emote_editor.container_all_emotes.columns = columns if is_portrait else columns - 1
 
 	if hseparator_size_maintainer != null:
 		hseparator_size_maintainer.custom_minimum_size.x = 410.0 if is_narrow else 630.0
