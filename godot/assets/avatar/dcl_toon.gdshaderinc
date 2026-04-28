@@ -13,22 +13,6 @@ uniform sampler2D emission_texture : source_color, hint_default_white;
 uniform vec4 emission_color = vec4(0.0, 0.0, 0.0, 1.0);
 uniform float emission_energy : hint_range(0.0, 16.0) = 5.0;
 
-// --- LOD dither cross-fade (1.0 = fully visible, 0.0 = fully discarded) ---
-uniform float dither_alpha : hint_range(0.0, 1.0) = 1.0;
-
-const mat4 TOON_BAYER_4X4 = mat4(
-	vec4( 0.0 / 16.0,  8.0 / 16.0,  2.0 / 16.0, 10.0 / 16.0),
-	vec4(12.0 / 16.0,  4.0 / 16.0, 14.0 / 16.0,  6.0 / 16.0),
-	vec4( 3.0 / 16.0, 11.0 / 16.0,  1.0 / 16.0,  9.0 / 16.0),
-	vec4(15.0 / 16.0,  7.0 / 16.0, 13.0 / 16.0,  5.0 / 16.0)
-);
-
-float toon_dither_threshold(vec2 frag_coord) {
-	int x = int(mod(frag_coord.x, 4.0));
-	int y = int(mod(frag_coord.y, 4.0));
-	return TOON_BAYER_4X4[y][x];
-}
-
 // --- Toon shading parameters (hardcoded from Unity deployed values) ---
 const float BASE_COLOR_STEP = 0.2;
 const float BASE_SHADE_FEATHER = 0.02;

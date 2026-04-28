@@ -6,9 +6,6 @@ render_mode ambient_light_disabled, cull_disabled, depth_prepass_alpha;
 uniform float alpha_scissor_threshold : hint_range(0.0, 1.0) = 0.5;
 
 void fragment() {
-	if (toon_dither_threshold(FRAGCOORD.xy) > dither_alpha) {
-		discard;
-	}
 	vec4 albedo_tex = texture(albedo_texture, UV);
 	ALBEDO = albedo_tex.rgb * albedo_color.rgb;
 	ALPHA = albedo_tex.a * albedo_color.a;

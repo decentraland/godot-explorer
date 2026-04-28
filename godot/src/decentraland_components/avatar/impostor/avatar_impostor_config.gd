@@ -18,4 +18,17 @@ const MAX_LAYERS: int = 256
 const DISTANCE_CHECK_PERIOD_FRAMES: int = 6
 const CAPTURE_BUDGET_PER_FRAME: int = 1
 
+# Hard caps applied by AvatarLODCoordinator. The N closest avatars get FULL,
+# the next M closest get MID/CROSSFADE, the rest are forced to FAR. Static
+# distance thresholds still cap the upper tier (an avatar at 50m is FAR even
+# if it's the only one in the scene), so caps only kick in under high
+# concurrency.
+const MAX_FULL_AVATARS: int = 8
+const MAX_THROTTLED_AVATARS: int = 32
+
 const MID_ANIMATION_PLAYBACK_SPEED: float = 0.5
+
+# When in MID/CROSSFADE we drive the AnimationTree manually and only call
+# advance() every N frames. The skeleton then updates its bones at ~20fps
+# (60/3) — imperceptible at 15-25m distance and frees significant CPU time.
+const MID_ANIM_ADVANCE_EVERY_N_FRAMES: int = 3

@@ -97,6 +97,17 @@ var _lod_state: int = LODState.FULL
 var _impostor_layer: int = -1
 var _lod_phase: int = 0
 var _mesh_lod_visibility_captured: bool = false
+# Written by AvatarLODCoordinator each tick. Caps the natural distance LOD so
+# only the N closest avatars stay FULL, the next M MID/CROSSFADE, rest FAR.
+var _lod_rank_cap: int = LODState.FULL
+
+# Skinning throttle (MID/CROSSFADE only): drive AnimationTree manually and
+# advance every N frames so the skeleton bones update at ~20fps instead of
+# ~60fps. Imperceptible at 15-30m distance and a sizeable CPU saving when
+# many avatars share the screen.
+var _anim_throttle_acc: float = 0.0
+var _anim_throttle_counter: int = 0
+var _anim_throttle_active: bool = false
 
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
@@ -116,6 +127,12 @@ var _mesh_lod_visibility_captured: bool = false
 
 @onready var glider_prop: Node3D = %GliderProp
 @onready var audio_player_double_jump: AudioStreamPlayer3D = %AudioPlayer_DoubleJump
+
+# Cache of toon ShaderMaterials keyed by source BaseMaterial3D's instance_id.
+# Lets avatars wearing the same wearable share a single ShaderMaterial across
+# the whole scene. Skin/hair surfaces clone-on-write in apply_color_and_facial
+# so per-avatar tints don't leak.
+static var _toon_material_cache: Dictionary = {}
 
 
 func _ready():
@@ -153,10 +170,15 @@ func _ready():
 	_apply_nickname_visibility()
 
 	_lod_phase = int(self.unique_id) % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES
+	AvatarLODCoordinator.register(self)
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
+
+
+func _exit_tree() -> void:
+	AvatarLODCoordinator.unregister(self)
 
 	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
 	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
@@ -403,8 +425,12 @@ func _apply_nickname_visibility() -> void:
 	var should_hide := is_avatar_shape or hide_name or _force_hide_name
 	if should_hide:
 		nickname_quad.hide()
+		if nickname_viewport != null:
+			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	else:
 		nickname_quad.show()
+		if nickname_viewport != null:
+			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
@@ -618,12 +644,18 @@ func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
 
 
 func apply_toon_material(node_to_apply: Node):
-	if node_to_apply is MeshInstance3D:
-		for surface_idx in range(node_to_apply.mesh.get_surface_count()):
-			var mat = node_to_apply.mesh.surface_get_material(surface_idx)
-			if mat != null and mat is BaseMaterial3D:
-				var toon_mat = _convert_to_toon(mat)
-				node_to_apply.mesh.surface_set_material(surface_idx, toon_mat)
+	if not (node_to_apply is MeshInstance3D) or node_to_apply.mesh == null:
+		return
+	for surface_idx in range(node_to_apply.mesh.get_surface_count()):
+		var mat = node_to_apply.mesh.surface_get_material(surface_idx)
+		if mat == null or not (mat is BaseMaterial3D):
+			continue
+		var key: int = mat.get_instance_id()
+		var cached = _toon_material_cache.get(key)
+		if cached == null or not is_instance_valid(cached):
+			cached = _convert_to_toon(mat)
+			_toon_material_cache[key] = cached
+		node_to_apply.mesh.surface_set_material(surface_idx, cached)
 
 
 func async_load_wearables():
@@ -790,14 +822,11 @@ func async_load_wearables():
 		if should_hide:
 			child.hide()
 
-	var meshes: Array = []
 	for child in body_shape_skeleton_3d.get_children():
 		if child.visible and child is MeshInstance3D:
+			# Shallow-duplicate the Mesh so per-avatar surface_set_material calls
+			# don't leak across avatars; materials referenced inside stay shared.
 			child.mesh = child.mesh.duplicate_deep(Resource.DEEP_DUPLICATE_NONE)
-			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
-
-	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
-	await PromiseUtils.async_awaiter(promise)
 
 	apply_toon_material(body_shape_skeleton_3d)
 	for child in body_shape_skeleton_3d.get_children():
@@ -852,19 +881,25 @@ func apply_color_and_facial():
 		if child.visible and child is MeshInstance3D:
 			for i in range(child.get_surface_override_material_count()):
 				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
+				var is_skin: bool = mat_name.find("skin") != -1
+				var is_hair: bool = mat_name.find("hair") != -1
 				var material = child.mesh.surface_get_material(i)
 
-				if material is ShaderMaterial:
-					if mat_name.find("skin") != -1:
+				if material is ShaderMaterial and (is_skin or is_hair):
+					# Cached materials are shared between avatars. Clone before
+					# writing the per-avatar tint so it doesn't leak.
+					material = material.duplicate()
+					child.mesh.surface_set_material(i, material)
+					if is_skin:
 						material.set_shader_parameter("albedo_color", avatar_data.get_skin_color())
-					elif mat_name.find("hair") != -1:
+					else:
 						material.set_shader_parameter("albedo_color", avatar_data.get_hair_color())
 				elif material is StandardMaterial3D:
 					material.metallic = 0
 					material.metallic_specular = 0
-					if mat_name.find("skin") != -1:
+					if is_skin:
 						material.albedo_color = avatar_data.get_skin_color()
-					elif mat_name.find("hair") != -1:
+					elif is_hair:
 						material.roughness = 1
 						material.albedo_color = avatar_data.get_hair_color()
 
@@ -939,7 +974,6 @@ func _update_lod() -> void:
 		return
 
 	var dist: float = camera.global_position.distance_to(global_position)
-	var emoting: bool = emote_controller != null and emote_controller.is_playing()
 
 	var new_state: int = _lod_state
 	var dither_alpha: float = 1.0
@@ -951,25 +985,31 @@ func _update_lod() -> void:
 	elif dist < AvatarImpostorConfig.DISTANCE_NEAR:
 		new_state = LODState.MID
 	elif dist < AvatarImpostorConfig.DISTANCE_FAR:
-		if emoting:
-			new_state = LODState.MID
-		else:
-			new_state = LODState.CROSSFADE
-			var span: float = AvatarImpostorConfig.DISTANCE_FAR - AvatarImpostorConfig.DISTANCE_NEAR
-			var t: float = (dist - AvatarImpostorConfig.DISTANCE_NEAR) / span
-			dither_alpha = 1.0 - t
-			fade_alpha = t
+		new_state = LODState.CROSSFADE
+		var span: float = AvatarImpostorConfig.DISTANCE_FAR - AvatarImpostorConfig.DISTANCE_NEAR
+		var t: float = (dist - AvatarImpostorConfig.DISTANCE_NEAR) / span
+		dither_alpha = 1.0 - t
+		fade_alpha = t
 	else:
-		if emoting:
-			new_state = LODState.MID
-		else:
-			new_state = LODState.FAR
+		new_state = LODState.FAR
+		dither_alpha = 0.0
+		fade_alpha = 1.0
+		var tint_span: float = (
+			AvatarImpostorConfig.TINT_FULL_DISTANCE - AvatarImpostorConfig.DISTANCE_FAR
+		)
+		tint_strength = clamp((dist - AvatarImpostorConfig.DISTANCE_FAR) / tint_span, 0.0, 1.0)
+
+	# Concurrency cap: only the closest N stay FULL, the next M stay
+	# MID/CROSSFADE, the rest are demoted to FAR. Applies to emoters too — mass
+	# emote scenarios shouldn't bypass the budget.
+	if _lod_rank_cap > new_state:
+		new_state = _lod_rank_cap
+		if new_state == LODState.FAR:
 			dither_alpha = 0.0
 			fade_alpha = 1.0
-			var tint_span: float = (
-				AvatarImpostorConfig.TINT_FULL_DISTANCE - AvatarImpostorConfig.DISTANCE_FAR
-			)
-			tint_strength = clamp((dist - AvatarImpostorConfig.DISTANCE_FAR) / tint_span, 0.0, 1.0)
+		else:
+			dither_alpha = 1.0
+			fade_alpha = 0.0
 
 	_apply_lod_state(new_state, dither_alpha, fade_alpha, tint_strength, dist)
 
@@ -989,8 +1029,13 @@ func _apply_lod_state(
 			Global.avatars.set_impostor_state(
 				get_instance_id(), fade_alpha, tint_strength, distance
 			)
-	elif _impostor_layer >= 0:
-		_release_impostor()
+	elif _impostor_layer >= 0 and Global.avatars != null:
+		# Don't release the slot on every LOD oscillation — re-allocating would
+		# trigger a new capture every time the camera swings between FAR and
+		# MID/FULL. Keep the slot, just hide the multimesh instance with
+		# fade_alpha=0. The slot is freed when the avatar is removed entirely
+		# (AvatarScene::remove_avatar).
+		Global.avatars.set_impostor_state(get_instance_id(), 0.0, 0.0, distance)
 
 	if state_changed:
 		_on_lod_state_changed(state, prev_state)
@@ -1018,24 +1063,28 @@ func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 			_set_lod_meshes_visible(true)
 			_set_lod_animation_active(true)
 			_set_lod_animation_speed(1.0)
+			_set_lod_animation_throttle(false)
 			_set_lod_particles_visible(true)
 			_set_lod_click_active(true)
 		LODState.MID:
 			_set_lod_meshes_visible(true)
 			_set_lod_animation_active(true)
-			_set_lod_animation_speed(AvatarImpostorConfig.MID_ANIMATION_PLAYBACK_SPEED)
+			_set_lod_animation_speed(1.0)
+			_set_lod_animation_throttle(true)
 			_set_lod_particles_visible(false)
 			_set_lod_click_active(false)
 		LODState.CROSSFADE:
 			_set_lod_meshes_visible(true)
 			_set_lod_animation_active(true)
-			_set_lod_animation_speed(AvatarImpostorConfig.MID_ANIMATION_PLAYBACK_SPEED)
+			_set_lod_animation_speed(1.0)
+			_set_lod_animation_throttle(true)
 			_set_lod_particles_visible(false)
 			_set_lod_click_active(false)
 		LODState.FAR:
 			_set_lod_meshes_visible(false)
 			_set_lod_animation_active(false)
 			_set_lod_animation_speed(1.0)
+			_set_lod_animation_throttle(false)
 			_set_lod_particles_visible(false)
 			_set_lod_click_active(false)
 
@@ -1043,12 +1092,13 @@ func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 func _set_dither_alpha(value: float) -> void:
 	if body_shape_skeleton_3d == null:
 		return
+	# Use Godot's built-in object-level dither via GeometryInstance3D.transparency
+	# (4×4 ordered dither when in (0, 1)). This avoids a per-material uniform,
+	# letting many avatars share the same ShaderMaterial.
+	var transparency: float = clamp(1.0 - value, 0.0, 1.0)
 	for child in body_shape_skeleton_3d.get_children():
-		if child is MeshInstance3D and child.mesh != null:
-			for i in range(child.mesh.get_surface_count()):
-				var mat = child.mesh.surface_get_material(i)
-				if mat is ShaderMaterial:
-					mat.set_shader_parameter("dither_alpha", value)
+		if child is MeshInstance3D:
+			child.transparency = transparency
 
 
 func _capture_lod_mesh_visibility() -> void:
@@ -1081,6 +1131,31 @@ func _set_lod_animation_speed(speed: float) -> void:
 		animation_player.speed_scale = speed
 
 
+func _set_lod_animation_throttle(throttled: bool) -> void:
+	if animation_tree == null:
+		return
+	_anim_throttle_active = throttled
+	_anim_throttle_acc = 0.0
+	_anim_throttle_counter = 0
+	if throttled:
+		animation_tree.callback_mode_process = (
+			AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		)
+	else:
+		animation_tree.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_IDLE
+
+
+func _tick_animation_throttle(delta: float) -> void:
+	if not _anim_throttle_active or animation_tree == null:
+		return
+	_anim_throttle_acc += delta
+	_anim_throttle_counter += 1
+	if _anim_throttle_counter >= AvatarImpostorConfig.MID_ANIM_ADVANCE_EVERY_N_FRAMES:
+		animation_tree.advance(_anim_throttle_acc)
+		_anim_throttle_acc = 0.0
+		_anim_throttle_counter = 0
+
+
 func _set_lod_particles_visible(visible: bool) -> void:
 	for node_name in ["GPUParticles3D_Move", "GPUParticles3D_Jump", "GPUParticles3D_Land"]:
 		var node = get_node_or_null(node_name)
@@ -1104,6 +1179,7 @@ func _process(delta):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
 
 	_maybe_update_lod()
+	_tick_animation_throttle(delta)
 
 	if _lod_state == LODState.FAR:
 		return
