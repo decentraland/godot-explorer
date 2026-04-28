@@ -89,7 +89,7 @@ impl LivekitRoom {
         let (_, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
 
         let room_id_clone = room_id.clone();
-        let catalyst_lambda_url = {
+        let lambdas_endpoint = {
             let global = DclGlobal::singleton();
             let realm = global.bind().get_realm();
             let url = realm.bind().get_lambda_server_base_url().to_string();
@@ -105,7 +105,7 @@ impl LivekitRoom {
                     mic_receiver,
                     room_id_clone,
                     auto_subscribe,
-                    catalyst_lambda_url,
+                    lambdas_endpoint,
                 );
             })
             .unwrap();
@@ -250,7 +250,7 @@ fn spawn_livekit_task(
     mut mic_receiver: tokio::sync::mpsc::Receiver<Vec<i16>>,
     room_id: String,
     auto_subscribe: bool,
-    catalyst_lambda_url: String,
+    lambdas_endpoint: String,
 ) {
     let url = Uri::try_from(remote_address).unwrap();
     let address = format!(
@@ -291,7 +291,7 @@ fn spawn_livekit_task(
             }
         };
 
-        // Set participant metadata (version, agent, platform, catalyst)
+        // Set participant metadata (version, agent, platform, lambdasEndpoint)
         let local_identity = room.local_participant().identity().0.clone();
         {
             let version = DclGlobal::get_version().to_string();
@@ -299,13 +299,13 @@ fn spawn_livekit_task(
                 "dcl_version": version,
                 "agent": "godot",
                 "platform": "mobile",
-                "catalyst": catalyst_lambda_url,
+                "lambdasEndpoint": lambdas_endpoint,
             }).to_string();
 
             if let Err(e) = room.local_participant().set_metadata(metadata).await {
                 tracing::warn!("Failed to set participant metadata: {:?}", e);
             } else {
-                tracing::debug!("Set participant metadata: version={}, agent=godot, platform=mobile, catalyst={}", version, catalyst_lambda_url);
+                tracing::debug!("Set participant metadata: version={}, agent=godot, platform=mobile, lambdasEndpoint={}", version, lambdas_endpoint);
             }
         }
 
