@@ -9,6 +9,7 @@ var _generator_statuses: Dictionary = {}
 
 @onready var search_bar: SearchBar = %SearchBar
 
+@onready var friends_online: VBoxContainer = %FriendsOnline
 @onready var last_visited: VBoxContainer = %LastVisited
 @onready var places_featured: VBoxContainer = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
@@ -19,6 +20,7 @@ var _generator_statuses: Dictionary = {}
 @onready var button_back_to_explorer: Button = %Button_BackToExplorer
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
+@onready var friend_jump_in: SidePanelWrapper = %FriendJumpIn
 #@onready var discover_content: VBoxContainer = %DiscoverContent
 
 static var _low_spec_warning_shown: bool = false
@@ -35,6 +37,9 @@ func _ready():
 	jump_in.jump_in_world.connect(_on_jump_in_world)
 	event_details.jump_in.connect(_on_event_details_jump_in)
 	event_details.jump_in_world.connect(_on_event_details_jump_in_world)
+	friend_jump_in.jump_in.connect(_on_friend_jump_in)
+	friend_jump_in.jump_in_world.connect(_on_friend_jump_in_world)
+	friend_jump_in.hide()
 
 	Global.notification_clicked.connect(_on_notification_clicked)
 
@@ -44,6 +49,9 @@ func _ready():
 	search_bar.cleared.connect(_on_search_bar_cleared)
 	container_content.show()
 
+	friends_online.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(friends_online)
+	)
 	last_visited.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(last_visited)
 	)
@@ -62,6 +70,64 @@ func _ready():
 func on_item_pressed(data):
 	jump_in.set_data(data)
 	jump_in.open_panel()
+
+
+func on_friend_pressed(data):
+	friend_jump_in.set_data(data)
+	friend_jump_in.open_panel()
+	# Set friend info on the instantiated panel
+	_async_set_friend_info_on_panel(data)
+
+
+func _async_set_friend_info_on_panel(data: Dictionary) -> void:
+	# Wait a frame for the panel to be instantiated
+	await get_tree().process_frame
+	var panel: PlaceItem = friend_jump_in.portrait_panel
+	if not panel:
+		panel = friend_jump_in.landscape_panel
+	if not panel:
+		return
+
+	var friend_name_label = panel.get_node_or_null("%Label_FriendName")
+	if friend_name_label:
+		friend_name_label.text = data.get("_friend_name", "")
+
+	var has_claimed_name: bool = data.get("_friend_has_claimed_name", false)
+
+	var friend_tag_label = panel.get_node_or_null("%Label_FriendTag")
+	if friend_tag_label:
+		if has_claimed_name:
+			friend_tag_label.hide()
+		else:
+			var address: String = data.get("_friend_address", "")
+			if not address.is_empty():
+				friend_tag_label.text = "#" + address.substr(2, 4)
+			else:
+				friend_tag_label.text = ""
+			friend_tag_label.show()
+
+	var checkmark = panel.get_node_or_null("%TextureRect_ClaimedCheckmark")
+	if checkmark:
+		checkmark.visible = has_claimed_name
+
+	var profile_pic = panel.get_node_or_null("%ProfilePicture")
+	if profile_pic:
+		var social_data = SocialItemData.new()
+		social_data.name = data.get("_friend_name", "")
+		social_data.address = data.get("_friend_address", "")
+		social_data.profile_picture_url = data.get("_friend_profile_picture_url", "")
+		social_data.has_claimed_name = data.get("_friend_has_claimed_name", false)
+		profile_pic.async_update_profile_picture(social_data)
+
+
+func _on_friend_jump_in(parcel_position: Vector2i, realm: String):
+	friend_jump_in.hide()
+	Global.async_teleport_to(parcel_position, realm)
+
+
+func _on_friend_jump_in_world(realm: String):
+	friend_jump_in.hide()
+	Global.async_join_world(realm)
 
 
 func on_event_pressed(data):
@@ -106,6 +172,7 @@ func _get_ui_location() -> String:
 func _on_visibility_changed():
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		last_visited.generator.async_request_last_places(0, 10)
+		friends_online.generator.on_request(0, 10)
 		Global.set_orientation_portrait()
 		Global.metrics.track_screen_viewed(
 			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
@@ -161,12 +228,14 @@ func _on_search_bar_cleared() -> void:
 func set_search_filter_text(new_text: String) -> void:
 	_generator_statuses.clear()
 	if new_text.is_empty():
+		friends_online.visible = friends_online.has_items()
 		last_visited.visible = last_visited.has_items()
 		places_featured.show()
 		places_favorites.show()
 		places_my_places.visible = places_my_places.has_items()
 		places_most_active.title = "Most Actives"
 	else:
+		friends_online.hide()
 		last_visited.hide()
 		places_featured.hide()
 		places_favorites.hide()
@@ -180,6 +249,7 @@ func set_search_filter_text(new_text: String) -> void:
 func _scroll_all_carousels_to_start() -> void:
 	container_content.reset_position()
 	for carousel in [
+		friends_online,
 		places_featured,
 		events,
 		last_visited,
@@ -304,7 +374,14 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, contain
 
 func _get_active_carousels() -> Array:
 	if search_text.is_empty():
-		return [last_visited, places_featured, places_most_active, events, places_favorites]
+		return [
+			friends_online,
+			last_visited,
+			places_featured,
+			places_most_active,
+			events,
+			places_favorites
+		]
 	return [places_most_active, events]
 
 

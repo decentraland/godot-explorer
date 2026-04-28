@@ -16,9 +16,12 @@
 [ext_resource type="PackedScene" uid="uid://ct64rhq0dtpa3" path="res://src/ui/components/discover/search_bar/search_suggestions.tscn" id="14_5g6gd"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
-[ext_resource type="PackedScene" path="res://src/ui/components/events/event_discover_skeleton.tscn" id="16_skel"]
+[ext_resource type="PackedScene" uid="uid://cwlnydq8rjjxt" path="res://src/ui/components/events/event_discover_skeleton.tscn" id="16_skel"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
 [ext_resource type="PackedScene" uid="uid://3uibe7yuvd3j" path="res://src/ui/components/search-bar/search_bar.tscn" id="18_sbar"]
+[ext_resource type="PackedScene" uid="uid://b8k2m5nf3qr7x" path="res://src/ui/components/discover/friends/friends_generator.tscn" id="19_fgen"]
+[ext_resource type="PackedScene" uid="uid://c7n3k8p2xq4rf" path="res://src/ui/components/discover/friends/friend_jump_in.tscn" id="20_fjump"]
+[ext_resource type="PackedScene" uid="uid://bk7m3n5xp2qrf" path="res://src/ui/components/discover/friends/friend_discover_skeleton.tscn" id="21_fskel"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
@@ -229,6 +232,18 @@ horizontal_alignment = 1
 layout_mode = 2
 theme_override_constants/separation = 20
 
+[node name="FriendsOnline" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=411918289 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("FriendsGenerator")
+skeleton_scene = ExtResource("21_fskel")
+skeleton_height = 225.0
+title = "Friends Online"
+item_separation = 24
+
+[node name="FriendsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/FriendsOnline" unique_id=1004775239 node_paths=PackedStringArray("discover") instance=ExtResource("19_fgen")]
+discover = NodePath("../../../../../../../..")
+
 [node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1265686382 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
@@ -311,6 +326,10 @@ unique_name_in_owner = true
 visible = false
 
 [node name="EventDetails" parent="CanvasLayer" unique_id=1053982210 instance=ExtResource("17_lvgj0")]
+unique_name_in_owner = true
+visible = false
+
+[node name="FriendJumpIn" parent="CanvasLayer" unique_id=1751478495 instance=ExtResource("20_fjump")]
 unique_name_in_owner = true
 visible = false
 
