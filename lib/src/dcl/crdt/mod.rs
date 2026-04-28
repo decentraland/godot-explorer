@@ -311,15 +311,25 @@ impl SceneCrdtState {
     /// `PlayerIdentityData` / `AvatarBase` / `AvatarEquippedData` entries.
     pub fn clear_entity_components(&mut self, entity_id: &SceneEntityId) {
         let component_ids: Vec<SceneComponentId> = self.components.keys().cloned().collect();
+        let mut cleared: Vec<SceneComponentId> = Vec::new();
         for component_id in &component_ids {
             if let Some(component) = self.get_lww_component_definition_mut(*component_id) {
-                component.delete(*entity_id);
+                if component.delete(*entity_id) {
+                    cleared.push(*component_id);
+                }
             }
         }
         for component_id in &component_ids {
             if let Some(component) = self.get_gos_component_definition_mut(*component_id) {
                 component.clean(*entity_id);
             }
+        }
+        if !cleared.is_empty() {
+            tracing::debug!(
+                "clear_entity_components entity={:?} cleared lww components: {:?}",
+                entity_id,
+                cleared
+            );
         }
     }
 }

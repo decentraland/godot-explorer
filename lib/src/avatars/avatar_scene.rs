@@ -129,7 +129,11 @@ impl AvatarScene {
     pub fn add_avatar(&mut self, alias: u32, address: GString) {
         // Check if avatar with this alias already exists
         if self.avatar_entity.contains_key(&alias) {
-            tracing::debug!("Avatar with alias {} already exists, discarding", alias);
+            tracing::info!(
+                "avatar_lifecycle: add_avatar SKIPPED (alias already exists) alias={} address={}",
+                alias,
+                address
+            );
             return;
         }
 
@@ -140,6 +144,13 @@ impl AvatarScene {
         self.crdt_state.entities.try_init(entity_id);
 
         self.avatar_entity.insert(alias, entity_id);
+
+        tracing::info!(
+            "avatar_lifecycle: add_avatar alias={} address={} entity={:?}",
+            alias,
+            address,
+            entity_id
+        );
 
         let mut new_avatar: Gd<DclAvatar> = godot::tools::load::<PackedScene>(
             "res://src/decentraland_components/avatar/avatar.tscn",
@@ -313,6 +324,15 @@ impl AvatarScene {
         let prev_scene_id = SceneId(prev_scene_id);
         let avatar_entity_id = SceneEntityId::from_i32(avatar_entity_id);
 
+        let still_alive = self.avatar_entity.values().any(|e| *e == avatar_entity_id);
+        tracing::info!(
+            "avatar_lifecycle: on_avatar_changed_scene entity={:?} from_scene={:?} to_scene={:?} still_alive={}",
+            avatar_entity_id,
+            prev_scene_id,
+            scene_id,
+            still_alive
+        );
+
         // TODO: as this function was deferred called, check if the current_parcel_entity_id is the same
         // maybe it's better to cache the last parcel here instead of using prev_scene_id
         // the state of to what parcel the avatar belongs is stored in the avatar_scene
@@ -418,6 +438,13 @@ impl AvatarScene {
     }
 
     pub fn remove_avatar(&mut self, alias: u32) {
+        if !self.avatar_entity.contains_key(&alias) {
+            tracing::info!(
+                "avatar_lifecycle: remove_avatar SKIPPED (alias not found) alias={}",
+                alias
+            );
+            return;
+        }
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
             self.crdt_state.kill_entity(&entity_id);
             let mut avatar = self.avatar_godot_scene.remove(&entity_id).unwrap();
@@ -428,6 +455,13 @@ impl AvatarScene {
                 .iter()
                 .find(|(_, &v)| v == alias)
                 .map(|(k, _)| *k);
+
+            tracing::info!(
+                "avatar_lifecycle: remove_avatar alias={} entity={:?} address={:?}",
+                alias,
+                entity_id,
+                removed_address.map(|a| format!("{:#x}", a))
+            );
 
             self.avatar_address.retain(|_, v| *v != alias);
 
@@ -731,6 +765,13 @@ impl AvatarScene {
             }
         }
         self.last_updated_profile.insert(entity_id, profile.clone());
+
+        tracing::info!(
+            "avatar_lifecycle: update_avatar entity={:?} address={} alive_in_avatar_entity={}",
+            entity_id,
+            profile.content.eth_address,
+            self.avatar_entity.values().any(|e| *e == entity_id)
+        );
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             let dcl_user_profile = DclUserProfile::from_gd(profile.clone());

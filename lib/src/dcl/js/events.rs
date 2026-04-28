@@ -474,6 +474,26 @@ pub fn process_events_players_stateful(
         || op_state.has::<EventSender<PlayerEnteredScene>>()
         || op_state.has::<EventSender<PlayerLeftScene>>();
 
+    let pid_dirty_count = dirty_crdt_state
+        .lww
+        .get(&SceneComponentId::PLAYER_IDENTITY_DATA)
+        .map(|v| v.len())
+        .unwrap_or(0);
+    let ipd_dirty_count = dirty_crdt_state
+        .lww
+        .get(&SceneComponentId::INTERNAL_PLAYER_DATA)
+        .map(|v| v.len())
+        .unwrap_or(0);
+
+    if pid_dirty_count > 0 || ipd_dirty_count > 0 {
+        tracing::info!(
+            "player_events: process_events_players_stateful subscribed={} pid_dirty={} ipd_dirty={}",
+            is_subscribed,
+            pid_dirty_count,
+            ipd_dirty_count
+        );
+    }
+
     if !is_subscribed {
         // When it's not subscribed, clean the state if it'exists
         let _ = op_state.try_take::<EventPlayerState>();
@@ -519,6 +539,11 @@ pub fn process_events_players_stateful(
                 events_state
                     .current_players
                     .insert(*entity_id, player_identity_value.address.clone());
+                tracing::info!(
+                    "player_events: PlayerConnected entity={:?} user_id={}",
+                    entity_id,
+                    player_identity_value.address
+                );
                 if let Some(player_connected_sender) = player_connected_sender.as_ref() {
                     player_connected_sender
                         .inner
@@ -539,6 +564,11 @@ pub fn process_events_players_stateful(
                     // can no longer resolve the user_id once we drop it from
                     // current_players, so it must happen here.
                     if events_state.inside_scene.remove(entity_id) {
+                        tracing::info!(
+                            "player_events: PlayerLeftScene (via disconnect) entity={:?} user_id={}",
+                            entity_id,
+                            user_id
+                        );
                         if let Some(player_left_scene_sender) =
                             player_left_scene_sender.as_ref()
                         {
@@ -553,6 +583,11 @@ pub fn process_events_players_stateful(
                                 .unwrap();
                         }
                     }
+                    tracing::info!(
+                        "player_events: PlayerDisconnected entity={:?} user_id={}",
+                        entity_id,
+                        user_id
+                    );
                     if let Some(player_disconnected_sender) = player_disconnected_sender.as_ref() {
                         player_disconnected_sender
                             .inner
@@ -562,6 +597,11 @@ pub fn process_events_players_stateful(
                             )
                             .unwrap();
                     }
+                } else {
+                    tracing::warn!(
+                        "player_events: PID went None for entity={:?} but no current_players entry",
+                        entity_id
+                    );
                 }
             }
         }
@@ -603,6 +643,11 @@ pub fn process_events_players_stateful(
                     events_state.inside_scene.insert(*entity_id);
 
                     if let Some(user_id) = events_state.current_players.get(entity_id).cloned() {
+                        tracing::info!(
+                            "player_events: PlayerEnteredScene entity={:?} user_id={}",
+                            entity_id,
+                            user_id
+                        );
                         if let Some(player_entered_scene_sender) =
                             player_entered_scene_sender.as_ref()
                         {
@@ -614,11 +659,21 @@ pub fn process_events_players_stateful(
                                 )
                                 .unwrap();
                         }
+                    } else {
+                        tracing::warn!(
+                            "player_events: entity entered scene but no current_players entry entity={:?}",
+                            entity_id
+                        );
                     }
                 } else {
                     events_state.inside_scene.remove(entity_id);
 
                     if let Some(user_id) = events_state.current_players.get(entity_id).cloned() {
+                        tracing::info!(
+                            "player_events: PlayerLeftScene entity={:?} user_id={}",
+                            entity_id,
+                            user_id
+                        );
                         if let Some(player_left_scene_sender) = player_left_scene_sender.as_ref() {
                             player_left_scene_sender
                                 .inner
