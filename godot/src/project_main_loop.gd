@@ -1,10 +1,16 @@
 class_name ProjectMainLoop
 extends SceneTree
 
+# attach_log uploads godot.log on every event. The SDK reads this once at
+# init, so we sample per-session: ~1% of sessions upload logs, the rest don't.
+const ATTACH_LOG_SAMPLE_RATE := 0.01
+
 # Environment detection based on version string suffix
 var is_dev_version = false
 var is_staging_version = false
 var is_prod_version = false
+
+var attach_log_sampled := false
 
 
 func _initialize() -> void:
@@ -15,10 +21,13 @@ func _initialize() -> void:
 	self.is_staging_version = DclGlobal.is_staging()
 	self.is_prod_version = DclGlobal.is_production()
 
+	self.attach_log_sampled = randf() < ATTACH_LOG_SAMPLE_RATE
+
 	SentrySDK.init(
 		func(options: SentryOptions) -> void:
 			options.release = release_string
 			options.before_send = _before_send
+			options.attach_log = self.attach_log_sampled
 
 			# Set environment based on build type
 			# production: report to production env
@@ -36,6 +45,9 @@ func _initialize() -> void:
 			# for custom sampling rate, use _before_send
 			options.sample_rate = 1.0
 	)
+
+	# Tag every event so we can filter sampled-vs-unsampled in the Sentry UI.
+	SentrySDK.set_tag("attach_log_sampled", str(self.attach_log_sampled))
 
 	# Add Sentry tags for staging and development builds (for filtering)
 	if self.is_staging_version or self.is_dev_version:
