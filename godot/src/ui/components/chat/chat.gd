@@ -3,61 +3,72 @@ extends Control
 signal submit_message(message: String)
 signal on_exit_chat
 signal on_open_chat
-signal release_mouse
+signal on_enter_write_mode
+signal on_exit_write_mode
 
-## Fixed width for the messages list column (scroll), aligned with `chat.tscn` PanelContainer.
-const MESSAGES_COLUMN_WIDTH_PX: int = 709
+const ChatMessage := preload("res://src/ui/components/chat/chat_message.gd")
+
 const MAX_AUTOCOMPLETE_RESULTS: int = 3
-## MentionItem min height (56) + AutocompleteItems VBox separation (2).
 const AUTOCOMPLETE_ITEM_STRIDE: float = 58.0
-## MarginContainer top+bottom (16) minus one trailing VBox separation (2).
 const AUTOCOMPLETE_SCROLL_PADDING: float = 14.0
 
-var hide_tween = null
-var open_tween = null
-var close_tween = null
-var nearby_avatars = null
-var is_open: bool = false
+## Design specs — header landscape
+const HEADER_HEIGHT_LANDSCAPE := 53
+const HEADER_SEPARATION_LANDSCAPE := 8
+const HEADER_ICON_LANDSCAPE := 29
+const HEADER_FONT_LANDSCAPE := 17
+const HEADER_LABEL_LANDSCAPE := "NEARBY"
+
+## Design specs — header portrait
+const HEADER_HEIGHT_PORTRAIT := 66
+const HEADER_SEPARATION_PORTRAIT := 12
+const HEADER_ICON_PORTRAIT := 44
+const HEADER_FONT_PORTRAIT := 27
+const HEADER_LABEL_PORTRAIT := "Nearby"
+
+## Design specs — write button landscape
+const WRITE_HEIGHT_LANDSCAPE := 48
+const WRITE_PADDING_LANDSCAPE := 10
+
+## Design specs — write button portrait
+const WRITE_HEIGHT_PORTRAIT := 66
+const WRITE_PADDING_PORTRAIT := 16
+
 var scrolled: bool = false
 var new_messages_count: int = 0
-
 var _mention_item_scene: PackedScene
 var _suppress_autocomplete: bool = false
 var _autocomplete_queued: bool = false
 
 @onready var panel_line_edit: PanelContainer = %PanelLineEdit
-@onready var h_box_container_line_edit = %HBoxContainer_LineEdit
-@onready var line_edit_command = %LineEdit_Command
-@onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
-@onready var texture_rect_logo: TextureRect = %TextureRect_Logo
+@onready var line_edit_command: LineEdit = %LineEdit_Command
 @onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
 @onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
-@onready var panel_container_navbar: PanelContainer = %PanelContainer_Navbar
 @onready var button_go_to_last: Button = %Button_GoToLast
 @onready var panel_container_new_messages: PanelContainer = %PanelContainer_NewMessages
 @onready var label_new_messages: Label = %Label_NewMessages
 @onready var button_send: Button = %Button_Send
+@onready var button_write: Button = %Button_Write
 @onready var panel_messages: PanelContainer = $VBoxContainer/HBoxContainer/PanelContainer
 @onready var column_go_to_last: Control = $VBoxContainer/HBoxContainer/VSeparator
+
+@onready var _line_edit_safe_area: MarginContainer = %MarginContainer_LineEditSafeArea
+@onready var _header: PanelContainer = %PanelContainer_Header
+@onready var _header_hbox: HBoxContainer = %PanelContainer_Header/HBoxContainer
+@onready var _header_icon: TextureRect = %PanelContainer_Header/HBoxContainer/TextureRect
+@onready var _header_label: Label = %PanelContainer_Header/HBoxContainer/Label
 @onready var _autocomplete_panel: PanelContainer = %AutocompletePanel
 @onready var _autocomplete_scroll: ScrollContainer = %AutocompleteScroll
 @onready var _autocomplete_container: VBoxContainer = %AutocompleteItems
 
 
 func _ready():
-	if Global.is_mobile():
-		# Full chat panel stretches with parent; scroll column keeps fixed width; VSeparator fills remaining X space.
-		custom_minimum_size.x = 0
-		panel_messages.custom_minimum_size.x = MESSAGES_COLUMN_WIDTH_PX
-		panel_messages.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		column_go_to_last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
 	Global.on_chat_message.connect(self._on_chat_message_arrived)
-	Global.change_virtual_keyboard.connect(self._async_on_change_virtual_keyboard)
 	submit_message.connect(self._on_submit_message)
 
 	exit_chat.call_deferred()
 	button_go_to_last.hide()
+	async_apply_system_bar_insets()
 
 	scroll_container_chats_list.get_v_scroll_bar().scrolling.connect(
 		self._on_chat_scrollbar_scrolling
@@ -87,6 +98,10 @@ func _on_submit_message(message: String):
 		UiSounds.play_sound("widget_chat_message_private_send")
 
 
+func scroll_to_bottom_deferred() -> void:
+	_scroll_to_bottom.call_deferred()
+
+
 func _scroll_to_bottom() -> void:
 	if not scroll_container_chats_list:
 		return
@@ -103,6 +118,10 @@ func _scroll_to_bottom() -> void:
 
 
 func _async_scroll_to_bottom_after_layout() -> void:
+	# _async_update_layout needs 3 frames: (1) reset sizes, (2) measure content,
+	# (3) Godot applies min sizes. If scroll is still off, increase frame count here.
+	await get_tree().process_frame
+	await get_tree().process_frame
 	await get_tree().process_frame
 	if not scroll_container_chats_list or not is_instance_valid(scroll_container_chats_list):
 		return
@@ -125,10 +144,26 @@ func _on_button_send_pressed():
 	button_send.disabled = true
 
 	_scroll_to_bottom()
-	# Always close chat if it's a command (starts with "/")
-	# or if the configuration requires it
-	if message.begins_with("/") or Global.get_config().submit_message_closes_chat:
+	if message.begins_with("/"):
 		exit_chat()
+	elif Global.get_config().submit_message_closes_chat:
+		_close_write_mode()
+	else:
+		line_edit_command.grab_focus()
+
+
+func _on_button_write_pressed():
+	button_write.hide()
+	panel_line_edit.show()
+	line_edit_command.text = ""
+	button_send.disabled = true
+	line_edit_command.grab_focus()
+	if Global.is_mobile():
+		DisplayServer.virtual_keyboard_show("")
+	if not Global.is_orientation_portrait():
+		_header.hide()
+	on_enter_write_mode.emit()
+	_relayout_all_messages()
 
 
 func _on_line_edit_command_text_submitted(new_text):
@@ -137,47 +172,66 @@ func _on_line_edit_command_text_submitted(new_text):
 	line_edit_command.text = ""
 	button_send.disabled = true
 	_scroll_to_bottom()
-	# Always close chat if it's a command (starts with "/")
-	# or if the configuration requires it
-	if new_text.begins_with("/") or Global.get_config().submit_message_closes_chat:
+	if new_text.begins_with("/"):
 		exit_chat()
-
-
-func toggle_chat_visibility(visibility: bool):
-	if visibility:
-		UiSounds.play_sound("widget_chat_open")
+	elif Global.get_config().submit_message_closes_chat:
+		_close_write_mode()
 	else:
-		Global.explorer_grab_focus()
-		UiSounds.play_sound("widget_chat_close")
+		line_edit_command.grab_focus()
+
+
+func _close_write_mode() -> void:
+	if not panel_line_edit.visible:
+		return
+	_hide_autocomplete()
+	panel_line_edit.hide()
+	button_write.show()
+	_header.show()
+	if Global.is_mobile():
+		DisplayServer.virtual_keyboard_hide()
+	on_exit_write_mode.emit()
+	_relayout_all_messages()
 
 
 func exit_chat() -> void:
-	_hide_autocomplete()
+	_close_write_mode()
 	hide()
 	on_exit_chat.emit()
-	if Global.is_mobile():
-		DisplayServer.virtual_keyboard_hide()
 
 
 func async_start_chat():
 	show()
-	Global.get_explorer().release_mouse()
-	DisplayServer.virtual_keyboard_show("")
-	line_edit_command.text = ""
-	button_send.disabled = true
-	h_box_container_line_edit.show()
-	line_edit_command.grab_focus()
+	panel_line_edit.hide()
 	on_open_chat.emit()
+	# Re-layout all messages now that we have a valid width
+	_relayout_all_messages()
 	if !scrolled:
 		await get_tree().process_frame
 		_scroll_to_bottom()
+
+
+func _relayout_all_messages() -> void:
+	var is_portrait := Global.is_orientation_portrait()
+	for child in v_box_container_chat.get_children():
+		if child.has_method("relayout"):
+			child.relayout(is_portrait)
+
+
+func _async_deferred_relayout_all_messages() -> void:
+	# iOS needs 3 frames for orientation change to propagate the new window size
+	# before relayout can measure correctly. If layout glitches on orientation
+	# change, increase the frame count here.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_relayout_all_messages()
 
 
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
 	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
 	new_chat.reduce_text = false
-	new_chat.max_panel_width = 550
+	new_chat.set_portrait(Global.is_orientation_portrait())
 	new_chat.set_chat(address, message, timestamp)
 
 	if !scrolled:
@@ -215,15 +269,57 @@ func _on_button_go_to_last_pressed() -> void:
 	_scroll_to_bottom()
 
 
-func _async_on_change_virtual_keyboard(keyboard_height: int) -> void:
-	if keyboard_height <= 0:
+func close_write_mode_if_active() -> void:
+	if panel_line_edit.visible:
+		_close_write_mode()
+
+
+func reset_safe_area_insets() -> void:
+	_line_edit_safe_area.add_theme_constant_override("margin_right", 0)
+	_line_edit_safe_area.add_theme_constant_override("margin_left", 0)
+
+
+func async_apply_system_bar_insets() -> void:
+	if not OS.get_name() == "Android":
 		return
 	await get_tree().process_frame
-	_scroll_to_bottom()
+	var insets := _get_android_system_bar_insets()
+	var win_size := DisplayServer.window_get_size()
+	var viewport_size := get_viewport().get_visible_rect().size
+	var x_factor: float = viewport_size.x / max(float(win_size.x), 1.0)
+	var nav_right: int = int(ceil(float(insets.get("right", 0)) * x_factor))
+	var nav_left: int = int(ceil(float(insets.get("left", 0)) * x_factor))
+	_line_edit_safe_area.add_theme_constant_override("margin_right", nav_right)
+	_line_edit_safe_area.add_theme_constant_override("margin_left", nav_left)
+
+
+func _get_android_system_bar_insets() -> Dictionary:
+	var result := {"left": 0, "top": 0, "right": 0, "bottom": 0}
+	if not Engine.has_singleton("AndroidRuntime"):
+		return result
+	var android_runtime: Object = Engine.get_singleton("AndroidRuntime")
+	var activity: Object = android_runtime.getActivity()
+	var window: Object = activity.getWindow()
+	var window_insets_types: Object = JavaClassWrapper.wrap("android.view.WindowInsets$Type")
+	var root_insets: Object = window.getDecorView().getRootWindowInsets()
+	var nav_bars: int = window_insets_types.navigationBars()
+	var insets: Object = root_insets.getInsetsIgnoringVisibility(nav_bars)
+	# android.graphics.Insets has public fields (left/top/right/bottom) but Godot's
+	# JNI bridge only exposes methods. toString() format is stable since API 28:
+	# "Insets{left=0, top=0, right=84, bottom=0}"
+	var insets_str: String = insets.toString()
+	var regex := RegEx.new()
+	regex.compile("(left|top|right|bottom)=(\\d+)")
+	for m in regex.search_all(insets_str):
+		result[m.get_string(1)] = int(m.get_string(2))
+	return result
 
 
 func _on_line_edit_command_focus_exited() -> void:
-	exit_chat()
+	# On mobile, write mode is closed by the virtual keyboard dismiss callback
+	# (via chat_panel). On desktop, focus_exited is the only close trigger.
+	if not Global.is_mobile():
+		_close_write_mode()
 
 
 func _on_line_edit_command_text_changed(new_text: String) -> void:
@@ -237,6 +333,92 @@ func _on_line_edit_command_text_changed(new_text: String) -> void:
 		_autocomplete_queued = true
 		_update_autocomplete.call_deferred()
 
+
+func is_interactive_area_at(position: Vector2) -> bool:
+	if panel_messages.visible and panel_messages.get_global_rect().has_point(position):
+		return true
+	if panel_line_edit.visible and panel_line_edit.get_global_rect().has_point(position):
+		return true
+	if button_go_to_last.visible and button_go_to_last.get_global_rect().has_point(position):
+		return true
+	return false
+
+
+# region Layout
+
+
+## Reading mode: panel_messages fixed width, separator expands
+func set_layout_reading(panel_width: int) -> void:
+	panel_messages.custom_minimum_size.x = panel_width
+	panel_messages.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	column_go_to_last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_go_to_last.show()
+
+
+## Writing mode: both panel_messages and separator expand 50/50
+func set_layout_writing() -> void:
+	panel_messages.custom_minimum_size.x = 0
+	panel_messages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_go_to_last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_go_to_last.show()
+
+
+## Portrait mode: panel_messages fills all, separator hidden
+func set_layout_portrait() -> void:
+	panel_messages.custom_minimum_size.x = 0
+	panel_messages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_go_to_last.hide()
+
+
+func apply_orientation(is_portrait: bool) -> void:
+	if is_portrait:
+		_header.custom_minimum_size.y = HEADER_HEIGHT_PORTRAIT
+		_header_hbox.add_theme_constant_override("separation", HEADER_SEPARATION_PORTRAIT)
+		_header_icon.custom_minimum_size = Vector2(HEADER_ICON_PORTRAIT, HEADER_ICON_PORTRAIT)
+		_header_label.text = HEADER_LABEL_PORTRAIT
+		_header_label.label_settings.font_size = HEADER_FONT_PORTRAIT
+		button_write.custom_minimum_size.y = WRITE_HEIGHT_PORTRAIT
+		button_write.add_theme_font_size_override("font_size", ChatMessage.PORTRAIT_BOLD_SIZE)
+		_set_button_write_padding(WRITE_PADDING_PORTRAIT)
+		line_edit_command.add_theme_font_size_override("font_size", ChatMessage.PORTRAIT_BOLD_SIZE)
+		button_send.add_theme_font_size_override("font_size", ChatMessage.PORTRAIT_BOLD_SIZE)
+	else:
+		_header.custom_minimum_size.y = HEADER_HEIGHT_LANDSCAPE
+		_header_hbox.add_theme_constant_override("separation", HEADER_SEPARATION_LANDSCAPE)
+		_header_icon.custom_minimum_size = Vector2(HEADER_ICON_LANDSCAPE, HEADER_ICON_LANDSCAPE)
+		_header_label.text = HEADER_LABEL_LANDSCAPE
+		_header_label.label_settings.font_size = HEADER_FONT_LANDSCAPE
+		button_write.custom_minimum_size.y = WRITE_HEIGHT_LANDSCAPE
+		button_write.add_theme_font_size_override("font_size", ChatMessage.LANDSCAPE_BOLD_SIZE)
+		_set_button_write_padding(WRITE_PADDING_LANDSCAPE)
+		line_edit_command.add_theme_font_size_override("font_size", ChatMessage.LANDSCAPE_BOLD_SIZE)
+		button_send.add_theme_font_size_override("font_size", ChatMessage.LANDSCAPE_BOLD_SIZE)
+	if panel_line_edit.visible:
+		_close_write_mode()
+	async_apply_system_bar_insets()
+	_async_deferred_relayout_all_messages()
+
+
+func _set_button_write_padding(left: int) -> void:
+	var style: StyleBoxFlat = button_write.get_theme_stylebox("normal").duplicate()
+	style.content_margin_left = left
+	for state in [
+		"normal",
+		"pressed",
+		"hover",
+		"hover_pressed",
+		"disabled",
+		"focus",
+		"normal_mirrored",
+		"pressed_mirrored",
+		"hover_mirrored",
+		"hover_pressed_mirrored",
+		"disabled_mirrored"
+	]:
+		button_write.add_theme_stylebox_override(state, style)
+
+
+# endregion
 
 # region Mention Autocomplete
 

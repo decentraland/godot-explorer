@@ -2,21 +2,24 @@
 
 [ext_resource type="Script" uid="uid://dkbrmxxnnfpgt" path="res://src/ui/components/chat/notifications.gd" id="1_xl4kp"]
 
-[node name="ScrollContainer" type="ScrollContainer" unique_id=522129608]
+[node name="ScrollContainer" type="ScrollContainer" unique_id=994288691]
+custom_minimum_size = Vector2(328, 0)
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_right = -1233.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 follow_focus = true
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 script = ExtResource("1_xl4kp")
+metadata/mobile_preview_orientation = "both"
 
-[node name="NotificationsContainer" type="VBoxContainer" parent="." unique_id=978475733]
+[node name="NotificationsContainer" type="VBoxContainer" parent="." unique_id=164061158]
 unique_name_in_owner = true
 clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 8

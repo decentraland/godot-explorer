@@ -12,6 +12,7 @@ signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal open_chat
+signal close_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
@@ -30,6 +31,8 @@ signal delete_account
 signal session_hide_ui_toggle_sync(pressed: bool)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal favorite_destination_set
+signal orientation_changed(is_portrait: bool)
+signal chat_write_mode_changed(is_writing: bool)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -711,6 +714,7 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
+	orientation_changed.emit(false)
 
 
 func is_orientation_portrait() -> bool:
@@ -733,6 +737,7 @@ func set_orientation_portrait():
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
+	orientation_changed.emit(true)
 
 
 func async_resolve_scene_entity_id(coord: Vector2i) -> String:

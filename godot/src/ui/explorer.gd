@@ -40,8 +40,7 @@ var _session_hide_main_hud: bool = false
 @onready var label_crosshair = %Label_Crosshair
 @onready var control_pointer_tooltip = %Control_PointerTooltip
 
-@onready var panel_chat = %Panel_Chat
-@onready var button_load_scenes: Button = %Button_LoadScenes
+@onready var chat_panel = %ChatPanel
 #@onready var url_popup = %UrlPopup
 #@onready var jump_in_popup = %JumpInPopup
 
@@ -63,20 +62,10 @@ var _session_hide_main_hud: bool = false
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
-@onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
-@onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
-@onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
-@onready var notifications: Control = %Notifications
-
-@onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
-@onready var chat_safe_margin: SafeMarginContainer = %SafeMarginContainer_Chat
-
-@onready var chat_container: Control = %ChatContainer
 @onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
-@onready var chatbar: Control = %Chatbar
 @onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
 @onready var button_show_ui: Button = %Button_ShowUI
 @onready var margin_container_show_ui: MarginContainer = %MarginContainer_ShowUI
@@ -128,14 +117,12 @@ func _ready():
 		label_fps.visible = false
 		label_ram.visible = false
 
-	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)
-	Global.open_chat.connect(_on_global_open_chat)
 	Global.open_discover.connect(_on_discover_open)
 	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
@@ -148,7 +135,6 @@ func _ready():
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
-	chatbar.share_place.connect(_share_place)
 	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
@@ -168,6 +154,9 @@ func _ready():
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
+
+	Global.orientation_changed.connect(_on_orientation_changed)
+	Global.chat_write_mode_changed.connect(_on_chat_write_mode_changed)
 
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
@@ -246,7 +235,6 @@ func _ready():
 	else:
 		mobile_ui.hide()
 
-	chat_container.hide()
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
@@ -945,32 +933,18 @@ func _on_ui_root_gui_input(event: InputEvent):
 				Input.action_release("ia_pointer")
 
 
-func _on_chat_container_gui_input(event: InputEvent) -> void:
-	if not chat_container.visible:
-		return
-
-	var should_close := false
-	if event is InputEventScreenTouch:
-		should_close = event.pressed
-	elif event is InputEventMouseButton:
-		should_close = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
-
-	if should_close:
-		panel_chat.exit_chat()
-
-
 func _on_panel_profile_open_profile():
 	_open_own_profile()
 
 
 func _on_button_load_scenes_pressed() -> void:
 	Global.scene_fetcher._bypass_loading_check = true
-	button_load_scenes.hide()
+	chat_panel.hide_load_scenes_button()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:
 	if pending:
-		button_load_scenes.show()
+		chat_panel.show_load_scenes_button()
 		if _first_time_refresh_warning:
 			if loading_ui.visible:
 				return
@@ -984,11 +958,10 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 			)
 			_first_time_refresh_warning = false
 	else:
-		button_load_scenes.hide()
+		chat_panel.hide_load_scenes_button()
 
 
 func _open_profile(dcl_user_profile: DclUserProfile):
-	panel_chat.exit_chat()
 	profile_container.open(dcl_user_profile)
 	release_mouse()
 
@@ -1080,60 +1053,6 @@ func _get_viewport_scale_factors() -> Vector2:
 	var x_factor: float = viewport_size.x / window_size.x
 	var y_factor: float = viewport_size.y / window_size.y
 	return Vector2(x_factor, y_factor)
-
-
-func _on_global_open_chat() -> void:
-	# When coming from Global.open_chat, start chat and handle UI
-	safe_margin_container_hud.hide()
-	chat_container.show()
-	panel_chat.async_start_chat()
-	release_mouse()
-
-
-func _on_panel_chat_on_open_chat() -> void:
-	# When coming from on_open_chat from panel_chat, only handle the UI
-	# DO NOT call async_start_chat() because it's already running (avoids recursion)
-	safe_margin_container_hud.hide()
-	chat_container.show()
-	# Hide navbar when chat opens to prevent it from showing when virtual keyboard appears
-	if Global.is_mobile():
-		navbar.set_manually_hidden(true)
-		if chat_safe_margin != null:
-			chat_safe_margin.refresh_margins()
-
-
-func _on_panel_chat_on_exit_chat() -> void:
-	if _session_hide_main_hud:
-		# Keep strict hidden HUD when profile/chat transitions occur while Hide UI is active.
-		chat_container.hide()
-		_set_explorer_hud_elements_visible(false)
-		return
-	safe_margin_container_hud.show()
-	chat_container.hide()
-	if Global.is_mobile():
-		mobile_ui.show()
-		# Restore navbar visibility when chat closes
-		navbar.set_manually_hidden(false)
-
-
-func _on_change_virtual_keyboard(virtual_keyboard_height: int):
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var safe_window_height: float = max(float(window_size.y), 1.0)
-	var y_factor: float = viewport_size.y / safe_window_height
-	var keyboard_height_scaled: float = ceil(max(float(virtual_keyboard_height) * y_factor, 0.0))
-	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
-
-	if Global.is_mobile() and chat_safe_margin != null:
-		# Keep margin_left (notch); when keyboard is open, align width with keyboard by removing only right inset.
-		if virtual_keyboard_height > 0:
-			chat_safe_margin.add_theme_constant_override("margin_right", 0)
-		else:
-			chat_safe_margin.remove_theme_constant_override("margin_right")
-			chat_safe_margin.refresh_margins()
-
-	if virtual_keyboard_height == 0:
-		panel_chat.exit_chat()
 
 
 func _show_friends_panel() -> void:
@@ -1298,6 +1217,48 @@ func _async_run_ban_check() -> void:
 	if not allowed and generation == _ban_check_generation:
 		Global.modal_manager.ban_pre_check_active = true
 		Global.modal_manager.async_show_ban_pre_check_modal()
+
+
+func _on_orientation_changed(is_portrait: bool) -> void:
+	if is_portrait:
+		# Portrait: hide all HUD and scene UI, only chat visible
+		mobile_ui.hide()
+		emote_wheel.hide()
+		navbar.hide()
+		_set_scene_ui_visible(false)
+	else:
+		# Landscape: restore all UI
+		if Global.is_mobile():
+			mobile_ui.show()
+			_update_virtual_controls_visibility()
+		emote_wheel.show()
+		navbar._on_size_changed()
+		_set_scene_ui_visible(true)
+
+
+func _on_chat_write_mode_changed(is_writing: bool) -> void:
+	if Global.is_orientation_portrait():
+		return  # Portrait hides everything already
+	if is_writing:
+		# Landscape writing: hide all UI
+		mobile_ui.hide()
+		emote_wheel.hide()
+		navbar.hide()
+		_set_scene_ui_visible(false)
+	else:
+		# Landscape reading: restore all UI
+		if Global.is_mobile():
+			mobile_ui.show()
+			_update_virtual_controls_visibility()
+		emote_wheel.show()
+		navbar._on_size_changed()
+		_set_scene_ui_visible(true)
+
+
+func _set_scene_ui_visible(is_visible: bool) -> void:
+	var base_ui = Global.scene_runner.base_ui
+	if is_instance_valid(base_ui):
+		base_ui.visible = is_visible
 
 
 func _update_version_label() -> void:

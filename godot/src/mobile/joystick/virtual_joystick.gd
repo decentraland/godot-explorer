@@ -116,7 +116,11 @@ func _on_input(event: InputEvent) -> void:
 	if Global.is_mobile():
 		if event is InputEventScreenTouch:
 			if event.pressed:
-				if _is_point_inside_joystick_area(event.position) and touch_index == -1:
+				if (
+					_is_point_inside_joystick_area(event.position)
+					and touch_index == -1
+					and not _is_hud_ui_at_position(event.position)
+				):
 					if (
 						joystick_mode == JoystickMode.DYNAMIC
 						or (
@@ -300,6 +304,16 @@ func _is_scene_ui_at_position(touch_position: Vector2) -> bool:
 	if not is_instance_valid(base_ui) or not base_ui.visible:
 		return false
 	return _check_children_for_pointer_control(base_ui, touch_position)
+
+
+func _is_hud_ui_at_position(touch_position: Vector2) -> bool:
+	var explorer = Global.get_explorer()
+	if not is_instance_valid(explorer):
+		return false
+	var chat_panel = explorer.chat_panel
+	if is_instance_valid(chat_panel):
+		return chat_panel.is_interactive_area_at(touch_position)
+	return false
 
 
 func _check_children_for_pointer_control(node: Node, touch_position: Vector2) -> bool:
