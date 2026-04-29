@@ -263,10 +263,19 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
 
 [node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1729052055]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 29)
+custom_minimum_size = Vector2(200, 28)
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/line_separation = -2
+theme_override_constants/paragraph_separation = -2
+theme_override_constants/shadow_outline_size = 0
+theme_override_constants/shadow_offset_y = 1
+theme_override_constants/outline_size = 0
+theme_override_constants/text_highlight_h_padding = 0
+theme_override_constants/text_highlight_v_padding = 0
+theme_override_constants/table_h_separation = 0
+theme_override_constants/table_v_separation = 0
 theme_override_fonts/normal_font = ExtResource("8_bold")
 theme_override_fonts/bold_italics_font = ExtResource("8_bold")
 theme_override_fonts/italics_font = ExtResource("8_bold")
@@ -276,7 +285,7 @@ theme_override_font_sizes/bold_font_size = 42
 theme_override_font_sizes/bold_italics_font_size = 42
 theme_override_font_sizes/italics_font_size = 42
 theme_override_font_sizes/mono_font_size = 42
-text = "Meta Residence Tower - Apartments in Decentraland"
+text = "Meta Residence Tower "
 fit_content = true
 scroll_active = false
 autowrap_mode = 2
@@ -285,12 +294,13 @@ script = ExtResource("9_rtl")
 
 [node name="HSeparator_Top2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=2092208633]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 5
 theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
 
 [node name="HBoxContainer_Creator" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=649726826]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 0
 theme_override_constants/separation = 8
 
 [node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Creator" unique_id=784476181]
