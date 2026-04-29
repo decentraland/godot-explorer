@@ -294,6 +294,7 @@ size_flags_horizontal = 3
 
 [node name="VBoxContainer_Gameplay" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=911633864]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")

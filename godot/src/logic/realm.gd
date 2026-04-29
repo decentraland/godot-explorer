@@ -325,44 +325,6 @@ func _async_fetch_world_scenes(world_name: String, base_content_url: String) -> 
 	return []
 
 
-func _async_fetch_world_scenes(world_name: String, base_content_url: String) -> Array:
-	var scenes_url = Realm.dcl_world_url(world_name) + "/scenes"
-	var promise: Promise = Global.http_requester.request_json(
-		scenes_url, HTTPClient.METHOD_GET, "", {}
-	)
-
-	var res = await PromiseUtils.async_awaiter(promise)
-	if res is PromiseError:
-		printerr("[REALM] Failed to fetch world scenes: ", res.get_error())
-		return []
-
-	if res is RequestResponse:
-		var response: RequestResponse = res
-		var json = response.get_string_response_as_json()
-		if json == null or not json is Dictionary:
-			printerr("[REALM] Invalid response from /scenes endpoint")
-			return []
-
-		var scenes = json.get("scenes", [])
-		if scenes.is_empty():
-			return []
-
-		var result: Array = []
-		for scene in scenes:
-			var entity_id = scene.get("entityId", "")
-			if entity_id.is_empty():
-				continue
-			var urn = "urn:decentraland:entity:" + entity_id
-			result.push_back({"urn": urn, "entityId": entity_id, "baseUrl": base_content_url})
-
-		if result.size() > 1:
-			prints("[REALM] Loaded", result.size(), "scenes for world", world_name)
-
-		return result
-
-	return []
-
-
 func async_request_set_position(scene_urn):
 	prints(scene_urn)
 	var url = scene_urn.baseUrl + scene_urn.entityId

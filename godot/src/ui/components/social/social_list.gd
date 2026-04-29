@@ -271,7 +271,6 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 			_sync_nearby_list()
 			_update_list_size()
 		SOCIAL_TYPE.BLOCKED:
-			remove_items()
 			await _async_reload_blocked_list(current_request_id)
 		SOCIAL_TYPE.ONLINE:
 			await _async_reload_online_list(current_request_id)
