@@ -15,7 +15,7 @@ use godot::classes::rendering_server::{
 use godot::classes::{
     Camera3D, INode, Material, Mesh, Node, PhysicsServer3D, RenderingServer, ResourceLoader,
 };
-use godot::global::godot_error;
+use godot::global::{godot_error, godot_warn};
 use godot::obj::{Base, Gd};
 use godot::prelude::*;
 
@@ -165,9 +165,19 @@ impl DclFloatingIslandsManager {
         self.candidates.clear();
         self.candidates.reserve(parcels.len());
 
+        // Latch within a single call so a fully-malformed buffer doesn't flood
+        // the console with thousands of duplicate warnings; resets across calls
+        // so a later batch with new bad bytes can still surface once.
+        let mut warned_invalid = false;
         for (i, coord) in parcels.iter_shared().enumerate() {
             let Some(cfg) = CornerConfig::from_packed(&corner_configs, i * 8) else {
-                floating_islands::warn_invalid_corner_config(i);
+                if !warned_invalid {
+                    warned_invalid = true;
+                    godot_warn!(
+                        "[DclFloatingIslandsManager] invalid ParcelState byte in corner_configs \
+                         near parcel index {i}, skipping (further warnings suppressed)"
+                    );
+                }
                 continue;
             };
             self.candidates.insert((coord.x, coord.y), cfg);
@@ -582,18 +592,22 @@ impl DclFloatingIslandsManager {
     }
 
     fn drain_worker_responses(&mut self, budget: usize) -> i32 {
+        let mut drained = 0;
         let mut submitted = 0;
-        while submitted < budget as i32 {
+        while drained < budget {
             let Some(worker) = self.worker.as_ref() else {
                 break;
             };
             let Ok(built) = worker.rx.try_recv() else {
                 break;
             };
+            drained += 1;
             self.pending.remove(&built.coord);
             // The candidate set may have changed (or vanished) while this
             // build was in flight. Discard the result if it no longer applies;
-            // `tick_culling` will re-enqueue with the current config.
+            // `tick_culling` will re-enqueue with the current config. Stale
+            // results still count against the budget so a burst of config
+            // changes can't drain unbounded queued items in a single frame.
             let Some(current_cfg) = self.candidates.get(&built.coord).copied() else {
                 continue;
             };

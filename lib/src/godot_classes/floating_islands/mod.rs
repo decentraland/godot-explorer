@@ -4,10 +4,8 @@ pub mod props_pool;
 pub mod terrain;
 
 use std::f32::consts::TAU;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use godot::builtin::{Basis, PackedByteArray, Rid, Transform3D, Vector3};
-use godot::global::godot_warn;
 
 pub const PARCEL_SIZE: f32 = 16.0;
 pub const PARCEL_HALF_SIZE: f32 = 8.0;
@@ -224,18 +222,4 @@ impl SimpleRng {
     pub fn next_f32(&mut self) -> f32 {
         (self.next_u32() as f32) / (u32::MAX as f32)
     }
-}
-
-/// Latches on the first invalid byte so a fully-malformed buffer doesn't
-/// flood the console with thousands of duplicate warnings.
-static INVALID_CORNER_CONFIG_WARNED: AtomicBool = AtomicBool::new(false);
-
-pub fn warn_invalid_corner_config(index: usize) {
-    if INVALID_CORNER_CONFIG_WARNED.swap(true, Ordering::Relaxed) {
-        return;
-    }
-    godot_warn!(
-        "[DclFloatingIslandsManager] invalid ParcelState byte in corner_configs near parcel \
-         index {index}, skipping (further warnings suppressed)"
-    );
 }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 
 use godot::builtin::{PackedFloat32Array, Rid, Transform3D, Vector3};
 use godot::classes::rendering_server::MultimeshTransformFormat;
@@ -20,7 +20,7 @@ struct PropPool {
     instance_rid: Rid,
     capacity: u32,
     high_water: u32,
-    free_slots: Vec<u32>,
+    free_slots: BinaryHeap<u32>,
 }
 
 #[derive(Default)]
@@ -71,10 +71,13 @@ impl PropPoolManager {
         pool.free_slots.push(id.slot);
         // Trim trailing free slots so the GPU stops iterating instances that
         // will only ever be zero-scaled. We can't reorder mid-buffer slots
-        // without re-issuing PropSlotIds, but tail compaction is cheap.
-        while pool.high_water > 0 && pool.free_slots.iter().any(|&s| s + 1 == pool.high_water) {
-            let top = pool.high_water - 1;
-            pool.free_slots.retain(|&s| s != top);
+        // without re-issuing PropSlotIds; the max-heap makes tail compaction
+        // O(k log n) where k is the trailing run.
+        while let Some(&top) = pool.free_slots.peek() {
+            if top + 1 != pool.high_water {
+                break;
+            }
+            pool.free_slots.pop();
             pool.high_water = top;
         }
         rs.multimesh_set_visible_instances(pool.multimesh_rid, pool.high_water as i32);
@@ -115,7 +118,7 @@ fn create_pool(mesh_rid: Rid, scenario: Rid) -> PropPool {
         instance_rid: instance,
         capacity: INITIAL_CAPACITY,
         high_water: 0,
-        free_slots: Vec::new(),
+        free_slots: BinaryHeap::new(),
     }
 }
 
