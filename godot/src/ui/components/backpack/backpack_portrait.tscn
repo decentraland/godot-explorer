@@ -1,4 +1,4 @@
-[gd_scene load_steps=48 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=45 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" uid="uid://c7d7n834bdsv4" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -21,9 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://cf4f5teas815x" path="res://src/ui/components/color_carrousel/color_carrousel.tscn" id="19_k780d"]
 [ext_resource type="Script" uid="uid://drm7w13o3wggu" path="res://src/ui/components/animated_texture_rect/animated_texture_rect.gd" id="19_ku1si"]
 [ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/components/discover/icons/back.svg" id="19_t0yet"]
-[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="21_k780d"]
-[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="22_et6he"]
-[ext_resource type="Texture2D" uid="uid://10ljw6k05g33" path="res://assets/ui/backpack/no-items-in-category.svg" id="27_kffkw"]
+[ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/components/backpack/no_items_message.tscn" id="27_noitems"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/emote_editor/emote_editor.tscn" id="30_vfwc7"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="34_gaa2l"]
 
@@ -96,10 +94,6 @@ resource_local_to_scene = false
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_et6he"]
 
-[sub_resource type="LabelSettings" id="LabelSettings_t0yet"]
-font = ExtResource("21_k780d")
-font_size = 40
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_18vfg"]
 
 [sub_resource type="Gradient" id="Gradient_v8iop"]
@@ -110,7 +104,7 @@ gradient = SubResource("Gradient_v8iop")
 fill = 1
 fill_from = Vector2(0.5, 0.5)
 
-[node name="BackpackPortrait" type="Control"]
+[node name="BackpackPortrait" type="Control" unique_id=1935067626]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -122,9 +116,10 @@ focus_mode = 2
 mouse_force_pass_scroll_events = false
 theme = ExtResource("1_0pkvk")
 script = ExtResource("1_a5ql5")
+default_main_category = "body"
 metadata/mobile_preview_orientation = "portrait"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1909251923]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -133,7 +128,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="PanelContainer_Navbar" type="PanelContainer" parent="VBoxContainer"]
+[node name="PanelContainer_Navbar" type="PanelContainer" parent="VBoxContainer" unique_id=180655044]
 unique_name_in_owner = true
 z_index = 1
 custom_minimum_size = Vector2(0, 60)
@@ -141,7 +136,7 @@ layout_mode = 2
 mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_no6vh")
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer_Navbar"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer_Navbar" unique_id=839068822]
 custom_minimum_size = Vector2(0, 76)
 layout_mode = 2
 theme_override_constants/margin_bottom = 8
@@ -149,23 +144,23 @@ script = ExtResource("3_0ypv2")
 default_margin = 48
 use_bottom = false
 
-[node name="HBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer"]
+[node name="HBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer" unique_id=1145767854]
 layout_mode = 2
 theme_override_constants/separation = 14
 alignment = 1
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer" unique_id=1612224134]
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2" unique_id=1476135233]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 alignment = 2
 
-[node name="Button_BackToExplorer" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2"]
+[node name="Button_BackToExplorer" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2" unique_id=1590360558]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -175,7 +170,7 @@ icon = ExtResource("19_t0yet")
 flat = true
 expand_icon = true
 
-[node name="Button_Wearables" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2"]
+[node name="Button_Wearables" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2" unique_id=242526884]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
@@ -187,20 +182,20 @@ button_group = SubResource("ButtonGroup_wyk6q")
 text = "Wearables"
 icon = ExtResource("12_6wpew")
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2" unique_id=1993015326]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2" unique_id=505776724]
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 2
 
-[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer"]
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer" unique_id=462515764]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_k780d")
 
-[node name="Button_Emotes" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer"]
+[node name="Button_Emotes" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer" unique_id=667276012]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
@@ -213,13 +208,13 @@ button_group = SubResource("ButtonGroup_wyk6q")
 text = "Emotes"
 icon = ExtResource("9_jb6ap")
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer" unique_id=1142025074]
 layout_mode = 2
 theme = ExtResource("12_2iqy8")
 theme_type_variation = &"HiddenVSeparator"
 theme_override_constants/separation = 68
 
-[node name="CheckBox_OnlyCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer"]
+[node name="CheckBox_OnlyCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer" unique_id=562067846]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -231,7 +226,7 @@ toggle_mode = true
 icon = ExtResource("10_jb6ap")
 icon_alignment = 1
 
-[node name="FilterIndicator" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles"]
+[node name="FilterIndicator" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles" unique_id=948931376]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 0
@@ -241,7 +236,7 @@ offset_right = 66.0
 offset_bottom = 16.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_b2yhx")
 
-[node name="Control" type="Control" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles"]
+[node name="Control" type="Control" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles" unique_id=1113908146]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -249,7 +244,7 @@ anchor_right = 1.0
 offset_bottom = 49.0
 grow_horizontal = 0
 
-[node name="FilterMenu" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control"]
+[node name="FilterMenu" type="Panel" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control" unique_id=687979460]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(330, 186)
 layout_mode = 1
@@ -262,7 +257,7 @@ offset_bottom = 256.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_ghn4u")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu" unique_id=1664776742]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -274,11 +269,11 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer" unique_id=2026137095]
 layout_mode = 2
 theme_override_constants/separation = 26
 
-[node name="ButtonAll" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer"]
+[node name="ButtonAll" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer" unique_id=758423893]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
@@ -294,7 +289,7 @@ alignment = 0
 icon_alignment = 2
 expand_icon = true
 
-[node name="ButtonCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer"]
+[node name="ButtonCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer/CheckBox_OnlyCollectibles/Control/FilterMenu/MarginContainer/VBoxContainer" unique_id=581785774]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
@@ -309,11 +304,11 @@ alignment = 0
 icon_alignment = 2
 expand_icon = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer" unique_id=822547458]
 layout_mode = 2
 theme_override_constants/separation = 15
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer"]
+[node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer" unique_id=1466882892]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m8ron")
 theme_override_font_sizes/font_size = 28
@@ -322,7 +317,7 @@ label_settings = ExtResource("5_18vfg")
 script = ExtResource("34_gaa2l")
 hide_on_portrait = true
 
-[node name="Button_Outfits" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer"]
+[node name="Button_Outfits" type="Button" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer" unique_id=1157647316]
 visible = false
 layout_mode = 2
 focus_mode = 0
@@ -337,19 +332,19 @@ button_group = SubResource("ButtonGroup_wyk6q")
 text = "Outfits"
 icon = ExtResource("4_8xgft")
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer" unique_id=1224249533]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yj6kw")
 
-[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer"]
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer" unique_id=1687306146]
 layout_mode = 2
 theme_override_constants/separation = 90
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yj6kw")
 script = ExtResource("34_gaa2l")
 hide_on_portrait = true
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="VBoxContainer"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=735542620]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -357,21 +352,21 @@ script = ExtResource("3_0ypv2")
 use_top = false
 use_bottom = false
 
-[node name="HBoxContainer_Backpack" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer"]
+[node name="HBoxContainer_Backpack" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer" unique_id=1495390153]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Control_LeftBar" type="Control" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack"]
+[node name="Control_LeftBar" type="Control" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack" unique_id=7635543]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="TextureProgressBar_AvatarLoading" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" instance=ExtResource("4_saosw")]
+[node name="TextureProgressBar_AvatarLoading" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=2011223973 instance=ExtResource("4_saosw")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -386,7 +381,7 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="AvatarPreview" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" instance=ExtResource("4_4kxkq")]
+[node name="AvatarPreview" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1038323443 instance=ExtResource("4_4kxkq")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
@@ -398,12 +393,12 @@ stretch = true
 hide_name = true
 metadata/_edit_use_anchors_ = true
 
-[node name="EmoteNameAnim" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" instance=ExtResource("16_u1xb7")]
+[node name="EmoteNameAnim" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1913936065 instance=ExtResource("16_u1xb7")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="AvatarVFX" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar"]
+[node name="AvatarVFX" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1182366062]
 unique_name_in_owner = true
 material = SubResource("ShaderMaterial_hpvfb")
 layout_mode = 1
@@ -422,7 +417,7 @@ x_offset = 343
 fps = 20.0
 metadata/_custom_type_script = "uid://drm7w13o3wggu"
 
-[node name="RightEditorContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack"]
+[node name="RightEditorContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack" unique_id=1039508584]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -433,51 +428,51 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer" unique_id=2107457233]
 layout_mode = 2
 
-[node name="WearableEditor" type="PanelContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer"]
+[node name="WearableEditor" type="PanelContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" unique_id=258215711]
 unique_name_in_owner = true
 material = SubResource("ShaderMaterial_k780d")
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_cq6cy")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor" unique_id=907653772]
 layout_mode = 2
 theme_override_constants/margin_left = 44
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 44
 theme_override_constants/margin_bottom = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer" unique_id=2057193099]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="VBoxContainer_WearableSelector" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer_WearableSelector" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer" unique_id=1732699320]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="MainCategoriesContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="MainCategoriesContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=1104529209]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="MainCategoriesContainerb" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer"]
+[node name="MainCategoriesContainerb" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer" unique_id=1100139670]
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="HBoxContainer_MainCategories" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb"]
+[node name="HBoxContainer_MainCategories" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb" unique_id=1321255653]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 43)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 10
 
-[node name="wearable_button_all" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_all" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1010208944 instance=ExtResource("7_wautc")]
 layout_mode = 2
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
@@ -487,13 +482,13 @@ alignment = 0
 filter_category = 0
 uppercase = true
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1859394635]
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("12_2iqy8")
 theme_type_variation = &"HiddenVSeparator"
 
-[node name="wearable_button_body_shape" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_body_shape" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1618130906 instance=ExtResource("7_wautc")]
 layout_mode = 2
 button_pressed = true
 action_mode = 1
@@ -501,15 +496,16 @@ button_group = SubResource("ButtonGroup_30sbq")
 text = "BODY"
 icon = null
 alignment = 0
+filter_category = 1
 uppercase = true
 
-[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories"]
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1222448922]
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("12_2iqy8")
 theme_type_variation = &"HiddenVSeparator"
 
-[node name="wearable_button_face" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_face" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1514954088 instance=ExtResource("7_wautc")]
 layout_mode = 2
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
@@ -519,13 +515,13 @@ alignment = 0
 filter_category = 23
 uppercase = true
 
-[node name="VSeparator3" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories"]
+[node name="VSeparator3" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1258972016]
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("12_2iqy8")
 theme_type_variation = &"HiddenVSeparator"
 
-[node name="wearable_button_clothing" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_clothing" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1610168043 instance=ExtResource("7_wautc")]
 layout_mode = 2
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
@@ -535,13 +531,13 @@ alignment = 0
 filter_category = 24
 uppercase = true
 
-[node name="VSeparator4" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories"]
+[node name="VSeparator4" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=428922534]
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("12_2iqy8")
 theme_type_variation = &"HiddenVSeparator"
 
-[node name="wearable_button_extras" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_extras" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=1592151282 instance=ExtResource("7_wautc")]
 layout_mode = 2
 action_mode = 1
 button_group = SubResource("ButtonGroup_30sbq")
@@ -551,19 +547,19 @@ alignment = 0
 filter_category = 25
 uppercase = true
 
-[node name="SubcategoriesSeparator" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="SubcategoriesSeparator" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=465074147]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 30
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 
-[node name="SubcategoriesContainer" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="SubcategoriesContainer" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=2075643096]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 0
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer" unique_id=17855159]
 clip_contents = false
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
@@ -571,14 +567,14 @@ size_flags_horizontal = 3
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 
-[node name="HBoxContainer_SubCategories" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer"]
+[node name="HBoxContainer_SubCategories" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer" unique_id=733025997]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 24
 
-[node name="wearable_button_all" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_all" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1648588516 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 button_pressed = true
@@ -587,7 +583,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 0
 
-[node name="wearable_button_all_extras" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_all_extras" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1345789592 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -596,14 +592,14 @@ text = "All"
 icon = null
 filter_category = 26
 
-[node name="wearable_button_body" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_body" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=509127059 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
 button_group = SubResource("ButtonGroup_meiko")
 icon = null
 
-[node name="wearable_button_head" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_head" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=358598956 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -611,7 +607,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 2
 
-[node name="wearable_button_upperbody" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_upperbody" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=375158835 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -619,7 +615,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 10
 
-[node name="wearable_button_lowerbody" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_lowerbody" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1209725819 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -627,7 +623,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 12
 
-[node name="wearable_button_feet" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_feet" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=994848171 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -635,7 +631,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 13
 
-[node name="wearable_button_handwear" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_handwear" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=991344957 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -643,7 +639,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 11
 
-[node name="wearable_button_hair" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_hair" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1723616071 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -651,7 +647,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 5
 
-[node name="wearable_button_facial_hair" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_facial_hair" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1219794584 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -659,7 +655,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 9
 
-[node name="wearable_button_eyes" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_eyes" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1539307837 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -667,7 +663,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 7
 
-[node name="wearable_button_eyebrows" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_eyebrows" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=223348034 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -675,7 +671,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 6
 
-[node name="wearable_button_mouth" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_mouth" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=2041048473 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -683,7 +679,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 8
 
-[node name="wearable_button_hat" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_hat" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1916345924 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -691,7 +687,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 14
 
-[node name="wearable_button_helmet" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_helmet" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=229557113 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -699,7 +695,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 20
 
-[node name="wearable_button_tiara" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_tiara" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1991901759 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -707,7 +703,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 18
 
-[node name="wearable_button_top_head" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_top_head" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1216388859 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -715,7 +711,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 19
 
-[node name="wearable_button_eyewear" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_eyewear" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=417464969 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -723,7 +719,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 15
 
-[node name="wearable_button_mask" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_mask" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1660457537 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -731,7 +727,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 17
 
-[node name="wearable_button_earring" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_earring" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=1666855936 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -739,7 +735,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 16
 
-[node name="wearable_button_body_shape" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_body_shape" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=941305917 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -747,7 +743,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 22
 
-[node name="wearable_button_skin" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" instance=ExtResource("7_wautc")]
+[node name="wearable_button_skin" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/ScrollContainer/HBoxContainer_SubCategories" unique_id=2094834455 instance=ExtResource("7_wautc")]
 layout_mode = 2
 theme_type_variation = &"SubcategoryButton"
 action_mode = 1
@@ -755,7 +751,7 @@ button_group = SubResource("ButtonGroup_meiko")
 icon = null
 filter_category = 21
 
-[node name="HSeparator_SizeMaintainer" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="HSeparator_SizeMaintainer" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=228069180]
 editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
 Otherwise the Editor shrinks if there is less than 3 wearables."
 custom_minimum_size = Vector2(630, 0)
@@ -763,7 +759,7 @@ layout_mode = 2
 theme_override_constants/separation = 0
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 
-[node name="HSeparator_ExtraSpaceB" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="HSeparator_ExtraSpaceB" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=852866011]
 unique_name_in_owner = true
 editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
 Otherwise the Editor shrinks if there is less than 3 wearables."
@@ -772,7 +768,7 @@ layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 
-[node name="HSeparator_ExtraSpace" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="HSeparator_ExtraSpace" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=924561413]
 unique_name_in_owner = true
 editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
 Otherwise the Editor shrinks if there is less than 3 wearables."
@@ -781,17 +777,17 @@ layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 
-[node name="ColorCarrousel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" instance=ExtResource("19_k780d")]
+[node name="ColorCarrousel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=939403013 instance=ExtResource("19_k780d")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CarrouselSeparator" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="CarrouselSeparator" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=1535611623]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
 
-[node name="MarginItemsContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
+[node name="MarginItemsContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=1777089626]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -799,11 +795,11 @@ theme_override_constants/margin_left = -20
 theme_override_constants/margin_top = -10
 theme_override_constants/margin_right = -10
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer" unique_id=1529560549]
 clip_contents = true
 layout_mode = 2
 
-[node name="ScrollContainer_Items" type="ScrollContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer"]
+[node name="ScrollContainer_Items" type="ScrollContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer" unique_id=2139294752]
 unique_name_in_owner = true
 clip_contents = false
 layout_mode = 2
@@ -812,7 +808,7 @@ mouse_filter = 0
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="MarginContainer2" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items"]
+[node name="MarginContainer2" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items" unique_id=398941304]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_left = 16
@@ -820,7 +816,7 @@ theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2" unique_id=1200051576]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -828,14 +824,14 @@ theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_bottom = 30
 
-[node name="GridContainer_WearablesList" type="GridContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer"]
+[node name="GridContainer_WearablesList" type="GridContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer" unique_id=1503433083]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/h_separation = 24
 theme_override_constants/v_separation = 24
 columns = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer" unique_id=1495681053]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 60
@@ -843,61 +839,26 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 60
 theme_override_constants/margin_bottom = 60
 
-[node name="Control_NoItems" type="VBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer"]
+[node name="Control_NoItems" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer" instance=ExtResource("27_noitems")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 0
+marketplace_section = "wearables"
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
-custom_minimum_size = Vector2(120, 120)
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("27_kffkw")
-expand_mode = 3
-stretch_mode = 5
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
-layout_mode = 2
-theme_override_constants/separation = 24
-theme_override_styles/separator = SubResource("StyleBoxEmpty_et6he")
-
-[node name="Label" type="Label" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
-layout_mode = 2
-text = "Nothing here yet"
-label_settings = SubResource("LabelSettings_t0yet")
-horizontal_alignment = 1
-
-[node name="RichTextBox_OpenMarketplace" type="RichTextLabel" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("22_et6he")
-theme_override_font_sizes/normal_font_size = 28
-bbcode_enabled = true
-text = "Find new ones in the
-[color=#A0ABFF][url]Marketplace[/url][/color]"
-fit_content = true
-scroll_active = false
-autowrap_mode = 2
-horizontal_alignment = 1
-
-[node name="EmoteEditor" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" instance=ExtResource("30_vfwc7")]
+[node name="EmoteEditor" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" unique_id=1768825536 instance=ExtResource("30_vfwc7")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" unique_id=227469305]
 layout_mode = 2
 theme_override_constants/separation = 95
 theme_override_styles/separator = SubResource("StyleBoxEmpty_18vfg")
 script = ExtResource("34_gaa2l")
 hide_on_portrait = true
 
-[node name="TextureProgressBar_BackpackLoading" parent="." instance=ExtResource("4_saosw")]
+[node name="TextureProgressBar_BackpackLoading" parent="." unique_id=1912826069 instance=ExtResource("4_saosw")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -913,7 +874,7 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ColorRect_Background" type="ColorRect" parent="."]
+[node name="ColorRect_Background" type="ColorRect" parent="." unique_id=2115252902]
 unique_name_in_owner = true
 visible = false
 show_behind_parent = true
@@ -926,7 +887,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.898039, 0.882353, 0.87451, 1)
 
-[node name="TextureRect_Background" type="TextureRect" parent="."]
+[node name="TextureRect_Background" type="TextureRect" parent="." unique_id=568870884]
 unique_name_in_owner = true
 visible = false
 show_behind_parent = true
@@ -948,6 +909,5 @@ texture = SubResource("GradientTexture2D_yjmsa")
 [connection signal="color_picked" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_picker_panel_pick_color"]
 [connection signal="color_set" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_set"]
 [connection signal="toggle_color_picker" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/ColorCarrousel" to="." method="_on_color_carrousel_toggle_color_picker"]
-[connection signal="meta_clicked" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/MarginContainer/MarginContainer/Control_NoItems/RichTextBox_OpenMarketplace" to="." method="_on_rich_text_box_open_marketplace_meta_clicked"]
 [connection signal="emote_equipped" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/EmoteEditor" to="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/EmoteNameAnim" method="set_equipped"]
 [connection signal="emote_grid_selected" from="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/EmoteEditor" to="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/EmoteNameAnim" method="set_emote_name"]

@@ -5,6 +5,38 @@ const DEFAULT_CAMERA_FOV = 60.0
 const SPRINTING_CAMERA_FOV = 75.0
 const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
 
+# Double-jump + glide tuning (values mirror Unity CharacterControllerSettings.asset).
+const MAX_AIR_JUMPS := 1
+const JUMP_BUFFER_WINDOW := 0.15
+const JUMP_COOLDOWN := 0.3
+const AIR_JUMP_HEIGHT := 2.0
+const AIR_JUMP_DELAY := 0.2
+const AIR_JUMP_DIRECTION_IMPULSE := 8.0
+const GLIDE_MAX_FALL_SPEED := 1.0
+const GLIDE_HORIZONTAL_SPEED := 6.0
+const GLIDE_MIN_GROUND_DISTANCE := 1.0
+const JUMP_TO_GLIDE_INTERVAL := 0.5
+const GLIDE_COOLDOWN := 0.6
+const GLIDE_OPENING_TIME := 0.5
+const GLIDE_CLOSING_TIME := 0.15
+
+# Glide FSM values — mirror DclAvatar.glide_state and rfc4.Movement.GlideState.
+const GLIDE_CLOSED := 0
+const GLIDE_OPENING := 1
+const GLIDE_GLIDING := 2
+const GLIDE_CLOSING := 3
+
+# What the jump button would do if pressed right now. Used by the UI to pick
+# the matching icon. Mirrors the decision tree in _physics_process.
+const JUMP_ACTION_NONE := 0
+const JUMP_ACTION_JUMP := 1  # ground jump or air (double) jump
+const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
+
+# #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
+# world/terrain). Keeps the ground raycast from pinging avatar wearables,
+# triggers, or other non-ground CollisionObject3Ds.
+const GROUND_RAYCAST_MASK := 2
+
 var last_position: Vector3
 var actual_velocity_xz: float
 
@@ -18,7 +50,8 @@ var run_jump_height: float = 1.8
 var hard_landing_cooldown: float = 0.0
 var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
-var jump_time := 0.0
+var jump_count: int = 0
+var glide_state: int = GLIDE_CLOSED
 
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
@@ -31,6 +64,16 @@ var current_profile_version: int = -1
 # Private variables (prefixed with _)
 var _hard_landing_timer: float = 0.0
 var _locomotion_settings: DclLocomotionSettings = null
+var _jump_buffer: float = 0.0
+var _glide_timer: float = 0.0
+var _time_since_last_jump: float = 1000.0
+var _time_since_glide_end: float = 1000.0
+var _air_jump_delay_timer: float = 0.0
+var _air_jump_direction: Vector3 = Vector3.ZERO
+var _ground_distance: float = INF
+# #b11: typed Array[RID] avoids per-element dynamic cast when passed to
+# PhysicsRayQueryParameters3D.exclude every physics frame.
+var _raycast_exclude: Array[RID] = []
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
@@ -152,6 +195,11 @@ func _ready():
 	Global.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
 	_on_scene_changed(Global.scene_runner.get_current_parcel_scene_id())
 
+	# Cache RIDs to exclude from ground-distance raycasts (player body itself +
+	# avatar subtree colliders, including the TriggerDetector which would
+	# otherwise make the ray report ~0m at all times).
+	_build_raycast_exclude()
+
 	# Avatar is top-level: initialize its world transform to match the player
 	avatar.global_position = global_position
 	avatar.rotation = Vector3(0, rotation.y, 0)
@@ -208,6 +256,25 @@ func _physics_process(dt: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, 20 * dt)
 		velocity.z = move_toward(velocity.z, 0, 20 * dt)
 
+	_jump_buffer = max(_jump_buffer - dt, 0.0)
+	if Global.explorer_has_focus() and Input.is_action_just_pressed("ia_jump"):
+		_jump_buffer = JUMP_BUFFER_WINDOW
+
+	_time_since_last_jump = minf(_time_since_last_jump + dt, 1000.0)
+	_time_since_glide_end = minf(_time_since_glide_end + dt, 1000.0)
+
+	if glide_state == GLIDE_OPENING:
+		_glide_timer -= dt
+		if _glide_timer <= 0.0:
+			glide_state = GLIDE_GLIDING
+	elif glide_state == GLIDE_CLOSING:
+		_glide_timer -= dt
+		if _glide_timer <= 0.0:
+			glide_state = GLIDE_CLOSED
+			_time_since_glide_end = 0.0
+
+	_ground_distance = _measure_ground_distance()
+
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 	var input_magnitude := clampf(input_dir.length(), 0.0, 1.0)
 
@@ -220,6 +287,8 @@ func _physics_process(dt: float) -> void:
 	var jog_disabled := Global.is_jog_disabled()
 	var run_disabled := Global.is_run_disabled()
 	var jump_disabled := Global.is_jump_disabled()
+	var double_jump_disabled := Global.is_double_jump_disabled()
+	var glide_disabled := Global.is_glide_disabled()
 
 	# If all input is disabled or during hard landing cooldown, clear input direction
 	if all_disabled or _hard_landing_timer > 0:
@@ -243,46 +312,124 @@ func _physics_process(dt: float) -> void:
 
 	var on_floor = is_on_floor() or position.y <= 0.0
 	var was_falling = avatar.fall
-	jump_time -= dt
 
 	if !on_floor:
 		time_falling += dt
 	else:
 		time_falling = 0.0
 
-	if not on_floor:
+	# Air-jump hover phase: freeze gravity, then fire impulse + horizontal dash
+	# when the timer expires. Leaves avatar.rise/fall untouched on purpose —
+	# flipping them mid-hover would trip Jump_Fall → Jump_End via nfall and
+	# strand the state machine away from Double_Jump_Rise when jump_count flips.
+	if _air_jump_delay_timer > 0.0:
+		_air_jump_delay_timer -= dt
+		velocity.y = 0.0
+		if _air_jump_delay_timer <= 0.0:
+			velocity.y = sqrt(2.0 * AIR_JUMP_HEIGHT * gravity)
+			var horiz_dir: Vector3 = Vector3(_air_jump_direction.x, 0.0, _air_jump_direction.z)
+			if horiz_dir.length_squared() > 0.0001:
+				horiz_dir = horiz_dir.normalized()
+				velocity.x = horiz_dir.x * AIR_JUMP_DIRECTION_IMPULSE
+				velocity.z = horiz_dir.z * AIR_JUMP_DIRECTION_IMPULSE
+			jump_count += 1
+			_time_since_last_jump = 0.0
+			avatar.rise = true
+			avatar.fall = false
+	elif not on_floor:
 		var in_grace_time = (
-			time_falling < .2 and !Input.is_action_pressed("ia_jump") and jump_time < 0
+			time_falling < .2
+			and !Input.is_action_pressed("ia_jump")
+			and _time_since_last_jump >= JUMP_COOLDOWN
 		)
 		avatar.land = in_grace_time
-		avatar.rise = velocity.y > .3
-		avatar.fall = velocity.y < -.3 && !in_grace_time
+		# rise/fall suppressed while the glider is providing lift (OPENING + GLIDING).
+		# During CLOSING normal gravity resumes so Jump_Fall can take over.
+		var free_flight: bool = glide_state == GLIDE_CLOSED or glide_state == GLIDE_CLOSING
+		avatar.rise = velocity.y > .3 and free_flight
+		avatar.fall = velocity.y < -.3 && !in_grace_time and free_flight
 		velocity.y -= gravity * dt
+
+		# Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step).
+		if (
+			_jump_buffer > 0.0
+			and jump_count >= 1
+			and jump_count <= MAX_AIR_JUMPS
+			and glide_state == GLIDE_CLOSED
+			and not jump_disabled
+			and not double_jump_disabled
+			and _hard_landing_timer <= 0
+			and _time_since_last_jump >= JUMP_COOLDOWN
+		):
+			_air_jump_delay_timer = AIR_JUMP_DELAY
+			_air_jump_direction = current_direction
+			_jump_buffer = 0.0
+
+		# Glide toggle-open (mobile-friendly). Diverges from Unity's hold-to-glide
+		# and from the Unity-exact `jump_count > MAX_AIR_JUMPS` entry gate — we
+		# let a stepped-off-a-ledge player open glide without first double-jumping.
+		# Air-jump still takes priority (above) because it consumes the buffer first.
+		if _jump_buffer > 0.0 and glide_state == GLIDE_CLOSED:
+			var gate_enabled := not jump_disabled and not glide_disabled
+			var gate_altitude := _ground_distance > GLIDE_MIN_GROUND_DISTANCE
+			var gate_jump_interval := _time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL
+			var gate_cooldown := _time_since_glide_end >= GLIDE_COOLDOWN
+			if gate_enabled and gate_altitude and gate_jump_interval and gate_cooldown:
+				glide_state = GLIDE_OPENING
+				_glide_timer = GLIDE_OPENING_TIME
+				_jump_buffer = 0.0
+				avatar.rise = false
+				avatar.fall = false
+
+		# Glide close: re-press (toggle), altitude too low, or input disabled.
+		# glide_disabled covers scene→scene transitions where the destination
+		# forbids gliding: the force-close fires on the next tick after the
+		# InputModifier update lands.
+		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+			var exit_toggle := _jump_buffer > 0.0
+			var exit_altitude := _ground_distance <= GLIDE_MIN_GROUND_DISTANCE
+			var exit_disabled := jump_disabled or glide_disabled
+			if exit_toggle or exit_altitude or exit_disabled:
+				glide_state = GLIDE_CLOSING
+				_glide_timer = GLIDE_CLOSING_TIME
+				if exit_toggle:
+					_jump_buffer = 0.0
+
+		# Clamp fall speed from OPENING onward so the 0.5s opening window isn't free-fall.
+		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+			if velocity.y < -GLIDE_MAX_FALL_SPEED:
+				velocity.y = -GLIDE_MAX_FALL_SPEED
 	elif (
-		Input.is_action_pressed("ia_jump")
-		and jump_time < 0
+		_jump_buffer > 0.0
 		and not jump_disabled
 		and _hard_landing_timer <= 0
+		and _time_since_last_jump >= JUMP_COOLDOWN
 	):
-		# Use run_jump_height if sprinting
+		# Ground jump — consume the buffer instead of reading the key again.
 		var effective_jump_height := jump_height
 		if Input.is_action_pressed("ia_sprint"):
 			effective_jump_height = run_jump_height
 		velocity.y = sqrt(2 * effective_jump_height * gravity)
+		jump_count = 1
+		_jump_buffer = 0.0
+		_time_since_last_jump = 0.0
 		avatar.land = false
 		avatar.rise = true
 		avatar.fall = false
-		jump_time = 1.5
 	else:
 		if not avatar.land:
 			avatar.land = true
-			# Check for hard landing (landing after falling for more than 1 second)
 			if was_falling and hard_landing_cooldown > 0 and time_falling > 1.0:
 				_hard_landing_timer = hard_landing_cooldown
 
 		velocity.y = 0
 		avatar.rise = false
 		avatar.fall = false
+		# Landing resets the air-jump budget and force-closes the glider.
+		jump_count = 0
+		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+			glide_state = GLIDE_CLOSING
+			_glide_timer = GLIDE_CLOSING_TIME
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
 	if current_direction:
@@ -320,9 +467,23 @@ func _physics_process(dt: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, walk_speed)
 		velocity.z = move_toward(velocity.z, 0, walk_speed)
 
+	# While gliding, cap horizontal speed — overrides walk/jog/run speeds set above.
+	if glide_state == GLIDE_GLIDING:
+		var horizontal := Vector2(velocity.x, velocity.z)
+		if horizontal.length() > GLIDE_HORIZONTAL_SPEED:
+			horizontal = horizontal.normalized() * GLIDE_HORIZONTAL_SPEED
+			velocity.x = horizontal.x
+			velocity.z = horizontal.y
+
 	actual_velocity_xz = (to_xz(global_position) - to_xz(last_position)).length() / dt
 
 	update_avatar_movement_state(actual_velocity_xz)
+
+	# Mirror local physics state into DclAvatar so avatar.gd drives the
+	# AnimationTree off the same numbers for both local and remote avatars.
+	avatar.jump_count = jump_count
+	avatar.glide_state = glide_state
+	avatar.is_grounded = on_floor
 
 	last_position = global_position
 	move_and_slide()
@@ -428,8 +589,114 @@ func get_avatar_under_crosshair() -> Avatar:
 	return null
 
 
+func get_jump_action() -> int:
+	if Global.is_jump_disabled() or Global.is_all_input_disabled():
+		return JUMP_ACTION_NONE
+	if _hard_landing_timer > 0.0:
+		return JUMP_ACTION_NONE
+	if is_on_floor() or position.y <= 0.0:
+		return JUMP_ACTION_JUMP
+	# Airborne. Report GLIDE_TOGGLE while the glider is open even if the
+	# current scene disables gliding — the force-close in _physics_process
+	# will transition to CLOSING on the next tick, and reporting NONE here
+	# would flicker the icon in the intervening frame.
+	if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+		return JUMP_ACTION_GLIDE_TOGGLE
+	if glide_state == GLIDE_CLOSING:
+		return JUMP_ACTION_NONE
+	# glide_state == GLIDE_CLOSED. Air-jump takes priority over glide-open.
+	if (
+		jump_count >= 1
+		and jump_count <= MAX_AIR_JUMPS
+		and not Global.is_double_jump_disabled()
+		and _time_since_last_jump >= JUMP_COOLDOWN
+	):
+		return JUMP_ACTION_JUMP
+	if (
+		not Global.is_glide_disabled()
+		and _ground_distance > GLIDE_MIN_GROUND_DISTANCE
+		and _time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL
+		and _time_since_glide_end >= GLIDE_COOLDOWN
+	):
+		return JUMP_ACTION_GLIDE_TOGGLE
+	return JUMP_ACTION_NONE
+
+
+# True while the next jump press would open or close the glider.
+func can_toggle_glide() -> bool:
+	if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+		return true
+	if glide_state != GLIDE_CLOSED:
+		return false
+	# jump_count in [1..MAX_AIR_JUMPS] => next press fires air-jump, not glide-open.
+	var grounded := is_on_floor() or position.y <= 0.0 or time_falling <= 0.0
+	var input_blocked := (
+		Global.is_jump_disabled() or Global.is_all_input_disabled() or Global.is_glide_disabled()
+	)
+	var air_jump_consumes_press := jump_count >= 1 and jump_count <= MAX_AIR_JUMPS
+	var too_low := _ground_distance <= GLIDE_MIN_GROUND_DISTANCE
+	var on_cooldown := (
+		_time_since_last_jump < JUMP_TO_GLIDE_INTERVAL or _time_since_glide_end < GLIDE_COOLDOWN
+	)
+	if (
+		grounded
+		or input_blocked
+		or _hard_landing_timer > 0.0
+		or air_jump_consumes_press
+		or too_low
+		or on_cooldown
+	):
+		return false
+	return true
+
+
 func move_to(target: Vector3, check_stuck: bool = true):
 	global_position = target
 	velocity = Vector3.ZERO
+	# #b15: teleports mid-glide (or mid-air-jump hover) must not carry the
+	# glider lift / frozen gravity into the destination. Reset everything to a
+	# grounded-idle baseline; _physics_process will re-derive on the next tick.
+	jump_count = 0
+	glide_state = GLIDE_CLOSED
+	_glide_timer = 0.0
+	_jump_buffer = 0.0
+	_air_jump_delay_timer = 0.0
 	if check_stuck and stuck_detector:
 		stuck_detector.check_stuck()
+
+
+# Distance from feet to ground for glide entry/close gating. Returns INF beyond
+# 20m. Uses GROUND_RAYCAST_MASK (#b9) so it only sees the world/terrain layer;
+# the exclude list (#b10) is kept as a belt-and-suspenders for avatar colliders
+# that might briefly share the world mask.
+func _measure_ground_distance() -> float:
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return INF
+	var from := global_position + Vector3(0.0, 0.1, 0.0)  # above feet to avoid self-hit
+	var to := from + Vector3(0.0, -20.0, 0.0)
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	# #b9: restrict to terrain layer so wearables / triggers / scene gadgets
+	# don't collapse the distance reading.
+	query.collision_mask = GROUND_RAYCAST_MASK
+	query.exclude = _raycast_exclude
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	var hit := space.intersect_ray(query)
+	if hit.is_empty():
+		return INF
+	return from.y - (hit.position as Vector3).y
+
+
+func _build_raycast_exclude() -> void:
+	_raycast_exclude.clear()
+	_raycast_exclude.append(get_rid())
+	if avatar != null:
+		_collect_collider_rids(avatar, _raycast_exclude)
+
+
+func _collect_collider_rids(node: Node, out: Array) -> void:
+	if node is CollisionObject3D:
+		out.append((node as CollisionObject3D).get_rid())
+	for c in node.get_children():
+		_collect_collider_rids(c, out)

@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://bectasdgy1btu"]
+[gd_scene format=3 uid="uid://bectasdgy1btu"]
 
 [ext_resource type="Script" uid="uid://c7b43qhrqpryi" path="res://src/ui/components/profile/profile_container.gd" id="1_d5ewq"]
 [ext_resource type="PackedScene" uid="uid://dcar8bc8rcscu" path="res://src/ui/components/profile/profile.tscn" id="2_d5ewq"]
 
-[node name="ProfileContainer" type="ColorRect"]
+[node name="ProfileContainer" type="ColorRect" unique_id=1313218663]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -14,7 +14,7 @@ color = Color(0, 0, 0, 0.784314)
 script = ExtResource("1_d5ewq")
 metadata/mobile_preview_orientation = "landscape"
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=214746559]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -24,7 +24,7 @@ offset_bottom = 4.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Profile" parent="CenterContainer" instance=ExtResource("2_d5ewq")]
+[node name="Profile" parent="CenterContainer" unique_id=1925699512 instance=ExtResource("2_d5ewq")]
 unique_name_in_owner = true
 layout_mode = 2
 rounded = true

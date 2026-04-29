@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://vc72j0sq70jq"]
+[gd_scene format=3 uid="uid://vc72j0sq70jq"]
 
 [ext_resource type="Script" uid="uid://d22htbtk8w5kn" path="res://src/ui/components/panels/side_panel.gd" id="1_gr74l"]
 [ext_resource type="Script" uid="uid://dkpoy3en6rfhc" path="res://src/logic/metrics/place_details_screen_tracking_handler.gd" id="2_j8c2j"]
@@ -9,7 +9,7 @@
 script = ExtResource("2_j8c2j")
 metadata/_custom_type_script = "uid://dkpoy3en6rfhc"
 
-[node name="JumpIn" type="ColorRect"]
+[node name="JumpIn" type="ColorRect" unique_id=429357386]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -21,7 +21,7 @@ portrait_panel_resource = ExtResource("2_mlrqc")
 landscape_panel_resource = ExtResource("2_mlrqc")
 tracking_handler = SubResource("Resource_mu208")
 
-[node name="TextureProgressBar" parent="." instance=ExtResource("4_jvwlf")]
+[node name="TextureProgressBar" parent="." unique_id=749487951 instance=ExtResource("4_jvwlf")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
