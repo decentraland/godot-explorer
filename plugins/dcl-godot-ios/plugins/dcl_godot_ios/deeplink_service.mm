@@ -5,7 +5,23 @@
 #import "drivers/apple_embedded/godot_app_delegate.h"
 #import "deeplink_service.h"
 #import "dcl_godot_ios.h"
+#import "core/os/os.h"
+#import "core/string/print_string.h"
 #import <objc/runtime.h>
+
+// NSLog goes to iOS syslog (Console.app) but does NOT reach Godot's stdout
+// pipeline that surfaces in `cargo run -- run` / Xcode debug output. Mirror
+// every deeplink log to print_line so it is visible alongside GDScript prints
+// and Rust tracing in the Godot log stream — but guard the print_line call so
+// it is a no-op before OS_IOS is constructed (e.g. inside +(void)load, which
+// runs at image load — well before apple_embedded_main creates OS_IOS).
+#define DEEPLINK_LOG(fmt, ...) do { \
+	NSLog(@"[DEEPLINK] " fmt, ##__VA_ARGS__); \
+	if (OS::get_singleton() != nullptr) { \
+		NSString *_dl_msg = [NSString stringWithFormat:@"[DEEPLINK] " fmt, ##__VA_ARGS__]; \
+		print_line(String::utf8([_dl_msg UTF8String])); \
+	} \
+} while (0)
 
 static bool scene_methods_injected = false;
 static bool deeplink_service_added = false;
@@ -23,24 +39,28 @@ static void inject_scene_url_methods() {
 	// Inject scene:openURLContexts: method
 	SEL openURLSel = @selector(scene:openURLContexts:);
 	if (!class_respondsToSelector(delegateClass, openURLSel)) {
-		NSLog(@"[DEEPLINK] Injecting scene:openURLContexts: into GDTApplicationDelegate");
+		DEEPLINK_LOG(@"Injecting scene:openURLContexts: into GDTApplicationDelegate");
 		class_addMethod(delegateClass, openURLSel, (IMP)injected_scene_openURLContexts, "v@:@@");
+	} else {
+		DEEPLINK_LOG(@"scene:openURLContexts: already present on GDTApplicationDelegate, skipping injection");
 	}
 
 	// Inject scene:willConnectToSession:options: method
 	SEL willConnectSel = @selector(scene:willConnectToSession:options:);
 	if (!class_respondsToSelector(delegateClass, willConnectSel)) {
-		NSLog(@"[DEEPLINK] Injecting scene:willConnectToSession:options: into GDTApplicationDelegate");
+		DEEPLINK_LOG(@"Injecting scene:willConnectToSession:options: into GDTApplicationDelegate");
 		class_addMethod(delegateClass, willConnectSel, (IMP)injected_scene_willConnectToSession, "v@:@@@");
+	} else {
+		DEEPLINK_LOG(@"scene:willConnectToSession:options: already present on GDTApplicationDelegate, skipping injection");
 	}
 }
 
 // Injected method: handles deep links when app is running (e.g., Safari tab returning)
 static void injected_scene_openURLContexts(id self, SEL _cmd, UIScene* scene, NSSet<UIOpenURLContext*>* URLContexts) {
-	NSLog(@"[DEEPLINK] scene:openURLContexts: called with %lu URL(s)", (unsigned long)URLContexts.count);
+	DEEPLINK_LOG(@"scene:openURLContexts: called with %lu URL(s)", (unsigned long)URLContexts.count);
 	for (UIOpenURLContext* context in URLContexts) {
 		NSURL* url = context.URL;
-		NSLog(@"[DEEPLINK] Scene URL received: %@", url.absoluteString);
+		DEEPLINK_LOG(@"Scene URL received: %@", url.absoluteString);
 		if (url) {
 			DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 		}
@@ -49,14 +69,14 @@ static void injected_scene_openURLContexts(id self, SEL _cmd, UIScene* scene, NS
 
 // Injected method: handles deep links on cold start
 static void injected_scene_willConnectToSession(id self, SEL _cmd, UIScene* scene, UISceneSession* session, UISceneConnectionOptions* connectionOptions) {
-	NSLog(@"[DEEPLINK] scene:willConnectToSession: called");
+	DEEPLINK_LOG(@"scene:willConnectToSession: called");
 
 	// Handle URL contexts passed at launch
 	if (connectionOptions.URLContexts.count > 0) {
-		NSLog(@"[DEEPLINK] Launch with %lu URL context(s)", (unsigned long)connectionOptions.URLContexts.count);
+		DEEPLINK_LOG(@"Launch with %lu URL context(s)", (unsigned long)connectionOptions.URLContexts.count);
 		for (UIOpenURLContext* context in connectionOptions.URLContexts) {
 			NSURL* url = context.URL;
-			NSLog(@"[DEEPLINK] Launch URL: %@", url.absoluteString);
+			DEEPLINK_LOG(@"Launch URL: %@", url.absoluteString);
 			if (url) {
 				DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 			}
@@ -68,7 +88,7 @@ static void injected_scene_willConnectToSession(id self, SEL _cmd, UIScene* scen
 		for (NSUserActivity* activity in connectionOptions.userActivities) {
 			if ([activity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
 				NSURL* url = activity.webpageURL;
-				NSLog(@"[DEEPLINK] Launch Universal Link: %@", url.absoluteString);
+				DEEPLINK_LOG(@"Launch Universal Link: %@", url.absoluteString);
 				if (url) {
 					DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 				}
@@ -98,6 +118,7 @@ static void injected_scene_willConnectToSession(id self, SEL _cmd, UIScene* scen
 
 @implementation DeeplinkServiceLoader
 + (void)load {
+	DEEPLINK_LOG(@"+[DeeplinkServiceLoader load] fired (image load)");
 	if (!scene_methods_injected) {
 		inject_scene_url_methods();
 		scene_methods_injected = true;
@@ -110,6 +131,7 @@ static void injected_scene_willConnectToSession(id self, SEL _cmd, UIScene* scen
 // initialized, so addService: actually registers the listener. The injection
 // is also re-attempted as a safety net in case +(void)load was somehow skipped.
 void force_deeplink_service_initialization() {
+	DEEPLINK_LOG(@"force_deeplink_service_initialization() called (Godot module init)");
 	// Reference DeeplinkServiceLoader so the iOS linker keeps it under
 	// -dead_strip (the Godot iOS app doesn't set -ObjC, so unreferenced
 	// Objective-C classes from static libs can be stripped — taking their
@@ -118,10 +140,14 @@ void force_deeplink_service_initialization() {
 	(void)[DeeplinkServiceLoader class];
 
 	if (!scene_methods_injected) {
+		DEEPLINK_LOG(@"force_init: injecting scene methods (loader +load did not fire first)");
 		inject_scene_url_methods();
 		scene_methods_injected = true;
+	} else {
+		DEEPLINK_LOG(@"force_init: scene methods already injected by +load");
 	}
 	if (!deeplink_service_added) {
+		DEEPLINK_LOG(@"force_init: registering DeeplinkService with GDTApplicationDelegate");
 		[GDTApplicationDelegate addService:[DeeplinkService shared]];
 		deeplink_service_added = true;
 	}
