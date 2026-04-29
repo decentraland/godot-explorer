@@ -5,16 +5,21 @@ const FRIEND_DISCOVER_CARD = preload(
 )
 
 const REFRESH_INTERVAL: float = 15.0
+const MAX_CONCURRENT_WORLD_REQUESTS: int = 8
+const WORLD_BATCH_TIMEOUT: float = 15.0
+const PLACE_CACHE_MAX_SIZE: int = 200
 
 var _loading: bool = false
 var _dirty: bool = false
 var _place_cache: Dictionary = {}  # "x,y" or "world:name" -> place_data
+var _place_cache_keys: Array = []  # insertion order for LRU eviction
 var _current_addresses: Dictionary = {}  # address_lower -> card node
 var _connected_signals: bool = false
 var _refresh_timer: Timer = null
 var _debounce_timer: Timer = null
 var _first_load: bool = true
 var _count_label: Label = null
+var _peers_request_id: int = 0
 
 
 func _ready() -> void:
@@ -70,35 +75,49 @@ func _async_on_request(_offset: int, _limit: int) -> void:
 	if _first_load:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.LOADING)
 
-	# Fetch all friends
-	var promise = Global.social_service.get_friends(100, 0, -1)
-	var timed_out = await _async_await_with_timeout(promise, 10.0)
+	# Fetch all friends with pagination (max 1000)
+	var all_friends: Array = []
+	var fetch_failed := false
+	var page_size := 100
+	var offset := 0
+	var max_pages := 10
+	for _page_i in range(max_pages):
+		var promise = Global.social_service.get_friends(page_size, offset, -1)
+		var timed_out = await _async_await_with_timeout(promise, 10.0)
+		if timed_out or promise.is_rejected():
+			if all_friends.is_empty():
+				fetch_failed = true
+			break
+		var page = promise.get_data()
+		all_friends.append_array(page)
+		if page.size() < page_size:
+			break
+		offset += page_size
 
-	if timed_out or promise.is_rejected():
-		_loading = false
-		if _first_load:
-			report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
-		return
-
-	var friends = promise.get_data()
-	if friends.is_empty():
+	if all_friends.is_empty():
 		_loading = false
 		_remove_all()
+		# On transient error, keep _first_load so the skeleton shows on retry
+		if not fetch_failed:
+			_first_load = false
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 		return
 
 	# Build address -> friend data map
 	var friends_by_address: Dictionary = {}
-	for friend_data in friends:
+	for friend_data in all_friends:
 		var address: String = friend_data["address"].to_lower()
 		friends_by_address[address] = friend_data
 
 	var friend_addresses: Array = friends_by_address.keys()
 
-	# Fetch peers from Archipelago to find friends in Genesis City
+	# Fetch peers from Archipelago to find friends in Genesis City.
+	# Use a request ID to ignore stale responses from concurrent fetch_peers calls.
+	_peers_request_id += 1
+	var my_request_id := _peers_request_id
 	Global.locations.fetch_peers()
 	await Global.locations.in_genesis_city_changed
-	if not is_instance_valid(item_container):
+	if not is_instance_valid(item_container) or my_request_id != _peers_request_id:
 		_loading = false
 		return
 
@@ -180,7 +199,7 @@ func _build_place_data(friend: Dictionary) -> Dictionary:
 				var json: Dictionary = result.get_string_response_as_json()
 				if not json.data.is_empty():
 					place_data = json.data[0]
-					_place_cache[cache_key] = place_data
+					_cache_put(cache_key, place_data)
 					place_data = place_data.duplicate()
 
 		if place_data.is_empty():
@@ -205,7 +224,7 @@ func _build_place_data(friend: Dictionary) -> Dictionary:
 				var json: Dictionary = result.get_string_response_as_json()
 				if not json.data.is_empty():
 					place_data = json.data[0]
-					_place_cache[cache_key] = place_data
+					_cache_put(cache_key, place_data)
 					place_data = place_data.duplicate()
 
 		if place_data.is_empty():
@@ -319,6 +338,32 @@ func clean_items():
 	_remove_all()
 
 
+# -- Place cache with bounded size ---------------------------------------------
+
+
+func _cache_put(key: String, value: Dictionary) -> void:
+	if _place_cache.has(key):
+		_place_cache_keys.erase(key)
+	elif _place_cache_keys.size() >= PLACE_CACHE_MAX_SIZE:
+		var oldest_key = _place_cache_keys.pop_front()
+		_place_cache.erase(oldest_key)
+	_place_cache[key] = value
+	_place_cache_keys.append(key)
+
+
+# -- World URL helper ----------------------------------------------------------
+
+
+func _get_worlds_base_url() -> String:
+	# worlds_content_server() returns "https://...decentraland.org/world/"
+	# We need "https://...decentraland.org" for the /wallet/ endpoint
+	var url := DclUrls.worlds_content_server()
+	var idx := url.find("/world/")
+	if idx >= 0:
+		return url.substr(0, idx)
+	return url.trim_suffix("/")
+
+
 # -- World fetching: streaming (first load) ------------------------------------
 
 
@@ -326,18 +371,38 @@ func _fetch_connected_worlds_streaming(addresses: Array, friends_by_address: Dic
 	if addresses.is_empty():
 		return
 
-	var base_url := DclUrls.worlds_content_server().replace("/world/", "")
+	var base_url := _get_worlds_base_url()
+	var in_flight: int = 0
 
 	for address in addresses:
+		# Throttle: wait until a slot opens up
+		while in_flight >= MAX_CONCURRENT_WORLD_REQUESTS:
+			if not is_inside_tree():
+				return
+			await get_tree().process_frame
+		if not is_instance_valid(item_container):
+			return
+
+		in_flight += 1
 		var http_request = HTTPRequest.new()
 		add_child(http_request)
 		var url := base_url + "/wallet/" + str(address) + "/connected-world"
 		http_request.request_completed.connect(
-			_on_world_stream_completed.bind(address, http_request, friends_by_address)
+			func(
+				p_result: int,
+				p_code: int,
+				p_headers: PackedStringArray,
+				p_body: PackedByteArray,
+			) -> void:
+				in_flight -= 1
+				_on_world_stream_completed(
+					p_result, p_code, p_headers, p_body, address, http_request, friends_by_address
+				)
 		)
 		var error = http_request.request(url)
 		if error != OK:
 			http_request.queue_free()
+			in_flight -= 1
 
 
 func _on_world_stream_completed(
@@ -382,28 +447,33 @@ func _on_world_stream_completed(
 
 
 func _async_fetch_connected_worlds(addresses: Array, friends_by_address: Dictionary) -> Dictionary:
-	var result: Dictionary = {}
+	var world_result: Dictionary = {}
 	if addresses.is_empty():
-		return result
+		return world_result
 
-	var base_url := DclUrls.worlds_content_server().replace("/world/", "")
+	var base_url := _get_worlds_base_url()
 	var responses: Dictionary = {}  # address -> data Dictionary or null
+	var queue_index: int = 0
 
-	for address in addresses:
-		var http_request = HTTPRequest.new()
-		add_child(http_request)
-		var url := base_url + "/wallet/" + str(address) + "/connected-world"
-		http_request.request_completed.connect(
-			_on_world_batch_completed.bind(address, http_request, responses)
-		)
-		var error = http_request.request(url)
-		if error != OK:
-			http_request.queue_free()
-			responses[address] = null
+	# Launch first batch
+	while queue_index < addresses.size() and queue_index < MAX_CONCURRENT_WORLD_REQUESTS:
+		_launch_world_batch_request(base_url, addresses[queue_index], responses)
+		queue_index += 1
 
-	# Wait until all requests have responded
+	# Wait with timeout, launching more as slots free up
+	var deadline := Time.get_ticks_msec() + int(WORLD_BATCH_TIMEOUT * 1000.0)
 	while responses.size() < addresses.size():
+		if Time.get_ticks_msec() >= deadline or not is_inside_tree():
+			break
 		await get_tree().process_frame
+
+		# in_flight = launched - responded
+		while (
+			queue_index < addresses.size()
+			and (queue_index - responses.size()) < MAX_CONCURRENT_WORLD_REQUESTS
+		):
+			_launch_world_batch_request(base_url, addresses[queue_index], responses)
+			queue_index += 1
 
 	for address in responses.keys():
 		var data = responses[address]
@@ -414,9 +484,22 @@ func _async_fetch_connected_worlds(addresses: Array, friends_by_address: Diction
 			continue
 		var friend = friends_by_address[address].duplicate()
 		friend["world_name"] = world_name
-		result[address] = friend
+		world_result[address] = friend
 
-	return result
+	return world_result
+
+
+func _launch_world_batch_request(base_url: String, address: String, responses: Dictionary) -> void:
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	var url := base_url + "/wallet/" + str(address) + "/connected-world"
+	http_request.request_completed.connect(
+		_on_world_batch_completed.bind(address, http_request, responses)
+	)
+	var error = http_request.request(url)
+	if error != OK:
+		http_request.queue_free()
+		responses[address] = null
 
 
 func _on_world_batch_completed(
@@ -451,9 +534,13 @@ func _async_await_with_timeout(promise_param: Promise, timeout_seconds: float) -
 		return true
 	if promise_param.is_resolved():
 		return false
+	if not is_inside_tree():
+		return true
 
 	var timer = get_tree().create_timer(timeout_seconds)
 	while not promise_param.is_resolved() and timer.time_left > 0:
+		if not is_inside_tree():
+			return true
 		await get_tree().process_frame
 
 	return not promise_param.is_resolved()

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dp4m8v2kxn5qf"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_theme"]
-[ext_resource type="Script" path="res://src/ui/components/discover/friends/friend_discover_card.gd" id="2_place"]
+[ext_resource type="Script" uid="uid://bs370waurf1im" path="res://src/ui/components/discover/friends/friend_discover_card.gd" id="2_place"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_safe"]
 [ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_exit"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="5_pfp"]
@@ -258,13 +258,14 @@ stretch_mode = 4
 
 [node name="HSeparator_AfterFriend" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1189458092]
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 45
 theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
 
 [node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1729052055]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 54)
+custom_minimum_size = Vector2(200, 29)
 layout_mode = 2
+size_flags_vertical = 0
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/normal_font = ExtResource("8_bold")
 theme_override_fonts/bold_italics_font = ExtResource("8_bold")
@@ -275,7 +276,7 @@ theme_override_font_sizes/bold_font_size = 42
 theme_override_font_sizes/bold_italics_font_size = 42
 theme_override_font_sizes/italics_font_size = 42
 theme_override_font_sizes/mono_font_size = 42
-text = "Scene Title"
+text = "Meta Residence Tower - Apartments in Decentraland"
 fit_content = true
 scroll_active = false
 autowrap_mode = 2
@@ -284,7 +285,7 @@ script = ExtResource("9_rtl")
 
 [node name="HSeparator_Top2" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=2092208633]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 18
 theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
 
 [node name="HBoxContainer_Creator" type="HBoxContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=649726826]
@@ -308,7 +309,7 @@ text_overrun_behavior = 3
 
 [node name="HSeparator_BeforeImage" type="HSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=546423234]
 layout_mode = 2
-theme_override_constants/separation = 32
+theme_override_constants/separation = 34
 theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
 
 [node name="Control" type="Control" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1780940183]
