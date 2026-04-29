@@ -7,7 +7,8 @@
 #import "dcl_godot_ios.h"
 #import <objc/runtime.h>
 
-static bool deeplink_service_initialized = false;
+static bool scene_methods_injected = false;
+static bool deeplink_service_added = false;
 
 // Forward declarations for injected methods
 static void injected_scene_openURLContexts(id self, SEL _cmd, UIScene* scene, NSSet<UIOpenURLContext*>* URLContexts);
@@ -76,23 +77,46 @@ static void injected_scene_willConnectToSession(id self, SEL _cmd, UIScene* scen
 	}
 }
 
-struct DeeplinkServiceInitializer {
-	DeeplinkServiceInitializer() {
-		if (!deeplink_service_initialized) {
-			inject_scene_url_methods();
-			[GDTApplicationDelegate addService:[DeeplinkService shared]];
-			deeplink_service_initialized = true;
-		}
-	}
-};
-static DeeplinkServiceInitializer initializer;
+// Inject scene URL methods at Objective-C image load — runs before main() and
+// before UIApplicationMain instantiates GDTApplicationDelegate as the
+// SceneDelegate. iOS caches respondsToSelector: results when it creates a
+// scene session, so the methods MUST be on the class before that happens.
+//
+// The previous approach (file-scope C++ static initializer) could be dropped
+// by the iOS linker, and the fallback in force_deeplink_service_initialization
+// only runs from Godot's Main::start() — well after the SceneDelegate exists,
+// so its respondsToSelector: cache no longer matched and scene:openURLContexts:
+// was never dispatched on warm-start deeplinks.
+//
+// Service registration (DeeplinkService → GDTApplicationDelegate.services) is
+// intentionally NOT done here: GDTApplicationDelegate's own +(void)load (which
+// initializes the services NSMutableArray) may not have run yet, and addService:
+// silently no-ops on a nil array. The service is added later in
+// force_deeplink_service_initialization, by which point services is ready.
+@interface DeeplinkServiceLoader : NSObject
+@end
 
-// C function to force initialization
-void force_deeplink_service_initialization() {
-	if (!deeplink_service_initialized) {
+@implementation DeeplinkServiceLoader
++ (void)load {
+	if (!scene_methods_injected) {
 		inject_scene_url_methods();
+		scene_methods_injected = true;
+	}
+}
+@end
+
+// Called from register_dcl_godot_ios_types during Godot module init. By this
+// point GDTApplicationDelegate's +(void)load has run and the services array is
+// initialized, so addService: actually registers the listener. The injection
+// is also re-attempted as a safety net in case +(void)load was somehow skipped.
+void force_deeplink_service_initialization() {
+	if (!scene_methods_injected) {
+		inject_scene_url_methods();
+		scene_methods_injected = true;
+	}
+	if (!deeplink_service_added) {
 		[GDTApplicationDelegate addService:[DeeplinkService shared]];
-		deeplink_service_initialized = true;
+		deeplink_service_added = true;
 	}
 }
 
