@@ -6,19 +6,12 @@ var known_locations: Array = []  # Array of objects {coord: [x,y], title: String
 var in_genesis_city: Array = []  # Array of objects {address: String, parcel: [int, int]}
 
 
-func fetch_peers(addresses: Array = []):
+func fetch_peers():
 	var http_request = HTTPRequest.new()
 	add_child(http_request)
 	http_request.request_completed.connect(_on_request_completed.bind(http_request))
 
-	var url := DclUrls.archipelago_stats() + "/comms/peers"
-	if not addresses.is_empty():
-		var params := []
-		for addr in addresses:
-			params.append("id=" + str(addr))
-		url += "?" + "&".join(params)
-
-	var error = http_request.request(url)
+	var error = http_request.request(DclUrls.archipelago_stats() + "/comms/peers")
 	if error != OK:
 		push_error("Error making request: " + str(error))
 

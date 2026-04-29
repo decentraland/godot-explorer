@@ -8,7 +8,7 @@ const REFRESH_INTERVAL: float = 15.0
 
 var _loading: bool = false
 var _dirty: bool = false
-var _place_cache: Dictionary = {}  # "x,y" -> place_data
+var _place_cache: Dictionary = {}  # "x,y" or "world:name" -> place_data
 var _current_addresses: Dictionary = {}  # address_lower -> card node
 var _connected_signals: bool = false
 var _refresh_timer: Timer = null
@@ -169,12 +169,27 @@ func _build_place_data(friend: Dictionary) -> Dictionary:
 	var world_name: String = friend.get("world_name", "")
 
 	if not world_name.is_empty():
-		var place_name = world_name.trim_suffix(".dcl.eth")
-		place_data = {
-			"title": place_name,
-			"world": true,
-			"world_name": world_name,
-		}
+		var cache_key := "world:" + world_name
+		if _place_cache.has(cache_key):
+			place_data = _place_cache[cache_key].duplicate()
+		else:
+			var result = await PlacesHelper.async_get_by_names(world_name)
+			if not is_instance_valid(item_container):
+				return {}
+			if result and not (result is PromiseError):
+				var json: Dictionary = result.get_string_response_as_json()
+				if not json.data.is_empty():
+					place_data = json.data[0]
+					_place_cache[cache_key] = place_data
+					place_data = place_data.duplicate()
+
+		if place_data.is_empty():
+			var place_name = world_name.trim_suffix(".dcl.eth")
+			place_data = {
+				"title": place_name,
+				"world": true,
+				"world_name": world_name,
+			}
 	else:
 		var parcel = friend["parcel"]
 		var parcel_pos = Vector2i(int(parcel[0]), int(parcel[1]))
