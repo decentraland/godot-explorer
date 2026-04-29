@@ -15,12 +15,14 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
+var _int_regex := RegEx.create_from_string(r"^-?\d+$")
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
 var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
+var _ban_check_generation: int = 0
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 var _gamepad_connected: bool = false
 
@@ -45,6 +47,7 @@ var _session_hide_main_hud: bool = false
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
+@onready var settings_panel: Control = %SettingsPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -140,6 +143,9 @@ func _ready():
 	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
 
+	# Connect settings panel button
+	Global.open_settings_panel.connect(_show_settings_panel)
+
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
@@ -198,6 +204,26 @@ func _ready():
 	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
 	if Global.deep_link_obj.livekit_debug:
 		_on_control_menu_request_livekit_debug(true)
+
+	# Scene Inspector: activate bridge if --scene-inspector or ?scene-inspector= is set
+	var scene_inspector_target := ""
+	if not Global.deep_link_obj.scene_inspector.is_empty():
+		scene_inspector_target = Global.deep_link_obj.scene_inspector
+	elif not Global.cli.scene_inspector.is_empty():
+		scene_inspector_target = Global.cli.scene_inspector
+	if not scene_inspector_target.is_empty():
+		# Activate Rust-side instrumentation before any scene is spawned
+		Global.scene_inspector_active = true
+		var bridge = SceneInspectorBridge.new()
+		bridge.set_name("scene_inspector_bridge")
+		add_child(bridge)
+		bridge.setup(scene_inspector_target)
+	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
+	var scene_inspector_file: bool = (
+		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
+	)
+	if scene_inspector_file:
+		Global.scene_inspector_dispatcher.set_file_logging(true)
 
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
 	Global.deep_link_router._clear_deep_link()
@@ -476,6 +502,14 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
+func _is_coordinate_string(text: String) -> bool:
+	var cleaned = text.strip_edges().replace("(", "").replace(")", "").replace(" ", "")
+	var parts = cleaned.split(",")
+	if parts.size() < 2:
+		return false
+	return _int_regex.search(parts[0]) != null and _int_regex.search(parts[1]) != null
+
+
 func _parse_coordinates(coord_string: String) -> Vector2i:
 	# Remove parentheses if present
 	var cleaned = coord_string.strip_edges()
@@ -491,10 +525,7 @@ func _parse_coordinates(coord_string: String) -> Vector2i:
 		var y_str = parts[1].strip_edges()
 
 		# Validate and parse integers (including negative values)
-		var int_regex = RegEx.new()
-		int_regex.compile(r"^-?\d+$")
-
-		if int_regex.search(x_str) != null and int_regex.search(y_str) != null:
+		if _int_regex.search(x_str) != null and _int_regex.search(y_str) != null:
 			return Vector2i(int(x_str), int(y_str))
 
 	return Vector2i(0, 0)
@@ -507,44 +538,29 @@ func _on_panel_chat_submit_message(message: String):
 	var params := message.split(" ")
 	var command_str := params[0].to_lower()
 	if command_str.begins_with("/"):
-		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
-			# Join all params after the command to handle spaces properly
-			var coord_string = ""
-			if params.size() > 1:
-				coord_string = " ".join(params.slice(1))
-
-			var dest_vector = _parse_coordinates(coord_string)
-
-			Global.on_chat_message.emit(
-				"system",
-				"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
-				Time.get_unix_time_from_system()
-			)
-			_on_control_menu_jump_to(dest_vector)
+		if (command_str == "/go" or command_str == "/goto") and params.size() > 1:
+			var arg_string = " ".join(params.slice(1)).strip_edges()
+			if _is_coordinate_string(arg_string):
+				var dest_vector = _parse_coordinates(arg_string)
+				Global.on_chat_message.emit(
+					"system",
+					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
+					Time.get_unix_time_from_system()
+				)
+				_on_control_menu_jump_to(dest_vector)
+			elif Realm.is_dcl_ens(arg_string) or not arg_string.contains("."):
+				var world_realm = (
+					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
+				)
+				Global.async_join_world(world_realm)
+			else:
+				_async_try_change_realm(arg_string, "on_goto_realm")
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
 			if Realm.is_dcl_ens(target_realm):
 				Global.async_join_world(target_realm)
 			else:
-				Global.on_chat_message.emit(
-					"system",
-					"[color=#ccc]Trying to change to realm " + target_realm + "[/color]",
-					Time.get_unix_time_from_system()
-				)
-				Global.realm.async_set_realm(target_realm, true)
-				loading_ui.enable_loading_screen()
-				var loading_data = {
-					"position": str(Global.scene_fetcher.current_position),
-					"realm": target_realm,
-					"when": "on_changerealm"
-				}
-				Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
-
-		elif command_str == "/world" and params.size() > 1:
-			var world_realm = (
-				params[1] if params[1].ends_with(".dcl.eth") else params[1] + ".dcl.eth"
-			)
-			Global.async_join_world(world_realm)
+				_async_try_change_realm(target_realm, "on_changerealm")
 
 		elif command_str == "/pos":
 			_emit_pos_command_message()
@@ -723,14 +739,33 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
+func _async_try_change_realm(realm_string: String, when: String) -> void:
+	Global.on_chat_message.emit(
+		"system",
+		"[color=#ccc]Trying to change to realm " + realm_string + "[/color]",
+		Time.get_unix_time_from_system()
+	)
+	var success = await Global.realm.async_set_realm(realm_string, true)
+	if success:
+		loading_ui.enable_loading_screen()
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm": realm_string,
+			"when": when
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+
 func teleport_to(parcel: Vector2i, realm: String = ""):
 	_async_teleport_to(parcel, realm)
 
 
 func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 	if not realm.is_empty() and realm != Global.realm.get_realm_string():
+		var success = await Global.realm.async_set_realm(realm)
+		if not success:
+			return
 		loading_ui.enable_loading_screen()
-		await Global.realm.async_set_realm(realm)
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
@@ -1027,6 +1062,8 @@ func _on_global_open_own_profile() -> void:
 		friends_panel.hide_panel()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
 	navbar.collapse()
 	_open_own_profile()
 
@@ -1106,6 +1143,8 @@ func _show_friends_panel() -> void:
 	friends_panel.show_panel_on_friends_tab()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
@@ -1118,6 +1157,27 @@ func _on_friends_panel_closed() -> void:
 	capture_mouse()
 
 
+func _show_settings_panel() -> void:
+	if settings_panel.visible:
+		return
+	joypad.hide()
+	settings_panel.show()
+	if friends_panel.visible:
+		friends_panel.hide_panel()
+	if notifications_panel.visible:
+		notifications_panel.hide_panel()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
+
+
+func _on_settings_panel_closed() -> void:
+	settings_panel.hide()
+	Global.explorer_grab_focus()
+	capture_mouse()
+
+
 func _show_notifications_panel() -> void:
 	if notifications_panel.visible:
 		return
@@ -1125,6 +1185,8 @@ func _show_notifications_panel() -> void:
 	notifications_panel.show_panel()
 	if friends_panel.visible:
 		friends_panel.hide_panel()
+	if settings_panel.visible:
+		settings_panel.hide()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
@@ -1194,6 +1256,8 @@ func _on_toast_mark_as_read(notification_d: Dictionary) -> void:
 
 func _on_loading_started() -> void:
 	_is_loading = true
+	_ban_check_generation += 1
+	Global.modal_manager.ban_pre_check_active = false
 	_pending_notification_toast = {}  # Clear any pending notification
 	_session_hide_main_hud = false
 	set_visible_ui(true, true)
@@ -1208,6 +1272,32 @@ func _on_loading_finished() -> void:
 	if not _pending_notification_toast.is_empty():
 		_show_notification_toast(_pending_notification_toast)
 		_pending_notification_toast = {}
+	if not Global.modal_manager.ban_pre_check_active:
+		_async_run_ban_check()
+
+
+func _async_run_ban_check() -> void:
+	_ban_check_generation += 1
+	var generation = _ban_check_generation
+
+	var realm_name = Global.realm.get_realm_string()
+	if realm_name.is_empty():
+		return
+
+	var scene_id: String
+	if Realm.is_dcl_ens(realm_name):
+		scene_id = await Global.async_resolve_world_scene_id(realm_name)
+	else:
+		var parcel = Global.scene_fetcher.current_position
+		scene_id = await Global.async_resolve_scene_entity_id(parcel)
+
+	if scene_id.is_empty() or generation != _ban_check_generation:
+		return
+
+	var allowed = await Global.async_check_scene_access(scene_id, realm_name)
+	if not allowed and generation == _ban_check_generation:
+		Global.modal_manager.ban_pre_check_active = true
+		Global.modal_manager.async_show_ban_pre_check_modal()
 
 
 func _update_version_label() -> void:
@@ -1227,9 +1317,10 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 			friends_panel.show_panel_on_friends_tab()
 			navbar.open_navbar_silently()
 			navbar.set_button_pressed(navbar.BUTTON.FRIENDS)
-			# Close notifications panel if open
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()
+			if settings_panel.visible:
+				settings_panel.hide()
 			h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
@@ -1288,7 +1379,10 @@ func _update_virtual_controls_visibility() -> void:
 	else:
 		# Only restore if no panel is covering them
 		var panel_open := (
-			friends_panel.visible or notifications_panel.visible or profile_container.visible
+			friends_panel.visible
+			or notifications_panel.visible
+			or settings_panel.visible
+			or profile_container.visible
 		)
 		if not panel_open:
 			joypad.show()
@@ -1306,6 +1400,7 @@ func _close_all_panels():
 	control_menu.async_close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not _gamepad_connected:
 		joypad.show()
@@ -1317,12 +1412,17 @@ func _on_discover_open():
 		joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
 
 func _on_menu_open():
+	_on_friends_panel_closed()
+	_on_notifications_panel_closed()
+	_on_settings_panel_closed()
+	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	release_mouse()
 
 

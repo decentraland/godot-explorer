@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://ctpn07xhmolrj"]
+[gd_scene format=3 uid="uid://ctpn07xhmolrj"]
 
 [ext_resource type="Script" uid="uid://y0530la2wdad" path="res://src/ui/components/notifications/alert_toast.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://e1pnifs5ua3y" path="res://assets/ui/modal-connection-icon.svg" id="2_1v63a"]
@@ -16,7 +16,7 @@ font = ExtResource("2_f1qq2")
 font_size = 27
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[node name="AlertToast" type="Control"]
+[node name="AlertToast" type="Control" unique_id=1592900362]
 layout_mode = 3
 anchors_preset = 5
 anchor_left = 0.5
@@ -28,7 +28,7 @@ offset_bottom = 130.86
 grow_horizontal = 2
 script = ExtResource("1_script")
 
-[node name="Panel" type="PanelContainer" parent="."]
+[node name="Panel" type="PanelContainer" parent="." unique_id=2063578430]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -44,7 +44,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_1v63a")
 
-[node name="MarginContainer" type="MarginContainer" parent="Panel"]
+[node name="MarginContainer" type="MarginContainer" parent="Panel" unique_id=849029934]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/margin_left = 20
@@ -52,11 +52,11 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Panel/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/MarginContainer" unique_id=965087979]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="NotificationImage" type="TextureRect" parent="Panel/MarginContainer/HBoxContainer"]
+[node name="NotificationImage" type="TextureRect" parent="Panel/MarginContainer/HBoxContainer" unique_id=1203869359]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 42)
 layout_mode = 2
@@ -65,7 +65,7 @@ texture = ExtResource("2_1v63a")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/MarginContainer/HBoxContainer" unique_id=893653736]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -73,7 +73,7 @@ mouse_filter = 2
 theme_override_constants/separation = 2
 alignment = 1
 
-[node name="LabelTitle" type="Label" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="LabelTitle" type="Label" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer" unique_id=583479352]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -82,7 +82,7 @@ text = "Poor Connection"
 label_settings = SubResource("LabelSettings_1v63a")
 vertical_alignment = 1
 
-[node name="LabelDescription" type="RichTextLabel" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="LabelDescription" type="RichTextLabel" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer" unique_id=1078677248]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 20)

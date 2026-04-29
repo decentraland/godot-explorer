@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://b3e5xybvamaqr"]
+[gd_scene format=3 uid="uid://b3e5xybvamaqr"]
 
 [ext_resource type="Script" uid="uid://cakahsoptay24" path="res://src/ui/components/menu/account_deletion_popup.gd" id="1_fnbls"]
 [ext_resource type="Texture2D" uid="uid://bdjpwpn5lt2yw" path="res://assets/ui/alert.svg" id="2_8nog7"]
@@ -34,7 +34,7 @@ font_size = 22
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_p3g0a"]
 
-[node name="AccountDeletionPopUp" type="TextureRect"]
+[node name="AccountDeletionPopUp" type="TextureRect" unique_id=1460909178]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -43,7 +43,7 @@ grow_vertical = 2
 texture = SubResource("GradientTexture2D_sl71o")
 script = ExtResource("1_fnbls")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1032712004]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -55,7 +55,7 @@ theme_override_constants/margin_top = 100
 theme_override_constants/margin_right = 150
 theme_override_constants/margin_bottom = 100
 
-[node name="ConfirmationDialog" type="VBoxContainer" parent="MarginContainer"]
+[node name="ConfirmationDialog" type="VBoxContainer" parent="MarginContainer" unique_id=302619701]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(100, 0)
@@ -65,21 +65,21 @@ size_flags_vertical = 5
 theme_override_constants/separation = 80
 alignment = 1
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/ConfirmationDialog"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/ConfirmationDialog" unique_id=651510919]
 custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 size_flags_horizontal = 5
 size_flags_vertical = 5
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/ConfirmationDialog/VBoxContainer2"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/ConfirmationDialog/VBoxContainer2" unique_id=1198119495]
 custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 texture = ExtResource("2_8nog7")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="MarginContainer/ConfirmationDialog/VBoxContainer2"]
+[node name="Label" type="Label" parent="MarginContainer/ConfirmationDialog/VBoxContainer2" unique_id=1337025529]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 text = "Request Account Deletion?"
@@ -87,12 +87,12 @@ label_settings = SubResource("LabelSettings_3chh0")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/ConfirmationDialog/VBoxContainer2"]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/ConfirmationDialog/VBoxContainer2" unique_id=1742584790]
 layout_mode = 2
 theme_override_constants/separation = 30
 theme_override_styles/separator = SubResource("StyleBoxEmpty_2wy27")
 
-[node name="Label2" type="Label" parent="MarginContainer/ConfirmationDialog/VBoxContainer2"]
+[node name="Label2" type="Label" parent="MarginContainer/ConfirmationDialog/VBoxContainer2" unique_id=589114880]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 text = "All your progress, purchases and data will be lost. This action is permanent and cannot be undone."
@@ -100,7 +100,7 @@ label_settings = SubResource("LabelSettings_eeec6")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ConfirmationDialog"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ConfirmationDialog" unique_id=457697174]
 custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 size_flags_horizontal = 5
@@ -108,16 +108,16 @@ size_flags_vertical = 5
 theme_override_constants/separation = 20
 alignment = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ConfirmationDialog/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ConfirmationDialog/VBoxContainer" unique_id=212116772]
 layout_mode = 2
 
-[node name="Control2" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer"]
+[node name="Control2" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer" unique_id=2099597511]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="Button_ConfirmDeleteAccount" type="Button" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer"]
+[node name="Button_ConfirmDeleteAccount" type="Button" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer" unique_id=660052277]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -125,22 +125,22 @@ theme = ExtResource("4_8nog7")
 theme_override_font_sizes/font_size = 30
 text = "YES, DELETE"
 
-[node name="Control" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer"]
+[node name="Control" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer" unique_id=1617105060]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/ConfirmationDialog/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/ConfirmationDialog/VBoxContainer" unique_id=780843082]
 layout_mode = 2
 
-[node name="Control" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2"]
+[node name="Control" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2" unique_id=585287710]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="Button_CancelDeleteAccount" type="Button" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2"]
+[node name="Button_CancelDeleteAccount" type="Button" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2" unique_id=1077168801]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -149,13 +149,13 @@ theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
 text = "CANCEL"
 
-[node name="Control2" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2"]
+[node name="Control2" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2" unique_id=1200840702]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="ProcessingScreen" type="VBoxContainer" parent="MarginContainer"]
+[node name="ProcessingScreen" type="VBoxContainer" parent="MarginContainer" unique_id=1242592820]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(100, 0)
@@ -165,7 +165,7 @@ size_flags_vertical = 5
 theme_override_constants/separation = 40
 alignment = 1
 
-[node name="Label" type="Label" parent="MarginContainer/ProcessingScreen"]
+[node name="Label" type="Label" parent="MarginContainer/ProcessingScreen" unique_id=127498003]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 text = "Processing"
@@ -173,11 +173,11 @@ label_settings = SubResource("LabelSettings_3chh0")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="TextureProgressBar" parent="MarginContainer/ProcessingScreen" instance=ExtResource("6_0n2jq")]
+[node name="TextureProgressBar" parent="MarginContainer/ProcessingScreen" unique_id=532733104 instance=ExtResource("6_0n2jq")]
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="DoneDialog" type="VBoxContainer" parent="MarginContainer"]
+[node name="DoneDialog" type="VBoxContainer" parent="MarginContainer" unique_id=1709724950]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
@@ -186,13 +186,13 @@ size_flags_vertical = 5
 theme_override_constants/separation = 80
 alignment = 1
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/DoneDialog"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/DoneDialog" unique_id=532379207]
 custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 theme_override_constants/separation = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2"]
+[node name="Label" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=319725703]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 text = "Deletion Requested"
@@ -200,7 +200,7 @@ label_settings = SubResource("LabelSettings_3chh0")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Label2" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2"]
+[node name="Label2" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=2115946537]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 text = "This process can take up to 30d to complete."
@@ -208,7 +208,7 @@ label_settings = SubResource("LabelSettings_eeec6")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Label3" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2"]
+[node name="Label3" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=1320224548]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 text = "We’ll keep you updated on the process through the email address used to register the account."
@@ -216,22 +216,22 @@ label_settings = SubResource("LabelSettings_eeec6")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/DoneDialog"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/DoneDialog" unique_id=438586406]
 custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/DoneDialog/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/DoneDialog/VBoxContainer" unique_id=1871290478]
 layout_mode = 2
 
-[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer"]
+[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer" unique_id=1155944264]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="Button_Ok" type="Button" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer"]
+[node name="Button_Ok" type="Button" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer" unique_id=541803780]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -239,22 +239,22 @@ theme = ExtResource("4_8nog7")
 theme_override_font_sizes/font_size = 30
 text = "OK"
 
-[node name="Control2" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer"]
+[node name="Control2" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer" unique_id=292836876]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/DoneDialog/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/DoneDialog/VBoxContainer" unique_id=1801022340]
 layout_mode = 2
 
-[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2"]
+[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2" unique_id=544737379]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="Button_CancelDeletion" type="Button" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2"]
+[node name="Button_CancelDeletion" type="Button" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2" unique_id=411757269]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
@@ -264,20 +264,20 @@ theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
 text = "CANCEL DELETION"
 
-[node name="Control2" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2"]
+[node name="Control2" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2" unique_id=882179608]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer"]
+[node name="Control" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer" unique_id=1783665955]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_vertical = 4
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="Label3" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer"]
+[node name="Label3" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer" unique_id=1114029987]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -285,7 +285,7 @@ text = "*If you registered your Decentraland account via a non custodial wallet,
 label_settings = SubResource("LabelSettings_p3g0a")
 autowrap_mode = 2
 
-[node name="FailDialog" type="VBoxContainer" parent="MarginContainer"]
+[node name="FailDialog" type="VBoxContainer" parent="MarginContainer" unique_id=1382082060]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(100, 0)
@@ -295,20 +295,20 @@ size_flags_vertical = 5
 theme_override_constants/separation = 80
 alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/FailDialog"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/FailDialog" unique_id=941086867]
 custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 theme_override_constants/separation = 4
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/FailDialog/VBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/FailDialog/VBoxContainer" unique_id=280618089]
 custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 texture = ExtResource("8_0n2jq")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="MarginContainer/FailDialog/VBoxContainer"]
+[node name="Label" type="Label" parent="MarginContainer/FailDialog/VBoxContainer" unique_id=524494]
 layout_mode = 2
 size_flags_vertical = 0
 text = "Ooops... Something
@@ -317,12 +317,12 @@ label_settings = SubResource("LabelSettings_3chh0")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/FailDialog/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/FailDialog/VBoxContainer" unique_id=1111617561]
 layout_mode = 2
 theme_override_constants/separation = 30
 theme_override_styles/separator = SubResource("StyleBoxEmpty_p3g0a")
 
-[node name="Label2" type="Label" parent="MarginContainer/FailDialog/VBoxContainer"]
+[node name="Label2" type="Label" parent="MarginContainer/FailDialog/VBoxContainer" unique_id=1900161172]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 text = "We couldn’t process your request.
@@ -331,21 +331,21 @@ label_settings = SubResource("LabelSettings_eeec6")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/FailDialog"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/FailDialog" unique_id=1109320784]
 custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/FailDialog/VBoxContainer2"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/FailDialog/VBoxContainer2" unique_id=163668790]
 layout_mode = 2
 
-[node name="Control" type="Control" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer"]
+[node name="Control" type="Control" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer" unique_id=1199794372]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")
 hide_on_portrait = true
 
-[node name="Button_Ok" type="Button" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer"]
+[node name="Button_Ok" type="Button" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer" unique_id=637647596]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -353,7 +353,7 @@ theme = ExtResource("4_8nog7")
 theme_override_font_sizes/font_size = 30
 text = "OK"
 
-[node name="Control2" type="Control" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer"]
+[node name="Control2" type="Control" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer" unique_id=1106422918]
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("5_p3g0a")

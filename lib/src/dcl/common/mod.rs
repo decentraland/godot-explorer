@@ -14,7 +14,6 @@ pub struct SceneMainCrdtFileContent(pub Vec<u8>);
 pub struct SceneStartTime(pub std::time::SystemTime);
 pub struct SceneLogs(pub Vec<SceneLogMessage>);
 pub struct SceneMainCrdt(pub Option<Vec<u8>>);
-pub struct SceneTickCounter(pub u32);
 pub struct SceneDying(pub bool);
 
 pub struct CommunicatedWithRenderer;

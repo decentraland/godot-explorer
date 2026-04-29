@@ -245,12 +245,33 @@ options/auto_init=false
 options/dsn="https://03559fa545b3fa2bc9e876a41d6aab2f@o4510187684298752.ingest.us.sentry.io/4510187688361984"
 options/debug_printing=0
 options/diagnostic_level=4
+options/attach_log=false
 
 [shader_globals]
 
 day_night_cycle={
 "type": "float",
 "value": 1.265
+}
+sun_direction={
+"type": "vec3",
+"value": Vector3(0, 0.7, 0.7)
+}
+moon_direction={
+"type": "vec3",
+"value": Vector3(0, -0.7, -0.7)
+}
+sun_opacity={
+"type": "float",
+"value": 1.0
+}
+sun_size={
+"type": "float",
+"value": 0.3
+}
+moon_mask_size={
+"type": "float",
+"value": 0.0
 }
 
 [xr]

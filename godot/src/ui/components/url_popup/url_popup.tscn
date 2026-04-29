@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://qbcqm5fskyho"]
+[gd_scene format=3 uid="uid://qbcqm5fskyho"]
 
 [ext_resource type="Script" uid="uid://cliebscquwioh" path="res://src/ui/components/url_popup/url_popup.gd" id="1_fqfiv"]
 [ext_resource type="Texture2D" uid="uid://jlijusqci4aw" path="res://assets/ui/warning.svg" id="2_2hcht"]
@@ -20,7 +20,7 @@ font_color = Color(0.196078, 0.807843, 1, 1)
 outline_size = 1
 outline_color = Color(0, 0, 0, 1)
 
-[node name="UrlPopup" type="ColorRect"]
+[node name="UrlPopup" type="ColorRect" unique_id=2079225382]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -29,7 +29,7 @@ grow_vertical = 2
 color = Color(0, 0, 0, 0.784314)
 script = ExtResource("1_fqfiv")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=123111139]
 clip_children = 2
 custom_minimum_size = Vector2(450, 0)
 layout_mode = 1
@@ -46,10 +46,10 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qbeay")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer" unique_id=448539999]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer" unique_id=882406205]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 6
@@ -58,11 +58,11 @@ theme_override_constants/margin_top = 60
 theme_override_constants/margin_right = 120
 theme_override_constants/margin_bottom = 60
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer" unique_id=1416732597]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="TextureRect" type="TextureRect" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1232314937]
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -71,13 +71,13 @@ texture = ExtResource("2_2hcht")
 expand_mode = 5
 stretch_mode = 4
 
-[node name="Label_Title" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=369686573]
 layout_mode = 2
 text = "Are you sure you want to follow this link?"
 label_settings = ExtResource("2_qbeay")
 horizontal_alignment = 1
 
-[node name="Label_Message" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Label_Message" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1241096369]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Continuing will open the link in your browser. Make sure it's a website you trust before proceeding."
@@ -85,7 +85,7 @@ label_settings = ExtResource("3_2hcht")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Label_Url" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Label_Url" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1106956728]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
@@ -94,13 +94,13 @@ label_settings = SubResource("LabelSettings_7wlfd")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=216256953]
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 theme_override_constants/separation = 15
 alignment = 2
 
-[node name="Button_GoToLinkCancel" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_GoToLinkCancel" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1181961774]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
@@ -108,7 +108,7 @@ size_flags_horizontal = 3
 theme_type_variation = &"DarkButton"
 text = "CANCEL"
 
-[node name="Button_GoToLinkContinue" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_GoToLinkContinue" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1430247645]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2

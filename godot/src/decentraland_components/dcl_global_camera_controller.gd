@@ -1,6 +1,7 @@
 extends Node
 
 const DEFAULT_TRANSITION_TIME = 0.35  # in seconds
+const DEFAULT_VIRTUAL_CAMERA_FOV = 60.0
 const PERSISTANT_CAMERA := preload("res://src/helpers_components/persistant_camera.tscn")
 
 var global_virtual_camera_transform: Transform3D
@@ -90,6 +91,7 @@ func _process(delta: float) -> void:
 
 			# Make the global virtual camera current
 			global_virtual_camera.make_current()
+			global_virtual_camera.fov = DEFAULT_VIRTUAL_CAMERA_FOV
 			Global.set_camera_mode(Global.CameraMode.CINEMATIC)
 
 			# When virtual camera is active we always show the primary avatar and hide outlines.
