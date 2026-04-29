@@ -230,7 +230,7 @@ horizontal_alignment = 1
 
 [node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=1835596805]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 32
 
 [node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1265686382 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
@@ -249,7 +249,6 @@ generator = NodePath("FriendsGenerator")
 skeleton_scene = ExtResource("21_fskel")
 skeleton_height = 225.0
 title = "Friends"
-item_separation = 20
 
 [node name="FriendsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/FriendsOnline" unique_id=1004775239 node_paths=PackedStringArray("discover") instance=ExtResource("19_fgen")]
 discover = NodePath("../../../../../../../..")

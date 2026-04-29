@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dkf7r2m3xp1qy"]
 
-[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_place"]
+[ext_resource type="Script" path="res://src/ui/components/discover/friends/friend_discover_card.gd" id="1_place"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="2_pfp"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_bold"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_regular"]
@@ -11,11 +11,13 @@
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_sep4"]
 
 [node name="FriendDiscoverCard" type="TextureButton" unique_id=921587679]
-custom_minimum_size = Vector2(220, 225)
+custom_minimum_size = Vector2(200, 232)
 offset_right = 220.0
 offset_bottom = 225.0
 mouse_filter = 1
 script = ExtResource("1_place")
+metadata/_edit_vertical_guides_ = [110.0]
+metadata/_edit_horizontal_guides_ = [49.0]
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1931465091]
 layout_mode = 1
@@ -29,7 +31,7 @@ theme_override_constants/separation = 0
 
 [node name="ProfilePicture" parent="VBoxContainer" unique_id=1850735016 instance=ExtResource("2_pfp")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 150)
+custom_minimum_size = Vector2(160, 160)
 layout_mode = 2
 mouse_filter = 2
 picture_size = 6
@@ -37,19 +39,26 @@ picture_size = 6
 [node name="HSeparator_12" type="HSeparator" parent="VBoxContainer" unique_id=828792393]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_sep12")
 
 [node name="HBoxContainer_Name" type="HBoxContainer" parent="VBoxContainer" unique_id=809199976]
 layout_mode = 2
-size_flags_horizontal = 4
 theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Control_Filler" type="Control" parent="VBoxContainer/HBoxContainer_Name" unique_id=2126088027]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Label_Title" type="Label" parent="VBoxContainer/HBoxContainer_Name" unique_id=252384728]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_bold")
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 24
 text = "User p name"
 
 [node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="VBoxContainer/HBoxContainer_Name" unique_id=1631871269]
@@ -57,6 +66,7 @@ unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
 texture = ExtResource("5_check")
@@ -71,11 +81,12 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_sep4")
 
 [node name="Label_Location" type="Label" parent="VBoxContainer" unique_id=2037171848]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 1
 theme_override_colors/font_color = Color(0.9098039, 0.7254902, 1, 1)
 theme_override_fonts/font = ExtResource("4_regular")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "Experience Name..."
 horizontal_alignment = 1
 autowrap_mode = 2

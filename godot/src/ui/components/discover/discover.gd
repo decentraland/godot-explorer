@@ -75,53 +75,6 @@ func on_item_pressed(data):
 func on_friend_pressed(data):
 	friend_jump_in.set_data(data)
 	friend_jump_in.open_panel()
-	# Set friend info on the instantiated panel
-	_async_set_friend_info_on_panel(data)
-
-
-func _async_set_friend_info_on_panel(data: Dictionary) -> void:
-	# Wait up to a few frames for the panel to be instantiated
-	var panel: PlaceItem = null
-	for i in range(5):
-		await get_tree().process_frame
-		panel = friend_jump_in.portrait_panel
-		if not panel:
-			panel = friend_jump_in.landscape_panel
-		if panel:
-			break
-	if not panel:
-		return
-
-	var friend_name_label = panel.get_node_or_null("%Label_FriendName")
-	if friend_name_label:
-		friend_name_label.text = data.get("_friend_name", "")
-
-	var has_claimed_name: bool = data.get("_friend_has_claimed_name", false)
-
-	var friend_tag_label = panel.get_node_or_null("%Label_FriendTag")
-	if friend_tag_label:
-		if has_claimed_name:
-			friend_tag_label.hide()
-		else:
-			var address: String = data.get("_friend_address", "")
-			if not address.is_empty():
-				friend_tag_label.text = "#" + address.substr(2, 4)
-			else:
-				friend_tag_label.text = ""
-			friend_tag_label.show()
-
-	var checkmark = panel.get_node_or_null("%TextureRect_ClaimedCheckmark")
-	if checkmark:
-		checkmark.visible = has_claimed_name
-
-	var profile_pic = panel.get_node_or_null("%ProfilePicture")
-	if profile_pic:
-		var social_data = SocialItemData.new()
-		social_data.name = data.get("_friend_name", "")
-		social_data.address = data.get("_friend_address", "")
-		social_data.profile_picture_url = data.get("_friend_profile_picture_url", "")
-		social_data.has_claimed_name = data.get("_friend_has_claimed_name", false)
-		profile_pic.async_update_profile_picture(social_data)
 
 
 func _on_friend_jump_in(parcel_position: Vector2i, realm: String):

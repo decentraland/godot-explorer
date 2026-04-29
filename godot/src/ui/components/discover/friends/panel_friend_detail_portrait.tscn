@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dp4m8v2kxn5qf"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_theme"]
-[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="2_place"]
+[ext_resource type="Script" path="res://src/ui/components/discover/friends/friend_discover_card.gd" id="2_place"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_safe"]
 [ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_exit"]
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="5_pfp"]

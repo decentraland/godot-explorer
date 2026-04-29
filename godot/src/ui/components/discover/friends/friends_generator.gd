@@ -93,6 +93,8 @@ func _async_on_request(_offset: int, _limit: int) -> void:
 		var address: String = friend_data["address"].to_lower()
 		friends_by_address[address] = friend_data
 
+	var friend_addresses: Array = friends_by_address.keys()
+
 	# Fetch peers from Archipelago to find friends in Genesis City
 	Global.locations.fetch_peers()
 	await Global.locations.in_genesis_city_changed
@@ -102,47 +104,37 @@ func _async_on_request(_offset: int, _limit: int) -> void:
 
 	var peers = Global.locations.in_genesis_city
 
-	# Build desired set: address_lower -> friend data with parcel
-	var desired: Dictionary = {}
+	# Build genesis set: address_lower -> friend data with parcel
+	var genesis_friends: Dictionary = {}
 	for peer in peers:
 		var peer_address: String = str(peer["address"]).to_lower()
 		if friends_by_address.has(peer_address):
 			var friend = friends_by_address[peer_address].duplicate()
 			friend["parcel"] = peer["parcel"]
-			desired[peer_address] = friend
+			genesis_friends[peer_address] = friend
 
-	# Remove cards for friends no longer in desired set
-	var to_remove: Array = []
-	for address in _current_addresses.keys():
-		if not desired.has(address):
-			to_remove.append(address)
+	# Friends not in genesis — candidates for worlds
+	var not_in_genesis: Array = []
+	for address in friend_addresses:
+		if not genesis_friends.has(address):
+			not_in_genesis.append(address)
 
-	for address in to_remove:
-		var card = _current_addresses[address]
-		if is_instance_valid(card):
-			item_container.remove_child(card)
-			card.queue_free()
-		_current_addresses.erase(address)
-
-	if not to_remove.is_empty():
-		_update_title()
-
-	# Add cards for new friends not yet displayed
-	for address in desired.keys():
-		if _current_addresses.has(address):
-			continue
-		var friend = desired[address]
-		await _async_create_friend_card(friend)
-
-	# Update title with count and visibility
-	_update_title()
-	_first_load = false
-	if _current_addresses.is_empty():
-		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
+	if _first_load:
+		# First load: show genesis cards immediately, worlds appear as they arrive
+		await _sync_cards(genesis_friends)
+		_first_load = false
+		_update_status()
+		_fetch_connected_worlds_streaming(not_in_genesis, friends_by_address)
 	else:
-		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
-		_refresh_timer.start()
+		# Refresh: collect all online friends (genesis + worlds) then diff
+		var world_friends := await _async_fetch_connected_worlds(not_in_genesis, friends_by_address)
+		var all_online: Dictionary = genesis_friends.duplicate()
+		for address in world_friends.keys():
+			all_online[address] = world_friends[address]
+		await _sync_cards(all_online)
+		_update_status()
 
+	_refresh_timer.start()
 	_loading = false
 
 	if _dirty:
@@ -150,71 +142,110 @@ func _async_on_request(_offset: int, _limit: int) -> void:
 		_debounce_timer.start()
 
 
-func _async_create_friend_card(friend: Dictionary) -> void:
-	var parcel = friend["parcel"]
-	var parcel_pos = Vector2i(int(parcel[0]), int(parcel[1]))
-	var cache_key := "%d,%d" % [parcel_pos.x, parcel_pos.y]
-	var place_name := ""
+## Syncs displayed cards with the desired set of online friends.
+## - Creates cards for new friends.
+## - Updates existing cards with fresh place data.
+## - Removes cards for friends no longer online.
+func _sync_cards(online_friends: Dictionary) -> void:
+	# Remove cards for friends no longer online
+	var to_remove: Array = []
+	for address in _current_addresses.keys():
+		if not online_friends.has(address):
+			to_remove.append(address)
+	for address in to_remove:
+		_remove_card(address)
+
+	# Create or update cards
+	for address in online_friends.keys():
+		var friend = online_friends[address]
+		if _current_addresses.has(address):
+			await _update_card(address, friend)
+		else:
+			await _async_create_friend_card(friend)
+
+
+func _build_place_data(friend: Dictionary) -> Dictionary:
 	var place_data: Dictionary = {}
+	var world_name: String = friend.get("world_name", "")
 
-	if _place_cache.has(cache_key):
-		place_data = _place_cache[cache_key]
-		place_name = place_data.get("title", "")
-	else:
-		var result = await PlacesHelper.async_get_by_position(parcel_pos)
-		if not is_instance_valid(item_container):
-			return
-		if result and not (result is PromiseError):
-			var json: Dictionary = result.get_string_response_as_json()
-			if not json.data.is_empty():
-				place_data = json.data[0]
-				place_name = place_data.get("title", "")
-				_place_cache[cache_key] = place_data
-
-	if place_name.is_empty():
-		place_name = "%d, %d" % [parcel_pos.x, parcel_pos.y]
-
-	if place_data.is_empty():
+	if not world_name.is_empty():
+		var place_name = world_name.trim_suffix(".dcl.eth")
 		place_data = {
 			"title": place_name,
-			"base_position": "%d,%d" % [parcel_pos.x, parcel_pos.y],
+			"world": true,
+			"world_name": world_name,
 		}
+	else:
+		var parcel = friend["parcel"]
+		var parcel_pos = Vector2i(int(parcel[0]), int(parcel[1]))
+		var cache_key := "%d,%d" % [parcel_pos.x, parcel_pos.y]
 
-	place_data = place_data.duplicate()
+		if _place_cache.has(cache_key):
+			place_data = _place_cache[cache_key].duplicate()
+		else:
+			var result = await PlacesHelper.async_get_by_position(parcel_pos)
+			if not is_instance_valid(item_container):
+				return {}
+			if result and not (result is PromiseError):
+				var json: Dictionary = result.get_string_response_as_json()
+				if not json.data.is_empty():
+					place_data = json.data[0]
+					_place_cache[cache_key] = place_data
+					place_data = place_data.duplicate()
+
+		if place_data.is_empty():
+			var place_name = "%d, %d" % [parcel_pos.x, parcel_pos.y]
+			place_data = {
+				"title": place_name,
+				"base_position": "%d,%d" % [parcel_pos.x, parcel_pos.y],
+			}
+
 	place_data["_friend_name"] = friend.get("name", friend["address"])
 	place_data["_friend_address"] = friend["address"]
 	place_data["_friend_profile_picture_url"] = friend.get("profile_picture_url", "")
 	place_data["_friend_has_claimed_name"] = friend.get("has_claimed_name", false)
+	return place_data
+
+
+func _async_create_friend_card(friend: Dictionary) -> void:
+	var place_data := await _build_place_data(friend)
+	if place_data.is_empty() or not is_instance_valid(item_container):
+		return
+
+	var address := str(friend["address"]).to_lower()
+
+	# Another card may have been created while awaiting
+	if _current_addresses.has(address):
+		return
 
 	var item = FRIEND_DISCOVER_CARD.instantiate()
 	item_container.add_child(item)
-
-	var label_title = item.get_node_or_null("%Label_Title")
-	if label_title:
-		label_title.text = friend.get("name", friend["address"])
-
-	var label_location = item.get_node_or_null("%Label_Location")
-	if label_location:
-		label_location.text = place_name
-
-	var profile_picture = item.get_node_or_null("%ProfilePicture")
-	if profile_picture:
-		var social_data = SocialItemData.new()
-		social_data.name = friend.get("name", friend["address"])
-		social_data.address = friend["address"]
-		social_data.profile_picture_url = friend.get("profile_picture_url", "")
-		social_data.has_claimed_name = friend.get("has_claimed_name", false)
-		profile_picture.async_update_profile_picture(social_data)
-
-	var checkmark = item.get_node_or_null("%TextureRect_ClaimedCheckmark")
-	if checkmark:
-		checkmark.visible = friend.get("has_claimed_name", false)
-
-	item._data = place_data
+	item.set_data(place_data)
 	item.item_pressed.connect(discover.on_friend_pressed)
 
-	_current_addresses[friend["address"].to_lower()] = item
+	_current_addresses[address] = item
+
 	_update_title()
+
+
+func _update_card(address: String, friend: Dictionary) -> void:
+	var card = _current_addresses.get(address)
+	if not card or not is_instance_valid(card):
+		return
+
+	var place_data := await _build_place_data(friend)
+	if place_data.is_empty() or not is_instance_valid(item_container):
+		return
+
+	card.set_data(place_data)
+
+
+func _update_status() -> void:
+	_update_title()
+	if _current_addresses.is_empty():
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
+	else:
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
 
 
 func _update_title() -> void:
@@ -252,6 +283,14 @@ func _update_title() -> void:
 		_count_label.hide()
 
 
+func _remove_card(address: String) -> void:
+	var card = _current_addresses.get(address)
+	if card and is_instance_valid(card):
+		item_container.remove_child(card)
+		card.queue_free()
+	_current_addresses.erase(address)
+
+
 func _remove_all() -> void:
 	for address in _current_addresses.keys():
 		var card = _current_addresses[address]
@@ -263,6 +302,133 @@ func _remove_all() -> void:
 
 func clean_items():
 	_remove_all()
+
+
+# -- World fetching: streaming (first load) ------------------------------------
+
+
+func _fetch_connected_worlds_streaming(addresses: Array, friends_by_address: Dictionary) -> void:
+	if addresses.is_empty():
+		return
+
+	var base_url := DclUrls.worlds_content_server().replace("/world/", "")
+
+	for address in addresses:
+		var http_request = HTTPRequest.new()
+		add_child(http_request)
+		var url := base_url + "/wallet/" + str(address) + "/connected-world"
+		http_request.request_completed.connect(
+			_on_world_stream_completed.bind(address, http_request, friends_by_address)
+		)
+		var error = http_request.request(url)
+		if error != OK:
+			http_request.queue_free()
+
+
+func _on_world_stream_completed(
+	result: int,
+	response_code: int,
+	_headers: PackedStringArray,
+	body: PackedByteArray,
+	address: String,
+	http_request: HTTPRequest,
+	friends_by_address: Dictionary,
+) -> void:
+	http_request.queue_free()
+
+	if not is_instance_valid(item_container):
+		return
+	if not friends_by_address.has(address):
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		return
+
+	var json = JSON.new()
+	if json.parse(body.get_string_from_utf8()) != OK:
+		return
+
+	var data = json.get_data()
+	if not data is Dictionary:
+		return
+
+	var world_name: String = data.get("world", "")
+	if world_name.is_empty():
+		return
+
+	if _current_addresses.has(address):
+		return
+
+	var friend = friends_by_address[address].duplicate()
+	friend["world_name"] = world_name
+	_async_create_friend_card(friend)
+
+
+# -- World fetching: batch (refreshes) ----------------------------------------
+
+
+func _async_fetch_connected_worlds(addresses: Array, friends_by_address: Dictionary) -> Dictionary:
+	var result: Dictionary = {}
+	if addresses.is_empty():
+		return result
+
+	var base_url := DclUrls.worlds_content_server().replace("/world/", "")
+	var responses: Dictionary = {}  # address -> data Dictionary or null
+
+	for address in addresses:
+		var http_request = HTTPRequest.new()
+		add_child(http_request)
+		var url := base_url + "/wallet/" + str(address) + "/connected-world"
+		http_request.request_completed.connect(
+			_on_world_batch_completed.bind(address, http_request, responses)
+		)
+		var error = http_request.request(url)
+		if error != OK:
+			http_request.queue_free()
+			responses[address] = null
+
+	# Wait until all requests have responded
+	while responses.size() < addresses.size():
+		await get_tree().process_frame
+
+	for address in responses.keys():
+		var data = responses[address]
+		if data == null or not data is Dictionary:
+			continue
+		var world_name: String = data.get("world", "")
+		if world_name.is_empty():
+			continue
+		var friend = friends_by_address[address].duplicate()
+		friend["world_name"] = world_name
+		result[address] = friend
+
+	return result
+
+
+func _on_world_batch_completed(
+	result: int,
+	response_code: int,
+	_headers: PackedStringArray,
+	body: PackedByteArray,
+	address: String,
+	http_request: HTTPRequest,
+	responses: Dictionary,
+) -> void:
+	http_request.queue_free()
+
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		responses[address] = null
+		return
+
+	var json = JSON.new()
+	if json.parse(body.get_string_from_utf8()) != OK:
+		responses[address] = null
+		return
+
+	var data = json.get_data()
+	if data is Dictionary:
+		responses[address] = data
+	else:
+		responses[address] = null
 
 
 func _async_await_with_timeout(promise_param: Promise, timeout_seconds: float) -> bool:

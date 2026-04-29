@@ -59,7 +59,7 @@ func _update_size() -> void:
 			size_px = 38
 			border_px = 5
 		Size.DISCOVER:
-			size_px = 150
+			size_px = 160
 			border_px = 5
 		Size.DISCOVER_HEADER:
 			size_px = 80

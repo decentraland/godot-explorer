@@ -6,12 +6,19 @@ var known_locations: Array = []  # Array of objects {coord: [x,y], title: String
 var in_genesis_city: Array = []  # Array of objects {address: String, parcel: [int, int]}
 
 
-func fetch_peers():
+func fetch_peers(addresses: Array = []):
 	var http_request = HTTPRequest.new()
 	add_child(http_request)
 	http_request.request_completed.connect(_on_request_completed.bind(http_request))
 
-	var error = http_request.request(DclUrls.archipelago_stats() + "/comms/peers")
+	var url := DclUrls.archipelago_stats() + "/comms/peers"
+	if not addresses.is_empty():
+		var params := []
+		for addr in addresses:
+			params.append("id=" + str(addr))
+		url += "?" + "&".join(params)
+
+	var error = http_request.request(url)
 	if error != OK:
 		push_error("Error making request: " + str(error))
 
@@ -30,10 +37,12 @@ func _on_request_completed(
 	# Verify that the response is OK
 	if result != HTTPRequest.RESULT_SUCCESS:
 		push_error("Error in HTTP request: " + str(result))
+		in_genesis_city_changed.emit(in_genesis_city)
 		return
 
 	if response_code != 200:
 		push_error("Error in response code: " + str(response_code))
+		in_genesis_city_changed.emit(in_genesis_city)
 		return
 
 	# Parse the JSON
@@ -43,11 +52,13 @@ func _on_request_completed(
 
 	if parse_result != OK:
 		push_error("Error parsing JSON: " + json.get_error_message())
+		in_genesis_city_changed.emit(in_genesis_city)
 		return
 
 	var data = json.get_data()
 	if not data.has("peers"):
 		push_error("Response does not contain 'peers'")
+		in_genesis_city_changed.emit(in_genesis_city)
 		return
 
 	# Create the online_players array
@@ -62,5 +73,4 @@ func _on_request_completed(
 			}
 			in_genesis_city.append(player)
 
-	# Emit signal when online_players changes
 	in_genesis_city_changed.emit(in_genesis_city)
