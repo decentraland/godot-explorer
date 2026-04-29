@@ -38,6 +38,7 @@ use std::{
     sync::atomic::AtomicU32,
     time::{Duration, Instant},
 };
+use tokio::sync::mpsc::error::TrySendError;
 
 use super::{
     components::pointer_events::{
@@ -109,8 +110,9 @@ pub struct SceneManager {
     #[var]
     pointer_tooltips: VarArray,
 
-    // Track avatar under crosshair
-    last_avatar_under_crosshair: Option<Gd<DclAvatar>>,
+    // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
+    // between physics ticks (despawn, scene unload, teleport).
+    last_avatar_under_crosshair: Option<InstanceId>,
 
     // Track when pointer was pressed on avatar for click-and-release mechanism
     avatar_pointer_press_time: Option<Instant>,
@@ -988,14 +990,28 @@ impl SceneManager {
             let scene = self.scenes.get_mut(scene_id).unwrap();
             match scene.state {
                 SceneState::ToKill => {
-                    if let Err(_e) = scene
+                    match scene
                         .dcl_scene
                         .main_sender_to_thread
                         .try_send(RendererResponse::Kill)
                     {
-                        tracing::error!("error sending kill signal to thread");
-                    } else {
-                        scene.state = SceneState::KillSignal(current_time_us);
+                        Ok(()) => {
+                            scene.state = SceneState::KillSignal(current_time_us);
+                        }
+                        // Receiver already exited (e.g. scene thread panicked). The kill
+                        // signal is moot; advance to KillSignal so the next tick's
+                        // is_finished() check moves the state to Dead and the scene
+                        // gets cleaned up. Without this, the loop body would re-fire
+                        // try_send every physics tick and spam the logger at ~60 Hz.
+                        Err(TrySendError::Closed(_)) => {
+                            tracing::warn!(
+                                "scene channel closed before kill signal; advancing to KillSignal scene_id={:?}",
+                                scene_id
+                            );
+                            scene.state = SceneState::KillSignal(current_time_us);
+                        }
+                        // Capacity-1 channel with the receiver still alive; retry next tick.
+                        Err(TrySendError::Full(_)) => {}
                     }
                 }
                 SceneState::KillSignal(kill_time_us) => {
@@ -1781,18 +1797,17 @@ impl INode for SceneManager {
         // Handle avatar detection
         match &current_raycast {
             Some(RaycastResult::Avatar(avatar)) => {
-                // Update selected avatar if changed
-                let avatar_changed = match &self.last_avatar_under_crosshair {
-                    None => true,
-                    Some(last) => last.instance_id() != avatar.instance_id(),
-                };
+                // The fresh `avatar` from raycast is alive, so calling instance_id() on it
+                // is safe; we never deref the previously-stored value.
+                let avatar_id = avatar.instance_id();
+                let avatar_changed = self.last_avatar_under_crosshair != Some(avatar_id);
 
                 if avatar_changed {
-                    self.last_avatar_under_crosshair = Some(avatar.clone());
+                    self.last_avatar_under_crosshair = Some(avatar_id);
 
                     // Update Global.selected_avatar directly
                     if let Some(mut global) = DclGlobal::try_singleton() {
-                        global.bind_mut().selected_avatar = Some(avatar.clone());
+                        global.bind_mut().selected_avatar = Some(avatar_id);
                     }
 
                     // Emit signal for tooltip change

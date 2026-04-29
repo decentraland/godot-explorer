@@ -231,7 +231,9 @@ pub struct DclGlobal {
     #[var(get)]
     pub dynamic_graphics_manager: Gd<DclDynamicGraphicsManager>,
 
-    pub selected_avatar: Option<Gd<DclAvatar>>,
+    // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
+    // between physics ticks. Resolve via get_selected_avatar() to drop stale ids.
+    pub selected_avatar: Option<InstanceId>,
 
     // Scene Inspector active flag — set from GDScript when deeplink/CLI activates the Scene Inspector.
     // Checked by scene_manager when spawning scenes to decide if they should be instrumented.
@@ -502,8 +504,16 @@ impl DclGlobal {
     }
 
     #[func]
-    fn get_selected_avatar(&self) -> Option<Gd<DclAvatar>> {
-        self.selected_avatar.clone()
+    fn get_selected_avatar(&mut self) -> Option<Gd<DclAvatar>> {
+        let id = self.selected_avatar?;
+        match Gd::<DclAvatar>::try_from_instance_id(id) {
+            Ok(gd) => Some(gd),
+            Err(_) => {
+                // Avatar node was freed; drop the stale id so we stop trying.
+                self.selected_avatar = None;
+                None
+            }
+        }
     }
 
     #[func]
