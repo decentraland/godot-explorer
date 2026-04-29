@@ -110,6 +110,13 @@ static void injected_scene_willConnectToSession(id self, SEL _cmd, UIScene* scen
 // initialized, so addService: actually registers the listener. The injection
 // is also re-attempted as a safety net in case +(void)load was somehow skipped.
 void force_deeplink_service_initialization() {
+	// Reference DeeplinkServiceLoader so the iOS linker keeps it under
+	// -dead_strip (the Godot iOS app doesn't set -ObjC, so unreferenced
+	// Objective-C classes from static libs can be stripped — taking their
+	// +(void)load with them and breaking the early scene-method injection).
+	// The reference is consumed via Class to avoid a "result unused" warning.
+	(void)[DeeplinkServiceLoader class];
+
 	if (!scene_methods_injected) {
 		inject_scene_url_methods();
 		scene_methods_injected = true;
