@@ -27,6 +27,14 @@ pub struct DeepLinkResult {
     pub livekit_debug: bool,
     /// Routable path (e.g. "/jump", "/events", "/places", "/mobile")
     pub path: String,
+    /// Dev/testing: short-circuit profile deploys so local changes never publish.
+    pub disable_profile_deploy: bool,
+    /// Dev/testing: URNs to inject into the backpack as fake-owned wearables.
+    pub fake_owned_wearables: Vec<String>,
+    /// Scene Inspector target: empty=off, "true"=auto (use preview WS + debugger), "ws://host:port"=custom target
+    pub scene_inspector: String,
+    /// Whether to write JSONL Scene Inspector files to disk
+    pub scene_inspector_file: bool,
     /// Simulate low-spec iPhone warnings (for testing)
     pub low_spec_warning: bool,
 }
@@ -146,11 +154,38 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             "livekit_debug" => {
                 result.livekit_debug = value.eq_ignore_ascii_case("true") || value == "1";
             }
+            "disable-profile-deploy" => {
+                result.disable_profile_deploy = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "fake-owned-wearables" => {
+                result.fake_owned_wearables = value
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+            }
+            "scene-inspector" => {
+                result.scene_inspector = if value.eq_ignore_ascii_case("true") || value == "1" {
+                    "true".to_string()
+                } else {
+                    value.to_string()
+                };
+            }
+            "scene-inspector-file" => {
+                result.scene_inspector_file = value.eq_ignore_ascii_case("true") || value == "1";
+            }
             "low_spec_warning" => {
                 result.low_spec_warning = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
+    }
+
+    // Fake-owned wearables imply disabling profile deploys: otherwise the
+    // catalyst rejects the deploy because the signed profile references items
+    // the wallet doesn't actually own.
+    if !result.fake_owned_wearables.is_empty() {
+        result.disable_profile_deploy = true;
     }
 
     Some(result)
@@ -432,6 +467,47 @@ mod tests {
     }
 
     #[test]
+    fn disable_profile_deploy_true() {
+        let r = parse("decentraland://open?disable-profile-deploy=true");
+        assert!(r.disable_profile_deploy);
+    }
+
+    #[test]
+    fn disable_profile_deploy_absent() {
+        let r = parse("decentraland://open");
+        assert!(!r.disable_profile_deploy);
+    }
+
+    #[test]
+    fn fake_owned_wearables_single() {
+        let r = parse(
+            "decentraland://open?fake-owned-wearables=urn:decentraland:amoy:collections-v2:0xabc:5",
+        );
+        assert_eq!(
+            r.fake_owned_wearables,
+            vec!["urn:decentraland:amoy:collections-v2:0xabc:5"]
+        );
+    }
+
+    #[test]
+    fn fake_owned_wearables_multiple() {
+        let r = parse("decentraland://open?fake-owned-wearables=urn:a,urn:b, urn:c ");
+        assert_eq!(r.fake_owned_wearables, vec!["urn:a", "urn:b", "urn:c"]);
+    }
+
+    #[test]
+    fn fake_owned_wearables_absent() {
+        let r = parse("decentraland://open");
+        assert!(r.fake_owned_wearables.is_empty());
+    }
+
+    #[test]
+    fn fake_owned_wearables_implies_disable_profile_deploy() {
+        let r = parse("decentraland://open?fake-owned-wearables=urn:a");
+        assert!(r.disable_profile_deploy);
+    }
+
+    #[test]
     fn rust_log_param() {
         let r = parse("decentraland://open?rust-log=debug");
         assert_eq!(get_param(&r, "rust-log"), Some("debug"));
@@ -503,5 +579,39 @@ mod tests {
         assert_eq!(r.realm, "r1");
         assert!(r.livekit_debug);
         assert_eq!(get_param(&r, "rust-log"), Some("debug"));
+    }
+
+    // ---- Scene Inspector parameters -----------------------------------------
+
+    #[test]
+    fn scene_inspector_true() {
+        let r = parse("decentraland://open?scene-inspector=true");
+        assert_eq!(r.scene_inspector, "true");
+    }
+
+    #[test]
+    fn scene_inspector_one() {
+        let r = parse("decentraland://open?scene-inspector=1");
+        assert_eq!(r.scene_inspector, "true");
+    }
+
+    #[test]
+    fn scene_inspector_custom_ws() {
+        let r = parse("decentraland://open?scene-inspector=ws://192.168.1.5:9090");
+        assert_eq!(r.scene_inspector, "ws://192.168.1.5:9090");
+    }
+
+    #[test]
+    fn scene_inspector_file() {
+        let r = parse("decentraland://open?scene-inspector=true&scene-inspector-file=true");
+        assert_eq!(r.scene_inspector, "true");
+        assert!(r.scene_inspector_file);
+    }
+
+    #[test]
+    fn scene_inspector_default_off() {
+        let r = parse("decentraland://open?location=0,0");
+        assert!(r.scene_inspector.is_empty());
+        assert!(!r.scene_inspector_file);
     }
 }

@@ -19,8 +19,8 @@ use crate::platform::{
 use crate::ui::{create_spinner, print_message, print_section, MessageType};
 
 use crate::consts::{
-    BIN_FOLDER, GODOT4_BIN_BASE_URL, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
-    RUST_LIB_PROJECT_FOLDER,
+    godot_editor_base_url_for_branch, sanitize_branch_for_url, BIN_FOLDER, GODOT4_BIN_BASE_URL,
+    GODOT_CURRENT_VERSION, PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER,
 };
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
@@ -30,7 +30,7 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-22578236808.commit-b829b38.tgz");
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-24360051842.commit-5e66d77.tgz");
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
     match PROTOCOL_FIXED_VERSION_URL {
@@ -211,7 +211,7 @@ pub fn download_and_extract_zip(
     Ok(())
 }
 
-fn get_godot_url() -> Option<String> {
+fn get_godot_url(branch: Option<&str>) -> Option<String> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
 
@@ -240,7 +240,12 @@ fn get_godot_url() -> Option<String> {
         _ => None,
     }?;
 
-    Some(format!("{GODOT4_BIN_BASE_URL}{os_url}"))
+    let base_url = match branch {
+        Some(b) => godot_editor_base_url_for_branch(b),
+        None => GODOT4_BIN_BASE_URL.to_string(),
+    };
+
+    Some(format!("{base_url}{os_url}"))
 }
 
 pub fn set_executable_permission(_file_path: &Path) -> std::io::Result<()> {
@@ -429,6 +434,7 @@ pub fn install(
     platforms: &[String],
     use_cache: bool,
     strip_ios: bool,
+    branch: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     print_section("Installing Dependencies");
 
@@ -437,6 +443,16 @@ pub fn install(
         MessageType::Info,
         &format!("Platform: {}", platform.display_name),
     );
+
+    if let Some(b) = branch {
+        print_message(
+            MessageType::Info,
+            &format!(
+                "Using Godot branch build: '{}' (editors + templates will be fetched from /branches/{}/)",
+                b, b
+            ),
+        );
+    }
 
     // Check for missing development dependencies
     let dev_deps = check_development_dependencies();
@@ -517,10 +533,17 @@ pub fn install(
     // Check if Godot is already installed
     if !crate::helpers::is_tool_installed("godot") {
         print_section("Installing Godot Engine");
+        let godot_cache_key = match branch {
+            Some(b) => format!(
+                "{GODOT_CURRENT_VERSION}.branch-{}.executable.zip",
+                sanitize_branch_for_url(b)
+            ),
+            None => format!("{GODOT_CURRENT_VERSION}.executable.zip"),
+        };
         download_and_extract_zip(
-            get_godot_url().unwrap().as_str(),
+            get_godot_url(branch).unwrap().as_str(),
             BinPaths::godot().to_str().unwrap(),
-            cache_key(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
+            cache_key(godot_cache_key),
         )?;
 
         let program_path = BinPaths::godot().join(get_godot_executable_path().unwrap());
@@ -569,7 +592,7 @@ pub fn install(
     };
 
     if !skip_download_templates {
-        prepare_templates(platforms, use_cache, strip_ios)?;
+        prepare_templates(platforms, use_cache, strip_ios, branch)?;
     }
 
     print_message(MessageType::Success, "Installation complete!");

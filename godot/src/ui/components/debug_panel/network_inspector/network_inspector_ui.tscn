@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://m5v31kdhwpyn"]
+[gd_scene format=3 uid="uid://m5v31kdhwpyn"]
 
 [ext_resource type="Script" uid="uid://c52q2ml7cwol7" path="res://src/ui/components/debug_panel/network_inspector/network_inspector_ui.gd" id="1_c55gl"]
 [ext_resource type="PackedScene" uid="uid://dvntl234e4lne" path="res://src/ui/components/debug_panel/network_inspector/request_entry.tscn" id="2_5px5s"]
 
-[node name="NetworkInspectorUi" type="Panel"]
+[node name="NetworkInspectorUi" type="Panel" unique_id=72255587]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -11,46 +11,47 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_c55gl")
 
-[node name="Timer" type="Timer" parent="."]
+[node name="Timer" type="Timer" parent="." unique_id=1878565782]
 wait_time = 0.1
 autostart = true
 
-[node name="Requests" type="Control" parent="."]
-layout_mode = 3
+[node name="Requests" type="Control" parent="." unique_id=437172663]
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="Header" parent="Requests" instance=ExtResource("2_5px5s")]
-layout_mode = 2
+[node name="Header" parent="Requests" unique_id=1439600056 instance=ExtResource("2_5px5s")]
+layout_mode = 0
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Requests"]
-layout_mode = 2
+[node name="ScrollContainer" type="ScrollContainer" parent="Requests" unique_id=807353304]
+layout_mode = 0
 offset_top = 26.0
 offset_right = 1279.0
 offset_bottom = 383.0
 horizontal_scroll_mode = 2
 vertical_scroll_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Requests/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Requests/ScrollContainer" unique_id=654349758]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Control" type="Control" parent="."]
+[node name="Control" type="Control" parent="." unique_id=660830028]
 anchors_preset = 0
 offset_top = 384.0
 offset_right = 1281.0
 offset_bottom = 721.0
 
-[node name="TabContainer" type="TabContainer" parent="Control"]
+[node name="TabContainer" type="TabContainer" parent="Control" unique_id=1365696748]
 layout_mode = 0
 offset_right = 1276.0
 offset_bottom = 329.0
+current_tab = 0
 
-[node name="General" type="Panel" parent="Control/TabContainer"]
+[node name="General" type="Panel" parent="Control/TabContainer" unique_id=152521192]
 layout_mode = 2
+metadata/_tab_index = 0
 
-[node name="Label_Title" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Title" type="Label" parent="Control/TabContainer/General" unique_id=540295626]
 layout_mode = 0
 offset_left = 32.0
 offset_top = 80.0
@@ -60,7 +61,7 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "URL:"
 horizontal_alignment = 2
 
-[node name="Label_Url" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Url" type="Label" parent="Control/TabContainer/General" unique_id=932021766]
 layout_mode = 0
 offset_left = 176.0
 offset_top = 80.0
@@ -69,7 +70,7 @@ offset_bottom = 100.0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "....."
 
-[node name="Label_Title2" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Title2" type="Label" parent="Control/TabContainer/General" unique_id=1343436242]
 layout_mode = 0
 offset_left = 32.0
 offset_top = 104.0
@@ -79,7 +80,7 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "Method:"
 horizontal_alignment = 2
 
-[node name="Label_Method" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Method" type="Label" parent="Control/TabContainer/General" unique_id=1438998440]
 layout_mode = 0
 offset_left = 176.0
 offset_top = 104.0
@@ -88,7 +89,7 @@ offset_bottom = 124.0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "....."
 
-[node name="Label_Title3" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Title3" type="Label" parent="Control/TabContainer/General" unique_id=1019730103]
 layout_mode = 0
 offset_left = 32.0
 offset_top = 56.0
@@ -98,7 +99,7 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "Ok:"
 horizontal_alignment = 2
 
-[node name="Label_OK" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_OK" type="Label" parent="Control/TabContainer/General" unique_id=2071617412]
 layout_mode = 0
 offset_left = 176.0
 offset_top = 56.0
@@ -107,7 +108,7 @@ offset_bottom = 76.0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "....."
 
-[node name="Label_Title4" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Title4" type="Label" parent="Control/TabContainer/General" unique_id=71047477]
 visible = false
 layout_mode = 0
 offset_left = 32.0
@@ -118,7 +119,7 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "URL:"
 horizontal_alignment = 2
 
-[node name="Label_Url4" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Url4" type="Label" parent="Control/TabContainer/General" unique_id=1287628514]
 visible = false
 layout_mode = 0
 offset_left = 176.0
@@ -128,7 +129,7 @@ offset_bottom = 148.0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "....."
 
-[node name="Label_Title5" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Title5" type="Label" parent="Control/TabContainer/General" unique_id=267529627]
 layout_mode = 0
 offset_left = 32.0
 offset_top = 32.0
@@ -138,7 +139,7 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "Status:"
 horizontal_alignment = 2
 
-[node name="Label_Status" type="Label" parent="Control/TabContainer/General"]
+[node name="Label_Status" type="Label" parent="Control/TabContainer/General" unique_id=608862627]
 layout_mode = 0
 offset_left = 176.0
 offset_top = 32.0
@@ -147,44 +148,48 @@ offset_bottom = 52.0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "....."
 
-[node name="RequestHeaders" type="Panel" parent="Control/TabContainer"]
+[node name="RequestHeaders" type="Panel" parent="Control/TabContainer" unique_id=1623476883]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 1
 
-[node name="TextEdit" type="TextEdit" parent="Control/TabContainer/RequestHeaders"]
+[node name="TextEdit" type="TextEdit" parent="Control/TabContainer/RequestHeaders" unique_id=1719503413]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 1100.0
 offset_bottom = 279.0
 
-[node name="RequestBody" type="Panel" parent="Control/TabContainer"]
+[node name="RequestBody" type="Panel" parent="Control/TabContainer" unique_id=1995868721]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 2
 
-[node name="TextEdit" type="TextEdit" parent="Control/TabContainer/RequestBody"]
+[node name="TextEdit" type="TextEdit" parent="Control/TabContainer/RequestBody" unique_id=783276869]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 1100.0
 offset_bottom = 279.0
 
-[node name="ResponseHeaders" type="Panel" parent="Control/TabContainer"]
+[node name="ResponseHeaders" type="Panel" parent="Control/TabContainer" unique_id=1408024909]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 3
 
-[node name="TextEdit" type="TextEdit" parent="Control/TabContainer/ResponseHeaders"]
+[node name="TextEdit" type="TextEdit" parent="Control/TabContainer/ResponseHeaders" unique_id=897063225]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 1100.0
 offset_bottom = 279.0
 
-[node name="ResponseBody" type="Panel" parent="Control/TabContainer"]
+[node name="ResponseBody" type="Panel" parent="Control/TabContainer" unique_id=288479315]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 4
 
-[node name="TextEdit" type="TextEdit" parent="Control/TabContainer/ResponseBody"]
+[node name="TextEdit" type="TextEdit" parent="Control/TabContainer/ResponseBody" unique_id=463220640]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 16.0

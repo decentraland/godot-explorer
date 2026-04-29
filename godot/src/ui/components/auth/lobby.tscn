@@ -9,7 +9,7 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
 [ext_resource type="PackedScene" uid="uid://5x6lss2vy1x0" path="res://src/ui/components/discover/first_time_user_experience.tscn" id="5_3tlbd"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_g62s5"]
-[ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="9_qv8xq"]
+[ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack_portrait.tscn" id="9_qv8xq"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_ypsmd"]
 [ext_resource type="LabelSettings" uid="uid://cjsuieuof7bhf" path="res://assets/themes/lobby_title_small.tres" id="10_3tlbd"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="11_7iulh"]

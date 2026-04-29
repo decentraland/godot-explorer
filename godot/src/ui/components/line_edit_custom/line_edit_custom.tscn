@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bij0xgcmb6ivs"]
+[gd_scene format=3 uid="uid://bij0xgcmb6ivs"]
 
 [ext_resource type="Script" uid="uid://cttwqr85x38kx" path="res://src/ui/components/line_edit_custom/line_edit_custom.gd" id="1_script"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="2_regular"]
@@ -13,7 +13,7 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_sep"]
 
-[node name="LineEditCustom" type="VBoxContainer"]
+[node name="LineEditCustom" type="VBoxContainer" unique_id=573575515]
 offset_right = 261.0
 offset_bottom = 136.0
 mouse_filter = 2
@@ -21,7 +21,7 @@ theme_override_constants/separation = 0
 script = ExtResource("1_script")
 text_button = "Casa"
 
-[node name="Label_Title" type="Label" parent="."]
+[node name="Label_Title" type="Label" parent="." unique_id=1092713925]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -30,16 +30,16 @@ theme_override_fonts/font = ExtResource("4_semibold")
 theme_override_font_sizes/font_size = 14
 label_settings = ExtResource("3_tiq7w")
 
-[node name="HSeparator" type="HSeparator" parent="."]
+[node name="HSeparator" type="HSeparator" parent="." unique_id=1389958368]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1533904277]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="LineEdit_Input" type="LineEdit" parent="HBoxContainer"]
+[node name="LineEdit_Input" type="LineEdit" parent="HBoxContainer" unique_id=1650781621]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
@@ -54,20 +54,21 @@ theme_override_styles/normal = ExtResource("5_panel")
 theme_override_styles/read_only = ExtResource("7_6jnwr")
 theme_override_styles/focus = ExtResource("8_0a0uc")
 
-[node name="Button" type="Button" parent="HBoxContainer"]
+[node name="Button" type="Button" parent="HBoxContainer" unique_id=304382981]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("8_5wmnl")
 theme_override_font_sizes/font_size = 30
+text = "Casa"
 
-[node name="HSeparator2" type="HSeparator" parent="."]
+[node name="HSeparator2" type="HSeparator" parent="." unique_id=256485422]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
 
-[node name="Label_Description" type="Label" parent="."]
+[node name="Label_Description" type="Label" parent="." unique_id=187990452]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2

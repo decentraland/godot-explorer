@@ -16,6 +16,11 @@ func _ready() -> void:
 
 func _on_button_cancel_delete_account_pressed() -> void:
 	hide()
+	# If the flow was opened from the explorer's landscape side panel, the menu
+	# was force-opened in portrait. Close it so the explorer flips back to
+	# landscape via _on_menu_close instead of stranding the user in portrait.
+	if Global.get_explorer():
+		Global.close_menu.emit()
 
 
 func _on_button_ok_pressed() -> void:

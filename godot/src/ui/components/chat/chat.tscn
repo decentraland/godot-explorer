@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://bl6h58asl377"]
+[gd_scene format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
@@ -12,6 +12,16 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_euk1h"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ac_panel"]
+bg_color = Color(0.13333334, 0.12941177, 0.14509805, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.5019608)
+shadow_size = 3
+shadow_offset = Vector2(0, -3)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0pohw"]
 
@@ -85,7 +95,7 @@ expand_margin_bottom = 2.0
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ttgy1"]
 
-[node name="Panel_Chat" type="Control"]
+[node name="Panel_Chat" type="Control" unique_id=675203837]
 custom_minimum_size = Vector2(1370, 0)
 layout_mode = 3
 anchors_preset = 0
@@ -98,7 +108,7 @@ theme = ExtResource("1_ytipc")
 script = ExtResource("1_llfi5")
 metadata/mobile_preview_orientation = "landscape"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=723468704]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -108,18 +118,18 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1683683258]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/HBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=1420448833]
 custom_minimum_size = Vector2(709, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_lt7hs")
 
-[node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer/HBoxContainer/PanelContainer"]
+[node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer/HBoxContainer/PanelContainer" unique_id=281446772]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -130,36 +140,70 @@ theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat" unique_id=1518286057]
 layout_mode = 2
 
-[node name="ScrollContainer_ChatsList" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer"]
+[node name="ScrollContainer_ChatsList" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer" unique_id=951018539]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="VBoxContainerChat" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList"]
+[node name="VBoxContainerChat" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" unique_id=432900112]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList/VBoxContainerChat"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList/VBoxContainerChat" unique_id=1437532205]
 layout_mode = 2
 theme_override_constants/separation = 8
 theme_override_styles/separator = SubResource("StyleBoxEmpty_euk1h")
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/HBoxContainer"]
+[node name="AutocompletePanel" type="PanelContainer" parent="VBoxContainer/HBoxContainer/PanelContainer" unique_id=1513873772]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 8
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ac_panel")
+
+[node name="AutocompleteScroll" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel" unique_id=1437342991]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel/AutocompleteScroll" unique_id=797719541]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 8
+
+[node name="AutocompleteItems" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel/AutocompleteScroll/MarginContainer" unique_id=911362068]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/HBoxContainer" unique_id=362487141]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 50
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0pohw")
 
-[node name="MarginContainer_GoToNewMessages" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VSeparator"]
+[node name="MarginContainer_GoToNewMessages" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VSeparator" unique_id=619715685]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -172,7 +216,7 @@ theme_override_constants/margin_left = 5
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 5
 
-[node name="Button_GoToLast" type="Button" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages"]
+[node name="Button_GoToLast" type="Button" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages" unique_id=551370394]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
@@ -183,7 +227,7 @@ icon = ExtResource("8_0pohw")
 icon_alignment = 1
 expand_icon = true
 
-[node name="PanelContainer_NewMessages" type="PanelContainer" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast"]
+[node name="PanelContainer_NewMessages" type="PanelContainer" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast" unique_id=1942484526]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(34, 0)
 layout_mode = 1
@@ -201,14 +245,14 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_5a8fu")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages" unique_id=1298490703]
 layout_mode = 2
 theme_override_constants/margin_left = 3
 theme_override_constants/margin_top = 3
 theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 3
 
-[node name="Label_NewMessages" type="Label" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages/MarginContainer"]
+[node name="Label_NewMessages" type="Label" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages/MarginContainer" unique_id=2046098247]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -217,23 +261,23 @@ label_settings = SubResource("LabelSettings_bhyuy")
 horizontal_alignment = 1
 vertical_alignment = 2
 
-[node name="PanelLineEdit" type="PanelContainer" parent="VBoxContainer"]
+[node name="PanelLineEdit" type="PanelContainer" parent="VBoxContainer" unique_id=701695377]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_askrr")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelLineEdit"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelLineEdit" unique_id=815343771]
 layout_mode = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer_LineEdit" type="HBoxContainer" parent="VBoxContainer/PanelLineEdit/MarginContainer"]
+[node name="HBoxContainer_LineEdit" type="HBoxContainer" parent="VBoxContainer/PanelLineEdit/MarginContainer" unique_id=1818959008]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="LineEdit_Command" type="LineEdit" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit"]
+[node name="LineEdit_Command" type="LineEdit" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit" unique_id=194010800]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -252,7 +296,7 @@ clear_button_enabled = true
 deselect_on_focus_loss_enabled = false
 caret_blink = true
 
-[node name="Button_Send" type="Button" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit"]
+[node name="Button_Send" type="Button" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit" unique_id=141404662]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(108, 0)
 layout_mode = 2
@@ -270,7 +314,7 @@ text = "SEND"
 flat = true
 icon_alignment = 2
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1237156629]
 layout_mode = 2
 theme_override_constants/separation = 4
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ttgy1")

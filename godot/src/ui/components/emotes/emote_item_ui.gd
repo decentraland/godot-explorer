@@ -4,6 +4,7 @@ extends BaseButton
 
 signal play_emote(emote_urn: String)
 signal select_emote(selected: bool, emote_urn: String)
+signal emote_name_ready(emote_name: String)
 
 @export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
@@ -42,6 +43,7 @@ var _is_dirty := false
 @onready var texture_rect_equiped_mark := %TextureRect_Equiped
 @onready var texture_rect_skeleton: TextureRect = %TextureRect_Skeleton
 @onready var texture_rect_picture: TextureRect = %TextureRect_Picture
+@onready var button_equiped: Button = get_node_or_null("%Button_Equiped")
 
 
 func async_load_from_urn(_emote_urn: String, _index: int = -1):
@@ -69,6 +71,8 @@ func async_load_from_entity(emote_data: DclItemEntityDefinition) -> void:
 	emote_name = emote_data.get_display_name()
 	rarity = emote_data.get_rarity()
 	await async_set_texture(emote_data)
+	if button_pressed:
+		emote_name_ready.emit(emote_name)
 
 
 func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
@@ -97,6 +101,7 @@ func _process(_delta: float) -> void:
 func _ready():
 	texture_rect_background.hide()
 	texture_rect_skeleton.show()
+	_update_equip_ui()
 	if not Engine.is_editor_hint():
 		set_meta("attenuated_sound", true)
 		UiSounds.install_audio_recusirve(self)
@@ -159,6 +164,7 @@ func _on_pressed():
 
 func _on_toggled(new_toggled: bool):
 	texture_rect_selected.set_visible(new_toggled)
+	_update_equip_ui()
 
 
 func _on_button_down():
@@ -173,13 +179,29 @@ func _on_button_up():
 
 func set_equipped(equipped: bool) -> void:
 	_is_equipped = equipped
-	texture_rect_equiped.set_visible(_is_equipped)
-	texture_rect_equiped_mark.set_visible(_is_equipped)
+	_update_equip_ui()
 
 
 func set_slot_selected(toggled_on: bool) -> void:
 	texture_rect_selected_bold.set_visible(toggled_on)
 	texture_rect_selected.hide()
+
+
+func _update_equip_ui() -> void:
+	if button_equiped == null:
+		texture_rect_equiped.set_visible(_is_equipped)
+		texture_rect_equiped_mark.set_visible(_is_equipped)
+		return
+	if not button_pressed:
+		texture_rect_equiped.set_visible(_is_equipped)
+		texture_rect_equiped_mark.set_visible(_is_equipped)
+		button_equiped.hide()
+	else:
+		texture_rect_equiped.hide()
+		texture_rect_equiped_mark.hide()
+		button_equiped.show()
+		button_equiped.set_pressed_no_signal(_is_equipped)
+		button_equiped.text = "UNEQUIP" if _is_equipped else "EQUIP"
 
 
 func set_empty() -> void:

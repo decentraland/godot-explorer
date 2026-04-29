@@ -37,9 +37,20 @@ pub struct GatekeeperResponse {
 }
 
 #[derive(Debug)]
-pub struct SceneRoomConnectionRequest {
-    pub scene_id: String,
-    pub livekit_url: String,
+pub enum SceneRoomConnectionRequest {
+    Connect {
+        scene_id: String,
+        livekit_url: String,
+    },
+    Banned {
+        scene_id: String,
+    },
+}
+
+#[derive(Debug)]
+enum SceneAdapterError {
+    Banned,
+    Other(String),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -162,6 +173,10 @@ pub struct CommunicationManager {
     #[cfg(feature = "use_livekit")]
     scene_room_connection_sender: mpsc::Sender<SceneRoomConnectionRequest>,
 
+    // Channel for scene access check results
+    scene_access_receiver: mpsc::Receiver<(String, bool, String)>,
+    scene_access_sender: mpsc::Sender<(String, bool, String)>,
+
     base: Base<Node>,
 }
 
@@ -170,6 +185,7 @@ impl INode for CommunicationManager {
     fn init(base: Base<Node>) -> Self {
         #[cfg(feature = "use_livekit")]
         let (scene_room_connection_sender, scene_room_connection_receiver) = mpsc::channel(10);
+        let (scene_access_sender, scene_access_receiver) = mpsc::channel(10);
 
         CommunicationManager {
             current_connection: CommsConnection::None,
@@ -197,6 +213,8 @@ impl INode for CommunicationManager {
             scene_room_connection_receiver,
             #[cfg(feature = "use_livekit")]
             scene_room_connection_sender,
+            scene_access_receiver,
+            scene_access_sender,
             realm_min_bounds: godot::prelude::Vector2i::new(-150, -150),
             realm_max_bounds: godot::prelude::Vector2i::new(163, 158),
             base,
@@ -208,6 +226,18 @@ impl INode for CommunicationManager {
     }
 
     fn process(&mut self, _dt: f64) {
+        // Handle scene access check results
+        while let Ok((scene_id, allowed, error_message)) = self.scene_access_receiver.try_recv() {
+            self.base_mut().emit_signal(
+                "scene_access_checked",
+                &[
+                    GString::from(&scene_id).to_variant(),
+                    allowed.to_variant(),
+                    GString::from(&error_message).to_variant(),
+                ],
+            );
+        }
+
         // Handle scene room connection requests from async tasks
         #[cfg(feature = "use_livekit")]
         if !self.comms_on_hold {
@@ -309,6 +339,23 @@ impl INode for CommunicationManager {
             // Check if disconnected from the server (returns reason + room_id)
             disconnect_info = processor.consume_disconnect_reason();
 
+            // Check if room metadata indicates the player was banned.
+            // Only clean the scene room — keep main room alive for navigation.
+            if processor.consume_room_metadata_banned() {
+                tracing::warn!("Detected ban via room metadata — emitting kicked disconnect");
+                #[cfg(feature = "use_livekit")]
+                {
+                    if let Some(scene_room) = &mut self.scene_room {
+                        scene_room.clean();
+                    }
+                    self.scene_room = None;
+                    self.scene_room_reconnect_at = None;
+                }
+                self.current_scene_id = None;
+                self.base_mut()
+                    .emit_signal("disconnected", &[2i32.to_variant()]);
+            }
+
             if !processor_polling_ok {
                 // Reset the message processor if it fails
                 processor_reset = true;
@@ -353,12 +400,20 @@ impl INode for CommunicationManager {
                 self.base_mut()
                     .emit_signal("disconnected", &[0i32.to_variant()]);
             } else if room_id.starts_with("scene-") {
-                // Scene room disconnect → handled by reconnection timer, don't emit signal
-                tracing::debug!(
-                    "Scene room '{}' disconnected ({:?}) — reconnection scheduled",
-                    room_id,
-                    reason
-                );
+                if reason == DisconnectReason::Kicked {
+                    // Kicked from scene room → full disconnect (clean all rooms)
+                    tracing::warn!("Kicked from scene room '{}' — disconnecting fully", room_id);
+                    self.clean();
+                    self.base_mut()
+                        .emit_signal("disconnected", &[2i32.to_variant()]);
+                } else {
+                    // Other scene room disconnects → handled by reconnection timer
+                    tracing::debug!(
+                        "Scene room '{}' disconnected ({:?}) — reconnection scheduled",
+                        room_id,
+                        reason
+                    );
+                }
             } else if room_id.starts_with("archipelago-livekit-") {
                 // Archipelago LiveKit room disconnect → handled by ArchipelagoManager
                 tracing::debug!(
@@ -394,6 +449,7 @@ impl INode for CommunicationManager {
         }
 
         // Poll scene room (if active)
+        // Skip if we already handled a kick (clean() already removed the scene room)
         #[cfg(feature = "use_livekit")]
         {
             let scene_room_alive = if let Some(scene_room) = &mut self.scene_room {
@@ -402,9 +458,13 @@ impl INode for CommunicationManager {
                 true
             };
             if !scene_room_alive {
-                tracing::warn!("🔌 Scene room disconnected, scheduling reconnection in 5s");
                 self.scene_room = None; // Remove dead room, keep current_scene_id
-                self.scene_room_reconnect_at = Some(Instant::now() + Duration::from_secs(5));
+                                        // Only schedule reconnection if we weren't kicked
+                                        // (kick handling above already called clean() which clears current_scene_id)
+                if self.current_scene_id.is_some() {
+                    tracing::warn!("🔌 Scene room disconnected, scheduling reconnection in 5s");
+                    self.scene_room_reconnect_at = Some(Instant::now() + Duration::from_secs(5));
+                }
             }
         }
 
@@ -530,14 +590,22 @@ impl CommunicationManager {
                         let livekit_url =
                             adapter_url.strip_prefix("livekit:").unwrap_or(&adapter_url);
                         let _ = connection_sender
-                            .send(SceneRoomConnectionRequest {
+                            .send(SceneRoomConnectionRequest::Connect {
                                 scene_id: scene_entity_id,
                                 livekit_url: livekit_url.to_string(),
                             })
                             .await;
                     }
                 }
-                Err(e) => {
+                Err(SceneAdapterError::Banned) => {
+                    tracing::warn!("🚫 Scene room reconnection denied: user is banned");
+                    let _ = connection_sender
+                        .send(SceneRoomConnectionRequest::Banned {
+                            scene_id: scene_entity_id,
+                        })
+                        .await;
+                }
+                Err(SceneAdapterError::Other(e)) => {
                     tracing::warn!("🔄 Scene room reconnection failed (will retry): {}", e);
                 }
             }
@@ -712,6 +780,12 @@ impl CommunicationManager {
     #[signal]
     fn disconnected(reason: i32);
 
+    /// Signal emitted with the result of a scene access check
+    /// allowed: true if access is granted, false if banned
+    /// error_message: non-empty if the check failed (network error, etc.)
+    #[signal]
+    fn scene_access_checked(scene_id: GString, allowed: bool, error_message: GString);
+
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
         let adapter = if let Some(main_room) = &mut self.main_room {
@@ -774,6 +848,9 @@ impl CommunicationManager {
         rise: bool,
         fall: bool,
         land: bool,
+        jump_count: i32,
+        glide_state: i32,
+        is_grounded: bool,
     ) -> bool {
         // Update archipelago position if connected via archipelago
         #[cfg(feature = "use_livekit")]
@@ -783,8 +860,18 @@ impl CommunicationManager {
 
         let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
 
+        // The Temporal bitfield doesn't carry jump_count / glide_state yet, so
+        // force uncompressed when either carries info beyond what rise/fall/land
+        // already encode.
+        // #b8: jump_count == 1 is a plain ground jump that rise/fall covers, so
+        // no need to force uncompressed. A player that steps off a ledge keeps
+        // jump_count=1 until landing, so forcing on `> 0` would burn bandwidth
+        // during every long fall.
+        let needs_uncompressed = jump_count >= 2 || glide_state != 0;
+        let use_compressed = compressed && !needs_uncompressed;
+
         let get_packet = || {
-            if compressed {
+            if use_compressed {
                 // Get elapsed time since start
                 let time = self.start_time.elapsed().as_secs_f64();
 
@@ -806,14 +893,16 @@ impl CommunicationManager {
                     MoveKind::Idle
                 };
 
-                // Temporal::with_rotation_f32 expects radians (quantizes over 0..TAU)
+                // rotation_y on the wire is Unity left-handed yaw in radians;
+                // negate to cross into Godot's right-handed frame.
+                let _ = land; // kept in signature for GDScript API stability
                 let temporal = Temporal::from_parts(
                     time,
                     false,
-                    rotation_y, // radians from Godot
+                    -rotation_y,
                     movement.velocity_tier(),
                     move_kind,
-                    !fall && !rise,
+                    is_grounded,
                 );
 
                 let movement_compressed = MovementCompressed { temporal, movement };
@@ -821,6 +910,8 @@ impl CommunicationManager {
                 let movement_packet = rfc4::MovementCompressed {
                     temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
                     movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
+                    head_sync_data: 0, // TODO: implement head sync compression
+                    point_at_data: 0,  // TODO: implement point-at compression
                 };
 
                 rfc4::Packet {
@@ -852,17 +943,29 @@ impl CommunicationManager {
                     velocity_x: velocity.x,
                     velocity_y: velocity.y,
                     velocity_z: velocity.z,
-                    rotation_y: -rotation_y,
+                    // Negate + rad→deg to match Unity Foundation Client
+                    // (rfc4.Movement.rotation_y is degrees in [0, 360)).
+                    rotation_y: (-rotation_y).to_degrees(),
                     movement_blend_value,
                     slide_blend_value: 0.0,
-                    is_grounded: land,
+                    is_grounded,
                     is_jumping: rise,
+                    jump_count,
                     is_long_jump: false,
                     is_long_fall: false,
                     is_falling: fall,
                     is_stunned: false,
+                    glide_state,
                     is_instant: false,
                     is_emoting: self.is_emoting,
+                    head_ik_yaw_enabled: false, // TODO: implement head sync
+                    head_ik_pitch_enabled: false,
+                    head_yaw: 0.0,
+                    head_pitch: 0.0,
+                    point_at_x: 0.0, // TODO: implement point-at
+                    point_at_y: 0.0,
+                    point_at_z: 0.0,
+                    is_pointing_at: false,
                 };
 
                 rfc4::Packet {
@@ -1496,39 +1599,64 @@ impl CommunicationManager {
 
     #[cfg(feature = "use_livekit")]
     fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
-        tracing::debug!(
-            "🔌 Processing scene room connection request for scene '{}' with URL: {}",
-            request.scene_id,
-            request.livekit_url
-        );
+        match request {
+            SceneRoomConnectionRequest::Banned { scene_id } => {
+                // Handle banned signal from scene room connection/reconnection.
+                // Only clean the scene room — keep main room alive so the user can navigate away.
+                tracing::warn!(
+                    "🚫 User is banned from scene '{}' — emitting kicked disconnect",
+                    scene_id
+                );
+                if let Some(scene_room) = &mut self.scene_room {
+                    scene_room.clean();
+                }
+                self.scene_room = None;
+                self.scene_room_reconnect_at = None;
+                self.current_scene_id = None;
+                self.base_mut()
+                    .emit_signal("disconnected", &[2i32.to_variant()]);
+            }
+            SceneRoomConnectionRequest::Connect {
+                scene_id,
+                livekit_url,
+            } => {
+                tracing::debug!(
+                    "🔌 Processing scene room connection request for scene '{}' with URL: {}",
+                    scene_id,
+                    livekit_url
+                );
 
-        // Ensure we have a message processor (create one if needed)
-        let processor_sender = self.ensure_message_processor();
+                // Ensure we have a message processor (create one if needed)
+                let processor_sender = self.ensure_message_processor();
 
-        // Clean up existing scene room
-        if let Some(scene_room) = &mut self.scene_room {
-            tracing::debug!("🧹 Cleaning up existing scene room");
-            scene_room.clean();
+                // Clean up existing scene room
+                if let Some(scene_room) = &mut self.scene_room {
+                    tracing::debug!("🧹 Cleaning up existing scene room");
+                    scene_room.clean();
+                }
+
+                // Create new LiveKit room for the scene
+                // Scene rooms use auto_subscribe: false to manually control subscriptions
+                let room_id = format!("scene-{}", scene_id);
+                tracing::debug!("🚀 Creating new scene room with ID: {}", room_id);
+
+                let mut scene_room =
+                    LivekitRoom::new_with_options(livekit_url.clone(), room_id, false);
+
+                // Connect the scene room to the message processor
+                scene_room.set_message_processor_sender(processor_sender);
+
+                self.scene_room = Some(scene_room);
+                self.scene_room_reconnect_at = None;
+
+                // Announce initial profile to the scene room
+                self.announce_initial_profile();
+
+                tracing::debug!(
+                    "✅ Scene room successfully created and connected to message processor"
+                );
+            }
         }
-
-        // Create new LiveKit room for the scene
-        // Scene rooms use auto_subscribe: false to manually control subscriptions
-        let room_id = format!("scene-{}", request.scene_id);
-        tracing::debug!("🚀 Creating new scene room with ID: {}", room_id);
-
-        let mut scene_room =
-            LivekitRoom::new_with_options(request.livekit_url.clone(), room_id, false);
-
-        // Connect the scene room to the message processor
-        scene_room.set_message_processor_sender(processor_sender);
-
-        self.scene_room = Some(scene_room);
-        self.scene_room_reconnect_at = None;
-
-        // Announce initial profile to the scene room
-        self.announce_initial_profile();
-
-        tracing::debug!("✅ Scene room successfully created and connected to message processor");
     }
 
     #[cfg(feature = "use_livekit")]
@@ -1636,7 +1764,7 @@ impl CommunicationManager {
                         );
 
                         // Send connection request to main thread via channel
-                        let request = SceneRoomConnectionRequest {
+                        let request = SceneRoomConnectionRequest::Connect {
                             scene_id: scene_entity_id.clone(),
                             livekit_url: livekit_url.to_string(),
                         };
@@ -1656,7 +1784,18 @@ impl CommunicationManager {
                         tracing::warn!("⚠️  Unsupported scene adapter type: {}", adapter_url);
                     }
                 }
-                Err(e) => {
+                Err(SceneAdapterError::Banned) => {
+                    tracing::warn!(
+                        "🚫 Scene adapter denied: user is banned from scene '{}'",
+                        scene_entity_id
+                    );
+                    let _ = connection_sender
+                        .send(SceneRoomConnectionRequest::Banned {
+                            scene_id: scene_entity_id,
+                        })
+                        .await;
+                }
+                Err(SceneAdapterError::Other(e)) => {
                     tracing::error!(
                         "❌ Failed to get scene adapter for scene '{}': {}",
                         scene_entity_id,
@@ -1767,6 +1906,120 @@ impl CommunicationManager {
         }
         arr
     }
+
+    /// Check if the current user has access to a scene (not banned).
+    /// Emits `scene_access_checked(scene_id, allowed, error_message)` with the result.
+    #[func]
+    pub fn check_scene_access(&self, scene_id: GString, realm_name: GString) {
+        let scene_id_str = scene_id.to_string();
+        let realm_name_str = realm_name.to_string();
+
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+
+        let Some(ephemeral_auth_chain) = player_identity_bind.try_get_ephemeral_auth_chain() else {
+            tracing::warn!("No ephemeral auth chain for scene access check");
+            let sender = self.scene_access_sender.clone();
+            let sid = scene_id_str.clone();
+            TokioRuntime::spawn(async move {
+                let _ = sender
+                    .send((sid, true, "No auth chain available".to_string()))
+                    .await;
+            });
+            return;
+        };
+
+        let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
+            .bind()
+            .get_http_requester()
+            .bind()
+            .get_http_queue_requester();
+        let sender = self.scene_access_sender.clone();
+
+        TokioRuntime::spawn(async move {
+            let result = check_gatekeeper_access(
+                http_requester,
+                &scene_id_str,
+                &realm_name_str,
+                &ephemeral_auth_chain,
+            )
+            .await;
+
+            match result {
+                Ok(allowed) => {
+                    let _ = sender.send((scene_id_str, allowed, String::new())).await;
+                }
+                Err(e) => {
+                    tracing::warn!("Scene access check failed: {}", e);
+                    let _ = sender.send((scene_id_str, true, e)).await;
+                }
+            }
+        });
+    }
+}
+
+/// Check if the user has access to a scene via the gatekeeper.
+/// Returns Ok(true) if allowed, Ok(false) if banned (HTTP 403), Err for other failures.
+async fn check_gatekeeper_access(
+    http_requester: Arc<HttpQueueRequester>,
+    scene_id: &str,
+    realm_name: &str,
+    ephemeral_auth_chain: &crate::auth::ephemeral_auth_chain::EphemeralAuthChain,
+) -> Result<bool, String> {
+    use crate::{
+        comms::consts::{gatekeeper_url, gatekeeper_url_local},
+        http_request::request_response::{RequestOption, ResponseType},
+    };
+
+    let gatekeeper = if scene_id.starts_with("b64-") {
+        gatekeeper_url_local()
+    } else {
+        gatekeeper_url()
+    };
+
+    let request_body = serde_json::json!({
+        "sceneId": scene_id,
+        "realmName": realm_name
+    });
+    let metadata_json_string = request_body.to_string();
+
+    let uri = gatekeeper
+        .parse::<http::Uri>()
+        .map_err(|e| format!("Invalid gatekeeper URL: {}", e))?;
+    let method = http::Method::POST;
+
+    let headers =
+        wallet::sign_request(method.as_str(), &uri, ephemeral_auth_chain, request_body).await;
+
+    let request_option = RequestOption::new(
+        0,
+        uri.to_string(),
+        method,
+        ResponseType::AsJson,
+        Some(metadata_json_string.as_bytes().to_vec()),
+        Some(headers.into_iter().collect()),
+        None,
+    );
+
+    let response = http_requester
+        .request(request_option, 0)
+        .await
+        .map_err(|e| format!("Request failed: {}", e.error_message))?;
+
+    if response.status_code == http::StatusCode::FORBIDDEN {
+        tracing::info!(
+            "Scene access denied (403) for scene '{}' in realm '{}'",
+            scene_id,
+            realm_name
+        );
+        return Ok(false);
+    }
+
+    if !response.status_code.is_success() {
+        return Err(format!("HTTP error: {}", response.status_code));
+    }
+
+    Ok(true)
 }
 
 #[cfg(feature = "use_livekit")]
@@ -1775,7 +2028,7 @@ async fn get_scene_adapter(
     scene_id: &str,
     realm_name: &str,
     ephemeral_auth_chain: &crate::auth::ephemeral_auth_chain::EphemeralAuthChain,
-) -> Result<String, String> {
+) -> Result<String, SceneAdapterError> {
     // Create the request body
 
     use crate::{
@@ -1802,7 +2055,7 @@ async fn get_scene_adapter(
     // Create URI
     let uri = gatekeeper
         .parse::<http::Uri>()
-        .map_err(|e| format!("Invalid gatekeeper URL: {}", e))?;
+        .map_err(|e| SceneAdapterError::Other(format!("Invalid gatekeeper URL: {}", e)))?;
     let method = http::Method::POST;
 
     // Sign the request
@@ -1830,45 +2083,65 @@ async fn get_scene_adapter(
     let response = http_requester
         .request(request_option, 0)
         .await
-        .map_err(|e| format!("Request failed: {}", e.error_message))?;
+        .map_err(|e| SceneAdapterError::Other(format!("Request failed: {}", e.error_message)))?;
 
     tracing::debug!(
         "📡 Received HTTP response with status: {}",
         response.status_code
     );
 
+    if response.status_code == http::StatusCode::FORBIDDEN {
+        tracing::info!(
+            "Scene adapter denied (403) for scene '{}' in realm '{}' — user is banned",
+            scene_id,
+            realm_name
+        );
+        return Err(SceneAdapterError::Banned);
+    }
+
     if !response.status_code.is_success() {
         tracing::error!(
             "❌ HTTP request failed with status: {}",
             response.status_code
         );
-        return Err(format!("HTTP error: {}", response.status_code));
+        return Err(SceneAdapterError::Other(format!(
+            "HTTP error: {}",
+            response.status_code
+        )));
     }
 
     // Extract response data
     let response_data = response
         .response_data
-        .map_err(|e| format!("Response data error: {}", e))?;
+        .map_err(|e| SceneAdapterError::Other(format!("Response data error: {}", e)))?;
 
     // Parse the response based on type
     tracing::debug!("🔍 Parsing gatekeeper response");
     let gatekeeper_response: GatekeeperResponse = match response_data {
         ResponseEnum::String(text) => {
             tracing::debug!("📄 Response as string: {}", text);
-            serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?
+            serde_json::from_str(&text)
+                .map_err(|e| SceneAdapterError::Other(format!("JSON parse error: {}", e)))?
         }
         ResponseEnum::Json(json_result) => {
-            let json_value = json_result.map_err(|e| format!("JSON result error: {}", e))?; // Extract the Result first
+            let json_value = json_result
+                .map_err(|e| SceneAdapterError::Other(format!("JSON result error: {}", e)))?;
             tracing::debug!("📊 Response as JSON: {}", json_value);
             serde_json::from_value(json_value)
-                .map_err(|e| format!("JSON value parse error: {}", e))?
+                .map_err(|e| SceneAdapterError::Other(format!("JSON value parse error: {}", e)))?
         }
         ResponseEnum::Bytes(bytes) => {
-            let text = String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8: {}", e))?;
+            let text = String::from_utf8(bytes)
+                .map_err(|e| SceneAdapterError::Other(format!("Invalid UTF-8: {}", e)))?;
             tracing::debug!("📄 Response as bytes->string: {}", text);
-            serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?
+            serde_json::from_str(&text)
+                .map_err(|e| SceneAdapterError::Other(format!("JSON parse error: {}", e)))?
         }
-        _ => return Err("Unexpected response type".to_string()),
+        _ => {
+            return Err(SceneAdapterError::Other(
+                "Unexpected response type".to_string(),
+            ))
+        }
     };
 
     tracing::debug!(

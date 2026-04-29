@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://bndmt8hl1n5ke"]
+[gd_scene format=3 uid="uid://bndmt8hl1n5ke"]
 
 [ext_resource type="Script" uid="uid://b0oiqklpfigfm" path="res://src/ui/components/change_nick_popup.gd" id="1_3hx3u"]
 [ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="1_v1ppy"]
@@ -13,7 +13,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="ChangeNickPopup" type="ColorRect"]
+[node name="ChangeNickPopup" type="ColorRect" unique_id=288866407]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -23,7 +23,7 @@ mouse_force_pass_scroll_events = false
 color = Color(0, 0, 0, 0.807843)
 script = ExtResource("1_3hx3u")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=511796628]
 clip_children = 2
 custom_minimum_size = Vector2(450, 0)
 layout_mode = 1
@@ -40,10 +40,10 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_doqh1")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer" unique_id=1341046834]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer" unique_id=526004289]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/margin_left = 30
@@ -51,35 +51,33 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer" unique_id=1747705884]
 custom_minimum_size = Vector2(0, 303)
 layout_mode = 2
 theme_override_constants/separation = 25
 
-[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=894440798]
 layout_mode = 2
 text = "Edit Username"
 label_settings = ExtResource("1_v1ppy")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1096072612]
 custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 
-[node name="DclLineEdit" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer" instance=ExtResource("3_v0a8f")]
+[node name="DclLineEdit" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer" unique_id=1197188055 instance=ExtResource("3_v0a8f")]
 unique_name_in_owner = true
 layout_mode = 2
-advice = "*Avoid using your real name for safety"
 hint = "Username"
-show_tag = false
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=557739403]
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 15
 alignment = 2
 
-[node name="Button_Cancel" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_Cancel" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1687099293]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
@@ -88,7 +86,7 @@ size_flags_vertical = 0
 theme_type_variation = &"DarkButton"
 text = "CANCEL"
 
-[node name="Button_Save" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_Save" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1915655998]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
@@ -98,7 +96,7 @@ focus_mode = 0
 theme = ExtResource("5_r18gj")
 text = "SAVE"
 
-[node name="ClaimNameContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer"]
+[node name="ClaimNameContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer" unique_id=1815782767]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -107,25 +105,25 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/ClaimNameContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/ClaimNameContainer" unique_id=1180675153]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Label_ClaimName1" type="Label" parent="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer"]
+[node name="Label_ClaimName1" type="Label" parent="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer" unique_id=1937198235]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "Claim a unique NAME for the full Decentraland experience!"
 label_settings = ExtResource("1_v1ppy")
 autowrap_mode = 2
 
-[node name="Label_ClaimName2" type="Label" parent="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer"]
+[node name="Label_ClaimName2" type="Label" parent="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer" unique_id=763008974]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 text = "A NAME comes with a World you can build and host events in and grants DAO Voting Power too!"
 label_settings = ExtResource("4_xy6kt")
 autowrap_mode = 2
 
-[node name="Button_ClaimName" type="Button" parent="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer"]
+[node name="Button_ClaimName" type="Button" parent="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer" unique_id=41412767]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(15, 38)

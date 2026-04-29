@@ -128,12 +128,12 @@ impl Temporal {
 
     // radians
     pub fn with_rotation_f32(self, rotation: f32) -> Self {
-        self.with_rotation_y(quantize::<B6>(((-rotation % TAU) + TAU) % TAU, 0.0, TAU))
+        self.with_rotation_y(quantize::<B6>(((rotation % TAU) + TAU) % TAU, 0.0, TAU))
     }
 
     // radians
     pub fn rotation_f32(&self) -> f32 {
-        TAU - dequantize::<B6>(self.rotation_y(), 0.0, TAU)
+        dequantize::<B6>(self.rotation_y(), 0.0, TAU)
     }
 }
 

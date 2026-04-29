@@ -792,6 +792,19 @@ pub fn update_video_material_textures(scene: &mut Scene) {
                     param
                 );
                 material.set_texture(param, &texture_to_set);
+
+                // ExternalTexture (ExoPlayer/AVPlayer) does not create an sRGB texture
+                // view in Godot's renderer, so `source_color` hint has no effect and
+                // hardware sRGB→linear conversion never happens. We need FORCE_SRGB=true
+                // to get the conversion done in the shader instead.
+                //
+                // ImageTexture (LiveKit) does have an sRGB view, so `source_color`
+                // already handles conversion — FORCE_SRGB must remain false to avoid
+                // double gamma correction.
+                if param == godot::classes::base_material_3d::TextureParam::ALBEDO {
+                    let force_srgb = video_player.bind().uses_external_texture();
+                    material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, force_srgb);
+                }
             }
         } else {
             // Video player not created yet — set black placeholder to avoid pink garbage.
