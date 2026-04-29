@@ -89,6 +89,8 @@ impl LivekitRoom {
         let (_, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
 
         let room_id_clone = room_id.clone();
+        // Broadcast the realm's lambda URL so other clients can query this peer's profile
+        // directly from the same catalyst node, reducing cross-catalyst propagation delays.
         let lambdas_endpoint = {
             let global = DclGlobal::singleton();
             let realm = global.bind().get_realm();

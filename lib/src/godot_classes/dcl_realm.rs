@@ -48,6 +48,18 @@ impl DclRealm {
         urls::peer_content().to_godot()
     }
 
+    /// Content URL for profile deployment — uses the realm's own catalyst when available,
+    /// falling back to the load-balancer URL. Intended to match Unity's behavior of
+    /// deploying directly to the realm's specific node.
+    #[func]
+    pub fn get_profile_deployment_url(&self) -> GString {
+        if self.content_base_url.is_empty() {
+            urls::peer_content().to_godot()
+        } else {
+            self.content_base_url.clone()
+        }
+    }
+
     #[func]
     pub fn get_lambda_server_base_url(&self) -> GString {
         if self.lambda_server_base_url.is_empty() {
