@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://nn0iih4xpn2e"]
+[gd_scene format=3 uid="uid://nn0iih4xpn2e"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_asumd"]
 [ext_resource type="Script" uid="uid://dn3hlhbknm1ej" path="res://src/ui/components/button_touch_action/button_touch_action.gd" id="2_c0jk1"]
 
-[node name="Button_TouchAction" type="Button"]
+[node name="Button_TouchAction" type="Button" unique_id=1532661067]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 custom_minimum_size = Vector2(65, 65)
 offset_right = 31.0

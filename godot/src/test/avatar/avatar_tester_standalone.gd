@@ -1,5 +1,9 @@
 extends Control
 
+const GLIDER_PROP_SCENE: PackedScene = preload(
+	"res://src/decentraland_components/avatar/glider_prop.tscn"
+)
+
 var avatar_list: Array = []
 
 # Emote batch testing
@@ -14,6 +18,15 @@ var batch_test_button: Button = null
 var batch_test_label: Label = null
 var batch_test_timer: Timer = null
 
+# Animation tester state
+var _anim_library_keys: Array = []
+var _current_glider_prop: Node = null
+# #b4: track the loop_mode override so Stop / RestoreTree / next Play can undo
+# it. Previously we awaited animation_finished, which never fires for looping
+# clips, so loop_mode stayed mutated on the shared Animation resource.
+var _looped_anim: Animation = null
+var _looped_anim_prev_mode: int = Animation.LOOP_NONE
+
 @onready var sub_viewport_container = $SubViewportContainer
 @onready var avatar: Avatar = sub_viewport_container.avatar
 @onready var emote_wheel = $TabContainer/Emotes/EmoteWheel
@@ -26,6 +39,28 @@ var batch_test_timer: Timer = null
 @onready var spinner = $Spinner
 @onready var line_edit_profile_entity = $TabContainer/Avatars/LineEdit_ProfileEntity
 @onready var outline_checkbox = %OutlineCheckBox
+
+@onready var anim_root = $TabContainer/Animations/VBoxContainer
+@onready
+var option_button_library: OptionButton = anim_root.get_node("HBox_Library/OptionButton_Library")
+@onready var option_button_animation: OptionButton = anim_root.get_node(
+	"HBox_Animation/OptionButton_Animation"
+)
+@onready var label_now_playing: Label = anim_root.get_node("Label_NowPlaying")
+@onready var check_walk: CheckBox = anim_root.get_node("Grid_Flags/CheckBox_Walk")
+@onready var check_jog: CheckBox = anim_root.get_node("Grid_Flags/CheckBox_Jog")
+@onready var check_run: CheckBox = anim_root.get_node("Grid_Flags/CheckBox_Run")
+@onready var check_rise: CheckBox = anim_root.get_node("Grid_Flags/CheckBox_Rise")
+@onready var check_fall: CheckBox = anim_root.get_node("Grid_Flags/CheckBox_Fall")
+@onready var check_land: CheckBox = anim_root.get_node("Grid_Flags/CheckBox_Land")
+@onready var check_show_glider: CheckBox = anim_root.get_node("CheckBox_ShowGlider")
+@onready var option_button_glider_anim: OptionButton = anim_root.get_node(
+	"HBox_GliderClip/OptionButton_GliderAnim"
+)
+@onready var spin_jump_count: SpinBox = anim_root.get_node("HBox_JumpCount/SpinBox_JumpCount")
+@onready var option_button_glide_state: OptionButton = anim_root.get_node(
+	"HBox_JumpCount/OptionButton_GlideState"
+)
 
 
 func _ready():
@@ -47,6 +82,12 @@ func _ready():
 
 	# Setup emote batch tester UI
 	_setup_emote_batch_tester()
+
+	# Populate animation tester dropdowns once the avatar is ready
+	avatar.ready.connect(_refresh_animation_lists)
+	_refresh_animation_lists()
+	_populate_glider_anim_list()
+	_populate_glide_state_list()
 
 	# Check for CLI auto-run mode: --emote-test
 	if Global.cli.emote_test_mode:
@@ -374,3 +415,225 @@ func _play_next_emote():
 
 func _on_batch_test_timer_timeout():
 	_play_next_emote()
+
+
+# ============================================================================
+# ANIMATION TESTER
+# ============================================================================
+
+
+func _refresh_animation_lists() -> void:
+	option_button_library.clear()
+	option_button_animation.clear()
+	_anim_library_keys.clear()
+
+	var player: AnimationPlayer = avatar.animation_player
+	if player == null:
+		return
+
+	var libraries := player.get_animation_library_list()
+	for lib_name in libraries:
+		var display := "<default>" if String(lib_name).is_empty() else String(lib_name)
+		option_button_library.add_item(display)
+		_anim_library_keys.append(String(lib_name))
+
+	if option_button_library.item_count > 0:
+		option_button_library.select(0)
+		_refresh_animation_options_for_library(0)
+
+
+func _refresh_animation_options_for_library(lib_idx: int) -> void:
+	option_button_animation.clear()
+	var player: AnimationPlayer = avatar.animation_player
+	if player == null or lib_idx < 0 or lib_idx >= _anim_library_keys.size():
+		return
+	var lib_name: String = _anim_library_keys[lib_idx]
+	var lib := player.get_animation_library(lib_name)
+	if lib == null:
+		return
+	var clips := lib.get_animation_list()
+	for clip in clips:
+		option_button_animation.add_item(String(clip))
+	if option_button_animation.item_count > 0:
+		option_button_animation.select(0)
+
+
+func _selected_animation_path() -> String:
+	var lib_idx := option_button_library.selected
+	var clip_idx := option_button_animation.selected
+	if lib_idx < 0 or clip_idx < 0:
+		return ""
+	var lib_name: String = _anim_library_keys[lib_idx]
+	var clip_name := option_button_animation.get_item_text(clip_idx)
+	if lib_name.is_empty():
+		return clip_name
+	return "%s/%s" % [lib_name, clip_name]
+
+
+func _suspend_state_machine() -> void:
+	# Stop avatar.gd's _process from re-enabling the tree and overwriting conditions.
+	avatar.set_process(false)
+	avatar.animation_tree.active = false
+
+
+func _restore_loop_override() -> void:
+	# #b4: undo any pending loop_mode override on the shared Animation resource.
+	if _looped_anim != null:
+		_looped_anim.loop_mode = _looped_anim_prev_mode
+		_looped_anim = null
+
+
+func _play_selected_animation(loop: bool) -> void:
+	var anim_path := _selected_animation_path()
+	if anim_path.is_empty():
+		label_now_playing.text = "Now playing: (no selection)"
+		return
+	var player: AnimationPlayer = avatar.animation_player
+	if not player.has_animation(anim_path):
+		label_now_playing.text = "Now playing: MISSING %s" % anim_path
+		return
+
+	_suspend_state_machine()
+	# #b4: restore any previous override before mutating a new one.
+	_restore_loop_override()
+
+	var anim := player.get_animation(anim_path)
+	if loop:
+		_looped_anim = anim
+		_looped_anim_prev_mode = anim.loop_mode
+		anim.loop_mode = Animation.LOOP_LINEAR
+	player.play(anim_path)
+	label_now_playing.text = "Now playing: %s%s" % [anim_path, " (looping)" if loop else ""]
+
+
+func _on_anim_library_selected(index: int) -> void:
+	_refresh_animation_options_for_library(index)
+
+
+func _on_anim_refresh_pressed() -> void:
+	_refresh_animation_lists()
+
+
+func _on_anim_play_pressed() -> void:
+	_play_selected_animation(false)
+
+
+func _on_anim_play_loop_pressed() -> void:
+	_play_selected_animation(true)
+
+
+func _on_anim_stop_pressed() -> void:
+	avatar.animation_player.stop()
+	# #b4: undo the loop_mode override before the user walks away.
+	_restore_loop_override()
+	label_now_playing.text = "Now playing: —"
+
+
+func _on_anim_restore_tree_pressed() -> void:
+	# #b4: restore loop_mode before handing the AnimationPlayer back to the tree.
+	_restore_loop_override()
+	avatar.animation_tree.active = true
+	avatar.set_process(true)
+	label_now_playing.text = "Now playing: (state machine)"
+	# Reset flags so the tree returns to idle.
+	check_walk.button_pressed = false
+	check_jog.button_pressed = false
+	check_run.button_pressed = false
+	check_rise.button_pressed = false
+	check_fall.button_pressed = false
+	check_land.button_pressed = false
+
+
+func _on_flag_walk_toggled(pressed: bool) -> void:
+	avatar.walk = pressed
+
+
+func _on_flag_jog_toggled(pressed: bool) -> void:
+	avatar.jog = pressed
+
+
+func _on_flag_run_toggled(pressed: bool) -> void:
+	avatar.run = pressed
+
+
+func _on_flag_rise_toggled(pressed: bool) -> void:
+	avatar.rise = pressed
+
+
+func _on_flag_fall_toggled(pressed: bool) -> void:
+	avatar.fall = pressed
+
+
+func _on_flag_land_toggled(pressed: bool) -> void:
+	avatar.land = pressed
+
+
+# ---------------------------------------------------------------------------
+# Glider prop
+# ---------------------------------------------------------------------------
+
+
+func _populate_glider_anim_list() -> void:
+	option_button_glider_anim.clear()
+	# Hardcoded — the library is known and small. Keeps the tester independent
+	# of whether the prop scene has been instantiated yet.
+	var clips := [
+		"Glider_Idle",
+		"Glider_Open",
+		"Glider_Close",
+		"Glider_Start",
+		"Glider_Forward",
+		"Glider_TurnLeft",
+		"Glider_TurnRight",
+		"Glider_End",
+	]
+	for clip in clips:
+		option_button_glider_anim.add_item(clip)
+	option_button_glider_anim.select(0)
+
+
+func _on_show_glider_toggled(pressed: bool) -> void:
+	if pressed:
+		if _current_glider_prop != null:
+			return
+		_current_glider_prop = GLIDER_PROP_SCENE.instantiate()
+		avatar.add_child(_current_glider_prop)
+	else:
+		if _current_glider_prop != null:
+			_current_glider_prop.queue_free()
+			_current_glider_prop = null
+
+
+func _on_play_glider_pressed() -> void:
+	if _current_glider_prop == null:
+		return
+	var clip := option_button_glider_anim.get_item_text(option_button_glider_anim.selected)
+	var player := _current_glider_prop.get_node_or_null("AnimationPlayer") as AnimationPlayer
+	if player == null:
+		return
+	if player.has_animation(clip):
+		player.play(clip)
+
+
+# ---------------------------------------------------------------------------
+# jump_count / glide_state toggles — drive avatar.gd's rising-edge detection
+# so we can rehearse the Double_Jump_* and Gliding_* state-machine paths
+# without running the full game.
+# ---------------------------------------------------------------------------
+
+
+func _populate_glide_state_list() -> void:
+	option_button_glide_state.clear()
+	option_button_glide_state.add_item("CLOSED (0)")
+	option_button_glide_state.add_item("OPENING (1)")
+	option_button_glide_state.add_item("GLIDING (2)")
+	option_button_glide_state.add_item("CLOSING (3)")
+	option_button_glide_state.select(0)
+
+
+func _on_jump_count_changed(value: float) -> void:
+	avatar.jump_count = int(value)
+
+
+func _on_glide_state_selected(index: int) -> void:
+	avatar.glide_state = index

@@ -102,17 +102,25 @@ func route() -> void:
 
 
 func _route_teleport() -> void:
+	var realm = Global.deep_link_obj.preview
+	if realm.is_empty():
+		realm = Global.deep_link_obj.realm
+
+	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
+	if (
+		not realm.is_empty()
+		and Realm.is_dcl_ens(realm)
+		and not Global.deep_link_obj.is_location_defined()
+	):
+		Global.async_join_world(realm)
+		return
+
 	if Global.deep_link_obj.is_location_defined():
-		var realm = Global.deep_link_obj.preview
-		if realm.is_empty():
-			realm = Global.deep_link_obj.realm
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.teleport_to(Global.deep_link_obj.location, realm)
-	elif not Global.deep_link_obj.preview.is_empty():
-		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
-	elif not Global.deep_link_obj.realm.is_empty():
-		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
+		Global.async_teleport_to(Global.deep_link_obj.location, realm)
+	elif not realm.is_empty():
+		Global.async_teleport_to(Vector2i.ZERO, realm)
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:

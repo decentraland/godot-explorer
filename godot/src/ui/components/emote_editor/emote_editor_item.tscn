@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://c6t7jqpx38nxd"]
+[gd_scene format=3 uid="uid://c6t7jqpx38nxd"]
 
 [ext_resource type="Script" uid="uid://dpygh4hywfy2" path="res://src/ui/components/emote_editor/emote_editor_item.gd" id="1_myf8i"]
 [ext_resource type="PackedScene" uid="uid://blc0mna12dsxo" path="res://src/ui/components/emotes/emote_square_item.tscn" id="2_w1a3f"]
 
-[node name="EmoteEditorItem" type="TextureButton"]
+[node name="EmoteEditorItem" type="TextureButton" unique_id=41411373]
 custom_minimum_size = Vector2(112, 112)
 offset_right = 112.0
 offset_bottom = 112.0
@@ -11,7 +11,7 @@ mouse_filter = 1
 toggle_mode = true
 script = ExtResource("1_myf8i")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=88689351]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -24,7 +24,7 @@ theme_override_constants/margin_top = 2
 theme_override_constants/margin_right = 2
 theme_override_constants/margin_bottom = 2
 
-[node name="EmoteSquareItem" parent="MarginContainer" instance=ExtResource("2_w1a3f")]
+[node name="EmoteSquareItem" parent="MarginContainer" unique_id=143896244 instance=ExtResource("2_w1a3f")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(112, 112)
 layout_mode = 2

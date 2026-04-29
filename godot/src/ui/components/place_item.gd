@@ -295,10 +295,6 @@ func _get_separator_recurrent() -> VSeparator:
 	return _get_node_safe("VSeparator_Recurrent")
 
 
-func _get_separator_duration() -> VSeparator:
-	return _get_node_safe("VSeparator_Duration")
-
-
 func _get_container_views() -> Control:
 	return _get_node_safe("HBoxContainer_Views")
 
@@ -559,7 +555,7 @@ func set_data(item_data):
 		if timestamp > 0:
 			event_start_timestamp = timestamp
 
-	set_server_or_location()
+	set_server_or_location(true)
 
 	var reminder_btn = _get_reminder_button()
 	if reminder_btn:
@@ -665,11 +661,11 @@ func _get_jump_in_position_and_realm_from_data(item_data: Dictionary) -> Array:
 	return [pos, r]
 
 
-static func _is_event_in_world(item_data: Dictionary) -> bool:
+static func _is_world(item_data: Dictionary) -> bool:
 	if not item_data is Dictionary or item_data.is_empty():
 		return false
-	if not item_data.has("duration"):
-		return false
+	if item_data.get("world", false):
+		return true
 	var server = item_data.get("server", null)
 	if server == null:
 		return false
@@ -678,7 +674,7 @@ static func _is_event_in_world(item_data: Dictionary) -> bool:
 
 
 func _do_jump_in() -> void:
-	if _data is Dictionary and not _data.is_empty() and _is_event_in_world(_data):
+	if _data is Dictionary and not _data.is_empty() and _is_world(_data):
 		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
 		var world_realm: String = pos_realm[1]
 		jump_in_world.emit(world_realm)
@@ -758,17 +754,14 @@ func set_duration(_duration: int) -> void:
 func set_recurrent(_recurrent_frequency: String) -> void:
 	var label = _get_recurrent_label()
 	var separator_recurrent = _get_separator_recurrent()
-	var separator_duration = _get_separator_duration()
 	if label:
 		if _recurrent_frequency != "":
 			label.get_parent().show()
 			separator_recurrent.show()
-			separator_duration.show()
 			label.text = _recurrent_frequency.capitalize()
 		else:
 			label.get_parent().hide()
 			separator_recurrent.hide()
-			separator_duration.hide()
 
 
 func set_recurrent_dates(item_data: Dictionary) -> void:

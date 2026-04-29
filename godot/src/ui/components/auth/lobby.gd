@@ -729,8 +729,8 @@ func _on_ftue_ftue_completed() -> void:
 
 
 func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
-	Global.teleport_to(parcel_position, realm_str)
+	Global.async_teleport_to(parcel_position, realm_str)
 
 
 func _on_ftue_jump_in_world(realm_str: String) -> void:
-	Global.join_world(realm_str)
+	Global.async_join_world(realm_str)

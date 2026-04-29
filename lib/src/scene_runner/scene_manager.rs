@@ -7,7 +7,7 @@ use crate::{
             proto_components::{
                 common::BorderRect,
                 sdk::components::{
-                    common::{InputAction, PointerEventType, RaycastHit},
+                    common::{InputAction, InteractionType, PointerEventType, RaycastHit},
                     PbAvatarEmoteCommand, PbUiCanvasInformation,
                 },
             },
@@ -40,7 +40,9 @@ use std::{
 };
 
 use super::{
-    components::pointer_events::{get_entity_pointer_event, pointer_events_system},
+    components::pointer_events::{
+        find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
+    },
     input::InputState,
     loading_session::LoadingSession,
     pool_manager::PoolManager,
@@ -102,6 +104,7 @@ pub struct SceneManager {
 
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
+    last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
     #[var]
     pointer_tooltips: VarArray,
@@ -196,6 +199,7 @@ impl SceneManager {
         let network_id = realm.get_network_id();
 
         let is_preview = dcl_global.bind().get_preview_mode();
+        let should_debug = dcl_global.bind().scene_inspector_active;
 
         let comms_adapter = dcl_global
             .bind()
@@ -237,6 +241,7 @@ impl SceneManager {
             },
             inspect,
             network_inspector_sender,
+            should_debug,
         });
 
         let new_scene = Scene::new(
@@ -926,6 +931,9 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
+                if scene.paused {
+                    continue;
+                }
                 if scene.dcl_scene.thread_join_handle.is_finished() {
                     tracing::error!("scene closed without kill signal");
                     if matches!(scene.scene_type, SceneType::Parcel) {
@@ -1403,7 +1411,12 @@ impl SceneManager {
         if let Some(mut global) = DclGlobal::try_singleton() {
             let mut global_bind = global.bind_mut();
             global_bind.reset_input_modifiers();
+            let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
+            drop(global_bind);
+            if was_skybox_active {
+                global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
+            }
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
@@ -1652,6 +1665,16 @@ impl SceneManager {
             .sum()
     }
 
+    /// Get total V8 heap limit across all scenes in MB
+    #[func]
+    pub fn get_total_deno_heap_limit_mb(&self) -> f64 {
+        self.scenes
+            .values()
+            .filter_map(|scene| scene.deno_memory_stats)
+            .map(|stats| stats.heap_limit_mb())
+            .sum()
+    }
+
     /// Get count of alive scenes (with active threads)
     #[func]
     pub fn get_alive_scene_count(&self) -> i32 {
@@ -1701,6 +1724,7 @@ impl INode for SceneManager {
             console: Callable::invalid(),
             input_state: InputState::default(),
             last_raycast_result: None,
+            last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
             interactable_area: Rect2i::from_components(
                 0,
@@ -1800,7 +1824,10 @@ impl INode for SceneManager {
                                 true // Default to true if global not available
                             };
 
-                            if ui_has_focus {
+                            let passport_disabled: bool =
+                                avatar.get("passport_disabled").try_to().unwrap_or(false);
+
+                            if ui_has_focus && !passport_disabled {
                                 // Emit open_profile_by_avatar signal on the Global singleton
                                 if let Some(mut global) = DclGlobal::try_singleton() {
                                     global.emit_signal(
@@ -1835,11 +1862,26 @@ impl INode for SceneManager {
             }
         }
 
+        let player_position = self.player_avatar_node.get_global_position();
+        let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
+            let size = viewport.get_visible_rect().size;
+            viewport.get_camera_3d().map(|camera| (camera, size))
+        });
+        let pointing_at_cursor = current_pointer_raycast_result
+            .as_ref()
+            .is_some_and(|raycast| {
+                get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
+                    .is_some_and(|pe| pe.has_any_pointer_event_without_proximity())
+            });
+
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
             &self.last_raycast_result,
             &current_pointer_raycast_result,
+            player_position,
+            &camera_and_viewport,
+            &mut self.last_proximity_entity,
         );
 
         let mut tooltips = VarArray::new();
@@ -1848,6 +1890,10 @@ impl INode for SceneManager {
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
                 for pointer_event in pointer_events.pointer_events.iter() {
+                    if pointer_event.interaction_type == Some(i32::from(InteractionType::Proximity))
+                    {
+                        continue;
+                    }
                     if let Some(info) = pointer_event.event_info.as_ref() {
                         let show_feedback = info.show_feedback.as_ref().unwrap_or(&true);
                         let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
@@ -1902,13 +1948,57 @@ impl INode for SceneManager {
             }
         }
 
+        // Add proximity tooltip for the closest entity within max_player_distance
+        if !pointing_at_cursor {
+            if let Some((scene_id, entity_id)) =
+                find_active_proximity_entity(&self.scenes, player_position, &camera_and_viewport)
+            {
+                if let Some(pointer_events) =
+                    get_entity_pointer_event(&self.scenes, &scene_id, &entity_id)
+                {
+                    let proximity_type = i32::from(InteractionType::Proximity);
+                    for pe in pointer_events.pointer_events.iter() {
+                        if pe.interaction_type != Some(proximity_type) {
+                            continue;
+                        }
+                        let Some(ref info) = pe.event_info else {
+                            continue;
+                        };
+                        let show_feedback = info.show_feedback.unwrap_or(true);
+                        if !show_feedback {
+                            continue;
+                        }
+                        let is_pet_down = pe.event_type == PointerEventType::PetDown as i32;
+                        let is_pet_up = pe.event_type == PointerEventType::PetUp as i32;
+                        if !is_pet_down && !is_pet_up {
+                            continue;
+                        }
+                        let text = info.hover_text.as_deref().unwrap_or("Interact").to_godot();
+                        let input_action = InputAction::from_i32(info.button.unwrap_or(0))
+                            .unwrap_or(InputAction::IaAny);
+                        let mut dict = VarDictionary::new();
+                        if is_pet_down {
+                            dict.set("text_pet_down", text);
+                        } else {
+                            dict.set("text_pet_up", text);
+                        }
+                        dict.set("action", GString::from(input_action.as_str_name()));
+                        tooltips.push(&dict.to_variant());
+                        break;
+                    }
+                }
+            }
+        }
+
         // Add avatar profile tooltip if there's an avatar under crosshair with a valid ID
         // Skip AvatarShapes (NPCs from scenes) which don't have valid profile IDs
+        // Skip avatars inside an AvatarModifierArea with DisablePassports
         if let Some(RaycastResult::Avatar(avatar)) = &current_raycast {
             // Check if avatar has a valid avatar_id (non-empty and not just "npc-*")
             let avatar_id: GString = avatar.get("avatar_id").try_to().unwrap_or_default();
             let is_avatar_shape: bool = avatar.get("is_avatar_shape").try_to().unwrap_or(false);
-            if !is_avatar_shape && !avatar_id.is_empty() {
+            let passport_disabled: bool = avatar.get("passport_disabled").try_to().unwrap_or(false);
+            if !is_avatar_shape && !avatar_id.is_empty() && !passport_disabled {
                 let mut profile_dict = VarDictionary::new();
                 profile_dict.set("text_pet_down", "View profile");
                 profile_dict.set("action", "ia_pointer");

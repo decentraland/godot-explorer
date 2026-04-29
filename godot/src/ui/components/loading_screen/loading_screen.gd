@@ -169,7 +169,9 @@ func _on_timer_check_progress_timeout_timeout():
 	if download_speed_mbs > 0.01:
 		last_activity_time = Time.get_ticks_msec()
 
-	var opt_suffix = " - Opt" if Global.content_provider.get_optimized_scene_count() > 0 else ""
+	var opt_suffix = ""
+	if not DclGlobal.is_production() and Global.content_provider.get_optimized_scene_count() > 0:
+		opt_suffix = " - Opt"
 	label_loading_state.text = (
 		"(%d/%d resources at %.2fmb/s)%s"
 		% [loaded_resources, loading_resources, download_speed_mbs, opt_suffix]

@@ -15,7 +15,8 @@ signal open_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
-signal open_backpack
+signal open_settings_panel
+signal open_backpack(on_emotes: bool)
 signal open_discover
 signal open_own_profile
 signal open_profile_editor
@@ -57,6 +58,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 
 const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
+#const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -145,9 +147,9 @@ func _instantiate_phone_frame_overlay() -> void:
 
 
 ## Vibrate handheld device
-func send_haptic_feedback() -> void:
+func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> void:
 	if is_mobile():
-		Input.vibrate_handheld(20)
+		Input.vibrate_handheld(duration_ms, amplitude)
 
 
 # gdlint: ignore=async-function-name
@@ -232,8 +234,14 @@ func _ready():
 	if env != "org":
 		print("[GLOBAL] Environment set to: ", env)
 
+	# Dev/testing: disable profile deploys so fake-owned wearables never publish.
+	if deep_link_obj.disable_profile_deploy:
+		ProfileService.set_deploy_disabled(true)
+		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
+
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
+	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
@@ -331,6 +339,7 @@ func _ready():
 			self.config.install_referrer_sent = true
 			self.config.save_to_settings_file()
 	get_tree().root.add_child.call_deferred(self.network_inspector)
+	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
 
@@ -546,6 +555,9 @@ func sign_out() -> void:
 	social_blacklist.clear_muted()
 	get_config().session_account = {}
 	get_config().save_to_settings_file()
+	# Lobby/login is portrait-only; reset orientation so logging out from a
+	# landscape screen (e.g. settings panel) doesn't strand the user there.
+	set_orientation_portrait()
 	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
 
 
@@ -723,10 +735,82 @@ func set_orientation_portrait():
 		get_window().move_to_center()
 
 
-func teleport_to(parcel_position: Vector2i, new_realm: String):
-	Global.set_orientation_landscape()
+func async_resolve_scene_entity_id(coord: Vector2i) -> String:
+	# Try cache first
+	var cached = Global.scene_fetcher.scene_entity_coordinator.get_scene_entity_id(coord)
+	if not cached.is_empty():
+		return cached
+
+	# Make HTTP request to entities/active
+	var content_url = Global.realm.content_base_url
+	if content_url.is_empty():
+		return ""
+
+	var url = content_url.trim_suffix("/") + "/entities/active"
+	var body = JSON.stringify({"pointers": [str(coord.x) + "," + str(coord.y)]})
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_POST, body, headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_warning("Failed to resolve scene entity ID: " + result.get_error())
+		return ""
+
+	var json = result.get_string_response_as_json()
+	if json is Array and not json.is_empty():
+		return json[0].get("id", "")
+	return ""
+
+
+func async_resolve_world_scene_id(world_realm: String) -> String:
+	var scenes_url = Realm.dcl_world_url(world_realm) + "/scenes"
+	var promise: Promise = Global.http_requester.request_json(
+		scenes_url, HTTPClient.METHOD_GET, "", {}
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_warning("Failed to resolve world scene ID: " + result.get_error())
+		return ""
+
+	var json = result.get_string_response_as_json()
+	if json is Dictionary:
+		var scenes = json.get("scenes", [])
+		if not scenes.is_empty():
+			return scenes[0].get("entityId", "")
+	return ""
+
+
+func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
+	if scene_id.is_empty():
+		return true  # fail-open
+
+	Global.comms.check_scene_access(scene_id, realm_name)
+
+	# Loop until we get the result for OUR scene_id (discard stale results from
+	# earlier navigations that may still be in-flight).
+	while true:
+		var result = await Global.comms.scene_access_checked
+		# result = [scene_id, allowed, error_message]
+		if str(result[0]) != scene_id:
+			continue
+
+		if not str(result[2]).is_empty():
+			push_warning("Ban check failed, allowing navigation: " + str(result[2]))
+			return true  # fail-open on error
+
+		return result[1]
+
+	return true  # unreachable, keeps compiler happy
+
+
+func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
+		# Show loading screen before orientation change to avoid flashing the scene
+		explorer.loading_ui.enable_loading_screen()
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
@@ -735,32 +819,34 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 			Time.get_unix_time_from_system()
 		)
 	else:
+		Global.set_orientation_landscape()
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func join_world(world_realm: String) -> void:
-	Global.set_orientation_landscape()
-	Global.on_chat_message.emit(
-		"system",
-		"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
-		Time.get_unix_time_from_system()
-	)
-	var loading_data = {
-		"position": str(Global.scene_fetcher.current_position),
-		"realm": world_realm,
-		"when": "on_world"
-	}
-	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
-
+func async_join_world(world_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
+		# Show loading screen before orientation change to avoid flashing the scene
+		explorer.loading_ui.enable_loading_screen()
+		Global.on_chat_message.emit(
+			"system",
+			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+			Time.get_unix_time_from_system()
+		)
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm": world_realm,
+			"when": "on_world"
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 		Global.realm.async_set_realm(world_realm, true)
 		explorer.hide_menu()
 		Global.close_menu.emit()
 	else:
+		Global.set_orientation_landscape()
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = world_realm
 		Global.get_config().last_parcel_position = Vector2i.ZERO
@@ -892,6 +978,19 @@ func _notification(what: int) -> void:
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	# Sync attended events notifications from server after authentication
 	NotificationsManager.async_sync_attended_events()
+
+
+func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> void:
+	# User-visible feedback when a requested realm cannot be loaded (e.g. /world
+	# pointing at a non-existent world). Only fires for Global.realm — transient
+	# Realm instances created elsewhere (e.g. portable experiences) are not wired
+	# to this handler.
+	NotificationsManager.show_system_toast(
+		"World unavailable",
+		'Could not load "%s": %s' % [new_realm_string, reason],
+		"error",
+		"alert"
+	)
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:

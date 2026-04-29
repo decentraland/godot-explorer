@@ -206,6 +206,9 @@ pub struct DclGlobal {
     pub network_inspector: Gd<NetworkInspector>,
 
     #[var]
+    pub scene_inspector_dispatcher: Gd<crate::tools::scene_inspector::SceneInspectorDispatcher>,
+
+    #[var]
     pub social_blacklist: Gd<DclSocialBlacklist>,
 
     #[var]
@@ -230,6 +233,11 @@ pub struct DclGlobal {
 
     pub selected_avatar: Option<Gd<DclAvatar>>,
 
+    // Scene Inspector active flag — set from GDScript when deeplink/CLI activates the Scene Inspector.
+    // Checked by scene_manager when spawning scenes to decide if they should be instrumented.
+    #[var]
+    pub scene_inspector_active: bool,
+
     // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
     #[var]
     pub input_modifier_disable_all: bool,
@@ -243,6 +251,10 @@ pub struct DclGlobal {
     pub input_modifier_disable_jump: bool,
     #[var]
     pub input_modifier_disable_emote: bool,
+    #[var]
+    pub input_modifier_disable_double_jump: bool,
+    #[var]
+    pub input_modifier_disable_gliding: bool,
 
     // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
     #[var]
@@ -275,6 +287,9 @@ impl INode for DclGlobal {
 
         log_panics::init();
 
+        // Scene Inspector is initialized lazily when the first scene with
+        // --scene-inspector enabled is spawned (see scene_thread in dcl/js/mod.rs).
+
         // Initialize Rust classes
         let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();
         let mut comms: Gd<CommunicationManager> = CommunicationManager::new_alloc();
@@ -282,6 +297,9 @@ impl INode for DclGlobal {
         let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
         let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
+        let mut scene_inspector_dispatcher: Gd<
+            crate::tools::scene_inspector::SceneInspectorDispatcher,
+        > = crate::tools::scene_inspector::SceneInspectorDispatcher::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
         let mut social_service: Gd<DclSocialService> = DclSocialService::new_alloc();
 
@@ -316,6 +334,12 @@ impl INode for DclGlobal {
         content_provider.set_name("content_provider");
         portable_experience_controller.set_name("portable_experience_controller");
         network_inspector.set_name("network_inspector");
+        scene_inspector_dispatcher.set_name("scene_inspector_dispatcher");
+
+        // Register the global Scene Inspector sender so Rust scene threads can push entries
+        let _ = crate::tools::scene_inspector::set_global_sender(
+            scene_inspector_dispatcher.bind().get_sender(),
+        );
         social_blacklist.set_name("social_blacklist");
         social_service.set_name("social_service");
 
@@ -391,6 +415,7 @@ impl INode for DclGlobal {
             metrics,
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector,
+            scene_inspector_dispatcher,
             social_blacklist,
             social_service,
 
@@ -410,6 +435,8 @@ impl INode for DclGlobal {
             dynamic_graphics_manager,
             selected_avatar: None,
 
+            scene_inspector_active: false,
+
             // Input modifiers start as false (no modification)
             input_modifier_disable_all: false,
             input_modifier_disable_walk: false,
@@ -417,6 +444,8 @@ impl INode for DclGlobal {
             input_modifier_disable_run: false,
             input_modifier_disable_jump: false,
             input_modifier_disable_emote: false,
+            input_modifier_disable_double_jump: false,
+            input_modifier_disable_gliding: false,
 
             // SDK skybox time starts as inactive
             sdk_skybox_time_active: false,
@@ -428,6 +457,9 @@ impl INode for DclGlobal {
 
 #[godot_api]
 impl DclGlobal {
+    #[signal]
+    fn sdk_skybox_time_active_changed(is_active: bool);
+
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
         set_scene_log_enabled(enabled);
@@ -588,6 +620,8 @@ impl DclGlobal {
         self.input_modifier_disable_run = false;
         self.input_modifier_disable_jump = false;
         self.input_modifier_disable_emote = false;
+        self.input_modifier_disable_double_jump = false;
+        self.input_modifier_disable_gliding = false;
     }
 
     /// Reset SDK skybox time to inactive state
@@ -625,6 +659,26 @@ impl DclGlobal {
     #[func]
     pub fn is_emote_disabled(&self) -> bool {
         self.input_modifier_disable_all || self.input_modifier_disable_emote
+    }
+
+    /// Check if double-jump is disabled in the current scene. A blanket
+    /// disable_jump or disable_all also suppresses double-jump, since the
+    /// trigger (jump input) itself is unavailable.
+    #[func]
+    pub fn is_double_jump_disabled(&self) -> bool {
+        self.input_modifier_disable_all
+            || self.input_modifier_disable_jump
+            || self.input_modifier_disable_double_jump
+    }
+
+    /// Check if glide is disabled in the current scene. A blanket disable_jump
+    /// or disable_all also suppresses glide, since opening the glider is a
+    /// jump-press gesture.
+    #[func]
+    pub fn is_glide_disabled(&self) -> bool {
+        self.input_modifier_disable_all
+            || self.input_modifier_disable_jump
+            || self.input_modifier_disable_gliding
     }
 
     /// Check if all movement input is disabled
