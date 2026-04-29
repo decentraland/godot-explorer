@@ -140,17 +140,17 @@ func _async_on_request(_offset: int, _limit: int) -> void:
 
 	if _first_load:
 		# First load: show genesis cards immediately, worlds appear as they arrive
-		await _sync_cards(genesis_friends)
+		await _async_sync_cards(genesis_friends)
 		_first_load = false
 		_update_status()
-		_fetch_connected_worlds_streaming(not_in_genesis, friends_by_address)
+		_async_fetch_connected_worlds_streaming(not_in_genesis, friends_by_address)
 	else:
 		# Refresh: collect all online friends (genesis + worlds) then diff
 		var world_friends := await _async_fetch_connected_worlds(not_in_genesis, friends_by_address)
 		var all_online: Dictionary = genesis_friends.duplicate()
 		for address in world_friends.keys():
 			all_online[address] = world_friends[address]
-		await _sync_cards(all_online)
+		await _async_sync_cards(all_online)
 		_update_status()
 
 	_refresh_timer.start()
@@ -165,7 +165,7 @@ func _async_on_request(_offset: int, _limit: int) -> void:
 ## - Creates cards for new friends.
 ## - Updates existing cards with fresh place data.
 ## - Removes cards for friends no longer online.
-func _sync_cards(online_friends: Dictionary) -> void:
+func _async_sync_cards(online_friends: Dictionary) -> void:
 	# Remove cards for friends no longer online
 	var to_remove: Array = []
 	for address in _current_addresses.keys():
@@ -178,12 +178,12 @@ func _sync_cards(online_friends: Dictionary) -> void:
 	for address in online_friends.keys():
 		var friend = online_friends[address]
 		if _current_addresses.has(address):
-			await _update_card(address, friend)
+			await _async_update_card(address, friend)
 		else:
 			await _async_create_friend_card(friend)
 
 
-func _build_place_data(friend: Dictionary) -> Dictionary:
+func _async_build_place_data(friend: Dictionary) -> Dictionary:
 	var place_data: Dictionary = {}
 	var world_name: String = friend.get("world_name", "")
 
@@ -242,7 +242,7 @@ func _build_place_data(friend: Dictionary) -> Dictionary:
 
 
 func _async_create_friend_card(friend: Dictionary) -> void:
-	var place_data := await _build_place_data(friend)
+	var place_data := await _async_build_place_data(friend)
 	if place_data.is_empty() or not is_instance_valid(item_container):
 		return
 
@@ -262,12 +262,12 @@ func _async_create_friend_card(friend: Dictionary) -> void:
 	_update_title()
 
 
-func _update_card(address: String, friend: Dictionary) -> void:
+func _async_update_card(address: String, friend: Dictionary) -> void:
 	var card = _current_addresses.get(address)
 	if not card or not is_instance_valid(card):
 		return
 
-	var place_data := await _build_place_data(friend)
+	var place_data := await _async_build_place_data(friend)
 	if place_data.is_empty() or not is_instance_valid(item_container):
 		return
 
@@ -367,7 +367,9 @@ func _get_worlds_base_url() -> String:
 # -- World fetching: streaming (first load) ------------------------------------
 
 
-func _fetch_connected_worlds_streaming(addresses: Array, friends_by_address: Dictionary) -> void:
+func _async_fetch_connected_worlds_streaming(
+	addresses: Array, friends_by_address: Dictionary
+) -> void:
 	if addresses.is_empty():
 		return
 
