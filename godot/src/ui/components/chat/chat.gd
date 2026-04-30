@@ -29,7 +29,6 @@ var _autocomplete_queued: bool = false
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
 @onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
-@onready var texture_rect_logo: TextureRect = %TextureRect_Logo
 @onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
 @onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
 @onready var panel_container_navbar: PanelContainer = %PanelContainer_Navbar
