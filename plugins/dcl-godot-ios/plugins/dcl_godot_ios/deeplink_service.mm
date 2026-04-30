@@ -29,14 +29,16 @@ static bool deeplink_service_added = false;
 // Forward declarations for injected methods
 static void injected_scene_openURLContexts(id self, SEL _cmd, UIScene* scene, NSSet<UIOpenURLContext*>* URLContexts);
 static void injected_scene_willConnectToSession(id self, SEL _cmd, UIScene* scene, UISceneSession* session, UISceneConnectionOptions* connectionOptions);
+static void injected_scene_continueUserActivity(id self, SEL _cmd, UIScene* scene, NSUserActivity* userActivity);
 
 // Inject scene URL handling methods into GDTApplicationDelegate at runtime
 // This is needed because Godot 4.6 uses scene-based lifecycle but doesn't forward
-// scene:openURLContexts: to services, breaking deep link handling
+// scene:openURLContexts: / scene:continueUserActivity: to services, breaking
+// custom-URL-scheme deep links AND HTTPS Universal Links respectively.
 static void inject_scene_url_methods() {
 	Class delegateClass = [GDTApplicationDelegate class];
 
-	// Inject scene:openURLContexts: method
+	// Inject scene:openURLContexts: (custom URL scheme, warm-start)
 	SEL openURLSel = @selector(scene:openURLContexts:);
 	if (!class_respondsToSelector(delegateClass, openURLSel)) {
 		DEEPLINK_LOG(@"Injecting scene:openURLContexts: into GDTApplicationDelegate");
@@ -45,13 +47,22 @@ static void inject_scene_url_methods() {
 		DEEPLINK_LOG(@"scene:openURLContexts: already present on GDTApplicationDelegate, skipping injection");
 	}
 
-	// Inject scene:willConnectToSession:options: method
+	// Inject scene:willConnectToSession:options: (cold-start: both URL contexts and user activities)
 	SEL willConnectSel = @selector(scene:willConnectToSession:options:);
 	if (!class_respondsToSelector(delegateClass, willConnectSel)) {
 		DEEPLINK_LOG(@"Injecting scene:willConnectToSession:options: into GDTApplicationDelegate");
 		class_addMethod(delegateClass, willConnectSel, (IMP)injected_scene_willConnectToSession, "v@:@@@");
 	} else {
 		DEEPLINK_LOG(@"scene:willConnectToSession:options: already present on GDTApplicationDelegate, skipping injection");
+	}
+
+	// Inject scene:continueUserActivity: (HTTPS Universal Link, warm-start)
+	SEL continueActivitySel = @selector(scene:continueUserActivity:);
+	if (!class_respondsToSelector(delegateClass, continueActivitySel)) {
+		DEEPLINK_LOG(@"Injecting scene:continueUserActivity: into GDTApplicationDelegate");
+		class_addMethod(delegateClass, continueActivitySel, (IMP)injected_scene_continueUserActivity, "v@:@@");
+	} else {
+		DEEPLINK_LOG(@"scene:continueUserActivity: already present on GDTApplicationDelegate, skipping injection");
 	}
 }
 
@@ -94,6 +105,21 @@ static void injected_scene_willConnectToSession(id self, SEL _cmd, UIScene* scen
 				}
 			}
 		}
+	}
+}
+
+// Injected method: handles HTTPS Universal Links delivered while the app is
+// already running (warm-start). iOS routes these via NSUserActivity with
+// activityType == NSUserActivityTypeBrowsingWeb on the scene delegate.
+static void injected_scene_continueUserActivity(id self, SEL _cmd, UIScene* scene, NSUserActivity* userActivity) {
+	DEEPLINK_LOG(@"scene:continueUserActivity: called, activityType=%@", userActivity.activityType);
+	if (![userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
+		return;
+	}
+	NSURL* url = userActivity.webpageURL;
+	DEEPLINK_LOG(@"Universal Link received: %@", url.absoluteString);
+	if (url) {
+		DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 	}
 }
 
