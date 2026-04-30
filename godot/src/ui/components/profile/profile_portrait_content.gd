@@ -30,7 +30,7 @@ func _ready() -> void:
 	custom_button_edit_profile.pressed.connect(func(): edit_profile_pressed.emit())
 
 
-func refresh(profile: DclUserProfile) -> void:
+func async_refresh(profile: DclUserProfile) -> void:
 	_refresh_name_and_address(profile)
 	profile_about.refresh(profile)
 	await profile_equipped.async_refresh(profile)

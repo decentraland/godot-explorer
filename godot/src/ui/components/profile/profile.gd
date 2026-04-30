@@ -11,7 +11,6 @@ const BLOCK = preload("res://assets/ui/block.svg")
 @export var closable: bool = false
 
 var url_to_visit: String = ""
-var _deploy_waiting: bool = false
 var is_own_passport: bool = false
 var is_blocked_user: bool = false
 var is_muted_user: bool = false
@@ -19,6 +18,8 @@ var current_profile: DclUserProfile = null
 var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var address: String = ""
 var player_profile = Global.player_identity.get_profile_or_null()
+
+var _deploy_waiting: bool = false
 var _deploy_timeout_timer: Timer
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
@@ -188,14 +189,14 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	_refresh_name_and_address()
 	await profile_equipped.async_refresh(current_profile)
 
-	# All data ready, swap placeholder for real content
-	_show_data()
-
 	if not is_own_passport:
 		_connect_friendship_signals()
-		# Wait for friendship status check before showing buttons
+		# Wait for friendship status before showing data to avoid button flicker
 		await _async_check_friendship_status()
 		mutual_friends.async_set_mutual_friends(profile.get_ethereum_address())
+
+	# All data ready, swap placeholder for real content
+	_show_data()
 
 	if is_own_passport:
 		var mutable: DclUserProfile = Global.player_identity.get_mutable_profile()
