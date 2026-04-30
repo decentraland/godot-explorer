@@ -159,19 +159,6 @@ impl DclIosPlugin {
         dict
     }
 
-    /// Non-consuming read of the iOS plugin's pending deeplink URL slot.
-    /// Returns "" when nothing is pending. For diagnostic per-frame polling.
-    #[func]
-    pub fn peek_deeplink_url() -> GString {
-        let Some(mut singleton) = Self::try_get_singleton() else {
-            return GString::from("");
-        };
-        singleton
-            .call("peek_deeplink_url", &[])
-            .try_to::<GString>()
-            .unwrap_or_else(|_| GString::from(""))
-    }
-
     /// Check if the iOS plugin is available
     #[func]
     pub fn is_available() -> bool {
