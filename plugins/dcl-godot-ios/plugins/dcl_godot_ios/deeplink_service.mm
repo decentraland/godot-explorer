@@ -184,7 +184,7 @@ void force_deeplink_service_initialization() {
 
 - (instancetype) init {
 	self = [super init];
-	NSLog(@"[DEEPLINK] DeeplinkService initialized!");
+	DEEPLINK_LOG(@"DeeplinkService initialized!");
 	return self;
 }
 
@@ -198,8 +198,8 @@ void force_deeplink_service_initialization() {
 }
 
 - (BOOL) application:(UIApplication*) app openURL:(NSURL*) url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id>*) options {
-	NSLog(@"[DEEPLINK] openURL called with URL: %@", url.absoluteString);
-	NSLog(@"[DEEPLINK] Application state: %ld", (long)app.applicationState);
+	DEEPLINK_LOG(@"DeeplinkService.application:openURL: fired, URL=%@", url.absoluteString);
+	DEEPLINK_LOG(@"  applicationState=%ld", (long)app.applicationState);
 	if (url) {
 		DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
 	}
@@ -207,11 +207,13 @@ void force_deeplink_service_initialization() {
 }
 
 - (BOOL) application:(UIApplication*) app continueUserActivity:(NSUserActivity*) userActivity restorationHandler:(void (^)(NSArray<id<UIUserActivityRestoring>>* restorableObjects)) restorationHandler {
-	NSLog(@"[DEEPLINK] continueUserActivity called, activityType: %@", userActivity.activityType);
+	DEEPLINK_LOG(@"DeeplinkService.application:continueUserActivity: fired, activityType=%@", userActivity.activityType);
 	if ([userActivity.activityType isEqualToString: NSUserActivityTypeBrowsingWeb]) {
 		NSURL* url = userActivity.webpageURL;
-		NSLog(@"[DEEPLINK] Universal Link URL: %@", url.absoluteString);
-		DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
+		DEEPLINK_LOG(@"  Universal Link URL=%@", url.absoluteString);
+		if (url) {
+			DclGodotiOS::emit_deeplink_received(String(url.absoluteString.UTF8String));
+		}
 	}
 
 	return YES;
