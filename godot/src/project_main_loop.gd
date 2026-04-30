@@ -6,6 +6,34 @@ extends SceneTree
 # the Sentry attachment quota.
 const ATTACH_LOG_SAMPLE_RATE := 0.01
 
+# Substring patterns for messages classified as Sentry noise. These all
+# originate in Godot internals, GPU drivers, or third-party crates
+# (livekit-rust); we can't act on them and they fire in tight loops,
+# dominating our quota. The loop with early-exit benchmarks ~1.7x faster
+# than a single compiled RegEx alternation in GDScript (~0.47 vs 0.79 us/call
+# at 200k iterations) — Godot's native String.find is well-optimized and the
+# regex setup cost dominates for short patterns. See tools/bench_noise_filter.gd.
+const NOISE_PATTERNS := [
+	"VK_SUCCESS",
+	"vkWaitForFences",
+	"QueuePresentKHR",
+	"Uniforms supplied",
+	"p_mipmap",
+	"det == 0",
+	"!is_inside_tree",
+	"err != OK",
+	"Bones array",
+	"Skin bind",
+	"must be a normalized",
+	"Mouse is not supported",
+	"utf16 surrogate",
+	"ClientMessagesHandler",
+	'Condition "active"',
+]
+# Keep this fraction of noise events as a canary — if the shape or volume of
+# engine/driver errors shifts we want to notice, but 100% is wasted quota.
+const NOISE_KEEP_RATE := 0.05
+
 # Environment detection based on version string suffix
 var is_dev_version = false
 var is_staging_version = false
@@ -72,6 +100,13 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 	# Discard events for dev builds - only prod and staging report to Sentry
 	if self.is_dev_version:
 		return null
+
+	if randf() >= NOISE_KEEP_RATE:
+		var msg: String = event.message
+		if not msg.is_empty():
+			for pattern in NOISE_PATTERNS:
+				if pattern in msg:
+					return null
 
 	# if event.message.contains("Bruno"):
 	#	# Scrub sensitive information from the event.

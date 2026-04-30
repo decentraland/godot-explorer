@@ -177,7 +177,7 @@ func _async_subscribe_to_friends_updates() -> void:
 
 	if promise.is_rejected():
 		var error = promise.get_data()
-		push_error(
+		push_warning(
 			"[FriendsPanel] Failed to subscribe to friendship updates: " + str(error.get_error())
 		)
 		streaming_failed = true
@@ -188,7 +188,7 @@ func _async_subscribe_to_friends_updates() -> void:
 
 	if connectivity_promise.is_rejected():
 		var error = connectivity_promise.get_data()
-		push_error(
+		push_warning(
 			"[FriendsPanel] Failed to subscribe to connectivity updates: " + str(error.get_error())
 		)
 		# Connectivity failure alone doesn't mark streaming as failed
