@@ -37,7 +37,10 @@ func _async_process_next() -> void:
 
 	var image: Image = await _async_get_image_for(avatar)
 	if image != null and is_instance_valid(avatar) and Global.avatars != null:
-		Global.avatars.set_impostor_texture(iid, image)
+		var key: String = (
+			avatar._get_impostor_cache_key() if avatar.has_method("_get_impostor_cache_key") else ""
+		)
+		Global.avatars.set_impostor_texture(iid, image, key)
 
 	_in_progress = false
 
@@ -90,8 +93,11 @@ func _async_capture_local(avatar) -> Image:
 
 	await preview.avatar.async_update_avatar(avatar.avatar_data, avatar_name)
 
-	var image: Image = await preview.async_get_viewport_image(
-		false, AvatarImpostorConfig.TEXTURE_SIZE, 2.5
+	# Texture size is owned by Rust (avatar_scene.rs) and queried at capture
+	# time so GDScript can't drift from the actual Texture2DArray dimensions.
+	var size: Vector2i = (
+		Global.avatars.impostor_texture_size() if Global.avatars != null else Vector2i(256, 512)
 	)
+	var image: Image = await preview.async_get_viewport_image(false, size, 2.5)
 	preview.queue_free()
 	return image

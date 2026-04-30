@@ -103,6 +103,26 @@ var _mesh_lod_visibility_captured: bool = false
 # Written by AvatarLODCoordinator each tick. Caps the natural distance LOD so
 # only the N closest avatars stay FULL, the next M MID/CROSSFADE, rest FAR.
 var _lod_rank_cap: int = LODState.FULL
+# Set by AvatarLODCoordinator: true when this avatar's rank is beyond the real
+# impostor layer cap. Such avatars borrow another slot's texture and render
+# fully tinted (black silhouette). Tracks the active slot's mode so a flip
+# triggers a clean reallocation.
+var _use_overflow_impostor: bool = false
+var _impostor_layer_is_overflow: bool = false
+# Set by AvatarLODCoordinator: true when the avatar's bounding sphere is fully
+# outside the camera frustum. Off-frustum avatars release their impostor slot
+# entirely — no multimesh instance, no real layer, no capture. Disk cache makes
+# re-entry fast (texture rehydrates from PNG without recapture).
+var _off_frustum: bool = false
+# Latched while off-frustum: the AnimationTree was paused regardless of LOD
+# state, so when we come back in-frustum we know we have to restore the
+# state-driven anim setup (active/manual/throttle).
+var _anim_frozen_off_frustum: bool = false
+# Wall-clock ms when the freeze started. Used to advance the AnimationTree by
+# the elapsed time on re-entry so the emote phase matches what it would have
+# been had we not paused — single one-shot recompute, not a frame-by-frame
+# catch-up, so the CPU saving from the freeze is preserved.
+var _anim_freeze_start_ms: int = 0
 
 # Skinning throttle (MID/CROSSFADE only): drive AnimationTree manually and
 # advance every N frames so the skeleton bones update at ~20fps instead of
@@ -237,6 +257,7 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 	for modifier in area.avatar_modifiers:
 		if modifier == 0:  # hide avatar
 			hide()
+			_hide_impostor_render()
 		elif modifier == 1:  # disable passport
 			passport_disabled = true
 
@@ -245,12 +266,45 @@ func set_hidden(value):
 	hidden = value
 	if hidden:
 		hide()
+		_hide_impostor_render()
 		# Disable click detection so blocked/hidden avatars can't be interacted with
 		_set_click_area_enabled(false)
 	else:
 		try_show()
 		# Re-enable click detection
 		_set_click_area_enabled(true)
+
+
+# The impostor MultiMesh lives on AvatarScene (parent), not on the Avatar node,
+# so hide()/visible=false on the avatar doesn't affect it. Force its slot's
+# fade_alpha to 0 so the GPU discards the fragment until LOD recomputes.
+func _hide_impostor_render() -> void:
+	if _impostor_layer >= 0 and Global.avatars != null:
+		Global.avatars.set_impostor_state(get_instance_id(), 0.0, 0.0, 0.0)
+
+
+# Stable identity key for the disk-backed impostor texture cache. The hash
+# combines eth address (for cross-session stability) with the visual identity
+# (body + wearables + colors), so a user that changes outfit gets a fresh
+# capture instead of pulling stale pixels from the previous look's PNG. NPCs
+# fall through the same path with an empty eth segment, so visually-identical
+# NPCs share a cache entry.
+func _get_impostor_cache_key() -> String:
+	if avatar_data == null:
+		return ""
+	var parts := PackedStringArray()
+	parts.append(avatar_id.to_lower() if avatar_id != "" else "")
+	parts.append(avatar_data.get_body_shape())
+	var wearables = avatar_data.get_wearables()
+	if wearables is Array:
+		var sorted_wearables: Array = wearables.duplicate()
+		sorted_wearables.sort()
+		for w in sorted_wearables:
+			parts.append(w)
+	parts.append(str(avatar_data.get_skin_color()))
+	parts.append(str(avatar_data.get_eyes_color()))
+	parts.append(str(avatar_data.get_hair_color()))
+	return "|".join(parts).sha1_text()
 
 
 func _set_click_area_enabled(enabled: bool) -> void:
@@ -443,8 +497,8 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 
 	if finish_loading:
 		apply_color_and_facial()
-		if _impostor_layer >= 0 and Global.avatars != null:
-			Global.avatars.invalidate_impostor_texture(get_instance_id())
+		if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Global.avatars != null:
+			Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
 			ImpostorCapturer.request_capture(self)
 
 
@@ -865,8 +919,8 @@ func async_load_wearables():
 
 	# Refresh LOD-related state since meshes were re-created.
 	_mesh_lod_visibility_captured = false
-	if _impostor_layer >= 0 and Global.avatars != null:
-		Global.avatars.invalidate_impostor_texture(get_instance_id())
+	if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Global.avatars != null:
+		Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
 		ImpostorCapturer.request_capture(self)
 
 	avatar_ready = true
@@ -966,10 +1020,12 @@ func _maybe_update_lod() -> void:
 
 
 func _update_lod() -> void:
-	var config = Global.get_config()
-	if config == null or not config.avatar_impostors_enabled:
-		if _lod_state != LODState.FULL:
-			_apply_lod_state(LODState.FULL, 1.0, 0.0, 0.0, 0.0)
+	# Defense for any path that hides the avatar without going through the
+	# helpers (set_hidden / modifier area). Don't change LOD state — the
+	# avatar's mesh is already invisible via the parent hide(); we just need
+	# the impostor slot off.
+	if not visible:
+		_hide_impostor_render()
 		return
 
 	var camera = get_viewport().get_camera_3d()
@@ -1015,6 +1071,7 @@ func _update_lod() -> void:
 			fade_alpha = 0.0
 
 	_apply_lod_state(new_state, dither_alpha, fade_alpha, tint_strength, dist)
+	_apply_off_frustum_anim_freeze()
 
 
 func _apply_lod_state(
@@ -1026,7 +1083,16 @@ func _apply_lod_state(
 
 	_set_dither_alpha(dither_alpha)
 
-	if state == LODState.FAR or state == LODState.CROSSFADE:
+	if _off_frustum:
+		# Off-frustum: avatar is invisible to the camera. Drop the slot
+		# entirely so its multimesh instance and (if owned) layer return to
+		# the pool for an in-frustum avatar to use. Re-entry rehydrates from
+		# the disk cache — fast and gap-free.
+		if _impostor_layer >= 0 and Global.avatars != null:
+			Global.avatars.clear_impostor(get_instance_id())
+			_impostor_layer = -1
+			_impostor_layer_is_overflow = false
+	elif state == LODState.FAR or state == LODState.CROSSFADE:
 		_ensure_impostor_layer(distance)
 		if _impostor_layer >= 0 and Global.avatars != null:
 			Global.avatars.set_impostor_state(
@@ -1045,10 +1111,22 @@ func _apply_lod_state(
 
 
 func _ensure_impostor_layer(distance: float) -> void:
-	if _impostor_layer >= 0 or Global.avatars == null:
+	if Global.avatars == null:
 		return
-	_impostor_layer = Global.avatars.request_impostor_layer(get_instance_id(), self, distance)
-	if _impostor_layer >= 0:
+	# Always call through. Rust handles the dispatch:
+	#   * No existing slot -> fresh allocation (real with cached texture if
+	#     available, or pure overflow when allow_overflow is true).
+	#   * Existing slot -> toggle render mode in place, keeping the layer warm.
+	# No clear-then-realloc dance, so a camera that briefly turns off-frustum
+	# doesn't trigger a recapture or flicker the borrowed silhouette.
+	_impostor_layer = Global.avatars.request_impostor_layer(
+		get_instance_id(), self, distance, _use_overflow_impostor, _get_impostor_cache_key()
+	)
+	if _impostor_layer < 0:
+		return
+	_impostor_layer_is_overflow = _use_overflow_impostor
+	# Capture only when the slot owns a real layer that hasn't been filled yet.
+	if Global.avatars.impostor_needs_capture(get_instance_id()):
 		ImpostorCapturer.request_capture(self)
 
 
@@ -1090,6 +1168,38 @@ func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 			_set_lod_animation_throttle(false)
 			_set_lod_particles_visible(false)
 			_set_lod_click_active(false)
+
+
+# Freeze the AnimationTree when off-frustum, regardless of LOD state. The mesh
+# is still visible logically (so re-entry doesn't pop), but Godot's GPU
+# frustum cull skips drawing it and the AnimationTree pauses CPU-side. On
+# re-entry we restore the state-driven anim setup and advance the tree by the
+# wall-clock time we were paused, so emote phase matches what it would have
+# been had we not paused — single recompute, no frame-by-frame catch-up.
+func _apply_off_frustum_anim_freeze() -> void:
+	if animation_tree == null:
+		return
+	if _off_frustum:
+		if not _anim_frozen_off_frustum:
+			animation_tree.active = false
+			_anim_throttle_active = false
+			_anim_freeze_start_ms = Time.get_ticks_msec()
+			_anim_frozen_off_frustum = true
+	elif _anim_frozen_off_frustum:
+		_anim_frozen_off_frustum = false
+		var elapsed_s: float = (Time.get_ticks_msec() - _anim_freeze_start_ms) / 1000.0
+		match _lod_state:
+			LODState.FULL:
+				_set_lod_animation_active(true)
+				_set_lod_animation_throttle(false)
+			LODState.MID, LODState.CROSSFADE:
+				_set_lod_animation_active(true)
+				_set_lod_animation_throttle(true)
+			LODState.FAR:
+				_set_lod_animation_active(false)
+				_set_lod_animation_throttle(false)
+		if animation_tree.active and elapsed_s > 0.0:
+			animation_tree.advance(elapsed_s)
 
 
 func _set_dither_alpha(value: float) -> void:

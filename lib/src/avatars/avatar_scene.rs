@@ -33,7 +33,11 @@ use crate::{
 
 type AvatarAlias = u32;
 
-const IMPOSTOR_MAX_LAYERS: u32 = 256;
+const IMPOSTOR_MAX_LAYERS: u32 = 128;
+// Multimesh instance count is decoupled from layer count. Beyond MAX_LAYERS,
+// extra avatars get an "overflow" slot that borrows another slot's texture and
+// renders fully tinted (looks like a distant silhouette).
+const IMPOSTOR_MAX_INSTANCES: u32 = 256;
 const IMPOSTOR_TEX_WIDTH: i32 = 256;
 const IMPOSTOR_TEX_HEIGHT: i32 = 512;
 // Quad world-space size matches the AvatarPreview ortho capture
@@ -43,9 +47,34 @@ const IMPOSTOR_QUAD_HEIGHT: f32 = 2.5;
 const IMPOSTOR_VERTICAL_OFFSET: f32 = 1.0;
 const IMPOSTOR_SHADER_PATH: &str = "res://assets/avatar/impostor.gdshader";
 
-#[derive(Clone, Copy, Debug)]
+// Disk cache. Keyed by lowercase eth address; PNGs live in user://impostor_cache.
+// Entries idle longer than IMPOSTOR_CACHE_TTL_MS get evicted on the next
+// cleanup tick, which itself runs at most every IMPOSTOR_CACHE_CLEANUP_MS.
+const IMPOSTOR_CACHE_DIR: &str = "user://impostor_cache";
+const IMPOSTOR_CACHE_TTL_MS: i64 = 5 * 60 * 1000;
+const IMPOSTOR_CACHE_CLEANUP_MS: i64 = 60 * 1000;
+
+#[derive(Clone, Debug)]
 struct ImpostorSlot {
+    // Index into the multimesh (0..IMPOSTOR_MAX_INSTANCES). Independent of
+    // layer_index: overflow slots get an instance but borrow another slot's
+    // layer.
+    instance_index: u32,
     layer_index: u32,
+    // Layer to sample when this slot can't render its own (overflow, or real
+    // slot whose first capture hasn't landed yet). Set once at allocation and
+    // only refreshed when the lender's layer becomes invalid — keeps the
+    // borrowed silhouette stable frame-to-frame instead of remapping every
+    // time loaded_layers.len() changes.
+    borrow_layer_hint: u32,
+    // Whether this slot exclusively owns layer_index. False for pure overflow
+    // slots that never received a real allocation. Demoted slots (real that
+    // became overflow due to camera turning away) still own their layer so
+    // their captured texture stays warm for instant flip-back.
+    owns_layer: bool,
+    // Render mode flag: when true, sample texture is rendered with tint=1.0
+    // (black silhouette). Independent of owns_layer.
+    is_overflow: bool,
     fade_alpha: f32,
     tint_strength: f32,
     texture_loaded: bool,
@@ -55,6 +84,11 @@ struct ImpostorSlot {
     // by LRU eviction so that slots that are no longer being shown (e.g., the
     // user moved away or turned around) are evicted before recently-seen ones.
     last_seen_frame: u64,
+    // Cache file key (lowercased) for this avatar. Used to keep the disk
+    // PNG's last_used_ms timestamp fresh while the slot actively renders, so
+    // entries in-use don't get TTL-evicted. Empty when the avatar didn't
+    // provide an identity (no avatar_data, brand new avatar, etc.).
+    cache_key: String,
 }
 
 #[derive(GodotClass)]
@@ -81,6 +115,13 @@ pub struct AvatarScene {
     impostor_texture_array: Option<Gd<Texture2DArray>>,
     impostor_slots: HashMap<i64, ImpostorSlot>,
     impostor_free_layers: Vec<u32>,
+    impostor_free_instances: Vec<u32>,
+    // Disk-backed impostor texture cache. The actual PNGs live on disk under
+    // user://impostor_cache/<avatar_id>.png; this map only tracks
+    // last-access timestamps for TTL eviction. Keyed by lowercase eth address
+    // so the cache survives cross-session.
+    impostor_cache_last_used: HashMap<String, i64>,
+    impostor_cache_last_cleanup_ms: i64,
 }
 
 #[godot_api]
@@ -100,6 +141,9 @@ impl INode for AvatarScene {
             impostor_texture_array: None,
             impostor_slots: HashMap::new(),
             impostor_free_layers: (0..IMPOSTOR_MAX_LAYERS).rev().collect(),
+            impostor_free_instances: (0..IMPOSTOR_MAX_INSTANCES).rev().collect(),
+            impostor_cache_last_used: HashMap::new(),
+            impostor_cache_last_cleanup_ms: 0,
         }
     }
 
@@ -114,6 +158,7 @@ impl INode for AvatarScene {
 
     fn process(&mut self, _delta: f64) {
         self.update_impostor_transforms();
+        self.maybe_run_cache_cleanup();
     }
 }
 
@@ -202,7 +247,7 @@ impl AvatarScene {
         multimesh.set_transform_format(TransformFormat::TRANSFORM_3D);
         multimesh.set_use_custom_data(true);
         multimesh.set_mesh(&quad.upcast::<godot::classes::Mesh>());
-        multimesh.set_instance_count(IMPOSTOR_MAX_LAYERS as i32);
+        multimesh.set_instance_count(IMPOSTOR_MAX_INSTANCES as i32);
 
         let mut mmi = MultiMeshInstance3D::new_alloc();
         mmi.set_name("impostor_multimesh");
@@ -212,7 +257,7 @@ impl AvatarScene {
             godot::classes::geometry_instance_3d::ShadowCastingSetting::OFF,
         );
 
-        for i in 0..IMPOSTOR_MAX_LAYERS as i32 {
+        for i in 0..IMPOSTOR_MAX_INSTANCES as i32 {
             multimesh.set_instance_transform(i, Transform3D::IDENTITY);
             multimesh.set_instance_custom_data(i, Color::from_rgba(0.0, 0.0, 0.0, 0.0));
         }
@@ -221,7 +266,8 @@ impl AvatarScene {
         self.impostor_multimesh = Some(mmi);
         self.impostor_texture_array = Some(texture_array);
         tracing::info!(
-            "Impostor renderer initialized: {} layers, {}x{} px",
+            "Impostor renderer initialized: {} instances, {} layers, {}x{} px",
+            IMPOSTOR_MAX_INSTANCES,
             IMPOSTOR_MAX_LAYERS,
             IMPOSTOR_TEX_WIDTH,
             IMPOSTOR_TEX_HEIGHT
@@ -236,6 +282,70 @@ impl AvatarScene {
             return;
         };
 
+        // Set of layers currently holding a captured texture, used both for
+        // borrow-fallback rendering and for refreshing stale borrow hints.
+        let loaded_layers: Vec<u32> = self
+            .impostor_slots
+            .values()
+            .filter(|s| s.texture_loaded)
+            .map(|s| s.layer_index)
+            .collect();
+        let loaded_set: std::collections::HashSet<u32> = loaded_layers.iter().copied().collect();
+
+        // Pre-pass: refresh borrow_layer_hint for slots whose hint points to
+        // a layer that's no longer loaded. Hints that are already valid stay
+        // put — frame-to-frame stability prevents flicker when loaded_layers
+        // grows. New assignments distribute via least-borrowed so we don't
+        // clump everyone on a single silhouette early in capture warmup.
+        if !loaded_layers.is_empty() {
+            let stale_borrowers: Vec<i64> = self
+                .impostor_slots
+                .iter()
+                .filter(|(_, s)| !s.texture_loaded && !loaded_set.contains(&s.borrow_layer_hint))
+                .map(|(k, _)| *k)
+                .collect();
+            if !stale_borrowers.is_empty() {
+                let mut counts: HashMap<u32, u32> = loaded_layers.iter().map(|l| (*l, 0)).collect();
+                for s in self.impostor_slots.values() {
+                    if !s.texture_loaded && loaded_set.contains(&s.borrow_layer_hint) {
+                        if let Some(c) = counts.get_mut(&s.borrow_layer_hint) {
+                            *c += 1;
+                        }
+                    }
+                }
+                for key in stale_borrowers {
+                    let tie = key.unsigned_abs() as u32;
+                    let new_hint = loaded_layers
+                        .iter()
+                        .min_by_key(|l| {
+                            (
+                                counts.get(*l).copied().unwrap_or(0),
+                                l.wrapping_mul(0x9E37_79B9) ^ tie,
+                            )
+                        })
+                        .copied()
+                        .unwrap_or(loaded_layers[0]);
+                    if let Some(slot) = self.impostor_slots.get_mut(&key) {
+                        slot.borrow_layer_hint = new_hint;
+                    }
+                    *counts.entry(new_hint).or_insert(0) += 1;
+                }
+            }
+        }
+
+        // Bump the TTL on every cache_key whose slot is currently rendering a
+        // valid texture. Without this, an avatar that's been on screen for
+        // longer than IMPOSTOR_CACHE_TTL_MS would have its disk PNG evicted
+        // even though it's actively in use, forcing a recapture the moment
+        // it next loses and re-acquires its slot (e.g. quick frustum churn).
+        let cache_now = Self::now_ms();
+        for slot in self.impostor_slots.values() {
+            if slot.texture_loaded && !slot.cache_key.is_empty() {
+                self.impostor_cache_last_used
+                    .insert(slot.cache_key.clone(), cache_now);
+            }
+        }
+
         let mut stale: Vec<i64> = Vec::new();
         for (key, slot) in self.impostor_slots.iter() {
             let Ok(avatar) = Gd::<DclAvatar>::try_from_instance_id(slot.avatar_instance_id) else {
@@ -246,21 +356,31 @@ impl AvatarScene {
             let mut transform = Transform3D::IDENTITY;
             transform.origin = avatar_pos + Vector3::new(0.0, IMPOSTOR_VERTICAL_OFFSET, 0.0);
 
-            multimesh.set_instance_transform(slot.layer_index as i32, transform);
+            multimesh.set_instance_transform(slot.instance_index as i32, transform);
 
-            let visible_alpha = if slot.texture_loaded {
-                slot.fade_alpha
+            let (render_layer, render_tint, render_alpha) = if slot.texture_loaded {
+                // Slot has its own captured texture. Render with normal tint,
+                // or full tint when the slot is in overflow render mode (was
+                // demoted because the avatar moved off-screen / out-of-rank).
+                let tint = if slot.is_overflow {
+                    1.0
+                } else {
+                    slot.tint_strength
+                };
+                (slot.layer_index, tint, slot.fade_alpha)
+            } else if loaded_set.contains(&slot.borrow_layer_hint) {
+                // No own texture yet — render the borrowed lender as a
+                // silhouette. The hint is stable across frames thanks to the
+                // pre-pass above.
+                (slot.borrow_layer_hint, 1.0, slot.fade_alpha)
             } else {
-                0.0
+                // Nothing to borrow (very early startup, no captures yet).
+                (0, 0.0, 0.0)
             };
+
             multimesh.set_instance_custom_data(
-                slot.layer_index as i32,
-                Color::from_rgba(
-                    slot.tint_strength,
-                    visible_alpha,
-                    slot.layer_index as f32,
-                    0.0,
-                ),
+                slot.instance_index as i32,
+                Color::from_rgba(render_tint, render_alpha, render_layer as f32, 0.0),
             );
         }
 
@@ -275,59 +395,178 @@ impl AvatarScene {
         impostor_id: i64,
         avatar: Gd<DclAvatar>,
         distance: f32,
+        allow_overflow: bool,
+        avatar_id: GString,
     ) -> i32 {
         let now = godot::classes::Engine::singleton().get_frames_drawn() as u64;
-        if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
-            slot.last_seen_frame = now;
-            return slot.layer_index as i32;
+
+        // Existing slot: toggle the render mode in place and, if we're
+        // promoting a pure-overflow slot to real-tier, attach a real layer.
+        // Demoting (real → overflow) keeps the existing layer so a camera
+        // that swings back doesn't recapture; promoting from a borrow-only
+        // slot needs an actual layer so the avatar can be rendered with
+        // colour instead of as a black silhouette.
+        if self.impostor_slots.contains_key(&impostor_id) {
+            let needs_real_layer = {
+                let slot = self.impostor_slots.get_mut(&impostor_id).expect("checked");
+                slot.is_overflow = allow_overflow;
+                slot.last_seen_frame = now;
+                !allow_overflow && !slot.owns_layer
+            };
+            if needs_real_layer {
+                let layer = self.alloc_layer();
+                let cache_key = avatar_id.to_string().to_lowercase();
+                let loaded = if !cache_key.is_empty() {
+                    self.try_load_cached_texture(&cache_key, layer)
+                } else {
+                    false
+                };
+                let slot = self.impostor_slots.get_mut(&impostor_id).expect("checked");
+                slot.layer_index = layer;
+                slot.owns_layer = true;
+                slot.texture_loaded = loaded;
+                slot.cache_key = cache_key;
+            }
+            let inst = self.impostor_slots[&impostor_id].instance_index;
+            return inst as i32;
         }
+
         let distance_sq = distance * distance;
 
-        let layer = match self.impostor_free_layers.pop() {
-            Some(l) => l,
-            None => {
-                // Pool full — evict the LRU slot (oldest last_seen_frame). This
-                // keeps slots that are actively rendered and frees the ones that
-                // haven't been touched in a while (e.g., player walked away).
-                let Some((lru_id, lru_layer)) = self
-                    .impostor_slots
-                    .iter()
-                    .map(|(id, slot)| (*id, slot.last_seen_frame, slot.layer_index))
-                    .min_by_key(|(_, last_seen, _)| *last_seen)
-                    .map(|(id, _, layer)| (id, layer))
-                else {
-                    return -1;
-                };
-                self.impostor_slots.remove(&lru_id);
-                if let Some(mmi) = self.impostor_multimesh.as_ref().cloned() {
-                    if let Some(mut multimesh) = mmi.get_multimesh() {
-                        multimesh.set_instance_custom_data(
-                            lru_layer as i32,
-                            Color::from_rgba(0.0, 0.0, 0.0, 0.0),
-                        );
-                    }
-                }
-                lru_layer
-            }
+        let instance_index = match self.alloc_instance() {
+            Some(i) => i,
+            None => return -1,
+        };
+
+        // Pure overflow alloc: no real layer, just an instance + a borrow
+        // hint. Real alloc: dedicated layer, populated from disk cache when
+        // possible so we skip a recapture; otherwise pick a borrow to render
+        // as silhouette until the capture lands.
+        let cache_key_str = avatar_id.to_string().to_lowercase();
+        let (layer_index, owns_layer, texture_loaded) = if allow_overflow {
+            (0u32, false, false)
+        } else {
+            let layer = self.alloc_layer();
+            let loaded = if !cache_key_str.is_empty() {
+                self.try_load_cached_texture(&cache_key_str, layer)
+            } else {
+                false
+            };
+            (layer, true, loaded)
+        };
+        let borrow_layer_hint = if !texture_loaded {
+            self.pick_loaded_layer_for(impostor_id).unwrap_or(0)
+        } else {
+            0
         };
 
         self.impostor_slots.insert(
             impostor_id,
             ImpostorSlot {
-                layer_index: layer,
+                instance_index,
+                layer_index,
+                borrow_layer_hint,
+                owns_layer,
+                is_overflow: allow_overflow,
                 fade_alpha: 0.0,
                 tint_strength: 0.0,
-                texture_loaded: false,
+                texture_loaded,
                 avatar_instance_id: avatar.instance_id(),
                 distance_sq,
                 last_seen_frame: now,
+                cache_key: cache_key_str,
             },
         );
-        layer as i32
+        instance_index as i32
+    }
+
+    /// Pick the loaded layer with the fewest current borrowers (slots that
+    /// don't have their own captured texture). Tie-broken by `impostor_id`
+    /// hash so different slots hitting the same minimum spread across
+    /// candidates. Distributes silhouettes across all available lenders
+    /// instead of clumping them on whichever layer wins the hash modulo when
+    /// `loaded.len()` is small (early startup).
+    fn pick_loaded_layer_for(&self, impostor_id: i64) -> Option<u32> {
+        let loaded: Vec<u32> = self
+            .impostor_slots
+            .values()
+            .filter(|s| s.texture_loaded)
+            .map(|s| s.layer_index)
+            .collect();
+        if loaded.is_empty() {
+            return None;
+        }
+        let mut counts: HashMap<u32, u32> = loaded.iter().map(|l| (*l, 0)).collect();
+        for s in self.impostor_slots.values() {
+            if !s.texture_loaded {
+                if let Some(c) = counts.get_mut(&s.borrow_layer_hint) {
+                    *c += 1;
+                }
+            }
+        }
+        let tie = impostor_id.unsigned_abs() as u32;
+        loaded.into_iter().min_by_key(|l| {
+            let c = counts.get(l).copied().unwrap_or(0);
+            // Use the high bits of the layer hash to break ties among layers
+            // with equal borrower count.
+            (c, l.wrapping_mul(0x9E37_79B9) ^ tie)
+        })
     }
 
     #[func]
-    fn set_impostor_texture(&mut self, impostor_id: i64, image: Gd<Image>) {
+    fn impostor_needs_capture(&self, impostor_id: i64) -> bool {
+        self.impostor_slots
+            .get(&impostor_id)
+            .map(|s| s.owns_layer && !s.texture_loaded)
+            .unwrap_or(false)
+    }
+
+    fn alloc_instance(&mut self) -> Option<u32> {
+        if let Some(i) = self.impostor_free_instances.pop() {
+            return Some(i);
+        }
+        // No free multimesh slots — evict the LRU slot. Use slot fields locally
+        // to avoid borrowing self mutably while iterating.
+        let lru_id = self
+            .impostor_slots
+            .iter()
+            .min_by_key(|(_, s)| s.last_seen_frame)
+            .map(|(id, _)| *id)?;
+        self.clear_impostor(lru_id);
+        self.impostor_free_instances.pop()
+    }
+
+    fn alloc_layer(&mut self) -> u32 {
+        if let Some(l) = self.impostor_free_layers.pop() {
+            return l;
+        }
+        // No free layers — steal the layer from the LRU layer-owning slot.
+        // We don't fully remove the victim; we just release its layer so it
+        // falls back to borrow-rendering. That preserves its multimesh
+        // instance and avatar binding, so when LOD picks it up again it
+        // simply gets a fresh layer rather than a fresh instance.
+        let lru_id = self
+            .impostor_slots
+            .iter()
+            .filter(|(_, s)| s.owns_layer)
+            .min_by_key(|(_, s)| s.last_seen_frame)
+            .map(|(id, _)| *id);
+        if let Some(id) = lru_id {
+            if let Some(slot) = self.impostor_slots.get_mut(&id) {
+                let freed = slot.layer_index;
+                slot.owns_layer = false;
+                slot.texture_loaded = false;
+                slot.layer_index = 0;
+                return freed;
+            }
+        }
+        // Last resort: nothing to evict. Caller gets layer 0 (will render
+        // garbage briefly until a real layer is reclaimed).
+        0
+    }
+
+    #[func]
+    fn set_impostor_texture(&mut self, impostor_id: i64, image: Gd<Image>, avatar_id: GString) {
         let Some(slot) = self.impostor_slots.get_mut(&impostor_id) else {
             tracing::warn!(
                 "set_impostor_texture: no slot for impostor_id {}",
@@ -335,6 +574,13 @@ impl AvatarScene {
             );
             return;
         };
+        if !slot.owns_layer {
+            // Slot doesn't have a real layer (pure overflow, or LRU-evicted
+            // before the capture finished). Drop the image; another capture
+            // will be requested if/when a layer is allocated again.
+            return;
+        }
+        let layer_index = slot.layer_index;
         let Some(tex_array) = self.impostor_texture_array.as_mut() else {
             return;
         };
@@ -357,8 +603,18 @@ impl AvatarScene {
             );
         }
 
-        tex_array.update_layer(&img, slot.layer_index as i32);
-        slot.texture_loaded = true;
+        tex_array.update_layer(&img, layer_index as i32);
+        let cache_key = avatar_id.to_string().to_lowercase();
+        if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
+            slot.texture_loaded = true;
+            slot.cache_key = cache_key.clone();
+        }
+
+        // Mirror to disk so the avatar doesn't need to re-capture next time
+        // it gets a real slot (after frustum churn or session restart).
+        if !cache_key.is_empty() {
+            self.save_cached_texture(&cache_key, &img);
+        }
     }
 
     #[func]
@@ -387,11 +643,17 @@ impl AvatarScene {
     #[func]
     fn clear_impostor(&mut self, impostor_id: i64) {
         if let Some(slot) = self.impostor_slots.remove(&impostor_id) {
-            self.impostor_free_layers.push(slot.layer_index);
+            self.impostor_free_instances.push(slot.instance_index);
+            // Pure overflow slots only borrowed a layer; the lender still
+            // owns it. Real (or formerly-real) slots return their layer to
+            // the pool so a future allocation can claim it.
+            if slot.owns_layer {
+                self.impostor_free_layers.push(slot.layer_index);
+            }
             if let Some(mmi) = self.impostor_multimesh.as_ref().cloned() {
                 if let Some(mut multimesh) = mmi.get_multimesh() {
                     multimesh.set_instance_custom_data(
-                        slot.layer_index as i32,
+                        slot.instance_index as i32,
                         Color::from_rgba(0.0, 0.0, 0.0, 0.0),
                     );
                 }
@@ -400,15 +662,35 @@ impl AvatarScene {
     }
 
     #[func]
-    fn invalidate_impostor_texture(&mut self, impostor_id: i64) {
-        if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
-            slot.texture_loaded = false;
+    fn invalidate_impostor_texture(&mut self, impostor_id: i64, avatar_id: GString) {
+        // Don't flip texture_loaded — keep rendering the (slightly stale)
+        // pixels in the layer until the new capture lands. With many avatars
+        // invalidating in lockstep (e.g. all remote profiles fetched at once),
+        // mass-clearing texture_loaded would briefly empty loaded_layers and
+        // every impostor would render either invisible or as a borrowed
+        // silhouette for the full duration of the capture queue. The layer's
+        // pixel data is still valid; the caller is responsible for queuing a
+        // fresh capture which will overwrite it.
+        let _ = impostor_id;
+        let cache_key = avatar_id.to_string().to_lowercase();
+        if !cache_key.is_empty() {
+            self.delete_cached_texture(&cache_key);
         }
     }
 
     #[func]
     fn has_impostor_capacity(&self) -> bool {
-        !self.impostor_free_layers.is_empty()
+        !self.impostor_free_instances.is_empty()
+    }
+
+    #[func]
+    fn impostor_texture_size(&self) -> Vector2i {
+        Vector2i::new(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT)
+    }
+
+    #[func]
+    fn impostor_max_layers(&self) -> i32 {
+        IMPOSTOR_MAX_LAYERS as i32
     }
 
     #[func]
@@ -718,6 +1000,94 @@ impl AvatarScene {
 }
 
 impl AvatarScene {
+    fn cache_path_for(key: &str) -> String {
+        format!("{}/{}.png", IMPOSTOR_CACHE_DIR, key)
+    }
+
+    fn ensure_cache_dir() {
+        let mut da = match godot::classes::DirAccess::open("user://") {
+            Some(d) => d,
+            None => return,
+        };
+        if !da.dir_exists("impostor_cache") {
+            let _ = da.make_dir("impostor_cache");
+        }
+    }
+
+    fn now_ms() -> i64 {
+        godot::classes::Time::singleton().get_ticks_msec() as i64
+    }
+
+    /// Try to upload a cached PNG into the given layer. Returns true on hit.
+    /// The decoded Image is dropped after upload so it doesn't sit in RAM.
+    fn try_load_cached_texture(&mut self, cache_key: &str, layer_index: u32) -> bool {
+        let path = Self::cache_path_for(cache_key);
+        let img_opt = Image::load_from_file(&path);
+        let Some(mut img) = img_opt else {
+            return false;
+        };
+        if img.is_empty() {
+            return false;
+        }
+        if img.get_width() != IMPOSTOR_TEX_WIDTH || img.get_height() != IMPOSTOR_TEX_HEIGHT {
+            img.resize(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT);
+        }
+        if img.get_format() != Format::RGBA8 {
+            img.convert(Format::RGBA8);
+        }
+        let mip_err = img.generate_mipmaps();
+        if mip_err != godot::global::Error::OK {
+            return false;
+        }
+        let Some(tex_array) = self.impostor_texture_array.as_mut() else {
+            return false;
+        };
+        tex_array.update_layer(&img, layer_index as i32);
+        self.impostor_cache_last_used
+            .insert(cache_key.to_string(), Self::now_ms());
+        true
+    }
+
+    fn save_cached_texture(&mut self, cache_key: &str, image: &Gd<Image>) {
+        Self::ensure_cache_dir();
+        let path = Self::cache_path_for(cache_key);
+        let err = image.clone().save_png(&path);
+        if err == godot::global::Error::OK {
+            self.impostor_cache_last_used
+                .insert(cache_key.to_string(), Self::now_ms());
+        } else {
+            tracing::warn!("Failed to save impostor PNG to {}: {:?}", path, err);
+        }
+    }
+
+    fn delete_cached_texture(&mut self, cache_key: &str) {
+        let path = Self::cache_path_for(cache_key);
+        if let Some(mut da) = godot::classes::DirAccess::open(IMPOSTOR_CACHE_DIR) {
+            let _ = da.remove(&format!("{}.png", cache_key));
+        } else {
+            // fall back to absolute remove if open failed
+            let _ = godot::classes::DirAccess::remove_absolute(&path);
+        }
+        self.impostor_cache_last_used.remove(cache_key);
+    }
+
+    fn maybe_run_cache_cleanup(&mut self) {
+        let now = Self::now_ms();
+        if now - self.impostor_cache_last_cleanup_ms < IMPOSTOR_CACHE_CLEANUP_MS {
+            return;
+        }
+        self.impostor_cache_last_cleanup_ms = now;
+        let stale: Vec<String> = self
+            .impostor_cache_last_used
+            .iter()
+            .filter(|(_, &ts)| now - ts > IMPOSTOR_CACHE_TTL_MS)
+            .map(|(k, _)| k.clone())
+            .collect();
+        for key in stale {
+            self.delete_cached_texture(&key);
+        }
+    }
+
     const FROM_ENTITY_ID: u16 = 32;
     const MAX_ENTITY_ID: u16 = 256;
 

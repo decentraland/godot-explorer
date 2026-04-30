@@ -10,6 +10,7 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir};
 
 mod android_godot_lib;
+mod avatar_impostor_benchmark;
 mod check_gdscript;
 mod consts;
 mod copy_files;
@@ -17,7 +18,6 @@ mod dependencies;
 mod doctor;
 mod download_file;
 mod export;
-mod avatar_impostor_benchmark;
 mod fi_benchmark;
 mod full_tests;
 mod helpers;

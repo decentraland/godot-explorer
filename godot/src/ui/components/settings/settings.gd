@@ -138,7 +138,7 @@ func _ready():
 			i += 1
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
-	_setup_avatar_impostors_toggle()
+	_setup_impostor_benchmark_button()
 	refresh_graphic_settings()
 
 	var j = 0
@@ -626,24 +626,12 @@ func _on_button_report_content_pressed() -> void:
 	Global.open_url(url)
 
 
-func _setup_avatar_impostors_toggle() -> void:
-	var row := HBoxContainer.new()
-	row.name = "AvatarImpostorsRow"
-	var label := Label.new()
-	label.text = "Avatar Impostors"
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(label)
-	var toggle := CheckButton.new()
-	toggle.name = "CheckButton_AvatarImpostors"
-	toggle.button_pressed = Global.get_config().avatar_impostors_enabled
-	toggle.toggled.connect(
-		func(on: bool) -> void:
-			Global.get_config().avatar_impostors_enabled = on
-			Global.get_config().save_to_settings_file()
-	)
-	row.add_child(toggle)
-	container_graphics.add_child(row)
-
+func _setup_impostor_benchmark_button() -> void:
+	# Benchmark scene fetches 200 catalyst profiles and runs a 30s+ stress
+	# pass — gate it behind the developer tab (which is itself hidden in
+	# production builds) so end users don't trip it from the graphics tab.
+	if Global.is_production():
+		return
 	var bench_button := Button.new()
 	bench_button.name = "Button_RunImpostorBenchmark"
 	bench_button.text = "Run Avatar Impostor Benchmark"
@@ -651,7 +639,7 @@ func _setup_avatar_impostors_toggle() -> void:
 		func() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
 	)
-	container_graphics.add_child(bench_button)
+	container_advanced.add_child(bench_button)
 
 
 func _setup_dynamic_graphics() -> void:
