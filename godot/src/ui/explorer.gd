@@ -989,7 +989,7 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 
 func _open_profile(dcl_user_profile: DclUserProfile):
 	panel_chat.exit_chat()
-	profile_container.open(dcl_user_profile)
+	profile_container.async_open(dcl_user_profile)
 	release_mouse()
 
 

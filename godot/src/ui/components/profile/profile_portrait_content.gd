@@ -33,7 +33,7 @@ func _ready() -> void:
 func refresh(profile: DclUserProfile) -> void:
 	_refresh_name_and_address(profile)
 	profile_about.refresh(profile)
-	profile_equipped.async_refresh(profile)
+	await profile_equipped.async_refresh(profile)
 	profile_links.refresh(profile)
 	separator_about.visible = profile_about.visible
 	separator_links.visible = profile_links.visible
