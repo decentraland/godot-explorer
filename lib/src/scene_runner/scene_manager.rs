@@ -878,6 +878,11 @@ impl SceneManager {
             self.player_position = player_parcel_position;
         }
 
+        // Drop scene ids removed in a previous tick — sorted list can lag the
+        // scenes map and the unwrap() below would panic on a stale id.
+        let scenes = &self.scenes;
+        self.sorted_scene_ids.retain(|id| scenes.contains_key(id));
+
         // TODO: review to define a better behavior
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
             let scene = self.scenes.get_mut(&scene_id).unwrap();
@@ -1422,6 +1427,13 @@ impl SceneManager {
     }
 
     fn on_current_parcel_scene_changed(&mut self) {
+        // base_ui can be dangling between Explorer teardown and recreate_base_ui()
+        // (see comment on recreate_base_ui). Touching it would panic in
+        // godot-rust's check_rtti — bail out, the next tick after the new
+        // base_ui is attached will reconcile the scene tree.
+        if !self.base_ui.is_instance_valid() {
+            return;
+        }
         // Reset input modifiers and skybox time when changing scenes
         // The new scene's components (if any) will be applied on the next update tick
         if let Some(mut global) = DclGlobal::try_singleton() {

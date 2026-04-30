@@ -23,10 +23,8 @@ var _wc_polling_start_time: int = 0
 @onready var button_apple: Button = %Button_Apple
 @onready var button_wallet_connect: Button = %Button_WalletConnect
 @onready var button_metamask: Button = %Button_MetaMask
-@onready var texture_rect_wallet_icon: TextureRect = %TextureRect_WalletIcon
 
 @onready var texture_rect_google: TextureRect = $Button_Google/TextureRect_Google
-@onready var texture_rect_apple: TextureRect = $HBoxContainer_More/Button_Apple/TextureRect_Apple
 
 
 func _ready():
