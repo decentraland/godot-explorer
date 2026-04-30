@@ -335,12 +335,17 @@ grow_vertical = 2
 [node name="AvatarPreview" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=677460621 instance=ExtResource("16_hsr60")]
 unique_name_in_owner = true
 layout_mode = 1
-offset_top = -234.0
-offset_bottom = 290.0
+anchors_preset = -1
+anchor_top = -0.05822329
+anchor_right = 1.0610687
+offset_right = 6.1035156e-05
 size_flags_horizontal = 1
 mouse_filter = 2
 stretch = true
 hide_name = true
+preview_margin_top = 110
+preview_margin_bottom = 20
+metadata/_edit_use_anchors_ = true
 
 [node name="EmoteNameAnim" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=948887334 instance=ExtResource("12_qqh12")]
 unique_name_in_owner = true
@@ -365,6 +370,17 @@ frame_count = 13
 x_offset = 343
 fps = 20.0
 metadata/_custom_type_script = "uid://drm7w13o3wggu"
+
+[node name="ColorRect" type="ColorRect" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1516367316]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = -0.05942377
+anchor_right = 1.0580152
+anchor_bottom = 0.99999994
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.6666667, 1, 1, 0.29411766)
+metadata/_edit_use_anchors_ = true
 
 [node name="RightEditorContainer" type="MarginContainer" parent="SafeMarginContainer/HBoxContainer_Backpack" unique_id=859585576]
 unique_name_in_owner = true
@@ -463,7 +479,6 @@ button_group = SubResource("ButtonGroup_30sbq")
 text = "BODY"
 icon = null
 alignment = 0
-filter_category = 1
 uppercase = true
 
 [node name="VSeparator2" type="VSeparator" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MainCategoriesContainer/ScrollContainer/MainCategoriesContainerb/HBoxContainer_MainCategories" unique_id=813848133]
