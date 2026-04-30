@@ -15,6 +15,7 @@ struct SentryConfig {
 }
 
 /// How the "healthy rate" is calculated for each project.
+#[derive(Clone, Copy)]
 enum RateMode {
     /// Rate = (sessions - crashes) / sessions (ignores errors)
     CrashFree,
@@ -25,12 +26,8 @@ enum RateMode {
 struct ProjectMetrics {
     name: String,
     rate_label: String,
-    track_users: bool,
+    rate_mode: RateMode,
     days: Vec<DayMetrics>,
-    total_sessions: u64,
-    total_errors: u64,
-    total_crashes: u64,
-    total_users: u64,
     healthy_rate: f64,
 }
 
@@ -39,7 +36,6 @@ struct DayMetrics {
     sessions: u64,
     errors: u64,
     crashes: u64,
-    users: u64,
     is_partial: bool,
     partial_hours: Option<u64>,
 }
@@ -95,10 +91,14 @@ fn get_sessions_by_day(
     project_id: &str,
     start: &str,
     end: &str,
+    environment: Option<&str>,
 ) -> anyhow::Result<Vec<DayMetrics>> {
+    let env_part = environment
+        .map(|e| format!("&environment={}", e))
+        .unwrap_or_default();
     let path = format!(
-        "/organizations/{}/sessions/?project={}&field=sum(session)&field=count_unique(user)&groupBy=session.status&interval=1d&start={}&end={}",
-        config.org, project_id, start, end
+        "/organizations/{}/sessions/?project={}&field=sum(session)&groupBy=session.status&interval=1d&start={}&end={}{}",
+        config.org, project_id, start, end, env_part
     );
 
     let data = sentry_get(config, &path)?;
@@ -140,8 +140,6 @@ fn get_sessions_by_day(
             }
         }
 
-        let mut users: u64 = 0;
-
         for group in groups {
             let status = group["by"]["session.status"].as_str().unwrap_or("");
             let series = &group["series"]["sum(session)"];
@@ -157,13 +155,6 @@ fn get_sessions_by_day(
                     }
                 }
             }
-            // count_unique(user) per status — sum across all statuses for total unique
-            let user_series = &group["series"]["count_unique(user)"];
-            if let Some(arr) = user_series.as_array() {
-                if let Some(val) = arr.get(i) {
-                    users += val.as_u64().unwrap_or(0);
-                }
-            }
         }
 
         let total_sessions = healthy + errored + crashed + abnormal;
@@ -173,7 +164,6 @@ fn get_sessions_by_day(
             sessions: total_sessions,
             errors: errored,
             crashes: crashed,
-            users,
             is_partial,
             partial_hours,
         });
@@ -189,14 +179,13 @@ fn build_project_metrics(
     start: &str,
     end: &str,
     rate_mode: RateMode,
-    track_users: bool,
+    environment: Option<&str>,
 ) -> anyhow::Result<ProjectMetrics> {
-    let days = get_sessions_by_day(config, project_id, start, end)?;
+    let days = get_sessions_by_day(config, project_id, start, end, environment)?;
 
     let total_sessions: u64 = days.iter().map(|d| d.sessions).sum();
     let total_errors: u64 = days.iter().map(|d| d.errors).sum();
     let total_crashes: u64 = days.iter().map(|d| d.crashes).sum();
-    let total_users: u64 = days.iter().map(|d| d.users).sum();
 
     let (healthy_rate, rate_label) = match rate_mode {
         RateMode::CrashFree => {
@@ -222,58 +211,41 @@ fn build_project_metrics(
     Ok(ProjectMetrics {
         name: project_slug.to_string(),
         rate_label,
-        track_users,
+        rate_mode,
         days,
-        total_sessions,
-        total_errors,
-        total_crashes,
-        total_users,
         healthy_rate,
     })
 }
 
-fn print_project_metrics(metrics: &ProjectMetrics) {
-    print_section(&format!("Project: {}", metrics.name));
-
-    let users_str = if metrics.track_users {
-        format!(" | {} users", metrics.total_users)
-    } else {
-        " | users: not tracked".to_string()
+fn day_rate(day: &DayMetrics, rate_mode: &RateMode) -> f64 {
+    if day.sessions == 0 {
+        return 0.0;
+    }
+    let bad = match rate_mode {
+        RateMode::CrashFree => day.crashes,
+        RateMode::ErrorFree => day.errors + day.crashes,
     };
+    let healthy = day.sessions.saturating_sub(bad);
+    (healthy as f64 / day.sessions as f64) * 100.0
+}
+
+fn print_project_metrics(metrics: &ProjectMetrics) {
+    print_section(&format!("Project: {} (production)", metrics.name));
 
     print_message(
-        if metrics.healthy_rate >= 90.0 {
+        if metrics.healthy_rate >= 99.0 {
             MessageType::Success
-        } else if metrics.healthy_rate >= 75.0 {
+        } else if metrics.healthy_rate >= 95.0 {
             MessageType::Warning
         } else {
             MessageType::Error
         },
-        &format!(
-            "{}: {:.1}% | {} sessions{} | {} errors | {} crashes",
-            metrics.rate_label,
-            metrics.healthy_rate,
-            metrics.total_sessions,
-            users_str,
-            metrics.total_errors,
-            metrics.total_crashes
-        ),
+        &format!("{}: {:.2}%", metrics.rate_label, metrics.healthy_rate),
     );
 
     println!();
-    if metrics.track_users {
-        println!(
-            "  {:<12} {:>10} {:>8} {:>10} {:>10}",
-            "Date", "Sessions", "Users", "Errors", "Crashes"
-        );
-        println!("  {}", "-".repeat(54));
-    } else {
-        println!(
-            "  {:<12} {:>10} {:>10} {:>10}",
-            "Date", "Sessions", "Errors", "Crashes"
-        );
-        println!("  {}", "-".repeat(44));
-    }
+    println!("  {:<12} {:>10}", "Date", metrics.rate_label.as_str());
+    println!("  {}", "-".repeat(24));
 
     for day in &metrics.days {
         let partial_note = if day.is_partial {
@@ -281,18 +253,8 @@ fn print_project_metrics(metrics: &ProjectMetrics) {
         } else {
             String::new()
         };
-
-        if metrics.track_users {
-            println!(
-                "  {:<12} {:>10} {:>8} {:>10} {:>10}{}",
-                day.date, day.sessions, day.users, day.errors, day.crashes, partial_note
-            );
-        } else {
-            println!(
-                "  {:<12} {:>10} {:>10} {:>10}{}",
-                day.date, day.sessions, day.errors, day.crashes, partial_note
-            );
-        }
+        let rate = day_rate(day, &metrics.rate_mode);
+        println!("  {:<12} {:>9.2}%{}", day.date, rate, partial_note);
     }
 }
 
@@ -337,7 +299,7 @@ pub fn get_metrics(from: &str, to: &str) -> anyhow::Result<()> {
         &start,
         &end,
         RateMode::CrashFree,
-        true,
+        Some("production"),
     )?;
     print_project_metrics(&ge_metrics);
 
@@ -350,7 +312,7 @@ pub fn get_metrics(from: &str, to: &str) -> anyhow::Result<()> {
         &start,
         &end,
         RateMode::ErrorFree,
-        false,
+        Some("production"),
     )?;
     print_project_metrics(&am_metrics);
 
@@ -389,7 +351,7 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
         &start,
         &end,
         RateMode::CrashFree,
-        true,
+        Some("production"),
     )?;
     let am_metrics = build_project_metrics(
         &config,
@@ -398,7 +360,7 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
         &start,
         &end,
         RateMode::ErrorFree,
-        false,
+        Some("production"),
     )?;
 
     // Also print to terminal
@@ -411,8 +373,8 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
     let ge_emoji = rate_emoji(ge_metrics.healthy_rate);
     let am_emoji = rate_emoji(am_metrics.healthy_rate);
 
-    let ge_days_text = format_days_for_slack(&ge_metrics.days, ge_metrics.track_users);
-    let am_days_text = format_days_for_slack(&am_metrics.days, am_metrics.track_users);
+    let ge_days_text = format_days_for_slack(&ge_metrics.days, ge_metrics.rate_mode);
+    let am_days_text = format_days_for_slack(&am_metrics.days, am_metrics.rate_mode);
 
     let slack_payload = serde_json::json!({
         "blocks": [
@@ -420,7 +382,7 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": format!(":bar_chart: Sentry Daily Digest ({} to {})", from, to)
+                    "text": format!(":bar_chart: Sentry Daily Digest — production ({} to {})", from, to)
                 }
             },
             {
@@ -428,15 +390,8 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
                 "text": {
                     "type": "mrkdwn",
                     "text": format!(
-                        "{} *godot-explorer* — {}: *{:.1}%*\n\
-                        Sessions: {} | Users: {} | Errors: {} | Crashes: {}",
-                        ge_emoji,
-                        ge_metrics.rate_label,
-                        ge_metrics.healthy_rate,
-                        ge_metrics.total_sessions,
-                        ge_metrics.total_users,
-                        ge_metrics.total_errors,
-                        ge_metrics.total_crashes
+                        "{} *godot-explorer* — {}: *{:.2}%*",
+                        ge_emoji, ge_metrics.rate_label, ge_metrics.healthy_rate
                     )
                 }
             },
@@ -455,14 +410,8 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
                 "text": {
                     "type": "mrkdwn",
                     "text": format!(
-                        "{} *auth-mobile* — {}: *{:.1}%*\n\
-                        Sessions: {} | Users: _not tracked_ | Errors: {} | Crashes: {}",
-                        am_emoji,
-                        am_metrics.rate_label,
-                        am_metrics.healthy_rate,
-                        am_metrics.total_sessions,
-                        am_metrics.total_errors,
-                        am_metrics.total_crashes
+                        "{} *auth-mobile* — {}: *{:.2}%*",
+                        am_emoji, am_metrics.rate_label, am_metrics.healthy_rate
                     )
                 }
             },
@@ -478,7 +427,7 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": ":construction: _This report is temporary._"
+                        "text": ":construction: _This report is temporary. Data filtered to `environment:production`._"
                     }
                 ]
             }
@@ -502,27 +451,21 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
 }
 
 fn rate_emoji(rate: f64) -> &'static str {
-    if rate >= 90.0 {
+    if rate >= 99.0 {
         ":large_green_circle:"
-    } else if rate >= 75.0 {
+    } else if rate >= 95.0 {
         ":large_yellow_circle:"
     } else {
         ":red_circle:"
     }
 }
 
-fn format_days_for_slack(days: &[DayMetrics], track_users: bool) -> String {
-    let mut lines = if track_users {
-        vec![format!(
-            "{:<12} {:>10} {:>8} {:>8} {:>8}",
-            "Date", "Sessions", "Users", "Errors", "Crashes"
-        )]
-    } else {
-        vec![format!(
-            "{:<12} {:>10} {:>8} {:>8}",
-            "Date", "Sessions", "Errors", "Crashes"
-        )]
+fn format_days_for_slack(days: &[DayMetrics], rate_mode: RateMode) -> String {
+    let label = match rate_mode {
+        RateMode::CrashFree => "Crash-Free",
+        RateMode::ErrorFree => "Error-Free",
     };
+    let mut lines = vec![format!("{:<12} {:>10}", "Date", label)];
 
     for day in days {
         let partial = if day.is_partial {
@@ -530,18 +473,8 @@ fn format_days_for_slack(days: &[DayMetrics], track_users: bool) -> String {
         } else {
             String::new()
         };
-
-        if track_users {
-            lines.push(format!(
-                "{:<12} {:>10} {:>8} {:>8} {:>8}{}",
-                day.date, day.sessions, day.users, day.errors, day.crashes, partial
-            ));
-        } else {
-            lines.push(format!(
-                "{:<12} {:>10} {:>8} {:>8}{}",
-                day.date, day.sessions, day.errors, day.crashes, partial
-            ));
-        }
+        let rate = day_rate(day, &rate_mode);
+        lines.push(format!("{:<12} {:>9.2}%{}", day.date, rate, partial));
     }
 
     lines.join("\n")

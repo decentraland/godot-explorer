@@ -14,7 +14,7 @@ var event_name: String = ""
 var event_coordinates: Vector2i = Vector2i(0, 0)
 var event_cover_image_url: String = ""
 var bell_texture = load("res://assets/ui/bell.svg")
-var check_texture = load("res://assets/ui/check.svg")
+var check_texture = load("res://assets/ui/checked.svg")
 var _debounced: DebouncedAction
 
 @onready var texture_rect_icon: TextureRect = %TextureRect_Icon

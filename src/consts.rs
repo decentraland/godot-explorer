@@ -4,7 +4,7 @@ pub const BIN_FOLDER: &str = "./.bin/";
 pub const RUST_LIB_PROJECT_FOLDER: &str = "./lib/";
 pub const EXPORTS_FOLDER: &str = "./exports/";
 
-pub const SENTRY_ADDON_URL: &str = "https://github.com/getsentry/sentry-godot/releases/download/1.0.0/sentry-godot-gdextension-1.0.0+f672aa4.zip";
+pub const SENTRY_ADDON_URL: &str = "https://github.com/getsentry/sentry-godot/releases/download/1.6.0/sentry-godot-1.6.0+4e3e3e5.zip";
 
 pub const PROTOC_BASE_URL: &str =
     "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
