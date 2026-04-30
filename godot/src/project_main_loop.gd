@@ -9,7 +9,7 @@ const ATTACH_LOG_SAMPLE_RATE := 0.01
 # Substring patterns for messages classified as Sentry noise. These all
 # originate in Godot internals, GPU drivers, or third-party crates
 # (livekit-rust); we can't act on them and they fire in tight loops,
-# dominating our quota. 
+# dominating our quota.
 const NOISE_PATTERNS := [
 	"VK_SUCCESS",
 	"vkWaitForFences",
