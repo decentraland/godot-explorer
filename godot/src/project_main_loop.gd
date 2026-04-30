@@ -9,10 +9,7 @@ const ATTACH_LOG_SAMPLE_RATE := 0.01
 # Substring patterns for messages classified as Sentry noise. These all
 # originate in Godot internals, GPU drivers, or third-party crates
 # (livekit-rust); we can't act on them and they fire in tight loops,
-# dominating our quota. The loop with early-exit benchmarks ~1.7x faster
-# than a single compiled RegEx alternation in GDScript (~0.47 vs 0.79 us/call
-# at 200k iterations) — Godot's native String.find is well-optimized and the
-# regex setup cost dominates for short patterns. See tools/bench_noise_filter.gd.
+# dominating our quota. 
 const NOISE_PATTERNS := [
 	"VK_SUCCESS",
 	"vkWaitForFences",
