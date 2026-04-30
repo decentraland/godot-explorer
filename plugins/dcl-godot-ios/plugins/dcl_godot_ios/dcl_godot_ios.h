@@ -52,6 +52,10 @@ public:
     void open_safari_auth_url(String url);
     void open_webview_url(String url);
     String get_deeplink_url();
+    // Non-consuming read of the static receivedUrl slot. For diagnostics only:
+    // lets GDScript log whether iOS dropped a URL into the slot without
+    // mutating it (which would race with get_deeplink_url's normal consumer).
+    String peek_deeplink_url();
     Dictionary get_mobile_device_info();
     Dictionary get_mobile_metrics();
     bool add_calendar_event(String title, String description, int64_t start_time, int64_t end_time, String location);

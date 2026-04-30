@@ -158,6 +158,7 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("open_safari_auth_url", "url"), &DclGodotiOS::open_safari_auth_url);
     ClassDB::bind_method(D_METHOD("open_webview_url", "url"), &DclGodotiOS::open_webview_url);
     ClassDB::bind_method(D_METHOD("get_deeplink_url"), &DclGodotiOS::get_deeplink_url);
+    ClassDB::bind_method(D_METHOD("peek_deeplink_url"), &DclGodotiOS::peek_deeplink_url);
     ClassDB::bind_method(D_METHOD("get_mobile_device_info"), &DclGodotiOS::get_mobile_device_info);
     ClassDB::bind_method(D_METHOD("get_mobile_metrics"), &DclGodotiOS::get_mobile_metrics);
     ClassDB::bind_method(D_METHOD("add_calendar_event", "title", "description", "start_time", "end_time", "location"), &DclGodotiOS::add_calendar_event);
@@ -323,6 +324,11 @@ String DclGodotiOS::get_deeplink_url() {
         receivedUrl = "";
     }
     return url;
+}
+
+String DclGodotiOS::peek_deeplink_url() {
+    // Non-consuming read for diagnostic per-frame polling.
+    return receivedUrl;
 }
 
 void DclGodotiOS::emit_deeplink_received(String url) {

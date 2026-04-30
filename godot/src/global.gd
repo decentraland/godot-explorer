@@ -100,6 +100,10 @@ var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
 
+# Diagnostic state for the per-frame deeplink debug log in _process().
+var _debug_last_ios_peek: String = ""
+var _debug_last_global_url: String = ""
+
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var session_id: String
@@ -928,6 +932,25 @@ func _process(_delta: float) -> void:
 		):
 			last_emitted_height = current_height
 			change_virtual_keyboard.emit(last_emitted_height)
+
+		# DEBUG: per-frame visibility into deeplink state. Logs whenever either
+		# slot has a value, including the value itself, so we can see whether
+		# iOS dropped a URL into the static slot OR GDScript already parsed it.
+		# Only changes are logged to avoid 60Hz spam of the same line.
+		if DclIosPlugin.is_available():
+			var ios_pending: String = DclIosPlugin.peek_deeplink_url()
+			if ios_pending != _debug_last_ios_peek:
+				_debug_last_ios_peek = ios_pending
+				if not ios_pending.is_empty():
+					print("[DEEPLINK-DEBUG] iOS receivedUrl slot now: ", ios_pending)
+				else:
+					print("[DEEPLINK-DEBUG] iOS receivedUrl slot cleared")
+		if deep_link_url != _debug_last_global_url:
+			_debug_last_global_url = deep_link_url
+			if not deep_link_url.is_empty():
+				print("[DEEPLINK-DEBUG] Global.deep_link_url now: ", deep_link_url)
+			else:
+				print("[DEEPLINK-DEBUG] Global.deep_link_url cleared")
 
 
 ## Check if the deep link contains a dclenv change. If it does, apply the new
