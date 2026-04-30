@@ -504,6 +504,15 @@ fn check_safe_repo() -> Result<(), String> {
 }
 
 fn set_godot_explorer_version() {
+    // Re-run when the git HEAD/branch ref/index changes so the embedded commit
+    // hash stays in sync with the current checkout.
+    println!("cargo:rerun-if-changed=../.git/HEAD");
+    println!("cargo:rerun-if-changed=../.git/refs/heads");
+    println!("cargo:rerun-if-changed=../.git/index");
+    println!("cargo:rerun-if-env-changed=BRANCH_NAME");
+    println!("cargo:rerun-if-env-changed=DECENTRALAND_PROD_BUILD");
+    println!("cargo:rerun-if-env-changed=DECENTRALAND_STAGING_BUILD");
+
     // Always use git to get the actual checked-out commit (what GitHub checkout uses)
     let commit_hash = match check_safe_repo() {
         Ok(_) => {

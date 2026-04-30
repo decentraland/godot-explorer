@@ -180,7 +180,7 @@ async fn op_crdt_recv_from_renderer(
                         component_id,
                         &mut data_writter,
                     ) {
-                        tracing::error!("error writing crdt message: {err}");
+                        tracing::debug!("error writing crdt message: {err}");
                     }
                 }
             }
@@ -207,7 +207,7 @@ async fn op_crdt_recv_from_renderer(
                         element_count,
                         &mut data_writter,
                     ) {
-                        tracing::error!("error writing crdt message: {err}");
+                        tracing::debug!("error writing crdt message: {err}");
                     }
                 }
             }
