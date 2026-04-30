@@ -105,17 +105,11 @@ else:
         '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1',
     ])
 
-# [TEMPORAL] Using the standalone fork checkout at ../../../godotengine for
-# faster iteration on the godot source (no need to rebuild the submodule
-# templates between edits). Revert these two paths back to 'godot' /
-# 'godot/platform/ios' before merging this PR.
-GODOT_SRC = '/Users/mateomiccino/Projects/decentraland/godotengine'
-
 # Adding header files
 env.Append(CPPPATH=[
     '.',
-    GODOT_SRC,
-    GODOT_SRC + '/platform/ios',
+    'godot',
+    'godot/platform/ios',
 ])
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
