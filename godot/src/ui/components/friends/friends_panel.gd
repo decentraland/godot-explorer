@@ -104,7 +104,6 @@ func _connect_social_service_signals() -> void:
 	_safe_connect(social.friendship_deleted, _on_friendship_deleted)
 	_safe_connect(social.friendship_request_cancelled, _on_friendship_request_cancelled)
 	_safe_connect(social.friend_connectivity_updated, _on_friend_connectivity_updated)
-	_safe_connect(social.subscription_dropped, _async_on_subscription_dropped)
 
 
 func _safe_connect(sig: Signal, callback: Callable) -> void:
@@ -140,12 +139,9 @@ func show_panel_on_friends_tab() -> void:
 	show()
 	_load_unloaded_items()
 	_hide_all_drowpdown_highlights()
-	# Switch to friends tab by setting the button pressed (triggers _on_button_friends_toggled)
 	if not Global.player_identity.is_guest:
 		v_box_container_friends_tab.show()
 		button_friends.button_pressed = true
-		# Subscribe to friends updates when panel opens
-		_async_subscribe_to_friends_updates()
 	else:
 		v_box_container_friends_tab.hide()
 		button_nearby.button_pressed = true
@@ -153,54 +149,70 @@ func show_panel_on_friends_tab() -> void:
 
 func hide_panel() -> void:
 	hide()
-	# Unsubscribe from friends updates when panel closes
-	if not Global.player_identity.is_guest:
-		Global.social_service.unsubscribe_from_updates()
-		Global.social_service.unsubscribe_from_connectivity_updates()
 	panel_closed.emit()
 
 
 func set_streaming_subscription_failed(failed: bool) -> void:
+	if failed and not _streaming_subscription_failed:
+		printerr("[FriendsPanel.SubscriptionState] flipped failed=true (warning visible to user)")
 	_streaming_subscription_failed = failed
 	_update_dropdown_visibility()
 
 
-func _async_subscribe_to_friends_updates() -> void:
-	# Show loading state
+## Fetches all friend lists from the server (called once at login by explorer.gd).
+func async_initial_friends_load() -> void:
+	if _is_loading:
+		return
 	_is_loading = true
 	_update_dropdown_visibility()
-
-	# Subscribe to friendship updates (request/accept/reject/etc)
-	var streaming_failed = false
-	var promise = Global.social_service.subscribe_to_updates()
-	await PromiseUtils.async_awaiter(promise)
-
-	if promise.is_rejected():
-		var error = promise.get_data()
-		push_error(
-			"[FriendsPanel] Failed to subscribe to friendship updates: " + str(error.get_error())
-		)
-		streaming_failed = true
-
-	# Subscribe to connectivity updates (online/offline/away)
-	var connectivity_promise = Global.social_service.subscribe_to_connectivity_updates()
-	await PromiseUtils.async_awaiter(connectivity_promise)
-
-	if connectivity_promise.is_rejected():
-		var error = connectivity_promise.get_data()
-		push_error(
-			"[FriendsPanel] Failed to subscribe to connectivity updates: " + str(error.get_error())
-		)
-		# Connectivity failure alone doesn't mark streaming as failed
-
-	# Update streaming subscription status
-	_streaming_subscription_failed = streaming_failed
-
-	# Fetch/refresh friends lists and wait for them to load
 	await _async_update_all_lists()
-
-	# Loading complete
 	_is_loading = false
+	_update_dropdown_visibility()
+
+
+## Diff-based refresh: fetches fresh friends data and syncs lists without full rebuild.
+## Used by the proactive re-subscribe timer to avoid UI disruption.
+func async_refresh_friends() -> void:
+	# Fetch all friends (reusing the same RPC as initial load)
+	var promise = Global.social_service.get_friends(100, 0, -1)
+	await PromiseUtils.async_awaiter(promise)
+	if promise.is_rejected():
+		return  # Silent failure — keep showing current data
+
+	var friends = promise.get_data()
+	var online_items: Array = []
+	var offline_items: Array = []
+
+	for friend_data in friends:
+		var item = SocialItemData.new()
+		item.address = friend_data["address"]
+		item.name = friend_data["name"]
+		item.has_claimed_name = friend_data["has_claimed_name"]
+		item.profile_picture_url = friend_data["profile_picture_url"]
+		if is_friend_online(item.address):
+			online_items.append(item)
+		else:
+			offline_items.append(item)
+
+	online_list.sync_items(online_items)
+	offline_list.sync_items(offline_items)
+
+	# Also refresh pending requests
+	var req_promise = Global.social_service.get_pending_requests(100, 0)
+	await PromiseUtils.async_awaiter(req_promise)
+	if not req_promise.is_rejected():
+		var requests = req_promise.get_data()
+		var request_items: Array = []
+		for req in requests:
+			var item = SocialItemData.new()
+			item.address = req["address"]
+			item.name = req["name"]
+			item.has_claimed_name = req["has_claimed_name"]
+			item.profile_picture_url = req["profile_picture_url"]
+			item.friendship_id = req.get("friendship_id", "")
+			request_items.append(item)
+		request_list.sync_items(request_items)
+
 	_update_dropdown_visibility()
 
 
@@ -453,17 +465,6 @@ func _send_friend_online_chat_message(friend_name: String) -> void:
 		"[color=#%s]%s[/color] [color=#8f8]is now online[/color]" % [color_hex, friend_name]
 	)
 	Global.on_chat_message.emit("system", message, Time.get_unix_time_from_system())
-
-
-func _async_on_subscription_dropped() -> void:
-	# Auto-reconnect if panel is visible
-	if visible and not Global.player_identity.is_guest:
-		print("[FriendsPanel] Subscription dropped while panel is open - reconnecting...")
-		# Small delay before reconnecting
-		await get_tree().create_timer(1.0).timeout
-		# Only reconnect if still visible
-		if visible:
-			_async_subscribe_to_friends_updates()
 
 
 func is_friend_online(address: String) -> bool:
