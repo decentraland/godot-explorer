@@ -21,6 +21,7 @@ var connection_status_offline = load("res://assets/ui/connection_status_offline.
 @onready var panel_border: PanelContainer = %Panel_Border
 @onready var texture_rect_status: TextureRect = %TextureRect_Status
 @onready var texture_rect_friendship: TextureRect = %TextureRect_Friendship
+@onready var panel_background: PanelContainer = %Panel_Background
 
 
 func _ready() -> void:
@@ -141,11 +142,11 @@ func set_dcl_logo() -> void:
 
 func apply_style(color: Color) -> void:
 	# Apply background color to the main panel container
-	var stylebox_background := get_theme_stylebox("panel")
+	var stylebox_background := panel_background.get_theme_stylebox("panel")
 	stylebox_background = stylebox_background.duplicate()
 	if stylebox_background is StyleBoxFlat:
 		stylebox_background.bg_color = color
-	add_theme_stylebox_override("panel", stylebox_background)
+	panel_background.add_theme_stylebox_override("panel", stylebox_background)
 
 	# Apply border color to the border panel
 	var factor = 0.3

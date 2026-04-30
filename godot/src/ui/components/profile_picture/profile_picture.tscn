@@ -40,7 +40,8 @@ size_flags_vertical = 4
 script = ExtResource("1_xkyte")
 picture_size = 2
 
-[node name="ProfilePicture" type="PanelContainer" parent="." unique_id=980945521]
+[node name="Panel_Background" type="PanelContainer" parent="." unique_id=980945521]
+unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 1
@@ -52,7 +53,7 @@ grow_vertical = 2
 mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_h41qx")
 
-[node name="TextureRect_Profile" type="TextureRect" parent="ProfilePicture" unique_id=414527700]
+[node name="TextureRect_Profile" type="TextureRect" parent="Panel_Background" unique_id=414527700]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
@@ -60,7 +61,7 @@ texture = ExtResource("2_q0svu")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Panel_Border" type="PanelContainer" parent="ProfilePicture" unique_id=65252985]
+[node name="Panel_Border" type="PanelContainer" parent="Panel_Background" unique_id=65252985]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
