@@ -1291,9 +1291,8 @@ impl MessageProcessor {
                         let mut result = Err(anyhow::anyhow!("not started"));
                         for attempt in 0..=MAX_RETRIES {
                             if attempt > 0 {
-                                let delay = (BASE_DELAY_MS
-                                    * BACKOFF_MULTIPLIER.pow(attempt - 1))
-                                .min(MAX_DELAY_MS);
+                                let delay = (BASE_DELAY_MS * BACKOFF_MULTIPLIER.pow(attempt - 1))
+                                    .min(MAX_DELAY_MS);
                                 tracing::debug!(
                                     "profile fetch retry {}/{} for {:#x} in {}ms",
                                     attempt,
