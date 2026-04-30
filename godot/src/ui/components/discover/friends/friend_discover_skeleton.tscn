@@ -1,0 +1,71 @@
+[gd_scene format=3 uid="uid://bk7m3n5xp2qrf"]
+
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="1_mat"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_circle"]
+bg_color = Color(1, 1, 1, 0.08)
+corner_radius_top_left = 500
+corner_radius_top_right = 500
+corner_radius_bottom_right = 500
+corner_radius_bottom_left = 500
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7mp4e"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar"]
+bg_color = Color(1, 1, 1, 0.08)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="FriendDiscoverSkeleton" type="Control" unique_id=155865921]
+custom_minimum_size = Vector2(220, 225)
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1494418796]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Circle" type="PanelContainer" parent="VBoxContainer" unique_id=1807440696]
+material = ExtResource("1_mat")
+custom_minimum_size = Vector2(150, 150)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_circle")
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1694936415]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 17
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7mp4e")
+
+[node name="NameBar" type="PanelContainer" parent="VBoxContainer" unique_id=1075749042]
+material = ExtResource("1_mat")
+custom_minimum_size = Vector2(130, 21)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer" unique_id=1556672257]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7mp4e")
+
+[node name="PlaceBar" type="PanelContainer" parent="VBoxContainer" unique_id=1314781149]
+material = ExtResource("1_mat")
+custom_minimum_size = Vector2(180, 17)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bar")

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b8k2m5nf3qr7x"]
+
+[ext_resource type="Script" path="res://src/ui/components/discover/friends/friends_generator.gd" id="1_gen"]
+
+[node name="FriendsGenerator" type="Node"]
+script = ExtResource("1_gen")

@@ -10,6 +10,8 @@ extends Control
 		%Label_Title.text = new_value
 		title = new_value
 
+@export var item_separation: int = -1
+
 @onready var scroll_container = %ScrollContainer
 @onready var item_container = %HBoxContainer_Items
 @onready var label_error = $VBoxContainer/Label_Error
@@ -44,6 +46,9 @@ func _ready():
 			var skeleton_instance = skeleton_scene.instantiate()
 			skeleton_instance.layout_mode = 2
 			hbox.add_child(skeleton_instance)
+
+	if item_separation >= 0:
+		item_container.add_theme_constant_override("separation", item_separation)
 
 	if is_instance_valid(generator):
 		generator.report_loading_status.connect(self._on_report_loading_status)

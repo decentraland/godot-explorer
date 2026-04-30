@@ -483,8 +483,9 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 	Global.get_config().save_to_settings_file()
 
-	# Note: Social service initialization moved to explorer.gd to ensure it completes
-	# before the Friends panel is used (lobby scene transitions before it finishes)
+	# Initialize social service early so Discover can show friends before entering explorer
+	if not _is_guest:
+		Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 
 func _on_check_box_eula_toggled(toggled_on: bool) -> void:

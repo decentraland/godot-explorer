@@ -30,10 +30,12 @@ func _on_request_completed(
 	# Verify that the response is OK
 	if result != HTTPRequest.RESULT_SUCCESS:
 		push_error("Error in HTTP request: " + str(result))
+		in_genesis_city_changed.emit(in_genesis_city)
 		return
 
 	if response_code != 200:
 		push_error("Error in response code: " + str(response_code))
+		in_genesis_city_changed.emit(in_genesis_city)
 		return
 
 	# Parse the JSON
@@ -43,11 +45,13 @@ func _on_request_completed(
 
 	if parse_result != OK:
 		push_error("Error parsing JSON: " + json.get_error_message())
+		in_genesis_city_changed.emit(in_genesis_city)
 		return
 
 	var data = json.get_data()
 	if not data.has("peers"):
 		push_error("Response does not contain 'peers'")
+		in_genesis_city_changed.emit(in_genesis_city)
 		return
 
 	# Create the online_players array
@@ -62,5 +66,4 @@ func _on_request_completed(
 			}
 			in_genesis_city.append(player)
 
-	# Emit signal when online_players changes
 	in_genesis_city_changed.emit(in_genesis_city)
