@@ -1270,28 +1270,52 @@ impl MessageProcessor {
                         .and_then(|p| p.lambdas_endpoint.clone());
 
                     TokioRuntime::spawn(async move {
+                        // Unity CatalystRetryPolicy: 6 retries, base 2s, multiplier 2x, capped at 60s
+                        // Retry if profile is None OR fetched version < announced version (version mismatch)
+                        const MAX_RETRIES: u32 = 6;
+                        const BASE_DELAY_MS: u64 = 2000;
+                        const BACKOFF_MULTIPLIER: u64 = 2;
+                        const MAX_DELAY_MS: u64 = 60_000;
+
                         let version_ok = |r: &Result<UserProfile, _>| matches!(r, Ok(p) if p.version >= announced_version_for_retry);
 
-                        // Step 1: peer's own lambdas endpoint (freshest — already has their latest deployment)
-                        let result = match peer_lambdas_endpoint.as_deref() {
+                        // Determine fetch endpoint: peer's lambdas endpoint if available, else realm lambda
+                        let fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
                             Some(endpoint) if endpoint != lamda_server_base_url => {
-                                tracing::debug!(
-                                    "Fetching profile for {:#x} from peer lambdas endpoint: {}",
-                                    address,
-                                    endpoint
-                                );
-                                request_lambda_profile(
-                                    address,
-                                    endpoint,
-                                    profile_base_url.as_str(),
-                                    http_requester.clone(),
-                                )
-                                .await
+                                endpoint.to_string()
                             }
-                            _ => Err(anyhow::anyhow!("no peer lambdas endpoint")),
+                            _ => lamda_server_base_url.clone(),
                         };
 
-                        // Step 2: asset-bundle-registry (polls all catalysts every ~5s)
+                        // Step 1: fetch with Unity-matching retry policy (exponential backoff)
+                        let mut result = Err(anyhow::anyhow!("not started"));
+                        for attempt in 0..=MAX_RETRIES {
+                            if attempt > 0 {
+                                let delay = (BASE_DELAY_MS
+                                    * BACKOFF_MULTIPLIER.pow(attempt - 1))
+                                .min(MAX_DELAY_MS);
+                                tracing::debug!(
+                                    "profile fetch retry {}/{} for {:#x} in {}ms",
+                                    attempt,
+                                    MAX_RETRIES,
+                                    address,
+                                    delay
+                                );
+                                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                            }
+                            result = request_lambda_profile(
+                                address,
+                                fetch_endpoint.as_str(),
+                                profile_base_url.as_str(),
+                                http_requester.clone(),
+                            )
+                            .await;
+                            if version_ok(&result) {
+                                break;
+                            }
+                        }
+
+                        // Step 2: asset-bundle-registry fallback (for legacy clients without lambdasEndpoint)
                         let result = if version_ok(&result) {
                             result
                         } else {
@@ -1304,10 +1328,10 @@ impl MessageProcessor {
                             .await
                         };
 
-                        // Step 3: realm lambda fallback
+                        // Step 3: realm lambda fallback (if peer endpoint != realm and registry also failed)
                         let result = if version_ok(&result) {
                             result
-                        } else {
+                        } else if fetch_endpoint != lamda_server_base_url {
                             tracing::debug!(
                                 "Falling back to realm lambda for {:#x}: {}",
                                 address,
@@ -1320,6 +1344,8 @@ impl MessageProcessor {
                                 http_requester,
                             )
                             .await
+                        } else {
+                            result
                         };
 
                         if let Ok(profile) = result {
