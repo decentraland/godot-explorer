@@ -22,11 +22,6 @@ const SCENE_TIMEOUT_BODY = "You can reload the experience, or jump in now, it sh
 const SCENE_TIMEOUT_PRIMARY = "RELOAD"
 const SCENE_TIMEOUT_SECONDARY = "START ANYWAY"
 
-const TELEPORT_TITLE = "Teleport"
-const TELEPORT_BODY = "You'll be traveling to "
-const TELEPORT_PRIMARY = "JUMP TO"
-const TELEPORT_SECONDARY = "CANCEL"
-
 const CONNECTION_LOST_TITLE = "Connection lost"
 const CONNECTION_LOST_BODY = "Please check your internet connection and try again."
 const CONNECTION_LOST_PRIMARY = "RETRY"
@@ -212,31 +207,22 @@ func async_show_world_modal(world_name: String) -> void:
 		_async_load_travel_modal_image(str(image_url))
 
 
-## Shows a CHANGE_REALM type modal
+## Shows a CHANGE_REALM type modal using TravelModal
 ## @param realm_name: The destination realm name
 ## @param message: Optional message from the scene
-func async_show_change_realm_modal(realm_name: String, message: String = "") -> void:
-	if not current_modal:
-		if not await _async_create_modal():
-			print("NOT CREATED MODAL")
-			return
+func async_show_change_realm_modal(realm_name: String, _message: String = "") -> void:
+	if not await _async_create_travel_modal():
+		return
 
-	var body_text = "The scene wants to move you to a new realm\nTo: `" + realm_name + "`"
-	if not message.is_empty():
-		body_text += "\nScene message: " + message
+	current_travel_modal.closed.connect(close_travel_modal)
+	current_travel_modal.jump_in_pressed.connect(_on_change_realm_primary.bind(realm_name))
+	current_travel_modal.show()
 
-	current_modal.set_title("Change Realm")
-	current_modal.set_body(body_text)
-	current_modal.set_primary_button_text("Let's go!")
-	current_modal.set_secondary_button_text("No thanks")
-	current_modal.hide_icon()
-	current_modal.hide_url()
-	current_modal.show()
+	await get_tree().process_frame
+	await get_tree().process_frame
 
-	# Disconnect previous connections and connect button actions
-	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(_on_change_realm_primary.bind(realm_name))
-	current_modal.button_secondary.pressed.connect(close_current_modal)
+	# Try to load realm data from Places API
+	await _async_load_change_realm_data(realm_name)
 
 
 ## Shows a SCENE_CRASH type modal
@@ -478,6 +464,41 @@ func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
 		_async_load_travel_modal_image(str(image_url))
 
 
+func _async_load_change_realm_data(realm_name: String) -> void:
+	if not is_instance_valid(current_travel_modal):
+		return
+
+	# Try to fetch world/realm data from Places API
+	var result = await PlacesHelper.async_get_by_names(realm_name)
+
+	if not is_instance_valid(current_travel_modal):
+		return
+
+	if result is PromiseError:
+		# API error — show realm name as fallback
+		current_travel_modal.set_place_name(realm_name)
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+
+	if not json.has("data") or json.data.is_empty():
+		# No data found — show realm name as fallback
+		current_travel_modal.set_place_name(realm_name)
+		return
+
+	var realm_data: Dictionary = json.data[0]
+
+	var title = str(realm_data.get("title", realm_name))
+	current_travel_modal.set_place_name(title if not title.is_empty() else realm_name)
+
+	var creator = realm_data.get("contact_name", "")
+	current_travel_modal.set_creator("" if creator == null else str(creator))
+
+	var image_url = realm_data.get("image", "")
+	if image_url != null and not str(image_url).is_empty():
+		_async_load_travel_modal_image(str(image_url))
+
+
 func _async_load_travel_modal_image(url: String) -> void:
 	var url_hash = url.md5_text()
 	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
@@ -489,36 +510,6 @@ func _async_load_travel_modal_image(url: String) -> void:
 
 	if is_instance_valid(current_travel_modal):
 		current_travel_modal.set_image(result.texture)
-
-
-func _async_load_place_name(location: Vector2i) -> void:
-	if !is_instance_valid(current_modal):
-		# Modal was already freed, cannot recreate it here as it would lose button connections
-		return
-
-	var result = await PlacesHelper.async_get_by_position(location)
-
-	if result is PromiseError:
-		printerr("Error requesting place name for teleport", result.get_error())
-		return
-
-	# Check if modal is still valid after await (it might have been closed)
-	if !is_instance_valid(current_modal):
-		return
-
-	var json: Dictionary = result.get_string_response_as_json()
-	var destination_name: String = "Unknown Place"
-
-	if not json.data.is_empty():
-		var title = json.data[0].get("title", "interactive-text")
-		if title != "interactive-text":
-			destination_name = title
-
-	# Update modal body with place name
-	# Double check validity before updating (modal might have been closed during await)
-	if is_instance_valid(current_modal):
-		current_modal.set_body(TELEPORT_BODY + destination_name)
-		# Modal is already shown, just update the size
 
 
 # Button action handlers
@@ -558,9 +549,8 @@ func _on_teleport_primary(location: Vector2i, realm: String) -> void:
 
 
 func _on_change_realm_primary(realm_name: String) -> void:
-	# Default behavior: call Global.realm.async_set_realm
 	Global.realm.async_set_realm(realm_name)
-	close_current_modal()
+	close_travel_modal()
 
 
 func _on_scene_crash_reload(_entity_id: String) -> void:
