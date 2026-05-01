@@ -473,6 +473,9 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }
         };
 
+        // Mark entity as kinematic (has active tween moving it)
+        scene.kinematic_entities.insert(*entity);
+
         // set new transform to the entity
         crdt_state
             .get_transform_mut()

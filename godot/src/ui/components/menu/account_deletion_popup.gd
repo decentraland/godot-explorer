@@ -1,7 +1,5 @@
 extends TextureRect
 
-const DELETION_API_URL = "https://mobile-bff.decentraland.org/deletion"
-
 @onready var confirmation_dialog: VBoxContainer = %ConfirmationDialog
 @onready var processing_screen: VBoxContainer = %ProcessingScreen
 @onready var done_dialog: VBoxContainer = %DoneDialog
@@ -18,6 +16,11 @@ func _ready() -> void:
 
 func _on_button_cancel_delete_account_pressed() -> void:
 	hide()
+	# If the flow was opened from the explorer's landscape side panel, the menu
+	# was force-opened in portrait. Close it so the explorer flips back to
+	# landscape via _on_menu_close instead of stranding the user in portrait.
+	if Global.get_explorer():
+		Global.close_menu.emit()
 
 
 func _on_button_ok_pressed() -> void:
@@ -37,7 +40,9 @@ func async_start_flow() -> void:
 	processing_screen.show()
 
 	# Check if deletion was already requested from server
-	var response = await Global.async_signed_fetch(DELETION_API_URL, HTTPClient.METHOD_GET, "")
+	var response = await Global.async_signed_fetch(
+		DclUrls.account_deletion(), HTTPClient.METHOD_GET, ""
+	)
 
 	_hide_all()
 
@@ -46,10 +51,13 @@ func async_start_flow() -> void:
 		fail_dialog.show()
 		return
 
-	var data: Dictionary = response.get_string_response_as_json()
+	var data = response.get_string_response_as_json()
 
-	if not data.get("ok", false):
-		printerr("Failed to check deletion status: ", data.get("error", "Unknown error"))
+	if not data is Dictionary or not data.get("ok", false):
+		var error_msg = (
+			data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		)
+		printerr("Failed to check deletion status: ", error_msg)
 		fail_dialog.show()
 		return
 
@@ -66,7 +74,9 @@ func _async_on_button_confirm_delete_account_pressed() -> void:
 	_hide_all()
 	processing_screen.show()
 
-	var response = await Global.async_signed_fetch(DELETION_API_URL, HTTPClient.METHOD_POST, "")
+	var response = await Global.async_signed_fetch(
+		DclUrls.account_deletion(), HTTPClient.METHOD_POST, ""
+	)
 
 	_hide_all()
 
@@ -75,10 +85,13 @@ func _async_on_button_confirm_delete_account_pressed() -> void:
 		fail_dialog.show()
 		return
 
-	var data: Dictionary = response.get_string_response_as_json()
+	var data = response.get_string_response_as_json()
 
-	if not data.get("ok", false):
-		printerr("Account deletion request failed: ", data.get("error", "Unknown error"))
+	if not data is Dictionary or not data.get("ok", false):
+		var error_msg = (
+			data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		)
+		printerr("Account deletion request failed: ", error_msg)
 		fail_dialog.show()
 		return
 
@@ -90,7 +103,9 @@ func _async_on_button_cancel_deletion_pressed() -> void:
 	_hide_all()
 	processing_screen.show()
 
-	var response = await Global.async_signed_fetch(DELETION_API_URL, HTTPClient.METHOD_DELETE, "")
+	var response = await Global.async_signed_fetch(
+		DclUrls.account_deletion(), HTTPClient.METHOD_DELETE, ""
+	)
 
 	_hide_all()
 
@@ -99,12 +114,15 @@ func _async_on_button_cancel_deletion_pressed() -> void:
 		fail_dialog.show()
 		return
 
-	var data: Dictionary = response.get_string_response_as_json()
+	var data = response.get_string_response_as_json()
 
-	if data.get("ok", false):
+	if data is Dictionary and data.get("ok", false):
 		hide()
 	else:
-		printerr("Cancel deletion request failed: ", data.get("error", "Unknown error"))
+		var error_msg = (
+			data.get("error", "Unknown error") if data is Dictionary else "Invalid response"
+		)
+		printerr("Cancel deletion request failed: ", error_msg)
 		fail_dialog.show()
 
 

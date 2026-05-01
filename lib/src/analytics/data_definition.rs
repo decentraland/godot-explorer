@@ -56,6 +56,11 @@ pub enum SegmentEvent {
     ChatMessageSent(SegmentEventChatMessageSent),
     ClickButton(SegmentEventClickButton),
     ScreenViewed(SegmentEventScreenViewed),
+    RequestFriend(SegmentEventRequestFriend),
+    AcceptFriend(SegmentEventAcceptFriend),
+    BlockUser(SegmentEventBlockUser),
+    Unfriend(SegmentEventUnfriend),
+    InstallAttribution(SegmentEventInstallAttribution),
 }
 
 #[derive(Serialize, Clone)]
@@ -146,6 +151,42 @@ pub struct SegmentEventPerformanceMetrics {
     // Average JS heap memory per scene in megabytes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub average_jsheap_mb: Option<f32>,
+
+    // Dynamic graphics system metrics
+    // Whether dynamic graphics adjustment is enabled
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_graphics_enabled: Option<bool>,
+    // Current state of the dynamic graphics system (Stabilizing/Monitoring/Adjusting)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_graphics_state: Option<String>,
+    // Current graphic profile index (0=Very Low, 1=Low, 2=Medium, 3=High)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_graphics_profile: Option<i32>,
+    // Frame time ratio (actual/target, <1 means headroom, >1 means struggling)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frame_time_ratio: Option<f32>,
+    // Thermal state as interpreted by dynamic graphics (normal/high/critical)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dynamic_graphics_thermal_state: Option<String>,
+
+    // Hardware benchmark result (from initial auto-detection)
+    // GPU render time in milliseconds (lower is better)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub benchmark_gpu_score: Option<f32>,
+
+    // Optimized asset usage counters
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_scene_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runtime_scene_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_wearable_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runtime_wearable_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_scene_pct: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub optimized_wearable_pct: Option<f32>,
 }
 
 #[derive(Serialize, Clone)]
@@ -229,6 +270,62 @@ pub struct SegmentEventScreenViewed {
     pub extra_properties: Option<String>,
 }
 
+#[derive(Serialize, Clone)]
+pub struct SegmentEventRequestFriend {
+    // Wallet address of the user receiving the friend request.
+    pub receiver_id: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct SegmentEventAcceptFriend {
+    // Wallet address of the user whose friend request was accepted.
+    pub receiver_id: String,
+    // Server-side friendship ID (for metrics mapping).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub friendship_id: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+pub struct SegmentEventBlockUser {
+    // Wallet address of the user being blocked.
+    pub receiver_id: String,
+    // Whether the blocked user was a friend at the time of blocking.
+    pub is_friend: bool,
+}
+
+#[derive(Serialize, Clone)]
+pub struct SegmentEventUnfriend {
+    // Wallet address of the user being unfriended.
+    pub receiver_id: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct SegmentEventInstallAttribution {
+    // Raw referrer string (e.g. "utm_source=youtube&utm_campaign=xyz")
+    pub referrer: String,
+    // Parsed UTM source
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_source: Option<String>,
+    // Parsed UTM medium
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_medium: Option<String>,
+    // Parsed UTM campaign
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_campaign: Option<String>,
+    // Parsed UTM content
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_content: Option<String>,
+    // Parsed UTM term
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_term: Option<String>,
+    // Seconds since epoch when the referrer click happened
+    pub click_timestamp: i64,
+    // Seconds since epoch when the install began
+    pub install_timestamp: i64,
+    // Whether the app was launched as a Google Play Instant app
+    pub google_play_instant: bool,
+}
+
 pub fn build_segment_event_batch_item(
     user_id: String,
     common: &SegmentEventCommonExplorerFields,
@@ -272,6 +369,31 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::ScreenViewed(event) => (
             "Screen Viewed".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::RequestFriend(event) => (
+            "Friend Request".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::AcceptFriend(event) => (
+            "Friend Accept".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::BlockUser(event) => (
+            "Block User".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::Unfriend(event) => (
+            "Unfriend".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::InstallAttribution(event) => (
+            "Install Attribution".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

@@ -1,5 +1,6 @@
 use godot::prelude::*;
-use url::Url;
+
+use crate::deep_link;
 
 #[derive(GodotClass)]
 #[class(base=RefCounted)]
@@ -27,13 +28,62 @@ pub struct DclParseDeepLink {
     /// The signin identity ID from deep link `decentraland://open?signin=${identityId}`
     #[var]
     signin_identity_id: GString,
+
+    /// The environment parameter from deep link `decentraland://open?dclenv=zone`
+    /// Valid values: "org", "zone", "today"
+    #[var]
+    dclenv: GString,
+
+    /// True if this is a WalletConnect callback that should be ignored
+    #[var]
+    is_walletconnect_callback: bool,
+
+    /// Numbered profile slot for identity storage (e.g., "2" uses account_2/guest_profile_2)
+    #[var]
+    saved_profile: GString,
+
+    /// Enable LiveKit debug panel from deep link (livekit_debug=true)
+    #[var]
+    livekit_debug: bool,
+
+    /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
+    #[var]
+    path: GString,
+
+    /// Dev/testing: short-circuit profile deploys (deep link param: disable-profile-deploy=true)
+    #[var]
+    disable_profile_deploy: bool,
+
+    /// Dev/testing: URNs to inject into the backpack as fake-owned wearables
+    /// (deep link param: fake-owned-wearables=urn1,urn2)
+
+    #[var]
+    fake_owned_wearables: PackedStringArray,
+
+    /// Scene Inspector target: empty=off, "true"=auto, "ws://host:port"=custom target
+    #[var]
+    scene_inspector: GString,
+
+    /// Whether to write JSONL Scene Inspector files to disk
+    #[var]
+    scene_inspector_file: bool,
+
+    /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
+    #[var]
+    low_spec_warning: bool,
 }
 
 #[godot_api]
 impl IRefCounted for DclParseDeepLink {
     fn init(_base: Base<RefCounted>) -> Self {
+        Self::default_fields()
+    }
+}
+
+impl DclParseDeepLink {
+    fn default_fields() -> Self {
         DclParseDeepLink {
-            // Due to Option<Vector2i> isn't supported in godot-rust extension, we workaround it by seeting ::MAX as invalid location
+            // Due to Option<Vector2i> isn't supported in godot-rust extension, we workaround it by setting ::MAX as invalid location
             //  Check is_location_defined
             location: Vector2i::MAX,
             realm: GString::new(),
@@ -41,6 +91,47 @@ impl IRefCounted for DclParseDeepLink {
             dynamic_scene_loading: false,
             params: VarDictionary::new(),
             signin_identity_id: GString::new(),
+            is_walletconnect_callback: false,
+            dclenv: GString::new(),
+            saved_profile: GString::new(),
+            livekit_debug: false,
+            path: GString::new(),
+            disable_profile_deploy: false,
+            fake_owned_wearables: PackedStringArray::new(),
+            scene_inspector: GString::new(),
+            scene_inspector_file: false,
+            low_spec_warning: false,
+        }
+    }
+
+    fn from_result(r: deep_link::DeepLinkResult) -> Self {
+        let mut params = VarDictionary::new();
+        for (k, v) in &r.params {
+            let _ = params.insert(k.to_variant(), v.to_variant());
+        }
+
+        DclParseDeepLink {
+            location: match r.location {
+                Some((x, y)) => Vector2i { x, y },
+                None => Vector2i::MAX,
+            },
+            realm: GString::from(&r.realm),
+            preview: GString::from(&r.preview),
+            dynamic_scene_loading: r.dynamic_scene_loading,
+            params,
+            signin_identity_id: GString::from(&r.signin_identity_id),
+            dclenv: GString::from(&r.dclenv),
+            is_walletconnect_callback: r.is_walletconnect_callback,
+            saved_profile: GString::from(&r.saved_profile),
+            livekit_debug: r.livekit_debug,
+            path: GString::from(&r.path),
+            disable_profile_deploy: r.disable_profile_deploy,
+            fake_owned_wearables: PackedStringArray::from_iter(
+                r.fake_owned_wearables.iter().map(GString::from),
+            ),
+            scene_inspector: GString::from(&r.scene_inspector),
+            scene_inspector_file: r.scene_inspector_file,
+            low_spec_warning: r.low_spec_warning,
         }
     }
 }
@@ -49,71 +140,12 @@ impl IRefCounted for DclParseDeepLink {
 impl DclParseDeepLink {
     #[func]
     pub fn parse_decentraland_link(url_str: GString) -> Gd<DclParseDeepLink> {
-        let mut return_object = DclParseDeepLink {
-            location: Vector2i::MAX,
-            realm: GString::new(),
-            preview: GString::new(),
-            dynamic_scene_loading: false,
-            params: VarDictionary::new(),
-            signin_identity_id: GString::new(),
+        let url_string = url_str.to_string();
+        let obj = match deep_link::parse_deep_link(&url_string) {
+            Some(result) => Self::from_result(result),
+            None => Self::default_fields(),
         };
-
-        if url_str.is_empty() {
-            return Gd::from_object(return_object);
-        }
-
-        let url = match Url::parse(url_str.to_string().as_str()) {
-            Ok(url) => url,
-            Err(err) => {
-                godot_error!("Deep link URL unparsed {} - {url_str}", err.to_string());
-                return Gd::from_object(return_object);
-            }
-        };
-
-        // Verify scheme
-        if url.scheme() != "decentraland" {
-            godot_error!("Invalid scheme: expected 'decentraland' - {url_str}");
-            return Gd::from_object(return_object);
-        }
-
-        // Parse query parameters
-        for (key, value) in url.query_pairs() {
-            let _ = return_object
-                .params
-                .insert(key.to_string().to_variant(), value.to_string().to_variant());
-
-            match key.as_ref() {
-                "location" | "position" => {
-                    // Parse location as "x,y"
-                    let coords: Vec<&str> = value.split(',').collect();
-                    if coords.len() == 2 {
-                        if let (Ok(x), Ok(y)) = (coords[0].parse::<i32>(), coords[1].parse::<i32>())
-                        {
-                            return_object.location = Vector2i { x, y };
-                        }
-                    }
-                }
-                "realm" => {
-                    return_object.realm = value.to_string().to_godot();
-                }
-                "signin" => {
-                    // Handle signin identity ID from deep link `decentraland://open?signin=${identityId}`
-                    return_object.signin_identity_id = value.to_string().to_godot();
-                }
-                "preview" => {
-                    // Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
-                    return_object.preview = value.to_string().to_godot();
-                }
-                "dynamic-scene-loading" => {
-                    // Dynamic scene loading mode - "true" or "1" enables it
-                    return_object.dynamic_scene_loading =
-                        value.eq_ignore_ascii_case("true") || value == "1";
-                }
-                _ => {}
-            }
-        }
-
-        Gd::from_object(return_object)
+        Gd::from_object(obj)
     }
 
     #[func]

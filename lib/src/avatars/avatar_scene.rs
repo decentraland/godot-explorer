@@ -358,6 +358,34 @@ impl AvatarScene {
     pub fn update_dcl_avatar_by_alias(&mut self, alias: u32, profile: Gd<DclUserProfile>) {
         self.update_avatar_by_alias(alias, &profile.bind().inner);
     }
+
+    #[func]
+    pub fn set_avatar_version_by_address(&mut self, address: GString, version: GString) {
+        let address_str = address.to_string();
+        if let Some(h160) = address_str.as_h160() {
+            if let Some(alias) = self.avatar_address.get(&h160) {
+                if let Some(entity_id) = self.avatar_entity.get(alias) {
+                    if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
+                        avatar.call("set_client_version", &[version.to_variant()]);
+                    }
+                }
+            }
+        }
+    }
+
+    #[func]
+    pub fn set_avatar_room_debug_by_address(&mut self, address: GString, room_info: GString) {
+        let address_str = address.to_string();
+        if let Some(h160) = address_str.as_h160() {
+            if let Some(alias) = self.avatar_address.get(&h160) {
+                if let Some(entity_id) = self.avatar_entity.get(alias) {
+                    if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
+                        avatar.call("set_room_debug", &[room_info.to_variant()]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl AvatarScene {
@@ -556,11 +584,15 @@ impl AvatarScene {
             }
         }
 
-        // Convert rotation_y from degrees to radians and create quaternion
-        let rotation_rad = movement.rotation_y * std::f32::consts::PI / 180.0;
-        let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
+        // rotation_y on the wire is the yaw in DCL/Unity (left-handed) space,
+        // in degrees — matching Unity Foundation Client's rfc4.Movement
+        // encoding (transform.eulerAngles.y). Convert to radians, then build
+        // the DCL-space quaternion directly. to_godot_transform_3d flips z/w
+        // at render time to convert to Godot's right-handed space, mirroring
+        // how Position packets handle translation.z.
+        let dcl_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
             x: 0.0,
-            y: rotation_rad,
+            y: movement.rotation_y.to_radians(),
             z: 0.0,
         });
 
@@ -570,12 +602,20 @@ impl AvatarScene {
                 y: movement.position_y,
                 z: movement.position_z,
             },
-            rotation: rotation_quat,
+            rotation: dcl_quat,
             scale: godot::prelude::Vector3::ONE,
             parent: SceneEntityId::ROOT,
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform);
+        // Wire-authoritative animation state for remote double-jump / glide.
+        if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
+            avatar.bind_mut().apply_wire_movement_state(
+                movement.jump_count,
+                movement.glide_state,
+                movement.is_grounded,
+            );
+        }
         self.last_movement_timestamp
             .insert(alias, movement.timestamp);
         true
@@ -609,8 +649,9 @@ impl AvatarScene {
             }
         }
 
-        // Create quaternion from rotation (already in radians)
-        let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
+        // rotation_rad is the yaw in DCL/Unity (left-handed) space. See
+        // update_avatar_transform_with_movement for the rationale.
+        let dcl_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
             x: 0.0,
             y: rotation_rad,
             z: 0.0,
@@ -618,7 +659,7 @@ impl AvatarScene {
 
         let dcl_transform = DclTransformAndParent {
             translation: position,
-            rotation: rotation_quat,
+            rotation: dcl_quat,
             scale: godot::prelude::Vector3::ONE,
             parent: SceneEntityId::ROOT,
         };

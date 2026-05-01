@@ -377,7 +377,7 @@ Pre-processed assets are available from `optimized-assets.dclexplorer.com` for f
 1. Check: optimized_asset_exists(hash)?
 2. Download: {hash}.zip from CDN
 3. Load: ProjectSettings.load_resource_pack(zip_path)
-4. Access: ResourceLoader.load("res://glbs/{hash}.tscn")
+4. Access: ResourceLoader.load("res://glbs/{hash}.scn")
 ```
 
 **Benefits**:

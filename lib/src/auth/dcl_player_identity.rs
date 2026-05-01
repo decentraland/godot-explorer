@@ -2,6 +2,7 @@ use ethers_core::types::H160;
 use ethers_signers::LocalWallet;
 use godot::prelude::*;
 use rand::thread_rng;
+use std::time::UNIX_EPOCH;
 use tokio::task::JoinHandle;
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
@@ -13,7 +14,8 @@ use crate::http_request::request_response::RequestResponse;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 use super::auth_identity::{
-    complete_mobile_auth, create_local_ephemeral, start_mobile_auth, PendingMobileAuth,
+    complete_mobile_auth, create_ephemeral_from_external_signature, create_local_ephemeral,
+    generate_ephemeral_for_signing, start_mobile_auth,
 };
 use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
@@ -31,16 +33,13 @@ pub struct DclPlayerIdentity {
     wallet: Option<CurrentWallet>,
     ephemeral_auth_chain: Option<EphemeralAuthChain>,
 
-    #[var]
-    target_config_id: GString,
-
     profile: Option<Gd<DclUserProfile>>,
 
     try_connect_account_handle: Option<JoinHandle<()>>,
 
     /// Pending mobile auth state, stored between start_mobile_connect_account
     /// and complete_mobile_connect_account (when deep link arrives)
-    pending_mobile_auth: Option<PendingMobileAuth>,
+    pending_mobile_auth: Option<()>,
 
     #[var]
     is_guest: bool,
@@ -59,7 +58,6 @@ impl INode for DclPlayerIdentity {
             is_guest: false,
             try_connect_account_handle: None,
             pending_mobile_auth: None,
-            target_config_id: GString::default(),
         }
     }
 }
@@ -74,6 +72,9 @@ impl DclPlayerIdentity {
 
     #[signal]
     fn profile_changed(new_profile: Gd<DclUserProfile>);
+
+    #[signal]
+    fn auth_error(error_message: GString);
 
     #[func]
     fn try_set_remote_wallet(
@@ -166,6 +167,8 @@ impl DclPlayerIdentity {
     #[func]
     fn _error_getting_wallet(&mut self, error_str: GString) {
         tracing::error!("error getting wallet {:?}", error_str);
+        self.base_mut()
+            .emit_signal("auth_error", &[error_str.to_variant()]);
     }
 
     #[func]
@@ -177,7 +180,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn try_connect_account(&mut self, target_config_id: GString) {
+    fn try_connect_account(&mut self) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -189,15 +192,8 @@ impl DclPlayerIdentity {
             .bind()
             .get_sender();
 
-        self.target_config_id = target_config_id.clone();
-        let target_config_id = if target_config_id.is_empty() {
-            None
-        } else {
-            Some(target_config_id.to_string())
-        };
-
         let try_connect_account_handle = handle.spawn(async move {
-            let wallet = RemoteWallet::with_auth_identity(sender, target_config_id).await;
+            let wallet = RemoteWallet::with_auth_identity(sender).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -240,7 +236,12 @@ impl DclPlayerIdentity {
     /// The app should wait for a deep link with signin identity ID,
     /// then call complete_mobile_connect_account with that ID.
     #[func]
-    fn start_mobile_connect_account(&mut self, target_config_id: GString) {
+    fn start_mobile_connect_account(
+        &mut self,
+        provider: GString,
+        user_id: GString,
+        session_id: GString,
+    ) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -252,25 +253,31 @@ impl DclPlayerIdentity {
             .bind()
             .get_sender();
 
-        self.target_config_id = target_config_id.clone();
-        let target_config_id = if target_config_id.is_empty() {
+        let provider = if provider.is_empty() {
             None
         } else {
-            Some(target_config_id.to_string())
+            Some(provider.to_string())
+        };
+        let user_id = if user_id.is_empty() {
+            None
+        } else {
+            Some(user_id.to_string())
+        };
+        let session_id = if session_id.is_empty() {
+            None
+        } else {
+            Some(session_id.to_string())
         };
 
         handle.spawn(async move {
-            let result = start_mobile_auth(sender, target_config_id).await;
+            let result = start_mobile_auth(sender, provider, user_id, session_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
 
             match result {
                 Ok(pending) => {
-                    tracing::info!(
-                        "Mobile auth started, waiting for deep link with request_id: {}",
-                        pending.request_id
-                    );
+                    tracing::info!("Mobile auth started, waiting for deep link");
                     this.bind_mut().pending_mobile_auth = Some(pending);
                 }
                 Err(err) => {
@@ -341,6 +348,92 @@ impl DclPlayerIdentity {
     #[func]
     fn has_pending_mobile_auth(&self) -> bool {
         self.pending_mobile_auth.is_some()
+    }
+
+    /// Generates ephemeral identity data for external signing (e.g., WalletConnect).
+    /// Returns a Dictionary with:
+    /// - "message": The message to be signed by the wallet
+    /// - "ephemeral_private_key": PackedByteArray of the ephemeral private key
+    /// - "expiration_timestamp": Unix timestamp (seconds) when the auth expires
+    #[func]
+    fn generate_ephemeral_for_signing(&self) -> VarDictionary {
+        let (ephemeral_message, signing_key_bytes, expiration) = generate_ephemeral_for_signing();
+
+        let expiration_timestamp = expiration
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+
+        let mut dict = VarDictionary::new();
+        let _ = dict.insert("message", ephemeral_message.to_variant());
+        let _ = dict.insert(
+            "ephemeral_private_key",
+            PackedByteArray::from(signing_key_bytes.as_slice()).to_variant(),
+        );
+        let _ = dict.insert("expiration_timestamp", expiration_timestamp.to_variant());
+        dict
+    }
+
+    /// Completes WalletConnect authentication using an externally-signed message.
+    /// This should be called after getting a signature from a native wallet app.
+    ///
+    /// # Arguments
+    /// * `signer_address` - The wallet address that signed the message (0x...)
+    /// * `signature` - The signature hex string from the wallet
+    /// * `ephemeral_private_key` - The ephemeral private key from generate_ephemeral_for_signing
+    /// * `expiration_timestamp` - Unix timestamp from generate_ephemeral_for_signing
+    /// * `original_message` - The exact message that was signed by the wallet
+    ///
+    /// # Returns
+    /// true if authentication was successful, false otherwise
+    #[func]
+    fn try_set_walletconnect_auth(
+        &mut self,
+        signer_address: GString,
+        signature: GString,
+        ephemeral_private_key: PackedByteArray,
+        expiration_timestamp: i64,
+        original_message: GString,
+    ) -> bool {
+        let expiration = std::time::SystemTime::UNIX_EPOCH
+            + std::time::Duration::from_secs(expiration_timestamp as u64);
+
+        match create_ephemeral_from_external_signature(
+            &signer_address.to_string(),
+            &signature.to_string(),
+            ephemeral_private_key.as_slice(),
+            expiration,
+            &original_message.to_string(),
+        ) {
+            Ok(ephemeral_auth_chain) => {
+                let address = ephemeral_auth_chain.signer();
+                self.wallet = Some(CurrentWallet::Remote(RemoteWallet::new(address, 1)));
+                self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
+
+                let address_str = format!("{:#x}", address);
+                self.base_mut().call_deferred(
+                    "emit_signal",
+                    &[
+                        "wallet_connected".to_variant(),
+                        address_str.to_variant(),
+                        1_u64.to_variant(),
+                        false.to_variant(),
+                    ],
+                );
+                self.is_guest = false;
+
+                tracing::info!("WalletConnect auth successful for address: {:#x}", address);
+                true
+            }
+            Err(e) => {
+                tracing::error!("WalletConnect auth failed: {}", e);
+                self.base_mut().call_deferred(
+                    "_error_getting_wallet",
+                    &[format!("WalletConnect auth error: {}", e).to_variant()],
+                );
+                false
+            }
+        }
     }
 
     #[func]
@@ -666,11 +759,8 @@ impl DclPlayerIdentity {
         body.auth_chain = Some(auth_chain.auth_chain().clone());
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let target_config_id = self.target_config_id.to_string();
             handle.spawn(async move {
-                let result = do_request(body, url_sender, Some(target_config_id))
-                    .await
-                    .map(|(_, result)| result);
+                let result = do_request(body, url_sender).await.map(|(_, result)| result);
                 response.send(result.map_err(|err| err.to_string()));
             });
         }

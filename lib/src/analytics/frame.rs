@@ -89,6 +89,21 @@ impl Frame {
                     network_used_last_minute_mb: None,
                     js_scene_count: None,
                     average_jsheap_mb: None,
+                    // Dynamic graphics metrics (populated by metrics.rs)
+                    dynamic_graphics_enabled: None,
+                    dynamic_graphics_state: None,
+                    dynamic_graphics_profile: None,
+                    frame_time_ratio: None,
+                    dynamic_graphics_thermal_state: None,
+                    // Hardware benchmark result (populated by metrics.rs)
+                    benchmark_gpu_score: None,
+                    // Optimized asset counters (populated by metrics.rs)
+                    optimized_scene_count: None,
+                    runtime_scene_count: None,
+                    optimized_wearable_count: None,
+                    runtime_wearable_count: None,
+                    optimized_scene_pct: None,
+                    optimized_wearable_pct: None,
                 }));
 
             self.dt_ms_vec.resize(0, 0.0);

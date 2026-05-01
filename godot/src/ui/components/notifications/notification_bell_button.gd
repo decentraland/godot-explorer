@@ -1,4 +1,4 @@
-extends AnimatedButton
+extends StaticButton
 
 
 func _get_unread_count() -> int:

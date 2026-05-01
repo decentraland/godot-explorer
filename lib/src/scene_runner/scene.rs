@@ -4,11 +4,7 @@ use std::{
     time::Instant,
 };
 
-use godot::{
-    obj::{NewAlloc, Singleton},
-    prelude::Gd,
-    prelude::ToGodot,
-};
+use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -30,8 +26,8 @@ use crate::{
     },
     godot_classes::{
         dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,
-        dcl_ui_control::DclUiControl, dcl_video_player::DclVideoPlayer,
-        dcl_virtual_camera::DclVirtualCamera,
+        dcl_locomotion_settings::DclLocomotionSettings, dcl_ui_control::DclUiControl,
+        dcl_video_player::DclVideoPlayer, dcl_virtual_camera::DclVirtualCamera,
     },
     realm::scene_definition::SceneEntityDefinition,
 };
@@ -120,8 +116,10 @@ pub enum SceneUpdateState {
     VideoPlayer,
     AudioStream,
     AvatarModifierArea,
+    AvatarLocomotionSettings,
     CameraModeArea,
     InputModifier,
+    SkyboxTime,
     TriggerArea,
     VirtualCameras,
     AudioSource,
@@ -156,9 +154,11 @@ impl SceneUpdateState {
             Self::Raycasts => Self::VideoPlayer,
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
-            Self::AvatarModifierArea => Self::CameraModeArea,
+            Self::AvatarModifierArea => Self::AvatarLocomotionSettings,
+            Self::AvatarLocomotionSettings => Self::CameraModeArea,
             Self::CameraModeArea => Self::InputModifier,
-            Self::InputModifier => Self::TriggerArea,
+            Self::InputModifier => Self::SkyboxTime,
+            Self::SkyboxTime => Self::TriggerArea,
             Self::TriggerArea => Self::VirtualCameras,
             Self::VirtualCameras => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
@@ -249,6 +249,10 @@ pub struct Scene {
 
     // Tween
     pub tweens: HashMap<SceneEntityId, Tween>,
+    // Entities with active tweens or repeated transform writes — their colliders should be KINEMATIC
+    pub kinematic_entities: HashSet<SceneEntityId>,
+    // Entities that have had at least one transform applied (second write = movement)
+    pub transform_initialized: HashSet<SceneEntityId>,
     // Texture animations (UV offset/scale) driven by TextureMove/TextureMoveContinuous tweens
     pub texture_animations: HashMap<SceneEntityId, TextureAnimation>,
     // Duplicated value to async-access the animator
@@ -267,10 +271,16 @@ pub struct Scene {
 
     pub virtual_camera: Gd<DclVirtualCamera>,
 
+    pub locomotion_settings: Gd<DclLocomotionSettings>,
+
     pub paused: bool,
 
     // Deno/V8 memory statistics for this scene
     pub deno_memory_stats: Option<crate::dcl::DenoMemoryStats>,
+
+    /// Number of consecutive frames where _process_scene returned false while waiting_process is true.
+    /// Used to detect stuck scenes and force completion to unblock the scene thread.
+    pub stuck_frames: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -371,6 +381,8 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            kinematic_entities: HashSet::new(),
+            transform_initialized: HashSet::new(),
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
@@ -379,7 +391,9 @@ impl Scene {
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
+            locomotion_settings: Default::default(),
             deno_memory_stats: None,
+            stuck_frames: 0,
         }
     }
 
@@ -444,6 +458,8 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            kinematic_entities: HashSet::new(),
+            transform_initialized: HashSet::new(),
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
@@ -452,7 +468,9 @@ impl Scene {
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
+            locomotion_settings: Default::default(),
             deno_memory_stats: None,
+            stuck_frames: 0,
         }
     }
 
@@ -468,23 +486,42 @@ impl Scene {
         use crate::godot_classes::dcl_video_player::VIDEO_STATE_PLAYING;
         use crate::scene_runner::components::video_player::update_video_texture_from_livekit;
         use godot::classes::Time;
+        use godot::prelude::*;
 
         let current_time = Time::singleton().get_ticks_msec() as f64 / 1000.0;
 
         // Send video frames to all registered livekit video players
         for entity_id in self.livekit_video_player_entities.clone() {
-            // Update the texture
-            if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
-                if let Some(vp_data) = &mut node.video_player_data {
-                    update_video_texture_from_livekit(vp_data, width, height, data);
-                }
-            }
-
-            // Update video player state to PLAYING when receiving frames
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
-                video_player.set("video_state", &VIDEO_STATE_PLAYING.to_variant());
-                video_player.set("video_length", &(-1.0_f64).to_variant());
+                // Always update last_frame_time so timeout detection works
                 video_player.set("last_frame_time", &current_time.to_variant());
+
+                // Check if the scene SDK has paused this player
+                let is_playing: bool = video_player
+                    .get("_is_playing")
+                    .try_to::<bool>()
+                    .unwrap_or(true);
+
+                if is_playing {
+                    // Detect stream resuming after a gap — clear stale audio buffer
+                    let prev_state: i32 =
+                        video_player.get("video_state").try_to::<i32>().unwrap_or(0);
+                    if prev_state != VIDEO_STATE_PLAYING {
+                        video_player.call("clear_audio_buffer", &[]);
+                    }
+
+                    // Update the texture only when playing
+                    if let Some(node) = self.godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
+                        if let Some(vp_data) = &mut node.video_player_data {
+                            update_video_texture_from_livekit(vp_data, width, height, data);
+                        }
+                    }
+
+                    // Update state to PLAYING
+                    video_player.set("video_state", &VIDEO_STATE_PLAYING.to_variant());
+                    video_player.set("video_length", &(-1.0_f64).to_variant());
+                }
+                // When paused: texture keeps the last frame, state stays as-is
             }
         }
     }
@@ -518,11 +555,20 @@ impl Scene {
     }
 
     pub fn process_livekit_audio_frame(&mut self, frame: godot::prelude::PackedVector2Array) {
+        use godot::prelude::*;
+
         // Send audio frames to all registered livekit video players
         for entity_id in self.livekit_video_player_entities.clone() {
             if let Some(video_player) = self.video_players.get_mut(&entity_id) {
-                // Call the stream_buffer method on the video player (GDScript)
-                video_player.call("stream_buffer", &[frame.to_variant()]);
+                // Skip audio when paused to avoid buffer accumulation
+                let is_playing: bool = video_player
+                    .get("_is_playing")
+                    .try_to::<bool>()
+                    .unwrap_or(true);
+
+                if is_playing {
+                    video_player.call("stream_buffer", &[frame.to_variant()]);
+                }
             }
         }
     }

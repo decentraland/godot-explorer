@@ -385,25 +385,6 @@ impl SceneEntityCoordinator {
         self.requested_entity.remove(&request_id);
     }
 
-    /// Checks if any parcel of a scene is within the scene radius from current position
-    fn is_scene_in_range(&self, scene_def: &SceneEntityDefinition) -> bool {
-        let inner_parcels = self.parcel_radius_calculator.get_inner_parcels();
-
-        for scene_parcel in scene_def.scene_meta_scene.scene.parcels.iter() {
-            let scene_coord = Coord::from(scene_parcel);
-
-            // Check if this parcel is within range of current position
-            for radius_offset in inner_parcels {
-                let target_coord = radius_offset.plus(&self.current_position);
-                if scene_coord == target_coord {
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-
     /// Determines which scenes should be loaded based on current mode and position.
     ///
     /// This is the core logic that decides what scenes to load. It's called whenever:
@@ -438,11 +419,10 @@ impl SceneEntityCoordinator {
             }
 
             for entity_hash in self.fixed_desired_entities.iter() {
-                if let Some(scene_def) = self.cache_scene_data.get(entity_hash) {
-                    // Check if scene is within range
-                    if self.is_scene_in_range(scene_def) {
-                        self.loadable_scenes.insert(entity_hash.clone());
-                    }
+                if self.cache_scene_data.contains_key(entity_hash) {
+                    // Fixed entities from scenesUrn are explicitly configured for this realm
+                    // and should always be loadable regardless of distance from player
+                    self.loadable_scenes.insert(entity_hash.clone());
                 } else {
                     tracing::debug!(
                         "Fixed entity {} not in cache yet (still loading?)",
@@ -592,7 +572,7 @@ impl SceneEntityCoordinator {
     /// - If no fixed entities: Requests scene at current coordinate (fallback for genesis city teleports)
     pub fn update_position(&mut self, x: i16, z: i16) {
         if self.entities_active_url.is_empty() {
-            tracing::error!("entities_active_url is empty, cannot update position");
+            tracing::warn!("entities_active_url is empty, cannot update position");
             return;
         }
 
@@ -844,7 +824,7 @@ mod tests {
         // TODO: the mock server is not working in the github actions
         // The test now is using the real server
         let entities_active_url =
-            "https://sdk-test-scenes.decentraland.zone/content/entities/active".to_string();
+            "https://sdk-test-scenes.decentraland.org/content/entities/active".to_string();
         let content_url =
             "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest/contents"
                 .to_string();

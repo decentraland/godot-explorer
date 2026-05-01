@@ -3,12 +3,12 @@
 ## Format GDScript
 
 When GD files are modified, they must be well-formated.
-It requires [godot-gdscript-toolkit](https://github.com/kuruk-mm/godot-gdscript-toolkit) installed
+It requires [godot-gdscript-toolkit](https://github.com/dcl-regenesislabs/godot-gdscript-toolkit) installed
 
 Installation:
 ```bash
 pip3 uninstall "gdtoolkit==4.*"
-pip3 install git+https://github.com/kuruk-mm/godot-gdscript-toolkit.git
+pip3 install git+https://github.com/dcl-regenesislabs/godot-gdscript-toolkit.git
 ```
 
 You can autoformat all files running:

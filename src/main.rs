@@ -17,6 +17,8 @@ mod dependencies;
 mod doctor;
 mod download_file;
 mod export;
+mod fi_benchmark;
+mod full_tests;
 mod helpers;
 mod image_comparison;
 mod install_dependency;
@@ -25,8 +27,10 @@ mod keystore;
 mod path;
 mod platform;
 mod run;
+mod sentry_metrics;
 mod tests;
 mod ui;
+mod update_snapshots;
 mod version;
 mod version_check;
 
@@ -112,6 +116,44 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
+            Command::new("fi-benchmark")
+                .about("Run floating islands memory benchmark with multiple client sessions")
+                .arg(
+                    Arg::new("headless")
+                        .long("headless")
+                        .help("Run in headless mode (faster, no screenshots)")
+                        .action(clap::ArgAction::SetTrue),
+                ),
+        )
+        .subcommand(
+            Command::new("full-tests")
+                .about("Run ALL test workflows locally in sequence with timing information")
+                .arg(
+                    Arg::new("continue-on-failure")
+                        .long("continue-on-failure")
+                        .help("Continue running steps even if one fails")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("skip-visual")
+                        .long("skip-visual")
+                        .help("Skip visual/GPU tests (scene, client, test-tools)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("update-snapshots")
+                        .long("update-snapshots")
+                        .help("After visual tests, accept new output as baseline snapshots")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("report")
+                        .long("report")
+                        .help("Generate an HTML report with snapshot diffs and open in browser")
+                        .takes_value(false),
+                ),
+        )
+        .subcommand(
             Command::new("explorer-version")
                 .about("Get Godot Explorer version (reads from .build.version created during build)")
                 .arg(
@@ -138,13 +180,24 @@ fn main() -> Result<(), anyhow::Error> {
                         .multiple_values(true),
                 )
                 .arg(
-                    Arg::new("no-strip")
-                        .long("no-strip")
-                        .help("skip stripping debug symbols from iOS templates (needed for CI to generate Sentry dSYMs)")
+                    Arg::new("cache")
+                        .long("cache")
+                        .help("use cached downloads instead of re-downloading (default: always download fresh)")
                         .takes_value(false),
                 )
+                .arg(
+                    Arg::new("strip-ios")
+                        .long("strip-ios")
+                        .help("strip debug symbols from iOS templates to save disk space (default: keep debug symbols)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("download Godot editor and templates from a branch build (e.g. `fix-ios-screen-orientation-swiftui-host`) instead of the stable release")
+                        .takes_value(true),
+                )
         )
-        .subcommand(Command::new("update-protocol"))
         .subcommand(Command::new("clean-cache").about("Clean the cache to re-download external files."))
         .subcommand(Command::new("strip-ios-templates").about("Strip debug symbols from installed iOS templates (macOS only)"))
         .subcommand(
@@ -284,6 +337,47 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("use-tuned-glibc")
                         .help("Tune glibc malloc for better memory release (Linux only)")
                         .takes_value(false),
+                ).arg(
+                    Arg::new("asset-server")
+                        .long("asset-server")
+                        .help("Start the asset optimization server instead of the normal client")
+                        .takes_value(false),
+                ).arg(
+                    Arg::new("asset-server-port")
+                        .long("asset-server-port")
+                        .help("Port for asset optimization server (default: 8080)")
+                        .takes_value(true)
+                        .default_value("8080"),
+                ),
+        ).subcommand(
+            Command::new("get-metrics")
+                .about("(TEMPORARY) Get Sentry metrics for godot-explorer and auth-mobile")
+                .arg(
+                    Arg::new("from")
+                        .help("Start date (YYYY-MM-DD)")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::new("to")
+                        .help("End date (YYYY-MM-DD, inclusive)")
+                        .required(true)
+                        .index(2),
+                ),
+        ).subcommand(
+            Command::new("push-metrics")
+                .about("(TEMPORARY) Push Sentry metrics to Slack")
+                .arg(
+                    Arg::new("from")
+                        .help("Start date (YYYY-MM-DD)")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::new("to")
+                        .help("End date (YYYY-MM-DD, inclusive)")
+                        .required(true)
+                        .index(2),
                 ),
         ).subcommand(
             Command::new("update-ios-xcode")
@@ -311,6 +405,36 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("pck")
                         .help("Re-export and update the PCK file")
                         .takes_value(false),
+                ),
+        ).subcommand(
+            Command::new("update-docker-snapshots")
+                .about("Update Docker avatar/scene test snapshots from CI artifacts")
+                .arg(
+                    Arg::new("run-id")
+                        .long("run-id")
+                        .help("GitHub Actions run ID (defaults to latest on current branch)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("Branch to find runs on (defaults to current branch)")
+                        .takes_value(true),
+                ),
+        ).subcommand(
+            Command::new("update-coverage-snapshots")
+                .about("Update coverage test snapshots from CI artifacts")
+                .arg(
+                    Arg::new("run-id")
+                        .long("run-id")
+                        .help("GitHub Actions run ID (defaults to latest on current branch)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::new("branch")
+                        .long("branch")
+                        .help("Branch to find runs on (defaults to current branch)")
+                        .takes_value(true),
                 ),
         ).subcommand(
             Command::new("update-libgodot-android")
@@ -390,16 +514,23 @@ fn main() -> Result<(), anyhow::Error> {
                 .unwrap_or_default();
 
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
-            let no_strip = sm.is_present("no-strip");
+            let use_cache = sm.is_present("cache");
+            let strip_ios = sm.is_present("strip-ios");
+            let branch = sm.value_of("branch").map(String::from);
             // Call your install function and pass the templates
-            let result = install_dependency::install(no_templates, &platforms, no_strip);
+            let result = install_dependency::install(
+                no_templates,
+                &platforms,
+                use_cache,
+                strip_ios,
+                branch.as_deref(),
+            );
             if result.is_ok() {
                 dependencies::suggest_next_steps("install", None);
             }
             result
         }
         ("clean-cache", _) => clear_cache_dir().map_err(|e| anyhow::anyhow!(e)),
-        ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("strip-ios-templates", _) => export::strip_ios_templates(),
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
@@ -425,6 +556,11 @@ fn main() -> Result<(), anyhow::Error> {
 
             if sm.is_present("resource-tracking") {
                 build_args.extend(&["-F", "use_resource_tracking"]);
+            }
+
+            // Add asset_server feature if running in asset-server mode
+            if sm.is_present("asset-server") {
+                build_args.extend(&["-F", "asset_server"]);
             }
 
             // Handle feature flags
@@ -543,12 +679,24 @@ fn main() -> Result<(), anyhow::Error> {
             }
 
             // Now run
+            let mut extras: Vec<String> = sm
+                .values_of("extras")
+                .map(|v| v.map(|it| it.into()).collect())
+                .unwrap_or_default();
+
+            // Add asset-server arguments if present
+            if sm.is_present("asset-server") {
+                extras.push("--asset-server".to_string());
+                if let Some(port) = sm.value_of("asset-server-port") {
+                    extras.push("--asset-server-port".to_string());
+                    extras.push(port.to_string());
+                }
+            }
+
             run::run(
                 sm.is_present("editor"),
                 sm.is_present("itest"),
-                sm.values_of("extras")
-                    .map(|v| v.map(|it| it.into()).collect())
-                    .unwrap_or_default(),
+                extras,
                 sm.is_present("stest"),
                 sm.is_present("ctest"),
                 sm.is_present("use-tuned-glibc"),
@@ -668,8 +816,32 @@ fn main() -> Result<(), anyhow::Error> {
         ("update-libgodot-android", sm) => {
             android_godot_lib::update_libgodot_android(sm.is_present("release"))
         }
+        ("update-docker-snapshots", sm) => {
+            update_snapshots::update_docker_snapshots(sm.value_of("run-id"), sm.value_of("branch"))
+        }
+        ("update-coverage-snapshots", sm) => update_snapshots::update_coverage_snapshots(
+            sm.value_of("run-id"),
+            sm.value_of("branch"),
+        ),
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
+        ("get-metrics", sm) => {
+            let from = sm.value_of("from").unwrap();
+            let to = sm.value_of("to").unwrap();
+            sentry_metrics::get_metrics(from, to)
+        }
+        ("push-metrics", sm) => {
+            let from = sm.value_of("from").unwrap();
+            let to = sm.value_of("to").unwrap();
+            sentry_metrics::push_metrics(from, to)
+        }
+        ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
+        ("full-tests", sm) => full_tests::run_full_tests(
+            sm.is_present("continue-on-failure"),
+            sm.is_present("skip-visual"),
+            sm.is_present("update-snapshots"),
+            sm.is_present("report"),
+        ),
         _ => unreachable!("unreachable branch"),
     };
 

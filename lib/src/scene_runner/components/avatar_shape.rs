@@ -120,7 +120,38 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mut avatar_shape_config = VarDictionary::new();
                 avatar_shape_config.set("is_avatar_shape", true);
                 if let Some(expression_trigger_id) = &new_value.expression_trigger_id {
-                    avatar_shape_config.set("expression_trigger_id", expression_trigger_id.clone());
+                    // Check if this is a scene emote (GLB/GLTF path)
+                    let is_scene_emote = expression_trigger_id.contains(".glb")
+                        || expression_trigger_id.contains(".gltf");
+
+                    if is_scene_emote {
+                        // Resolve the GLB path to hash and build a scene-emote URN
+                        if let Some(emote_hash) = scene
+                            .content_mapping
+                            .get_scene_emote_hash(expression_trigger_id)
+                        {
+                            // Build URN: urn:decentraland:off-chain:scene-emote:{sceneId}-{glbHash}-{loop}
+                            let scene_emote_urn = format!(
+                                "urn:decentraland:off-chain:scene-emote:{}-{}-false",
+                                scene.scene_entity_definition.id, emote_hash.glb_hash
+                            );
+                            tracing::debug!(
+                                "AvatarShape expression_trigger: scene emote '{}' -> {}",
+                                expression_trigger_id,
+                                scene_emote_urn
+                            );
+                            avatar_shape_config.set("expression_trigger_id", scene_emote_urn);
+                        } else {
+                            tracing::warn!(
+                                "AvatarShape expression_trigger: scene emote '{}' not found in content mapping",
+                                expression_trigger_id
+                            );
+                        }
+                    } else {
+                        // URN or default emote - pass as-is
+                        avatar_shape_config
+                            .set("expression_trigger_id", expression_trigger_id.clone());
+                    }
                 }
                 if let Some(expression_trigger_timestamp) = new_value.expression_trigger_timestamp {
                     avatar_shape_config
@@ -193,7 +224,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 .expect("emotes should have at least one element");
 
             let local_emote = emote.emote_urn.contains(".glb") || emote.emote_urn.contains(".gltf");
-            tracing::info!(
+            tracing::debug!(
                 "AvatarEmoteCommand: emote_urn={}, loop={}, is_local={}",
                 emote.emote_urn,
                 emote.r#loop,
@@ -209,15 +240,40 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                     );
                     continue;
                 };
-                tracing::info!(
-                    "AvatarEmoteCommand: playing scene emote glb_hash={}, audio_hash={:?}",
+
+                // Build scene-emote URN (same format used for comms)
+                let scene_emote_urn = format!(
+                    "urn:decentraland:off-chain:scene-emote:{}-{}-{}",
+                    scene.scene_entity_definition.id, emote_hash.glb_hash, emote.r#loop
+                );
+
+                tracing::debug!(
+                    "AvatarEmoteCommand: playing scene emote urn={}, glb_hash={}, audio_hash={:?}",
+                    scene_emote_urn,
                     emote_hash.glb_hash,
                     emote_hash.audio_hash
                 );
-                let emote_data = emote_hash.to_godot_data(emote.r#loop);
-                avatar_node.call_deferred("async_play_scene_emote", &[emote_data.to_variant()]);
+
+                // Register content URL for this scene (so GDScript can look it up)
+                avatar_node.call_deferred(
+                    "register_scene_emote_content",
+                    &[
+                        scene.scene_entity_definition.id.to_godot().to_variant(),
+                        scene.content_mapping.base_url.to_godot().to_variant(),
+                        emote_hash.glb_hash.to_godot().to_variant(),
+                        emote_hash
+                            .audio_hash
+                            .as_deref()
+                            .unwrap_or_default()
+                            .to_godot()
+                            .to_variant(),
+                    ],
+                );
+
+                // Call the SAME function as wearable emotes!
+                avatar_node.call_deferred("async_play_emote", &[scene_emote_urn.to_variant()]);
             } else {
-                tracing::info!(
+                tracing::debug!(
                     "AvatarEmoteCommand: playing wearable emote urn={}",
                     emote.emote_urn
                 );

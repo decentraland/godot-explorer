@@ -4,7 +4,7 @@ use std::{
 };
 
 use ethers_core::types::H160;
-use godot::prelude::{GString, Gd};
+use godot::prelude::{GString, Gd, ToGodot};
 use std::cmp::Ordering;
 use tokio::sync::mpsc;
 
@@ -21,7 +21,7 @@ use crate::{
     },
     content::profile::{prepare_request_requirements, request_lambda_profile},
     dcl::components::proto_components::kernel::comms::rfc4,
-    godot_classes::dcl_social_blacklist::DclSocialBlacklist,
+    godot_classes::{dcl_global::DclGlobal, dcl_social_blacklist::DclSocialBlacklist},
     scene_runner::tokio_runtime::TokioRuntime,
 };
 
@@ -61,6 +61,8 @@ pub enum MessageType {
     PeerJoined,                     // Peer joined a room
     PeerLeft,                       // Peer left a room
     Disconnected(DisconnectReason), // Disconnected from the server
+    PeerMetadata(String),           // Peer metadata (e.g., version info for staging/dev builds)
+    RoomMetadataChanged(String),    // Room metadata changed (e.g., ban list update)
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +127,9 @@ struct Peer {
     profile_fetch_attempted: bool,           // Track if we already tried to fetch this profile
     profile_fetch_failures: u8,              // Count consecutive failures
     profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
+    peer_version: Option<String>,            // Client version for staging/dev builds
+    last_movement_timestamp: f32,            // Dedup: last movement timestamp received
+    last_emote_incremental_id: u32,          // Dedup: last emote incremental ID received
 }
 
 struct ProfileUpdate {
@@ -209,6 +214,9 @@ pub struct MessageProcessor {
 
     // Disconnect reason if disconnected from the server, along with the room_id
     disconnect_reason: Option<(DisconnectReason, String)>,
+
+    // Set to true when room metadata indicates the local player is banned
+    room_metadata_banned: bool,
 }
 
 fn compare_f64(a: &f64, b: &f64) -> Ordering {
@@ -269,7 +277,17 @@ impl MessageProcessor {
             cached_muted: HashSet::new(),
             active_video_tracks: HashMap::new(),
             disconnect_reason: None,
+            room_metadata_banned: false,
         }
+    }
+
+    /// Returns true if the address looks like a real player (non-synthetic Ethereum address).
+    /// Synthetic addresses (like H160::from_low_u64_be(1) for the auth server) are non-player.
+    fn is_player_address(address: H160) -> bool {
+        // Addresses in the first 0xff range are Ethereum precompiles / synthetic,
+        // not real players. Real Ethereum addresses are derived from public keys
+        // and are effectively random 160-bit values.
+        address > H160::from_low_u64_be(0xff)
     }
 
     /// Sets the social blacklist reference for filtering blocked/muted users
@@ -392,6 +410,13 @@ impl MessageProcessor {
     /// CommunicationManager should call this regularly to check for disconnection
     pub fn consume_disconnect_reason(&mut self) -> Option<(DisconnectReason, String)> {
         self.disconnect_reason.take()
+    }
+
+    /// Returns true (and resets) if room metadata indicated the local player was banned.
+    pub fn consume_room_metadata_banned(&mut self) -> bool {
+        let banned = self.room_metadata_banned;
+        self.room_metadata_banned = false;
+        banned
     }
 
     /// Processes all pending messages and performs periodic maintenance
@@ -533,7 +558,167 @@ impl MessageProcessor {
         true
     }
 
+    /// Handle media messages (video/audio from streamers) that don't need peer lifecycle.
+    /// These use synthetic addresses (H160::zero()) and must bypass the player address check.
+    fn process_media_message(&mut self, message: IncomingMessage) {
+        match message.message {
+            MessageType::InitVideo(video_init) => {
+                tracing::debug!(
+                    "InitVideo from {:#x}: {}x{}",
+                    message.address,
+                    video_init.width,
+                    video_init.height
+                );
+
+                self.active_video_tracks.insert(
+                    message.address,
+                    VideoTrackInfo {
+                        width: video_init.width,
+                        height: video_init.height,
+                        last_frame_time: Instant::now(),
+                    },
+                );
+            }
+            MessageType::VideoFrame(video_frame) => {
+                // Filter blocked users
+                if self.cached_blocked.contains(&message.address) {
+                    return;
+                }
+
+                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
+                    track_info.last_frame_time = Instant::now();
+
+                    // Forward to all scenes (any video track goes to all livekit video players)
+                    use crate::godot_classes::dcl_global::DclGlobal;
+                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                    let mut scene_runner = scene_runner.bind_mut();
+
+                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                        scene.process_livekit_video_frame(
+                            video_frame.width,
+                            video_frame.height,
+                            &video_frame.data,
+                        );
+                    }
+                } else {
+                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
+                }
+            }
+            MessageType::InitStreamerAudio(audio_init) => {
+                tracing::debug!(
+                    "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
+                    audio_init.sample_rate,
+                    audio_init.num_channels,
+                    audio_init.samples_per_channel
+                );
+
+                // Forward to all scenes to initialize their video player audio
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.init_livekit_audio(
+                        audio_init.sample_rate,
+                        audio_init.num_channels,
+                        audio_init.samples_per_channel,
+                    );
+                }
+            }
+            MessageType::StreamerAudioFrame(audio_frame) => {
+                // Convert i16 audio data to PackedVector2Array (same as voice chat)
+                let frame = godot::prelude::PackedVector2Array::from_iter(
+                    audio_frame.data.iter().map(|c| {
+                        let val = (*c as f32) / (i16::MAX as f32);
+                        godot::prelude::Vector2 { x: val, y: val }
+                    }),
+                );
+
+                // Forward to all scenes
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
+
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.process_livekit_audio_frame(frame.clone());
+                }
+            }
+            _ => {} // Other message types are not media messages
+        }
+    }
+
+    /// Handle non-player participant messages (e.g., "authoritative-server").
+    /// Matching bevy's NonPlayerUpdate path: no avatar, no profile, only Scene messages.
+    fn process_non_player_message(&mut self, message: IncomingMessage) {
+        if let MessageType::Rfc4(rfc4_msg) = message.message {
+            if let rfc4::packet::Message::Scene(scene) = rfc4_msg.message {
+                tracing::debug!(
+                    "📨 Non-player Scene message received for scene '{}' ({} bytes)",
+                    scene.scene_id,
+                    scene.data.len()
+                );
+
+                // Limit the number of scene IDs we track
+                if !self.incoming_scene_messages.contains_key(&scene.scene_id)
+                    && self.incoming_scene_messages.len() >= MAX_SCENE_IDS
+                {
+                    if let Some(oldest_key) = self.incoming_scene_messages.keys().next().cloned() {
+                        self.incoming_scene_messages.remove(&oldest_key);
+                    }
+                }
+
+                let entry = self
+                    .incoming_scene_messages
+                    .entry(scene.scene_id.clone())
+                    .or_default();
+
+                if entry.len() >= MAX_SCENE_MESSAGES_PER_SCENE {
+                    entry.pop_front();
+                }
+                entry.push_back((message.address, scene.data));
+            } else {
+                tracing::debug!(
+                    "📨 Non-player non-Scene message ignored from {:#x} (room '{}')",
+                    message.address,
+                    message.room_id
+                );
+            }
+        }
+    }
+
     fn process_message(&mut self, message: IncomingMessage) {
+        // Skip messages from ourselves (can happen if local participant events leak through)
+        if message.address == self.player_address {
+            return;
+        }
+
+        // Room-level events (synthetic H160::zero() address) — handle before peer checks
+        if let MessageType::RoomMetadataChanged(ref metadata) = message.message {
+            self.handle_room_metadata_changed(metadata);
+            return;
+        }
+
+        // Media messages (video/audio from streamers) use synthetic addresses (H160::zero())
+        // and must bypass the player address check — they don't need peer lifecycle management.
+        match &message.message {
+            MessageType::InitVideo(_)
+            | MessageType::VideoFrame(_)
+            | MessageType::InitStreamerAudio(_)
+            | MessageType::StreamerAudioFrame(_) => {
+                self.process_media_message(message);
+                return;
+            }
+            _ => {}
+        }
+
+        // Non-player participants (like "authoritative-server" with synthetic address)
+        // bypass the full peer lifecycle — no avatar, no profile, only Scene messages.
+        // This matches bevy's NonPlayerUpdate path.
+        if !Self::is_player_address(message.address) {
+            self.process_non_player_message(message);
+            return;
+        }
+
         let room_id = message.room_id.clone(); // Extract room_id for later use
 
         // Handle peer creation/updates first
@@ -595,6 +780,9 @@ impl MessageProcessor {
                     profile_fetch_attempted: false,
                     profile_fetch_failures: 0,
                     profile_fetch_banned_until: None,
+                    peer_version: None,
+                    last_movement_timestamp: f32::NEG_INFINITY,
+                    last_emote_incremental_id: 0,
                 },
             );
 
@@ -679,86 +867,14 @@ impl MessageProcessor {
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene.push_voice_frame(peer_alias, frame);
             }
-            MessageType::InitVideo(video_init) => {
-                tracing::debug!(
-                    "InitVideo from {:#x}: {}x{}",
-                    message.address,
-                    video_init.width,
-                    video_init.height
-                );
-
-                self.active_video_tracks.insert(
-                    message.address,
-                    VideoTrackInfo {
-                        width: video_init.width,
-                        height: video_init.height,
-                        last_frame_time: Instant::now(),
-                    },
-                );
-            }
-            MessageType::VideoFrame(video_frame) => {
-                // Filter blocked users
-                if self.cached_blocked.contains(&message.address) {
-                    return;
-                }
-
-                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
-                    track_info.last_frame_time = Instant::now();
-
-                    // Forward to all scenes (any video track goes to all livekit video players)
-                    use crate::godot_classes::dcl_global::DclGlobal;
-                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                    let mut scene_runner = scene_runner.bind_mut();
-
-                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                        scene.process_livekit_video_frame(
-                            video_frame.width,
-                            video_frame.height,
-                            &video_frame.data,
-                        );
-                    }
-                } else {
-                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
-                }
-            }
-            MessageType::InitStreamerAudio(audio_init) => {
-                tracing::debug!(
-                    "InitStreamerAudio: sample_rate={}, channels={}, samples_per_channel={}",
-                    audio_init.sample_rate,
-                    audio_init.num_channels,
-                    audio_init.samples_per_channel
-                );
-
-                // Forward to all scenes to initialize their video player audio
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.init_livekit_audio(
-                        audio_init.sample_rate,
-                        audio_init.num_channels,
-                        audio_init.samples_per_channel,
-                    );
-                }
-            }
-            MessageType::StreamerAudioFrame(audio_frame) => {
-                // Convert i16 audio data to PackedVector2Array (same as voice chat)
-                let frame = godot::prelude::PackedVector2Array::from_iter(
-                    audio_frame.data.iter().map(|c| {
-                        let val = (*c as f32) / (i16::MAX as f32);
-                        godot::prelude::Vector2 { x: val, y: val }
-                    }),
-                );
-
-                // Forward to all scenes
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.process_livekit_audio_frame(frame.clone());
-                }
+            // Media messages (InitVideo, VideoFrame, InitStreamerAudio, StreamerAudioFrame)
+            // are handled early in process_message() via process_media_message() before
+            // the peer lifecycle check, so they never reach this match block.
+            MessageType::InitVideo(_)
+            | MessageType::VideoFrame(_)
+            | MessageType::InitStreamerAudio(_)
+            | MessageType::StreamerAudioFrame(_) => {
+                unreachable!("Media messages are handled before peer lifecycle check");
             }
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
@@ -784,6 +900,63 @@ impl MessageProcessor {
                     self.disconnect_reason = Some((*reason, room_id));
                 }
             }
+            MessageType::PeerMetadata(ref metadata) => {
+                // Parse metadata JSON to extract version info
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(metadata) {
+                    if let Some(version) = json.get("dcl_version").and_then(|v| v.as_str()) {
+                        tracing::debug!(
+                            "Received version metadata from {:#x}: {}",
+                            message.address,
+                            version
+                        );
+                        if let Some(peer) = self.peer_identities.get_mut(&message.address) {
+                            peer.peer_version = Some(version.to_string());
+                            // Only show version label for non-production builds
+                            if !DclGlobal::is_production() {
+                                let mut avatar_scene_ref = self.avatars.clone();
+                                let address_str = format!("{:#x}", message.address);
+                                avatar_scene_ref.call(
+                                    "set_avatar_version_by_address",
+                                    &[
+                                        GString::from(&address_str).to_variant(),
+                                        GString::from(version).to_variant(),
+                                    ],
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            // Handled via early return at the top of process_message()
+            MessageType::RoomMetadataChanged(_) => {}
+        }
+    }
+
+    /// Parse room metadata JSON for `bannedAddresses` and check if the local
+    /// player is in the list.  Metadata format (from comms-gatekeeper):
+    /// `{"bannedAddresses": ["0xabc...", "0xdef..."]}`
+    fn handle_room_metadata_changed(&mut self, metadata: &str) {
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(metadata) else {
+            return;
+        };
+        let Some(banned) = json.get("bannedAddresses").and_then(|v| v.as_array()) else {
+            return;
+        };
+
+        let local_addr = format!("{:#x}", self.player_address);
+        let local_addr_no_prefix = &local_addr[2..]; // strip "0x"
+        let is_banned = banned.iter().any(|v| {
+            v.as_str().is_some_and(|s| {
+                s.eq_ignore_ascii_case(&local_addr) || s.eq_ignore_ascii_case(local_addr_no_prefix)
+            })
+        });
+
+        if is_banned {
+            tracing::warn!(
+                "Room metadata indicates local player {:#x} is banned",
+                self.player_address
+            );
+            self.room_metadata_banned = true;
         }
     }
 
@@ -847,8 +1020,22 @@ impl MessageProcessor {
                 avatar_scene.update_avatar_transform_with_rfc4_position(peer_alias, &position);
             }
             rfc4::packet::Message::Movement(movement) => {
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if movement.timestamp <= peer.last_movement_timestamp {
+                        tracing::debug!(
+                            "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
+                            address,
+                            movement.timestamp,
+                            peer.last_movement_timestamp
+                        );
+                        return;
+                    }
+                    peer.last_movement_timestamp = movement.timestamp;
+                }
+
                 tracing::debug!(
-                    "Received Movement from {:#x}: timestamp({}) pos({}, {}, {}), rot_y({}), vel({}, {}, {}) blend({}), slide_blend({})", 
+                    "Received Movement from {:#x}: timestamp({}) pos({}, {}, {}), rot_y({}), vel({}, {}, {}) blend({}), slide_blend({})",
                     address,
                     movement.timestamp,
                     movement.position_x, movement.position_y, movement.position_z,
@@ -869,11 +1056,25 @@ impl MessageProcessor {
                 // Decompress movement data
                 let movement = MovementCompressed::from_proto(movement_compressed);
 
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
+                let timestamp = movement.temporal.timestamp_f32();
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if timestamp <= peer.last_movement_timestamp {
+                        tracing::debug!(
+                            "Discarding duplicate MovementCompressed from {:#x}: timestamp {} <= {}",
+                            address,
+                            timestamp,
+                            peer.last_movement_timestamp
+                        );
+                        return;
+                    }
+                    peer.last_movement_timestamp = timestamp;
+                }
+
                 // Get position from compressed movement with configured realm bounds
                 let pos = movement.position(self.realm_min, self.realm_max);
                 let velocity = movement.velocity();
-                let rotation_rad = -movement.temporal.rotation_f32();
-                let timestamp = movement.temporal.timestamp_f32();
+                let rotation_rad = movement.temporal.rotation_f32();
 
                 tracing::debug!(
                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
@@ -950,6 +1151,20 @@ impl MessageProcessor {
                 );
 
                 let announced_version = announce_profile_version.profile_version;
+
+                // Deduplicate: skip if same version already announced and fetch attempted (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get(&address) {
+                    if peer.announced_version == Some(announced_version)
+                        && peer.profile_fetch_attempted
+                    {
+                        tracing::debug!(
+                            "Discarding duplicate ProfileVersion from {:#x}: version {} already being processed",
+                            address,
+                            announced_version
+                        );
+                        return;
+                    }
+                }
 
                 // Get current version and update peer
                 let (current_version, peer_alias_for_async) = if let Some(peer) =
@@ -1281,6 +1496,20 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Voice(_voice) => {}
             rfc4::packet::Message::PlayerEmote(player_emote) => {
+                // Deduplicate: skip if incremental_id is not newer (dual-room broadcasting)
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
+                    if player_emote.incremental_id <= peer.last_emote_incremental_id {
+                        tracing::debug!(
+                            "Discarding duplicate PlayerEmote from {:#x}: id {} <= {}",
+                            address,
+                            player_emote.incremental_id,
+                            peer.last_emote_incremental_id
+                        );
+                        return;
+                    }
+                    peer.last_emote_incremental_id = player_emote.incremental_id;
+                }
+
                 tracing::debug!(
                     "Received PlayerEmote from {:#x}: {:?}",
                     address,
@@ -1304,8 +1533,23 @@ impl MessageProcessor {
 
     pub fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
         if let Some(messages) = self.incoming_scene_messages.get_mut(scene_id) {
-            messages.drain(..).collect()
+            let result: Vec<_> = messages.drain(..).collect();
+            if !result.is_empty() {
+                tracing::debug!(
+                    "📤 consume_scene_messages: delivering {} messages for scene '{}'",
+                    result.len(),
+                    scene_id
+                );
+            }
+            result
         } else {
+            if !self.incoming_scene_messages.is_empty() {
+                tracing::debug!(
+                    "📤 consume_scene_messages: scene '{}' not found, available keys: {:?}",
+                    scene_id,
+                    self.incoming_scene_messages.keys().collect::<Vec<_>>()
+                );
+            }
             Vec::new()
         }
     }
@@ -1321,5 +1565,31 @@ impl MessageProcessor {
         // Clean up all avatars when disconnected
         let mut avatar_scene_ref = self.avatars.clone();
         avatar_scene_ref.bind_mut().clean();
+    }
+
+    /// Returns room connectivity info for each peer.
+    /// Each entry is (address, room_description) where room_description is
+    /// "Scene", "Archipelago", or "Both".
+    pub fn get_peer_room_info(&self) -> Vec<(H160, String)> {
+        let mut result = Vec::new();
+        for (address, peer) in &self.peer_identities {
+            let mut has_scene = false;
+            let mut has_archipelago = false;
+            for room_id in peer.room_activity.keys() {
+                if room_id.starts_with("scene-") {
+                    has_scene = true;
+                } else {
+                    has_archipelago = true;
+                }
+            }
+            let room_desc = match (has_scene, has_archipelago) {
+                (true, true) => "Both".to_string(),
+                (true, false) => "Scene".to_string(),
+                (false, true) => "Archipelago".to_string(),
+                (false, false) => "None".to_string(),
+            };
+            result.push((*address, room_desc));
+        }
+        result
     }
 }

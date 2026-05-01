@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/JumpInIcnWhite.svg-c3b8600ab6d4fb6e039982c7a5
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

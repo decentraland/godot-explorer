@@ -20,13 +20,18 @@ func _ready():
 ## Called by loading_screen.gd when it wants to enable loading
 func enable_loading_screen():
 	# Show loading screen immediately - the LoadingSession will update progress later
-	Global.content_provider.set_max_concurrent_downloads(6)
+	Global.content_provider.set_max_concurrent_downloads(12)
+	Global.content_provider.set_max_low_priority_downloads(2)
+
+	# Defer scene room connection until loading finishes
+	Global.comms.hold_comms()
 
 	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
 	AudioSettings.apply_voice_chat_volume_settings(0.0)
 
 	loading_screen.show()
+	Global.set_orientation_landscape()
 	loading_screen.set_progress(0)
 	loading_show_requested.emit()
 
@@ -37,7 +42,11 @@ func hide_loading_screen():
 
 
 func _on_loading_started(_session_id: int, _expected_count: int):
-	Global.content_provider.set_max_concurrent_downloads(6)
+	Global.content_provider.set_max_concurrent_downloads(12)
+	Global.content_provider.set_max_low_priority_downloads(2)
+
+	# Defer scene room connection until loading finishes
+	Global.comms.hold_comms()
 
 	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
@@ -75,7 +84,11 @@ func _on_loading_cancelled(_session_id: int):
 
 
 func _hide_loading_screen():
-	Global.content_provider.set_max_concurrent_downloads(6)
+	Global.content_provider.set_max_concurrent_downloads(12)
+	Global.content_provider.set_max_low_priority_downloads(12)
+
+	# Connect the scene room now that loading is done
+	Global.comms.release_comms()
 
 	# Restore voice chat and scene volume
 	AudioSettings.apply_scene_volume_settings()

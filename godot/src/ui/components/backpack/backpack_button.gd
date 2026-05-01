@@ -1,4 +1,4 @@
-extends AnimatedButton
+extends StaticButton
 
 
 func _get_unread_count() -> int:
@@ -10,7 +10,7 @@ func _connect_update_signals() -> void:
 
 
 func _on_button_clicked() -> void:
-	Global.open_backpack.emit()
+	Global.open_backpack.emit(false)
 	Global.send_haptic_feedback()
 
 

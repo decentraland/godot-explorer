@@ -8,10 +8,6 @@ use crate::dcl::SceneId;
 use super::animator_controller::{apply_anims, DUMMY_ANIMATION_NAME};
 use super::dcl_global::DclGlobal;
 
-/// Number of transform changes to tolerate before triggering kinematic switch
-/// First change is tolerated (initial positioning), switch happens after the second
-const TRANSFORM_CHANGE_THRESHOLD: i32 = 2;
-
 #[derive(Clone, Var, GodotConvert, Export, PartialEq, Debug)]
 #[godot(via=i32)]
 pub enum GltfContainerLoadingState {
@@ -94,12 +90,6 @@ pub struct DclGltfContainer {
     #[export]
     dcl_pending_node: Option<Gd<Node>>,
 
-    // Transform change tracking for STATIC -> KINEMATIC optimization
-    // Tracked in Rust for better per-frame performance
-    last_global_transform: Transform3D,
-    transform_change_count: i32,
-    transform_tracking_enabled: bool,
-
     base: Base<Node3D>,
 }
 
@@ -109,32 +99,6 @@ impl DclGltfContainer {
     /// switching colliders from STATIC to KINEMATIC mode
     #[signal]
     fn switch_to_kinematic();
-
-    /// Enable transform tracking for STATIC->KINEMATIC optimization
-    /// Call this after loading a GLTF that has static colliders
-    #[func]
-    pub fn enable_transform_tracking(&mut self) {
-        self.last_global_transform = self.base().get_global_transform();
-        self.transform_change_count = 0;
-        self.transform_tracking_enabled = true;
-        self.base_mut().set_process(true);
-    }
-
-    /// Disable transform tracking (e.g., after switching to kinematic)
-    #[func]
-    pub fn disable_transform_tracking(&mut self) {
-        self.transform_tracking_enabled = false;
-        self.base_mut().set_process(false);
-    }
-
-    /// Reset transform tracking state (e.g., when entity moves after kinematic switch)
-    /// Resets counters but keeps tracking enabled if it was
-    #[func]
-    pub fn reset_transform_tracking(&mut self) {
-        self.last_global_transform = self.base().get_global_transform();
-        self.transform_change_count = 0;
-        // Keep transform_tracking_enabled and process as they were
-    }
 
     #[func]
     pub fn get_gltf_resource(&self) -> Option<Gd<Node3D>> {
@@ -224,38 +188,7 @@ impl INode3D for DclGltfContainer {
             dcl_entity_id: SceneEntityId::INVALID.as_i32(),
             dcl_gltf_loading_state: GltfContainerLoadingState::Unknown,
             dcl_pending_node: None,
-            // Transform tracking starts disabled
-            last_global_transform: Transform3D::IDENTITY,
-            transform_change_count: 0,
-            transform_tracking_enabled: false,
             base,
-        }
-    }
-
-    fn process(&mut self, _delta: f64) {
-        // Skip if tracking is disabled
-        if !self.transform_tracking_enabled {
-            return;
-        }
-
-        // Skip if not in tree (being freed) - prevents signal emission on freed nodes
-        if !self.base().is_inside_tree() {
-            self.transform_tracking_enabled = false;
-            return;
-        }
-
-        // Check if transform has changed
-        let current_transform = self.base().get_global_transform();
-        if current_transform != self.last_global_transform {
-            self.transform_change_count += 1;
-            self.last_global_transform = current_transform;
-
-            // Emit signal after reaching threshold
-            if self.transform_change_count >= TRANSFORM_CHANGE_THRESHOLD {
-                self.transform_tracking_enabled = false;
-                self.base_mut().set_process(false);
-                self.base_mut().emit_signal("switch_to_kinematic", &[]);
-            }
         }
     }
 }

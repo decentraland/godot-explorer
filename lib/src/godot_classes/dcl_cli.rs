@@ -35,6 +35,8 @@ pub struct DclCli {
     #[var(get)]
     pub skip_lobby: bool,
     #[var(get)]
+    pub skip_lobby_to_menu: bool,
+    #[var(get)]
     pub guest_profile: bool,
     #[var(get)]
     pub preview_mode: bool,
@@ -81,6 +83,8 @@ pub struct DclCli {
     #[var(get)]
     pub only_no_optimized: bool,
     #[var(get)]
+    pub only_no_optimized_scene_emotes: bool,
+    #[var(get)]
     pub emote_test_mode: bool,
     #[var(get)]
     pub stress_test: bool,
@@ -88,8 +92,22 @@ pub struct DclCli {
     pub emulate_ios: bool,
     #[var(get)]
     pub emulate_android: bool,
+    #[var(get)]
+    pub landscape: bool,
+    #[var(get)]
+    pub asset_server: bool,
+    #[var(get)]
+    pub scene_inspector: GString,
+    #[var(get)]
+    pub scene_inspector_file: bool,
+    #[var(get)]
+    pub low_spec_warning: bool,
+    #[var(get)]
+    pub fi_benchmark_size: i32,
 
     // Arguments with values
+    #[var(get)]
+    pub asset_server_port: i32,
     #[var(get)]
     pub realm: GString,
     #[var(get)]
@@ -102,6 +120,10 @@ pub struct DclCli {
     pub snapshot_folder: GString,
     #[var(get)]
     pub fake_deeplink: GString,
+    #[var(get)]
+    pub fi_benchmark_output: GString,
+    #[var(get)]
+    pub saved_profile: GString,
 }
 
 impl DclCli {
@@ -134,6 +156,13 @@ impl DclCli {
                 category: "UI/Display".to_string(),
             },
             ArgDefinition {
+                name: "--skip-lobby-to-menu".to_string(),
+                description: "Skip the lobby screen and go directly to the menu/discover screen"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
                 name: "--emulate-ios".to_string(),
                 description: "Emulate iOS safe area margins (iPhone 14 Pro style notch)"
                     .to_string(),
@@ -144,6 +173,14 @@ impl DclCli {
                 name: "--emulate-android".to_string(),
                 description: "Emulate Android safe area margins (status bar + gesture nav)"
                     .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--landscape".to_string(),
+                description:
+                    "Start in landscape orientation (used with --emulate-ios/--emulate-android)"
+                        .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
@@ -312,6 +349,14 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Asset Loading".to_string(),
             },
+            // TODO: Remove after asset-server re-processes scene emotes correctly
+            ArgDefinition {
+                name: "--use-optimized-scene-emotes".to_string(),
+                description: "Use optimized scene emotes (disabled by default due to asset issues)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Asset Loading".to_string(),
+            },
             // Deep Link
             ArgDefinition {
                 name: "--fake-deeplink".to_string(),
@@ -325,6 +370,72 @@ impl DclCli {
                 description:
                     "Run stress test with rapid teleportation to test scene loading/unloading"
                         .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
+            // Asset Server
+            ArgDefinition {
+                name: "--asset-server".to_string(),
+                description: "Start the asset optimization server instead of the normal client"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Server".to_string(),
+            },
+            ArgDefinition {
+                name: "--asset-server-port".to_string(),
+                description: "Port for asset optimization server (default: 8080)".to_string(),
+                arg_type: ArgType::Value("<port>".to_string()),
+                category: "Server".to_string(),
+            },
+            // Floating Islands Benchmark
+            ArgDefinition {
+                name: "--fi-benchmark-size".to_string(),
+                description: "Number of parcels to generate for floating islands benchmark"
+                    .to_string(),
+                arg_type: ArgType::Value("<N>".to_string()),
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--fi-benchmark-output".to_string(),
+                description: "Output file path for benchmark results (JSON)".to_string(),
+                arg_type: ArgType::Value("<file>".to_string()),
+                category: "Performance".to_string(),
+            },
+            // Authentication
+            ArgDefinition {
+                name: "--saved-profile".to_string(),
+                description: "Use a numbered profile slot for identity storage (e.g., 2 uses account_2/guest_profile_2)".to_string(),
+                arg_type: ArgType::Value("<number>".to_string()),
+                category: "Authentication".to_string(),
+            },
+            ArgDefinition {
+                name: "--scene-inspector".to_string(),
+                description: "Enable the Scene Inspector. 'true' = use the preview WebSocket channel, or 'ws://host:port' for a custom WebSocket target. Also passable via deeplink (?scene-inspector=true)".to_string(),
+                arg_type: ArgType::Value("<target>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--scene-inspector-file".to_string(),
+                description: "Write Scene Inspector entries to JSONL files on disk (user://scene_inspector/)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            // Logging
+            ArgDefinition {
+                name: "--rust-log".to_string(),
+                description: "Set Rust log filter (e.g., debug, info, warn, dclgodot::comms=debug,info). Works via deeplink on all platforms".to_string(),
+                arg_type: ArgType::Value("<filter>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-pipe-logging".to_string(),
+                description: "Disable piping Rust logs to Godot console (use platform default: stdout/logcat/oslog)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--low-spec-warning".to_string(),
+                description: "Simulate low-spec iPhone warnings (for testing on desktop)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
@@ -435,6 +546,7 @@ impl INode for DclCli {
         // Extract common flags
         let force_mobile = args_map.contains_key("--force-mobile");
         let skip_lobby = args_map.contains_key("--skip-lobby");
+        let skip_lobby_to_menu = args_map.contains_key("--skip-lobby-to-menu");
         let guest_profile = args_map.contains_key("--guest-profile");
         let preview_mode = args_map.contains_key("--preview");
         let scene_test_mode = args_map.contains_key("--scene-test");
@@ -456,13 +568,38 @@ impl INode for DclCli {
         let developer_mode = args_map.contains_key("--dev");
         let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
         let only_optimized = args_map.contains_key("--only-optimized");
-        let only_no_optimized = true; // args_map.contains_key("--only-no-optimized");
+        let only_no_optimized = args_map.contains_key("--only-no-optimized");
+        // TODO: Remove this default=true after asset-server re-processes scene emotes correctly.
+        // Currently optimized scene emotes have incorrect animation structure.
+        let only_no_optimized_scene_emotes = !args_map.contains_key("--use-optimized-scene-emotes");
         let emote_test_mode = args_map.contains_key("--emote-test");
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
+        let landscape = args_map.contains_key("--landscape");
+        let asset_server = args_map.contains_key("--asset-server");
+        // --scene-inspector accepts an optional value; bare flag means "true"
+        let scene_inspector = args_map
+            .get("--scene-inspector")
+            .map(|v| {
+                v.as_ref()
+                    .map(GString::from)
+                    .unwrap_or_else(|| GString::from("true"))
+            })
+            .unwrap_or_default();
+        let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
+        let low_spec_warning = args_map.contains_key("--low-spec-warning");
+        let fi_benchmark_size = args_map
+            .get("--fi-benchmark-size")
+            .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
+            .unwrap_or(-1);
 
         // Extract arguments with values
+        let asset_server_port = args_map
+            .get("--asset-server-port")
+            .and_then(|v| v.as_ref())
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(8080);
         let realm = args_map
             .get("--realm")
             .and_then(|v| v.as_ref())
@@ -503,6 +640,17 @@ impl INode for DclCli {
                 }
             })
             .unwrap_or_default();
+        let fi_benchmark_output = args_map
+            .get("--fi-benchmark-output")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
+        let saved_profile = args_map
+            .get("--saved-profile")
+            .and_then(|v| v.as_ref())
+            .and_then(|s| s.parse::<u32>().ok())
+            .map(|n| GString::from(&n.to_string()))
+            .unwrap_or_default();
 
         // Convert combined args back to PackedStringArray for storage
         let args: PackedStringArray = args_vec.iter().cloned().collect();
@@ -514,6 +662,7 @@ impl INode for DclCli {
             arg_definitions: Self::register_arguments(),
             force_mobile,
             skip_lobby,
+            skip_lobby_to_menu,
             guest_profile,
             preview_mode,
             scene_test_mode,
@@ -537,16 +686,26 @@ impl INode for DclCli {
             help_requested,
             only_optimized,
             only_no_optimized,
+            only_no_optimized_scene_emotes,
             emote_test_mode,
             stress_test,
             emulate_ios,
             emulate_android,
+            landscape,
+            asset_server,
+            scene_inspector,
+            scene_inspector_file,
+            low_spec_warning,
+            fi_benchmark_size,
+            asset_server_port,
             realm,
             location,
             scene_input_file,
             avatars_file,
             snapshot_folder,
             fake_deeplink,
+            fi_benchmark_output,
+            saved_profile,
         }
     }
 }

@@ -2,7 +2,7 @@
 
 importer="svg"
 type="DPITexture"
-uid="uid://bxi281gjgk05i"
+uid="uid://bu0ha8dwtwdcl"
 path="res://.godot/imported/unfriend.svg-681ea55e254d92031574dcd3f6fd5743.dpitex"
 
 [deps]
@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/unfriend.svg-681ea55e254d92031574dcd3f6fd5743
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

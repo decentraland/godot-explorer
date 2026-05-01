@@ -16,7 +16,6 @@ signal local_notification_permission_changed(granted: bool)
 signal local_notification_scheduled(notification_id: String)
 signal local_notification_cancelled(notification_id: String)
 
-const BASE_URL = "https://notifications.decentraland.org"
 const POLL_INTERVAL_SECONDS = 30.0  # Poll every 30 seconds
 
 ## TESTING: Set to true to inject fake notifications for testing
@@ -30,6 +29,9 @@ const ENABLE_DEBUG_RANDOM_NOTIFICATIONS = false
 
 ## DEBUG: Set to true to schedule a test notification 2 minutes from now using real event data
 const DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION = false
+
+## DEBUG: Set to true to schedule the Day 1 notification 30 seconds from now instead of 24h
+const DEBUG_DAY1_SHORT_DELAY = false
 
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
@@ -49,7 +51,6 @@ const MAX_OS_SCHEDULED_NOTIFICATIONS = 24  # Maximum notifications scheduled wit
 const TOAST_MAX_AGE_MS = 5 * 60 * 1000  # 5 minutes in milliseconds
 
 # Event notification sync constants
-const EVENTS_API_BASE_URL = "https://events.decentraland.org/api"
 const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 
 # Local notifications version - increment this to clear and re-sync all notifications
@@ -122,6 +123,9 @@ func _ready() -> void:
 	# Initial queue sync on app launch (relaunch)
 	_sync_notification_queue.call_deferred()
 
+	# Schedule day 1 notification (24h after first launch)
+	async_schedule_day1_notification.call_deferred()
+
 
 ## Start polling for new notifications
 func start_polling() -> void:
@@ -143,9 +147,11 @@ func stop_polling() -> void:
 		_poll_timer.stop()
 
 
-## Get currently cached notifications
+## Get currently cached notifications sorted by timestamp descending (newest first)
 func get_notifications() -> Array:
-	return _notifications.duplicate()
+	var sorted = _notifications.duplicate()
+	sorted.sort_custom(func(a, b): return a.get("timestamp", 0) > b.get("timestamp", 0))
+	return sorted
 
 
 ## Filter notifications to only include supported types
@@ -346,7 +352,7 @@ func fetch_notifications(
 	if query_params.size() > 0:
 		query_string = "?" + "&".join(query_params)
 
-	var url = BASE_URL + "/notifications" + query_string
+	var url = DclUrls.notifications_api() + "/notifications" + query_string
 
 	# Execute async fetch in a coroutine
 	_async_fetch_notifications(promise, url)
@@ -439,7 +445,7 @@ func mark_as_read(notification_ids: PackedStringArray) -> Promise:
 		promise.reject("User not authenticated")
 		return promise
 
-	var url = BASE_URL + "/notifications/read"
+	var url = DclUrls.notifications_api() + "/notifications/read"
 	var body = {"notificationIds": Array(notification_ids)}
 	var body_json = JSON.stringify(body)
 
@@ -485,6 +491,13 @@ func _on_poll_timeout() -> void:
 
 ## OS wrapper signal handlers
 func _on_permission_changed(granted: bool) -> void:
+	if granted:
+		Global.metrics.track_click_button("accept", "NOTIF_PROMPT", "")
+		# Permission just granted — try scheduling Day 1 notification now
+		async_schedule_day1_notification.call_deferred()
+	else:
+		Global.metrics.track_click_button("reject", "NOTIF_PROMPT", "")
+	Global.metrics.flush.call_deferred()
 	local_notification_permission_changed.emit(granted)
 
 
@@ -576,13 +589,49 @@ func _on_debug_timer_timeout() -> void:
 
 
 # =============================================================================
+# SYSTEM TOASTS (in-app only, not OS notifications)
+# =============================================================================
+
+
+## Show a system toast notification (in-app only, for things like profile changes)
+## @param title: The notification title
+## @param description: The notification description
+## @param notification_type: Type identifier (default: "system")
+func show_system_toast(
+	title: String,
+	description: String,
+	notification_type: String = "system",
+	toast_style: String = "default"
+) -> void:
+	var timestamp = Time.get_unix_time_from_system() * 1000  # milliseconds
+	var notif: Dictionary = {
+		"id": "system_" + str(timestamp) + "_" + str(randi()),
+		"type": notification_type,
+		"address": "",
+		"timestamp": int(timestamp),
+		"read": true,  # Mark as read so it doesn't persist
+		"metadata": {"title": title, "description": description, "link": ""},
+		"toast_style": toast_style,
+	}
+
+	# Add to queue for toast display
+	_notification_queue.append(notif)
+
+	# Emit signal to show toast if this is the only one in queue
+	if _notification_queue.size() == 1 and not _queue_paused:
+		notification_queued.emit(notif)
+
+
+# =============================================================================
 # LOCAL NOTIFICATIONS
 # =============================================================================
 
 
 ## Request permission to show local notifications
-func request_local_notification_permission() -> void:
+func request_local_notification_permission(from_screen: String = "") -> void:
 	if _os_wrapper:
+		Global.metrics.track_screen_viewed("NOTIF_PROMPT", from_screen)
+		Global.metrics.flush.call_deferred()
 		_os_wrapper.request_permission()
 
 
@@ -811,6 +860,12 @@ func _check_and_handle_version_change() -> bool:
 	Global.get_config().local_notifications_version = LOCAL_NOTIFICATIONS_VERSION
 	Global.get_config().save_to_settings_file()
 
+	# Day 1 retention notif is local-only — server sync won't restore it after the wipe.
+	if Global.get_config().day1_notification_scheduled:
+		Global.get_config().day1_notification_scheduled = false
+		Global.get_config().save_to_settings_file()
+		async_schedule_day1_notification.call_deferred()
+
 	_debug_log("All notifications cleared, version updated to v%d" % LOCAL_NOTIFICATIONS_VERSION)
 	return true
 
@@ -830,7 +885,7 @@ func async_sync_attended_events() -> void:
 
 	# Check and request notification permission
 	if not has_local_notification_permission():
-		request_local_notification_permission()
+		request_local_notification_permission("SYNC_ATTENDED_EVENTS")
 
 		# Check permission after request
 		# Note: On iOS this is async, but we'll try to schedule anyway
@@ -840,7 +895,11 @@ func async_sync_attended_events() -> void:
 				"Notification permission not granted yet, scheduling anyway (OS will handle)"
 			)
 
-	var url = EVENTS_API_BASE_URL + "/events/?only_attendee=true"
+	# iOS plugin doesn't emit permission_changed, so the lobby grant never reaches
+	# _on_permission_changed. Trigger day1 here instead — its own guards handle dedup.
+	async_schedule_day1_notification.call_deferred()
+
+	var url = DclUrls.mobile_events_api() + "/?only_attendee=true"
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:
@@ -1145,6 +1204,35 @@ func _sync_notification_queue() -> void:
 				plugin.db_mark_scheduled(notif_id, true)
 
 	_debug_log("Queue sync completed")
+
+
+## Schedule a one-time "Day 1" notification 24h after first app launch.
+## Only runs on mobile, only once per install (persisted via config flag).
+func async_schedule_day1_notification() -> void:
+	if not Global.is_android() and not Global.is_ios():
+		return
+
+	var config = Global.get_config()
+	if config.day1_notification_scheduled:
+		return
+
+	if not _os_wrapper or not _os_wrapper.has_permission():
+		return
+
+	var delay_seconds := 30 if DEBUG_DAY1_SHORT_DELAY else 86400
+	var trigger_timestamp := int(Time.get_unix_time_from_system()) + delay_seconds
+	var scheduled := await async_queue_local_notification(
+		"day1_welcome",
+		"Come and say hi 👋",
+		"People are hanging out in Decentraland.",
+		trigger_timestamp,
+		"",
+		"decentraland://open?position=0,0",
+	)
+
+	if scheduled:
+		config.day1_notification_scheduled = true
+		config.save_to_settings_file()
 
 
 ## Get the appropriate plugin for the current platform (used by queue management)

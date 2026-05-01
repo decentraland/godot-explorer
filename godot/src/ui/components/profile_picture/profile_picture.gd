@@ -2,7 +2,7 @@
 class_name ProfilePicture
 extends Control
 
-enum Size { EXTRA_LARGE, LARGE, MEDIUM, SMALL }
+enum Size { PROFILE_EDITOR, EXTRA_LARGE, LARGE, MEDIUM, SMALL, MUTUAL }
 const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 
 @export var picture_size: Size = Size.MEDIUM:
@@ -40,6 +40,9 @@ func _update_size() -> void:
 	var border_px: int
 
 	match picture_size:
+		Size.PROFILE_EDITOR:
+			size_px = 175
+			border_px = 5
 		Size.EXTRA_LARGE:
 			size_px = 60
 			border_px = 3
@@ -52,6 +55,9 @@ func _update_size() -> void:
 		Size.SMALL:
 			size_px = 28
 			border_px = 2
+		Size.MUTUAL:
+			size_px = 38
+			border_px = 5
 
 	# Update the border width property
 	border_width = border_px
@@ -92,7 +98,6 @@ func _update_border_style() -> void:
 
 func async_update_profile_picture(data: SocialItemData):
 	var nickname_color = DclAvatar.get_nickname_color(data.name)
-
 	var background_color = nickname_color
 	apply_style(background_color)
 
@@ -103,10 +108,16 @@ func async_update_profile_picture(data: SocialItemData):
 	if data.profile_picture_url.is_empty():
 		return
 
-	# Use address-based hash for caching, or fallback to avatar_name
-	var texture_hash = (
-		data.address + "_face" if not data.address.is_empty() else data.avatar_name + "_face"
-	)
+	# For local snapshots ("local:<hash>"), use the hash directly as the file key
+	# so the content provider finds the file already stored on disk.
+	# For remote URLs, use address-based key for caching.
+	var texture_hash: String
+	if data.profile_picture_url.begins_with("local:"):
+		texture_hash = data.profile_picture_url.substr(6)
+	else:
+		texture_hash = (
+			data.address + "_face" if not data.address.is_empty() else data.avatar_name + "_face"
+		)
 	var promise = Global.content_provider.fetch_texture_by_url(
 		texture_hash, data.profile_picture_url
 	)
@@ -152,7 +163,7 @@ func _on_gui_input(event: InputEvent) -> void:
 			if avatar != null and is_instance_valid(avatar):
 				var explorer = Global.get_explorer()
 				if avatar.avatar_id == Global.player_identity.get_address_str():
-					explorer.control_menu.show_own_profile()
+					explorer.control_menu.async_show_own_profile()
 				else:
 					Global.open_profile_by_avatar.emit(avatar)
 

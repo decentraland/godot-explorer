@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://bcdxv1hq2lqvp"]
+[gd_scene format=3 uid="uid://bcdxv1hq2lqvp"]
 
 [ext_resource type="Shader" uid="uid://cm0fkgbtmi0l4" path="res://assets/shaders/grass_blades.gdshader" id="2_it4im"]
 [ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="3_17dba"]
@@ -51,31 +51,31 @@ resource_local_to_scene = true
 transform_format = 1
 mesh = SubResource("ArrayMesh_fwft2")
 
-[node name="EmptyParcel" type="Node3D"]
+[node name="EmptyParcel" type="Node3D" unique_id=1702080208]
 script = ExtResource("4_empty_parcel")
 
-[node name="Grass" type="MultiMeshInstance3D" parent="."]
+[node name="Grass" type="MultiMeshInstance3D" parent="." unique_id=1439721755]
 multimesh = SubResource("MultiMesh_1")
 
-[node name="TerrainGenerator" type="Node3D" parent="."]
+[node name="TerrainGenerator" type="Node3D" parent="." unique_id=1075044486]
 script = ExtResource("5_terrain_gen")
 
-[node name="CliffGenerator" type="Node3D" parent="."]
+[node name="CliffGenerator" type="Node3D" parent="." unique_id=1372156213]
 script = ExtResource("6_cliff_gen")
 
-[node name="GrassSpawner" type="Node3D" parent="."]
+[node name="GrassSpawner" type="Node3D" parent="." unique_id=1458876434]
 script = ExtResource("7_grass_spawn")
 
-[node name="RockSpawner" type="Node3D" parent="."]
+[node name="RockSpawner" type="Node3D" parent="." unique_id=1976530383]
 script = ExtResource("8_rock_spawn")
 min_falloff_for_spawning = 0.5
 
-[node name="PropsSpawner" type="Node3D" parent="."]
+[node name="PropsSpawner" type="Node3D" parent="." unique_id=1521969783]
 script = ExtResource("9_props_spawn")
 min_props = 2
 max_props = 3
 
-[node name="TreeSpawner" type="Node3D" parent="."]
+[node name="TreeSpawner" type="Node3D" parent="." unique_id=157576200]
 script = ExtResource("10_tree_spawn")
 max_trees = 3
 min_falloff_for_spawning = 0.5

@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://kfsjxah2khkg"]
-
-[ext_resource type="Script" uid="uid://pwgjuq7d0e8j" path="res://src/ui/components/discover/places/custom_places_generator.gd" id="1_yi7bp"]
-
-[node name="CustomPlacesGenerator" type="Node"]
-script = ExtResource("1_yi7bp")

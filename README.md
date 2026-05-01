@@ -4,7 +4,7 @@
 [![CI](https://github.com/decentraland/godot-explorer/actions/workflows/ci.yml/badge.svg)](https://github.com/decentraland/godot-explorer/actions)
 [![Android](https://github.com/decentraland/godot-explorer/actions/workflows/android_builds.yml/badge.svg)](https://github.com/decentraland/godot-explorer/actions)
 
-Decentraland Godot Explorer is a cross-platform metaverse client built with Godot 4.5.1 and Rust, supporting desktop, mobile, and VR platforms.
+Decentraland Godot Explorer is a cross-platform metaverse client built with Godot 4.6.2 and Rust, supporting desktop, mobile, and VR platforms.
 
 ## ✨ Features
 
@@ -153,8 +153,8 @@ cargo run -- strip-ios-templates
 iOS builds are skipped by default to save CI resources. To trigger an iOS build:
 
 ```bash
-# On a PR: add the build-ios-internal label
-gh pr edit --add-label "build-ios-internal"
+# On a PR: add the build-ios label
+gh pr edit --add-label "build-ios"
 
 # Manual trigger: use the GitHub Actions UI or gh CLI
 gh workflow run "🍏 iOS" --ref main
@@ -175,6 +175,16 @@ cargo run -- run --stest
 rustup component add llvm-tools-preview
 cargo install grcov
 cargo run -- coverage --dev
+
+# Update Docker test snapshots from CI artifacts (requires gh CLI)
+cargo run -- update-docker-snapshots
+
+# Update coverage test snapshots from CI artifacts
+cargo run -- update-coverage-snapshots
+
+# Optionally specify a branch or run ID
+cargo run -- update-docker-snapshots --branch main
+cargo run -- update-docker-snapshots --run-id 21769476899
 ```
 
 ## 🎮 Supported Platforms

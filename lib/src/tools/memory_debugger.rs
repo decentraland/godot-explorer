@@ -80,14 +80,26 @@ impl INode for MemoryDebugger {
     }
 
     fn ready(&mut self) {
-        // Check if this is a Godot debug build
-        let is_debug_build = Os::singleton().is_debug_build();
-        self.is_enabled = is_debug_build;
-
-        if self.is_enabled {
-            tracing::info!("MemoryDebugger enabled (Godot debug export)");
+        // Check if logging disabled via environment variable (tracking still works)
+        if std::env::var("DISABLE_MEMORY_DEBUGGER_LOGS")
+            .map(|v| v == "1")
+            .unwrap_or(false)
+        {
+            self.is_enabled = false;
+            tracing::info!(
+                "MemoryDebugger logging disabled via DISABLE_MEMORY_DEBUGGER_LOGS env var"
+            );
+            // Continue to set up scene_manager_path for benchmark queries
         } else {
-            tracing::info!("MemoryDebugger disabled (Godot release export)");
+            // Check if this is a Godot debug build
+            let is_debug_build = Os::singleton().is_debug_build();
+            self.is_enabled = is_debug_build;
+
+            if self.is_enabled {
+                tracing::info!("MemoryDebugger enabled (Godot debug export)");
+            } else {
+                tracing::info!("MemoryDebugger disabled (Godot release export)");
+            }
         }
 
         // Automatically find and set the scene_manager_path if not already set

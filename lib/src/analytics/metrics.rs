@@ -17,11 +17,13 @@ use crate::{
 
 use super::{
     data_definition::{
-        build_segment_event_batch_item, SegmentEvent, SegmentEventChatMessageSent,
-        SegmentEventClickButton, SegmentEventCommonExplorerFields,
-        SegmentEventExplorerMoveToParcel, SegmentEventScreenViewed,
+        build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
+        SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
+        SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
+        SegmentEventRequestFriend, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
+    install_referrer::InstallReferrer,
 };
 
 #[derive(Clone, Copy)]
@@ -55,6 +57,9 @@ pub struct Metrics {
     // Debug level: 0=disabled, 1=enabled (full JSON output)
     debug_level: u8,
 
+    // Install referrer tracker (Android only, None when not applicable or already sent)
+    install_referrer: Option<InstallReferrer>,
+
     base: Base<Node>,
 }
 
@@ -74,6 +79,7 @@ impl INode for Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
+            install_referrer: None,
             base,
         }
     }
@@ -115,7 +121,27 @@ impl INode for Metrics {
 impl Metrics {
     #[func]
     fn timer_timeout(&mut self) {
+        // Poll install referrer (Android only, auto-completes after first success)
+        if let Some(ref mut referrer) = self.install_referrer {
+            if let Some(event) = referrer.poll() {
+                self.events.push(event);
+                self.install_referrer = None;
+            }
+        }
+
         self.process_and_send_events(false);
+    }
+
+    /// Start fetching the Google Play install referrer.
+    /// GDScript should call this only once per install (gated by a config flag).
+    #[func]
+    pub fn track_install_referrer(&mut self) {
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return;
+        }
+        if self.install_referrer.is_none() {
+            self.install_referrer = Some(InstallReferrer::start());
+        }
     }
 
     #[func]
@@ -130,6 +156,7 @@ impl Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
+            install_referrer: None,
             base,
         })
     }
@@ -223,6 +250,44 @@ impl Metrics {
         });
         self.events.push(event.clone());
         self.debug_print_event("Screen Viewed", &event);
+    }
+
+    #[func]
+    pub fn track_request_friend(&mut self, receiver_id: String) {
+        let event = SegmentEvent::RequestFriend(SegmentEventRequestFriend { receiver_id });
+        self.events.push(event.clone());
+        self.debug_print_event("Friend Request", &event);
+    }
+
+    #[func]
+    pub fn track_accept_friend(&mut self, receiver_id: String, friendship_id: String) {
+        let event = SegmentEvent::AcceptFriend(SegmentEventAcceptFriend {
+            receiver_id,
+            friendship_id: if friendship_id.is_empty() {
+                None
+            } else {
+                Some(friendship_id)
+            },
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("Friend Accept", &event);
+    }
+
+    #[func]
+    pub fn track_block_user(&mut self, receiver_id: String, is_friend: bool) {
+        let event = SegmentEvent::BlockUser(SegmentEventBlockUser {
+            receiver_id,
+            is_friend,
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("Block User", &event);
+    }
+
+    #[func]
+    pub fn track_unfriend(&mut self, receiver_id: String) {
+        let event = SegmentEvent::Unfriend(SegmentEventUnfriend { receiver_id });
+        self.events.push(event.clone());
+        self.debug_print_event("Unfriend", &event);
     }
 
     #[func]
@@ -433,6 +498,53 @@ impl Metrics {
                         metrics.average_jsheap_mb = Some(jsheap_avg_mb as f32);
                     }
                 }
+
+                // Dynamic graphics metrics
+                let dynamic_manager = global_bind.dynamic_graphics_manager.clone();
+                let dm_bind = dynamic_manager.bind();
+                metrics.dynamic_graphics_enabled = Some(dm_bind.is_enabled());
+                if dm_bind.is_enabled() {
+                    metrics.dynamic_graphics_state = Some(dm_bind.get_state_name().to_string());
+                    metrics.dynamic_graphics_profile = Some(dm_bind.get_current_profile());
+                    metrics.frame_time_ratio = Some(dm_bind.get_frame_time_ratio() as f32);
+                    // Use the internal thermal state from the dynamic manager
+                    metrics.dynamic_graphics_thermal_state =
+                        Some(dm_bind.get_thermal_state_string().to_string());
+                }
+
+                // Hardware benchmark result from config (GDScript property)
+                let config = global_bind.config.clone();
+                let gpu_score = config.get("benchmark_gpu_score");
+                if let Ok(score) = gpu_score.try_to::<f64>() {
+                    if score > 0.0 {
+                        metrics.benchmark_gpu_score = Some(score as f32);
+                    }
+                }
+
+                // Optimized asset counters
+                let opt_scenes = content_provider_bind.get_optimized_scene_count();
+                let rt_scenes = content_provider_bind.get_runtime_scene_count();
+                let opt_wearables = content_provider_bind.get_optimized_wearable_count();
+                let rt_wearables = content_provider_bind.get_runtime_wearable_count();
+
+                metrics.optimized_scene_count = Some(opt_scenes);
+                metrics.runtime_scene_count = Some(rt_scenes);
+                metrics.optimized_wearable_count = Some(opt_wearables);
+                metrics.runtime_wearable_count = Some(rt_wearables);
+
+                let total_scenes = opt_scenes + rt_scenes;
+                metrics.optimized_scene_pct = if total_scenes > 0 {
+                    Some((opt_scenes as f32 / total_scenes as f32) * 100.0)
+                } else {
+                    None
+                };
+
+                let total_wearables = opt_wearables + rt_wearables;
+                metrics.optimized_wearable_pct = if total_wearables > 0 {
+                    Some((opt_wearables as f32 / total_wearables as f32) * 100.0)
+                } else {
+                    None
+                };
             }
         }
     }
@@ -473,7 +585,7 @@ impl Metrics {
             None,
         );
         if let Err(err) = http_requester.request(request, 0).await {
-            tracing::error!("Failed to send segment batch: {:?}", err);
+            tracing::warn!("Failed to send segment batch: {:?}", err);
         } else {
             tracing::debug!("Segment batch sent successfully");
         }

@@ -57,9 +57,10 @@ var output := Vector2.ZERO
 
 # PRIVATE VARIABLES
 
-var _touch_index: int = -1
+var touch_index: int = -1
 var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
+var _joystick_visible := false
 
 @onready var _sprint_timer := %SprintTimer
 
@@ -67,6 +68,8 @@ var _tip_position := Vector2.ZERO
 @onready var _active_area: Control = $ActiveArea
 
 @onready var _tip_default_position := Vector2.ZERO
+
+@onready var _button_camera := %Button_Camera
 
 # FUNCTIONS
 
@@ -83,6 +86,11 @@ func _ready() -> void:
 	_active_area.connect("input_received", _on_input)
 
 	Global.loading_started.connect(_on_loading_scene)
+	Global.camera_mode_set.connect(_on_camera_mode_set)
+	var connect_explorer_signals := func():
+		Global.get_explorer().navbar.navbar_opened.connect(_on_navbar_opened)
+		Global.get_explorer().navbar.navbar_closed.connect(_on_navbar_closed)
+	connect_explorer_signals.call_deferred()
 	_on_loading_scene()
 
 
@@ -90,11 +98,25 @@ func _on_loading_scene() -> void:
 	_dynamic_material.set_shader_parameter("state", 0)
 
 
+func _on_navbar_opened() -> void:
+	_button_camera.hide()
+
+
+func _on_navbar_closed() -> void:
+	if Global.current_camera_mode != Global.CameraMode.CINEMATIC:
+		_button_camera.show()
+
+
+func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
+	prints(camera_mode, Global.CameraMode.CINEMATIC, camera_mode != Global.CameraMode.CINEMATIC)
+	_button_camera.visible = camera_mode != Global.CameraMode.CINEMATIC
+
+
 func _on_input(event: InputEvent) -> void:
 	if Global.is_mobile():
 		if event is InputEventScreenTouch:
 			if event.pressed:
-				if _is_point_inside_joystick_area(event.position) and _touch_index == -1:
+				if _is_point_inside_joystick_area(event.position) and touch_index == -1:
 					if (
 						joystick_mode == JoystickMode.DYNAMIC
 						or (
@@ -104,19 +126,32 @@ func _on_input(event: InputEvent) -> void:
 					):
 						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
-							_dynamic_material.set_shader_parameter("state", 1)
-						_touch_index = event.index
+							get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
+						touch_index = event.index
 						_update_joystick(event.position)
-						get_viewport().set_input_as_handled()
-			elif event.index == _touch_index:
+						if (
+							not Global.scene_runner.raycast_use_cursor_position
+							and not _is_scene_ui_at_position(event.position)
+						):
+							get_viewport().set_input_as_handled()
+			elif event.index == touch_index:
 				_reset()
-				_dynamic_material.set_shader_parameter("state", 2)
+				if _joystick_visible:
+					_dynamic_material.set_shader_parameter("state", 2)
+					_joystick_visible = false
 				emit_signal("stick_position", Vector2.ZERO)
-				get_viewport().set_input_as_handled()
+				if not Global.scene_runner.raycast_use_cursor_position:
+					get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
-			if event.index == _touch_index:
+			if event.index == touch_index:
 				_update_joystick(event.position)
 				get_viewport().set_input_as_handled()
+
+
+func _on_show_joystick_timer() -> void:
+	if touch_index != -1:
+		_dynamic_material.set_shader_parameter("state", 1)
+		_joystick_visible = true
 
 
 func _move_base(new_position: Vector2) -> void:
@@ -203,13 +238,9 @@ func _update_input_actions():
 		Input.action_press(action_down, output.y)
 	elif Input.is_action_pressed(action_down):
 		Input.action_release(action_down)
-	if output.length() < 0.75:
-		Input.action_press(action_walk)
-		_sprint_timer.stop()
-	elif Input.is_action_pressed(action_walk):
-		Input.action_release(action_walk)
 	if output.length() < 0.95:
 		Input.action_release(action_sprint)
+		_sprint_timer.stop()
 	elif _sprint_timer.is_stopped() and !Input.is_action_pressed(action_sprint):
 		_sprint_timer.start()
 
@@ -218,19 +249,19 @@ func _reset():
 	is_pressed = false
 	emit_signal("is_holded", false)
 	output = Vector2.ZERO
-	_touch_index = -1
+	touch_index = -1
 
 	var base_position := _joystick_default_position
 	base_position.y = size.y - base_position.y
 
+	# Expand VirtualJoystick outside the Safe Margin
 	if margin_control:
 		var margin_top: float = margin_control.get_theme_constant("margin_top")
 		var margin_left: float = margin_control.get_theme_constant("margin_left")
-		var margin_right: float = margin_control.get_theme_constant("margin_right")
 		var margin_bottom: float = margin_control.get_theme_constant("margin_bottom")
 		offset_left = -margin_left
 		offset_top = -margin_top
-		offset_right = -margin_right
+		offset_right = 0
 		offset_bottom = -margin_bottom
 		base_position.y += margin_bottom
 		base_position.x += margin_left
@@ -251,9 +282,44 @@ func _reset():
 			Input.action_release(action_down)
 		if Input.is_action_pressed(action_up) or Input.is_action_just_pressed(action_up):
 			Input.action_release(action_up)
+		if Input.is_action_pressed(action_walk) or Input.is_action_just_pressed(action_walk):
+			Input.action_release(action_walk)
+		if Input.is_action_pressed(action_sprint) or Input.is_action_just_pressed(action_sprint):
+			Input.action_release(action_sprint)
+		_sprint_timer.stop()
 
 
 func _on_resized() -> void:
 	if not is_node_ready():
 		return
 	_reset()
+
+
+func _is_scene_ui_at_position(touch_position: Vector2) -> bool:
+	var base_ui = Global.scene_runner.base_ui
+	if not is_instance_valid(base_ui) or not base_ui.visible:
+		return false
+	return _check_children_for_pointer_control(base_ui, touch_position)
+
+
+func _check_children_for_pointer_control(node: Node, touch_position: Vector2) -> bool:
+	for child in node.get_children():
+		if child is Control and child.visible and child.mouse_filter == Control.MOUSE_FILTER_STOP:
+			if child.get_global_rect().has_point(touch_position):
+				return true
+		if child.get_child_count() > 0:
+			if _check_children_for_pointer_control(child, touch_position):
+				return true
+	return false
+
+
+func _on_button_camera_pressed() -> void:
+	const CAMERA_MODE_1P = preload("res://assets/ui/camera_mode_1p.svg")
+	const CAMERA_MODE_3P = preload("res://assets/ui/camera_mode_3p.svg")
+	match Global.player_camera_node.get_camera_mode():
+		Global.CameraMode.THIRD_PERSON:
+			_button_camera.icon = CAMERA_MODE_3P
+			Global.set_camera_mode(Global.CameraMode.FIRST_PERSON)
+		Global.CameraMode.FIRST_PERSON:
+			_button_camera.icon = CAMERA_MODE_1P
+			Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)

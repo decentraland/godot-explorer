@@ -11,7 +11,7 @@ func fetch_peers():
 	add_child(http_request)
 	http_request.request_completed.connect(_on_request_completed.bind(http_request))
 
-	var error = http_request.request("https://archipelago-ea-stats.decentraland.org/comms/peers")
+	var error = http_request.request(DclUrls.archipelago_stats() + "/comms/peers")
 	if error != OK:
 		push_error("Error making request: " + str(error))
 

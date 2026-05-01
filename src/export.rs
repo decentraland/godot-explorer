@@ -3,8 +3,9 @@ use zip::ZipArchive;
 
 use crate::{
     consts::{
-        EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
-        GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
+        godot_templates_base_url_for_branch, sanitize_branch_for_url, EXPORTS_FOLDER,
+        GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION, GODOT_PLATFORM_FILES,
+        GODOT_PROJECT_FOLDER,
     },
     helpers::get_exe_extension,
     install_dependency::{
@@ -426,7 +427,12 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     Ok(())
 }
 
-pub fn prepare_templates(platforms: &[String], no_strip: bool) -> Result<(), anyhow::Error> {
+pub fn prepare_templates(
+    platforms: &[String],
+    use_cache: bool,
+    strip_ios: bool,
+    branch: Option<&str>,
+) -> Result<(), anyhow::Error> {
     // Convert GODOT_PLATFORM_FILES into a HashMap
     let file_map: HashMap<&str, Vec<&str>> = GODOT_PLATFORM_FILES
         .iter()
@@ -450,32 +456,47 @@ pub fn prepare_templates(platforms: &[String], no_strip: bool) -> Result<(), any
     // Process each template and download the associated files
     let dest_path = godot_export_templates_path().expect("Failed to get template path");
 
+    // Helper: only pass cache key when --cache is enabled
+    let cache_key = |key: String| -> Option<String> {
+        if use_cache {
+            Some(key)
+        } else {
+            None
+        }
+    };
+
+    let templates_base_url = match branch {
+        Some(b) => godot_templates_base_url_for_branch(b),
+        None => GODOT4_EXPORT_TEMPLATES_BASE_URL.to_string(),
+    };
+
     for template in &templates {
         if let Some(files) = file_map.get(template.as_str()) {
             for file in files {
                 println!("Downloading file for {}: {}", template, file);
 
-                let url = format!("{}{}.zip", GODOT4_EXPORT_TEMPLATES_BASE_URL, file);
-                download_and_extract_zip(
-                    url.as_str(),
-                    dest_path.as_str(),
-                    Some(format!(
-                        "{GODOT_CURRENT_VERSION}.{file}.export-templates.zip"
-                    )),
-                )?;
+                let url = format!("{}{}.zip", templates_base_url, file);
+                let cache_id = match branch {
+                    Some(b) => format!(
+                        "{GODOT_CURRENT_VERSION}.branch-{}.{file}.export-templates.zip",
+                        sanitize_branch_for_url(b)
+                    ),
+                    None => format!("{GODOT_CURRENT_VERSION}.{file}.export-templates.zip"),
+                };
+                download_and_extract_zip(url.as_str(), dest_path.as_str(), cache_key(cache_id))?;
             }
         } else {
             println!("No files mapped for template: {}", template);
         }
     }
 
-    // Strip iOS templates if downloaded (unless --no-strip is specified)
-    if templates.iter().any(|t| t == "ios") && !no_strip {
+    // Strip iOS templates only if --strip-ios is specified
+    if templates.iter().any(|t| t == "ios") && strip_ios {
         strip_ios_template_symbols(&dest_path)?;
-    } else if templates.iter().any(|t| t == "ios") && no_strip {
+    } else if templates.iter().any(|t| t == "ios") && !strip_ios {
         print_message(
             MessageType::Info,
-            "Skipping iOS template stripping (--no-strip specified, debug symbols preserved for Sentry)",
+            "Keeping iOS debug symbols (use --strip-ios to strip them and save disk space)",
         );
     }
 

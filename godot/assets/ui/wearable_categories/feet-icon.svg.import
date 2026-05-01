@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/feet-icon.svg-84e2af1aa037c813d0141894f0107bf
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

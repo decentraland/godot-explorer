@@ -1,4 +1,4 @@
-[gd_resource type="Environment" load_steps=2 format=3 uid="uid://b0er3qu7hwmqs"]
+[gd_resource type="Environment" format=3 uid="uid://b0er3qu7hwmqs"]
 
 [ext_resource type="Sky" uid="uid://l82r2nfrgcbx" path="res://assets/sky.tres" id="1_mk51q"]
 
@@ -14,12 +14,9 @@ tonemap_mode = 3
 glow_enabled = true
 glow_levels/1 = 2.5
 glow_levels/2 = 1.0
-glow_levels/5 = 0.0
 glow_normalized = true
 glow_intensity = 1.25
 glow_strength = 1.25
-glow_blend_mode = 1
-glow_hdr_threshold = 0.5
 fog_enabled = true
 fog_mode = 1
 fog_light_color = Color(0.245887, 0.52169, 1, 1)

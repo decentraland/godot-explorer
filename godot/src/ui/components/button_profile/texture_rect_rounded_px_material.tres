@@ -1,0 +1,7 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://bv7vw2bdrp1mm"]
+
+[ext_resource type="Shader" uid="uid://hm1f1bm7ql4g" path="res://src/ui/components/button_profile/texture_rect_rounded_px.gdshader" id="1_shader"]
+
+[resource]
+shader = ExtResource("1_shader")
+shader_parameter/corner_radius_px = 24.0

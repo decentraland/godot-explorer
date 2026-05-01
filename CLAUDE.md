@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 Decentraland Godot Explorer is a cross-platform metaverse client that combines:
-- **Godot Engine 4.5.1** (custom fork) for 3D rendering and UI
+- **Godot Engine 4.6.2** (custom fork) for 3D rendering and UI
 - **Rust** for core systems and performance-critical components
 - **GDScript** for game logic
 - **JavaScript/V8** runtime for executing Decentraland SDK scenes
@@ -20,16 +20,18 @@ All commands use the xtask pattern via `cargo run --`:
 cargo run -- doctor
 
 # Install dependencies (specify platforms: linux, windows, macos, android, ios)
-cargo run -- install                      # Installs protoc and Godot only
+cargo run -- install                      # Installs protoc and Godot only (fresh download)
 cargo run -- install --targets linux      # Also installs Linux export templates
 cargo run -- install --targets android    # Also installs Android tools and templates
-cargo run -- install --targets ios        # iOS templates (auto-strips debug symbols)
-cargo run -- install --targets ios --no-strip  # iOS templates with debug symbols (for Sentry)
+cargo run -- install --targets ios        # iOS templates (keeps debug symbols)
+cargo run -- install --targets ios --strip-ios  # iOS templates (strips debug symbols to save disk)
+cargo run -- install --cache              # Use cached downloads instead of re-downloading
+cargo run -- install --cache --targets ios --strip-ios  # Cached + strip iOS
 
 # Strip iOS templates manually (saves ~1.9GB disk space)
 cargo run -- strip-ios-templates
 
-# Clear download cache (useful if you need to re-download templates)
+# Clear download cache
 cargo run -- clean-cache
 ```
 
@@ -163,32 +165,27 @@ cargo run -- export --target ios
 
 4. **For iOS development** (macOS only):
    ```bash
-   # Install iOS templates (strips debug symbols by default to save ~1.9GB)
+   # Install iOS templates (keeps debug symbols by default)
    cargo run -- install --targets ios
 
-   # Install WITHOUT stripping (preserves debug symbols for Sentry crash reports)
-   cargo run -- install --targets ios --no-strip
+   # Install with stripping (saves ~1.9GB disk space)
+   cargo run -- install --targets ios --strip-ios
 
    # Strip already-installed templates manually
    cargo run -- strip-ios-templates
    ```
 
    **Important notes about iOS templates:**
-   - Local installs **strip debug symbols by default** to save disk space (~2.1GB → ~234MB)
-   - Stripping can take a few minutes (extracts, strips, re-compresses the zip)
-   - **Cached templates are already stripped** - if you need debug symbols for crash symbolication, you must clear the cache and reinstall with `--no-strip`:
-     ```bash
-     cargo run -- clean-cache
-     cargo run -- install --targets ios --no-strip
-     ```
-   - CI uses `--no-strip` to preserve debug symbols for Sentry dSYM uploads
+   - Local installs **keep debug symbols by default** (useful for Sentry crash symbolication)
+   - Use `--strip-ios` to strip debug symbols and save disk space (~2.1GB -> ~234MB)
+   - Use `--cache` to reuse previously downloaded files instead of re-downloading
    - The strip command auto-detects already-stripped templates (< 1GB) and skips
 
 5. **Triggering iOS CI builds**:
    iOS builds are skipped by default to save CI resources. To trigger an iOS build:
    ```bash
-   # On a PR: add the build-ios-internal label
-   gh pr edit --add-label "build-ios-internal"
+   # On a PR: add the build-ios label
+   gh pr edit --add-label "build-ios"
 
    # Manual trigger: use the GitHub Actions UI or gh CLI
    gh workflow run "🍏 iOS" --ref main
@@ -197,7 +194,7 @@ cargo run -- export --target ios
 
 ## Important Notes
 
-- The project uses a forked Godot 4.5.1 - don't update the engine version
+- The project uses a forked Godot 4.6.2 - don't update the engine version
 - Windows users should clone to short paths (e.g., `C:/gexplorer`)
 - The Rust toolchain is pinned in `rust-toolchain.toml` (1.90)
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
@@ -236,6 +233,39 @@ The build system now enforces proper command order:
 2. Add GDExtension bindings in the component file
 3. Create corresponding GDScript class in `godot/src/decentraland_components/`
 4. Register in the scene runner
+
+### Rust Log Filtering
+
+All Rust `tracing` output is routed through Godot's print functions. Errors and warnings include real source file/line metadata for Sentry and the Godot debugger.
+
+**Setting the log filter:**
+
+```bash
+# Via environment variable (desktop only)
+RUST_LOG=debug cargo run -- run
+RUST_LOG="dclgodot::comms=debug,warn" cargo run -- run
+
+# Via command-line argument (all platforms)
+cargo run -- run -- --rust-log=debug
+cargo run -- run -- --rust-log="dclgodot::scene_runner=trace,dclgodot::comms=debug,warn"
+
+# Via deeplink (mobile/desktop)
+# decentraland://open?rust-log=dclgodot::analytics=debug,warn
+```
+
+Priority: `--rust-log` > `RUST_LOG` env var > default (`warn` on desktop, `info` on mobile).
+
+The filter can also be changed at runtime from GDScript: `DclGlobal.set_rust_log_filter("dclgodot::comms=debug,warn")`.
+
+**Rust Log Filter editor tool:**
+
+In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual tool that:
+- Shows the full module tree scanned from `lib/src/`
+- Lets you toggle per-module log levels (ERROR/WARN/INFO/DEBUG/TRACE)
+- Previews the generated filter string
+- "Apply to Run Args" injects `--rust-log=...` into the editor's run arguments
+- "Copy --rust-log" / "Copy RUST_LOG" copies the filter for use in terminal or deeplinks
+- Settings persist across editor restarts via EditorSettings
 
 ### Debugging scene loading:
 1. Enable verbose logging: `RUST_LOG=debug cargo run -- run`

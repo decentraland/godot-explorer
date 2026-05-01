@@ -1,11 +1,21 @@
 [gd_scene format=3 uid="uid://cf8j7k2x3p4hl"]
 
-[node name="SkyLights" type="Node3D"]
+[ext_resource type="Animation" path="res://assets/environment/directional_light_cycle.tres" id="1_anim"]
 
-[node name="MainLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.00710599, -0.978071, 0.20815, 0.00639971, 0.208107, 0.978085, -0.999954, 0.00828236, 0.00478057, 0, 0, 0)
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_local"]
+_data = {
+&"light_cycle": ExtResource("1_anim")
+}
+
+[node name="SkyLights" type="Node3D" unique_id=697501473]
+
+[node name="MainLight" type="DirectionalLight3D" parent="." unique_id=876333680]
 light_color = Color(1, 0.988235, 0.768627, 1)
 light_energy = 0.7
 light_bake_mode = 0
 shadow_enabled = true
 shadow_opacity = 0.7
+directional_shadow_max_distance = 50.0
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1628949876]
+libraries/ = SubResource("AnimationLibrary_local")

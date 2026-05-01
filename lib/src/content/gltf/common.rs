@@ -29,15 +29,23 @@ use crate::godot_classes::dcl_resource_tracker::{
 };
 
 /// Post-import texture processing for all GLTF types.
-/// Resizes images according to max_size limits.
-pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
+/// Resizes and optionally compresses images according to max_size limits.
+///
+/// # Arguments
+/// * `node_to_inspect` - The root node to process
+/// * `max_size` - Maximum texture dimension
+/// * `force_compress` - If true, always compress with ETC2 (for asset server)
+pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compress: bool) {
+    let should_compress =
+        force_compress || std::env::consts::OS == "ios" || std::env::consts::OS == "android";
+
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             if let Some(mesh) = mesh_instance_3d.get_mesh() {
                 for surface_index in 0..mesh.get_surface_count() {
                     if let Some(material) = mesh.surface_get_material(surface_index) {
                         if let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() {
-                            // Resize images
+                            // Resize/compress images
                             for ord in 0..TextureParam::MAX.ord() {
                                 let texture_param = TextureParam::from_ord(ord);
                                 if let Some(texture) = base_material.get_texture(texture_param) {
@@ -45,9 +53,7 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                                         texture.try_cast::<ImageTexture>()
                                     {
                                         if let Some(mut image) = texture_image.get_image() {
-                                            if std::env::consts::OS == "ios"
-                                                || std::env::consts::OS == "android"
-                                            {
+                                            if should_compress {
                                                 let texture =
                                                     create_compressed_texture(&mut image, max_size);
                                                 base_material.set_texture(texture_param, &texture);
@@ -64,7 +70,7 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
             }
         }
 
-        post_import_process(child, max_size);
+        post_import_process(child, max_size, force_compress);
     }
 }
 
@@ -85,7 +91,8 @@ pub(super) fn set_owner_recursive(node: &mut Gd<Node>, owner: &Gd<Node>) {
 }
 
 /// Parse GLTF/GLB file to extract dependencies (images and buffers).
-pub(super) async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
+/// Returns file paths as referenced in the GLTF (relative paths like "textures/image.png").
+pub async fn get_dependencies(file_path: &str) -> Result<Vec<String>, anyhow::Error> {
     let mut dependencies = Vec::new();
     let mut file = tokio::fs::File::open(file_path).await?;
 
@@ -314,9 +321,9 @@ where
             .generate_scene(&new_gltf_state)
             .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
 
-        // Post-process textures
+        // Post-process textures (compress if on mobile or force_compress is set)
         let max_size = ctx.texture_quality.to_max_size();
-        post_import_process(node.clone(), max_size);
+        post_import_process(node.clone(), max_size, ctx.force_compress);
 
         // Cast to Node3D and rotate
         let mut node = node

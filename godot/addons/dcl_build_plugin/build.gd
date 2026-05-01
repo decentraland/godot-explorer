@@ -21,6 +21,7 @@ class DclBuildPlugin:
 		"res://addons/godot-xr-tools/", "res://addons/godotopenxrvendors/"
 	]
 	const include_only_android: PackedStringArray = []
+	const include_only_editor: PackedStringArray = ["res://addons/dcl_mobile_preview/"]
 
 	func _export_begin(features, is_debug, path, flags):
 		prints("Start export, using XR is ", is_xr_export)
@@ -81,6 +82,8 @@ class DclBuildPlugin:
 
 		if !is_android_export:
 			check_excluded(path, include_only_android)
+
+		check_excluded(path, include_only_editor)
 
 	func _get_name():
 		return "DclBuildPlugin"

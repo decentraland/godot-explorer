@@ -1,14 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://1llql2trpa5s"]
+[gd_scene format=3 uid="uid://1llql2trpa5s"]
 
 [ext_resource type="Script" uid="uid://dxroh81x8phbn" path="res://src/decentraland_components/avatar/avatar_sfxs.gd" id="1_q3p8f"]
 
-[node name="Avatar_SFXs" type="Node3D"]
+[node name="Avatar_SFXs" type="Node3D" unique_id=1381733467]
 script = ExtResource("1_q3p8f")
 
-[node name="AudioPlayer_Steps" type="AudioStreamPlayer3D" parent="."]
+[node name="AudioPlayer_Steps" type="AudioStreamPlayer3D" parent="." unique_id=257952697]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
-bus = &"Scene"
+bus = &"AvatarAndEmotes"
 
-[node name="AudioPlayer_Effects" type="AudioStreamPlayer3D" parent="."]
+[node name="AudioPlayer_Effects" type="AudioStreamPlayer3D" parent="." unique_id=2010234368]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
-bus = &"Scene"
+bus = &"AvatarAndEmotes"

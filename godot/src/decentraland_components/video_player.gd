@@ -41,6 +41,20 @@ var _last_effective_volume: float = -1.0  # -1 means uninitialized
 var _last_play_pause_time: float = 0.0
 var _pending_play_state: int = -1  # -1=none, 0=pause, 1=play
 
+# Track if we ever received a valid frame (to distinguish garbage from last frame)
+var _has_received_frame: bool = false
+
+# Static black placeholder texture shared across all video players
+static var _black_placeholder: ImageTexture = null
+
+
+static func _get_black_placeholder() -> ImageTexture:
+	if _black_placeholder == null:
+		var img = Image.create(2, 2, false, Image.FORMAT_RGBA8)
+		img.fill(Color.BLACK)
+		_black_placeholder = ImageTexture.create_from_image(img)
+	return _black_placeholder
+
 
 # Called from Rust DclVideoPlayer::init_backend
 func _init_backend_impl(backend_type: int, source: String, playing: bool, looping: bool):
@@ -276,6 +290,23 @@ func _process(_delta):
 	_update_effective_volume()
 	_update_video_state()
 
+	# Track first valid frame for native players (ExoPlayer/AVPlayer).
+	# Requires BOTH conditions to avoid pink garbage:
+	# 1. video_state == PLAYING (player reports active playback)
+	# 2. Native player has actually delivered a GPU frame (_frame_count > 0)
+	# Without #2, there's a gap where is_playing=true but ExternalTexture has garbage.
+	# For LiveKit, _has_received_frame is set in _update_video_state (frames come from Rust).
+	if not _has_received_frame and video_state == VIDEO_STATE_PLAYING:
+		match current_backend:
+			BackendType.AV_PLAYER:
+				if av_player and av_player._frame_count > 0:
+					_has_received_frame = true
+			BackendType.EXO_PLAYER:
+				if exo_player and exo_player._frame_count > 0:
+					_has_received_frame = true
+			_:
+				pass
+
 
 ## Process pending play/pause commands after debounce period
 func _process_pending_play_state():
@@ -349,7 +380,7 @@ func _update_av_player_volume():
 ## LiveKit uses Godot's AudioStreamPlayer which goes through audio buses
 ## Godot buses handle master/scene volume, we only apply video's own volume
 func _update_livekit_volume():
-	var effective_volume: float = 0.0 if dcl_muted else dcl_volume
+	var effective_volume: float = 0.0 if (dcl_muted or not _is_playing) else dcl_volume
 
 	if absf(effective_volume - _last_effective_volume) < 0.001:
 		return
@@ -372,6 +403,12 @@ func _update_video_state():
 		_:
 			pass
 
+	# For native players, _has_received_frame is set when update_texture() returns true
+	# (i.e., the GPU actually has a valid frame). For LiveKit, it's set here since
+	# frames are pushed from Rust and video_state is set to PLAYING on first frame.
+	if current_backend == BackendType.LIVEKIT and video_state == VIDEO_STATE_PLAYING:
+		_has_received_frame = true
+
 
 ## Poll ExoPlayer state and update video_state/position/length
 func _update_exo_player_state():
@@ -388,13 +425,14 @@ func _update_exo_player_state():
 		video_length = duration
 
 	# Determine state based on ExoPlayer status
-	if duration <= 0:
-		# Still loading/buffering
-		video_state = VIDEO_STATE_LOADING
-	elif is_playing:
+	# Note: is_playing takes priority over duration check because live HLS streams
+	# report duration=0 even while actively playing, which would keep state stuck
+	# in LOADING and prevent video texture from being displayed.
+	if is_playing:
 		video_state = VIDEO_STATE_PLAYING
+	elif duration <= 0:
+		video_state = VIDEO_STATE_LOADING
 	else:
-		# Not playing - could be paused or ready
 		if video_state == VIDEO_STATE_LOADING:
 			video_state = VIDEO_STATE_READY
 		elif video_state != VIDEO_STATE_READY:
@@ -416,13 +454,14 @@ func _update_av_player_state():
 		video_length = duration
 
 	# Determine state based on AVPlayer status
-	if duration <= 0:
-		# Still loading/buffering
-		video_state = VIDEO_STATE_LOADING
-	elif is_playing:
+	# Note: is_playing takes priority over duration check because live HLS streams
+	# report duration=0 even while actively playing, which would keep state stuck
+	# in LOADING and prevent video texture from being displayed.
+	if is_playing:
 		video_state = VIDEO_STATE_PLAYING
+	elif duration <= 0:
+		video_state = VIDEO_STATE_LOADING
 	else:
-		# Not playing - could be paused or ready
 		if video_state == VIDEO_STATE_LOADING:
 			video_state = VIDEO_STATE_READY
 		elif video_state != VIDEO_STATE_READY:
@@ -432,6 +471,10 @@ func _update_av_player_state():
 func _update_livekit_state():
 	# LiveKit state is set to PLAYING by Rust when frames arrive
 	# Here we detect buffering/stopped when frames haven't arrived for a while
+	# Skip if user manually paused (state managed by _apply_pause/_apply_play)
+	if not _is_playing:
+		return
+
 	# Only check if we've received at least one frame
 	if last_frame_time <= 0:
 		return
@@ -444,9 +487,10 @@ func _update_livekit_state():
 		if time_since_last_frame > LIVEKIT_BUFFERING_THRESHOLD:
 			video_state = VIDEO_STATE_BUFFERING
 	elif video_state == VIDEO_STATE_BUFFERING:
-		# If no frames for a long time, stream is likely stopped
+		# If no frames for a long time, stream is likely stopped - show black
 		if time_since_last_frame > LIVEKIT_STOPPED_THRESHOLD:
 			video_state = VIDEO_STATE_PAUSED
+			_has_received_frame = false
 
 
 # Backend control methods called from Rust
@@ -465,6 +509,7 @@ func _backend_play():
 
 func _apply_play():
 	_is_playing = true
+	_last_effective_volume = -1.0  # Force volume recalculation
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			if exo_player:
@@ -473,7 +518,7 @@ func _apply_play():
 			if av_player:
 				av_player.play()
 		BackendType.LIVEKIT:
-			pass  # LiveKit is always "playing" when receiving frames
+			pass  # Rust will resume updating texture when _is_playing is true
 		_:
 			pass
 
@@ -493,6 +538,7 @@ func _backend_pause():
 
 func _apply_pause():
 	_is_playing = false
+	_last_effective_volume = -1.0  # Force volume recalculation (mutes LiveKit audio)
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			if exo_player:
@@ -501,7 +547,8 @@ func _apply_pause():
 			if av_player:
 				av_player.pause()
 		BackendType.LIVEKIT:
-			pass  # LiveKit doesn't support pause
+			# Freeze last frame - Rust will stop updating texture while _is_playing is false
+			video_state = VIDEO_STATE_PAUSED
 		_:
 			pass
 
@@ -562,6 +609,7 @@ func _backend_dispose():
 
 	current_backend = BackendType.NOOP
 	_source = ""
+	_has_received_frame = false
 	# Reset state when disposing - will trigger state change event on next source
 	video_state = VIDEO_STATE_NONE
 	video_position = 0.0
@@ -570,6 +618,13 @@ func _backend_dispose():
 
 
 func _get_backend_texture() -> Texture2D:
+	# Before receiving the first valid frame, ExternalTexture (ExoPlayer/AVPlayer)
+	# may contain GPU garbage. Return a black placeholder instead.
+	# After the first frame, always return the backend texture so that pause/buffering
+	# keeps showing the last valid frame instead of going black.
+	if not _has_received_frame:
+		return _get_black_placeholder()
+
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			if exo_player:
@@ -582,7 +637,7 @@ func _get_backend_texture() -> Texture2D:
 			return dcl_texture
 		_:
 			pass
-	return dcl_texture
+	return null
 
 
 # LiveKit audio streaming methods
@@ -592,8 +647,17 @@ func init_livekit_audio(sample_rate: int, _num_channels: int, _samples_per_chann
 
 	var stream = self.get_stream() as AudioStreamGenerator
 	if stream:
-		print("VideoPlayer: Setting LiveKit audio sample_rate=", sample_rate)
 		stream.mix_rate = sample_rate
+		# Clear buffer on re-init to avoid stale data
+		clear_audio_buffer()
+
+
+func clear_audio_buffer():
+	if current_backend != BackendType.LIVEKIT:
+		return
+	var playback = self.get_stream_playback() as AudioStreamGeneratorPlayback
+	if playback:
+		playback.clear_buffer()
 
 
 func stream_buffer(data: PackedVector2Array):
@@ -605,7 +669,8 @@ func stream_buffer(data: PackedVector2Array):
 
 	var playback = self.get_stream_playback() as AudioStreamGeneratorPlayback
 	if playback:
-		playback.push_buffer(data)
+		if playback.get_frames_available() >= data.size():
+			playback.push_buffer(data)
 
 
 # Legacy methods for backward compatibility with existing code

@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://d30nejywxmhpn"]
+[gd_scene format=3 uid="uid://d30nejywxmhpn"]
 
 [ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/social/social_item/social_item.gd" id="1_qmekl"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="2_wvdds"]
@@ -9,13 +9,13 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_2kre2"]
 [ext_resource type="StyleBox" uid="uid://p7xigefabmi8" path="res://assets/themes/seconday_pressed_hover_little.tres" id="12_lm8sy"]
 [ext_resource type="Texture2D" uid="uid://cnainsx10j8v1" path="res://assets/ui/add.svg" id="13_5r2pa"]
-[ext_resource type="Texture2D" uid="uid://dolqfi671arf2" path="res://assets/ui/audio_on.svg" id="13_463mj"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="13_m2rwh"]
 [ext_resource type="StyleBox" uid="uid://cjr732avt4ugw" path="res://assets/themes/secondary_disabled_little.tres" id="13_pm4ta"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="14_h2dbk"]
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="14_lm8sy"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="14_pm4ta"]
 [ext_resource type="Texture2D" uid="uid://b1f8bhb2dkbx3" path="res://assets/themes/icons/check.svg" id="15_0guw6"]
-[ext_resource type="LabelSettings" uid="uid://bjq083uusq2di" path="res://assets/themes/social_tab_label.tres" id="15_463mj"]
+[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/components/discover/icons/close.svg" id="15_40r3o"]
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="16_m2rwh"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66h5u"]
 bg_color = Color(1, 1, 1, 0.0823529)
@@ -24,7 +24,98 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="SocialItem" type="Button"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fkduy"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 0.176471, 0.333333, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4fpp1"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0.941176, 0.129412, 0.282353, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o0a4w"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 0.176471, 0.333333, 0.501961)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5x3e0"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 0.176471, 0.333333, 0.501961)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_40r3o"]
+content_margin_left = 24.0
+content_margin_top = 8.0
+content_margin_right = 24.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="LabelSettings" id="LabelSettings_m2rwh"]
+font = ExtResource("13_m2rwh")
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b4lym"]
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gaktv"]
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m2rwh"]
+bg_color = Color(1, 1, 1, 0.078431375)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_463mj"]
+bg_color = Color(1, 1, 1, 0.078431375)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="SocialItem" type="Button" unique_id=1909289064]
 custom_minimum_size = Vector2(280, 53)
 offset_right = 280.0
 offset_bottom = 53.0
@@ -33,7 +124,7 @@ mouse_filter = 1
 flat = true
 script = ExtResource("1_qmekl")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1672624557]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -43,7 +134,7 @@ grow_vertical = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="Panel_NearbyPlayerItem" type="Panel" parent="MarginContainer"]
+[node name="Panel_NearbyPlayerItem" type="Panel" parent="MarginContainer" unique_id=1848183150]
 unique_name_in_owner = true
 self_modulate = Color(1, 1, 1, 0)
 layout_mode = 2
@@ -52,7 +143,7 @@ mouse_filter = 1
 theme = ExtResource("2_wvdds")
 theme_override_styles/panel = SubResource("StyleBoxFlat_66h5u")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem" unique_id=1684517967]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -65,30 +156,35 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer" unique_id=2091937006]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 9
 
-[node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer" instance=ExtResource("3_yus00")]
+[node name="Data" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer" unique_id=1964961984]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 9
+
+[node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=896502818 instance=ExtResource("3_yus00")]
+unique_name_in_owner = true
 layout_mode = 2
 mouse_default_cursor_shape = 2
-picture_size = 1
 
-[node name="VBoxContainer_Nickname" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer_Nickname" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=368797677]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = -1
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer_Nickname"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname" unique_id=1953585844]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer_Nickname/HBoxContainer"]
+[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer" unique_id=1906278426]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -99,10 +195,10 @@ theme_override_constants/outline_size = 3
 theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("5_iy8au")
 theme_override_font_sizes/font_size = 18
-text = "NickWith15Chars"
 
-[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer_Nickname/HBoxContainer"]
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer" unique_id=596596572]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 2
 size_flags_vertical = 4
@@ -111,7 +207,7 @@ texture = ExtResource("6_b8cqn")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Label_Place" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer_Nickname"]
+[node name="Label_Place" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname" unique_id=983667723]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -122,9 +218,8 @@ theme_override_constants/outline_size = 3
 theme_override_constants/shadow_outline_size = 1
 theme_override_fonts/font = ExtResource("7_m2rwh")
 theme_override_font_sizes/font_size = 16
-text = "Somewhere"
 
-[node name="HBoxContainer_Online" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+[node name="HBoxContainer_Online" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=1942524608]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -132,7 +227,7 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_DM" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online"]
+[node name="Button_DM" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Online" unique_id=724915179]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(40, 40)
@@ -157,9 +252,9 @@ icon = ExtResource("14_lm8sy")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_JumpIn" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online"]
+[node name="Button_JumpIn" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Online" unique_id=725921928]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 40)
+custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -167,11 +262,12 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
+theme_override_font_sizes/font_size = 16
 text = "JUMP"
 icon = ExtResource("14_pm4ta")
 expand_icon = true
 
-[node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+[node name="HBoxContainer_Nearby" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=253896926]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -179,34 +275,8 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_Mute" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+[node name="Button_AddFriend" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby" unique_id=1107805977]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-mouse_default_cursor_shape = 2
-theme = ExtResource("10_2kre2")
-theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 30
-theme_override_styles/pressed = ExtResource("12_lm8sy")
-theme_override_styles/pressed_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/hover = ExtResource("12_lm8sy")
-theme_override_styles/hover_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/hover_pressed = ExtResource("12_lm8sy")
-theme_override_styles/hover_pressed_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/disabled = ExtResource("13_pm4ta")
-theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
-theme_override_styles/focus = ExtResource("12_lm8sy")
-toggle_mode = true
-icon = ExtResource("13_463mj")
-icon_alignment = 1
-expand_icon = true
-
-[node name="Button_AddFriend" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -216,17 +286,34 @@ theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
 theme_override_constants/icon_max_width = 20
 theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("StyleBoxFlat_fkduy")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_fkduy")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_4fpp1")
+theme_override_styles/hover = SubResource("StyleBoxFlat_4fpp1")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_4fpp1")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_4fpp1")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_4fpp1")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_o0a4w")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_5x3e0")
+theme_override_styles/focus = SubResource("StyleBoxFlat_4fpp1")
 toggle_mode = true
 text = "ADD FRIEND"
 icon = ExtResource("13_5r2pa")
 
-[node name="Label_PendingRequest" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby"]
+[node name="PanelContainer_Request" type="PanelContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby" unique_id=2018177859]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(139, 36)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_40r3o")
+
+[node name="Label_PendingRequest" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby/PanelContainer_Request" unique_id=46806490]
 unique_name_in_owner = true
 layout_mode = 2
 text = "PENDING"
-label_settings = ExtResource("15_463mj")
+label_settings = SubResource("LabelSettings_m2rwh")
+horizontal_alignment = 1
 
-[node name="HBoxContainer_Request" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+[node name="HBoxContainer_Request" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=229025307]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -234,9 +321,9 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_Reject" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Request"]
+[node name="Button_Reject" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Request" unique_id=1374089667]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -244,23 +331,15 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 20
-theme_override_styles/pressed = ExtResource("12_lm8sy")
-theme_override_styles/pressed_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/hover = ExtResource("12_lm8sy")
-theme_override_styles/hover_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/hover_pressed = ExtResource("12_lm8sy")
-theme_override_styles/hover_pressed_mirrored = ExtResource("12_lm8sy")
-theme_override_styles/disabled = ExtResource("13_pm4ta")
-theme_override_styles/disabled_mirrored = ExtResource("13_pm4ta")
-theme_override_styles/focus = ExtResource("12_lm8sy")
-icon = ExtResource("14_h2dbk")
+theme_override_styles/normal = SubResource("StyleBoxFlat_b4lym")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_gaktv")
+icon = ExtResource("15_40r3o")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Accept" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Request"]
+[node name="Button_Accept" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Request" unique_id=296695721]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
+custom_minimum_size = Vector2(139, 36)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -269,10 +348,11 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
 theme_override_constants/icon_max_width = 20
+theme_override_font_sizes/font_size = 16
 text = "ACCEPT"
 icon = ExtResource("15_0guw6")
 
-[node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+[node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=735645496]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -280,8 +360,9 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_Unblock" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Blocked"]
-custom_minimum_size = Vector2(40, 40)
+[node name="Button_Unblock" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Blocked" unique_id=1387481875]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(139, 36)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -289,14 +370,32 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"SecondaryLittle"
+theme_override_font_sizes/font_size = 16
 text = "UNBLOCK"
 icon_alignment = 1
 expand_icon = true
 
+[node name="Skeleton" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer" unique_id=74286863]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 9
+
+[node name="Avatar" type="Panel" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/Skeleton" unique_id=1368434441]
+material = ExtResource("16_m2rwh")
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_m2rwh")
+
+[node name="Name" type="Panel" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/Skeleton" unique_id=1267082171]
+material = ExtResource("16_m2rwh")
+custom_minimum_size = Vector2(140, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_463mj")
+
 [connection signal="pressed" from="." to="." method="_on_pressed"]
 [connection signal="mouse_entered" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_exited"]
-[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Online/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
-[connection signal="toggled" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_Mute" to="." method="_on_button_mute_toggled"]
-[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Nearby/Button_AddFriend" to="." method="_on_button_add_friend_pressed"]
-[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer_Blocked/Button_Unblock" to="." method="_on_button_unblock_pressed"]

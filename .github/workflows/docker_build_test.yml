@@ -1,6 +1,12 @@
 name: 🐳 Docker builds and test
 on:
   workflow_call:
+    inputs:
+      publish_docker:
+        description: 'Whether to publish Docker image to quay.io'
+        required: false
+        type: boolean
+        default: false
     secrets:
       QUAY_USERNAME:
         required: true
@@ -48,7 +54,7 @@ jobs:
             COMMIT_HASH=${{ github.sha }}
 
       - name: Push To quay.io
-        if: github.ref == 'refs/heads/release'
+        if: github.ref == 'refs/heads/release' || inputs.publish_docker
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:

@@ -8,7 +8,15 @@ use anyhow::anyhow;
 use godot::prelude::*;
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
-use std::{io::Read, sync::Arc};
+use std::{
+    io::Read,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
+
+static DEPLOY_DISABLED: AtomicBool = AtomicBool::new(false);
 
 // ADR-290: Profile deployments no longer include snapshot content files.
 // Profile images are served on-demand by the profile-images service.
@@ -45,6 +53,23 @@ impl ProfileService {
         Self::async_deploy_profile_with_version_control(new_profile, true)
     }
 
+    /// Dev/testing toggle: when true, profile deploys are short-circuited to a
+    /// local-only update (no POST to the catalyst content server). Used together
+    /// with the `fake-owned-wearables` deep link param to test unowned wearables
+    /// without publishing fake ownership to the network.
+    #[func]
+    pub fn set_deploy_disabled(disabled: bool) {
+        DEPLOY_DISABLED.store(disabled, Ordering::Relaxed);
+        if disabled {
+            tracing::warn!("profile > deploys DISABLED (local-only profile updates)");
+        }
+    }
+
+    #[func]
+    pub fn get_deploy_disabled() -> bool {
+        DEPLOY_DISABLED.load(Ordering::Relaxed)
+    }
+
     // ADR-290: Removed generate_snapshots parameter - snapshots are no longer uploaded
     #[func]
     pub fn async_deploy_profile_with_version_control(
@@ -58,6 +83,9 @@ impl ProfileService {
         let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
         let is_guest = player_identity.bind().get_is_guest();
 
+        // Dev/testing short-circuit: skip HTTP deploy, update local profile only.
+        let deploy_disabled = DEPLOY_DISABLED.load(Ordering::Relaxed);
+
         // Handle guest profile
         if is_guest {
             let profile_dict = new_profile.bind().to_godot_dictionary();
@@ -65,6 +93,17 @@ impl ProfileService {
             config.set("guest_profile", &profile_dict.to_variant());
             config.call("save_to_settings_file", &[]);
 
+            if increment_version {
+                new_profile.bind_mut().increment_profile_version();
+            }
+            player_identity.bind_mut().set_profile(new_profile);
+
+            let mut promise_clone = promise.clone();
+            promise_clone.bind_mut().resolve();
+            return promise;
+        }
+
+        if deploy_disabled {
             if increment_version {
                 new_profile.bind_mut().increment_profile_version();
             }
@@ -160,7 +199,12 @@ impl ProfileService {
 
     #[func]
     pub fn async_fetch_profile(address: GString, lambda_server_url: GString) -> Gd<Promise> {
-        let url = format!("{}/profiles/{}", lambda_server_url, address);
+        let base_url = lambda_server_url
+            .to_string()
+            .trim_end_matches('/')
+            .to_string();
+        let url = format!("{}/profiles/{}", base_url, address);
+        tracing::debug!("profile > fetching from: {}", url);
         let http_requester = DclGlobal::singleton().bind().get_http_requester();
         let promise = http_requester.bind().request_json(
             GString::from(url.as_str()),
@@ -254,6 +298,7 @@ impl ProfileService {
 
         // Deploy to server
         let url = format!("{}entities/", profile_content_url);
+        tracing::debug!("profile > deploying to: {}", url);
 
         // Deploy via HTTP request using the Arc<HttpQueueRequester>
         let headers_map = {
@@ -264,7 +309,7 @@ impl ProfileService {
 
         let request_option = crate::http_request::request_response::RequestOption::new(
             0,
-            url,
+            url.clone(),
             http::Method::POST,
             crate::http_request::request_response::ResponseType::AsString,
             Some(prepared_data),
@@ -277,6 +322,22 @@ impl ProfileService {
             .await
             .map_err(|e| anyhow!("Failed to deploy profile: {:?}", e))?;
 
+        // Check HTTP status code
+        let status_code = response.status_code();
+        if !(200..=299).contains(&status_code) {
+            let error_body = response.get_response_as_string().to_string();
+            tracing::error!(
+                "profile > deploy failed - HTTP {}: {}",
+                status_code,
+                error_body
+            );
+            return Err(anyhow!(
+                "Deploy failed with HTTP {}: {}",
+                status_code,
+                error_body
+            ));
+        }
+
         // Parse response
         let response_variant = response.get_response_as_string();
         let response_str = if response_variant.is_nil() {
@@ -288,11 +349,16 @@ impl ProfileService {
             .map_err(|e| anyhow!("Failed to parse deployment response: {}", e))?;
 
         if response_json.get("creationTimestamp").is_none() {
+            tracing::error!(
+                "profile > deploy failed - invalid response: {}",
+                response_str
+            );
             return Err(anyhow!(
                 "Invalid deployment response: missing creationTimestamp"
             ));
         }
 
+        tracing::info!("profile > deploy succeeded for: {}", eth_address);
         Ok(response_json)
     }
 }

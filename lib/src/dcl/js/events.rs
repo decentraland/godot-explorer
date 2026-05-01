@@ -277,7 +277,12 @@ pub fn process_events(
     let messages = comms_string
         .into_iter()
         .map(|(sender_address, data)| {
-            let sender = format!("{:#x}", sender_address);
+            // Use the original identity string for non-player addresses (e.g., auth server)
+            let sender = if sender_address == H160::from_low_u64_be(1) {
+                "authoritative-server".to_string()
+            } else {
+                format!("{:#x}", sender_address)
+            };
             let message = String::from_utf8_lossy(&data[1..]).to_string();
             EventComms { sender, message }
         })

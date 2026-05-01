@@ -53,9 +53,13 @@ func set_shadow(shadow_quality: int):
 			sky.main_light.shadow_enabled = true
 			# Use base light energy when shadows are on
 			sky.main_light.light_energy = 0.7
+			# Shorter shadow distance for better performance
+			sky.main_light.directional_shadow_max_distance = 30.0
 		2:  # high res shadow
 			sky.main_light.shadow_enabled = true
 			sky.main_light.light_energy = 0.7
+			# Full shadow distance for high quality
+			sky.main_light.directional_shadow_max_distance = 50.0
 			quality = RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM
 
 	RenderingServer.directional_soft_shadow_filter_set_quality(quality)
@@ -69,6 +73,8 @@ func set_bloom(bloom_quality: int):
 		1:  # Low quality
 			environment.glow_enabled = true
 			environment.glow_intensity = 0.7
+			environment.glow_hdr_threshold = 1.0
+			environment.glow_hdr_scale = 2.0
 			environment.set("glow_levels/1", 0.2)
 			environment.set("glow_levels/2", 0.15)
 			environment.set("glow_levels/3", 0.0)
@@ -76,6 +82,8 @@ func set_bloom(bloom_quality: int):
 		2:  # High quality
 			environment.glow_enabled = true
 			environment.glow_intensity = 1.5
+			environment.glow_hdr_threshold = 1.0
+			environment.glow_hdr_scale = 2.0
 			environment.set("glow_levels/1", 0.4)
 			environment.set("glow_levels/2", 0.3)
 			environment.set("glow_levels/3", 0.0)

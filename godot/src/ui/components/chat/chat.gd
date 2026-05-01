@@ -1,9 +1,17 @@
-extends PanelContainer
+extends Control
 
 signal submit_message(message: String)
 signal on_exit_chat
 signal on_open_chat
 signal release_mouse
+
+## Fixed width for the messages list column (scroll), aligned with `chat.tscn` PanelContainer.
+const MESSAGES_COLUMN_WIDTH_PX: int = 709
+const MAX_AUTOCOMPLETE_RESULTS: int = 3
+## MentionItem min height (56) + AutocompleteItems VBox separation (2).
+const AUTOCOMPLETE_ITEM_STRIDE: float = 58.0
+## MarginContainer top+bottom (16) minus one trailing VBox separation (2).
+const AUTOCOMPLETE_SCROLL_PADDING: float = 14.0
 
 var hide_tween = null
 var open_tween = null
@@ -13,22 +21,36 @@ var is_open: bool = false
 var scrolled: bool = false
 var new_messages_count: int = 0
 
+var _mention_item_scene: PackedScene
+var _suppress_autocomplete: bool = false
+var _autocomplete_queued: bool = false
+
 @onready var panel_line_edit: PanelContainer = %PanelLineEdit
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
 @onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
-@onready var texture_rect_logo: TextureRect = %TextureRect_Logo
 @onready var v_box_container_chat: VBoxContainer = %VBoxContainerChat
 @onready var scroll_container_chats_list: ScrollContainer = %ScrollContainer_ChatsList
 @onready var panel_container_navbar: PanelContainer = %PanelContainer_Navbar
-@onready var margin_container_go_to_new_messages: MarginContainer = %MarginContainer_GoToNewMessages
 @onready var button_go_to_last: Button = %Button_GoToLast
 @onready var panel_container_new_messages: PanelContainer = %PanelContainer_NewMessages
 @onready var label_new_messages: Label = %Label_NewMessages
+@onready var button_send: Button = %Button_Send
+@onready var panel_messages: PanelContainer = $VBoxContainer/HBoxContainer/PanelContainer
+@onready var column_go_to_last: Control = $VBoxContainer/HBoxContainer/VSeparator
+@onready var _autocomplete_panel: PanelContainer = %AutocompletePanel
+@onready var _autocomplete_scroll: ScrollContainer = %AutocompleteScroll
+@onready var _autocomplete_container: VBoxContainer = %AutocompleteItems
 
 
-# gdlint:ignore = async-function-name
 func _ready():
+	if Global.is_mobile():
+		# Full chat panel stretches with parent; scroll column keeps fixed width; VSeparator fills remaining X space.
+		custom_minimum_size.x = 0
+		panel_messages.custom_minimum_size.x = MESSAGES_COLUMN_WIDTH_PX
+		panel_messages.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		column_go_to_last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
 	Global.on_chat_message.connect(self._on_chat_message_arrived)
 	Global.change_virtual_keyboard.connect(self._async_on_change_virtual_keyboard)
 	submit_message.connect(self._on_submit_message)
@@ -40,10 +62,16 @@ func _ready():
 		self._on_chat_scrollbar_scrolling
 	)
 
+	async_show_welcome_message.call_deferred()
+	button_send.disabled = true
+	_setup_autocomplete()
+
+
+func async_show_welcome_message() -> void:
 	await Global.loading_finished
 	Global.on_chat_message.emit(
 		"system",
-		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b]",
+		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b][/color]",
 		Time.get_unix_time_from_system()
 	)
 
@@ -55,7 +83,6 @@ func _on_submit_message(message: String):
 		Global.metrics.track_chat_message_sent(
 			message.length(), "nearby", false, is_mention, is_command, "", "CHAT"
 		)
-
 		UiSounds.play_sound("widget_chat_message_private_send")
 
 
@@ -64,32 +91,55 @@ func _scroll_to_bottom() -> void:
 		return
 
 	new_messages_count = 0
+	panel_container_new_messages.hide()
 	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
 	if scrollbar:
-		scroll_container_chats_list.set_v_scroll.call_deferred(scrollbar.max_value - scrollbar.page)
+		var target_scroll: float = max(scrollbar.max_value - scrollbar.page, 0.0)
+		scroll_container_chats_list.set_v_scroll(target_scroll)
 		scrolled = false
 		button_go_to_last.hide()
+		_async_scroll_to_bottom_after_layout.call_deferred()
+
+
+func _async_scroll_to_bottom_after_layout() -> void:
+	await get_tree().process_frame
+	if not scroll_container_chats_list or not is_instance_valid(scroll_container_chats_list):
+		return
+
+	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
+	if not scrollbar or not is_instance_valid(scrollbar):
+		return
+
+	var target_scroll: float = max(scrollbar.max_value - scrollbar.page, 0.0)
+	scroll_container_chats_list.set_v_scroll(target_scroll)
+	scrolled = false
+	button_go_to_last.hide()
 
 
 func _on_button_send_pressed():
-	submit_message.emit(line_edit_command.text)
+	_hide_autocomplete()
+	var message = line_edit_command.text
+	submit_message.emit(message)
 	line_edit_command.text = ""
-	exit_chat()
-	DisplayServer.virtual_keyboard_hide()
+	button_send.disabled = true
+
+	_scroll_to_bottom()
+	# Always close chat if it's a command (starts with "/")
+	# or if the configuration requires it
+	if message.begins_with("/") or Global.get_config().submit_message_closes_chat:
+		exit_chat()
 
 
 func _on_line_edit_command_text_submitted(new_text):
+	_hide_autocomplete()
 	submit_message.emit(new_text)
 	line_edit_command.text = ""
-	line_edit_command.focus_exited.emit()
-	grab_focus.call_deferred()
-	exit_chat()
-
-
-func finish():
-	if line_edit_command.text.size() > 0:
-		submit_message.emit(line_edit_command.text)
-		line_edit_command.text = ""
+	button_send.disabled = true
+	_scroll_to_bottom()
+	# Always close chat if it's a command (starts with "/")
+	# or if the configuration requires it
+	if new_text.begins_with("/") or Global.get_config().submit_message_closes_chat:
+		exit_chat()
 
 
 func toggle_chat_visibility(visibility: bool):
@@ -100,17 +150,8 @@ func toggle_chat_visibility(visibility: bool):
 		UiSounds.play_sound("widget_chat_close")
 
 
-func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		if event.pressed and event.keycode == KEY_ESCAPE:
-			exit_chat()
-		if event.pressed and event.keycode == KEY_ENTER:
-			toggle_chat_visibility(true)
-			async_start_chat()
-			line_edit_command.grab_focus.call_deferred()
-
-
 func exit_chat() -> void:
+	_hide_autocomplete()
 	hide()
 	on_exit_chat.emit()
 	if Global.is_mobile():
@@ -119,10 +160,10 @@ func exit_chat() -> void:
 
 func async_start_chat():
 	show()
-	panel_container_navbar.show()
-
 	Global.get_explorer().release_mouse()
 	DisplayServer.virtual_keyboard_show("")
+	line_edit_command.text = ""
+	button_send.disabled = true
 	h_box_container_line_edit.show()
 	line_edit_command.grab_focus()
 	on_open_chat.emit()
@@ -134,7 +175,6 @@ func async_start_chat():
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
 	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
-	new_chat.compact_view = true
 	new_chat.reduce_text = false
 	new_chat.max_panel_width = 550
 	new_chat.set_chat(address, message, timestamp)
@@ -143,17 +183,8 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 		_scroll_to_bottom()
 	else:
 		new_messages_count = new_messages_count + 1
-		if new_messages_count == 0:
-			panel_container_new_messages.hide()
-		else:
-			panel_container_new_messages.show()
-			label_new_messages.text = str(new_messages_count)
-
-
-func _on_line_edit_command_gui_input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		if event.pressed and event.keycode == KEY_ESCAPE:
-			exit_chat()
+		panel_container_new_messages.show()
+		label_new_messages.text = str(new_messages_count)
 
 
 func is_at_bottom() -> bool:
@@ -161,12 +192,17 @@ func is_at_bottom() -> bool:
 		return true  # Consider it "at bottom" if container doesn't exist
 
 	var scrollbar = scroll_container_chats_list.get_v_scroll_bar()
-	if not scrollbar or not is_instance_valid(scrollbar) or not scrollbar.visible:
-		return true  # No scrollbar means all content visible, so we're "at bottom"
+	if not scrollbar or not is_instance_valid(scrollbar):
+		return true
+
+	# Works even if the scrollbar is set to "never show".
+	var max_scroll: float = max(scrollbar.max_value - scrollbar.page, 0.0)
+	if max_scroll <= 0.0:
+		return true
 
 	# Check if at bottom with small tolerance
 	var tolerance = 5.0
-	return scrollbar.value + scrollbar.page >= scrollbar.max_value - tolerance
+	return scrollbar.value >= max_scroll - tolerance
 
 
 func _on_chat_scrollbar_scrolling() -> void:
@@ -178,10 +214,159 @@ func _on_button_go_to_last_pressed() -> void:
 	_scroll_to_bottom()
 
 
-func _async_on_change_virtual_keyboard(_new_safe_area) -> void:
+func _async_on_change_virtual_keyboard(keyboard_height: int) -> void:
+	if keyboard_height <= 0:
+		return
 	await get_tree().process_frame
 	_scroll_to_bottom()
 
 
 func _on_line_edit_command_focus_exited() -> void:
 	exit_chat()
+
+
+func _on_line_edit_command_text_changed(new_text: String) -> void:
+	button_send.disabled = new_text.length() == 0
+	if _suppress_autocomplete:
+		_suppress_autocomplete = false
+		return
+	# Deferred so caret_column is fully updated before we read it.
+	# Only queue one call per frame to avoid rapid node churn on fast typing/deleting.
+	if not _autocomplete_queued:
+		_autocomplete_queued = true
+		_update_autocomplete.call_deferred()
+
+
+# region Mention Autocomplete
+
+
+func _setup_autocomplete() -> void:
+	_mention_item_scene = load("res://src/ui/components/chat/mention_item.tscn")
+
+
+## Returns the partial name being typed after @, or null if not currently typing a mention.
+func _get_mention_query():
+	var text: String = line_edit_command.text
+	var caret: int = line_edit_command.caret_column
+	var before_caret: String = text.substr(0, caret)
+
+	var at_pos: int = before_caret.rfind("@")
+	if at_pos == -1:
+		return null
+
+	# @ must be at start of text or preceded by a space
+	if at_pos > 0 and before_caret[at_pos - 1] != " ":
+		return null
+
+	var query: String = before_caret.substr(at_pos + 1)
+	# If there's a space in the query portion, the mention is already finished
+	if query.contains(" "):
+		return null
+
+	return query
+
+
+func _get_matching_avatars(query: String) -> Array:
+	var results: Array = []
+	if not Global.avatars:
+		return results
+
+	var avatars = Global.avatars.get_avatars()
+
+	for avatar in avatars:
+		if not avatar is Avatar:
+			continue
+		var avatar_name: String = avatar.get_avatar_name()
+		if avatar_name.is_empty():
+			continue
+		if query.is_empty() or avatar_name.containsn(query):
+			results.append(avatar)
+
+	results.sort_custom(
+		func(a, b): return a.get_avatar_name().nocasecmp_to(b.get_avatar_name()) < 0
+	)
+	return results
+
+
+func _update_autocomplete() -> void:
+	_autocomplete_queued = false
+	var query = _get_mention_query()
+	if query == null:
+		_hide_autocomplete()
+		return
+
+	var avatars: Array = _get_matching_avatars(query)
+	if avatars.is_empty():
+		_hide_autocomplete()
+		return
+
+	_show_autocomplete(avatars)
+
+
+func _show_autocomplete(avatars: Array) -> void:
+	# Clear previous items immediately to avoid ghost nodes
+	for child in _autocomplete_container.get_children():
+		_autocomplete_container.remove_child(child)
+		child.queue_free()
+
+	for avatar in avatars:
+		var item = _mention_item_scene.instantiate()
+		_autocomplete_container.add_child(item)
+		item.setup(avatar)
+		item.mention_selected.connect(_on_autocomplete_item_pressed)
+
+	_resize_autocomplete_scroll(avatars.size())
+	_autocomplete_panel.visible = true
+	_autocomplete_scroll.scroll_vertical = 0
+
+
+func _hide_autocomplete() -> void:
+	if not _autocomplete_panel:
+		return
+	_autocomplete_panel.visible = false
+	for child in _autocomplete_container.get_children():
+		_autocomplete_container.remove_child(child)
+		child.queue_free()
+
+
+func _resize_autocomplete_scroll(item_count: int) -> void:
+	var visible_count: int = mini(item_count, MAX_AUTOCOMPLETE_RESULTS)
+	var scroll_height: float = (
+		visible_count * AUTOCOMPLETE_ITEM_STRIDE + AUTOCOMPLETE_SCROLL_PADDING
+	)
+	_autocomplete_scroll.custom_minimum_size.y = scroll_height
+
+
+func _on_autocomplete_item_pressed(avatar_name: String) -> void:
+	var caret: int = line_edit_command.caret_column
+	var text: String = line_edit_command.text
+	var before_caret: String = text.substr(0, caret)
+
+	var at_pos: int = before_caret.rfind("@")
+	if at_pos == -1:
+		_hide_autocomplete()
+		return
+
+	var mention: String = "@" + avatar_name + " "
+	var new_text: String = text.substr(0, at_pos) + mention + text.substr(caret)
+	var new_caret: int = at_pos + mention.length()
+
+	_hide_autocomplete()
+	_suppress_autocomplete = true
+	line_edit_command.text = new_text
+	line_edit_command.caret_column = new_caret
+	button_send.disabled = new_text.is_empty()
+	# Sync the OS keyboard/IME text buffer with the new content, otherwise
+	# backspace won't work on programmatically inserted text because the OS
+	# still holds the old buffer. This is what a tap on the LineEdit triggers.
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		DisplayServer.virtual_keyboard_show(
+			new_text,
+			Rect2i(),
+			DisplayServer.KEYBOARD_TYPE_DEFAULT,
+			line_edit_command.max_length,
+			new_caret,
+			new_caret
+		)
+
+# endregion

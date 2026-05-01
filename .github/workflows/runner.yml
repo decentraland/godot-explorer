@@ -23,10 +23,12 @@ jobs:
     uses: ./.github/workflows/clippy.yml
 
   # Third stage: Run all the builds and tests (all depend on static-checks)
-  test-coverage:
-    name: 🔎 Test & Coverage
-    needs: static-checks
-    uses: ./.github/workflows/coverage.yml
+
+  # Temporarily disabled: GPU self-hosted runner is down
+  # test-coverage:
+  #   name: 🔎 Test & Coverage
+  #   needs: static-checks
+  #   uses: ./.github/workflows/coverage.yml
 
   android-build:
     name: 🤖 Android (VR and Mobile)
@@ -35,12 +37,14 @@ jobs:
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      APK_ANDROID_KEYSTORE_BASE64: ${{ secrets.APK_ANDROID_KEYSTORE_BASE64 }}
+      APK_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
   # iOS builds are triggered separately via:
-  # - Label 'build-ios-internal' on PRs (see ios_label_trigger.yml)
+  # - Label 'build-ios' on PRs (see ios_label_trigger.yml)
   # - Manual workflow dispatch (see ios_builds.yml)
 
   linux-build:
@@ -63,16 +67,19 @@ jobs:
     name: 🐳 Docker builds and test
     needs: linux-build
     uses: ./.github/workflows/docker_build_test.yml
+    with:
+      publish_docker: ${{ contains(github.event.pull_request.labels.*.name, 'publish-docker') }}
     secrets:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
 
-  benchmark:
-    name: 📊 Benchmark Report
-    needs: static-checks
-    uses: ./.github/workflows/benchmark.yml
-    secrets:
-      BENCHMARK_AWS_ACCESS_KEY_ID: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
-      BENCHMARK_AWS_SECRET_ACCESS_KEY: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
-      BENCHMARK_AWS_ENDPOINT_URL: ${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}
-      BENCHMARK_AWS_S3_BUCKET: ${{ secrets.BENCHMARK_AWS_S3_BUCKET }}
+  # Temporarily disabled: GPU self-hosted runner is down
+  # benchmark:
+  #   name: 📊 Benchmark Report
+  #   needs: static-checks
+  #   uses: ./.github/workflows/benchmark.yml
+  #   secrets:
+  #     BENCHMARK_AWS_ACCESS_KEY_ID: ${{ secrets.BENCHMARK_AWS_ACCESS_KEY_ID }}
+  #     BENCHMARK_AWS_SECRET_ACCESS_KEY: ${{ secrets.BENCHMARK_AWS_SECRET_ACCESS_KEY }}
+  #     BENCHMARK_AWS_ENDPOINT_URL: ${{ secrets.BENCHMARK_AWS_ENDPOINT_URL }}
+  #     BENCHMARK_AWS_S3_BUCKET: ${{ secrets.BENCHMARK_AWS_S3_BUCKET }}

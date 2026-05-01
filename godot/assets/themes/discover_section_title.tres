@@ -1,0 +1,8 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://dk8eqdewqhsor"]
+
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_hu1b5"]
+
+[resource]
+font = ExtResource("1_hu1b5")
+font_size = 32
+font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)

@@ -10,6 +10,7 @@ mod players;
 mod portables;
 mod restricted_actions;
 mod runtime;
+mod scene_inspector_ops;
 mod testing;
 mod websocket;
 
@@ -20,9 +21,13 @@ use crate::dcl::common::{
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
-use super::crdt::SceneCrdtState;
-use super::{crdt::message::process_many_messages, serialization::reader::DclReader};
+use super::crdt::{
+    message::{process_many_messages, process_many_messages_with_logging},
+    CrdtLoggingContext, SceneCrdtState,
+};
+use super::serialization::reader::DclReader;
 use super::{RendererResponse, SceneId, SceneResponse, SpawnDclSceneData};
+use scene_inspector_ops::SceneDebugFlag;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -43,7 +48,7 @@ use v8::IsolateHandle;
 
 use crate::realm::scene_definition::SceneEntityDefinition;
 
-/// Helper struct for consistent scene logging with title and parcel info
+/// Helper struct for consistent tracing prefixes with title and parcel info
 struct SceneLogInfo {
     scene_id: SceneId,
     title: String,
@@ -95,7 +100,7 @@ pub fn init_runtime() {
 pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorServer>) {
     let mut ops = vec![op_require(), op_log(), op_error()];
 
-    let op_sets: [Vec<deno_core::OpDecl>; 12] = [
+    let op_sets: Vec<Vec<deno_core::OpDecl>> = vec![
         engine::ops(),
         adaptation_layer_helper::ops(),
         runtime::ops(),
@@ -108,6 +113,7 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         testing::ops(),
         ethereum_controller::ops(),
         comms::ops(),
+        scene_inspector_ops::ops(),
     ];
 
     // add plugin registrations
@@ -193,7 +199,25 @@ pub(crate) fn scene_thread(
     let mut scene_main_crdt = None;
 
     let scene_id = spawn_dcl_scene_data.scene_id;
+    let should_debug = spawn_dcl_scene_data.should_debug;
+
+    // Lifecycle logging: each `if should_debug` guard below emits a
+    // SceneLifecycleEvent at the exact point in the scene thread where the
+    // event happens. They are intentionally kept inline (not extracted into a
+    // loop or macro) because each call site has unique arguments (tick, dt,
+    // error) and sits at a distinct control-flow position. The actual logging
+    // work lives behind `#[cold] #[inline(never)]` helpers, so the hot path
+    // only pays for a single predictable branch when `should_debug` is false.
     let scene_entity_definition = spawn_dcl_scene_data.scene_entity_definition;
+    if should_debug {
+        let title = scene_entity_definition.get_title().to_string();
+        let base = scene_entity_definition.get_base_parcel();
+        crate::tools::scene_inspector::log_scene_init_event(
+            scene_id.0,
+            if title.is_empty() { None } else { Some(title) },
+            Some(format!("{},{}", base.x, base.y)),
+        );
+    }
     let log_info = SceneLogInfo::new(scene_id, &scene_entity_definition);
     let local_main_js_file_path = spawn_dcl_scene_data.local_main_js_file_path;
     let local_main_crdt_file_path = spawn_dcl_scene_data.local_main_crdt_file_path;
@@ -216,12 +240,71 @@ pub(crate) fn scene_thread(
         if let Some(file) = file {
             let buf = file.get_buffer(file.get_length() as i64).to_vec();
 
+            tracing::info!(
+                "{} main.crdt: raw_size={} bytes",
+                log_info.prefix(),
+                buf.len()
+            );
+
             let mut stream = DclReader::new(&buf);
             let mut scene_crdt_state = scene_crdt.lock().unwrap();
 
-            process_many_messages(&mut stream, &mut scene_crdt_state);
+            if should_debug {
+                use crate::tools::scene_inspector::{get_logger_sender, CrdtDirection};
+
+                let logging_ctx = get_logger_sender().map(|sender| {
+                    CrdtLoggingContext::new(sender, scene_id.0, 0, CrdtDirection::SceneToRenderer)
+                });
+
+                process_many_messages_with_logging(
+                    &mut stream,
+                    &mut scene_crdt_state,
+                    logging_ctx.as_ref(),
+                );
+                crate::tools::scene_inspector::log_lifecycle_event(
+                    scene_id.0,
+                    crate::tools::scene_inspector::SceneLifecycleEvent::MainCrdtLoaded,
+                    None,
+                    None,
+                    None,
+                );
+            } else {
+                process_many_messages(&mut stream, &mut scene_crdt_state);
+            }
 
             let dirty = scene_crdt_state.take_dirty();
+
+            tracing::info!(
+                "{} main.crdt: dirty_lww_components={}, dirty_gos_components={}, entities_born={}, entities_died={}",
+                log_info.prefix(),
+                dirty.lww.len(),
+                dirty.gos.len(),
+                dirty.entities.born.len(),
+                dirty.entities.died.len()
+            );
+
+            for (component_id, entities) in dirty.lww.iter() {
+                tracing::info!(
+                    "{}   LWW component {} has {} dirty entities",
+                    log_info.prefix(),
+                    component_id.0,
+                    entities.len()
+                );
+            }
+            for (component_id, entities) in dirty.gos.iter() {
+                tracing::info!(
+                    "{}   GOS component {} has {} dirty entities",
+                    log_info.prefix(),
+                    component_id.0,
+                    entities.len()
+                );
+            }
+
+            // Pass raw bytes directly to JS — the SDK needs ALL components
+            // (including ones unknown to Godot) for scene logic like PointerEvents.
+            // Only the renderer side (dirty_crdt_state above) filters to known components.
+            scene_main_crdt = Some(buf);
+
             thread_sender_to_main
                 .send(SceneResponse::Ok {
                     scene_id,
@@ -232,8 +315,6 @@ pub(crate) fn scene_thread(
                     deno_memory_stats: None,
                 })
                 .expect("error sending scene response!!");
-
-            scene_main_crdt = Some(buf);
         }
     }
 
@@ -253,7 +334,7 @@ pub(crate) fn scene_thread(
     }
 
     let scene_code = format!(
-        "var module = {{ exports: {{}} }};{};module.exports.__after__ = async function() {{}};module.exports",
+        "var module = {{ exports: {{}} }};(function(){{{}}})();module.exports.__after__ = async function() {{}};module.exports",
         file.unwrap().get_as_text()
     );
 
@@ -312,6 +393,15 @@ pub(crate) fn scene_thread(
     // Initialize Deno memory stats tracking
     state.borrow_mut().put(super::DenoMemoryStats::default());
 
+    // Per-scene debug flag and tick counter consumed by the engine ops.
+    // Both are inserted unconditionally so the hot path can read them with a
+    // single `borrow::<T>()` call instead of a fallible `try_borrow`.
+    {
+        let mut op_state = state.borrow_mut();
+        op_state.put(SceneDebugFlag(should_debug));
+        op_state.put(engine::SceneTickCounter(std::cell::Cell::new(0)));
+    }
+
     if inspector.is_some() {
         // TODO: maybe send a message to announce the inspector is being waited
         tracing::debug!("Inspector is waiting...");
@@ -328,6 +418,11 @@ pub(crate) fn scene_thread(
         .build()
         .unwrap();
 
+    tracing::info!(
+        "{} loading scene code (size={} bytes)",
+        log_info.prefix(),
+        scene_code.len()
+    );
     let script = rt.block_on(async { runtime.execute_script("<loader>", scene_code) });
 
     let script = match script {
@@ -339,12 +434,50 @@ pub(crate) fn scene_thread(
         Ok(script) => script,
     };
 
+    if should_debug {
+        crate::tools::scene_inspector::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_inspector::SceneLifecycleEvent::ScriptLoaded,
+            None,
+            None,
+            None,
+        );
+        crate::tools::scene_inspector::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_inspector::SceneLifecycleEvent::OnStart,
+            None,
+            None,
+            None,
+        );
+    }
+
     let result =
         rt.block_on(async { run_script(&mut runtime, &script, "onStart", |_| Vec::new()).await });
     if let Err(e) = result {
         tracing::error!("{} script onStart error: {}", log_info.prefix(), e);
+
+        if should_debug {
+            crate::tools::scene_inspector::log_lifecycle_event(
+                scene_id.0,
+                crate::tools::scene_inspector::SceneLifecycleEvent::OnStartEnd,
+                None,
+                None,
+                Some(format!("{}", e)),
+            );
+        }
+
         send_remove_godot_scene(&state, scene_id);
         return;
+    }
+
+    if should_debug {
+        crate::tools::scene_inspector::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_inspector::SceneLifecycleEvent::OnStartEnd,
+            None,
+            None,
+            None,
+        );
     }
 
     // Workaround: this piece of code is to make v8-runtime to process the microqueue tasks
@@ -361,6 +494,8 @@ pub(crate) fn scene_thread(
     let mut reported_error_filter = 0;
     let mut last_memory_stats_update = std::time::Instant::now();
 
+    let mut tick_counter: u32 = 0;
+
     loop {
         let dt = std::time::SystemTime::now()
             .duration_since(start_time)
@@ -372,6 +507,25 @@ pub(crate) fn scene_thread(
             .borrow_mut()
             .put(SceneElapsedTime(elapsed.as_secs_f32()));
 
+        if should_debug {
+            tick_counter += 1;
+            // Sync to OpState so op_crdt_send_to_renderer and
+            // op_crdt_recv_from_renderer log the correct frame tick.
+            state
+                .borrow()
+                .borrow::<engine::SceneTickCounter>()
+                .0
+                .set(tick_counter);
+
+            crate::tools::scene_inspector::log_lifecycle_event(
+                scene_id.0,
+                crate::tools::scene_inspector::SceneLifecycleEvent::OnUpdate,
+                Some(tick_counter),
+                Some(dt.as_secs_f64()),
+                None,
+            );
+        }
+
         // run the onUpdate function
         let result = rt.block_on(async {
             run_script(&mut runtime, &script, "onUpdate", |scope| {
@@ -381,9 +535,21 @@ pub(crate) fn scene_thread(
         });
 
         if let Err(e) = result {
-            let err_str = format!("{:?}", e);
-            if let Ok(err) = e.downcast::<JsError>() {
-                if reported_error_filter < 10 {
+            reported_error_filter += 1;
+            if reported_error_filter <= 10 {
+                let err_str = format!("{:?}", e);
+
+                if should_debug {
+                    crate::tools::scene_inspector::log_lifecycle_event(
+                        scene_id.0,
+                        crate::tools::scene_inspector::SceneLifecycleEvent::OnUpdateEnd,
+                        Some(tick_counter),
+                        Some(dt.as_secs_f64()),
+                        Some(err_str.clone()),
+                    );
+                }
+
+                if let Ok(err) = e.downcast::<JsError>() {
                     tracing::error!(
                         "{} script error onUpdate: {} msg {:?} @ {:?}",
                         log_info.prefix(),
@@ -391,13 +557,18 @@ pub(crate) fn scene_thread(
                         err.message,
                         err
                     );
+                } else {
+                    tracing::error!("{} script error onUpdate: {}", log_info.prefix(), err_str);
                 }
-            } else if reported_error_filter < 10 {
-                tracing::error!("{} script error onUpdate: {}", log_info.prefix(), err_str);
+                if reported_error_filter == 10 {
+                    tracing::error!(
+                        "{} not logging any further uncaught errors.",
+                        log_info.prefix()
+                    );
+                }
             }
-            reported_error_filter += 1;
 
-            if (10..15).contains(&reported_error_filter)
+            if reported_error_filter == 10
                 && state
                     .borrow()
                     .try_borrow::<CommunicatedWithRenderer>()
@@ -409,8 +580,14 @@ pub(crate) fn scene_thread(
                 );
                 break;
             }
-        } else if reported_error_filter > 0 {
-            reported_error_filter -= 1;
+        } else if should_debug {
+            crate::tools::scene_inspector::log_lifecycle_event(
+                scene_id.0,
+                crate::tools::scene_inspector::SceneLifecycleEvent::OnUpdateEnd,
+                Some(tick_counter),
+                Some(dt.as_secs_f64()),
+                None,
+            );
         }
 
         // Collect V8 heap statistics every second
@@ -436,6 +613,16 @@ pub(crate) fn scene_thread(
         }
 
         state.borrow_mut().try_take::<CommunicatedWithRenderer>();
+    }
+
+    if should_debug {
+        crate::tools::scene_inspector::log_lifecycle_event(
+            scene_id.0,
+            crate::tools::scene_inspector::SceneLifecycleEvent::SceneShutdown,
+            None,
+            None,
+            None,
+        );
     }
 
     send_remove_godot_scene(&state, scene_id);
@@ -541,6 +728,35 @@ fn op_require(
     }
 }
 
+/// Sends a console log/error message to the Scene Inspector channel if
+/// debugging is enabled. Shared by `op_log` and `op_error` to avoid duplicated
+/// blocks.
+#[cold]
+#[inline(never)]
+fn maybe_send_log_to_scene_inspector(op_state: &OpState, op_name: &str, message: &str) {
+    if op_state
+        .try_borrow::<scene_inspector_ops::SceneDebugFlag>()
+        .map(|f| f.0)
+        .unwrap_or(false)
+    {
+        if let Some(sender) = crate::tools::scene_inspector::get_logger_sender() {
+            let scene_id = op_state.try_borrow::<SceneId>().map(|id| id.0).unwrap_or(0);
+            crate::tools::scene_inspector::try_send_entry(
+                &sender,
+                crate::tools::scene_inspector::SceneInspectorEntry::OpCallStart(
+                    crate::tools::scene_inspector::OpCallStartEntry {
+                        call_id: 0,
+                        scene_id,
+                        timestamp_ms: crate::tools::scene_inspector::current_timestamp_ms(),
+                        op_name: op_name.to_string(),
+                        args: Some(serde_json::Value::String(message.to_string())),
+                    },
+                ),
+            );
+        }
+    }
+}
+
 #[op2(fast)]
 fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate: bool) {
     if !is_scene_log_enabled() {
@@ -557,6 +773,8 @@ fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate:
     } else {
         tracing::debug!("{}", message);
     }
+
+    maybe_send_log_to_scene_inspector(&state.borrow(), "op_log", &message);
 
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state
@@ -585,6 +803,8 @@ fn op_error(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediat
         tracing::error!("{}", message);
     }
     tracing::debug!("{}", message);
+
+    maybe_send_log_to_scene_inspector(&state.borrow(), "op_error", &message);
 
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state

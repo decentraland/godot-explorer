@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/connection_status_online.svg-2397d6fa41ce0ad7
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true

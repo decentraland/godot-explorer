@@ -9,8 +9,22 @@ const DEBUG_SAVE_AVATAR_DATA = false
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
+const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
+const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
+const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
+const TOON_SHADER_DOUBLE = preload("res://assets/avatar/dcl_toon_double.gdshader")
+const TOON_SHADER_ALPHA_CLIP_DOUBLE = preload(
+	"res://assets/avatar/dcl_toon_alpha_clip_double.gdshader"
+)
+const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
+	"res://assets/avatar/dcl_toon_alpha_blend_double.gdshader"
+)
+
 @export var skip_process: bool = false
-@export var hide_name: bool = false
+@export var hide_name: bool = false:
+	set(value):
+		hide_name = value
+		_apply_nickname_visibility()
 @export var non_3d_audio: bool = false
 
 # Entity info for trigger area detection
@@ -20,12 +34,14 @@ var is_local_player: bool = false
 # Public
 var avatar_id: String = ""
 var hidden: bool = false
+var passport_disabled: bool = false
 var avatar_ready: bool = false
 var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
 # AvatarShape-specific state (NPCs from scene SDK)
 var is_avatar_shape: bool = false
 var last_expression_trigger_timestamp: int = -1
+var last_expression_trigger_id: String = ""
 
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
@@ -46,6 +62,37 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
+# Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
+var _force_hide_name: bool = false
+
+# Previous-frame jump_count for rising-edge detection of double-jump SFX.
+var _last_jump_count: int = 0
+# #b2: first _process tick should not treat wire-provided jump_count>=2 as a
+# rising edge — otherwise a remote avatar first seen mid-double-jump plays the
+# SFX from nothing. Cleared after the first frame where we seed _last_jump_count.
+var _jump_count_sync_pending: bool = true
+# Latched so we don't spam Close audio / Glider_End restart / hide-timer scheduling.
+var _glider_close_initiated: bool = false
+# Previous glide_state for _update_glider_prop's edge detection.
+var _prop_last_glide_state: int = 0
+# #b1/#b12: first call to _update_glider_prop should adopt whatever curr_state
+# came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
+# of staying invisible because prev_state==0 doesn't match any branch.
+var _prop_sync_pending: bool = true
+var _glide_forward_blend: float = 0.0
+
+# Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
+var _scene_emote_registry: Dictionary = {}
+
+# Indices of bones added to body_shape_skeleton_3d by _merge_extra_wearable_bones_into_base
+# and currently in use by the active wearables.
+var _active_extra_bone_indices: Array[int] = []
+# Slots recycled from previous merges (renamed + disabled) waiting to be reused by the next
+# merge. Skeleton3D has no remove_bone() in Godot 4.6, so reusing slots is the only way to
+# keep bone_count bounded across outfit / body-shape changes.
+var _free_bone_pool: Array[int] = []
+var _stale_bone_counter: int = 0
+
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
 
@@ -61,6 +108,9 @@ var wearable_loader: WearableLoader = null
 @onready var avatar_modifier_area_detector = $avatar_modifier_area_detector
 @onready var click_area = $ClickArea
 @onready var trigger_detector = %TriggerDetector
+
+@onready var glider_prop: Node3D = %GliderProp
+@onready var audio_player_double_jump: AudioStreamPlayer3D = %AudioPlayer_DoubleJump
 
 
 func _ready():
@@ -88,12 +138,14 @@ func _ready():
 		audio_player_emote.queue_free()
 
 		audio_player_emote = AudioStreamPlayer.new()
+		audio_player_emote.bus = &"AvatarAndEmotes"
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name
 
 	# Hide mic when the avatar is spawned
 	nickname_ui.mic_enabled = false
 	Global.on_chat_message.connect(on_chat_message)
+	_apply_nickname_visibility()
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
@@ -132,9 +184,9 @@ func on_chat_message(address: String, message: String, _timestamp: float):
 
 func _input(event):
 	if event.is_action_pressed("ia_pointer"):
-		# Only handle input if this avatar is currently selected
+		# Only handle input if this avatar is currently selected and not blocked/hidden
 		var selected = Global.get_selected_avatar()
-		if selected and selected == self and avatar_id:
+		if selected and selected == self and avatar_id and not hidden and not passport_disabled:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				Global.open_profile_by_avatar.emit(self)
 
@@ -154,21 +206,32 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 		if modifier == 0:  # hide avatar
 			hide()
 		elif modifier == 1:  # disable passport
-			pass  # TODO: Passport (disable functionality)
+			passport_disabled = true
 
 
 func set_hidden(value):
 	hidden = value
 	if hidden:
 		hide()
+		# Disable click detection so blocked/hidden avatars can't be interacted with
+		_set_click_area_enabled(false)
 	else:
 		try_show()
+		# Re-enable click detection
+		_set_click_area_enabled(true)
+
+
+func _set_click_area_enabled(enabled: bool) -> void:
+	if click_area:
+		var collision_shape = click_area.get_node_or_null("CollisionShape3D")
+		if collision_shape:
+			collision_shape.disabled = not enabled
 
 
 func _unset_avatar_modifier_area():
 	if not hidden:
 		show()
-	# TODO: Passport (enable functionality)
+	passport_disabled = false
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
@@ -210,12 +273,21 @@ func async_update_avatar(
 			"expression_trigger_timestamp", -1
 		)
 
-		# Trigger emote if timestamp changed (Lamport timestamp pattern)
-		if (
-			expression_trigger_timestamp > last_expression_trigger_timestamp
-			and not expression_trigger_id.is_empty()
-		):
+		# Determine if we should trigger the emote:
+		# 1. If timestamp is valid (>= 0) and greater than last timestamp, OR
+		# 2. If no timestamp (-1) but the expression_trigger_id changed
+		var should_trigger = false
+		if not expression_trigger_id.is_empty():
+			if expression_trigger_timestamp >= 0:
+				# Timestamp-based triggering (Lamport timestamp pattern)
+				should_trigger = expression_trigger_timestamp > last_expression_trigger_timestamp
+			else:
+				# No timestamp - trigger when id changes
+				should_trigger = expression_trigger_id != last_expression_trigger_id
+
+		if should_trigger:
 			last_expression_trigger_timestamp = expression_trigger_timestamp
+			last_expression_trigger_id = expression_trigger_id
 			# Defer emote play to after avatar is loaded if needed
 			if avatar_ready:
 				_async_play_expression_trigger(expression_trigger_id)
@@ -255,13 +327,7 @@ func async_update_avatar(
 	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 	nickname_ui.mic_enabled = false
 
-	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
-	if is_avatar_shape:
-		nickname_quad.hide()
-	elif hide_name:
-		nickname_quad.hide()
-	else:
-		nickname_quad.show()
+	_apply_nickname_visibility()
 
 	wearable_to_request.append_array(avatar_data.get_wearables())
 
@@ -313,6 +379,25 @@ func async_update_avatar(
 	)
 	await PromiseUtils.async_all(promise)
 	await async_fetch_wearables_dependencies()
+
+
+func set_force_hide_name(value: bool) -> void:
+	if _force_hide_name == value:
+		return
+	_force_hide_name = value
+	if is_inside_tree():
+		_apply_nickname_visibility()
+
+
+func _apply_nickname_visibility() -> void:
+	if nickname_quad == null:
+		return
+	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
+	var should_hide := is_avatar_shape or hide_name or _force_hide_name
+	if should_hide:
+		nickname_quad.hide()
+	else:
+		nickname_quad.show()
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
@@ -375,6 +460,10 @@ func async_try_to_set_body_shape(body_shape_hash):
 			body_shape_skeleton_3d.remove_child(child)
 			child.queue_free()
 
+	# Recycle any extra bones merged in the previous assembly so the upcoming
+	# _merge_extra_wearable_bones_into_base pass starts from a clean slate.
+	_recycle_extra_wearable_bones()
+
 	# Reparent children directly (no need to duplicate since wearable_loader
 	# returns a fresh instantiated scene that we'll discard anyway)
 	for child in new_skeleton.get_children():
@@ -388,14 +477,143 @@ func async_try_to_set_body_shape(body_shape_hash):
 	_add_attach_points()
 
 
-func apply_unshaded_mode(node_to_apply: Node):
+# Renames bones previously merged via _merge_extra_wearable_bones_into_base to a
+# unique stale sentinel, disables them, detaches them from the active hierarchy
+# (parent=-1, rest=identity), and pushes their indices into the free pool so the
+# next merge can reuse them instead of growing the skeleton. Detaching keeps the
+# per-frame skeleton transform walk cheap by leaving stale slots as flat roots.
+func _recycle_extra_wearable_bones() -> void:
+	if _active_extra_bone_indices.is_empty():
+		return
+	for bone_idx in _active_extra_bone_indices:
+		if bone_idx < 0 or bone_idx >= body_shape_skeleton_3d.get_bone_count():
+			continue
+		var stale_name = "__stale_bone_%d" % _stale_bone_counter
+		_stale_bone_counter += 1
+		body_shape_skeleton_3d.set_bone_name(bone_idx, stale_name)
+		body_shape_skeleton_3d.set_bone_enabled(bone_idx, false)
+		body_shape_skeleton_3d.set_bone_parent(bone_idx, -1)
+		body_shape_skeleton_3d.set_bone_rest(bone_idx, Transform3D.IDENTITY)
+		body_shape_skeleton_3d.reset_bone_pose(bone_idx)
+		_free_bone_pool.push_back(bone_idx)
+	_active_extra_bone_indices.clear()
+
+
+# Copies bones that exist in the wearable's Skeleton3D but not in body_shape_skeleton_3d
+# (typically ADR-316 spring bones for hair, earrings, capes, etc.). Parents are added
+# before children so parent-by-name resolution always succeeds. Without this, mesh
+# skins referencing indices beyond body_shape_skeleton_3d.get_bone_count() log
+# `Skin bind #N contains bone index bind: N, which is greater than the skeleton bone count`.
+func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
+	var wearable_bone_count = wearable_skel.get_bone_count()
+	if wearable_bone_count == 0:
+		return
+
+	# Collect missing bones along with their depth in the wearable hierarchy so we
+	# can add parents before children.
+	var missing: Array = []  # Array of [depth, wearable_idx, name]
+	for i in wearable_bone_count:
+		var bone_name = wearable_skel.get_bone_name(i)
+		if body_shape_skeleton_3d.find_bone(bone_name) != -1:
+			continue
+		var depth = 0
+		var cursor = wearable_skel.get_bone_parent(i)
+		while cursor != -1:
+			depth += 1
+			cursor = wearable_skel.get_bone_parent(cursor)
+		missing.push_back([depth, i, bone_name])
+
+	if missing.is_empty():
+		return
+
+	missing.sort_custom(func(a, b): return a[0] < b[0])
+
+	for entry in missing:
+		var wearable_idx: int = entry[1]
+		var bone_name: String = entry[2]
+		var new_idx: int
+		if not _free_bone_pool.is_empty():
+			new_idx = _free_bone_pool.pop_back()
+			body_shape_skeleton_3d.set_bone_name(new_idx, bone_name)
+			body_shape_skeleton_3d.set_bone_enabled(new_idx, true)
+		else:
+			new_idx = body_shape_skeleton_3d.add_bone(bone_name)
+		body_shape_skeleton_3d.set_bone_rest(new_idx, wearable_skel.get_bone_rest(wearable_idx))
+		body_shape_skeleton_3d.reset_bone_pose(new_idx)
+		_active_extra_bone_indices.push_back(new_idx)
+		# Always reset parent: a recycled slot may have been linked to a stale
+		# parent from its previous use.
+		var parent_wearable_idx = wearable_skel.get_bone_parent(wearable_idx)
+		var parent_base_idx = -1
+		if parent_wearable_idx != -1:
+			var parent_name = wearable_skel.get_bone_name(parent_wearable_idx)
+			parent_base_idx = body_shape_skeleton_3d.find_bone(parent_name)
+			if parent_base_idx == -1:
+				push_warning(
+					(
+						"[AVATAR] Extra bone '%s' parent '%s' not found in base skeleton; leaving as root"
+						% [bone_name, parent_name]
+					)
+				)
+		body_shape_skeleton_3d.set_bone_parent(new_idx, parent_base_idx)
+
+
+# Rewrites a MeshInstance3D's Skin so every bind references its target bone by name.
+# Godot resolves named binds against the attached skeleton at runtime, so once the
+# mesh is reparented to body_shape_skeleton_3d (which may have been extended with
+# extra wearable bones) every joint resolves correctly, including ADR-316 spring bones.
+func _rebind_skin_by_name(mesh: MeshInstance3D, wearable_skel: Skeleton3D) -> void:
+	if mesh.skin == null:
+		return
+	var skin: Skin = mesh.skin.duplicate()
+	var wearable_bone_count = wearable_skel.get_bone_count()
+	for i in skin.get_bind_count():
+		var bone_idx = skin.get_bind_bone(i)
+		if bone_idx >= 0 and bone_idx < wearable_bone_count:
+			skin.set_bind_name(i, wearable_skel.get_bone_name(bone_idx))
+	mesh.skin = skin
+
+
+func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
+	var is_alpha_scissor = base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	var is_alpha_blend = (
+		base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA
+		or base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
+		or base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+	)
+	var double_sided = base_mat.cull_mode == BaseMaterial3D.CULL_DISABLED
+	var toon_mat = ShaderMaterial.new()
+	if is_alpha_scissor and double_sided:
+		toon_mat.shader = TOON_SHADER_ALPHA_CLIP_DOUBLE
+	elif is_alpha_scissor:
+		toon_mat.shader = TOON_SHADER_ALPHA_CLIP
+	elif is_alpha_blend and double_sided:
+		toon_mat.shader = TOON_SHADER_ALPHA_BLEND_DOUBLE
+	elif is_alpha_blend:
+		toon_mat.shader = TOON_SHADER_ALPHA_BLEND
+	elif double_sided:
+		toon_mat.shader = TOON_SHADER_DOUBLE
+	else:
+		toon_mat.shader = TOON_SHADER
+	toon_mat.set_shader_parameter("albedo_color", base_mat.albedo_color)
+	if base_mat.albedo_texture:
+		toon_mat.set_shader_parameter("albedo_texture", base_mat.albedo_texture)
+	if base_mat.emission_enabled:
+		toon_mat.set_shader_parameter("emission_color", base_mat.emission)
+		if base_mat.emission_texture:
+			toon_mat.set_shader_parameter("emission_texture", base_mat.emission_texture)
+	if is_alpha_scissor:
+		toon_mat.set_shader_parameter("alpha_scissor_threshold", base_mat.alpha_scissor_threshold)
+	return toon_mat
+
+
+func apply_toon_material(node_to_apply: Node):
 	if node_to_apply is MeshInstance3D:
 		for surface_idx in range(node_to_apply.mesh.get_surface_count()):
 			var mat = node_to_apply.mesh.surface_get_material(surface_idx)
 			if mat != null and mat is BaseMaterial3D:
-				mat.disable_receive_shadows = true
-				mat.roughness = .1
-				mat.metallic = 0.0
+				var toon_mat = _convert_to_toon(mat)
+				node_to_apply.mesh.surface_set_material(surface_idx, toon_mat)
 
 
 func async_load_wearables():
@@ -476,7 +694,14 @@ func async_load_wearables():
 		# returns a fresh instantiated scene that we'll discard anyway)
 		var wearable_skeletons = obj.find_children("Skeleton3D")
 		for skeleton_3d in wearable_skeletons:
+			# Spring bones (ADR-316) and other extra bones not in the base armature
+			# must be copied into body_shape_skeleton_3d before meshes are reparented,
+			# otherwise mesh skins reference bone indices that don't exist here.
+			_merge_extra_wearable_bones_into_base(skeleton_3d)
+
 			for child in skeleton_3d.get_children():
+				if child is MeshInstance3D:
+					_rebind_skin_by_name(child, skeleton_3d)
 				skeleton_3d.remove_child(child)
 				child.set_owner(null)  # Clear owner since we're reparenting
 				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
@@ -563,11 +788,12 @@ func async_load_wearables():
 
 	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
 	await PromiseUtils.async_awaiter(promise)
-	apply_color_and_facial()
 
-	apply_unshaded_mode(body_shape_skeleton_3d)
+	apply_toon_material(body_shape_skeleton_3d)
 	for child in body_shape_skeleton_3d.get_children():
-		apply_unshaded_mode(child)
+		apply_toon_material(child)
+
+	apply_color_and_facial()
 
 	# For show_only_wearables, reset skeleton to T-pose so wearable doesn't animate
 	if show_only_wearables:
@@ -576,7 +802,6 @@ func async_load_wearables():
 
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
-
 	# Emotes - get from cached emote scenes
 	for emote_urn in avatar_data.get_emotes():
 		if not emote_urn.begins_with("urn"):
@@ -595,6 +820,7 @@ func async_load_wearables():
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 	emote_controller.clean_unused_emotes()
+
 	avatar_ready = true
 	avatar_loaded.emit()
 
@@ -612,12 +838,16 @@ func apply_color_and_facial():
 				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
 				var material = child.mesh.surface_get_material(i)
 
-				if material is StandardMaterial3D:
+				if material is ShaderMaterial:
+					if mat_name.find("skin") != -1:
+						material.set_shader_parameter("albedo_color", avatar_data.get_skin_color())
+					elif mat_name.find("hair") != -1:
+						material.set_shader_parameter("albedo_color", avatar_data.get_hair_color())
+				elif material is StandardMaterial3D:
 					material.metallic = 0
 					material.metallic_specular = 0
 					if mat_name.find("skin") != -1:
 						material.albedo_color = avatar_data.get_skin_color()
-						material.metallic = 0
 					elif mat_name.find("hair") != -1:
 						material.roughness = 1
 						material.albedo_color = avatar_data.get_hair_color()
@@ -692,6 +922,10 @@ func _process(delta):
 	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
 	emote_controller.process(self_idle)
 
+	var is_emoting = self_idle && emote_controller.is_playing()
+	if is_local_player:
+		Global.comms.set_emoting(is_emoting)
+
 	animation_tree.set("parameters/conditions/idle", self_idle)
 	animation_tree.set("parameters/conditions/emote", emote_controller.playing_single)
 	animation_tree.set("parameters/conditions/nemote", not emote_controller.playing_single)
@@ -705,8 +939,152 @@ func _process(delta):
 	animation_tree.set("parameters/conditions/rise", self.rise)
 	animation_tree.set("parameters/conditions/fall", self.fall)
 	animation_tree.set("parameters/conditions/land", self.land)
+	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
+	# locally (in_grace_time) and was previously overridden to is_grounded for
+	# remotes, causing asymmetric behavior. is_grounded is the same shape on
+	# both sides, and fall's 1-2 frame deadband at apex is still avoided.
+	animation_tree.set("parameters/conditions/nfall", self.is_grounded)
 
-	animation_tree.set("parameters/conditions/nfall", !self.fall)
+	# Rising-edge detection for one-frame AnimationTree condition pulses.
+	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
+	# #b2: on first observation of this avatar (local or remote) suppress the
+	# rising edge so we don't retroactively play SFX for state that happened
+	# before we started watching.
+	if _jump_count_sync_pending:
+		jump_rising_edge = false
+		_jump_count_sync_pending = false
+	_last_jump_count = self.jump_count
+	# #b16: start_glide is sustained for the whole OPENING window, not a one-
+	# frame edge. An edge pulse is lost when the AnimationTree sits in a state
+	# without an outgoing `start_glide` transition (Jump_Mid, Run_Jump_Mid,
+	# Idle, Jump_Start, …), leaving the avatar stuck in Jump_Fall while
+	# glide_state == GLIDING. Holding the condition for the full 0.5s window
+	# gives the state machine time to pass through a source state.
+	var glide_opening: bool = self.glide_state == 1
+	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
+
+	animation_tree.set("parameters/conditions/double_jump", jump_rising_edge)
+	animation_tree.set("parameters/conditions/start_glide", glide_opening)
+	animation_tree.set("parameters/conditions/gliding", gliding_now)
+	animation_tree.set("parameters/conditions/ngliding", not gliding_now)
+
+	var glide_moving: bool = self.walk or self.jog or self.run
+	var glide_forward_target: float = 1.0 if glide_moving else 0.0
+	_glide_forward_blend = move_toward(_glide_forward_blend, glide_forward_target, delta * 4.0)
+	animation_tree.set("parameters/Gliding_Idle/Blend2/blend_amount", _glide_forward_blend)
+
+	if jump_rising_edge:
+		audio_player_double_jump.play()
+
+	_update_glider_prop()
+
+
+# Toggles GliderProp visibility based on glide_state transitions. The prop is
+# a persistent child (rotated 180° Y to compensate the Unity→Godot axis flip)
+# so audio and AnimationPlayer stay warm across glide cycles.
+func _update_glider_prop() -> void:
+	if is_avatar_shape:
+		if glider_prop.visible:
+			glider_prop.visible = false
+		_prop_last_glide_state = self.glide_state
+		_prop_sync_pending = false
+		return
+
+	var curr_state: int = self.glide_state
+
+	# #b1/#b12: first tick — adopt whatever state came in without firing open/close
+	# SFX, so a remote seen mid-glide actually shows wings and the idle loop.
+	if _prop_sync_pending:
+		_prop_sync_pending = false
+		_prop_last_glide_state = curr_state
+		if curr_state == 1 or curr_state == 2:
+			glider_prop.visible = true
+			_glider_close_initiated = false
+			# Jump straight to Glider_Idle; no Start/Open sfx for state we joined into.
+			_play_glider_clip_if_different("Glider_Idle")
+			if curr_state == 1:
+				_play_glider_audio("AudioPlayer_Idle")
+			else:
+				_play_glider_audio("AudioPlayer_Idle")
+		elif curr_state == 3:
+			# Joined during CLOSING: show prop, let the existing CLOSING→CLOSED
+			# transition scheduled by the next tick hide it naturally.
+			glider_prop.visible = true
+			_glider_close_initiated = true
+		return
+
+	var prev_state: int = _prop_last_glide_state
+	_prop_last_glide_state = curr_state
+
+	if prev_state == 0 and curr_state == 1:
+		glider_prop.visible = true
+		_glider_close_initiated = false
+		_play_glider_audio("AudioPlayer_Open")
+		_play_glider_audio("AudioPlayer_Idle")
+		_play_glider_clip("Glider_Start")
+	elif (prev_state == 1 or prev_state == 2) and curr_state == 3:
+		# Start close immediately on CLOSING edge — don't wait for the FSM to
+		# reach CLOSED (0.15s later) or the user sees wings-open mid-close.
+		_glider_close_initiated = true
+		_stop_glider_audio("AudioPlayer_Idle")
+		_play_glider_audio("AudioPlayer_Close")
+		_play_glider_clip("Glider_End")
+	elif prev_state == 3 and curr_state == 0 and glider_prop.visible:
+		_schedule_glider_hide()
+	elif curr_state == 0 and glider_prop.visible and not _glider_close_initiated:
+		# Fallback: state jumped directly to CLOSED without passing CLOSING.
+		_glider_close_initiated = true
+		_stop_glider_audio("AudioPlayer_Idle")
+		_play_glider_audio("AudioPlayer_Close")
+		_play_glider_clip("Glider_End")
+		_schedule_glider_hide()
+
+	if curr_state == 2 and glider_prop.visible:
+		var glider_moving: bool = self.walk or self.jog or self.run
+		var glider_clip: String = "Glider_Forward" if glider_moving else "Glider_Idle"
+		_play_glider_clip_if_different(glider_clip, 0.25)
+
+
+func _schedule_glider_hide() -> void:
+	var tree := get_tree()
+	if tree != null:
+		var timer := tree.create_timer(0.25)
+		timer.timeout.connect(_hide_glider_prop)
+	else:
+		_hide_glider_prop()
+
+
+func _hide_glider_prop() -> void:
+	# Skip the hide if the user re-opened glide during the fade-out window.
+	if self.glide_state == 0:
+		glider_prop.visible = false
+
+
+func _play_glider_audio(node_name: String) -> void:
+	var player := glider_prop.get_node_or_null(node_name) as AudioStreamPlayer3D
+	if player != null:
+		player.play()
+
+
+func _stop_glider_audio(node_name: String) -> void:
+	var player := glider_prop.get_node_or_null(node_name) as AudioStreamPlayer3D
+	if player != null:
+		player.stop()
+
+
+func _play_glider_clip(clip: String) -> void:
+	var ap := glider_prop.get_node_or_null("AnimationPlayer") as AnimationPlayer
+	if ap == null or not ap.has_animation(clip):
+		return
+	ap.play(clip)
+
+
+func _play_glider_clip_if_different(clip: String, blend_time: float = -1.0) -> void:
+	var ap := glider_prop.get_node_or_null("AnimationPlayer") as AnimationPlayer
+	if ap == null or not ap.has_animation(clip):
+		return
+	if ap.current_animation != clip:
+		ap.play(clip, blend_time)
 
 
 func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):
@@ -759,6 +1137,14 @@ func _on_timer_hide_mic_timeout():
 	nickname_ui.mic_enabled = false
 
 
+func set_client_version(version: String):
+	nickname_ui.client_version = version
+
+
+func set_room_debug(info: String):
+	nickname_ui.room_debug = info
+
+
 func _play_emote_audio(file_hash: String):
 	emote_controller.play_emote_audio(file_hash)
 
@@ -767,8 +1153,27 @@ func async_play_emote(emote_urn: String):
 	await emote_controller.async_play_emote(emote_urn)
 
 
-func async_play_scene_emote(emote_data: DclSceneEmoteData) -> void:
-	await emote_controller.async_play_scene_emote(emote_data)
+## Register scene emote content info for later retrieval.
+## Called from Rust before async_play_emote for scene emotes.
+func register_scene_emote_content(
+	scene_id: String, base_url: String, glb_hash: String, audio_hash: String
+) -> void:
+	if not _scene_emote_registry.has(scene_id):
+		_scene_emote_registry[scene_id] = {"base_url": base_url, "emotes": {}}
+	_scene_emote_registry[scene_id]["emotes"][glb_hash] = audio_hash
+
+
+## Get scene emote content info for loading.
+## Returns {base_url, audio_hash} or fallback to realm URL for remote players.
+func get_scene_emote_info(scene_id: String, glb_hash: String) -> Dictionary:
+	if _scene_emote_registry.has(scene_id):
+		var scene_data = _scene_emote_registry[scene_id]
+		if scene_data["emotes"].has(glb_hash):
+			return {
+				"base_url": scene_data["base_url"], "audio_hash": scene_data["emotes"][glb_hash]
+			}
+	# Fallback for remote players - use realm URL (audio won't be available)
+	return {"base_url": Global.realm.content_base_url, "audio_hash": ""}
 
 
 ## Play emote triggered by AvatarShape's expression_trigger_id field.
@@ -777,7 +1182,7 @@ func _async_play_expression_trigger(emote_id: String) -> void:
 	if emote_id.is_empty():
 		return
 
-	# URN emotes (wearable emotes)
+	# URN emotes (wearable emotes and scene emotes)
 	if emote_id.begins_with("urn:"):
 		await async_play_emote(emote_id)
 	# Default emotes (wave, clap, dance, etc.) - play via emote controller

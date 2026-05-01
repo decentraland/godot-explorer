@@ -10,6 +10,12 @@ use crate::{
     godot_classes::dcl_global::DclGlobal,
 };
 
+/// Minimum action strength for analog movement actions (joystick) to be
+/// considered "pressed" when reporting to the SDK.  This prevents tiny
+/// accidental stick displacements from firing spurious IaForward / IaBackward /
+/// IaLeft / IaRight events to scenes.
+const ANALOG_ACTION_THRESHOLD: f32 = 0.5;
+
 pub struct InputState {
     dcl_to_action: HashMap<InputAction, StringName>,
     pub state: HashMap<InputAction, bool>, // for now, only support bool states
@@ -42,6 +48,16 @@ impl InputState {
         }
     }
 
+    fn is_movement_action(action: &InputAction) -> bool {
+        matches!(
+            action,
+            InputAction::IaForward
+                | InputAction::IaBackward
+                | InputAction::IaLeft
+                | InputAction::IaRight
+        )
+    }
+
     pub fn get_new_inputs(&mut self) -> HashSet<(InputAction, bool)> {
         let mut result = HashSet::new();
         let input: Gd<Input> = Input::singleton();
@@ -52,7 +68,13 @@ impl InputState {
         let is_pointer_locked = input.get_mouse_mode() == MouseMode::CAPTURED;
         if is_pointer_locked || DclGlobal::singleton().bind().is_mobile {
             for (input_action, action_string) in self.dcl_to_action.iter() {
-                let current_state = input.is_action_pressed(action_string);
+                let current_state = if Self::is_movement_action(input_action) {
+                    // Use strength threshold for movement actions so that tiny
+                    // analog stick displacements don't send SDK events.
+                    input.get_action_strength(action_string) > ANALOG_ACTION_THRESHOLD
+                } else {
+                    input.is_action_pressed(action_string)
+                };
                 if self.state[input_action] != current_state {
                     self.state.insert(*input_action, current_state);
                     result.insert((*input_action, current_state));

@@ -1,8 +1,8 @@
 extends Control
 
-signal close_all
 signal close_only_panels
 signal navbar_opened
+signal navbar_closed
 
 enum BUTTON { FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
 
@@ -11,21 +11,21 @@ var _manually_hidden: bool = false
 @onready var animation_player: AnimationPlayer = %AnimationPlayer
 @onready var panel_container: PanelContainer = %PanelContainer
 @onready var v_box_container_buttons: VBoxContainer = %VBoxContainer_Buttons
-@onready var hud_button_friends: Button = %HudButton_Friends
-@onready var hud_button_notifications: Button = %HudButton_Notifications
-@onready var hud_button_backpack: Button = %HudButton_Backpack
-@onready var hud_button_settings: Button = %HudButton_Settings
+@onready var static_button_friends: TextureButton = %StaticButton_Friends
+@onready var static_button_notifications: TextureButton = %StaticButton_Notifications
 @onready var button: Button = %Button
-@onready var portrait_button_profile: Button = %Portrait_Button_Profile
+@onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
+@onready var static_button_backpack: TextureButton = %StaticButton_Backpack
+@onready var static_button_settings: TextureButton = %StaticButton_Settings
 
 
 func _ready() -> void:
 	var btn_group = ButtonGroup.new()
 	btn_group.allow_unpress = false
-	hud_button_friends.button_group = btn_group
-	hud_button_notifications.button_group = btn_group
-	hud_button_backpack.button_group = btn_group
-	hud_button_settings.button_group = btn_group
+	static_button_friends.button_group = btn_group
+	static_button_notifications.button_group = btn_group
+	static_button_backpack.button_group = btn_group
+	static_button_settings.button_group = btn_group
 	portrait_button_profile.button_group = btn_group
 	# Ensure there's always a pressed button at startup
 	# The ButtonGroup with allow_unpress = false ensures one is always pressed
@@ -48,7 +48,8 @@ func _on_size_changed():
 		if (
 			explorer.control_menu != null
 			and explorer.control_menu.visible
-			and explorer.control_menu.control_discover.visible
+			and explorer.control_menu.control_discover.instance != null
+			and explorer.control_menu.control_discover.instance.visible
 		):
 			# If discover is open, keep hidden
 			hide()
@@ -63,8 +64,7 @@ func _on_size_changed():
 
 
 func _on_navbar_close() -> void:
-	close_from_discover_button()
-	close_all.emit()
+	collapse()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
@@ -75,29 +75,30 @@ func _on_button_toggled(toggled_on: bool) -> void:
 		navbar_opened.emit()
 	else:
 		animation_player.play("close")
-		close_all.emit()
+		navbar_closed.emit()
 
 
 ## Set a button as pressed
 func set_button_pressed(button_to_press: BUTTON) -> void:
 	match button_to_press:
 		BUTTON.FRIENDS:
-			hud_button_friends.button_pressed = true
+			static_button_friends.button_pressed = true
 		BUTTON.NOTIFICATIONS:
-			hud_button_notifications.button_pressed = true
+			static_button_notifications.button_pressed = true
 		BUTTON.BACKPACK:
-			hud_button_backpack.button_pressed = true
+			static_button_backpack.button_pressed = true
 		BUTTON.SETTINGS:
-			hud_button_settings.button_pressed = true
+			static_button_settings.button_pressed = true
 
 
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
-func close_from_discover_button():
+func collapse():
 	button.set_pressed_no_signal(false)
 	animation_player.play("close")
+	navbar_closed.emit()
 
 
 func _on_navbar_open_silently_on_backpack() -> void:
@@ -119,10 +120,15 @@ func set_manually_hidden(is_hidden: bool) -> void:
 		var explorer = Global.get_explorer()
 		if explorer != null:
 			# Check if discover or chat are open before restoring visibility
-			if explorer.control_menu.visible and explorer.control_menu.control_discover.visible:
+			if (
+				explorer.control_menu != null
+				and explorer.control_menu.visible
+				and explorer.control_menu.control_discover.instance != null
+				and explorer.control_menu.control_discover.instance.visible
+			):
 				# If discover is open, keep hidden
 				return
-			if explorer.chat_container.visible:
+			if explorer.chat_container != null and explorer.chat_container.visible:
 				# If chat is open, keep hidden
 				return
 

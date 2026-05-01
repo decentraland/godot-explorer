@@ -3,7 +3,7 @@
 class_name OpenSeaFetcher
 
 # DCL OpenSea
-const RETRIEVE_ASSETS_ENDPOINT := "https://opensea.decentraland.org/api/v2/chain/%s/contract/%s/nfts/%s"
+# Note: endpoint URL built dynamically using DclUrls.opensea_proxy()
 
 # OpenSea
 #const RETRIEVE_ASSETS_ENDPOINT := "https://api.opensea.io/api/v2/chain/%s/contract/%s/nfts/%s"
@@ -92,7 +92,10 @@ func fetch_nft(urn: DclUrn) -> Promise:
 
 
 func _async_request_nft(completed_promise: Promise, urn: DclUrn):
-	var url = RETRIEVE_ASSETS_ENDPOINT % [urn.chain, urn.contract_address, urn.token_id]
+	var url = (
+		DclUrls.open_sea_proxy()
+		+ "/api/v2/chain/%s/contract/%s/nfts/%s" % [urn.chain, urn.contract_address, urn.token_id]
+	)
 	var headers = {
 		"Content-Type": "application/json",
 		"X-API-KEY": API_KEY,

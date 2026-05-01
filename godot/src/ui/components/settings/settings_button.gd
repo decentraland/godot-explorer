@@ -1,4 +1,4 @@
-extends AnimatedButton
+extends StaticButton
 
 
 func _get_unread_count() -> int:
@@ -11,7 +11,12 @@ func _connect_update_signals() -> void:
 
 
 func _on_button_clicked() -> void:
-	Global.open_settings.emit()
+	if Global.get_explorer():
+		Global.close_menu.emit()
+		Global.open_settings_panel.emit()
+	else:
+		Global.close_navbar.emit()
+		Global.open_settings.emit()
 	Global.send_haptic_feedback()
 
 

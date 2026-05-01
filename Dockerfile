@@ -8,6 +8,8 @@ RUN apt-get install -y --no-install-recommends \
     libssl-dev libx11-dev libgl1-mesa-dev libxext-dev \
     libxcursor1 libxinerama1 libxrandr2 libxi6 libwayland-cursor0 \
     libdbus-1-3 libxrender1 libxkbcommon0 libfontconfig1 \
+    nodejs npm \
+    && npm install -g @gltf-transform/cli \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

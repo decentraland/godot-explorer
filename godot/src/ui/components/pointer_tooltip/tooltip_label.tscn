@@ -1,7 +1,11 @@
-[gd_scene load_steps=4 format=3 uid="uid://d0rqfy34immue"]
+[gd_scene format=3 uid="uid://d0rqfy34immue"]
 
 [ext_resource type="FontFile" uid="uid://cmc7ku5u0efdy" path="res://assets/themes/fonts/lato_family/Lato-Bold.ttf" id="1_1lcoh"]
 [ext_resource type="Script" uid="uid://5u25dqo7og70" path="res://src/ui/components/pointer_tooltip/tooltip_label.gd" id="1_ut63f"]
+[ext_resource type="Texture2D" uid="uid://dmm6s6ay3iatx" path="res://assets/themes/icons/gamepad/left-bumper.svg" id="2_qd4xu"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_sk4cq"]
+[ext_resource type="Texture2D" uid="uid://bjppxn35ls1rc" path="res://assets/themes/icons/gamepad/a-filled.svg" id="5_sk4cq"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_sk4cq"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_473nw"]
 bg_color = Color(0, 0, 0, 0.501961)
@@ -10,49 +14,133 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="PanelContainer" type="PanelContainer"]
-offset_right = 85.0
-offset_bottom = 40.0
+[sub_resource type="LabelSettings" id="LabelSettings_i8mwd"]
+font = ExtResource("4_sk4cq")
+font_size = 28
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sk4cq"]
+bg_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(0, 0, 0, 0.356863)
+shadow_size = 2
+shadow_offset = Vector2(2, 2)
+
+[sub_resource type="LabelSettings" id="LabelSettings_r3qmc"]
+font = ExtResource("6_sk4cq")
+font_size = 24
+font_color = Color(0, 0, 0, 1)
+
+[node name="PanelContainer" type="PanelContainer" unique_id=2053453734]
+custom_minimum_size = Vector2(0, 52)
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -26.0
+offset_right = 130.0
+offset_bottom = 26.0
+grow_vertical = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_473nw")
 script = ExtResource("1_ut63f")
+metadata/_edit_horizontal_guides_ = [312.0, 342.0]
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=555259352]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=1838841736]
 layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 10
+
+[node name="MarginContainer_Icons" type="MarginContainer" parent="MarginContainer/HBoxContainer" unique_id=2075078618]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_bottom = 0
+
+[node name="HBoxContainer_Icons" type="HBoxContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons" unique_id=1619349462]
+layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(24, 24)
-layout_mode = 2
-mouse_filter = 2
-
-[node name="Label_Action" type="Label" parent="MarginContainer/HBoxContainer/PanelContainer"]
+[node name="HBoxContainer_Gamepad" type="HBoxContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons" unique_id=811244264]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 12
-text = "1"
-horizontal_alignment = 1
+theme_override_constants/separation = -3
+
+[node name="HBoxContainer_Modifier" type="HBoxContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad" unique_id=216559038]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="TextureRect_GamepadIModifier" type="TextureRect" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad/HBoxContainer_Modifier" unique_id=291825035]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("2_qd4xu")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Label_Text2" type="Label" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad/HBoxContainer_Modifier" unique_id=830748808]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("1_1lcoh")
+text = "+"
+label_settings = SubResource("LabelSettings_i8mwd")
 vertical_alignment = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/PanelContainer"]
+[node name="TextureRect_GamepadButton" type="TextureRect" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad" unique_id=1598126860]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("5_sk4cq")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons" unique_id=612962913]
+layout_mode = 2
+theme_override_constants/margin_right = 6
+
+[node name="PanelContainer_Inputs" type="PanelContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer" unique_id=1715365517]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(36, 24)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_sk4cq")
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer/PanelContainer_Inputs" unique_id=675262588]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_vertical = 4
 theme_override_constants/margin_left = 3
 theme_override_constants/margin_top = 3
 theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 3
 
-[node name="TextureRect_ActionIcon" type="TextureRect" parent="MarginContainer/HBoxContainer/PanelContainer/MarginContainer"]
+[node name="Label_Action" type="Label" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer/PanelContainer_Inputs/MarginContainer" unique_id=256015191]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "E"
+label_settings = SubResource("LabelSettings_r3qmc")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TextureRect_ActionIcon" type="TextureRect" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer/PanelContainer_Inputs/MarginContainer" unique_id=435183030]
 unique_name_in_owner = true
 visible = false
 self_modulate = Color(0, 0, 0, 1)
@@ -60,10 +148,15 @@ layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/HBoxContainer" unique_id=2060292076]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer/HBoxContainer2" unique_id=578823531]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("1_1lcoh")
 text = "Text"
+label_settings = SubResource("LabelSettings_i8mwd")
 vertical_alignment = 1

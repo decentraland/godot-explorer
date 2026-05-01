@@ -1,12 +1,17 @@
 extends Node
 
+# Startup instrumentation - capture engine boot time
+var _startup_time: int = Time.get_ticks_msec()
+
 
 func _ready():
+	print("[Startup] main._ready: %dms" % (Time.get_ticks_msec() - _startup_time))
 	Global.set_orientation_portrait()
 	start.call_deferred()
 
 
 func start():
+	print("[Startup] main.start: %dms" % (Time.get_ticks_msec() - _startup_time))
 	get_tree().quit_on_go_back = false
 
 	# Check if help was requested
@@ -43,11 +48,17 @@ func start():
 
 
 func _start():
-	if Global.is_xr():
-		print("Running in XR mode")
-		Global.set_orientation_landscape()
-		get_tree().change_scene_to_file("res://src/vr/vr_lobby.tscn")
-	elif Global.cli.emote_test_mode:
+	print("[Startup] main._start: %dms" % (Time.get_ticks_msec() - _startup_time))
+	if Global.cli.asset_server:
+		print("Running in Asset Server mode")
+		_start_asset_server()
+		return
+
+	# Floating Islands Benchmark mode - don't load any UI scene
+	if Global.cli.fi_benchmark_size >= 0:
+		return
+
+	if Global.cli.emote_test_mode:
 		print("Running in Emote Test mode")
 		get_tree().change_scene_to_file("res://src/test/emote/emote_tester_standalone.tscn")
 	elif Global.cli.avatar_renderer_mode:
@@ -71,18 +82,24 @@ func _start():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
 		print("Running in regular mode")
-		var current_terms_and_conditions_version: int = (
-			Global.get_config().terms_and_conditions_version
-		)
-		# Force show Terms when benchmarking (even if already accepted)
-		if (
-			Global.cli.benchmark_report
-			or current_terms_and_conditions_version != Global.TERMS_AND_CONDITIONS_VERSION
-		):
-			if Global.cli.benchmark_report:
-				print("✓ Forcing Terms and Conditions for benchmark flow")
-			get_tree().change_scene_to_file(
-				"res://src/ui/components/terms_and_conditions/terms_and_conditions.tscn"
-			)
-		else:
-			get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+		# EULA check is handled inside lobby.gd — always go to lobby
+		get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+
+
+func _start_asset_server():
+	# Check if asset_server feature was compiled
+	if not ClassDB.class_exists(&"DclAssetServer"):
+		push_error("Asset server requires the 'asset_server' feature to be enabled during build.")
+		push_error("Build with: cargo run -- build --features asset_server")
+		get_tree().quit(1)
+		return
+
+	# Create and start the asset server
+	var asset_server = ClassDB.instantiate(&"DclAssetServer")
+	asset_server.set_port(Global.cli.asset_server_port)
+	asset_server.set_name("AssetServer")
+	get_tree().root.add_child(asset_server)
+	asset_server.start()
+
+	# Keep the process running in headless mode
+	print("Asset server is running. Press Ctrl+C to stop.")

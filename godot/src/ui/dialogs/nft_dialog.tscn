@@ -1,10 +1,10 @@
-[gd_scene load_steps=4 format=3 uid="uid://ca84fs1dxdp6e"]
+[gd_scene format=3 uid="uid://ca84fs1dxdp6e"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gqdup"]
 [ext_resource type="Script" uid="uid://c7j7m3nuc2wb1" path="res://src/ui/dialogs/nft_dialog.gd" id="1_insdf"]
 [ext_resource type="SpriteFrames" uid="uid://bthpplsqs257v" path="res://assets/nftshape/loading_animation_sprite.tres" id="3_6iawc"]
 
-[node name="Panel_NFTDialog" type="Panel"]
+[node name="Panel_NFTDialog" type="Panel" unique_id=1578795125]
 custom_minimum_size = Vector2(800, 400)
 anchors_preset = 8
 anchor_left = 0.5
@@ -18,7 +18,7 @@ size_flags_vertical = 4
 theme = ExtResource("1_gqdup")
 script = ExtResource("1_insdf")
 
-[node name="VBoxContainer_Main" type="VBoxContainer" parent="."]
+[node name="VBoxContainer_Main" type="VBoxContainer" parent="." unique_id=669019302]
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 1.0
@@ -30,10 +30,10 @@ offset_bottom = -10.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HBoxContainer_Header" type="HBoxContainer" parent="VBoxContainer_Main"]
+[node name="HBoxContainer_Header" type="HBoxContainer" parent="VBoxContainer_Main" unique_id=1528580986]
 layout_mode = 2
 
-[node name="Label_Title" type="Label" parent="VBoxContainer_Main/HBoxContainer_Header"]
+[node name="Label_Title" type="Label" parent="VBoxContainer_Main/HBoxContainer_Header" unique_id=1413529165]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
@@ -41,15 +41,15 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 20
 text = "Loading NFT..."
 
-[node name="HBoxContainer_Body" type="HBoxContainer" parent="VBoxContainer_Main"]
+[node name="HBoxContainer_Body" type="HBoxContainer" parent="VBoxContainer_Main" unique_id=578851563]
 layout_mode = 2
 
-[node name="Control_Image" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body"]
+[node name="Control_Image" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body" unique_id=382897700]
 custom_minimum_size = Vector2(0, 340)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ColorRect_Background" type="ColorRect" parent="VBoxContainer_Main/HBoxContainer_Body/Control_Image"]
+[node name="ColorRect_Background" type="ColorRect" parent="VBoxContainer_Main/HBoxContainer_Body/Control_Image" unique_id=1407964335]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -59,7 +59,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(1, 1, 1, 0)
 
-[node name="TextureRect_NFTImage" type="TextureRect" parent="VBoxContainer_Main/HBoxContainer_Body/Control_Image"]
+[node name="TextureRect_NFTImage" type="TextureRect" parent="VBoxContainer_Main/HBoxContainer_Body/Control_Image" unique_id=1451304382]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -71,22 +71,22 @@ size_flags_horizontal = 3
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Control_Separator" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body"]
+[node name="Control_Separator" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body" unique_id=1529894499]
 custom_minimum_size = Vector2(10, 0)
 layout_mode = 2
 
-[node name="VBoxContainer_InfoPanel" type="VBoxContainer" parent="VBoxContainer_Main/HBoxContainer_Body"]
+[node name="VBoxContainer_InfoPanel" type="VBoxContainer" parent="VBoxContainer_Main/HBoxContainer_Body" unique_id=1137593882]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 
-[node name="Label_OwnerDesc" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
+[node name="Label_OwnerDesc" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=1371285715]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
 theme_override_font_sizes/font_size = 14
 text = "OWNER"
 
-[node name="RichTextBox_Owner" type="RichTextLabel" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
+[node name="RichTextBox_Owner" type="RichTextLabel" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=1021154821]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -95,21 +95,21 @@ theme_override_font_sizes/normal_font_size = 14
 bbcode_enabled = true
 fit_content = true
 
-[node name="Control_Separator2" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
+[node name="Control_Separator2" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=255556240]
 custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
 
-[node name="Separator" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
+[node name="Separator" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=1161800]
 custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
 
-[node name="Label_DescriptionDesc" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
+[node name="Label_DescriptionDesc" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=2133644199]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
 theme_override_font_sizes/font_size = 14
 text = "DESCRIPTION"
 
-[node name="Label_Description" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
+[node name="Label_Description" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=532595245]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
@@ -120,16 +120,16 @@ text = "Lorem Ipsum is simply dummy text of the printing and typesetting industr
 autowrap_mode = 3
 clip_text = true
 
-[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
+[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=998722699]
 layout_mode = 2
 
-[node name="Button_Cancel" type="Button" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Buttons"]
+[node name="Button_Cancel" type="Button" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Buttons" unique_id=146442112]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 12
 text = "CANCEL"
 
-[node name="Button_ViewOnOpenSea" type="Button" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Buttons"]
+[node name="Button_ViewOnOpenSea" type="Button" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Buttons" unique_id=1464405155]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -137,7 +137,7 @@ theme_override_font_sizes/font_size = 12
 disabled = true
 text = "VIEW ON OPENSEA"
 
-[node name="LoadingAnimation" type="Control" parent="."]
+[node name="LoadingAnimation" type="Control" parent="." unique_id=1284621777]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -146,13 +146,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="LoadingAnimation" type="AnimatedSprite2D" parent="LoadingAnimation"]
+[node name="LoadingAnimation" type="AnimatedSprite2D" parent="LoadingAnimation" unique_id=1080174752]
 position = Vector2(334, 141)
 sprite_frames = ExtResource("3_6iawc")
 autoplay = "default"
 centered = false
 
-[node name="Button_Cancel" type="Button" parent="LoadingAnimation"]
+[node name="Button_Cancel" type="Button" parent="LoadingAnimation" unique_id=1148011025]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 1
 anchors_preset = 7

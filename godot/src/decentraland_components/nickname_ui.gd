@@ -49,6 +49,22 @@ var send_message_action = func(): async_show_message.bind(send_message).call()
 			return
 		nickname_label.add_theme_color_override("font_color", nickname_color)
 
+@export var client_version := "":
+	set(value):
+		client_version = value
+		if !is_inside_tree():
+			return
+		version_label.visible = !client_version.is_empty()
+		version_label.text = client_version
+
+@export var room_debug := "":
+	set(value):
+		room_debug = value
+		if !is_inside_tree():
+			return
+		room_debug_label.visible = !room_debug.is_empty()
+		room_debug_label.text = room_debug
+
 var message_tween: Tween
 
 @onready var mic_enabled_icon = %MicEnabled
@@ -58,6 +74,8 @@ var message_tween: Tween
 @onready var hash_container = %Hash
 @onready var checkmark_container = %ClaimedCheckmark
 @onready var message_clip = %MessageClip
+@onready var version_label = %VersionLabel
+@onready var room_debug_label = %RoomDebugLabel
 
 
 func create_message_container(message: String):

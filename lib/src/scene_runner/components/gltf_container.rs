@@ -89,6 +89,12 @@ pub fn update_gltf_container(
                     new_gltf_ref.set_dcl_invisible_cmask(invisible_meshes_collision_mask);
                     drop(new_gltf_ref);
 
+                    // If entity has an active tween, mark as kinematic so colliders
+                    // are created as KINEMATIC in GDScript's _ready()
+                    if scene.kinematic_entities.contains(entity) {
+                        new_gltf.set_meta("kinematic_requested", &true.to_variant());
+                    }
+
                     new_gltf.set_name("GltfContainer");
                     node_3d.add_child(&new_gltf.clone().upcast::<Node>());
 

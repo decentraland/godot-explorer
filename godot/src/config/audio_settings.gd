@@ -6,6 +6,7 @@ static func apply_volume_settings():
 	apply_scene_volume_settings()
 	apply_ui_volume_settings()
 	apply_music_volume_settings()
+	apply_avatar_and_emotes_volume_settings()
 	apply_voice_chat_volume_settings()
 	apply_mic_amplification_settings()
 
@@ -45,6 +46,14 @@ static func apply_ui_volume_settings():
 static func apply_music_volume_settings():
 	var bus_index := AudioServer.get_bus_index("Music")
 	var general_db = -80.0 + (80.0 * (float(Global.get_config().audio_music_volume) / 100.0))
+	AudioServer.set_bus_volume_db(bus_index, general_db)
+
+
+static func apply_avatar_and_emotes_volume_settings():
+	var bus_index := AudioServer.get_bus_index("AvatarAndEmotes")
+	var general_db = (
+		-80.0 + (80.0 * (float(Global.get_config().audio_avatar_and_emotes_volume) / 100.0))
+	)
 	AudioServer.set_bus_volume_db(bus_index, general_db)
 
 

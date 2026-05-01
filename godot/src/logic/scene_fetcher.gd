@@ -7,6 +7,12 @@ signal notify_pending_loading_scenes(is_pending: bool)
 signal player_parcel_changed(new_position: Vector2i)
 
 const EMPTY_SCENE = preload("res://assets/empty-scenes/empty_parcel.tscn")
+const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_material.tres")
+const CLIFF_MATERIAL = preload("res://assets/empty-scenes/cliff_material.tres")
+
+# Maximum number of empty parcels before switching to simple floor mode
+# Above this threshold, individual floating islands are replaced with a single floor + cliffs
+const MAX_EMPTY_PARCELS_FOR_FLOATING_ISLANDS: int = 100
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
@@ -49,6 +55,10 @@ var _use_dynamic_loading: bool = false
 # This is a one-shot flag that gets reset after use
 var _is_reloading: bool = false
 
+# When true, the current reload is a hot reload from the preview WebSocket
+# Hot reloads skip the loading screen for a smoother development experience
+var _is_hot_reloading: bool = false
+
 # Flag to purge cache on first scene load in preview mode
 # This prevents the race condition where cached content is used before
 # the WebSocket SCENE_UPDATE can trigger a reload
@@ -74,9 +84,22 @@ var _floating_islands_queue: Array = []  # Coordinates to generate
 var _floating_islands_total: int = 0
 var _floating_islands_created: int = 0
 
+# Simple floor for large scenes (>100 empty parcels)
+var _large_scene_floor: Node3D = null
+
+# Preview WebSocket for hot reload
+var _preview_ws := PreviewWebSocket.new()
+
+
+func get_preview_ws() -> PreviewWebSocket:
+	return _preview_ws
+
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
+
+	add_child(_preview_ws)
+	_preview_ws.scene_update.connect(_on_preview_scene_update)
 
 	# Initialize wall manager and base floor manager only for floating islands mode
 	if is_using_floating_islands():
@@ -96,6 +119,7 @@ func _ready():
 	scene_entity_coordinator.set_scene_radius(scene_radius)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
+	Global.scene_runner.scene_crashed.connect(self._on_scene_crashed)
 	Global.loading_finished.connect(self.on_loading_finished)
 
 
@@ -117,9 +141,9 @@ func on_loading_finished():
 	if scene_data != null:
 		var target_position = scene_data.scene_entity_definition.get_global_spawn_position()
 		if target_position != null:
-			# Try raycast to find ground, fallback to original position
-			var ground_position := _raycast_to_ground(target_position)
-			Global.get_explorer().move_to(ground_position, true)
+			# Trust the spawn point position, move up if inside a collider
+			var valid_position := _find_valid_spawn_position(target_position)
+			Global.get_explorer().move_to(valid_position, true, false)  # skip stuck check, position already validated
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
@@ -128,6 +152,14 @@ func on_scene_killed(killed_scene_id, _entity_id):
 		if scene.scene_number_id == killed_scene_id:
 			loaded_scenes.erase(scene_entity_id)
 			return
+
+
+func _on_scene_crashed(crashed_scene_id: int, entity_id: String) -> void:
+	var current_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
+	if crashed_scene_id != current_scene_id:
+		return
+	if Global.modal_manager != null:
+		Global.modal_manager.async_show_scene_crash_modal(entity_id)
 
 
 func get_current_scene_data() -> SceneItem:
@@ -178,6 +210,7 @@ func set_dynamic_loading_mode(enabled: bool) -> void:
 		loaded_empty_scenes.clear()
 		if wall_manager:
 			wall_manager.clear_walls()
+		_cleanup_simple_floor()
 
 
 func is_dynamic_loading_mode() -> bool:
@@ -267,22 +300,26 @@ func _async_on_desired_scene_changed():
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
 
-	# Capture reloading flag - only consume it when there are scenes to load
+	# Capture reloading flags - only consume them when there are scenes to load
 	# This ensures we don't lose the flag if coordinator hasn't discovered scenes yet
 	var is_reloading_now := _is_reloading
+	var is_hot_reloading_now := _is_hot_reloading
 	if not loadable_scenes.is_empty():
-		_is_reloading = false  # Only reset when we have scenes to consider
+		_is_reloading = false
+		_is_hot_reloading = false
 
 	# Determine if we should show a loading screen
 	# Show loading screen when:
 	# - We have no scenes loaded AND there are scenes to load
 	# - We're in floating islands mode
 	# - Either NOT in dynamic loading mode, OR this is a teleport (user expects to wait)
+	# - NOT a hot reload (preview WebSocket) — hot reloads skip loading screen
 	var new_loading = (
 		loaded_scenes.is_empty()
 		and not loadable_scenes.is_empty()
 		and is_using_floating_islands()
 		and (not _use_dynamic_loading or is_reloading_now)
+		and not is_hot_reloading_now
 	)
 
 	# Start a new loading session if we need to load scenes
@@ -363,6 +400,7 @@ func _async_on_desired_scene_changed():
 			remove_child(empty_scene)
 			empty_scene.queue_free()
 		loaded_empty_scenes.clear()
+		_cleanup_simple_floor()
 
 	if use_floating_islands:
 		# Wait for coordinator to finish fetching all scene metadata before generating islands
@@ -435,7 +473,11 @@ func _async_on_desired_scene_changed():
 		# Only emit if:
 		# - Coordinator was busy at some point (meaning it fetched and found no scenes), OR
 		# - We're not in a reloading state (normal update, not teleport/realm change)
-		if not loading_session_started and (coordinator_was_busy or not is_reloading_now):
+		if (
+			not loading_session_started
+			and not Global.scene_runner.has_active_loading_session()
+			and (coordinator_was_busy or not is_reloading_now)
+		):
 			Global.scene_runner.loading_complete.emit(-1)
 
 	var empty_parcels_coords = []
@@ -513,6 +555,7 @@ func _on_realm_changed():
 	loaded_empty_scenes.clear()
 	if wall_manager:
 		wall_manager.clear_walls()
+	_cleanup_simple_floor()
 
 	loaded_scenes = {}
 
@@ -629,6 +672,15 @@ func _regenerate_floating_islands() -> void:
 
 	_floating_islands_total = _floating_islands_queue.size()
 	_floating_islands_created = 0
+
+	# For large scenes, use simple floor instead of individual floating islands
+	if _floating_islands_total > MAX_EMPTY_PARCELS_FOR_FLOATING_ISLANDS:
+		_create_simple_floor_with_cliffs(min_x, max_x, min_z, max_z, padding)
+		_floating_islands_generating = false
+		_floating_islands_queue.clear()
+		Global.scene_runner.start_floating_islands(0)
+		Global.scene_runner.finish_floating_islands()
+		return
 
 	# Capture all needed data for async generation
 	_floating_islands_generation_data = {
@@ -776,6 +828,136 @@ func _finish_floating_islands_generation() -> void:
 	Global.scene_runner.finish_floating_islands()
 
 
+## Clean up the simple floor used for large scenes
+func _cleanup_simple_floor() -> void:
+	if _large_scene_floor != null:
+		remove_child(_large_scene_floor)
+		_large_scene_floor.queue_free()
+		_large_scene_floor = null
+
+
+## Create a simple floor with fixed cliffs for large scenes (>100 empty parcels)
+## This reduces memory from ~450MB (individual floating islands) to ~10MB (single floor + 4 cliffs)
+func _create_simple_floor_with_cliffs(
+	min_x: int, max_x: int, min_z: int, max_z: int, padding: int
+) -> void:
+	# Clean up any previous simple floor
+	_cleanup_simple_floor()
+
+	# Clean up existing floating islands
+	for parcel in loaded_empty_scenes:
+		var empty_scene = loaded_empty_scenes[parcel]
+		remove_child(empty_scene)
+		empty_scene.queue_free()
+	loaded_empty_scenes.clear()
+	current_edge_parcels.clear()
+	if wall_manager:
+		wall_manager.clear_walls()
+
+	_large_scene_floor = Node3D.new()
+	_large_scene_floor.name = "LargeSceneFloor"
+	add_child(_large_scene_floor)
+
+	# Calculate world-space bounds
+	var world_min_x = (min_x - padding) * EmptyParcel.PARCEL_SIZE
+	var world_max_x = (max_x + padding + 1) * EmptyParcel.PARCEL_SIZE
+	var world_min_z = -(max_z + padding + 1) * EmptyParcel.PARCEL_SIZE
+	var world_max_z = -(min_z - padding) * EmptyParcel.PARCEL_SIZE
+
+	var width = world_max_x - world_min_x
+	var height = world_max_z - world_min_z
+	var center_x = (world_min_x + world_max_x) / 2.0
+	var center_z = (world_min_z + world_max_z) / 2.0
+
+	# Create floor mesh
+	_create_floor_mesh(width, height, center_x, center_z)
+
+	# Create collision
+	_create_floor_collision(width, height, center_x, center_z)
+
+	# Create cliffs on all 4 sides
+	var cliff_height = 30.0
+	# North cliff (facing +Z toward center)
+	_create_cliff(
+		Vector3(center_x, -cliff_height / 2.0, world_min_z),
+		Vector2(width, cliff_height),
+		Vector3(0, PI, 0)
+	)
+	# South cliff (facing -Z toward center)
+	_create_cliff(
+		Vector3(center_x, -cliff_height / 2.0, world_max_z),
+		Vector2(width, cliff_height),
+		Vector3.ZERO
+	)
+	# West cliff (facing +X toward center)
+	_create_cliff(
+		Vector3(world_min_x, -cliff_height / 2.0, center_z),
+		Vector2(height, cliff_height),
+		Vector3(0, -PI / 2.0, 0)
+	)
+	# East cliff (facing -X toward center)
+	_create_cliff(
+		Vector3(world_max_x, -cliff_height / 2.0, center_z),
+		Vector2(height, cliff_height),
+		Vector3(0, PI / 2.0, 0)
+	)
+
+	# Create walls
+	if wall_manager:
+		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
+
+
+## Create the floor mesh for simple floor mode
+func _create_floor_mesh(width: float, height: float, center_x: float, center_z: float) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = "FloorMesh"
+
+	var plane_mesh := PlaneMesh.new()
+	plane_mesh.size = Vector2(width, height)
+	mesh_instance.mesh = plane_mesh
+
+	# Use the same material as floating islands (grass texture)
+	# The default grass_rect in the material already points to the bottom-left quadrant
+	mesh_instance.material_override = EMPTY_PARCEL_MATERIAL
+
+	_large_scene_floor.add_child(mesh_instance)
+	mesh_instance.global_position = Vector3(center_x, -0.05, center_z)
+
+
+## Create the floor collision for simple floor mode
+func _create_floor_collision(width: float, height: float, center_x: float, center_z: float) -> void:
+	var static_body := StaticBody3D.new()
+	static_body.name = "FloorCollision"
+	static_body.collision_layer = EmptyParcel.OBSTACLE_COLLISION_LAYER
+
+	var collision_shape := CollisionShape3D.new()
+	var box_shape := BoxShape3D.new()
+	box_shape.size = Vector3(width, 0.1, height)
+	collision_shape.shape = box_shape
+
+	static_body.add_child(collision_shape)
+
+	_large_scene_floor.add_child(static_body)
+	static_body.global_position = Vector3(center_x, -0.05, center_z)
+
+
+## Create a cliff plane on one side of the simple floor
+func _create_cliff(position: Vector3, size: Vector2, rotation: Vector3) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = "Cliff"
+
+	var plane_mesh := PlaneMesh.new()
+	plane_mesh.size = size
+	plane_mesh.orientation = PlaneMesh.FACE_Z
+	mesh_instance.mesh = plane_mesh
+
+	mesh_instance.material_override = CLIFF_MATERIAL
+
+	_large_scene_floor.add_child(mesh_instance)
+	mesh_instance.global_position = position
+	mesh_instance.rotation = rotation
+
+
 func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
 	# Wait one more physics frame to ensure collision shape is ready
 	await get_tree().physics_frame
@@ -784,26 +966,40 @@ func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
 		0,
 		-parcel.y * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
 	)
-	var ground_position := _raycast_to_ground(parcel_center)
-	Global.get_explorer().move_to(ground_position, true)
+	# Trust the spawn point position, move up if inside a collider
+	var valid_position := _find_valid_spawn_position(parcel_center)
+	Global.get_explorer().move_to(valid_position, true, false)  # skip stuck check, position already validated
 
 
-func _raycast_to_ground(from_position: Vector3) -> Vector3:
+## Finds a valid spawn position by trusting the spawn point and moving up if inside a collider.
+## This avoids the issue where raycasting from above causes players to spawn on top of tall objects.
+func _find_valid_spawn_position(spawn_position: Vector3) -> Vector3:
 	var space_state := get_tree().root.get_world_3d().direct_space_state
-	var ray_origin := Vector3(from_position.x, 100.0, from_position.z)
-	var ray_end := Vector3(from_position.x, -10.0, from_position.z)
+	var check_position := spawn_position
 
-	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+	# Create a small sphere query to check for collisions at player position
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 0.3  # Small check radius
+	query.shape = sphere
 	# Layer 1 = scene geometry, Layer 2 = empty parcel terrain
 	query.collision_mask = 3
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
 
-	var result := space_state.intersect_ray(query)
-	if result.is_empty():
-		# No ground found, use original position or default height
-		return Vector3(from_position.x, maxf(from_position.y, 2.0), from_position.z)
+	# Move up in small increments until we find a clear position
+	var max_iterations := 50  # Prevent infinite loop (50m max)
+	for i in range(max_iterations):
+		query.transform = Transform3D(Basis.IDENTITY, check_position)
+		var results := space_state.intersect_shape(query, 1)
 
-	# Position player slightly above ground
-	return result.position + Vector3(0, 1.0, 0)
+		if results.is_empty():
+			return check_position  # Found clear position
+
+		check_position.y += 1.0  # Move up 1 meter
+
+	# Fallback: return original position if nothing found
+	return spawn_position
 
 
 func update_position(new_position: Vector2i, is_teleport: bool) -> void:
@@ -895,9 +1091,12 @@ func async_load_scene(
 	if _purge_cache_on_first_load:
 		_purge_cache_on_first_load = false
 		var files: PackedStringArray = content_mapping.get_files()
+		var purge_promises: Array = []
 		for file_path in files:
 			var file_hash = content_mapping.get_hash(file_path)
-			Global.content_provider.purge_file(file_hash)
+			purge_promises.push_back(Global.content_provider.purge_file(file_hash))
+		# Await all purge operations to complete before fetching
+		await PromiseUtils.async_all(purge_promises)
 
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null
@@ -1141,6 +1340,15 @@ func reload_scene(scene_id: String) -> void:
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)
 		_is_reloading = true
+
+
+func set_preview_url(url: String) -> void:
+	_preview_ws.set_url(url)
+
+
+func _on_preview_scene_update(scene_id: String) -> void:
+	_is_hot_reloading = true
+	reload_scene(scene_id)
 
 
 func set_debugging_js_scene_id(id: String) -> void:

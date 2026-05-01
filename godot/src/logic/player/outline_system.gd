@@ -6,6 +6,9 @@ const OUTLINE_LAYER = 20  # Using layer 20 for outlined objects (bit 19, value 5
 var main_camera: Camera3D = null
 var current_outlined_avatar: Node3D = null
 
+# Cached so we only push to the shader on size changes.
+var _last_pushed_viewport_size: Vector2i = Vector2i.ZERO
+
 @onready var sub_viewport: SubViewport = $SubViewport
 @onready var depth_camera: Camera3D = $SubViewport/DepthCamera
 @onready var outline_quad: MeshInstance3D = $OutlineQuad
@@ -27,12 +30,25 @@ func _process(_delta):
 
 	# Match viewport size to window size
 	var window_size = main_camera.get_viewport().get_visible_rect().size
-	if sub_viewport.size != Vector2i(window_size):
-		sub_viewport.size = Vector2i(window_size)
+	var window_size_i = Vector2i(window_size)
+	if sub_viewport.size != window_size_i:
+		sub_viewport.size = window_size_i
 
-	# Sync depth camera with main camera
+	# Push viewport size to the outline shader so it doesn't depend on
+	# textureSize(extracted_texture, 0), which returns inconsistent values
+	# in Godot 4.6 for ViewportTextures inside SubViewports with non-default
+	# scaling_3d_scale (e.g. avatar_preview uses scaling_3d_scale=2.0).
+	if outline_quad and window_size_i != _last_pushed_viewport_size:
+		var mat := outline_quad.material_override as ShaderMaterial
+		if mat:
+			mat.set_shader_parameter("viewport_size", Vector2(window_size_i))
+			_last_pushed_viewport_size = window_size_i
+
+	# Sync depth camera with main camera (incl. ortho size for avatar preview)
 	depth_camera.global_transform = main_camera.global_transform
+	depth_camera.projection = main_camera.projection
 	depth_camera.fov = main_camera.fov
+	depth_camera.size = main_camera.size
 	depth_camera.near = main_camera.near
 	depth_camera.far = main_camera.far
 

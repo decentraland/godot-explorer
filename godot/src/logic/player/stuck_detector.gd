@@ -40,6 +40,49 @@ func check_stuck():
 			_disable_collider(collider)
 
 
+func _physics_process(_dt: float):
+	if _disabled_colliders.is_empty():
+		return
+
+	var space_state = get_world_3d().direct_space_state
+	if not space_state:
+		return
+
+	var collision_shape = get_node("CollisionShape3D_Body")
+
+	# Temporarily restore CL_PHYSICS on all disabled colliders so the query can detect them
+	for collider in _disabled_colliders:
+		collider.collision_layer = _disabled_colliders[collider]
+
+	var query = PhysicsShapeQueryParameters3D.new()
+	query.shape = collision_shape.shape
+	query.transform = global_transform * collision_shape.transform
+	query.collision_mask = 2  # CL_PHYSICS
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+
+	var results = space_state.intersect_shape(query, 32)
+
+	# Find which disabled colliders are still overlapping
+	var still_overlapping: Dictionary = {}
+	for result in results:
+		var collider = result.get("collider")
+		if collider and collider in _disabled_colliders:
+			still_overlapping[collider] = true
+
+	# Re-enable colliders the player has exited, keep others disabled
+	var to_enable: Array = []
+	for collider in _disabled_colliders:
+		if collider in still_overlapping:
+			# Still overlapping - re-disable CL_PHYSICS
+			collider.collision_layer = collider.collision_layer & ~2
+		else:
+			to_enable.append(collider)
+
+	for collider in to_enable:
+		_enable_collider(collider)
+
+
 func _disable_collider(collider: Node):
 	if collider in _disabled_colliders:
 		return

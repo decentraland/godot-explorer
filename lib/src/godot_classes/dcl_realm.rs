@@ -1,5 +1,7 @@
 use godot::prelude::*;
 
+use crate::urls;
+
 #[derive(GodotClass)]
 #[class(init, base=Node)]
 pub struct DclRealm {
@@ -43,13 +45,13 @@ pub struct DclRealm {
 impl DclRealm {
     #[func]
     pub fn get_profile_content_url(&self) -> GString {
-        "https://peer.decentraland.org/content/".to_godot()
+        urls::peer_content().to_godot()
     }
 
     #[func]
     pub fn get_lambda_server_base_url(&self) -> GString {
         if self.lambda_server_base_url.is_empty() {
-            "https://peer.decentraland.org/lambdas/".to_godot()
+            urls::peer_lambdas().to_godot()
         } else {
             self.lambda_server_base_url.clone()
         }

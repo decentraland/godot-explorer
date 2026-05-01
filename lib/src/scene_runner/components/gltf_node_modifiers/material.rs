@@ -109,10 +109,20 @@ pub fn apply_material_to_mesh(
     // Track the last material for texture loading (we'll return this one)
     let mut result_material: Option<Gd<StandardMaterial3D>> = None;
 
+    let material_type = match &dcl_material {
+        DclMaterial::Unlit(_) => "Unlit",
+        DclMaterial::Pbr(_) => "PBR",
+    };
+
     // Apply to specified surface(s)
     if let Some(idx) = surface_index {
         // Apply to specific surface only
         if idx < mesh.get_surface_override_material_count() {
+            tracing::debug!(
+                "GLTF modifier: applying {} material to surface {}",
+                material_type,
+                idx
+            );
             let mut godot_material = get_or_create_material(mesh, idx);
             apply_dcl_material_properties(&mut godot_material, &dcl_material);
             mesh.set_surface_override_material(idx, &godot_material.clone().upcast::<Material>());
@@ -121,6 +131,11 @@ pub fn apply_material_to_mesh(
     } else {
         // Apply to all surfaces
         let surface_count = mesh.get_surface_override_material_count();
+        tracing::debug!(
+            "GLTF modifier: applying {} material to all {} surfaces",
+            material_type,
+            surface_count
+        );
         for i in 0..surface_count {
             let mut godot_material = get_or_create_material(mesh, i);
             apply_dcl_material_properties(&mut godot_material, &dcl_material);
@@ -382,6 +397,17 @@ pub fn update_modifier_video_textures(scene: &mut Scene) {
                 if let Some(texture) = video_player.bind().get_dcl_texture() {
                     material.set_texture(param, &texture.upcast::<Texture2D>());
                 }
+            }
+
+            // ExternalTexture (ExoPlayer/AVPlayer) lacks an sRGB texture view,
+            // so `source_color` hint has no effect. Use FORCE_SRGB to compensate.
+            // ImageTexture (LiveKit) has an sRGB view — keep FORCE_SRGB off.
+            if param == TextureParam::ALBEDO {
+                let force_srgb = video_player.bind().uses_external_texture();
+                material.set_flag(
+                    godot::classes::base_material_3d::Flags::ALBEDO_TEXTURE_FORCE_SRGB,
+                    force_srgb,
+                );
             }
         }
     }

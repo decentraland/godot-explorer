@@ -7,7 +7,7 @@ use crate::{
             proto_components::{
                 common::BorderRect,
                 sdk::components::{
-                    common::{InputAction, PointerEventType, RaycastHit},
+                    common::{InputAction, InteractionType, PointerEventType, RaycastHit},
                     PbAvatarEmoteCommand, PbUiCanvasInformation,
                 },
             },
@@ -17,7 +17,8 @@ use crate::{
     },
     godot_classes::{
         dcl_avatar::DclAvatar, dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal,
-        dcl_ui_control::DclUiControl, dcl_virtual_camera::DclVirtualCamera,
+        dcl_locomotion_settings::DclLocomotionSettings, dcl_ui_control::DclUiControl,
+        dcl_virtual_camera::DclVirtualCamera,
         rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
         JsonGodotClass,
     },
@@ -37,9 +38,12 @@ use std::{
     sync::atomic::AtomicU32,
     time::{Duration, Instant},
 };
+use tokio::sync::mpsc::error::TrySendError;
 
 use super::{
-    components::pointer_events::{get_entity_pointer_event, pointer_events_system},
+    components::pointer_events::{
+        find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
+    },
     input::InputState,
     loading_session::LoadingSession,
     pool_manager::PoolManager,
@@ -96,16 +100,19 @@ pub struct SceneManager {
     begin_time: Instant,
     sorted_scene_ids: Vec<SceneId>,
     dying_scene_ids: Vec<SceneId>,
+    crashed_scene_ids: Vec<SceneId>,
     global_scene_ids: Vec<SceneId>,
 
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
+    last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
     #[var]
     pointer_tooltips: VarArray,
 
-    // Track avatar under crosshair
-    last_avatar_under_crosshair: Option<Gd<DclAvatar>>,
+    // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
+    // between physics ticks (despawn, scene unload, teleport).
+    last_avatar_under_crosshair: Option<InstanceId>,
 
     // Track when pointer was pressed on avatar for click-and-release mechanism
     avatar_pointer_press_time: Option<Instant>,
@@ -133,6 +140,9 @@ impl SceneManager {
 
     #[signal]
     fn scene_killed(scene_id: i32, entity_id: GString);
+
+    #[signal]
+    fn scene_crashed(scene_id: i32, entity_id: GString);
 
     // Loading session signals
     #[signal]
@@ -191,6 +201,7 @@ impl SceneManager {
         let network_id = realm.get_network_id();
 
         let is_preview = dcl_global.bind().get_preview_mode();
+        let should_debug = dcl_global.bind().scene_inspector_active;
 
         let comms_adapter = dcl_global
             .bind()
@@ -232,6 +243,7 @@ impl SceneManager {
             },
             inspect,
             network_inspector_sender,
+            should_debug,
         });
 
         let new_scene = Scene::new(
@@ -286,6 +298,25 @@ impl SceneManager {
             ],
         );
         new_scene_id.0
+    }
+
+    /// Recreate the base_ui DclUiControl node.
+    /// Must be called at the start of explorer._ready() because the previous base_ui
+    /// is freed when the Explorer scene is torn down (change_scene_to_file/logout),
+    /// leaving SceneManager with a dangling Gd<DclUiControl> reference.
+    #[func]
+    fn recreate_base_ui(&mut self) {
+        if self.base_ui.is_instance_valid() {
+            self.base_ui.clone().free();
+        }
+        let mut base_ui = DclUiControl::new_alloc();
+        base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
+        base_ui.set_mouse_filter(MouseFilter::IGNORE);
+        base_ui.set_name("scenes_ui");
+        let callable_on_ui_resize = self.base().callable("_on_ui_resize");
+        base_ui.connect("resized", &callable_on_ui_resize);
+        self.base_ui = base_ui;
+        self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
     #[func]
@@ -847,6 +878,11 @@ impl SceneManager {
             self.player_position = player_parcel_position;
         }
 
+        // Drop scene ids removed in a previous tick — sorted list can lag the
+        // scenes map and the unwrap() below would panic on a stale id.
+        let scenes = &self.scenes;
+        self.sorted_scene_ids.retain(|id| scenes.contains_key(id));
+
         // TODO: review to define a better behavior
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
             let scene = self.scenes.get_mut(&scene_id).unwrap();
@@ -902,10 +938,31 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
+                if scene.paused {
+                    continue;
+                }
                 if scene.dcl_scene.thread_join_handle.is_finished() {
                     tracing::error!("scene closed without kill signal");
+                    if matches!(scene.scene_type, SceneType::Parcel) {
+                        self.crashed_scene_ids.push(*scene_id);
+                    }
                     scene_to_remove.insert(*scene_id);
                     continue;
+                }
+
+                // Detect stuck scenes: if the scene thread has been waiting for a response
+                // for too many frames, force-process to completion to unblock it.
+                // This matches bevy-explorer's behavior of always processing each scene
+                // to completion once started.
+                const STUCK_FRAMES_THRESHOLD: u32 = 10;
+                let force_complete = scene.stuck_frames >= STUCK_FRAMES_THRESHOLD;
+                if force_complete {
+                    tracing::warn!(
+                        "Scene {:?} stuck for {} frames at state {:?}, forcing completion",
+                        scene.scene_entity_definition.get_title(),
+                        scene.stuck_frames,
+                        scene.current_dirty.update_state,
+                    );
                 }
 
                 if _process_scene(
@@ -920,9 +977,13 @@ impl SceneManager {
                     &self.begin_time,
                     &self.ui_canvas_information,
                     &self.pool_manager,
+                    force_complete,
                 ) {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+                    scene.stuck_frames = 0;
+                } else if scene.current_dirty.waiting_process {
+                    scene.stuck_frames += 1;
                 }
             }
         }
@@ -934,14 +995,28 @@ impl SceneManager {
             let scene = self.scenes.get_mut(scene_id).unwrap();
             match scene.state {
                 SceneState::ToKill => {
-                    if let Err(_e) = scene
+                    match scene
                         .dcl_scene
                         .main_sender_to_thread
                         .try_send(RendererResponse::Kill)
                     {
-                        tracing::error!("error sending kill signal to thread");
-                    } else {
-                        scene.state = SceneState::KillSignal(current_time_us);
+                        Ok(()) => {
+                            scene.state = SceneState::KillSignal(current_time_us);
+                        }
+                        // Receiver already exited (e.g. scene thread panicked). The kill
+                        // signal is moot; advance to KillSignal so the next tick's
+                        // is_finished() check moves the state to Dead and the scene
+                        // gets cleaned up. Without this, the loop body would re-fire
+                        // try_send every physics tick and spam the logger at ~60 Hz.
+                        Err(TrySendError::Closed(_)) => {
+                            tracing::warn!(
+                                "scene channel closed before kill signal; advancing to KillSignal scene_id={:?}",
+                                scene_id
+                            );
+                            scene.state = SceneState::KillSignal(current_time_us);
+                        }
+                        // Capacity-1 channel with the receiver still alive; retry next tick.
+                        Err(TrySendError::Full(_)) => {}
                     }
                 }
                 SceneState::KillSignal(kill_time_us) => {
@@ -1036,6 +1111,14 @@ impl SceneManager {
                 "scene_killed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
+
+            if self.crashed_scene_ids.contains(scene_id) {
+                self.crashed_scene_ids.retain(|x| x != scene_id);
+                self.base_mut().emit_signal(
+                    "scene_crashed",
+                    &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+                );
+            }
         }
     }
 
@@ -1088,6 +1171,9 @@ impl SceneManager {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             scene.state = SceneState::Dead;
                             if !self.dying_scene_ids.contains(&scene_id) {
+                                if matches!(scene.scene_type, SceneType::Parcel) {
+                                    self.crashed_scene_ids.push(scene_id);
+                                }
                                 self.dying_scene_ids.push(scene_id);
                             }
                         }
@@ -1257,6 +1343,10 @@ impl SceneManager {
                         loop {
                             // Try to cast to DclAvatar
                             if let Ok(avatar) = current_node.clone().try_cast::<DclAvatar>() {
+                                // Skip blocked avatars - they should not be interactable
+                                if avatar.bind().blocked {
+                                    return None;
+                                }
                                 return Some(RaycastResult::Avatar(avatar));
                             }
 
@@ -1321,11 +1411,40 @@ impl SceneManager {
         self.current_parcel_scene_id.0
     }
 
+    /// Simulates a scene crash for the current parcel scene.
+    /// Used by the /scenecrash chat command for testing.
+    #[func]
+    pub fn debug_force_crash_current_scene(&mut self) {
+        let scene_id = self.current_parcel_scene_id;
+        if let Some(scene) = self.scenes.get(&scene_id) {
+            let entity_id = scene.scene_entity_definition.id.clone();
+            tracing::info!("Forcing crash signal for scene {:?}", scene_id);
+            self.base_mut().emit_signal(
+                "scene_crashed",
+                &[scene_id.0.to_variant(), entity_id.to_variant()],
+            );
+        }
+    }
+
     fn on_current_parcel_scene_changed(&mut self) {
-        // Reset input modifiers when changing scenes
-        // The new scene's InputModifier (if any) will be applied on the next update tick
+        // base_ui can be dangling between Explorer teardown and recreate_base_ui()
+        // (see comment on recreate_base_ui). Touching it would panic in
+        // godot-rust's check_rtti — bail out, the next tick after the new
+        // base_ui is attached will reconcile the scene tree.
+        if !self.base_ui.is_instance_valid() {
+            return;
+        }
+        // Reset input modifiers and skybox time when changing scenes
+        // The new scene's components (if any) will be applied on the next update tick
         if let Some(mut global) = DclGlobal::try_singleton() {
-            global.bind_mut().reset_input_modifiers();
+            let mut global_bind = global.bind_mut();
+            global_bind.reset_input_modifiers();
+            let was_skybox_active = global_bind.sdk_skybox_time_active;
+            global_bind.reset_skybox_time();
+            drop(global_bind);
+            if was_skybox_active {
+                global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
+            }
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
@@ -1377,6 +1496,7 @@ impl SceneManager {
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
             .emit_signal("on_change_scene_id", &[scene_id]);
@@ -1384,6 +1504,9 @@ impl SceneManager {
 
     #[signal]
     fn on_change_scene_id(scene_id: i32);
+
+    #[signal]
+    fn locomotion_settings_changed(settings: Gd<DclLocomotionSettings>);
 
     pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes
@@ -1423,6 +1546,24 @@ impl SceneManager {
         self.scenes
             .get(&SceneId(scene_id))
             .map(|x| x.virtual_camera.clone())
+    }
+
+    #[func]
+    pub fn get_scene_locomotion_settings(
+        &self,
+        scene_id: i32,
+    ) -> Option<Gd<DclLocomotionSettings>> {
+        self.scenes
+            .get(&SceneId(scene_id))
+            .map(|x| x.locomotion_settings.clone())
+    }
+
+    #[func]
+    pub fn get_current_scene_locomotion_settings(&self) -> Gd<DclLocomotionSettings> {
+        self.scenes
+            .get(&self.current_parcel_scene_id)
+            .map(|x| x.locomotion_settings.clone())
+            .unwrap_or_default()
     }
 
     #[func]
@@ -1552,6 +1693,16 @@ impl SceneManager {
             .sum()
     }
 
+    /// Get total V8 heap limit across all scenes in MB
+    #[func]
+    pub fn get_total_deno_heap_limit_mb(&self) -> f64 {
+        self.scenes
+            .values()
+            .filter_map(|scene| scene.deno_memory_stats)
+            .map(|stats| stats.heap_limit_mb())
+            .sum()
+    }
+
     /// Get count of alive scenes (with active threads)
     #[func]
     pub fn get_alive_scene_count(&self) -> i32 {
@@ -1583,6 +1734,7 @@ impl INode for SceneManager {
             pause: false,
             sorted_scene_ids: vec![],
             dying_scene_ids: vec![],
+            crashed_scene_ids: vec![],
             global_scene_ids: vec![],
             current_parcel_scene_id: SceneId(0),
             last_current_parcel_scene_id: SceneId::INVALID,
@@ -1600,6 +1752,7 @@ impl INode for SceneManager {
             console: Callable::invalid(),
             input_state: InputState::default(),
             last_raycast_result: None,
+            last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
             interactable_area: Rect2i::from_components(
                 0,
@@ -1656,18 +1809,17 @@ impl INode for SceneManager {
         // Handle avatar detection
         match &current_raycast {
             Some(RaycastResult::Avatar(avatar)) => {
-                // Update selected avatar if changed
-                let avatar_changed = match &self.last_avatar_under_crosshair {
-                    None => true,
-                    Some(last) => last.instance_id() != avatar.instance_id(),
-                };
+                // The fresh `avatar` from raycast is alive, so calling instance_id() on it
+                // is safe; we never deref the previously-stored value.
+                let avatar_id = avatar.instance_id();
+                let avatar_changed = self.last_avatar_under_crosshair != Some(avatar_id);
 
                 if avatar_changed {
-                    self.last_avatar_under_crosshair = Some(avatar.clone());
+                    self.last_avatar_under_crosshair = Some(avatar_id);
 
                     // Update Global.selected_avatar directly
                     if let Some(mut global) = DclGlobal::try_singleton() {
-                        global.bind_mut().selected_avatar = Some(avatar.clone());
+                        global.bind_mut().selected_avatar = Some(avatar_id);
                     }
 
                     // Emit signal for tooltip change
@@ -1699,7 +1851,10 @@ impl INode for SceneManager {
                                 true // Default to true if global not available
                             };
 
-                            if ui_has_focus {
+                            let passport_disabled: bool =
+                                avatar.get("passport_disabled").try_to().unwrap_or(false);
+
+                            if ui_has_focus && !passport_disabled {
                                 // Emit open_profile_by_avatar signal on the Global singleton
                                 if let Some(mut global) = DclGlobal::try_singleton() {
                                     global.emit_signal(
@@ -1734,11 +1889,26 @@ impl INode for SceneManager {
             }
         }
 
+        let player_position = self.player_avatar_node.get_global_position();
+        let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
+            let size = viewport.get_visible_rect().size;
+            viewport.get_camera_3d().map(|camera| (camera, size))
+        });
+        let pointing_at_cursor = current_pointer_raycast_result
+            .as_ref()
+            .is_some_and(|raycast| {
+                get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
+                    .is_some_and(|pe| pe.has_any_pointer_event_without_proximity())
+            });
+
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
             &self.last_raycast_result,
             &current_pointer_raycast_result,
+            player_position,
+            &camera_and_viewport,
+            &mut self.last_proximity_entity,
         );
 
         let mut tooltips = VarArray::new();
@@ -1747,6 +1917,10 @@ impl INode for SceneManager {
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
                 for pointer_event in pointer_events.pointer_events.iter() {
+                    if pointer_event.interaction_type == Some(i32::from(InteractionType::Proximity))
+                    {
+                        continue;
+                    }
                     if let Some(info) = pointer_event.event_info.as_ref() {
                         let show_feedback = info.show_feedback.as_ref().unwrap_or(&true);
                         let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
@@ -1801,13 +1975,57 @@ impl INode for SceneManager {
             }
         }
 
+        // Add proximity tooltip for the closest entity within max_player_distance
+        if !pointing_at_cursor {
+            if let Some((scene_id, entity_id)) =
+                find_active_proximity_entity(&self.scenes, player_position, &camera_and_viewport)
+            {
+                if let Some(pointer_events) =
+                    get_entity_pointer_event(&self.scenes, &scene_id, &entity_id)
+                {
+                    let proximity_type = i32::from(InteractionType::Proximity);
+                    for pe in pointer_events.pointer_events.iter() {
+                        if pe.interaction_type != Some(proximity_type) {
+                            continue;
+                        }
+                        let Some(ref info) = pe.event_info else {
+                            continue;
+                        };
+                        let show_feedback = info.show_feedback.unwrap_or(true);
+                        if !show_feedback {
+                            continue;
+                        }
+                        let is_pet_down = pe.event_type == PointerEventType::PetDown as i32;
+                        let is_pet_up = pe.event_type == PointerEventType::PetUp as i32;
+                        if !is_pet_down && !is_pet_up {
+                            continue;
+                        }
+                        let text = info.hover_text.as_deref().unwrap_or("Interact").to_godot();
+                        let input_action = InputAction::from_i32(info.button.unwrap_or(0))
+                            .unwrap_or(InputAction::IaAny);
+                        let mut dict = VarDictionary::new();
+                        if is_pet_down {
+                            dict.set("text_pet_down", text);
+                        } else {
+                            dict.set("text_pet_up", text);
+                        }
+                        dict.set("action", GString::from(input_action.as_str_name()));
+                        tooltips.push(&dict.to_variant());
+                        break;
+                    }
+                }
+            }
+        }
+
         // Add avatar profile tooltip if there's an avatar under crosshair with a valid ID
         // Skip AvatarShapes (NPCs from scenes) which don't have valid profile IDs
+        // Skip avatars inside an AvatarModifierArea with DisablePassports
         if let Some(RaycastResult::Avatar(avatar)) = &current_raycast {
             // Check if avatar has a valid avatar_id (non-empty and not just "npc-*")
             let avatar_id: GString = avatar.get("avatar_id").try_to().unwrap_or_default();
             let is_avatar_shape: bool = avatar.get("is_avatar_shape").try_to().unwrap_or(false);
-            if !is_avatar_shape && !avatar_id.is_empty() {
+            let passport_disabled: bool = avatar.get("passport_disabled").try_to().unwrap_or(false);
+            if !is_avatar_shape && !avatar_id.is_empty() && !passport_disabled {
                 let mut profile_dict = VarDictionary::new();
                 profile_dict.set("text_pet_down", "View profile");
                 profile_dict.set("action", "ia_pointer");

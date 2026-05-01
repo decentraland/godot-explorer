@@ -42,20 +42,20 @@ pub async fn build_auth_chain(wallet: &EphemeralAuthChain) -> anyhow::Result<Str
 mod tests {
     use super::*;
     use crate::dcl::components::proto_components::social_service::v2::*;
+    use crate::urls;
     use dcl_rpc::{
         client::RpcClient,
         transports::{web_sockets::WebSocketTransport, Transport},
     };
-
-    const SOCIAL_URL: &str = "wss://rpc-social-service-ea.decentraland.org";
 
     /// Helper function to test the social service client with a given wallet
     /// This function can be called from tests or integration code
     pub async fn test_social_service_with_wallet(
         wallet: &EphemeralAuthChain,
     ) -> anyhow::Result<()> {
+        let social_url = urls::social_service();
         let service_connection =
-            dcl_rpc::transports::web_sockets::tungstenite::WebSocketClient::connect(SOCIAL_URL)
+            dcl_rpc::transports::web_sockets::tungstenite::WebSocketClient::connect(&social_url)
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to connect: {:?}", e))?;
         let service_transport = WebSocketTransport::new(service_connection);

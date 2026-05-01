@@ -395,21 +395,52 @@ pub async fn load_image_texture(
     Ok(Some(texture_entry.to_variant()))
 }
 
+/// Pads image dimensions to multiples of 4 for ETC2 compression compatibility.
+/// ETC2 operates on 4x4 pixel blocks and requires dimensions divisible by 4.
+fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
+    let w = image.get_width();
+    let h = image.get_height();
+    let pw = ((w + 3) / 4) * 4;
+    let ph = ((h + 3) / 4) * 4;
+    if w != pw || h != ph {
+        image.resize(pw, ph);
+        true
+    } else {
+        false
+    }
+}
+
 /// Creates a texture from a compressed image, resizing if needed.
 /// Uses ETC2 compression for better memory usage on mobile platforms.
-/// Returns an ImageTexture containing the compressed image data.
+/// Falls back to uncompressed texture if compression fails.
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
     resize_image(image, max_size);
 
     if !image.is_compressed() {
-        image.compress(CompressMode::ETC2);
+        pad_image_to_multiple_of_4(image);
+
+        let result = image.compress(CompressMode::ETC2);
+        if result != Error::OK {
+            tracing::warn!(
+                "ETC2 compression failed ({}x{}, error {:?}), using uncompressed texture",
+                image.get_width(),
+                image.get_height(),
+                result
+            );
+        }
     }
 
-    // Create ImageTexture from the compressed image
-    // The compressed image data will be preserved when saved/loaded
-    let texture = ImageTexture::create_from_image(&*image)
-        .expect("Failed to create ImageTexture from compressed image");
-    texture.upcast()
+    match ImageTexture::create_from_image(&*image) {
+        Some(texture) => texture.upcast(),
+        None => {
+            tracing::error!(
+                "Failed to create ImageTexture ({}x{}), using placeholder",
+                image.get_width(),
+                image.get_height()
+            );
+            create_placeholder_texture()
+        }
+    }
 }
 
 pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {

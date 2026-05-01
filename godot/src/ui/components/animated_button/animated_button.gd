@@ -33,8 +33,8 @@ func _on_pressed() -> void:
 	_on_button_clicked()
 
 
-func _on_toggled(button_pressed: bool) -> void:
-	set_panel_open(button_pressed)
+func _on_toggled(_button_pressed: bool) -> void:
+	set_panel_open(_button_pressed)
 
 
 func instantiate_animated_sprite():
