@@ -12,9 +12,9 @@ config_version=5
 
 active=true
 is_ios=false
-is_portrait=false
-viewport_width=1600
-viewport_height=720
+is_portrait=true
+viewport_width=720
+viewport_height=1600
 
 [animation]
 
@@ -52,15 +52,15 @@ gdscript/warnings/redundant_await=false
 
 [display]
 
-window/size/viewport_width=1600
-window/size/viewport_height=720
+window/size/viewport_width=720
+window/size/viewport_height=1600
 window/size/window_width_override=720
 window/size/window_height_override=1280
 window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--emulate-ios"
+run/main_run_args="--emulate-android"
 
 [editor_plugins]
 
@@ -191,6 +191,7 @@ ia_open_emote_wheel={
 
 [input_devices]
 
+pointing/android/enable_pan_and_scale_gestures=true
 pointing/emulate_touch_from_mouse=true
 
 [layer_names]

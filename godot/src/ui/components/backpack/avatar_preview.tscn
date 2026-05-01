@@ -42,16 +42,20 @@ render_target_update_mode = 4
 unique_name_in_owner = true
 non_3d_audio = true
 
-[node name="Camera3D" type="Camera3D" parent="SubViewport" unique_id=483905790]
+[node name="CameraCenter" type="Node3D" parent="SubViewport" unique_id=1985999758]
 unique_name_in_owner = true
-transform = Transform3D(-1, -5.164368e-08, 1.4188981e-07, -4.137693e-08, 0.9974458, 0.07142756, -1.4521618e-07, 0.07142756, -0.9974458, 0, 1.7318428, -3.5)
+transform = Transform3D(1, 0, 0, 0, 0.99744076, -0.07149744, 0, 0.07149744, 0.99744076, 0, 1.732, 0)
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport/CameraCenter" unique_id=483905790]
+unique_name_in_owner = true
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, -3.5)
 cull_mask = 524287
 projection = 1
 fov = 40.0
 size = 3.0
 far = 100.0
 
-[node name="OutlineSystem" parent="SubViewport/Camera3D" unique_id=1572032427 instance=ExtResource("4_outline")]
+[node name="OutlineSystem" parent="SubViewport/CameraCenter/Camera3D" unique_id=1572032427 instance=ExtResource("4_outline")]
 unique_name_in_owner = true
 transform = Transform3D(1, -3.55271e-15, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
