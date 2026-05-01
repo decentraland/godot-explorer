@@ -57,6 +57,7 @@ var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
 var _canvas_layer: CanvasLayer = null
+var _travel_canvas_layer: CanvasLayer = null
 
 
 func _ready() -> void:
@@ -182,7 +183,7 @@ func async_show_world_modal(world_name: String) -> void:
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()
-	if json.data.is_empty():
+	if not json.has("data") or json.data.is_empty():
 		printerr("World does not exist: ", world_name)
 		NotificationsManager.show_system_toast(
 			"World not found", world_name + " does not exist.", "error", "alert"
@@ -416,19 +417,19 @@ func _async_create_travel_modal() -> TravelModal:
 		push_error("ModalManager: Could not instantiate travel modal")
 		return null
 
-	if _canvas_layer and is_instance_valid(_canvas_layer):
-		_canvas_layer.queue_free()
+	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
+		_travel_canvas_layer.queue_free()
 
-	_canvas_layer = CanvasLayer.new()
-	_canvas_layer.layer = 100
+	_travel_canvas_layer = CanvasLayer.new()
+	_travel_canvas_layer.layer = 100
 
 	var root = get_tree().root
 	if not root:
 		push_error("ModalManager: Could not get scene tree root")
 		return null
 
-	root.add_child(_canvas_layer)
-	_canvas_layer.add_child(modal)
+	root.add_child(_travel_canvas_layer)
+	_travel_canvas_layer.add_child(modal)
 	current_travel_modal = modal
 
 	current_travel_modal.tree_exited.connect(_on_travel_modal_tree_exited)
@@ -459,7 +460,7 @@ func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
 
 	var json: Dictionary = result.get_string_response_as_json()
 
-	if json.data.is_empty():
+	if not json.has("data") or json.data.is_empty():
 		return
 
 	var place_data: Dictionary = json.data[0]
@@ -653,6 +654,6 @@ func _remove_travel_modal() -> void:
 	if current_travel_modal:
 		current_travel_modal.queue_free()
 		current_travel_modal = null
-	if _canvas_layer and is_instance_valid(_canvas_layer):
-		_canvas_layer.queue_free()
-		_canvas_layer = null
+	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
+		_travel_canvas_layer.queue_free()
+		_travel_canvas_layer = null

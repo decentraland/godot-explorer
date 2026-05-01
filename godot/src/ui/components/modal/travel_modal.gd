@@ -23,7 +23,6 @@ const LANDSCAPE_CONTENT_MIN_SIZE := Vector2(460, 460)
 
 func _ready() -> void:
 	hide()
-	button_close.pressed.connect(func(): closed.emit())
 	button_jump_in.pressed.connect(func(): jump_in_pressed.emit())
 	_show_loading_state()
 
