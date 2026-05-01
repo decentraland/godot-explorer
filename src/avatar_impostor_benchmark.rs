@@ -114,13 +114,16 @@ fn run_ios() -> anyhow::Result<()> {
         let _ = fs::remove_file(&pulled_log);
     }
 
-    // Launch the app with the benchmark deeplink. The benchmark scene writes
+    // Launch the app with the benchmark CLI flag. devicectl forwards positional
+    // args after the bundle id as argv to the launched process; Godot iOS reads
+    // them via OS.get_cmdline_args(), and the cli parser picks up
+    // --avatar-impostor-benchmark from there. The benchmark scene writes
     // results into the app's user://logs/godot.log; we poll that file via
     // `xcrun devicectl device copy from` because GDScript prints don't reach
     // devicectl --console on iOS.
     print_message(
         MessageType::Step,
-        "Launching app on iOS device with --payload-url decentraland://open?benchmark=avatar-impostors",
+        "Launching app on iOS device with --avatar-impostor-benchmark",
     );
     let launch_status = Command::new("xcrun")
         .args([
@@ -131,9 +134,8 @@ fn run_ios() -> anyhow::Result<()> {
             "--device",
             &device_id,
             "--terminate-existing",
-            "--payload-url",
-            "decentraland://open?benchmark=avatar-impostors",
             IOS_BUNDLE_ID,
+            "--avatar-impostor-benchmark",
         ])
         .status()?;
     if !launch_status.success() {

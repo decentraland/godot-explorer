@@ -232,6 +232,7 @@ func on_chat_message(address: String, message: String, _timestamp: float):
 	if avatar_id != address:
 		return
 	nickname_ui.async_show_message(message)
+	_request_nickname_redraw()
 
 
 func _input(event):
@@ -348,6 +349,16 @@ func async_update_avatar(
 	# Handle AvatarShape-specific config (NPCs from scene SDK)
 	is_avatar_shape = avatar_shape_config.get("is_avatar_shape", false)
 
+	# Adopt the AvatarShape.id when it's an eth address so the impostor capturer
+	# can route through the catalyst body-texture path
+	# (`avatar_id.begins_with("0x")`) instead of an off-screen render.
+	if is_avatar_shape:
+		var shape_id: String = avatar_shape_config.get("id", "")
+		if shape_id.begins_with("0x") and avatar_id != shape_id:
+			avatar_id = shape_id
+			if click_area:
+				click_area.set_meta("avatar_id", avatar_id)
+
 	# Update metadata for raycast detection
 	if click_area:
 		click_area.set_meta("is_avatar_shape", is_avatar_shape)
@@ -395,6 +406,8 @@ func async_update_avatar(
 				nickname_ui.nickname = new_avatar_name
 				nickname_ui.tag = ""
 			nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
+			# Re-trigger UPDATE_ONCE so the SubViewport repaints with the new text
+			_apply_nickname_visibility()
 		return
 
 	set_avatar_data(new_avatar)
@@ -475,11 +488,29 @@ func set_force_hide_name(value: bool) -> void:
 		_apply_nickname_visibility()
 
 
+## Bump the nickname SubViewport to redraw exactly one frame. The viewport
+## otherwise stays in UPDATE_ONCE (see _apply_nickname_visibility) so nicknames
+## don't burn a SubViewport render every frame on idle avatars.
+func _request_nickname_redraw() -> void:
+	if nickname_viewport == null:
+		return
+	if nickname_viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED:
+		return
+	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
 func _apply_nickname_visibility() -> void:
 	if nickname_quad == null:
 		return
-	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
-	var should_hide := is_avatar_shape or hide_name or _force_hide_name
+	# Hide nickname for AvatarShapes only when the scene didn't set a real name
+	# (the proto default is "NPC", which is noise). Also hide on FAR LOD —
+	# unreadable at impostor distance and each quad is an extra draw call.
+	var current_name: String = get_avatar_name()
+	var avatar_shape_has_no_name: bool = (
+		is_avatar_shape and (current_name.is_empty() or current_name == "NPC")
+	)
+	var far_lod: bool = _lod_state == LODState.FAR
+	var should_hide := avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod
 	if should_hide:
 		nickname_quad.hide()
 		if nickname_viewport != null:
@@ -487,7 +518,9 @@ func _apply_nickname_visibility() -> void:
 	else:
 		nickname_quad.show()
 		if nickname_viewport != null:
-			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+			# UPDATE_ONCE: redraw one frame here, then the SubViewport idles until
+			# something nickname-related changes (see _request_nickname_redraw).
+			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
@@ -1020,6 +1053,15 @@ func _maybe_update_lod() -> void:
 
 
 func _update_lod() -> void:
+	# Bypass: when the impostor system is globally disabled, force FULL so
+	# the benchmark's OFF phase measures full-mesh rendering with zero
+	# impostor capture/eviction work.
+	var config = Global.get_config()
+	if config != null and not config.avatar_impostors_enabled:
+		if _lod_state != LODState.FULL:
+			_apply_lod_state(LODState.FULL, 1.0, 0.0, 0.0, 0.0)
+		return
+
 	# Defense for any path that hides the avatar without going through the
 	# helpers (set_hidden / modifier area). Don't change LOD state — the
 	# avatar's mesh is already invisible via the parent hide(); we just need
@@ -1147,6 +1189,7 @@ func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 			_set_lod_animation_throttle(false)
 			_set_lod_particles_visible(true)
 			_set_lod_click_active(true)
+			_apply_nickname_visibility()
 		LODState.MID:
 			_set_lod_meshes_visible(true)
 			_set_lod_animation_active(true)
@@ -1154,6 +1197,7 @@ func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 			_set_lod_animation_throttle(true)
 			_set_lod_particles_visible(false)
 			_set_lod_click_active(false)
+			_apply_nickname_visibility()
 		LODState.CROSSFADE:
 			_set_lod_meshes_visible(true)
 			_set_lod_animation_active(true)
@@ -1161,6 +1205,7 @@ func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 			_set_lod_animation_throttle(true)
 			_set_lod_particles_visible(false)
 			_set_lod_click_active(false)
+			_apply_nickname_visibility()
 		LODState.FAR:
 			_set_lod_meshes_visible(false)
 			_set_lod_animation_active(false)
@@ -1168,6 +1213,7 @@ func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 			_set_lod_animation_throttle(false)
 			_set_lod_particles_visible(false)
 			_set_lod_click_active(false)
+			_apply_nickname_visibility()
 
 
 # Freeze the AnimationTree when off-frustum, regardless of LOD state. The mesh
@@ -1270,10 +1316,17 @@ func _tick_animation_throttle(delta: float) -> void:
 
 
 func _set_lod_particles_visible(visible: bool) -> void:
+	# `visible` flips the draw call but not the simulation. Also gate emission
+	# and the per-tick process so hidden GPU particle systems stop spending
+	# both GPU and CPU budget; visibility alone leaves them simulating.
 	for node_name in ["GPUParticles3D_Move", "GPUParticles3D_Jump", "GPUParticles3D_Land"]:
 		var node = get_node_or_null(node_name)
-		if node != null:
-			node.visible = visible
+		if node == null:
+			continue
+		node.visible = visible
+		if node is GPUParticles3D:
+			node.emitting = visible
+		node.process_mode = (Node.PROCESS_MODE_INHERIT if visible else Node.PROCESS_MODE_DISABLED)
 
 
 func _set_lod_click_active(active: bool) -> void:
@@ -1282,6 +1335,11 @@ func _set_lod_click_active(active: bool) -> void:
 	var collision_shape = click_area.get_node_or_null("CollisionShape3D")
 	if collision_shape != null:
 		collision_shape.disabled = not active
+	# Area3D.monitoring drives whether the physics server tracks this body's
+	# overlaps every tick, which scales linearly with avatar count.
+	if click_area is Area3D:
+		click_area.monitoring = active
+		click_area.monitorable = active
 
 
 func _process(delta):
@@ -1490,7 +1548,9 @@ func push_voice_frame(frame):
 		voice_chat_audio_player.play()
 
 	voice_chat_audio_player.get_stream_playback().push_buffer(frame)
-	nickname_ui.mic_enabled = true
+	if not nickname_ui.mic_enabled:
+		nickname_ui.mic_enabled = true
+		_request_nickname_redraw()
 	timer_hide_mic.start()
 
 
@@ -1522,14 +1582,17 @@ func _attach_point_skeleton_updated():
 
 func _on_timer_hide_mic_timeout():
 	nickname_ui.mic_enabled = false
+	_request_nickname_redraw()
 
 
 func set_client_version(version: String):
 	nickname_ui.client_version = version
+	_request_nickname_redraw()
 
 
 func set_room_debug(info: String):
 	nickname_ui.room_debug = info
+	_request_nickname_redraw()
 
 
 func _play_emote_audio(file_hash: String):

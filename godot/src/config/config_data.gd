@@ -32,6 +32,7 @@ enum ConfigParams {
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
 	GAMEPAD_CAMERA_SENSITIVITY,
+	AVATAR_IMPOSTORS_ENABLED,
 }
 
 # Graphics profile index for Custom (manual settings)
@@ -136,6 +137,13 @@ var dynamic_graphics_enabled: bool = true:
 	set(value):
 		dynamic_graphics_enabled = value
 		param_changed.emit(ConfigParams.DYNAMIC_GRAPHICS_ENABLED)
+
+# Avatar impostors enabled — when false, forces all avatars to FULL LOD
+# (no impostor demotion). Used by the benchmark to A/B impostors ON vs OFF.
+var avatar_impostors_enabled: bool = true:
+	set(value):
+		avatar_impostors_enabled = value
+		param_changed.emit(ConfigParams.AVATAR_IMPOSTORS_ENABLED)
 
 var last_realm_joined: String = "":
 	set(value):

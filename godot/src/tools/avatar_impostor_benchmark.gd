@@ -1,6 +1,6 @@
 extends Node3D
 
-enum Phase { LOADING, MEASURE, INTERACTIVE }
+enum Phase { LOADING, OFF, ON, INTERACTIVE }
 
 const AVATAR_SCENE = preload("res://src/decentraland_components/avatar/avatar.tscn")
 const NUM_AVATARS: int = 200
@@ -34,6 +34,9 @@ var _loads_failed: int = 0
 func _ready() -> void:
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+
+	# Start with impostors ON; the bench flips to OFF later for the comparison.
+	Global.get_config().avatar_impostors_enabled = true
 
 	_auto_quit = (
 		Global.cli.avatar_impostor_benchmark
@@ -126,7 +129,13 @@ func _async_run() -> void:
 		)
 	)
 
-	_start_phase(Phase.MEASURE)
+	# Phase OFF — impostors disabled, every avatar renders as full mesh.
+	_start_phase(Phase.OFF, false)
+	await get_tree().create_timer(PHASE_WARMUP_SEC + PHASE_MEASURE_SEC).timeout
+	_finish_phase()
+
+	# Phase ON — impostors enabled, far avatars render as billboards.
+	_start_phase(Phase.ON, true)
 	await get_tree().create_timer(PHASE_WARMUP_SEC + PHASE_MEASURE_SEC).timeout
 	_finish_phase()
 
@@ -167,12 +176,13 @@ func _async_load_one(avatar: Node, address: String) -> void:
 	_loads_in_flight -= 1
 
 
-func _start_phase(phase: int) -> void:
+func _start_phase(phase: int, impostors_enabled: bool) -> void:
+	Global.get_config().avatar_impostors_enabled = impostors_enabled
 	_phase = phase
 	_phase_dts.clear()
 	_phase_start_ms = Time.get_ticks_msec()
 	var phase_name: String = _phase_name(phase)
-	_log("benchmark: phase %s" % phase_name)
+	_log("benchmark: phase %s (impostors=%s)" % [phase_name, str(impostors_enabled)])
 	_label_status.text = (
 		"Phase %s — warmup %ds, measure %ds"
 		% [phase_name, int(PHASE_WARMUP_SEC), int(PHASE_MEASURE_SEC)]
@@ -196,7 +206,11 @@ func _finish_phase() -> void:
 
 
 func _emit_results() -> void:
-	var measure: Dictionary = _results.get("MEASURE", {})
+	var off: Dictionary = _results.get("OFF", {})
+	var on: Dictionary = _results.get("ON", {})
+	var off_fps: float = off.get("avg_fps", 0.0)
+	var on_fps: float = on.get("avg_fps", 0.0)
+	var delta_pct: float = ((on_fps - off_fps) / off_fps) * 100.0 if off_fps > 0.0 else 0.0
 
 	var text := (
 		"=== Avatar Impostor Benchmark ===\n"
@@ -205,12 +219,19 @@ func _emit_results() -> void:
 			% [_avatars.size(), SPAWN_DEPTH_MIN, SPAWN_DEPTH_MAX]
 		)
 		+ "Warmup: %.0fs   Measure: %.0fs\n\n" % [PHASE_WARMUP_SEC, PHASE_MEASURE_SEC]
-		+ "Impostors:\n"
-		+ "  avg fps : %.2f\n" % measure.get("avg_fps", 0.0)
-		+ "  avg ms  : %.2f\n" % measure.get("avg_ms", 0.0)
-		+ "  p99 ms  : %.2f\n" % measure.get("p99_ms", 0.0)
-		+ "  p1 ms   : %.2f\n" % measure.get("p1_ms", 0.0)
-		+ "  samples : %d\n" % measure.get("samples", 0)
+		+ "Impostors OFF:\n"
+		+ "  avg fps : %.2f\n" % off_fps
+		+ "  avg ms  : %.2f\n" % off.get("avg_ms", 0.0)
+		+ "  p99 ms  : %.2f\n" % off.get("p99_ms", 0.0)
+		+ "  p1 ms   : %.2f\n" % off.get("p1_ms", 0.0)
+		+ "  samples : %d\n\n" % off.get("samples", 0)
+		+ "Impostors ON:\n"
+		+ "  avg fps : %.2f\n" % on_fps
+		+ "  avg ms  : %.2f\n" % on.get("avg_ms", 0.0)
+		+ "  p99 ms  : %.2f\n" % on.get("p99_ms", 0.0)
+		+ "  p1 ms   : %.2f\n" % on.get("p1_ms", 0.0)
+		+ "  samples : %d\n\n" % on.get("samples", 0)
+		+ "Delta FPS: %+.1f%%\n" % delta_pct
 	)
 	print(text)
 	var f := FileAccess.open(OUTPUT_PATH, FileAccess.WRITE)
@@ -316,7 +337,7 @@ func _save_cached_addresses(addresses: Array) -> void:
 
 
 func _process(delta: float) -> void:
-	if _phase == Phase.MEASURE:
+	if _phase == Phase.OFF or _phase == Phase.ON:
 		var elapsed: float = (Time.get_ticks_msec() - _phase_start_ms) / 1000.0
 		if elapsed >= PHASE_WARMUP_SEC and elapsed < PHASE_WARMUP_SEC + PHASE_MEASURE_SEC:
 			_phase_dts.append(delta)
@@ -330,15 +351,19 @@ func _process(delta: float) -> void:
 			avg_dt += dt
 		avg_dt /= float(_frame_dts.size())
 		var fps: float = 1.0 / avg_dt if avg_dt > 0.0 else 0.0
+		var imp_state: String = "ON" if Global.get_config().avatar_impostors_enabled else "OFF"
 		_label_fps.text = (
-			"FPS: %5.1f   |   %5.2f ms   |   N=%d" % [fps, avg_dt * 1000.0, _avatars.size()]
+			"FPS: %5.1f   |   %5.2f ms   |   N=%d   |   IMPOSTORS %s"
+			% [fps, avg_dt * 1000.0, _avatars.size(), imp_state]
 		)
 
 
 func _phase_name(phase: int) -> String:
 	match phase:
-		Phase.MEASURE:
-			return "MEASURE"
+		Phase.OFF:
+			return "OFF"
+		Phase.ON:
+			return "ON"
 		_:
 			return "?"
 
