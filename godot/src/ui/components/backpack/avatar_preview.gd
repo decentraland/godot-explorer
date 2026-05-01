@@ -66,8 +66,10 @@ func focus_camera_on(type):
 	match type:
 		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
 			_camera_focus = "head"
-		Wearables.Categories.UPPER_BODY, Wearables.Categories.HANDS_WEAR, Wearables.Categories.HANDS:
+		Wearables.Categories.UPPER_BODY:
 			_camera_focus = "torso"
+		Wearables.Categories.HANDS_WEAR, Wearables.Categories.HANDS:
+			_camera_focus = "hands"
 		Wearables.Categories.LOWER_BODY:
 			_camera_focus = "legs"
 		Wearables.Categories.FEET:
@@ -271,7 +273,7 @@ func _compute_avatar_aabbs() -> Dictionary:
 	var avatar_xform_inv: Transform3D = (avatar.global_transform as Transform3D).affine_inverse()
 	var results: Dictionary = {}
 	var firsts: Dictionary = {
-		"overall": true, "head": true, "torso": true, "legs": true, "feet": true
+		"overall": true, "head": true, "torso": true, "legs": true, "feet": true, "hands": true
 	}
 	for child in skeleton.get_children():
 		var mi := child as MeshInstance3D
@@ -296,6 +298,12 @@ func _compute_avatar_aabbs() -> Dictionary:
 				firsts[cat] = false
 			else:
 				results[cat] = (results[cat] as AABB).merge(mesh_aabb)
+		if "_hands_basemesh" in mi.name:
+			if firsts["hands"]:
+				results["hands"] = mesh_aabb
+				firsts["hands"] = false
+			else:
+				results["hands"] = (results["hands"] as AABB).merge(mesh_aabb)
 	return results
 
 
@@ -358,6 +366,7 @@ func _update_aabb_debug_box(aabbs: Dictionary) -> void:
 		"torso": Color(1, 1, 0, 0.20),
 		"legs": Color(1, 0.5, 0, 0.20),
 		"feet": Color(0, 0.5, 1, 0.20),
+		"hands": Color(1, 0, 1, 0.20),
 	}
 	for key in box_colors:
 		if key not in aabbs:
