@@ -35,6 +35,11 @@ func _ready() -> void:
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
+	# main.gd starts in low-processor lobby mode which sets viewport.disable_3d
+	# = true; explorer.gd would normally re-enable 3D when entering the world,
+	# but the benchmark bypasses that path, so we have to do it here.
+	GraphicSettings.apply_full_processor_mode()
+
 	# Start with impostors ON; the bench flips to OFF later for the comparison.
 	Global.get_config().avatar_impostors_enabled = true
 
