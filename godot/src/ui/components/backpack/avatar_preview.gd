@@ -1,6 +1,9 @@
 class_name AvatarPreview
 extends SubViewportContainer
 
+const MIN_CAMERA_SIZE_OVERALL = 1.0
+const MIN_CAMERA_SIZE_PART = 0.2
+const MAX_CAMERA_SIZE = 5.0
 
 @export var hide_name: bool = false
 @export var show_platform: bool = false
@@ -11,6 +14,7 @@ extends SubViewportContainer
 @export var preview_margin_bottom: int = 0
 @export var preview_margin_left: int = 0
 @export var preview_margin_right: int = 0
+@export var show_aabb_debug: bool = false
 
 var start_angle
 var start_dragging_position
@@ -20,6 +24,7 @@ var _camera_focus: String = "overall"
 
 var _cached_aabbs: Dictionary = {}
 var _camera_tween: Tween = null
+var _user_has_panned: bool = false
 
 var _aabb_debug_nodes: Array[MeshInstance3D] = []
 
@@ -69,8 +74,14 @@ func focus_camera_on(type):
 			_camera_focus = "feet"
 		_:
 			_camera_focus = "overall"
-	if _camera_focus in _cached_aabbs:
-		_fit_camera_to_aabb(_cached_aabbs[_camera_focus])
+	_user_has_panned = false
+	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
+	if aabb_key in _cached_aabbs:
+		_fit_camera_to_aabb(_cached_aabbs[aabb_key], 0.2 if _camera_focus == "feet" else 0.0)
+
+
+func _min_camera_size() -> float:
+	return MIN_CAMERA_SIZE_OVERALL if _camera_focus == "overall" else MIN_CAMERA_SIZE_PART
 
 
 func _input(event: InputEvent):
@@ -98,13 +109,27 @@ func _input(event: InputEvent):
 				dir = 0.2
 
 			if dir != 0.0:
-				camera_3d.size = maxf(0.1, camera_3d.size + dir)
+				camera_3d.size = clampf(camera_3d.size + dir, _min_camera_size(), MAX_CAMERA_SIZE)
+
+	if event is InputEventMagnifyGesture:
+		dirty_is_dragging = false
+		camera_3d.size = clampf(camera_3d.size / event.factor, _min_camera_size(), MAX_CAMERA_SIZE)
 
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging:
-			var diff = 0.005 * (get_global_mouse_position() - start_dragging_position)
-			avatar.rotation.y = start_angle + diff.x
-			camera_center.position.y = start_camera_center_y - diff.y * 10.0
+			var drag_pixels: Vector2 = get_global_mouse_position() - start_dragging_position
+			avatar.rotation.y = start_angle + drag_pixels.x * 0.005
+			var focus_aabb: AABB = _cached_aabbs.get(
+				_camera_focus, _cached_aabbs.get("overall", AABB(Vector3.ZERO, Vector3.ONE * 2.0))
+			)
+			var av_xform: Transform3D = avatar.global_transform
+			var pan_min: float = (av_xform * Vector3(0.0, focus_aabb.position.y, 0.0)).y
+			var pan_max: float = (
+				(av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
+			)
+			var pan: float = drag_pixels.y * camera_3d.size / size.y
+			camera_center.position.y = clampf(start_camera_center_y + pan, pan_min, pan_max)
+			_user_has_panned = true
 
 
 func reset_avatar_rotation() -> void:
@@ -124,16 +149,23 @@ func disable_outline():
 func _on_avatar_loaded():
 	_cached_aabbs = _compute_avatar_aabbs()
 	_update_aabb_debug_box(_cached_aabbs)
-	if _camera_focus in _cached_aabbs:
-		_fit_camera_to_aabb(_cached_aabbs[_camera_focus])
+	if not _user_has_panned and _camera_focus in _cached_aabbs:
+		_fit_camera_to_aabb(_cached_aabbs[_camera_focus], 0.2 if _camera_focus == "feet" else 0.0)
 
 
 func _get_mesh_category(mesh_name: String) -> String:
-	if "__hair" in mesh_name or "__facial_hair" in mesh_name \
-			or "__eyewear" in mesh_name or "__earring" in mesh_name \
-			or "__tiara" in mesh_name or "__helmet" in mesh_name \
-			or "__mask" in mesh_name or "__top_head" in mesh_name \
-			or "_head_basemesh" in mesh_name or "_mask_" in mesh_name:
+	if (
+		"__hair" in mesh_name
+		or "__facial_hair" in mesh_name
+		or "__eyewear" in mesh_name
+		or "__earring" in mesh_name
+		or "__tiara" in mesh_name
+		or "__helmet" in mesh_name
+		or "__mask" in mesh_name
+		or "__top_head" in mesh_name
+		or "_head_basemesh" in mesh_name
+		or "_mask_" in mesh_name
+	):
 		return "head"
 	if "__upper_body" in mesh_name or "_ubody_basemesh" in mesh_name:
 		return "torso"
@@ -144,15 +176,22 @@ func _get_mesh_category(mesh_name: String) -> String:
 	return ""
 
 
-func _compute_skinned_mesh_aabb(mi: MeshInstance3D, skeleton: Skeleton3D, avatar_xform_inv: Transform3D) -> AABB:
+func _compute_skinned_mesh_aabb(
+	mi: MeshInstance3D, skeleton: Skeleton3D, avatar_xform_inv: Transform3D
+) -> AABB:
+	if mi.mesh == null:
+		return AABB()
 	var skin: Skin = mi.skin
 	if skin == null:
-		# Non-skinned: transform mesh AABB corners through node transforms
 		var mesh_aabb: AABB = mi.mesh.get_aabb()
+		if mesh_aabb.size == Vector3.ZERO:
+			return AABB()
 		var result := AABB()
 		var first := true
 		for i in 8:
-			var local_pt: Vector3 = avatar_xform_inv * (mi.global_transform * mesh_aabb.get_endpoint(i))
+			var local_pt: Vector3 = (
+				avatar_xform_inv * (mi.global_transform * mesh_aabb.get_endpoint(i))
+			)
 			if first:
 				result = AABB(local_pt, Vector3.ZERO)
 				first = false
@@ -161,33 +200,48 @@ func _compute_skinned_mesh_aabb(mi: MeshInstance3D, skeleton: Skeleton3D, avatar
 		return result
 
 	var skin_count: int = skin.get_bind_count()
+	if skin_count == 0:
+		return AABB()
 	var skeleton_global: Transform3D = skeleton.global_transform
 
-	# Build world-space skin matrices: bone_world_pose * inverse_bind
 	var skin_matrices: Array[Transform3D] = []
 	skin_matrices.resize(skin_count)
 	for i in skin_count:
 		var bone_idx: int = skin.get_bind_bone(i)
 		if bone_idx < 0:
 			bone_idx = skeleton.find_bone(skin.get_bind_name(i))
-		skin_matrices[i] = skeleton_global * skeleton.get_bone_global_pose(bone_idx) * skin.get_bind_pose(i)
+		if bone_idx < 0 or bone_idx >= skeleton.get_bone_count():
+			skin_matrices[i] = Transform3D.IDENTITY
+			continue
+		skin_matrices[i] = (
+			skeleton_global * skeleton.get_bone_global_pose(bone_idx) * skin.get_bind_pose(i)
+		)
 
 	var result := AABB()
 	var first := true
 
 	for surf_idx in mi.mesh.get_surface_count():
 		var arrays: Array = mi.mesh.surface_get_arrays(surf_idx)
+		if arrays.is_empty():
+			continue
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 		var bones_raw = arrays[Mesh.ARRAY_BONES]
-		var weights_raw: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		var weights_raw = arrays[Mesh.ARRAY_WEIGHTS]
 		if bones_raw == null or weights_raw == null or vertices.is_empty():
+			continue
+		if not weights_raw is PackedFloat32Array:
 			continue
 
 		var bones: PackedInt32Array
 		if bones_raw is PackedFloat32Array:
 			bones = PackedInt32Array(bones_raw)
+		elif bones_raw is PackedInt32Array:
+			bones = bones_raw
 		else:
-			bones = bones_raw as PackedInt32Array
+			continue
+
+		if bones.is_empty() or bones.size() % vertices.size() != 0:
+			continue
 
 		var influences: int = bones.size() / vertices.size()
 
@@ -196,8 +250,10 @@ func _compute_skinned_mesh_aabb(mi: MeshInstance3D, skeleton: Skeleton3D, avatar
 			for b in influences:
 				var bind_idx: int = bones[v_idx * influences + b]
 				var weight: float = weights_raw[v_idx * influences + b]
-				if weight > 0.0:
+				if weight > 0.0 and bind_idx < skin_count:
 					skinned_pos += weight * (skin_matrices[bind_idx] * vertices[v_idx])
+			if skinned_pos == Vector3.ZERO:
+				continue
 			var local_pt: Vector3 = avatar_xform_inv * skinned_pos
 			if first:
 				result = AABB(local_pt, Vector3.ZERO)
@@ -214,7 +270,9 @@ func _compute_avatar_aabbs() -> Dictionary:
 		return {}
 	var avatar_xform_inv: Transform3D = (avatar.global_transform as Transform3D).affine_inverse()
 	var results: Dictionary = {}
-	var firsts: Dictionary = {"overall": true, "head": true, "torso": true, "legs": true, "feet": true}
+	var firsts: Dictionary = {
+		"overall": true, "head": true, "torso": true, "legs": true, "feet": true
+	}
 	for child in skeleton.get_children():
 		var mi := child as MeshInstance3D
 		if mi == null or mi.mesh == null:
@@ -223,6 +281,8 @@ func _compute_avatar_aabbs() -> Dictionary:
 		if not mi.visible and not is_basemesh:
 			continue
 		var mesh_aabb: AABB = _compute_skinned_mesh_aabb(mi, skeleton, avatar_xform_inv)
+		if mesh_aabb.size == Vector3.ZERO:
+			continue
 		if mi.visible:
 			if firsts["overall"]:
 				results["overall"] = mesh_aabb
@@ -239,17 +299,22 @@ func _compute_avatar_aabbs() -> Dictionary:
 	return results
 
 
-func _fit_camera_to_aabb(aabb: AABB) -> void:
+func _fit_camera_to_aabb(aabb: AABB, padding: float = 0.0) -> void:
 	if not is_inside_tree():
 		return
 	if _camera_tween:
 		_camera_tween.kill()
+	if padding > 0.0:
+		aabb = aabb.grow(maxf(aabb.size.x, aabb.size.y) * padding * 0.5)
 	var vp_w: float = size.x
 	var vp_h: float = size.y
 	var inner_h: float = maxf(1.0, vp_h - preview_margin_top - preview_margin_bottom)
 	var inner_w: float = maxf(1.0, vp_w - preview_margin_left - preview_margin_right)
 	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
-	var center_y: float = aabb.get_center().y + float(preview_margin_top - preview_margin_bottom) * cam_size / (2.0 * vp_h)
+	var center_y: float = (
+		aabb.get_center().y
+		+ float(preview_margin_top - preview_margin_bottom) * cam_size / (2.0 * vp_h)
+	)
 	_camera_tween = create_tween().set_parallel()
 	_camera_tween.tween_property(camera_center, "position:y", center_y, 0.5)
 	_camera_tween.tween_property(camera_3d, "size", cam_size, 0.5)
@@ -263,7 +328,7 @@ func _make_aabb_box(aabb: AABB, color: Color) -> MeshInstance3D:
 	for i in 8:
 		c.append(aabb.get_endpoint(i) - center)
 	im.surface_begin(Mesh.PRIMITIVE_LINES)
-	var edges: Array[int] = [0,1, 2,3, 4,5, 6,7, 0,2, 1,3, 4,6, 5,7, 0,4, 1,5, 2,6, 3,7]
+	var edges: Array[int] = [0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 1, 3, 4, 6, 5, 7, 0, 4, 1, 5, 2, 6, 3, 7]
 	for i in range(0, edges.size(), 2):
 		im.surface_add_vertex(c[edges[i]])
 		im.surface_add_vertex(c[edges[i + 1]])
@@ -284,15 +349,15 @@ func _update_aabb_debug_box(aabbs: Dictionary) -> void:
 			n.queue_free()
 	_aabb_debug_nodes.clear()
 
-	if aabbs.is_empty():
+	if not show_aabb_debug or aabbs.is_empty():
 		return
 
 	var box_colors: Dictionary = {
 		"overall": Color(0, 1, 0, 0.15),
-		"head":    Color(0, 1, 1, 0.20),
-		"torso":   Color(1, 1, 0, 0.20),
-		"legs":    Color(1, 0.5, 0, 0.20),
-		"feet":    Color(0, 0.5, 1, 0.20),
+		"head": Color(0, 1, 1, 0.20),
+		"torso": Color(1, 1, 0, 0.20),
+		"legs": Color(1, 0.5, 0, 0.20),
+		"feet": Color(0, 0.5, 1, 0.20),
 	}
 	for key in box_colors:
 		if key not in aabbs:

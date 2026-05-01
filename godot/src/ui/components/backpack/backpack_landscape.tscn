@@ -372,6 +372,7 @@ fps = 20.0
 metadata/_custom_type_script = "uid://drm7w13o3wggu"
 
 [node name="ColorRect" type="ColorRect" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1516367316]
+visible = false
 layout_mode = 1
 anchors_preset = -1
 anchor_top = -0.05942377

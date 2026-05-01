@@ -391,7 +391,7 @@ size_flags_horizontal = 1
 mouse_filter = 2
 stretch = true
 hide_name = true
-preview_margin_top = 100
+preview_margin_top = 140
 preview_margin_bottom = 45
 metadata/_edit_use_anchors_ = true
 
@@ -420,6 +420,7 @@ fps = 20.0
 metadata/_custom_type_script = "uid://drm7w13o3wggu"
 
 [node name="ColorRect" type="ColorRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1745470339]
+visible = false
 layout_mode = 1
 anchors_preset = -1
 anchor_top = -0.31214952
