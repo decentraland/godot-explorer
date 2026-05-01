@@ -195,6 +195,8 @@ func make_urls_clickable(text: String) -> String:
 			)
 			_apply_mention_style()
 
+	# World regex runs before URL regex so .dcl.eth names get wrapped first.
+	# The URL regex won't re-wrap them because _is_safe_url rejects BBCode chars.
 	var world_regex = RegEx.new()
 	world_regex.compile(r"([a-zA-Z0-9][-a-zA-Z0-9]*\.dcl\.eth)")
 

@@ -206,6 +206,7 @@ func async_show_world_modal(world_name: String) -> void:
 
 	current_travel_modal.show()
 
+	# Fire-and-forget: image is non-critical, modal is already usable without it
 	var image_url = world_data.get("image", "")
 	if image_url != null and not str(image_url).is_empty():
 		_async_load_travel_modal_image(str(image_url))

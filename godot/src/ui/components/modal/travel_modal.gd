@@ -82,17 +82,12 @@ func set_image(texture: Texture2D) -> void:
 		texture_rect_image.show()
 
 
-func _async_update_modal_size() -> void:
-	if not is_inside_tree():
-		return
-	if panel_container and panel_container.has_method("_request_update"):
-		await get_tree().process_frame
-		await get_tree().process_frame
-		panel_container._request_update()
-
-
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch and event.pressed:
+		closed.emit()
+	elif (
+		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	):
 		closed.emit()
 
 
