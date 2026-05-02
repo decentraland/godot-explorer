@@ -524,7 +524,6 @@ func dequeue_notification() -> Dictionary:
 		# Return next notification if available and queue is not paused
 		if _notification_queue.size() > 0 and not _queue_paused:
 			var next_notif = _notification_queue[0]
-			# Emit signal for next notification
 			notification_queued.emit(next_notif)
 			return next_notif
 
@@ -601,7 +600,8 @@ func show_system_toast(
 	title: String,
 	description: String,
 	notification_type: String = "system",
-	toast_style: String = "default"
+	toast_style: String = "default",
+	extra_data: Dictionary = {}
 ) -> void:
 	var timestamp = Time.get_unix_time_from_system() * 1000  # milliseconds
 	var notif: Dictionary = {
@@ -613,6 +613,7 @@ func show_system_toast(
 		"metadata": {"title": title, "description": description, "link": ""},
 		"toast_style": toast_style,
 	}
+	notif.merge(extra_data)
 
 	# Add to queue for toast display
 	_notification_queue.append(notif)

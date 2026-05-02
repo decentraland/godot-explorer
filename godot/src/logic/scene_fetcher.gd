@@ -46,6 +46,7 @@ var last_scene_group_hash: String = ""
 var base_floor_manager: BaseFloorManager = null
 
 var desired_portable_experiences_urns: Array[String] = []
+var nearby_scene_notifier := NearbySceneNotifier.new()
 
 # Dynamic loading mode: enables continuous scene loading/unloading without terrain generation
 # Used for deep links to custom realms - provides smooth loading without freezes
@@ -121,6 +122,9 @@ func _ready():
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
 	Global.scene_runner.scene_crashed.connect(self._on_scene_crashed)
 	Global.loading_finished.connect(self.on_loading_finished)
+
+	nearby_scene_notifier.setup(self)
+	add_child(nearby_scene_notifier)
 
 
 func get_current_spawn_point():
@@ -558,6 +562,7 @@ func _on_realm_changed():
 	_cleanup_simple_floor()
 
 	loaded_scenes = {}
+	nearby_scene_notifier.on_realm_changed()
 
 
 func set_portable_experiences_urns(urns: Array[String]) -> void:
@@ -1010,9 +1015,12 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 
 	# For teleports to the same position, we still want to reload the scene
 	var position_changed = current_position != new_position
+	if position_changed and not is_teleport:
+		nearby_scene_notifier.on_position_changed(new_position)
 	current_position = new_position
 
 	if is_teleport:
+		nearby_scene_notifier.on_teleport()
 		_teleport_target_parcel = new_position
 
 		# Mark as reloading to show loading screen even in dynamic loading mode
