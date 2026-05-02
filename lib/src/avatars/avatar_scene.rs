@@ -1,6 +1,11 @@
 use std::collections::HashMap;
 
 use ethers_core::types::H160;
+use godot::classes::image::Format;
+use godot::classes::multi_mesh::TransformFormat;
+use godot::classes::{
+    Image, MultiMesh, MultiMeshInstance3D, QuadMesh, ResourceLoader, ShaderMaterial, Texture2DArray,
+};
 use godot::prelude::*;
 
 use crate::{
@@ -28,6 +33,30 @@ use crate::{
 
 type AvatarAlias = u32;
 
+const IMPOSTOR_MAX_LAYERS: u32 = 256;
+const IMPOSTOR_TEX_WIDTH: i32 = 256;
+const IMPOSTOR_TEX_HEIGHT: i32 = 512;
+// Quad world-space size matches the AvatarPreview ortho capture
+// (256x512 px @ ortho_size=2.5 → 1.25m W × 2.5m H).
+const IMPOSTOR_QUAD_WIDTH: f32 = 1.25;
+const IMPOSTOR_QUAD_HEIGHT: f32 = 2.5;
+const IMPOSTOR_VERTICAL_OFFSET: f32 = 1.0;
+const IMPOSTOR_SHADER_PATH: &str = "res://assets/avatar/impostor.gdshader";
+
+#[derive(Clone, Copy, Debug)]
+struct ImpostorSlot {
+    layer_index: u32,
+    fade_alpha: f32,
+    tint_strength: f32,
+    texture_loaded: bool,
+    avatar_instance_id: InstanceId,
+    distance_sq: f32,
+    // Frame index of the last time this slot rendered with fade_alpha>0. Used
+    // by LRU eviction so that slots that are no longer being shown (e.g., the
+    // user moved away or turned around) are evicted before recently-seen ones.
+    last_seen_frame: u64,
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct AvatarScene {
@@ -47,6 +76,11 @@ pub struct AvatarScene {
     last_position_index: HashMap<AvatarAlias, u32>,
 
     last_emote_incremental_id: HashMap<AvatarAlias, u32>,
+
+    impostor_multimesh: Option<Gd<MultiMeshInstance3D>>,
+    impostor_texture_array: Option<Gd<Texture2DArray>>,
+    impostor_slots: HashMap<i64, ImpostorSlot>,
+    impostor_free_layers: Vec<u32>,
 }
 
 #[godot_api]
@@ -62,6 +96,10 @@ impl INode for AvatarScene {
             last_movement_timestamp: HashMap::new(),
             last_position_index: HashMap::new(),
             last_emote_incremental_id: HashMap::new(),
+            impostor_multimesh: None,
+            impostor_texture_array: None,
+            impostor_slots: HashMap::new(),
+            impostor_free_layers: (0..IMPOSTOR_MAX_LAYERS).rev().collect(),
         }
     }
 
@@ -70,6 +108,12 @@ impl INode for AvatarScene {
             .bind_mut()
             .scene_runner
             .connect("scene_spawned", &self.base().callable("on_scene_spawned"));
+
+        self.setup_impostor_renderer();
+    }
+
+    fn process(&mut self, _delta: f64) {
+        self.update_impostor_transforms();
     }
 }
 
@@ -102,6 +146,291 @@ impl AvatarScene {
 
     #[signal]
     fn avatar_removed(address: GString);
+
+    fn setup_impostor_renderer(&mut self) {
+        // Load shader first; if it fails we bail out so we don't render
+        // default-white quads that mask the failure.
+        let Some(shader_resource) = ResourceLoader::singleton().load(IMPOSTOR_SHADER_PATH) else {
+            tracing::warn!(
+                "Impostor shader not found at {} — impostor renderer disabled",
+                IMPOSTOR_SHADER_PATH
+            );
+            return;
+        };
+        let shader = match shader_resource.try_cast::<godot::classes::Shader>() {
+            Ok(s) => s,
+            Err(_) => {
+                tracing::error!(
+                    "Impostor resource at {} is not a Shader — disabled",
+                    IMPOSTOR_SHADER_PATH
+                );
+                return;
+            }
+        };
+
+        let mut blank_images: Array<Gd<Image>> = Array::new();
+        for _ in 0..IMPOSTOR_MAX_LAYERS {
+            // mipmaps=true so the GPU can pick a smaller mip for distant
+            // impostors. The data is zero-initialized; mip chain layout still
+            // has to match what update_layer will upload later.
+            let img = Image::create(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT, true, Format::RGBA8)
+                .expect("Failed to create blank impostor image");
+            blank_images.push(&img);
+        }
+
+        let mut texture_array = Texture2DArray::new_gd();
+        let create_err = texture_array.create_from_images(&blank_images);
+        if create_err != godot::global::Error::OK {
+            tracing::error!(
+                "Failed to create impostor texture array: error code {:?}",
+                create_err
+            );
+            return;
+        }
+
+        let mut shader_material = ShaderMaterial::new_gd();
+        shader_material.set_shader(&shader);
+        shader_material.set_shader_parameter("impostor_array", &texture_array.to_variant());
+
+        // Set the material on the QuadMesh surface (more reliable for
+        // MultiMesh than relying solely on MMI3D.material_override).
+        let mut quad = QuadMesh::new_gd();
+        quad.set_size(Vector2::new(IMPOSTOR_QUAD_WIDTH, IMPOSTOR_QUAD_HEIGHT));
+        quad.set_material(&shader_material.clone().upcast::<godot::classes::Material>());
+
+        let mut multimesh = MultiMesh::new_gd();
+        multimesh.set_transform_format(TransformFormat::TRANSFORM_3D);
+        multimesh.set_use_custom_data(true);
+        multimesh.set_mesh(&quad.upcast::<godot::classes::Mesh>());
+        multimesh.set_instance_count(IMPOSTOR_MAX_LAYERS as i32);
+
+        let mut mmi = MultiMeshInstance3D::new_alloc();
+        mmi.set_name("impostor_multimesh");
+        mmi.set_multimesh(&multimesh);
+        mmi.set_material_override(&shader_material.upcast::<godot::classes::Material>());
+        mmi.set_cast_shadows_setting(
+            godot::classes::geometry_instance_3d::ShadowCastingSetting::OFF,
+        );
+
+        for i in 0..IMPOSTOR_MAX_LAYERS as i32 {
+            multimesh.set_instance_transform(i, Transform3D::IDENTITY);
+            multimesh.set_instance_custom_data(i, Color::from_rgba(0.0, 0.0, 0.0, 0.0));
+        }
+
+        self.base_mut().add_child(&mmi);
+        self.impostor_multimesh = Some(mmi);
+        self.impostor_texture_array = Some(texture_array);
+        tracing::info!(
+            "Impostor renderer initialized: {} layers, {}x{} px",
+            IMPOSTOR_MAX_LAYERS,
+            IMPOSTOR_TEX_WIDTH,
+            IMPOSTOR_TEX_HEIGHT
+        );
+    }
+
+    fn update_impostor_transforms(&mut self) {
+        let Some(mmi) = self.impostor_multimesh.as_ref().cloned() else {
+            return;
+        };
+        let Some(mut multimesh) = mmi.get_multimesh() else {
+            return;
+        };
+
+        let mut stale: Vec<i64> = Vec::new();
+        for (key, slot) in self.impostor_slots.iter() {
+            let Ok(avatar) = Gd::<DclAvatar>::try_from_instance_id(slot.avatar_instance_id) else {
+                stale.push(*key);
+                continue;
+            };
+            let avatar_pos = avatar.get_global_position();
+            let mut transform = Transform3D::IDENTITY;
+            transform.origin = avatar_pos + Vector3::new(0.0, IMPOSTOR_VERTICAL_OFFSET, 0.0);
+
+            multimesh.set_instance_transform(slot.layer_index as i32, transform);
+
+            let visible_alpha = if slot.texture_loaded {
+                slot.fade_alpha
+            } else {
+                0.0
+            };
+            multimesh.set_instance_custom_data(
+                slot.layer_index as i32,
+                Color::from_rgba(
+                    slot.tint_strength,
+                    visible_alpha,
+                    slot.layer_index as f32,
+                    0.0,
+                ),
+            );
+        }
+
+        for key in stale {
+            self.clear_impostor(key);
+        }
+    }
+
+    #[func]
+    fn request_impostor_layer(
+        &mut self,
+        impostor_id: i64,
+        avatar: Gd<DclAvatar>,
+        distance: f32,
+    ) -> i32 {
+        let now = godot::classes::Engine::singleton().get_frames_drawn() as u64;
+        if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
+            slot.last_seen_frame = now;
+            return slot.layer_index as i32;
+        }
+        let distance_sq = distance * distance;
+
+        let layer = match self.impostor_free_layers.pop() {
+            Some(l) => l,
+            None => {
+                // Pool full — evict the LRU slot (oldest last_seen_frame). This
+                // keeps slots that are actively rendered and frees the ones that
+                // haven't been touched in a while (e.g., player walked away).
+                let Some((lru_id, lru_layer)) = self
+                    .impostor_slots
+                    .iter()
+                    .map(|(id, slot)| (*id, slot.last_seen_frame, slot.layer_index))
+                    .min_by_key(|(_, last_seen, _)| *last_seen)
+                    .map(|(id, _, layer)| (id, layer))
+                else {
+                    return -1;
+                };
+                self.impostor_slots.remove(&lru_id);
+                if let Some(mmi) = self.impostor_multimesh.as_ref().cloned() {
+                    if let Some(mut multimesh) = mmi.get_multimesh() {
+                        multimesh.set_instance_custom_data(
+                            lru_layer as i32,
+                            Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+                        );
+                    }
+                }
+                lru_layer
+            }
+        };
+
+        self.impostor_slots.insert(
+            impostor_id,
+            ImpostorSlot {
+                layer_index: layer,
+                fade_alpha: 0.0,
+                tint_strength: 0.0,
+                texture_loaded: false,
+                avatar_instance_id: avatar.instance_id(),
+                distance_sq,
+                last_seen_frame: now,
+            },
+        );
+        layer as i32
+    }
+
+    #[func]
+    fn set_impostor_texture(&mut self, impostor_id: i64, image: Gd<Image>) {
+        let Some(slot) = self.impostor_slots.get_mut(&impostor_id) else {
+            tracing::warn!(
+                "set_impostor_texture: no slot for impostor_id {}",
+                impostor_id
+            );
+            return;
+        };
+        let Some(tex_array) = self.impostor_texture_array.as_mut() else {
+            return;
+        };
+
+        let mut img = image;
+        if img.get_width() != IMPOSTOR_TEX_WIDTH || img.get_height() != IMPOSTOR_TEX_HEIGHT {
+            img.resize(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT);
+        }
+        if img.get_format() != Format::RGBA8 {
+            img.convert(Format::RGBA8);
+        }
+        // The texture array was created with mipmaps; the layer upload must
+        // include the same mip chain or update_layer rejects it.
+        let mip_err = img.generate_mipmaps();
+        if mip_err != godot::global::Error::OK {
+            tracing::warn!(
+                "Failed to generate impostor mipmaps for slot {}: {:?}",
+                impostor_id,
+                mip_err
+            );
+        }
+
+        tex_array.update_layer(&img, slot.layer_index as i32);
+        slot.texture_loaded = true;
+    }
+
+    #[func]
+    fn set_impostor_state(
+        &mut self,
+        impostor_id: i64,
+        fade_alpha: f32,
+        tint_strength: f32,
+        distance: f32,
+    ) {
+        if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
+            let clamped = fade_alpha.clamp(0.0, 1.0);
+            slot.fade_alpha = clamped;
+            slot.tint_strength = tint_strength.clamp(0.0, 1.0);
+            slot.distance_sq = distance * distance;
+            // Only mark the slot as recently-seen when it's actually rendering.
+            // A slot at fade_alpha=0 is allocated-but-hidden; LRU eviction
+            // should pick those before slots that are currently visible.
+            if clamped > 0.0 {
+                slot.last_seen_frame =
+                    godot::classes::Engine::singleton().get_frames_drawn() as u64;
+            }
+        }
+    }
+
+    #[func]
+    fn clear_impostor(&mut self, impostor_id: i64) {
+        if let Some(slot) = self.impostor_slots.remove(&impostor_id) {
+            self.impostor_free_layers.push(slot.layer_index);
+            if let Some(mmi) = self.impostor_multimesh.as_ref().cloned() {
+                if let Some(mut multimesh) = mmi.get_multimesh() {
+                    multimesh.set_instance_custom_data(
+                        slot.layer_index as i32,
+                        Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+                    );
+                }
+            }
+        }
+    }
+
+    #[func]
+    fn invalidate_impostor_texture(&mut self, impostor_id: i64) {
+        if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
+            slot.texture_loaded = false;
+        }
+    }
+
+    #[func]
+    fn has_impostor_capacity(&self) -> bool {
+        !self.impostor_free_layers.is_empty()
+    }
+
+    #[func]
+    fn impostor_diagnostics(&self) -> VarDictionary {
+        let total = self.impostor_slots.len() as i64;
+        let loaded = self
+            .impostor_slots
+            .values()
+            .filter(|s| s.texture_loaded)
+            .count() as i64;
+        let visible = self
+            .impostor_slots
+            .values()
+            .filter(|s| s.texture_loaded && s.fade_alpha > 0.0)
+            .count() as i64;
+        let mut dict = VarDictionary::new();
+        dict.set("total_slots", total);
+        dict.set("texture_loaded", loaded);
+        dict.set("currently_visible", visible);
+        dict.set("free_layers", self.impostor_free_layers.len() as i64);
+        dict
+    }
 
     #[func]
     pub fn update_primary_player_profile(&mut self, profile: Gd<DclUserProfile>) {
@@ -409,6 +738,11 @@ impl AvatarScene {
     pub fn clean(&mut self) {
         self.avatar_entity.clear();
 
+        let impostor_ids: Vec<i64> = self.impostor_slots.keys().copied().collect();
+        for id in impostor_ids {
+            self.clear_impostor(id);
+        }
+
         let avatars = std::mem::take(&mut self.avatar_godot_scene);
         for (_, mut avatar) in avatars {
             self.base_mut()
@@ -419,6 +753,10 @@ impl AvatarScene {
 
     pub fn remove_avatar(&mut self, alias: u32) {
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
+            if let Some(avatar) = self.avatar_godot_scene.get(&entity_id) {
+                let impostor_id = avatar.instance_id().to_i64();
+                self.clear_impostor(impostor_id);
+            }
             self.crdt_state.kill_entity(&entity_id);
             let mut avatar = self.avatar_godot_scene.remove(&entity_id).unwrap();
 

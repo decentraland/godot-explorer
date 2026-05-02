@@ -33,3 +33,5 @@ __pycache__
 .build.version
 
 .DS_Store
+benchmark-results/
+tasks/

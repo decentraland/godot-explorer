@@ -40,6 +40,8 @@ Global="*res://src/global.gd"
 NotificationsManager="*res://src/notifications_manager.gd"
 ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
+ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_capturer.gd"
+AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
 
 [debug]
 
