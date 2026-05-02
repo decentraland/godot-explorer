@@ -32,6 +32,9 @@ var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
 ## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
 var _session_hide_main_hud: bool = false
 
+## True when the debug panel was enabled from settings toggle.
+var _debug_panel_from_settings: bool = false
+
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 @onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
@@ -146,6 +149,11 @@ func _ready():
 	# Connect settings panel button
 	Global.open_settings_panel.connect(_show_settings_panel)
 
+	# Connect debug panel signal from landscape settings panel
+	var settings_node = settings_panel.get_node("MarginContainer/Settings")
+	if settings_node:
+		settings_node.request_debug_panel.connect(_on_control_menu_request_debug_panel)
+
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
 	chatbar.share_place.connect(_share_place)
@@ -197,9 +205,12 @@ func _ready():
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
 		add_child(test_spawn_and_move_avatars)
 
-	# --debug-panel (automatically enabled with --preview or preview deeplink)
-	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
-		_on_control_menu_request_debug_panel(true)
+	# --debug-panel flag acts like enabling from settings
+	if Global.cli.debug_panel:
+		_debug_panel_from_settings = true
+
+	# Show debug panel and reload button if in preview mode or --debug-panel
+	_update_debug_ui()
 
 	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
 	if Global.deep_link_obj.livekit_debug:
@@ -861,7 +872,14 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 
 
 func _on_control_menu_request_debug_panel(enabled):
-	if enabled:
+	_debug_panel_from_settings = enabled
+	_update_debug_ui()
+
+
+func _update_debug_ui():
+	var should_show = _debug_panel_from_settings or _is_in_preview_realm()
+
+	if should_show:
 		if not is_instance_valid(debug_panel):
 			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
 			safe_margin_container_debug.add_child(debug_panel)
@@ -871,7 +889,10 @@ func _on_control_menu_request_debug_panel(enabled):
 			debug_panel.queue_free()
 			debug_panel = null
 
-	Global.set_scene_log_enabled(enabled)
+	if is_instance_valid(debug_panel):
+		debug_panel.set_reload_scene_visible(should_show)
+
+	Global.set_scene_log_enabled(should_show)
 
 
 func _on_timer_fps_label_timeout():
@@ -966,6 +987,17 @@ func _on_panel_profile_open_profile():
 func _on_button_load_scenes_pressed() -> void:
 	Global.scene_fetcher._bypass_loading_check = true
 	button_load_scenes.hide()
+
+
+func _is_in_preview_realm() -> bool:
+	var preview_url := Global.deep_link_obj.preview
+	if not preview_url.is_empty():
+		return Global.realm.realm_string == preview_url
+	return Global.cli.preview_mode
+
+
+func _update_preview_ui(_in_preview: bool) -> void:
+	_update_debug_ui()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:
@@ -1480,12 +1512,14 @@ func _on_change_scene_id(scene_id: int):
 	is_genesis_city = Realm.is_genesis_city(Global.realm.realm_url)
 	if scene_id == -1:
 		scene_title = ""
+		_update_preview_ui(false)
 		return
 	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)
 	if scene != null:
 		scene_title = scene.scene_entity_definition.get_title()
 	else:
 		scene_title = ""
+	_update_preview_ui(_is_in_preview_realm())
 
 
 func _on_change_parcel(_position: Vector2i):
