@@ -91,8 +91,8 @@ func _refresh_content() -> void:
 	if profile == null:
 		return
 	var content = draggable_bottom_sheet.get_content_instance()
-	if content and content.has_method("refresh"):
-		content.refresh(profile)
+	if content and content.has_method("async_refresh"):
+		content.async_refresh(profile)
 
 
 func _refresh_content_from_mutable() -> void:
@@ -100,8 +100,8 @@ func _refresh_content_from_mutable() -> void:
 	if profile == null:
 		return
 	var content = draggable_bottom_sheet.get_content_instance()
-	if content and content.has_method("refresh"):
-		content.refresh(profile)
+	if content and content.has_method("async_refresh"):
+		content.async_refresh(profile)
 
 
 func _on_save_failed() -> void:

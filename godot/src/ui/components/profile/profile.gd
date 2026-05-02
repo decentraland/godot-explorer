@@ -11,7 +11,6 @@ const BLOCK = preload("res://assets/ui/block.svg")
 @export var closable: bool = false
 
 var url_to_visit: String = ""
-var avatar_loading_counter: int = 0
 var is_own_passport: bool = false
 var is_blocked_user: bool = false
 var is_muted_user: bool = false
@@ -19,7 +18,8 @@ var current_profile: DclUserProfile = null
 var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var address: String = ""
 var player_profile = Global.player_identity.get_profile_or_null()
-var _deploy_loading_id: int = -1
+
+var _deploy_waiting: bool = false
 var _deploy_timeout_timer: Timer
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
@@ -36,7 +36,8 @@ var _deploy_timeout_timer: Timer
 @onready var button_block_user: Button = %Button_BlockUser
 
 @onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
-@onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
+@onready var h_box_container_data: HBoxContainer = %HBoxContainer_Data
+@onready var h_box_container_placeholder: HBoxContainer = %HBoxContainer_PlaceHolder
 @onready var button_mute_user: Button = %Button_MuteUser
 @onready var button_edit_profile: Button = %Button_EditProfile
 @onready var button_close_profile: Button = %Button_CloseProfile
@@ -149,22 +150,14 @@ func _update_elements_visibility() -> void:
 			label_tag.text = "#" + address.substr(address.length() - 4, 4)
 
 
-func _set_avatar_loading() -> int:
-	panel_container_getting_data.show()
-	profile_header.hide()
-	v_box_container_content.hide()
-	avatar_preview.hide()
-	avatar_loading_counter += 1
-	return avatar_loading_counter
+func _show_placeholder() -> void:
+	h_box_container_placeholder.show()
+	h_box_container_data.hide()
 
 
-func _unset_avatar_loading(current: int):
-	if current != avatar_loading_counter:
-		return
-	avatar_preview.show()
-	panel_container_getting_data.hide()
-	profile_header.show()
-	v_box_container_content.show()
+func _show_data() -> void:
+	h_box_container_placeholder.hide()
+	h_box_container_data.show()
 	_on_stop_emote()
 	if not avatar_preview.avatar.emote_controller.is_playing():
 		avatar_preview.avatar.emote_controller.async_play_emote("wave")
@@ -180,36 +173,40 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
 	# Reset friendship status to ensure buttons don't show with old state
 	current_friendship_status = Global.FriendshipStatus.UNKNOWN
-	await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
 
 	if player_profile != null:
 		is_own_passport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
 	else:
 		is_own_passport = false
 
-	var loading_id := _set_avatar_loading()
+	# Show placeholder skeleton while data loads
+	_show_placeholder()
+	show()
+	await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
 
 	profile_about.refresh(current_profile)
 	profile_links.refresh(current_profile)
 	_refresh_name_and_address()
-	profile_equipped.async_refresh(current_profile)
-	_unset_avatar_loading(loading_id)
+	await profile_equipped.async_refresh(current_profile)
 
 	if not is_own_passport:
 		_connect_friendship_signals()
-		# Wait for friendship status check before showing buttons
+		# Wait for friendship status before showing data to avoid button flicker
 		await _async_check_friendship_status()
 		mutual_friends.async_set_mutual_friends(profile.get_ethereum_address())
+
+	# All data ready, swap placeholder for real content
+	_show_data()
 
 	if is_own_passport:
 		var mutable: DclUserProfile = Global.player_identity.get_mutable_profile()
 		if mutable != null and profile.get_profile_version() < mutable.get_profile_version():
-			if _deploy_loading_id == -1:
-				_deploy_loading_id = _set_avatar_loading()
+			if not _deploy_waiting:
+				_deploy_waiting = true
+				_show_placeholder()
 				_deploy_timeout_timer.start()
 
 	UiSounds.play_sound("mainmenu_widget_open")
-	show()
 
 
 func _on_emote_pressed(urn: String) -> void:
@@ -229,6 +226,7 @@ func _on_reset_avatars_rotation() -> void:
 
 func close() -> void:
 	hide()
+	_show_placeholder()
 	_hide_all_social_buttons()
 	_on_stop_emote()
 	_on_reset_avatars_rotation()
@@ -294,22 +292,22 @@ func _on_global_profile_changed(new_profile: DclUserProfile) -> void:
 	profile_links.refresh(current_profile)
 	profile_about.refresh(current_profile)
 	_refresh_name_and_address()
-	if _deploy_loading_id != -1:
-		_unset_avatar_loading(_deploy_loading_id)
-		_deploy_loading_id = -1
+	if _deploy_waiting:
+		_deploy_waiting = false
+		_show_data()
 	if _deploy_timeout_timer != null and _deploy_timeout_timer.is_stopped() == false:
 		_deploy_timeout_timer.stop()
 
 
 func _async_on_deploy_timeout() -> void:
-	if _deploy_loading_id == -1:
+	if not _deploy_waiting:
 		return
 	var addr = Global.player_identity.get_address_str()
 	var lambda_url = Global.realm.get_lambda_server_base_url()
 	await Global.player_identity.async_fetch_profile(addr, lambda_url)
-	if _deploy_loading_id != -1:
-		_unset_avatar_loading(_deploy_loading_id)
-		_deploy_loading_id = -1
+	if _deploy_waiting:
+		_deploy_waiting = false
+		_show_data()
 
 
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:

@@ -12,9 +12,9 @@ func close() -> void:
 	hide()
 
 
-func open(profile: DclUserProfile) -> void:
+func async_open(profile: DclUserProfile) -> void:
 	show()
-	profile_panel.async_show_profile(profile)
+	await profile_panel.async_show_profile(profile)
 
 
 func _on_profile_close_profile() -> void:
