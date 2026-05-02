@@ -147,6 +147,10 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 
 var terms_and_conditions_version: int = 0
 
+# Unix timestamp until which the soft version-upgrade overlay is snoozed
+# (set when the user presses "Later"; ignored for required-minimum blocks).
+var version_gate_snooze_until: int = 0
+
 var install_referrer_sent: bool = false
 
 var local_assets_cache_version: int = 0
@@ -432,6 +436,10 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
+	self.version_gate_snooze_until = settings_file.get_value(
+		"user", "version_gate_snooze_until", data_default.version_gate_snooze_until
+	)
+
 	self.install_referrer_sent = settings_file.get_value(
 		"user", "install_referrer_sent", data_default.install_referrer_sent
 	)
@@ -512,6 +520,7 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
+	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
 	new_settings_file.set_value(
 		"user", "local_assets_cache_version", self.local_assets_cache_version
