@@ -19,7 +19,9 @@ use crate::{
         },
         profile::{SerializedProfile, UserProfile},
     },
-    content::profile::{prepare_request_requirements, request_lambda_profile},
+    content::profile::{
+        prepare_request_requirements, request_lambda_profile, request_registry_profile,
+    },
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::{dcl_global::DclGlobal, dcl_social_blacklist::DclSocialBlacklist},
     scene_runner::tokio_runtime::TokioRuntime,
@@ -128,8 +130,9 @@ struct Peer {
     profile_fetch_failures: u8,              // Count consecutive failures
     profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
     peer_version: Option<String>,            // Client version for staging/dev builds
-    last_movement_timestamp: f32,            // Dedup: last movement timestamp received
-    last_emote_incremental_id: u32,          // Dedup: last emote incremental ID received
+    lambdas_endpoint: Option<String>, // Peer's lambda URL from LiveKit metadata (lambdasEndpoint)
+    last_movement_timestamp: f32,     // Dedup: last movement timestamp received
+    last_emote_incremental_id: u32,   // Dedup: last emote incremental ID received
 }
 
 struct ProfileUpdate {
@@ -781,6 +784,7 @@ impl MessageProcessor {
                     profile_fetch_failures: 0,
                     profile_fetch_banned_until: None,
                     peer_version: None,
+                    lambdas_endpoint: None,
                     last_movement_timestamp: f32::NEG_INFINITY,
                     last_emote_incremental_id: 0,
                 },
@@ -901,7 +905,7 @@ impl MessageProcessor {
                 }
             }
             MessageType::PeerMetadata(ref metadata) => {
-                // Parse metadata JSON to extract version info
+                // Parse metadata JSON to extract version and catalyst info
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(metadata) {
                     if let Some(version) = json.get("dcl_version").and_then(|v| v.as_str()) {
                         tracing::debug!(
@@ -922,6 +926,22 @@ impl MessageProcessor {
                                         GString::from(version).to_variant(),
                                     ],
                                 );
+                            }
+                        }
+                    }
+                    if let Some(endpoint) = json.get("lambdasEndpoint").and_then(|v| v.as_str()) {
+                        if let Some(peer) = self.peer_identities.get_mut(&message.address) {
+                            if peer.lambdas_endpoint.as_deref() != Some(endpoint) {
+                                tracing::debug!(
+                                    "Peer {:#x} lambdas endpoint: {}",
+                                    message.address,
+                                    endpoint
+                                );
+                                peer.lambdas_endpoint = Some(endpoint.to_string());
+                                // Reset fetch state so we retry with the new endpoint
+                                peer.profile_fetch_attempted = false;
+                                peer.profile_fetch_failures = 0;
+                                peer.profile_fetch_banned_until = None;
                             }
                         }
                     }
@@ -1241,14 +1261,92 @@ impl MessageProcessor {
                     let (lamda_server_base_url, profile_base_url, http_requester) =
                         prepare_request_requirements();
 
+                    // Use the peer's lambdasEndpoint (from LiveKit metadata) as the primary
+                    // fetch target — goes directly to the catalyst the peer deployed to,
+                    // avoiding cross-catalyst propagation delays (issue #1856).
+                    let peer_lambdas_endpoint = self
+                        .peer_identities
+                        .get(&address)
+                        .and_then(|p| p.lambdas_endpoint.clone());
+
                     TokioRuntime::spawn(async move {
-                        let result = request_lambda_profile(
-                            address,
-                            lamda_server_base_url.as_str(),
-                            profile_base_url.as_str(),
-                            http_requester,
-                        )
-                        .await;
+                        // Unity CatalystRetryPolicy: 6 retries, base 2s, multiplier 2x, capped at 60s
+                        // Retry if profile is None OR fetched version < announced version (version mismatch)
+                        const MAX_RETRIES: u32 = 6;
+                        const BASE_DELAY_MS: u64 = 2000;
+                        const BACKOFF_MULTIPLIER: u64 = 2;
+                        const MAX_DELAY_MS: u64 = 60_000;
+
+                        let version_ok = |r: &Result<UserProfile, _>| matches!(r, Ok(p) if p.version >= announced_version_for_retry);
+
+                        // Determine fetch endpoint: peer's lambdas endpoint if available, else realm lambda
+                        let fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
+                            Some(endpoint) if endpoint != lamda_server_base_url => {
+                                endpoint.to_string()
+                            }
+                            _ => lamda_server_base_url.clone(),
+                        };
+
+                        // Step 1: fetch with Unity-matching retry policy (exponential backoff)
+                        let mut result = Err(anyhow::anyhow!("not started"));
+                        for attempt in 0..=MAX_RETRIES {
+                            if attempt > 0 {
+                                let delay = (BASE_DELAY_MS * BACKOFF_MULTIPLIER.pow(attempt - 1))
+                                    .min(MAX_DELAY_MS);
+                                tracing::debug!(
+                                    "profile fetch retry {}/{} for {:#x} in {}ms",
+                                    attempt,
+                                    MAX_RETRIES,
+                                    address,
+                                    delay
+                                );
+                                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                            }
+                            result = request_lambda_profile(
+                                address,
+                                fetch_endpoint.as_str(),
+                                profile_base_url.as_str(),
+                                http_requester.clone(),
+                            )
+                            .await;
+                            if version_ok(&result) {
+                                break;
+                            }
+                        }
+
+                        // Step 2: asset-bundle-registry fallback (for legacy clients without lambdasEndpoint)
+                        let result = if version_ok(&result) {
+                            result
+                        } else {
+                            tracing::debug!("Trying asset-bundle-registry for {:#x}", address);
+                            request_registry_profile(
+                                address,
+                                profile_base_url.as_str(),
+                                http_requester.clone(),
+                            )
+                            .await
+                        };
+
+                        // Step 3: realm lambda fallback (if peer endpoint != realm and registry also failed)
+                        let result = if version_ok(&result) {
+                            result
+                        } else if fetch_endpoint != lamda_server_base_url {
+                            tracing::debug!(
+                                "Falling back to realm lambda for {:#x}: {}",
+                                address,
+                                lamda_server_base_url
+                            );
+                            request_lambda_profile(
+                                address,
+                                lamda_server_base_url.as_str(),
+                                profile_base_url.as_str(),
+                                http_requester,
+                            )
+                            .await
+                        } else {
+                            result
+                        };
+
                         if let Ok(profile) = result {
                             tracing::debug!(
                                 "Fetched profile from lambda for {:#x}: version {}",
