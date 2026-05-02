@@ -302,6 +302,36 @@ impl SceneCrdtState {
         self.entities.kill(*entity_id);
         // TODO: iterato over every component and remove
     }
+
+    /// Clears every component for `entity_id` with dirty tracking, so the
+    /// resulting DELETE_COMPONENT messages reach the scene's JS runtime and
+    /// player tracking events (`onLeaveScene`, `onPlayerDisconnected`) fire.
+    /// The entity itself is NOT killed: `engine.rs` skips component updates
+    /// for entities marked as died, which would leave the JS ECS with stale
+    /// `PlayerIdentityData` / `AvatarBase` / `AvatarEquippedData` entries.
+    pub fn clear_entity_components(&mut self, entity_id: &SceneEntityId) {
+        let component_ids: Vec<SceneComponentId> = self.components.keys().cloned().collect();
+        let mut cleared: Vec<SceneComponentId> = Vec::new();
+        for component_id in &component_ids {
+            if let Some(component) = self.get_lww_component_definition_mut(*component_id) {
+                if component.delete(*entity_id) {
+                    cleared.push(*component_id);
+                }
+            }
+        }
+        for component_id in &component_ids {
+            if let Some(component) = self.get_gos_component_definition_mut(*component_id) {
+                component.clean(*entity_id);
+            }
+        }
+        if !cleared.is_empty() {
+            tracing::debug!(
+                "clear_entity_components entity={:?} cleared lww components: {:?}",
+                entity_id,
+                cleared
+            );
+        }
+    }
 }
 
 include!(concat!(env!("OUT_DIR"), "/crdt_impl.gen.rs"));
@@ -428,6 +458,125 @@ mod test {
         mesh_renderer_component.remove(SceneEntityId::new(0, 0));
         let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert!(mesh_renderer.is_none());
+    }
+
+    #[test]
+    fn test_clear_entity_components_zeroes_lww_components_and_marks_dirty() {
+        use crate::dcl::components::internal_player_data::InternalPlayerData;
+        use crate::dcl::components::transform_and_parent::DclTransformAndParent;
+
+        let mut crdt_state = SceneCrdtState::from_proto();
+        let target_entity = SceneEntityId::new(32, 0);
+        let other_entity = SceneEntityId::new(33, 0);
+
+        // Seed values for the target on three different LWW components
+        crdt_state
+            .get_transform_mut()
+            .put(target_entity, Some(DclTransformAndParent::default()));
+        crdt_state
+            .get_internal_player_data_mut()
+            .put(target_entity, Some(InternalPlayerData { inside: true }));
+        SceneCrdtStateProtoComponents::get_player_identity_data_mut(&mut crdt_state).put(
+            target_entity,
+            Some(proto_components::sdk::components::PbPlayerIdentityData {
+                address: "0xabc".to_string(),
+                is_guest: false,
+            }),
+        );
+
+        // Seed a value for an unrelated entity that must NOT be touched
+        crdt_state
+            .get_internal_player_data_mut()
+            .put(other_entity, Some(InternalPlayerData { inside: true }));
+
+        // Drain dirty so we only see what `clear_entity_components` produces
+        let _ = crdt_state.take_dirty();
+
+        crdt_state.clear_entity_components(&target_entity);
+
+        // Target's LWW components should now have value=None
+        assert!(crdt_state
+            .get_transform()
+            .get(&target_entity)
+            .unwrap()
+            .value
+            .is_none());
+        assert!(crdt_state
+            .get_internal_player_data()
+            .get(&target_entity)
+            .unwrap()
+            .value
+            .is_none());
+        let player_identity = SceneCrdtStateProtoComponents::get_player_identity_data(&crdt_state);
+        assert!(player_identity.get(&target_entity).unwrap().value.is_none());
+
+        // Other entity must remain untouched
+        let other_internal = crdt_state
+            .get_internal_player_data()
+            .get(&other_entity)
+            .unwrap()
+            .value
+            .as_ref()
+            .expect("other entity's internal_player_data was wiped");
+        assert!(other_internal.inside);
+
+        // Dirty set must include the cleared LWW components for the target,
+        // and the entity must NOT be marked as died (so engine.rs forwards
+        // the DELETE_COMPONENT messages to the JS scene).
+        let dirty = crdt_state.take_dirty();
+        assert!(dirty.entities.died.is_empty());
+        assert!(dirty
+            .lww
+            .get(&SceneComponentId::TRANSFORM)
+            .unwrap()
+            .contains(&target_entity));
+        assert!(dirty
+            .lww
+            .get(&SceneComponentId::INTERNAL_PLAYER_DATA)
+            .unwrap()
+            .contains(&target_entity));
+        assert!(dirty
+            .lww
+            .get(&SceneComponentId::PLAYER_IDENTITY_DATA)
+            .unwrap()
+            .contains(&target_entity));
+
+        // Other entity must NOT show up in any dirty set
+        for entities in dirty.lww.values() {
+            assert!(!entities.contains(&other_entity));
+        }
+    }
+
+    #[test]
+    fn test_clear_entity_components_skips_components_without_value() {
+        use crate::dcl::components::internal_player_data::InternalPlayerData;
+
+        let mut crdt_state = SceneCrdtState::from_proto();
+        let entity = SceneEntityId::new(32, 0);
+
+        // Only seed one component; others were never touched for this entity
+        crdt_state
+            .get_internal_player_data_mut()
+            .put(entity, Some(InternalPlayerData { inside: true }));
+
+        let _ = crdt_state.take_dirty();
+
+        crdt_state.clear_entity_components(&entity);
+
+        // Only the seeded component should appear in dirty — components the
+        // entity never had must not produce phantom DELETE_COMPONENT messages.
+        let dirty = crdt_state.take_dirty();
+        for (component_id, entities) in dirty.lww.iter() {
+            if *component_id == SceneComponentId::INTERNAL_PLAYER_DATA {
+                assert!(entities.contains(&entity));
+            } else {
+                assert!(
+                    !entities.contains(&entity),
+                    "component {:?} should not be dirty for an entity that never had a value",
+                    component_id
+                );
+            }
+        }
     }
 
     #[test]

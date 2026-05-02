@@ -7,6 +7,13 @@ use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{reload, Layer, Registry};
 
+/// Hardcoded override for the log filter. When non-empty, takes priority over
+/// `--rust-log`, `RUST_LOG`, and the default filter. Leave as `""` for normal
+/// operation. Set during local debugging sessions to avoid having to pass
+/// `--rust-log` every run.
+const FORCE_LOG_FILTER: &str =
+    "dclgodot::avatars=info,dclgodot::scene_runner::components::avatar_data=info,dclgodot::dcl::crdt=debug,dclgodot::dcl::js::events=info,dclgodot::dcl::js::engine=info,warn";
+
 /// Global handle to swap the log filter at runtime.
 static RELOAD_HANDLE: OnceLock<reload::Handle<EnvFilter, Registry>> = OnceLock::new();
 
@@ -180,6 +187,15 @@ fn build_log_filter(default_filter: &str) -> EnvFilter {
         args.len(),
         args
     );
+
+    // 0. FORCE_LOG_FILTER hardcoded override (debug-only, leave as "" for normal use)
+    if !FORCE_LOG_FILTER.is_empty() {
+        godot_print!(
+            "[RustLogger] FORCE_LOG_FILTER is set, using filter: \"{}\"",
+            FORCE_LOG_FILTER
+        );
+        return EnvFilter::new(FORCE_LOG_FILTER);
+    }
 
     // 1. --rust-log flag (works on all platforms via deeplink or cmdline)
     if let Some(filter) = find_arg_value(&args, "--rust-log") {

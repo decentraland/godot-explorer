@@ -11,6 +11,7 @@ use crate::dcl::{
     common::{
         CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
     },
+    components::SceneComponentId,
     crdt::{
         message::{
             append_gos_component, process_many_messages_with_logging, put_or_delete_lww_component,
@@ -171,6 +172,32 @@ async fn op_crdt_recv_from_renderer(
                             *entity_id,
                             current_tick,
                             scene_id_val,
+                        );
+                    }
+
+                    // Trace renderer→scene messages for the avatar/player
+                    // components so we can confirm DELETE_COMPONENT actually
+                    // reaches each scene's JS runtime. The SDK detects player
+                    // leave via AvatarBase.onChange when value becomes
+                    // undefined, so AvatarBase is the critical one.
+                    if matches!(
+                        *component_id,
+                        SceneComponentId::PLAYER_IDENTITY_DATA
+                            | SceneComponentId::INTERNAL_PLAYER_DATA
+                            | SceneComponentId::AVATAR_BASE
+                            | SceneComponentId::AVATAR_EQUIPPED_DATA
+                    ) {
+                        let value_kind = scene_crdt_state
+                            .get_lww_component_definition(*component_id)
+                            .and_then(|c| c.get_opaque(*entity_id))
+                            .map(|e| if e.value.is_some() { "PUT" } else { "DELETE" })
+                            .unwrap_or("MISSING");
+                        tracing::info!(
+                            "renderer_to_scene: scene_id={} entity={:?} component={:?} kind={}",
+                            scene_id_val,
+                            entity_id,
+                            component_id,
+                            value_kind
                         );
                     }
 
