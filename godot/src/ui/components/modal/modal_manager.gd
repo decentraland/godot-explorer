@@ -9,6 +9,7 @@ signal connection_lost_retry
 signal connection_lost_exit
 
 const MODAL_SCENE_PATH = "res://src/ui/components/modal/modal.tscn"
+const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/modal/travel_modal.tscn"
 
 # Modal text constants
 const EXTERNAL_LINK_TITLE = "Open external link?"
@@ -20,11 +21,6 @@ const SCENE_TIMEOUT_TITLE = "Loading  is taking longer than expected"
 const SCENE_TIMEOUT_BODY = "You can reload the experience, or jump in now, it should keep loading in the background."
 const SCENE_TIMEOUT_PRIMARY = "RELOAD"
 const SCENE_TIMEOUT_SECONDARY = "START ANYWAY"
-
-const TELEPORT_TITLE = "Teleport"
-const TELEPORT_BODY = "You'll be traveling to "
-const TELEPORT_PRIMARY = "JUMP TO"
-const TELEPORT_SECONDARY = "CANCEL"
 
 const CONNECTION_LOST_TITLE = "Connection lost"
 const CONNECTION_LOST_BODY = "Please check your internet connection and try again."
@@ -49,17 +45,23 @@ const LOW_SPEC_IPHONE_BODY = "Your device is below our recommended specs (iPhone
 const LOW_SPEC_IPHONE_PRIMARY = "OK"
 
 var current_modal: Modal = null
+var current_travel_modal: TravelModal = null
 var modal_scene: PackedScene = null
+var travel_modal_scene: PackedScene = null
 var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
 var _canvas_layer: CanvasLayer = null
+var _travel_canvas_layer: CanvasLayer = null
 
 
 func _ready() -> void:
 	modal_scene = load(MODAL_SCENE_PATH)
 	if not modal_scene:
 		push_error("ModalManager: Could not load modal scene at: " + MODAL_SCENE_PATH)
+	travel_modal_scene = load(TRAVEL_MODAL_SCENE_PATH)
+	if not travel_modal_scene:
+		push_error("ModalManager: Could not load travel modal scene at: " + TRAVEL_MODAL_SCENE_PATH)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
@@ -138,68 +140,89 @@ func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
 		current_modal.button_secondary.pressed.connect(_on_connection_lost_secondary)
 
 
-## Shows a TELEPORT type modal
+## Shows a TELEPORT type modal using the new TravelModal layout
 ## @param location: The position to teleport to
 ## @param realm: The destination realm (optional)
 func async_show_teleport_modal(location: Vector2i, realm: String = "") -> void:
-	if not current_modal:
-		if not await _async_create_modal():
-			print("NOT CREATED MODAL")
-			return
-
 	var destination_realm = realm if not realm.is_empty() else DclUrls.main_realm()
 
-	current_modal.set_title(TELEPORT_TITLE)
-	current_modal.set_body(TELEPORT_BODY + str(location))
-	current_modal.set_primary_button_text(TELEPORT_PRIMARY)
-	current_modal.set_secondary_button_text(TELEPORT_SECONDARY)
-	current_modal.hide_icon()
-	current_modal.hide_url()
+	if not await _async_create_travel_modal():
+		return
 
-	# Disconnect previous connections and connect button actions
-	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(
+	current_travel_modal.closed.connect(close_travel_modal)
+	current_travel_modal.jump_in_pressed.connect(
 		_on_teleport_primary.bind(location, destination_realm)
 	)
-	current_modal.button_secondary.pressed.connect(close_current_modal)
 
-	# Show modal immediately so ResponsiveContainer can calculate size correctly
-	# This is especially important when called from SDK/Rust
-	current_modal.show()
+	current_travel_modal.show()
 
-	# Wait a bit for the modal to be fully visible and layout calculated
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	# Load place name asynchronously and update modal
-	await _async_load_place_name(location)
+	# Load place data asynchronously and update modal
+	await _async_load_travel_modal_data(location, destination_realm)
 
 
-## Shows a CHANGE_REALM type modal
+## Shows a WORLD travel modal (for .dcl.eth worlds)
+## Validates the world exists before showing the modal.
+## @param world_name: The world name (e.g. "something.dcl.eth")
+func async_show_world_modal(world_name: String) -> void:
+	# Validate world exists before creating the modal
+	var result = await PlacesHelper.async_get_by_names(world_name)
+
+	if result is PromiseError:
+		printerr("World not found or error: ", world_name, " ", result.get_error())
+		NotificationsManager.show_system_toast(
+			"World not found", world_name + " could not be reached.", "error", "alert"
+		)
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+	if not json.has("data") or json.data.is_empty():
+		printerr("World does not exist: ", world_name)
+		NotificationsManager.show_system_toast(
+			"World not found", world_name + " does not exist.", "error", "alert"
+		)
+		return
+
+	var world_data: Dictionary = json.data[0]
+
+	if not await _async_create_travel_modal():
+		return
+
+	current_travel_modal.closed.connect(close_travel_modal)
+	current_travel_modal.jump_in_pressed.connect(_on_world_jump_in.bind(world_name))
+
+	var title = str(world_data.get("title", world_name))
+	current_travel_modal.set_place_name(title if not title.is_empty() else world_name)
+
+	var creator = world_data.get("contact_name", "")
+	current_travel_modal.set_creator("" if creator == null else str(creator))
+
+	current_travel_modal.show()
+
+	# Fire-and-forget: image is non-critical, modal is already usable without it
+	var image_url = world_data.get("image", "")
+	if image_url != null and not str(image_url).is_empty():
+		_async_load_travel_modal_image(str(image_url))
+
+
+## Shows a CHANGE_REALM type modal using TravelModal
 ## @param realm_name: The destination realm name
 ## @param message: Optional message from the scene
-func async_show_change_realm_modal(realm_name: String, message: String = "") -> void:
-	if not current_modal:
-		if not await _async_create_modal():
-			print("NOT CREATED MODAL")
-			return
+func async_show_change_realm_modal(realm_name: String, _message: String = "") -> void:
+	if not await _async_create_travel_modal():
+		return
 
-	var body_text = "The scene wants to move you to a new realm\nTo: `" + realm_name + "`"
-	if not message.is_empty():
-		body_text += "\nScene message: " + message
+	current_travel_modal.closed.connect(close_travel_modal)
+	current_travel_modal.jump_in_pressed.connect(_on_change_realm_primary.bind(realm_name))
+	current_travel_modal.show()
 
-	current_modal.set_title("Change Realm")
-	current_modal.set_body(body_text)
-	current_modal.set_primary_button_text("Let's go!")
-	current_modal.set_secondary_button_text("No thanks")
-	current_modal.hide_icon()
-	current_modal.hide_url()
-	current_modal.show()
+	await get_tree().process_frame
+	await get_tree().process_frame
 
-	# Disconnect previous connections and connect button actions
-	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(_on_change_realm_primary.bind(realm_name))
-	current_modal.button_secondary.pressed.connect(close_current_modal)
+	# Try to load realm data from Places API
+	await _async_load_change_realm_data(realm_name)
 
 
 ## Shows a SCENE_CRASH type modal
@@ -293,6 +316,13 @@ func clear_suppress_ban_kicked() -> void:
 	_suppress_ban_kicked = false
 
 
+## Closes the current travel modal if it exists
+func close_travel_modal() -> void:
+	if current_travel_modal:
+		current_travel_modal.hide()
+		_remove_travel_modal()
+
+
 ## Closes the current modal if it exists
 func close_current_modal() -> void:
 	if current_modal:
@@ -361,34 +391,125 @@ func _async_create_modal() -> Modal:
 	return modal
 
 
-func _async_load_place_name(location: Vector2i) -> void:
-	if !is_instance_valid(current_modal):
-		# Modal was already freed, cannot recreate it here as it would lose button connections
+func _async_create_travel_modal() -> TravelModal:
+	if current_travel_modal:
+		close_travel_modal()
+
+	if not travel_modal_scene:
+		push_error("ModalManager: Travel modal scene is not loaded")
+		return null
+
+	var modal = travel_modal_scene.instantiate() as TravelModal
+	if not modal:
+		push_error("ModalManager: Could not instantiate travel modal")
+		return null
+
+	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
+		_travel_canvas_layer.queue_free()
+
+	_travel_canvas_layer = CanvasLayer.new()
+	_travel_canvas_layer.layer = 100
+
+	var root = get_tree().root
+	if not root:
+		push_error("ModalManager: Could not get scene tree root")
+		return null
+
+	root.add_child(_travel_canvas_layer)
+	_travel_canvas_layer.add_child(modal)
+	current_travel_modal = modal
+
+	current_travel_modal.tree_exited.connect(_on_travel_modal_tree_exited)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	return modal
+
+
+func _on_world_jump_in(world_name: String) -> void:
+	Global.async_teleport_to(Vector2i.ZERO, world_name)
+	close_travel_modal()
+
+
+func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
+	if not is_instance_valid(current_travel_modal):
 		return
 
 	var result = await PlacesHelper.async_get_by_position(location)
 
 	if result is PromiseError:
-		printerr("Error requesting place name for teleport", result.get_error())
+		printerr("Error requesting place data for travel modal", result.get_error())
 		return
 
-	# Check if modal is still valid after await (it might have been closed)
-	if !is_instance_valid(current_modal):
+	if not is_instance_valid(current_travel_modal):
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()
-	var destination_name: String = "Unknown Place"
 
-	if not json.data.is_empty():
-		var title = json.data[0].get("title", "interactive-text")
-		if title != "interactive-text":
-			destination_name = title
+	if not json.has("data") or json.data.is_empty():
+		return
 
-	# Update modal body with place name
-	# Double check validity before updating (modal might have been closed during await)
-	if is_instance_valid(current_modal):
-		current_modal.set_body(TELEPORT_BODY + destination_name)
-		# Modal is already shown, just update the size
+	var place_data: Dictionary = json.data[0]
+
+	var title = str(place_data.get("title", ""))
+	if not title.is_empty() and title != "interactive-text":
+		current_travel_modal.set_place_name(title)
+
+	var creator = place_data.get("contact_name", "")
+	current_travel_modal.set_creator("" if creator == null else str(creator))
+
+	var image_url = place_data.get("image", "")
+	if image_url != null and not str(image_url).is_empty():
+		_async_load_travel_modal_image(str(image_url))
+
+
+func _async_load_change_realm_data(realm_name: String) -> void:
+	if not is_instance_valid(current_travel_modal):
+		return
+
+	# Try to fetch world/realm data from Places API
+	var result = await PlacesHelper.async_get_by_names(realm_name)
+
+	if not is_instance_valid(current_travel_modal):
+		return
+
+	if result is PromiseError:
+		# API error — show realm name as fallback
+		current_travel_modal.set_place_name(realm_name)
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+
+	if not json.has("data") or json.data.is_empty():
+		# No data found — show realm name as fallback
+		current_travel_modal.set_place_name(realm_name)
+		return
+
+	var realm_data: Dictionary = json.data[0]
+
+	var title = str(realm_data.get("title", realm_name))
+	current_travel_modal.set_place_name(title if not title.is_empty() else realm_name)
+
+	var creator = realm_data.get("contact_name", "")
+	current_travel_modal.set_creator("" if creator == null else str(creator))
+
+	var image_url = realm_data.get("image", "")
+	if image_url != null and not str(image_url).is_empty():
+		_async_load_travel_modal_image(str(image_url))
+
+
+func _async_load_travel_modal_image(url: String) -> void:
+	var url_hash = url.md5_text()
+	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		printerr("ModalManager: Error downloading travel modal image: ", result.get_error())
+		return
+
+	if is_instance_valid(current_travel_modal):
+		current_travel_modal.set_image(result.texture)
 
 
 # Button action handlers
@@ -424,13 +545,12 @@ func _on_connection_lost_secondary() -> void:
 
 func _on_teleport_primary(location: Vector2i, realm: String) -> void:
 	Global.async_teleport_to(location, realm)
-	close_current_modal()
+	close_travel_modal()
 
 
 func _on_change_realm_primary(realm_name: String) -> void:
-	# Default behavior: call Global.realm.async_set_realm
 	Global.realm.async_set_realm(realm_name)
-	close_current_modal()
+	close_travel_modal()
 
 
 func _on_scene_crash_reload(_entity_id: String) -> void:
@@ -480,6 +600,11 @@ func _on_modal_tree_exited() -> void:
 		current_modal = null
 
 
+func _on_travel_modal_tree_exited() -> void:
+	if current_travel_modal:
+		current_travel_modal = null
+
+
 ## Instantly kills the loading screen and runs the normal post-loading cleanup
 ## (release comms, restore audio, close navbar, emit loading_finished, etc.).
 func _force_hide_loading_screen() -> void:
@@ -514,3 +639,12 @@ func _remove_modal() -> void:
 	if _canvas_layer and is_instance_valid(_canvas_layer):
 		_canvas_layer.queue_free()
 		_canvas_layer = null
+
+
+func _remove_travel_modal() -> void:
+	if current_travel_modal:
+		current_travel_modal.queue_free()
+		current_travel_modal = null
+	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
+		_travel_canvas_layer.queue_free()
+		_travel_canvas_layer = null

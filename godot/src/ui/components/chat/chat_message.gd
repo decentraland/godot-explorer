@@ -195,6 +195,25 @@ func make_urls_clickable(text: String) -> String:
 			)
 			_apply_mention_style()
 
+	# World regex runs before URL regex so .dcl.eth names get wrapped first.
+	# The URL regex won't re-wrap them because _is_safe_url rejects BBCode chars.
+	var world_regex = RegEx.new()
+	world_regex.compile(r"([a-zA-Z0-9][-a-zA-Z0-9]*\.dcl\.eth)")
+
+	var world_results = world_regex.search_all(processed_text)
+	for i in range(world_results.size() - 1, -1, -1):
+		var world_match = world_results[i]
+		var world_name = world_match.get_string()
+		var start_pos = world_match.get_start()
+		var end_pos = world_match.get_end()
+
+		var clickable_world = (
+			"[url=world:%s][color=#66B3FF]%s[/color][/url]" % [world_name, world_name]
+		)
+		processed_text = (
+			processed_text.substr(0, start_pos) + clickable_world + processed_text.substr(end_pos)
+		)
+
 	var coord_regex = RegEx.new()
 	coord_regex.compile(r"(-?\d+,-?\d+)")
 
@@ -367,6 +386,9 @@ func _on_url_clicked(meta) -> void:
 	if meta_str.begins_with("coord:"):
 		var coord_str = meta_str.substr(6)
 		_handle_coordinate_click(coord_str)
+	elif meta_str.begins_with("world:"):
+		var world_name = meta_str.substr(6)
+		Global.modal_manager.async_show_world_modal(world_name)
 	elif meta_str.begins_with("mention:"):
 		var mention_str = meta_str.substr(8)
 		_handle_mention_click(mention_str)
