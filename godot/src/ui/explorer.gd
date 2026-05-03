@@ -270,6 +270,10 @@ func _ready():
 	ui_safe_area.add_child(Global.scene_runner.base_ui)
 	ui_safe_area.move_child(Global.scene_runner.base_ui, 0)
 
+	ui_safe_area.resized.connect(self._push_scene_interactable_area)
+	get_window().size_changed.connect(self._push_scene_interactable_area)
+	_push_scene_interactable_area.call_deferred()
+
 	Global.scene_fetcher.notify_pending_loading_scenes.connect(
 		self._on_notify_pending_loading_scenes
 	)
@@ -353,6 +357,36 @@ func _ready():
 func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:
 	if not Global.player_identity.get_address_str().is_empty():
 		Global.open_url(url)
+
+
+## Push the safe-area rect (in canvas/logical pixels) to the scene runner so
+## scenes get correct UiCanvasInformation.interactable_area on every resize,
+## including --emulate-ios / --emulate-android virtual margins.
+func _push_scene_interactable_area() -> void:
+	if not is_instance_valid(Global.scene_runner) or not is_instance_valid(ui_safe_area):
+		return
+	var canvas: Vector2 = ui_safe_area.size
+	var canvas_w: int = int(canvas.x)
+	var canvas_h: int = int(canvas.y)
+	if canvas_w <= 0 or canvas_h <= 0:
+		return
+
+	var rect := Rect2i(0, 0, canvas_w, canvas_h)
+
+	if Global.is_mobile() or Global.is_emulating_safe_area():
+		var window_size: Vector2i = DisplayServer.window_get_size()
+		if window_size.x > 0 and window_size.y > 0:
+			var safe: Rect2i = Global.get_safe_area()
+			var x_factor: float = canvas.x / float(window_size.x)
+			var y_factor: float = canvas.y / float(window_size.y)
+
+			var pos_x: int = clampi(roundi(safe.position.x * x_factor), 0, canvas_w)
+			var pos_y: int = clampi(roundi(safe.position.y * y_factor), 0, canvas_h)
+			var end_x: int = clampi(roundi(safe.end.x * x_factor), pos_x, canvas_w)
+			var end_y: int = clampi(roundi(safe.end.y * y_factor), pos_y, canvas_h)
+			rect = Rect2i(pos_x, pos_y, end_x - pos_x, end_y - pos_y)
+
+	Global.scene_runner.set_interactable_area(rect)
 
 
 func _on_player_logout():
