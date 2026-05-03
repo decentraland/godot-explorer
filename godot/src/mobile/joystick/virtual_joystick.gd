@@ -118,8 +118,7 @@ func _on_camera_mode_block_changed(_blocked: bool) -> void:
 
 func _refresh_camera_button_visibility() -> void:
 	var should_show := (
-		Global.current_camera_mode != Global.CameraMode.CINEMATIC
-		and not Global.camera_mode_blocked
+		Global.current_camera_mode != Global.CameraMode.CINEMATIC and not Global.camera_mode_blocked
 	)
 	_button_camera.visible = should_show
 
