@@ -29,6 +29,7 @@ signal delete_account
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 signal camera_mode_set(camera_mode: Global.CameraMode)
+signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
 
 enum CameraMode {
@@ -102,6 +103,7 @@ var deep_link_router := DeepLinkRouter.new()
 
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
+var camera_mode_blocked: bool = false
 var session_id: String
 
 var _is_portrait: bool = true
@@ -996,3 +998,10 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
 	current_camera_mode = camera_mode
 	camera_mode_set.emit(camera_mode)
+
+
+func set_camera_mode_blocked(blocked: bool) -> void:
+	if camera_mode_blocked == blocked:
+		return
+	camera_mode_blocked = blocked
+	camera_mode_block_changed.emit(blocked)
