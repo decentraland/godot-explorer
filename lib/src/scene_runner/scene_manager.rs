@@ -54,6 +54,13 @@ use super::{
     update_scene::_process_scene,
 };
 
+/// Reference canvas height (in virtual / scene pixels). Matches the convention
+/// used by the Bevy reference client: scenes design against a fixed-height
+/// canvas and the runtime uniformly scales the resulting UI to fill the actual
+/// window. This way aspect-ratio changes only zoom the UI — they never re-flow
+/// the scene's layout.
+const REFERENCE_HEIGHT: f32 = 720.0;
+
 // Deriving GodotClass makes the class available to Godot
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -64,7 +71,14 @@ pub struct SceneManager {
     base_ui: Gd<DclUiControl>,
 
     ui_canvas_information: PbUiCanvasInformation,
+    /// Stored in REFERENCE units (canvas pixels divided by `canvas_pixel_scale`),
+    /// not physical pixels. This matches the units the scene receives in
+    /// `UiCanvasInformation`.
     interactable_area: Rect2i,
+    /// Uniform scale applied to `base_ui` so scenes lay out at a fixed
+    /// reference resolution (REFERENCE_HEIGHT) regardless of window size.
+    /// This is also the value reported as `device_pixel_ratio`.
+    canvas_pixel_scale: f32,
 
     scenes: HashMap<SceneId, Scene>,
 
@@ -310,12 +324,16 @@ impl SceneManager {
             self.base_ui.clone().free();
         }
         let mut base_ui = DclUiControl::new_alloc();
-        base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
+        // Top-left anchored, sized manually in reference units by
+        // update_canvas_metrics(). Do NOT use FULL_RECT — that would stretch
+        // the scene UI with the parent and defeat the uniform-scale layout.
+        base_ui.set_anchors_preset(LayoutPreset::TOP_LEFT);
         base_ui.set_mouse_filter(MouseFilter::IGNORE);
         base_ui.set_name("scenes_ui");
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
         base_ui.connect("resized", &callable_on_ui_resize);
         self.base_ui = base_ui;
+        self.canvas_pixel_scale = 1.0;
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
@@ -1369,13 +1387,19 @@ impl SceneManager {
     fn pointer_tooltip_changed();
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
+        // base_ui is sized in REFERENCE units (REFERENCE_HEIGHT tall) by
+        // update_canvas_metrics(); a CanvasItem scale matches it to the
+        // physical canvas. Scenes therefore lay out against a stable virtual
+        // canvas and aspect-ratio changes only adjust the reported width.
         let canvas_size = self.base_ui.get_size();
-        let window_size: Vector2i = godot::classes::DisplayServer::singleton().window_get_size();
 
-        let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
+        if canvas_size.x <= 0.0 || canvas_size.y <= 0.0 {
+            return PbUiCanvasInformation::default();
+        }
 
-        // BorderRect carries indents (in canvas pixels) from each canvas edge to the
-        // safe/interactable rectangle. Clamp to [0, canvas] so a stale or oversized
+        // BorderRect carries indents (in canvas pixels — same reference units
+        // as width/height) from each canvas edge to the safe/interactable
+        // rectangle. Clamp to [0, canvas] so a stale or oversized
         // interactable_area never produces negative or out-of-canvas indents.
         let ia_pos = self.interactable_area.position;
         let ia_end = self.interactable_area.end();
@@ -1385,7 +1409,7 @@ impl SceneManager {
         let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
 
         PbUiCanvasInformation {
-            device_pixel_ratio,
+            device_pixel_ratio: self.canvas_pixel_scale,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
             interactable_area: Some(BorderRect {
@@ -1410,10 +1434,41 @@ impl SceneManager {
         }
     }
 
+    /// Push the current canvas size and safe/interactable rect (both in physical
+    /// canvas pixels) from Godot. Computes the uniform scene-UI scale, sizes
+    /// `base_ui` in reference units, and stores the interactable area in those
+    /// same reference units so scenes get a stable virtual canvas.
     #[func]
-    fn set_interactable_area(&mut self, interactable_area: Rect2i) {
-        self.interactable_area = interactable_area;
-        self.ui_canvas_information = self.create_ui_canvas_information();
+    fn update_canvas_metrics(&mut self, canvas_size_px: Vector2, interactable_area_px: Rect2i) {
+        if !self.base_ui.is_instance_valid() {
+            return;
+        }
+        if canvas_size_px.x <= 0.0 || canvas_size_px.y <= 0.0 {
+            return;
+        }
+
+        let scale = canvas_size_px.y / REFERENCE_HEIGHT;
+        if scale <= 0.0 || !scale.is_finite() {
+            return;
+        }
+        self.canvas_pixel_scale = scale;
+
+        let inv = 1.0 / scale;
+        let ref_width = canvas_size_px.x * inv;
+
+        // Convert interactable area from physical canvas pixels to reference
+        // units so it shares units with width/height when emitted as BorderRect.
+        let pos_x = (interactable_area_px.position.x as f32 * inv).round() as i32;
+        let pos_y = (interactable_area_px.position.y as f32 * inv).round() as i32;
+        let size_x = (interactable_area_px.size.x as f32 * inv).round() as i32;
+        let size_y = (interactable_area_px.size.y as f32 * inv).round() as i32;
+        self.interactable_area = Rect2i::from_components(pos_x, pos_y, size_x, size_y);
+
+        // Apply uniform scale + reference-unit size. Setting the size triggers
+        // the resized signal, which rebuilds ui_canvas_information.
+        self.base_ui.set_scale(Vector2::new(scale, scale));
+        self.base_ui
+            .set_size(Vector2::new(ref_width, REFERENCE_HEIGHT));
     }
 
     #[func]
@@ -1730,7 +1785,9 @@ impl INode for SceneManager {
             std::sync::mpsc::sync_channel(1000);
 
         let mut base_ui = DclUiControl::new_alloc();
-        base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
+        // Top-left anchored, sized manually in reference units by
+        // update_canvas_metrics(). See SceneManager::recreate_base_ui.
+        base_ui.set_anchors_preset(LayoutPreset::TOP_LEFT);
         base_ui.set_mouse_filter(MouseFilter::IGNORE);
 
         let canvas_size = base_ui.get_size();
@@ -1770,6 +1827,7 @@ impl INode for SceneManager {
                 canvas_size.x as i32,
                 canvas_size.y as i32,
             ),
+            canvas_pixel_scale: 1.0,
             viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             raycast_use_cursor_position: false,
