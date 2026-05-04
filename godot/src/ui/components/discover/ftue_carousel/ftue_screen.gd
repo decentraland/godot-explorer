@@ -10,7 +10,7 @@ const CARD_SCENE = preload(
 
 var _places: Array[Dictionary] = []
 
-@onready var carousel: SnapCarousel = %SnapCarousel
+@onready var carousel: Control = %SnapCarousel
 @onready var label_title: Label = %Label_Title
 @onready var label_creator: Label = %Label_Creator
 @onready var label_nickname: Label = %Label_NickNameFTUE

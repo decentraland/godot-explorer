@@ -1,15 +1,16 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://byp4n7u2145fx"]
 
-[ext_resource type="Script" path="res://src/ui/components/discover/ftue_carousel/snap_carousel.gd" id="1_snap"]
+[ext_resource type="Script" uid="uid://cml07tp7nuhck" path="res://src/ui/components/discover/ftue_carousel/snap_carousel.gd" id="1_snap"]
 
-[node name="SnapCarousel" type="Control"]
+[node name="SnapCarousel" type="Control" unique_id=1077907770]
 clip_contents = true
-layout_mode = 2
+layout_mode = 3
+anchors_preset = 0
 size_flags_horizontal = 3
 size_flags_vertical = 4
 script = ExtResource("1_snap")
 
-[node name="DotsContainer" type="HBoxContainer" parent="."]
+[node name="DotsContainer" type="HBoxContainer" parent="." unique_id=1079715379]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
