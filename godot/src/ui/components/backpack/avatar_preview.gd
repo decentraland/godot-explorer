@@ -29,6 +29,7 @@ var _cached_aabbs: Dictionary = {}
 var _camera_tween: Tween = null
 var _user_has_panned: bool = false
 var _pending_camera_fit: bool = false
+var _fitted_camera_size: float = MAX_CAMERA_SIZE
 
 var _aabb_debug_nodes: Array[MeshInstance3D] = []
 
@@ -109,7 +110,7 @@ func _input(event: InputEvent):
 			else:
 				dirty_is_dragging = false
 
-		if not event.pressed and irect.has_point(event.position):
+		if not event.pressed and can_drag and irect.has_point(event.position):
 			var dir: float = 0.0
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				dir = -0.2
@@ -117,17 +118,38 @@ func _input(event: InputEvent):
 				dir = 0.2
 
 			if dir != 0.0:
-				camera_3d.size = clampf(camera_3d.size + dir, _min_camera_size(), MAX_CAMERA_SIZE)
+				camera_3d.size = clampf(camera_3d.size + dir, _min_camera_size(), _fitted_camera_size)
+				_clamp_camera_center()
 
-	if event is InputEventMagnifyGesture:
+	if event is InputEventMagnifyGesture and can_drag:
 		if not irect.has_point(event.position):
 			return
 		dirty_is_dragging = false
-		camera_3d.size = clampf(camera_3d.size / event.factor, _min_camera_size(), MAX_CAMERA_SIZE)
+		camera_3d.size = clampf(camera_3d.size / event.factor, _min_camera_size(), _fitted_camera_size)
+		_clamp_camera_center()
 
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging:
 			_apply_drag(get_global_mouse_position())
+
+
+func _pan_limits() -> Vector2:
+	var focus_aabb: AABB = _cached_aabbs.get(
+		_camera_focus, _cached_aabbs.get("overall", AABB(Vector3.ZERO, Vector3.ONE * 2.0))
+	)
+	var av_xform: Transform3D = avatar.global_transform
+	var aabb_bottom: float = (av_xform * Vector3(0.0, focus_aabb.position.y, 0.0)).y
+	var aabb_top: float = (av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
+	var cam_size: float = camera_3d.size
+	var vp_h: float = size.y
+	var pan_min: float = aabb_bottom + cam_size * (0.5 - float(preview_margin_bottom) / vp_h)
+	var pan_max: float = aabb_top - cam_size * (0.5 - float(preview_margin_top) / vp_h)
+	return Vector2(minf(pan_min, pan_max), maxf(pan_min, pan_max))
+
+
+func _clamp_camera_center() -> void:
+	var limits: Vector2 = _pan_limits()
+	camera_center.position.y = clampf(camera_center.position.y, limits.x, limits.y)
 
 
 func _apply_drag(current_pos: Vector2) -> void:
@@ -135,14 +157,9 @@ func _apply_drag(current_pos: Vector2) -> void:
 	avatar.rotation.y = start_angle + drag_pixels.x * 0.005
 	if not can_drag:
 		return
-	var focus_aabb: AABB = _cached_aabbs.get(
-		_camera_focus, _cached_aabbs.get("overall", AABB(Vector3.ZERO, Vector3.ONE * 2.0))
-	)
-	var av_xform: Transform3D = avatar.global_transform
-	var pan_min: float = (av_xform * Vector3(0.0, focus_aabb.position.y, 0.0)).y
-	var pan_max: float = (av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
+	var limits: Vector2 = _pan_limits()
 	var pan: float = drag_pixels.y * camera_3d.size / size.y
-	camera_center.position.y = clampf(start_camera_center_y + pan, pan_min, pan_max)
+	camera_center.position.y = clampf(start_camera_center_y + pan, limits.x, limits.y)
 	_user_has_panned = true
 
 
@@ -345,6 +362,7 @@ func _fit_camera_to_aabb(aabb: AABB, padding: float = 0.0) -> void:
 	var inner_w: float = maxf(1.0, vp_w - preview_margin_left - preview_margin_right)
 	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
 	cam_size = maxf(cam_size, MIN_CAMERA_SIZE_PART)
+	_fitted_camera_size = cam_size
 	var center_y: float = (
 		aabb.get_center().y
 		+ float(preview_margin_top - preview_margin_bottom) * cam_size / (2.0 * vp_h)
