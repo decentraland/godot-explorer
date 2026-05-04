@@ -585,7 +585,7 @@ impl Metrics {
             None,
         );
         if let Err(err) = http_requester.request(request, 0).await {
-            tracing::error!("Failed to send segment batch: {:?}", err);
+            tracing::warn!("Failed to send segment batch: {:?}", err);
         } else {
             tracing::debug!("Segment batch sent successfully");
         }

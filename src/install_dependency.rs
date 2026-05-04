@@ -569,7 +569,7 @@ pub fn install(
         download_and_extract_zip(
             SENTRY_ADDON_URL,
             uncompressed_folder.to_str().unwrap(),
-            cache_key("sentry.zip".into()),
+            cache_key("sentry-1.6.0.zip".into()),
         )?;
 
         fs::rename(

@@ -1050,7 +1050,7 @@ impl DclSocialService {
                 promise.bind_mut().resolve_with_data(array.to_variant());
             }
             Err(e) => {
-                tracing::error!("get_friends failed: {}", e);
+                tracing::warn!("get_friends failed: {}", e);
                 promise.bind_mut().reject(e.as_str().into())
             }
         }

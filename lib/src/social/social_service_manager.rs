@@ -300,7 +300,7 @@ impl SocialServiceManager {
         u64,
     ) {
         if let Err(e) = self.ensure_connected().await {
-            tracing::error!("call_get_friends: connection failed: {:?}", e);
+            tracing::warn!("call_get_friends: connection failed: {:?}", e);
             return (
                 Err(ClientResultError::Client(ClientError::TransportError)),
                 0,
@@ -313,7 +313,7 @@ impl SocialServiceManager {
         let service = match state.connection.as_ref() {
             Some(conn) => &conn.service,
             None => {
-                tracing::error!("call_get_friends: no connection after ensure_connected");
+                tracing::warn!("call_get_friends: no connection after ensure_connected");
                 return (
                     Err(ClientResultError::Client(ClientError::TransportError)),
                     generation,
@@ -330,7 +330,7 @@ impl SocialServiceManager {
         match result {
             Ok(rpc_result) => (rpc_result, generation),
             Err(_) => {
-                tracing::error!("call_get_friends: RPC timeout after {}s", RPC_TIMEOUT_SECS);
+                tracing::warn!("call_get_friends: RPC timeout after {}s", RPC_TIMEOUT_SECS);
                 (
                     Err(ClientResultError::Client(ClientError::TransportError)),
                     generation,
