@@ -428,12 +428,21 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float
 	avatar.rotation.y = 0.0
 	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 1.25, -3.5)
 	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.70, -1.25)
-	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION
-	camera_3d.size = ortho_size
 
 	# Store original values to restore after capture
 	var original_stretch = stretch
 	var original_size = size
+	var original_camera_center_y: float = camera_center.position.y
+	var original_camera_position: Vector3 = camera_3d.position
+	var original_camera_size: float = camera_3d.size
+
+	if _camera_tween:
+		_camera_tween.kill()
+		_camera_tween = null
+
+	camera_center.position.y = 0.0
+	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION
+	camera_3d.size = ortho_size
 
 	# Disable stretch to allow manual SubViewport sizing
 	stretch = false
@@ -443,10 +452,15 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
 
 	var img := subviewport.get_texture().get_image()
 
-	# Restore original stretch and size
+	# Restore original camera and viewport state
+	camera_center.position.y = original_camera_center_y
+	camera_3d.position = original_camera_position
+	camera_3d.size = original_camera_size
 	stretch = original_stretch
 	set_size(original_size)
 
