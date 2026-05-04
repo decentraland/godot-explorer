@@ -94,7 +94,7 @@ var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/R
 @onready var label_version = %Label_Version
 
 @onready var control_ftue = %FTUE
-@onready var place_ftue = %FTUE/FTUE
+@onready var ftue_screen = %FTUE/FTUE
 
 @onready var backgrounds = [loading_solid_bg, default_bg, discover_bg]
 @onready var control_with_discover_bg = [
@@ -239,25 +239,21 @@ func show_auth_browser_open_screen(
 func show_control_ftue():
 	track_lobby_screen("DISCOVER_FTUE")
 	button_back.hide()
-	var nickname_label = place_ftue._get_label_nickname_ftue()
-	if nickname_label and current_profile:
-		nickname_label.text = current_profile.get_name()
+	if current_profile:
+		ftue_screen.set_username(current_profile.get_name())
 	show_panel(control_ftue)
-	_async_fetch_ftue_place()
+	_async_fetch_ftue_places()
 
 
-func _async_fetch_ftue_place() -> void:
-	var response = await PlacesHelper.async_get_place_by_id(FTUE_PLACE_ID)
-	if response is PromiseError:
-		printerr("[Lobby] Failed to fetch FTUE place data: ", response.get_error())
+func _async_fetch_ftue_places() -> void:
+	var places := await FtueDataProvider.async_fetch_ftue_places()
+	if places.is_empty():
+		printerr("[Lobby] No FTUE places loaded, skipping FTUE")
+		async_close_sign_in()
 		return
-	if not is_instance_valid(place_ftue):
+	if not is_instance_valid(ftue_screen):
 		return
-	var json: Dictionary = response.get_string_response_as_json()
-	var place_data: Dictionary = json.get("data", json)
-	if place_data.is_empty():
-		return
-	place_ftue.set_data(place_data)
+	ftue_screen.set_places(places)
 
 
 func show_avatar_create_screen():
@@ -430,7 +426,9 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
+	print("[Lobby] _async_on_profile_changed: updating avatar...")
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
+	print("[Lobby] _async_on_profile_changed: avatar updated")
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
@@ -438,12 +436,17 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 
 	if loading_first_profile:
 		loading_first_profile = false
+		print("[Lobby] loading_first_profile, has_name=", profile_has_name(), " ftue_completed=", Global.get_config().discover_ftue_completed)
 		if profile_has_name():
-			# Session restored with existing profile — go directly to discover
 			Global.metrics.update_identity(
 				Global.player_identity.get_address_str(), Global.player_identity.is_guest
 			)
-			await async_close_sign_in()
+			if not Global.get_config().discover_ftue_completed:
+				print("[Lobby] showing FTUE")
+				show_control_ftue()
+			else:
+				print("[Lobby] FTUE already completed, closing sign in")
+				await async_close_sign_in()
 			return
 # gdlint: ignore=no-else-return
 		else:
@@ -584,8 +587,7 @@ func _on_button_next_pressed():
 		var error: PromiseError = promise.get_data()
 		printerr("[Lobby] Profile deploy failed: ", error.get_error())
 
-	# Skip FTUE, go directly to discover
-	await async_close_sign_in()
+	show_control_ftue()
 
 
 func _on_button_random_name_pressed():
@@ -697,7 +699,10 @@ func _show_avatar_preview():
 # gdlint:ignore = async-function-name
 func _on_button_jump_in_pressed():
 	Global.metrics.track_click_button("lets_go", current_screen_name, "")
-	await async_close_sign_in()
+	if not Global.get_config().discover_ftue_completed:
+		show_control_ftue()
+	else:
+		await async_close_sign_in()
 
 
 func _on_avatar_preview_gui_input(event: InputEvent) -> void:
@@ -731,6 +736,8 @@ func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
 
 
 func _on_ftue_ftue_completed() -> void:
+	Global.get_config().discover_ftue_completed = true
+	Global.get_config().save_to_settings_file()
 	async_close_sign_in()
 
 
