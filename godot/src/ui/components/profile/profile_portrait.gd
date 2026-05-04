@@ -92,6 +92,7 @@ func _refresh_content() -> void:
 		return
 	var content = draggable_bottom_sheet.get_content_instance()
 	if content and content.has_method("async_refresh"):
+		# Fire-and-forget: no await needed, the refresh runs in the background
 		content.async_refresh(profile)
 
 
@@ -101,6 +102,7 @@ func _refresh_content_from_mutable() -> void:
 		return
 	var content = draggable_bottom_sheet.get_content_instance()
 	if content and content.has_method("async_refresh"):
+		# Fire-and-forget: no await needed, the refresh runs in the background
 		content.async_refresh(profile)
 
 
