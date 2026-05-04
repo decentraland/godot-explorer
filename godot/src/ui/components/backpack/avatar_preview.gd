@@ -30,6 +30,9 @@ var _camera_tween: Tween = null
 var _user_has_panned: bool = false
 var _pending_camera_fit: bool = false
 var _fitted_camera_size: float = MAX_CAMERA_SIZE
+var _touch_points: Dictionary = {}
+var _pinch_start_distance: float = 0.0
+var _pinch_start_camera_size: float = 0.0
 
 var _aabb_debug_nodes: Array[MeshInstance3D] = []
 
@@ -123,14 +126,31 @@ func _input(event: InputEvent):
 				)
 				_clamp_camera_center()
 
-	if event is InputEventMagnifyGesture and can_drag:
-		if not irect.has_point(event.position):
-			return
-		dirty_is_dragging = false
-		camera_3d.size = clampf(
-			camera_3d.size / event.factor, _min_camera_size(), _fitted_camera_size
-		)
-		_clamp_camera_center()
+	# InputEventMagnifyGesture is intentionally not used: it only fires on macOS trackpads
+	# and is not emitted on iOS or Android. Pinch zoom is handled via InputEventScreenTouch
+	# and InputEventScreenDrag below, which works on all platforms.
+
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_touch_points[event.index] = event.position
+			if _touch_points.size() == 2 and can_drag:
+				dirty_is_dragging = false
+				_pinch_start_distance = _get_touch_distance()
+				_pinch_start_camera_size = camera_3d.size
+		else:
+			_touch_points.erase(event.index)
+			_pinch_start_distance = 0.0
+
+	if event is InputEventScreenDrag:
+		_touch_points[event.index] = event.position
+		if _touch_points.size() == 2 and can_drag and _pinch_start_distance > 0.0:
+			var current_dist: float = _get_touch_distance()
+			camera_3d.size = clampf(
+				_pinch_start_camera_size * _pinch_start_distance / current_dist,
+				_min_camera_size(),
+				_fitted_camera_size
+			)
+			_clamp_camera_center()
 
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging:
@@ -167,6 +187,11 @@ func _apply_drag(current_pos: Vector2) -> void:
 	var pan: float = drag_pixels.y * camera_3d.size / size.y
 	camera_center.position.y = clampf(start_camera_center_y + pan, limits.x, limits.y)
 	_user_has_panned = true
+
+
+func _get_touch_distance() -> float:
+	var keys: Array = _touch_points.keys()
+	return (_touch_points[keys[0]] as Vector2).distance_to(_touch_points[keys[1]])
 
 
 func reset_avatar_rotation() -> void:
