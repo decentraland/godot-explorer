@@ -3,7 +3,7 @@ use godot::prelude::*;
 use http::Uri;
 #[cfg(feature = "use_livekit")]
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "use_livekit")]
 use crate::{
@@ -1093,7 +1093,7 @@ impl CommunicationManager {
         let packet = rfc4::Packet {
             message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
                 message: text.to_string(),
-                timestamp: self.start_time.elapsed().as_secs_f64(),
+                timestamp: ole_timestamp_now(),
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
@@ -2149,6 +2149,15 @@ async fn get_scene_adapter(
         gatekeeper_response.adapter
     );
     Ok(gatekeeper_response.adapter)
+}
+
+fn ole_timestamp_now() -> f64 {
+    let unix_seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs_f64();
+
+    unix_seconds / 86400.0 + 25569.0
 }
 
 fn get_chat_array(chats: Vec<(H160, rfc4::Chat)>) -> VarArray {
