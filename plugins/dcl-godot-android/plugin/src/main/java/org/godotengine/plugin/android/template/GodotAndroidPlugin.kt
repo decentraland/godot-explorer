@@ -233,8 +233,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         try {
             val builder = CustomTabsIntent.Builder()
             val customTabsIntent = builder.build()
-            customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
-            customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             customTabsIntent.intent.setPackage(packageName)
             customTabsIntent.launchUrl(activity, Uri.parse(url))
             return true
