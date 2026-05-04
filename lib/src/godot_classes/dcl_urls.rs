@@ -143,6 +143,10 @@ impl DclUrls {
     pub fn account_deletion() -> GString {
         urls::account_deletion().to_godot()
     }
+    #[func]
+    pub fn app_versions() -> GString {
+        urls::app_versions().to_godot()
+    }
 
     // Proxy
     #[func]

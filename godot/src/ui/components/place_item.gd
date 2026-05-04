@@ -29,6 +29,7 @@ const _TWEEN_DURATION := 0.2
 @export var realm_title: String = "Genesis City"
 @export var categories: Array = []
 @export var is_draggable := false
+@export var allow_full_drag := true
 
 var event_id: String
 var event_status: String
@@ -1107,11 +1108,12 @@ func _input(event: InputEvent) -> void:
 
 			match gesture:
 				DragGesture.UP:
-					match drag_state:
-						DragState.HALF:
-							_on_show_more_toggled(true)
-							drag_state = DragState.FULL
-							tween_to(0.0, func(): return, true)
+					if allow_full_drag:
+						match drag_state:
+							DragState.HALF:
+								_on_show_more_toggled(true)
+								drag_state = DragState.FULL
+								tween_to(0.0, func(): return, true)
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:

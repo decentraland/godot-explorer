@@ -84,12 +84,20 @@ impl DclSocialService {
     #[signal]
     pub fn block_update_received(address: GString, is_blocked: bool);
 
-    /// Initialize the service with DclPlayerIdentity
+    /// Initialize the service with DclPlayerIdentity.
+    /// Safe to call multiple times — skips if already initialized.
     #[func]
     pub fn initialize_from_player_identity(
         &mut self,
         player_identity: Gd<crate::auth::dcl_player_identity::DclPlayerIdentity>,
     ) {
+        // Skip if already initialized
+        if let Ok(guard) = self.manager.try_read() {
+            if guard.is_some() {
+                return;
+            }
+        }
+
         let wallet_option = player_identity.bind().try_get_ephemeral_auth_chain();
 
         let Some(wallet) = wallet_option else {
@@ -1050,7 +1058,7 @@ impl DclSocialService {
                 promise.bind_mut().resolve_with_data(array.to_variant());
             }
             Err(e) => {
-                tracing::error!("get_friends failed: {}", e);
+                tracing::warn!("get_friends failed: {}", e);
                 promise.bind_mut().reject(e.as_str().into())
             }
         }
