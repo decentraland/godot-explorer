@@ -493,8 +493,9 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 	Global.get_config().save_to_settings_file()
 
-	# Note: Social service initialization moved to explorer.gd to ensure it completes
-	# before the Friends panel is used (lobby scene transitions before it finishes)
+	# Initialize social service early so Discover can show friends before entering explorer
+	if not _is_guest:
+		Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 
 func _on_check_box_eula_toggled(toggled_on: bool) -> void:
@@ -543,8 +544,13 @@ func _on_button_different_account_pressed():
 	Global.metrics.track_click_button("use_another_account", current_screen_name, "")
 	Global.get_config().session_account = {}
 
-	# Unsubscribe from block updates before clearing
+	# Unsubscribe from all social service updates before clearing
+	Global.social_service.unsubscribe_from_updates()
+	Global.social_service.unsubscribe_from_connectivity_updates()
 	Global.social_service.unsubscribe_from_block_updates()
+	# Drop the gRPC manager so the previous identity's streams don't leak into
+	# the next account. initialize_from_player_identity rebuilds it on login.
+	Global.social_service.disconnect()
 
 	# Clear the current social blacklist when switching accounts
 	Global.social_blacklist.clear_blocked()
