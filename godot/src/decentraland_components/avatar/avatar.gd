@@ -1123,7 +1123,7 @@ func _apply_lod_state(
 	var prev_state: int = _lod_state
 	_lod_state = state
 
-	_set_dither_alpha(dither_alpha)
+	AvatarLODHelpers.set_dither_alpha(self, dither_alpha)
 
 	if _off_frustum:
 		# Off-frustum: avatar is invisible to the camera. Drop the slot
@@ -1183,36 +1183,36 @@ func _release_impostor() -> void:
 func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 	match new_state:
 		LODState.FULL:
-			_set_lod_meshes_visible(true)
-			_set_lod_animation_active(true)
-			_set_lod_animation_speed(1.0)
-			_set_lod_animation_throttle(false)
-			_set_lod_particles_visible(true)
-			_set_lod_click_active(true)
+			AvatarLODHelpers.set_meshes_visible(self, true)
+			AvatarLODHelpers.set_animation_active(self, true)
+			AvatarLODHelpers.set_animation_speed(self, 1.0)
+			AvatarLODHelpers.set_animation_throttle(self, false)
+			AvatarLODHelpers.set_particles_visible(self, true)
+			AvatarLODHelpers.set_click_active(self, true)
 			_apply_nickname_visibility()
 		LODState.MID:
-			_set_lod_meshes_visible(true)
-			_set_lod_animation_active(true)
-			_set_lod_animation_speed(1.0)
-			_set_lod_animation_throttle(true)
-			_set_lod_particles_visible(false)
-			_set_lod_click_active(false)
+			AvatarLODHelpers.set_meshes_visible(self, true)
+			AvatarLODHelpers.set_animation_active(self, true)
+			AvatarLODHelpers.set_animation_speed(self, 1.0)
+			AvatarLODHelpers.set_animation_throttle(self, true)
+			AvatarLODHelpers.set_particles_visible(self, false)
+			AvatarLODHelpers.set_click_active(self, false)
 			_apply_nickname_visibility()
 		LODState.CROSSFADE:
-			_set_lod_meshes_visible(true)
-			_set_lod_animation_active(true)
-			_set_lod_animation_speed(1.0)
-			_set_lod_animation_throttle(true)
-			_set_lod_particles_visible(false)
-			_set_lod_click_active(false)
+			AvatarLODHelpers.set_meshes_visible(self, true)
+			AvatarLODHelpers.set_animation_active(self, true)
+			AvatarLODHelpers.set_animation_speed(self, 1.0)
+			AvatarLODHelpers.set_animation_throttle(self, true)
+			AvatarLODHelpers.set_particles_visible(self, false)
+			AvatarLODHelpers.set_click_active(self, false)
 			_apply_nickname_visibility()
 		LODState.FAR:
-			_set_lod_meshes_visible(false)
-			_set_lod_animation_active(false)
-			_set_lod_animation_speed(1.0)
-			_set_lod_animation_throttle(false)
-			_set_lod_particles_visible(false)
-			_set_lod_click_active(false)
+			AvatarLODHelpers.set_meshes_visible(self, false)
+			AvatarLODHelpers.set_animation_active(self, false)
+			AvatarLODHelpers.set_animation_speed(self, 1.0)
+			AvatarLODHelpers.set_animation_throttle(self, false)
+			AvatarLODHelpers.set_particles_visible(self, false)
+			AvatarLODHelpers.set_click_active(self, false)
 			_apply_nickname_visibility()
 
 
@@ -1236,72 +1236,16 @@ func _apply_off_frustum_anim_freeze() -> void:
 		var elapsed_s: float = (Time.get_ticks_msec() - _anim_freeze_start_ms) / 1000.0
 		match _lod_state:
 			LODState.FULL:
-				_set_lod_animation_active(true)
-				_set_lod_animation_throttle(false)
+				AvatarLODHelpers.set_animation_active(self, true)
+				AvatarLODHelpers.set_animation_throttle(self, false)
 			LODState.MID, LODState.CROSSFADE:
-				_set_lod_animation_active(true)
-				_set_lod_animation_throttle(true)
+				AvatarLODHelpers.set_animation_active(self, true)
+				AvatarLODHelpers.set_animation_throttle(self, true)
 			LODState.FAR:
-				_set_lod_animation_active(false)
-				_set_lod_animation_throttle(false)
+				AvatarLODHelpers.set_animation_active(self, false)
+				AvatarLODHelpers.set_animation_throttle(self, false)
 		if animation_tree.active and elapsed_s > 0.0:
 			animation_tree.advance(elapsed_s)
-
-
-func _set_dither_alpha(value: float) -> void:
-	if body_shape_skeleton_3d == null:
-		return
-	# Use Godot's built-in object-level dither via GeometryInstance3D.transparency
-	# (4×4 ordered dither when in (0, 1)). This avoids a per-material uniform,
-	# letting many avatars share the same ShaderMaterial.
-	var transparency: float = clamp(1.0 - value, 0.0, 1.0)
-	for child in body_shape_skeleton_3d.get_children():
-		if child is MeshInstance3D:
-			child.transparency = transparency
-
-
-func _capture_lod_mesh_visibility() -> void:
-	if _mesh_lod_visibility_captured or body_shape_skeleton_3d == null:
-		return
-	for child in body_shape_skeleton_3d.get_children():
-		if child is MeshInstance3D:
-			child.set_meta("lod_visible", child.visible)
-	_mesh_lod_visibility_captured = true
-
-
-func _set_lod_meshes_visible(visible: bool) -> void:
-	if not _mesh_lod_visibility_captured:
-		_capture_lod_mesh_visibility()
-	if body_shape_skeleton_3d == null:
-		return
-	for child in body_shape_skeleton_3d.get_children():
-		if child is MeshInstance3D:
-			var orig: bool = child.get_meta("lod_visible", true)
-			child.visible = visible and orig
-
-
-func _set_lod_animation_active(active: bool) -> void:
-	if animation_tree != null:
-		animation_tree.active = active
-
-
-func _set_lod_animation_speed(speed: float) -> void:
-	if animation_player != null:
-		animation_player.speed_scale = speed
-
-
-func _set_lod_animation_throttle(throttled: bool) -> void:
-	if animation_tree == null:
-		return
-	_anim_throttle_active = throttled
-	_anim_throttle_acc = 0.0
-	_anim_throttle_counter = 0
-	if throttled:
-		animation_tree.callback_mode_process = (
-			AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
-		)
-	else:
-		animation_tree.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_IDLE
 
 
 func _tick_animation_throttle(delta: float) -> void:
@@ -1313,33 +1257,6 @@ func _tick_animation_throttle(delta: float) -> void:
 		animation_tree.advance(_anim_throttle_acc)
 		_anim_throttle_acc = 0.0
 		_anim_throttle_counter = 0
-
-
-func _set_lod_particles_visible(visible: bool) -> void:
-	# `visible` flips the draw call but not the simulation. Also gate emission
-	# and the per-tick process so hidden GPU particle systems stop spending
-	# both GPU and CPU budget; visibility alone leaves them simulating.
-	for node_name in ["GPUParticles3D_Move", "GPUParticles3D_Jump", "GPUParticles3D_Land"]:
-		var node = get_node_or_null(node_name)
-		if node == null:
-			continue
-		node.visible = visible
-		if node is GPUParticles3D:
-			node.emitting = visible
-		node.process_mode = (Node.PROCESS_MODE_INHERIT if visible else Node.PROCESS_MODE_DISABLED)
-
-
-func _set_lod_click_active(active: bool) -> void:
-	if click_area == null:
-		return
-	var collision_shape = click_area.get_node_or_null("CollisionShape3D")
-	if collision_shape != null:
-		collision_shape.disabled = not active
-	# Area3D.monitoring drives whether the physics server tracks this body's
-	# overlaps every tick, which scales linearly with avatar count.
-	if click_area is Area3D:
-		click_area.monitoring = active
-		click_area.monitorable = active
 
 
 func _process(delta):
