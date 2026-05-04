@@ -36,7 +36,9 @@ func _apply_closed_state() -> void:
 	chatbar.show()
 	notifications.show()
 	_apply_default_margins()
-	if not Global.is_orientation_portrait():
+	if Global.is_orientation_portrait():
+		safe_bottom_area.hide()
+	else:
 		safe_bottom_area.show()
 	virtual_keyboard_margin.custom_minimum_size.y = 0
 
@@ -48,8 +50,11 @@ func _apply_open_state() -> void:
 	chatbar.show()
 	notifications.hide()
 	_apply_default_margins()
-	if not Global.is_orientation_portrait():
+	if Global.is_orientation_portrait():
+		safe_bottom_area.hide()
+	else:
 		safe_bottom_area.show()
+	virtual_keyboard_margin.custom_minimum_size.y = 0
 	_update_chat_layout()
 
 
@@ -71,7 +76,17 @@ func _apply_default_margins() -> void:
 	add_theme_constant_override("margin_left", m["left"])
 	add_theme_constant_override("margin_top", m["top"])
 	add_theme_constant_override("margin_right", m["right"])
-	add_theme_constant_override("margin_bottom", m["bottom"])
+	var bottom: int = m["bottom"]
+	# In portrait, compensate the safe area bottom margin added by SafeMarginContainerHUD
+	# so the chat sits exactly PORTRAIT_MARGINS.bottom pixels from the screen edge.
+	if Global.is_orientation_portrait() and _current_state != ChatState.CLOSED:
+		var safe_area := Global.get_safe_area()
+		var window_size := DisplayServer.window_get_size()
+		var viewport_size := get_viewport().get_visible_rect().size
+		var y_factor: float = viewport_size.y / max(float(window_size.y), 1.0)
+		var safe_bottom := int(abs(safe_area.end.y - window_size.y) * y_factor)
+		bottom = max(bottom - safe_bottom, 0)
+	add_theme_constant_override("margin_bottom", bottom)
 
 
 func _update_chat_layout() -> void:
@@ -154,6 +169,9 @@ func is_chat_visible() -> bool:
 
 
 func is_interactive_area_at(position: Vector2) -> bool:
+	# In portrait with chat open, block all touch input for camera/joystick
+	if Global.is_orientation_portrait() and _current_state != ChatState.CLOSED:
+		return true
 	if chatbar.visible and chatbar.is_point_inside(position):
 		return true
 	if chat.visible and chat.is_interactive_area_at(position):
