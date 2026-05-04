@@ -1,6 +1,12 @@
 class_name Explorer
 extends Node
 
+# Friendship/connectivity subscribe retry policy: bounded exponential backoff
+# 5s, 10s, 20s, 40s, 60s, 60s — caps at ~3min total before giving up.
+const _SUBSCRIBE_RETRY_MAX_ATTEMPTS: int = 6
+const _SUBSCRIBE_RETRY_BASE_DELAY: float = 5.0
+const _SUBSCRIBE_RETRY_MAX_DELAY: float = 60.0
+
 var is_genesis_city: bool
 var player: Node3D = null
 var scene_title: String
@@ -24,6 +30,11 @@ var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
 var _ban_check_generation: int = 0
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
+var _subscription_reconnecting: bool = false  # Debounce for subscription_dropped
+var _resubscribe_timer: Timer = null
+## True between social-service init and player logout. Gates retry loops so they
+## exit cleanly when the session ends mid-await instead of re-subscribing after sign-out.
+var _session_active: bool = false
 var _gamepad_connected: bool = false
 
 ## Children of %UI hidden while "hide explorer UI" is on; restored when toggled off.
@@ -356,6 +367,15 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 
 
 func _on_player_logout():
+	# Mark session inactive first so any in-flight retry awaits exit on next check
+	_session_active = false
+
+	# Stop re-subscribe timer
+	if _resubscribe_timer != null:
+		_resubscribe_timer.stop()
+		_resubscribe_timer.queue_free()
+		_resubscribe_timer = null
+
 	# Stop notifications polling
 	NotificationsManager.stop_polling()
 
@@ -378,18 +398,40 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 
 func _async_initialize_social_service() -> void:
 	# Initialize the social service with player identity
-	# Note: Friendship subscriptions are handled by FriendsPanel when it opens/closes
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 	# Connect to block update signal for real-time sync
 	if not Global.social_service.block_update_received.is_connected(_on_block_update_received):
 		Global.social_service.block_update_received.connect(_on_block_update_received)
 
+	# Guests have no wallet identity and no friend graph — skip the entire
+	# friendship/connectivity flow (subscriptions, retries, and the proactive timer).
+	if Global.player_identity.is_guest:
+		return
+
+	# Connect subscription_dropped for auto-reconnect
+	if not Global.social_service.subscription_dropped.is_connected(_async_on_subscription_dropped):
+		Global.social_service.subscription_dropped.connect(_async_on_subscription_dropped)
+
+	_session_active = true
+
 	# Fetch blocked users from server and initialize local cache (fire-and-forget)
 	_async_fetch_blocking_status()
 
 	# Subscribe to block updates for real-time sync across devices
 	Global.social_service.subscribe_to_block_updates()
+
+	# Subscribe to friendship and connectivity updates persistently
+	_async_subscribe_to_friendship_updates(true)
+	_async_subscribe_to_connectivity_updates()
+
+	# Start proactive re-subscribe timer (every 30s)
+	if _resubscribe_timer == null:
+		_resubscribe_timer = Timer.new()
+		_resubscribe_timer.wait_time = 30.0
+		_resubscribe_timer.autostart = true
+		_resubscribe_timer.timeout.connect(_async_proactive_resubscribe)
+		add_child(_resubscribe_timer)
 
 
 func _async_fetch_blocking_status() -> void:
@@ -411,6 +453,106 @@ func _on_block_update_received(address: String, is_blocked: bool) -> void:
 		Global.social_blacklist.add_blocked(address)
 	else:
 		Global.social_blacklist.remove_blocked(address)
+
+
+## Subscribe to friendship updates with bounded exponential backoff.
+## `initial_load`: on success, true triggers a full friends fetch; false a diff refresh
+## (used by reconnect-after-drop, which already has data on screen).
+func _async_subscribe_to_friendship_updates(initial_load: bool) -> void:
+	var attempt: int = 0
+	while _session_active:
+		var promise = Global.social_service.subscribe_to_updates()
+		await PromiseUtils.async_awaiter(promise)
+		if not _session_active:
+			return
+
+		if not promise.is_rejected():
+			friends_panel.set_streaming_subscription_failed(false)
+			if initial_load:
+				friends_panel.async_initial_friends_load()
+			else:
+				friends_panel.async_refresh_friends()
+			return
+
+		attempt += 1
+		push_error(
+			(
+				"[FriendsPanel.SubscriptionState] friendship subscribe rejected (attempt %d/%d): %s"
+				% [attempt, _SUBSCRIBE_RETRY_MAX_ATTEMPTS, PromiseUtils.get_error_message(promise)]
+			)
+		)
+		friends_panel.set_streaming_subscription_failed(true)
+
+		if attempt >= _SUBSCRIBE_RETRY_MAX_ATTEMPTS:
+			return
+
+		var delay: float = min(
+			_SUBSCRIBE_RETRY_BASE_DELAY * pow(2.0, attempt - 1), _SUBSCRIBE_RETRY_MAX_DELAY
+		)
+		await get_tree().create_timer(delay).timeout
+
+
+func _async_subscribe_to_connectivity_updates() -> void:
+	var attempt: int = 0
+	while _session_active:
+		var promise = Global.social_service.subscribe_to_connectivity_updates()
+		await PromiseUtils.async_awaiter(promise)
+		if not _session_active:
+			return
+
+		if not promise.is_rejected():
+			return
+
+		attempt += 1
+		push_error(
+			(
+				"[FriendsPanel.SubscriptionState] connectivity subscribe rejected (attempt %d/%d): %s"
+				% [attempt, _SUBSCRIBE_RETRY_MAX_ATTEMPTS, PromiseUtils.get_error_message(promise)]
+			)
+		)
+
+		if attempt >= _SUBSCRIBE_RETRY_MAX_ATTEMPTS:
+			return
+
+		var delay: float = min(
+			_SUBSCRIBE_RETRY_BASE_DELAY * pow(2.0, attempt - 1), _SUBSCRIBE_RETRY_MAX_DELAY
+		)
+		await get_tree().create_timer(delay).timeout
+
+
+func _async_proactive_resubscribe() -> void:
+	if not _session_active:
+		return
+	# Re-subscribe silently (cancels old subscription, creates new one)
+	var promise = Global.social_service.subscribe_to_updates()
+	await PromiseUtils.async_awaiter(promise)
+	if not _session_active:
+		return
+	if promise.is_rejected():
+		return  # Silent failure — subscription_dropped will handle recovery
+	# Diff-based refresh (no full rebuild)
+	friends_panel.async_refresh_friends()
+
+	# Also re-subscribe connectivity
+	Global.social_service.subscribe_to_connectivity_updates()
+	Global.social_service.subscribe_to_block_updates()
+
+
+func _async_on_subscription_dropped() -> void:
+	if not _session_active:
+		return
+	# Debounce: multiple streams may drop at once when connection dies
+	if _subscription_reconnecting:
+		return
+	_subscription_reconnecting = true
+	print("[FriendsPanel.SubscriptionState] subscription dropped — reconnecting in 2s")
+	await get_tree().create_timer(2.0).timeout
+	_subscription_reconnecting = false
+	if not _session_active:
+		return
+	Global.social_service.subscribe_to_block_updates()
+	_async_subscribe_to_friendship_updates(false)
+	_async_subscribe_to_connectivity_updates()
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
