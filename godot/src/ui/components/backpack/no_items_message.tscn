@@ -1,0 +1,54 @@
+[gd_scene load_steps=7 format=3 uid="uid://2n7qh48sy4i4"]
+
+[ext_resource type="Script" uid="uid://muiiytq5vnn4" path="res://src/ui/components/backpack/no_items_message.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://10ljw6k05g33" path="res://assets/ui/backpack/no-items-in-category.svg" id="2_icon"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_font600"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_font400"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hp11i"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("3_font600")
+font_size = 40
+
+[node name="NoItemsMessage" type="VBoxContainer"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+alignment = 1
+script = ExtResource("1_script")
+
+[node name="TextureRect" type="TextureRect" parent="."]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+texture = ExtResource("2_icon")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="HSeparator" type="HSeparator" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_hp11i")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 2
+text = "Nothing here yet"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="RichTextBox" type="RichTextLabel" parent="."]
+layout_mode = 2
+mouse_filter = 1
+theme_override_fonts/normal_font = ExtResource("4_font400")
+theme_override_font_sizes/normal_font_size = 28
+bbcode_enabled = true
+text = "Find new ones in the
+[color=#A0ABFF][url]Marketplace[/url][/color]"
+fit_content = true
+scroll_active = false
+autowrap_mode = 2
+horizontal_alignment = 1
+
+[connection signal="meta_clicked" from="RichTextBox" to="." method="_on_rich_text_box_meta_clicked"]

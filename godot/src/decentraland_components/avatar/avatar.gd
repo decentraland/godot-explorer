@@ -21,7 +21,10 @@ const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
 )
 
 @export var skip_process: bool = false
-@export var hide_name: bool = false
+@export var hide_name: bool = false:
+	set(value):
+		hide_name = value
+		_apply_nickname_visibility()
 @export var non_3d_audio: bool = false
 
 # Entity info for trigger area detection

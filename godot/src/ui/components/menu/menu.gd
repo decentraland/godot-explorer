@@ -145,8 +145,7 @@ func async_show_backpack(on_emotes := false):
 	await control_backpack._async_instantiate()
 	select_backpack_screen()
 	if on_emotes:
-		control_backpack.instance.show_emotes()
-		control_backpack.instance.press_button_emotes()
+		await control_backpack.instance.async_show_emotes()
 	_open()
 
 
