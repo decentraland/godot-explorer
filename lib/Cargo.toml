@@ -79,6 +79,11 @@ modular-bitfield = "0.11"
 # Image decoding for formats not natively supported by Godot (GIF, animated WebP)
 image = { version = "0.25", default-features = false, features = ["gif", "webp"] }
 
+# Procedural noise for Floating Islands terrain generation. Pure-Rust port of
+# FastNoiseLite (same algorithm Godot uses) so seeds match the legacy GDScript
+# implementation bit-for-bit.
+fastnoise-lite = "1.1"
+
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"

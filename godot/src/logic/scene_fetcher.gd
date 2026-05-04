@@ -6,13 +6,8 @@ signal report_scene_load(done: bool, is_new_loading: bool, pending: int)
 signal notify_pending_loading_scenes(is_pending: bool)
 signal player_parcel_changed(new_position: Vector2i)
 
-const EMPTY_SCENE = preload("res://assets/empty-scenes/empty_parcel.tscn")
-const EMPTY_PARCEL_MATERIAL = preload("res://assets/empty-scenes/empty_parcel_material.tres")
-const CLIFF_MATERIAL = preload("res://assets/empty-scenes/cliff_material.tres")
-
-# Maximum number of empty parcels before switching to simple floor mode
-# Above this threshold, individual floating islands are replaced with a single floor + cliffs
-const MAX_EMPTY_PARCELS_FOR_FLOATING_ISLANDS: int = 100
+const PARCEL_SIZE: float = 16.0
+const PARCEL_HALF_SIZE: float = 8.0
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
@@ -34,9 +29,8 @@ class SceneItem:
 var current_position: Vector2i = INVALID_PARCEL
 var current_scene_entity_id: String = ""
 
-var loaded_empty_scenes: Dictionary = {}
+var islands_manager: DclFloatingIslandsManager = null
 var loaded_scenes: Dictionary = {}
-var current_edge_parcels: Array[Vector2i] = []
 var wall_manager: FloatingIslandWalls = null
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
@@ -77,15 +71,20 @@ var _teleport_target_parcel: Vector2i = INVALID_PARCEL
 # Track if the coordinator has been configured (config() called)
 var _coordinator_configured: bool = false
 
-# Async floating islands generation state
-var _floating_islands_generating: bool = false
-var _floating_islands_generation_data: Dictionary = {}  # Captured data for generation
-var _floating_islands_queue: Array = []  # Coordinates to generate
-var _floating_islands_total: int = 0
-var _floating_islands_created: int = 0
+# Mirrors the candidate set handed to `islands_manager` so `is_scene_loaded`
+# and the `parcels_processed` signal can enumerate empty parcels without
+# querying Rust.
+var _candidate_set: Dictionary = {}
+var _last_candidate_parcels: Array[Vector2i] = []
 
-# Simple floor for large scenes (>100 empty parcels)
-var _large_scene_floor: Node3D = null
+# Coalesces multiple `_regenerate_floating_islands.call_deferred()` requests
+# into a single regen pass — without this, spawning N scenes in one frame
+# triggers N rebuild cycles back-to-back.
+var _regen_scheduled: bool = false
+
+# If set, the manager's next `generation_complete` should teleport the player
+# onto this parcel (empty-parcel spawn flow). Cleared after use.
+var _pending_empty_parcel_spawn: Vector2i = INVALID_PARCEL
 
 # Preview WebSocket for hot reload
 var _preview_ws := PreviewWebSocket.new()
@@ -110,7 +109,11 @@ func _ready():
 		base_floor_manager.name = "BaseFloorManager"
 		add_child(base_floor_manager)
 
-		# Parcel data texture will be generated after parcels are loaded
+		islands_manager = DclFloatingIslandsManager.new()
+		islands_manager.name = "FloatingIslandsManager"
+		add_child(islands_manager)
+		islands_manager.generation_progress.connect(_on_islands_generation_progress)
+		islands_manager.generation_complete.connect(_on_islands_generation_complete)
 
 	# Set scene radius based on mode:
 	# - Floating islands: radius 5 to load scenes within range (avoids loading all scattered scenes)
@@ -203,14 +206,7 @@ func set_dynamic_loading_mode(enabled: bool) -> void:
 	if enabled:
 		# Clear floating island state when enabling dynamic mode
 		last_scene_group_hash = ""
-		for parcel in loaded_empty_scenes:
-			var empty_scene = loaded_empty_scenes[parcel]
-			remove_child(empty_scene)
-			empty_scene.queue_free()
-		loaded_empty_scenes.clear()
-		if wall_manager:
-			wall_manager.clear_walls()
-		_cleanup_simple_floor()
+		_clear_floating_islands_state()
 
 
 func is_dynamic_loading_mode() -> bool:
@@ -219,9 +215,6 @@ func is_dynamic_loading_mode() -> bool:
 
 # gdlint:ignore = async-function-name
 func _process(_dt):
-	# Process async floating islands generation (2 parcels per frame)
-	_process_floating_islands_batch()
-
 	scene_entity_coordinator.update()
 
 	var version := scene_entity_coordinator.get_version()
@@ -267,8 +260,7 @@ func _process(_dt):
 
 
 func is_scene_loaded(x: int, z: int) -> bool:
-	var parcel_str = "%d,%d" % [x, z]
-	return get_parcel_scene_id(x, z) != -1 or loaded_empty_scenes.has(parcel_str)
+	return get_parcel_scene_id(x, z) != -1 or _candidate_set.has(Vector2i(x, z))
 
 
 func get_parcel_scene_id(x: int, z: int) -> int:
@@ -394,13 +386,7 @@ func _async_on_desired_scene_changed():
 	# Clear floating island state when switching to dynamic loading
 	if not use_floating_islands and !last_scene_group_hash.is_empty():
 		last_scene_group_hash = ""
-		# Clean up any existing floating island empty parcels
-		for parcel in loaded_empty_scenes:
-			var empty_scene = loaded_empty_scenes[parcel]
-			remove_child(empty_scene)
-			empty_scene.queue_free()
-		loaded_empty_scenes.clear()
-		_cleanup_simple_floor()
+		_clear_floating_islands_state()
 
 	if use_floating_islands:
 		# Wait for coordinator to finish fetching all scene metadata before generating islands
@@ -482,12 +468,7 @@ func _async_on_desired_scene_changed():
 
 	var empty_parcels_coords = []
 	if use_floating_islands and !last_scene_group_hash.is_empty():
-		# Use floating island empty parcels
-		for parcel_string in loaded_empty_scenes.keys():
-			var coord = parcel_string.split(",")
-			var x = int(coord[0])
-			var z = int(coord[1])
-			empty_parcels_coords.push_back(Vector2i(x, z))
+		empty_parcels_coords = _last_candidate_parcels.duplicate()
 	# Note: In test/renderer mode (use_floating_islands = false), we don't render empty parcels at all
 	# This prevents grass/terrain from appearing in scene snapshots
 
@@ -547,15 +528,7 @@ func _on_realm_changed():
 		if not scene.is_global and scene.scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene.scene_number_id)
 
-	for parcel in loaded_empty_scenes:
-		var empty_parcel = loaded_empty_scenes[parcel]
-		remove_child(empty_parcel)
-		empty_parcel.queue_free()
-
-	loaded_empty_scenes.clear()
-	if wall_manager:
-		wall_manager.clear_walls()
-	_cleanup_simple_floor()
+	_clear_floating_islands_state()
 
 	loaded_scenes = {}
 
@@ -602,9 +575,19 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 		loaded_scenes.erase(scene_id)
 
 
+## Coalesced entry point for callers that may fire several regen requests in
+## the same frame (e.g. spawning multiple scenes via `call_deferred`).
+func _request_regenerate_floating_islands() -> void:
+	if _regen_scheduled:
+		return
+	_regen_scheduled = true
+	_regenerate_floating_islands.call_deferred()
+
+
 func _regenerate_floating_islands() -> void:
+	_regen_scheduled = false
 	# Guard against overlapping generation
-	if _floating_islands_generating:
+	if islands_manager == null:
 		return
 
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
@@ -631,7 +614,6 @@ func _regenerate_floating_islands() -> void:
 			return
 
 		empty_parcel_center = target_parcel
-		# Treat current position as if it were a "scene" to generate the surrounding island
 		all_scene_parcels = [target_parcel]
 
 	var current_scene_group_hash: String = str(all_scene_parcels.hash())
@@ -642,7 +624,6 @@ func _regenerate_floating_islands() -> void:
 
 	last_scene_group_hash = current_scene_group_hash
 
-	# Calculate bounds
 	var min_x = all_scene_parcels[0].x
 	var max_x = all_scene_parcels[0].x
 	var min_z = all_scene_parcels[0].y
@@ -654,317 +635,103 @@ func _regenerate_floating_islands() -> void:
 		min_z = min(min_z, parcel.y)
 		max_z = max(max_z, parcel.y)
 
-	# Create a set of scene parcels for quick lookup (captured data)
 	var scene_parcel_set = {}
 	for parcel in all_scene_parcels:
 		scene_parcel_set[Vector2i(parcel.x, parcel.y)] = true
 
 	var padding = 2
+	var candidates: Array[Vector2i] = []
+	var corner_bytes := PackedByteArray()
 
-	# Build queue of coordinates to generate
-	_floating_islands_queue = []
 	for x in range(min_x - padding, max_x + padding + 1):
 		for z in range(min_z - padding, max_z + padding + 1):
 			var coord = Vector2i(x, z)
-			# Only add empty parcels if they're not occupied by actual scenes
-			if not scene_parcel_set.has(coord):
-				_floating_islands_queue.append(coord)
+			if scene_parcel_set.has(coord):
+				continue
+			if is_empty_parcel_mode and coord == empty_parcel_center:
+				# Added below with all-LOADED neighbors.
+				continue
+			var config = _calculate_parcel_adjacency(
+				x,
+				z,
+				min_x - padding,
+				max_x + padding,
+				min_z - padding,
+				max_z + padding,
+				scene_parcel_set
+			)
+			candidates.append(coord)
+			_append_corner_config_bytes(corner_bytes, config)
 
-	_floating_islands_total = _floating_islands_queue.size()
-	_floating_islands_created = 0
-
-	# For large scenes, use simple floor instead of individual floating islands
-	if _floating_islands_total > MAX_EMPTY_PARCELS_FOR_FLOATING_ISLANDS:
-		_create_simple_floor_with_cliffs(min_x, max_x, min_z, max_z, padding)
-		_floating_islands_generating = false
-		_floating_islands_queue.clear()
-		Global.scene_runner.start_floating_islands(0)
-		Global.scene_runner.finish_floating_islands()
-		return
-
-	# Capture all needed data for async generation
-	_floating_islands_generation_data = {
-		"scene_parcel_set": scene_parcel_set,
-		"min_x": min_x,
-		"max_x": max_x,
-		"min_z": min_z,
-		"max_z": max_z,
-		"padding": padding,
-		"is_empty_parcel_mode": is_empty_parcel_mode,
-		"empty_parcel_center": empty_parcel_center
-	}
-
-	# Signal floating islands generation start with count
-	Global.scene_runner.start_floating_islands(_floating_islands_total)
-
-	# Clear old empty parcels
-	for parcel in loaded_empty_scenes:
-		var empty_scene = loaded_empty_scenes[parcel]
-		remove_child(empty_scene)
-		empty_scene.queue_free()
-	loaded_empty_scenes.clear()
-	current_edge_parcels.clear()
-	if wall_manager:
-		wall_manager.clear_walls()
-
-	# Start async generation
-	_floating_islands_generating = true
-
-
-## Process async floating islands generation - 2 parcels per frame
-func _process_floating_islands_batch() -> void:
-	if not _floating_islands_generating:
-		return
-
-	# Process 2 parcels per frame
-	var parcels_this_frame = mini(2, _floating_islands_queue.size())
-	for i in parcels_this_frame:
-		var coord = _floating_islands_queue.pop_front()
-		_create_single_empty_parcel(coord)
-		_floating_islands_created += 1
-
-	# Report progress
-	Global.scene_runner.report_floating_islands_progress(
-		_floating_islands_created, _floating_islands_total
-	)
-
-	# Check if generation is complete
-	if _floating_islands_queue.is_empty():
-		_finish_floating_islands_generation()
-
-
-## Create a single empty parcel at the given coordinate
-func _create_single_empty_parcel(coord: Vector2i) -> void:
-	var x = coord.x
-	var z = coord.y
-	var parcel_string = "%d,%d" % [x, z]
-
-	if loaded_empty_scenes.has(parcel_string):
-		return  # Already exists
-
-	var data = _floating_islands_generation_data
-	var scene_parcel_set = data.get("scene_parcel_set", {})
-	var min_x = data.get("min_x", 0)
-	var max_x = data.get("max_x", 0)
-	var min_z = data.get("min_z", 0)
-	var max_z = data.get("max_z", 0)
-	var padding = data.get("padding", 2)
-
-	var scene: Node3D = EMPTY_SCENE.instantiate()
-	var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
-	scene.name = temp
-	add_child(scene)
-	scene.global_position = Vector3(
-		x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
-		0,
-		-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
-	)
-
-	var config = _calculate_parcel_adjacency(
-		x, z, min_x - padding, max_x + padding, min_z - padding, max_z + padding, scene_parcel_set
-	)
-	scene.set_corner_configuration.call_deferred(config)
-
-	loaded_empty_scenes[parcel_string] = scene
-
-
-## Finish floating islands generation (create walls, handle empty parcel mode, signal completion)
-func _finish_floating_islands_generation() -> void:
-	var data = _floating_islands_generation_data
-	var min_x: int = data.get("min_x", 0)
-	var max_x: int = data.get("max_x", 0)
-	var min_z: int = data.get("min_z", 0)
-	var max_z: int = data.get("max_z", 0)
-	var padding: int = data.get("padding", 2)
-	var is_empty_parcel_mode: bool = data.get("is_empty_parcel_mode", false)
-	var empty_parcel_center: Vector2i = data.get("empty_parcel_center", INVALID_PARCEL)
-
-	# Create walls
-	if wall_manager:
-		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
-
-	# For empty parcel mode, also create an empty parcel at the center
 	if is_empty_parcel_mode and empty_parcel_center != INVALID_PARCEL:
-		var x := empty_parcel_center.x
-		var z := empty_parcel_center.y
-		var parcel_string := "%d,%d" % [x, z]
+		var center_config := CornerConfiguration.new()
+		center_config.north = CornerConfiguration.ParcelState.LOADED
+		center_config.south = CornerConfiguration.ParcelState.LOADED
+		center_config.east = CornerConfiguration.ParcelState.LOADED
+		center_config.west = CornerConfiguration.ParcelState.LOADED
+		center_config.northwest = CornerConfiguration.ParcelState.LOADED
+		center_config.northeast = CornerConfiguration.ParcelState.LOADED
+		center_config.southwest = CornerConfiguration.ParcelState.LOADED
+		center_config.southeast = CornerConfiguration.ParcelState.LOADED
+		candidates.append(empty_parcel_center)
+		_append_corner_config_bytes(corner_bytes, center_config)
 
-		var scene: Node3D = EMPTY_SCENE.instantiate()
-		var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
-		scene.name = temp
-		add_child(scene)
-		scene.global_position = Vector3(
-			x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
-			0,
-			-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
-		)
+	var total := candidates.size()
 
-		# Center parcel has all neighbors as LOADED (flat terrain with edge strips)
-		var config := CornerConfiguration.new()
-		config.north = CornerConfiguration.ParcelState.LOADED
-		config.south = CornerConfiguration.ParcelState.LOADED
-		config.east = CornerConfiguration.ParcelState.LOADED
-		config.west = CornerConfiguration.ParcelState.LOADED
-		config.northwest = CornerConfiguration.ParcelState.LOADED
-		config.northeast = CornerConfiguration.ParcelState.LOADED
-		config.southwest = CornerConfiguration.ParcelState.LOADED
-		config.southeast = CornerConfiguration.ParcelState.LOADED
-		scene.set_corner_configuration.call_deferred(config)
-
-		loaded_empty_scenes[parcel_string] = scene
-
-		# Spawn player after terrain is generated
-		var terrain_gen = scene.get_node("TerrainGenerator")
-		terrain_gen.terrain_generated.connect(
-			_async_spawn_on_empty_parcel.bind(empty_parcel_center), CONNECT_ONE_SHOT
-		)
-
-	# Clear generation state
-	_floating_islands_generating = false
-	_floating_islands_generation_data = {}
-	_floating_islands_queue = []
-
-	# Signal floating islands generation complete (100%)
-	Global.scene_runner.finish_floating_islands()
-
-
-## Clean up the simple floor used for large scenes
-func _cleanup_simple_floor() -> void:
-	if _large_scene_floor != null:
-		remove_child(_large_scene_floor)
-		_large_scene_floor.queue_free()
-		_large_scene_floor = null
-
-
-## Create a simple floor with fixed cliffs for large scenes (>100 empty parcels)
-## This reduces memory from ~450MB (individual floating islands) to ~10MB (single floor + 4 cliffs)
-func _create_simple_floor_with_cliffs(
-	min_x: int, max_x: int, min_z: int, max_z: int, padding: int
-) -> void:
-	# Clean up any previous simple floor
-	_cleanup_simple_floor()
-
-	# Clean up existing floating islands
-	for parcel in loaded_empty_scenes:
-		var empty_scene = loaded_empty_scenes[parcel]
-		remove_child(empty_scene)
-		empty_scene.queue_free()
-	loaded_empty_scenes.clear()
-	current_edge_parcels.clear()
 	if wall_manager:
 		wall_manager.clear_walls()
-
-	_large_scene_floor = Node3D.new()
-	_large_scene_floor.name = "LargeSceneFloor"
-	add_child(_large_scene_floor)
-
-	# Calculate world-space bounds
-	var world_min_x = (min_x - padding) * EmptyParcel.PARCEL_SIZE
-	var world_max_x = (max_x + padding + 1) * EmptyParcel.PARCEL_SIZE
-	var world_min_z = -(max_z + padding + 1) * EmptyParcel.PARCEL_SIZE
-	var world_max_z = -(min_z - padding) * EmptyParcel.PARCEL_SIZE
-
-	var width = world_max_x - world_min_x
-	var height = world_max_z - world_min_z
-	var center_x = (world_min_x + world_max_x) / 2.0
-	var center_z = (world_min_z + world_max_z) / 2.0
-
-	# Create floor mesh
-	_create_floor_mesh(width, height, center_x, center_z)
-
-	# Create collision
-	_create_floor_collision(width, height, center_x, center_z)
-
-	# Create cliffs on all 4 sides
-	var cliff_height = 30.0
-	# North cliff (facing +Z toward center)
-	_create_cliff(
-		Vector3(center_x, -cliff_height / 2.0, world_min_z),
-		Vector2(width, cliff_height),
-		Vector3(0, PI, 0)
-	)
-	# South cliff (facing -Z toward center)
-	_create_cliff(
-		Vector3(center_x, -cliff_height / 2.0, world_max_z),
-		Vector2(width, cliff_height),
-		Vector3.ZERO
-	)
-	# West cliff (facing +X toward center)
-	_create_cliff(
-		Vector3(world_min_x, -cliff_height / 2.0, center_z),
-		Vector2(height, cliff_height),
-		Vector3(0, -PI / 2.0, 0)
-	)
-	# East cliff (facing -X toward center)
-	_create_cliff(
-		Vector3(world_max_x, -cliff_height / 2.0, center_z),
-		Vector2(height, cliff_height),
-		Vector3(0, PI / 2.0, 0)
-	)
-
-	# Create walls
-	if wall_manager:
 		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
 
+	_candidate_set.clear()
+	_last_candidate_parcels = candidates.duplicate()
+	for coord in candidates:
+		_candidate_set[coord] = true
 
-## Create the floor mesh for simple floor mode
-func _create_floor_mesh(width: float, height: float, center_x: float, center_z: float) -> void:
-	var mesh_instance := MeshInstance3D.new()
-	mesh_instance.name = "FloorMesh"
+	_pending_empty_parcel_spawn = empty_parcel_center if is_empty_parcel_mode else INVALID_PARCEL
 
-	var plane_mesh := PlaneMesh.new()
-	plane_mesh.size = Vector2(width, height)
-	mesh_instance.mesh = plane_mesh
-
-	# Use the same material as floating islands (grass texture)
-	# The default grass_rect in the material already points to the bottom-left quadrant
-	mesh_instance.material_override = EMPTY_PARCEL_MATERIAL
-
-	_large_scene_floor.add_child(mesh_instance)
-	mesh_instance.global_position = Vector3(center_x, -0.05, center_z)
+	Global.scene_runner.start_floating_islands(total)
+	islands_manager.set_player_parcel(current_position)
+	islands_manager.set_candidate_parcels(candidates, corner_bytes)
 
 
-## Create the floor collision for simple floor mode
-func _create_floor_collision(width: float, height: float, center_x: float, center_z: float) -> void:
-	var static_body := StaticBody3D.new()
-	static_body.name = "FloorCollision"
-	static_body.collision_layer = EmptyParcel.OBSTACLE_COLLISION_LAYER
-
-	var collision_shape := CollisionShape3D.new()
-	var box_shape := BoxShape3D.new()
-	box_shape.size = Vector3(width, 0.1, height)
-	collision_shape.shape = box_shape
-
-	static_body.add_child(collision_shape)
-
-	_large_scene_floor.add_child(static_body)
-	static_body.global_position = Vector3(center_x, -0.05, center_z)
+func _append_corner_config_bytes(buffer: PackedByteArray, config: CornerConfiguration) -> void:
+	buffer.append(config.north)
+	buffer.append(config.south)
+	buffer.append(config.east)
+	buffer.append(config.west)
+	buffer.append(config.northwest)
+	buffer.append(config.northeast)
+	buffer.append(config.southwest)
+	buffer.append(config.southeast)
 
 
-## Create a cliff plane on one side of the simple floor
-func _create_cliff(position: Vector3, size: Vector2, rotation: Vector3) -> void:
-	var mesh_instance := MeshInstance3D.new()
-	mesh_instance.name = "Cliff"
+func _on_islands_generation_progress(created: int, total: int) -> void:
+	Global.scene_runner.report_floating_islands_progress(created, total)
 
-	var plane_mesh := PlaneMesh.new()
-	plane_mesh.size = size
-	plane_mesh.orientation = PlaneMesh.FACE_Z
-	mesh_instance.mesh = plane_mesh
 
-	mesh_instance.material_override = CLIFF_MATERIAL
+func _on_islands_generation_complete() -> void:
+	Global.scene_runner.finish_floating_islands()
+	if _pending_empty_parcel_spawn != INVALID_PARCEL:
+		var target := _pending_empty_parcel_spawn
+		_pending_empty_parcel_spawn = INVALID_PARCEL
+		_async_spawn_on_empty_parcel(target)
 
-	_large_scene_floor.add_child(mesh_instance)
-	mesh_instance.global_position = position
-	mesh_instance.rotation = rotation
+
+func _clear_floating_islands_state() -> void:
+	if islands_manager:
+		islands_manager.clear_all()
+	_candidate_set.clear()
+	_last_candidate_parcels.clear()
+	_pending_empty_parcel_spawn = INVALID_PARCEL
+	if wall_manager:
+		wall_manager.clear_walls()
 
 
 func _async_spawn_on_empty_parcel(parcel: Vector2i) -> void:
 	# Wait one more physics frame to ensure collision shape is ready
 	await get_tree().physics_frame
 	var parcel_center := Vector3(
-		parcel.x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
-		0,
-		-parcel.y * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
+		parcel.x * PARCEL_SIZE + PARCEL_HALF_SIZE, 0, -parcel.y * PARCEL_SIZE - PARCEL_HALF_SIZE
 	)
 	# Trust the spawn point position, move up if inside a collider
 	var valid_position := _find_valid_spawn_position(parcel_center)
@@ -1044,6 +811,9 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 	if _coordinator_configured:
 		if not is_using_floating_islands() or is_teleport or _use_dynamic_loading:
 			scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
+
+	if islands_manager:
+		islands_manager.set_player_parcel(new_position)
 
 	player_parcel_changed.emit(new_position)
 
@@ -1314,7 +1084,7 @@ func _on_try_spawn_scene(
 	# Regenerate floating islands after scene spawns (deferred to ensure scene is fully initialized)
 	# Skip in dynamic loading mode - we use simple base floors instead
 	if is_using_floating_islands() and not _use_dynamic_loading:
-		_regenerate_floating_islands.call_deferred()
+		_request_regenerate_floating_islands()
 
 	return true
 
@@ -1353,104 +1123,6 @@ func _on_preview_scene_update(scene_id: String) -> void:
 
 func set_debugging_js_scene_id(id: String) -> void:
 	_debugging_js_scene_id = id
-
-
-func get_edge_parcels() -> Array[Vector2i]:
-	return current_edge_parcels
-
-
-func _find_cluster_containing_parcel(clusters: Array, parcel: Vector2i):
-	for cluster in clusters:
-		for cluster_parcel in cluster:
-			if cluster_parcel.x == parcel.x and cluster_parcel.y == parcel.y:
-				return cluster
-	return null
-
-
-func _cluster_parcels(parcels: Array) -> Array:
-	if parcels.is_empty():
-		return []
-
-	var clusters = []
-	var max_cluster_distance = 10  # Parcels within 10 units are considered part of the same island
-
-	for parcel in parcels:
-		var added_to_cluster = false
-
-		# Try to add to an existing cluster
-		for cluster in clusters:
-			# Check if this parcel is close to any parcel in the cluster
-			for cluster_parcel in cluster:
-				var distance = abs(parcel.x - cluster_parcel.x) + abs(parcel.y - cluster_parcel.y)
-				if distance <= max_cluster_distance:
-					cluster.append(parcel)
-					added_to_cluster = true
-					break
-			if added_to_cluster:
-				break
-
-		# If not added to any cluster, create a new one
-		if not added_to_cluster:
-			clusters.append([parcel])
-
-	return clusters
-
-
-func _create_floating_island_for_cluster(cluster: Array):
-	if cluster.is_empty():
-		return
-
-	var min_x = cluster[0].x
-	var max_x = cluster[0].x
-	var min_z = cluster[0].y
-	var max_z = cluster[0].y
-
-	for parcel in cluster:
-		min_x = min(min_x, parcel.x)
-		max_x = max(max_x, parcel.x)
-		min_z = min(min_z, parcel.y)
-		max_z = max(max_z, parcel.y)
-
-	# Create a set of scene parcels for quick lookup
-	var scene_parcel_set = {}
-	for parcel in cluster:
-		scene_parcel_set[Vector2i(parcel.x, parcel.y)] = true
-
-	# Create 2-parcel padding around the bounds
-	var padding = 2
-	for x in range(min_x - padding, max_x + padding + 1):
-		for z in range(min_z - padding, max_z + padding + 1):
-			var coord = Vector2i(x, z)
-			# Only add empty parcels if they're not occupied by actual scenes
-			if not scene_parcel_set.has(coord):
-				var parcel_string = "%d,%d" % [x, z]
-
-				if not loaded_empty_scenes.has(parcel_string):
-					var scene: Node3D = EMPTY_SCENE.instantiate()
-					var temp := "EP_%s_%s" % [str(x).replace("-", "m"), str(z).replace("-", "m")]
-					scene.name = temp
-					add_child(scene)
-					scene.global_position = Vector3(
-						x * EmptyParcel.PARCEL_SIZE + EmptyParcel.PARCEL_HALF_SIZE,
-						0,
-						-z * EmptyParcel.PARCEL_SIZE - EmptyParcel.PARCEL_HALF_SIZE
-					)
-
-					var config = _calculate_parcel_adjacency(
-						x,
-						z,
-						min_x - padding,
-						max_x + padding,
-						min_z - padding,
-						max_z + padding,
-						scene_parcel_set
-					)
-					scene.set_corner_configuration.call_deferred(config)
-
-					loaded_empty_scenes[parcel_string] = scene
-
-	if wall_manager:
-		wall_manager.create_walls_for_bounds(min_x, max_x, min_z, max_z, padding)
 
 
 func _calculate_parcel_adjacency(
