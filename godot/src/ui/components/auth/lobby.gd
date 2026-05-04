@@ -26,6 +26,7 @@ signal change_scene(new_scene_path: String)
 
 const FTUE_PLACE_ID: String = "780f04dd-eba1-41a8-b109-74896c87e98b"
 const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
+const _FtueDataProvider = preload("res://src/ui/components/discover/ftue_carousel/ftue_data_provider.gd")
 
 var is_creating_account: bool = false
 
@@ -246,7 +247,7 @@ func show_control_ftue():
 
 
 func _async_fetch_ftue_places() -> void:
-	var places := await FtueDataProvider.async_fetch_ftue_places()
+	var places := await _FtueDataProvider.async_fetch_ftue_places()
 	if places.is_empty():
 		printerr("[Lobby] No FTUE places loaded, skipping FTUE")
 		async_close_sign_in()
