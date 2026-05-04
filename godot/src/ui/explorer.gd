@@ -359,12 +359,9 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 		Global.open_url(url)
 
 
-## Push the canvas size and safe-area rect (in canvas/logical pixels) to the
-## scene runner. SceneManager applies a uniform scale so scenes lay out
-## against a fixed-height reference canvas, and converts the rect into the
-## same reference units before exposing it as UiCanvasInformation.interactable_area.
-## Called on every resize, including --emulate-ios / --emulate-android
-## virtual margins and orientation flips.
+## Push the safe-area rect (in canvas/logical pixels) to the scene runner so
+## scenes get correct UiCanvasInformation.interactable_area on every resize,
+## including --emulate-ios / --emulate-android virtual margins.
 func _push_scene_interactable_area() -> void:
 	if not is_instance_valid(Global.scene_runner) or not is_instance_valid(ui_safe_area):
 		return
@@ -389,7 +386,7 @@ func _push_scene_interactable_area() -> void:
 			var end_y: int = clampi(roundi(safe.end.y * y_factor), pos_y, canvas_h)
 			rect = Rect2i(pos_x, pos_y, end_x - pos_x, end_y - pos_y)
 
-	Global.scene_runner.update_canvas_metrics(canvas, rect)
+	Global.scene_runner.set_interactable_area(rect)
 
 
 func _on_player_logout():
