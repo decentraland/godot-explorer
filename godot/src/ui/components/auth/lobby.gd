@@ -308,6 +308,12 @@ func _ready():
 	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
 	print("[Startup] lobby.show_loading_screen: %dms" % startup_time_ms)
 
+	if Global.is_mobile():
+		var gate_decision := await _async_run_version_gate()
+		if gate_decision == "hard":
+			# Overlay blocks interaction; loading screen stays behind it.
+			return
+
 	# Track startup metric for analytics
 	var startup_data := {"startup_time_ms": startup_time_ms, "platform": OS.get_name()}
 	Global.metrics.track_screen_viewed("START", JSON.stringify(startup_data))
@@ -483,8 +489,9 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 	Global.get_config().save_to_settings_file()
 
-	# Note: Social service initialization moved to explorer.gd to ensure it completes
-	# before the Friends panel is used (lobby scene transitions before it finishes)
+	# Initialize social service early so Discover can show friends before entering explorer
+	if not _is_guest:
+		Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 
 func _on_check_box_eula_toggled(toggled_on: bool) -> void:
@@ -533,8 +540,13 @@ func _on_button_different_account_pressed():
 	Global.metrics.track_click_button("use_another_account", current_screen_name, "")
 	Global.get_config().session_account = {}
 
-	# Unsubscribe from block updates before clearing
+	# Unsubscribe from all social service updates before clearing
+	Global.social_service.unsubscribe_from_updates()
+	Global.social_service.unsubscribe_from_connectivity_updates()
 	Global.social_service.unsubscribe_from_block_updates()
+	# Drop the gRPC manager so the previous identity's streams don't leak into
+	# the next account. initialize_from_player_identity rebuilds it on login.
+	Global.social_service.disconnect()
 
 	# Clear the current social blacklist when switching accounts
 	Global.social_blacklist.clear_blocked()
@@ -734,3 +746,14 @@ func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
 
 func _on_ftue_jump_in_world(realm_str: String) -> void:
 	Global.async_join_world(realm_str)
+
+
+func _async_run_version_gate() -> String:
+	var gate: Node = preload("res://src/version_gate.gd").new()
+	add_child(gate)
+	var result: String = await gate.async_check()
+	if result == "hard":
+		gate.show_overlay(false)
+	elif result == "soft":
+		gate.show_overlay(true)
+	return result
