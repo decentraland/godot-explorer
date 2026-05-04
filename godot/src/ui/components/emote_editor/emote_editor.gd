@@ -22,12 +22,14 @@ var _only_collectibles: bool = false
 
 @onready var container_avatar_emotes = %VBoxContainer_AvatarEmotes
 @onready var container_all_emotes = %GridContainer_Emotes
+@onready var control_no_emotes = %Control_NoEmotes
 @onready var button_group_avatar_emotes = ButtonGroup.new()
 @onready var button_group_all_emotes = ButtonGroup.new()
-@onready var scroll_container = %ScrollContainer
+@onready var scroll_container_grid: ScrollContainer = %ScrollContainer_Grid
 @onready var inner_margin_container: MarginContainer = %InnerMarginContainer
-@onready
-var emote_grid_outter_margin_container: MarginContainer = $MarginContainer/HBoxContainer/EmoteGridOutterMarginContainer
+@onready var emote_grid_outter_margin_container: MarginContainer = %EmoteGridOutterMarginContainer
+@onready var external_margin_container: MarginContainer = %ExternalMarginContainer
+@onready var outter_margin_container: MarginContainer = %OutterMarginContainer
 
 
 func _ready():
@@ -98,7 +100,15 @@ func _async_load_emotes():
 	all_emote_items.clear()
 
 	await _async_load_remote_emotes()
+	_update_empty_state()
 	_sync_grid_selection()
+
+
+func _update_empty_state():
+	var is_empty := all_emote_items.is_empty()
+	if control_no_emotes != null:
+		control_no_emotes.visible = is_empty
+	container_all_emotes.visible = not is_empty
 
 
 func _on_avatar_loaded():
@@ -205,18 +215,45 @@ func _sync_grid_selection():
 			if _normalize_emote_urn(emote_item.emote_urn) == selected_urn:
 				emote_item.set_pressed(true)
 				_currently_selected_emote_item = emote_item
+				if scroll_container_grid != null:
+					_scroll_to_item_with_margin(emote_item, 20)
 				if not emote_item.emote_name.is_empty():
 					emote_grid_selected.emit(emote_item.emote_name)
 				break
 
 
+func _scroll_to_item_with_margin(item: Control, margin: float) -> void:
+	var item_top := item.get_global_rect().position.y
+	var item_bottom := item_top + item.size.y
+	var scroll_top := scroll_container_grid.get_global_rect().position.y
+	var scroll_bottom := scroll_top + scroll_container_grid.size.y
+
+	if item_top < scroll_top + margin:
+		var offset := scroll_top + margin - item_top
+		scroll_container_grid.scroll_vertical -= int(offset)
+	elif item_bottom > scroll_bottom - margin:
+		var offset := item_bottom - (scroll_bottom - margin)
+		scroll_container_grid.scroll_vertical += int(offset)
+
+
 func _on_visibility_changed() -> void:
 	if not is_node_ready():
 		return
-	scroll_container.scroll_vertical = 0
+	if scroll_container_grid != null:
+		scroll_container_grid.scroll_vertical = 0
+
+
+func on_narrow(is_narrow: bool) -> void:
+	emote_grid_outter_margin_container.custom_minimum_size.x = 274.0 if is_narrow else 494.0
 
 
 func _on_landscape() -> void:
-	inner_margin_container.add_theme_constant_override("margin_left", -20)
+	outter_margin_container.add_theme_constant_override("margin_right", 48)
+	outter_margin_container.add_theme_constant_override("margin_left", 60)
 	inner_margin_container.add_theme_constant_override("margin_right", -20)
+	inner_margin_container.add_theme_constant_override("margin_left", -20)
 	emote_grid_outter_margin_container.add_theme_constant_override("margin_top", 0)
+	external_margin_container.add_theme_constant_override("margin_top", 0)
+	container_all_emotes.columns = 2
+	for emote_item in avatar_emote_items:
+		emote_item.custom_minimum_size = Vector2(138, 138)
