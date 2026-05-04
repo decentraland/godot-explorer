@@ -349,6 +349,7 @@ metadata/_edit_use_anchors_ = true
 
 [node name="EmoteNameAnim" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=948887334 instance=ExtResource("12_qqh12")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 offset_top = -70.5
 offset_bottom = -14.5
