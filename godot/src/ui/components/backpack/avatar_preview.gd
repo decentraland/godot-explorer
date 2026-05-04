@@ -7,7 +7,10 @@ const MAX_CAMERA_SIZE = 5.0
 
 @export var hide_name: bool = false
 @export var show_platform: bool = false
+## Enables rotation and pan/zoom interactions.
 @export var can_move: bool = true
+## When can_move is true, controls whether vertical pan is allowed. Rotation is always enabled.
+@export var can_drag: bool = true
 @export var custom_environment: Environment = null
 @export var with_light: bool = true
 @export var preview_margin_top: int = 0
@@ -25,6 +28,7 @@ var _camera_focus: String = "overall"
 var _cached_aabbs: Dictionary = {}
 var _camera_tween: Tween = null
 var _user_has_panned: bool = false
+var _pending_camera_fit: bool = false
 
 var _aabb_debug_nodes: Array[MeshInstance3D] = []
 
@@ -55,6 +59,7 @@ func _ready():
 	set_process_input(true)
 
 	avatar.avatar_loaded.connect(_on_avatar_loaded)
+	resized.connect(_on_resized)
 
 	if Global.standalone:
 		Global.player_identity.set_default_profile()
@@ -89,13 +94,14 @@ func _min_camera_size() -> float:
 func _input(event: InputEvent):
 	if not can_move:
 		return
-	if get_parent_control() and event is InputEventMouseButton:
-		if not get_parent_control().get_global_rect().has_point(event.position):
-			return
+
+	var irect: Rect2 = get_global_rect()
 
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
+				if not irect.has_point(event.position):
+					return
 				dirty_is_dragging = true
 				start_dragging_position = get_global_mouse_position()
 				start_angle = avatar.rotation.y
@@ -103,7 +109,7 @@ func _input(event: InputEvent):
 			else:
 				dirty_is_dragging = false
 
-		if not event.pressed:
+		if not event.pressed and irect.has_point(event.position):
 			var dir: float = 0.0
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				dir = -0.2
@@ -114,28 +120,41 @@ func _input(event: InputEvent):
 				camera_3d.size = clampf(camera_3d.size + dir, _min_camera_size(), MAX_CAMERA_SIZE)
 
 	if event is InputEventMagnifyGesture:
+		if not irect.has_point(event.position):
+			return
 		dirty_is_dragging = false
 		camera_3d.size = clampf(camera_3d.size / event.factor, _min_camera_size(), MAX_CAMERA_SIZE)
 
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging:
-			var drag_pixels: Vector2 = get_global_mouse_position() - start_dragging_position
-			avatar.rotation.y = start_angle + drag_pixels.x * 0.005
-			var focus_aabb: AABB = _cached_aabbs.get(
-				_camera_focus, _cached_aabbs.get("overall", AABB(Vector3.ZERO, Vector3.ONE * 2.0))
-			)
-			var av_xform: Transform3D = avatar.global_transform
-			var pan_min: float = (av_xform * Vector3(0.0, focus_aabb.position.y, 0.0)).y
-			var pan_max: float = (
-				(av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
-			)
-			var pan: float = drag_pixels.y * camera_3d.size / size.y
-			camera_center.position.y = clampf(start_camera_center_y + pan, pan_min, pan_max)
-			_user_has_panned = true
+			_apply_drag(get_global_mouse_position())
+
+
+func _apply_drag(current_pos: Vector2) -> void:
+	var drag_pixels: Vector2 = current_pos - start_dragging_position
+	avatar.rotation.y = start_angle + drag_pixels.x * 0.005
+	if not can_drag:
+		return
+	var focus_aabb: AABB = _cached_aabbs.get(
+		_camera_focus, _cached_aabbs.get("overall", AABB(Vector3.ZERO, Vector3.ONE * 2.0))
+	)
+	var av_xform: Transform3D = avatar.global_transform
+	var pan_min: float = (av_xform * Vector3(0.0, focus_aabb.position.y, 0.0)).y
+	var pan_max: float = (av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
+	var pan: float = drag_pixels.y * camera_3d.size / size.y
+	camera_center.position.y = clampf(start_camera_center_y + pan, pan_min, pan_max)
+	_user_has_panned = true
 
 
 func reset_avatar_rotation() -> void:
 	avatar.rotation.y = 0.0
+
+
+func _on_resized() -> void:
+	if _pending_camera_fit and size.x > 0.0 and size.y > 0.0:
+		var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
+		if aabb_key in _cached_aabbs:
+			_fit_camera_to_aabb(_cached_aabbs[aabb_key], 0.2 if _camera_focus == "feet" else 0.0)
 
 
 func enable_outline():
@@ -203,6 +222,8 @@ func _compute_skinned_mesh_aabb(
 
 	var skin_count: int = skin.get_bind_count()
 	if skin_count == 0:
+		return AABB()
+	if not skeleton.is_inside_tree():
 		return AABB()
 	var skeleton_global: Transform3D = skeleton.global_transform
 
@@ -310,6 +331,10 @@ func _compute_avatar_aabbs() -> Dictionary:
 func _fit_camera_to_aabb(aabb: AABB, padding: float = 0.0) -> void:
 	if not is_inside_tree():
 		return
+	if size.x <= 0.0 or size.y <= 0.0:
+		_pending_camera_fit = true
+		return
+	_pending_camera_fit = false
 	if _camera_tween:
 		_camera_tween.kill()
 	if padding > 0.0:
@@ -319,6 +344,7 @@ func _fit_camera_to_aabb(aabb: AABB, padding: float = 0.0) -> void:
 	var inner_h: float = maxf(1.0, vp_h - preview_margin_top - preview_margin_bottom)
 	var inner_w: float = maxf(1.0, vp_w - preview_margin_left - preview_margin_right)
 	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
+	cam_size = maxf(cam_size, MIN_CAMERA_SIZE_PART)
 	var center_y: float = (
 		aabb.get_center().y
 		+ float(preview_margin_top - preview_margin_bottom) * cam_size / (2.0 * vp_h)

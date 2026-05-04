@@ -72,6 +72,10 @@ func _show_avatar() -> void:
 	_avatar_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_avatar_preview.stretch = true
 	_avatar_preview.hide_name = true
+	_avatar_preview.can_move = true
+	_avatar_preview.can_drag = false
+	_avatar_preview.preview_margin_top = 90
+	_avatar_preview.preview_margin_bottom = 20
 	avatar_container.add_child(_avatar_preview)
 	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if profile != null:

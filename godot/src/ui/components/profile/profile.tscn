@@ -27,7 +27,7 @@
 [ext_resource type="Texture2D" uid="uid://0w50cay6b2b6" path="res://assets/ui/mute.svg" id="27_8iwyo"]
 [ext_resource type="PackedScene" uid="uid://ddgiwkq38wjib" path="res://src/ui/components/profile/profile_about.tscn" id="40_about"]
 [ext_resource type="PackedScene" uid="uid://b2ojldlluptgu" path="res://src/ui/components/profile/profile_equipped.tscn" id="41_equipped"]
-[ext_resource type="PackedScene" path="res://src/ui/components/profile/profile_links.tscn" id="42_links"]
+[ext_resource type="PackedScene" uid="uid://d2i7uk87vqea0" path="res://src/ui/components/profile/profile_links.tscn" id="42_links"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_usboe"]
 
@@ -327,6 +327,11 @@ size_flags_vertical = 3
 mouse_filter = 0
 stretch = true
 hide_name = true
+can_drag = false
+preview_margin_top = 20
+preview_margin_bottom = 20
+preview_margin_left = 20
+preview_margin_right = 20
 
 [node name="MutualFriends" parent="MarginContainer2/HBoxContainer/Control_landscape_avatar" unique_id=826336159 instance=ExtResource("18_61jmm")]
 unique_name_in_owner = true
@@ -620,6 +625,7 @@ layout_mode = 2
 
 [node name="ProfileLinks" parent="MarginContainer2/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" unique_id=1049095341 instance=ExtResource("42_links")]
 unique_name_in_owner = true
+layout_mode = 2
 
 [node name="Control_OwnAndLandscape" type="VBoxContainer" parent="MarginContainer2/HBoxContainer" unique_id=860719787]
 unique_name_in_owner = true
