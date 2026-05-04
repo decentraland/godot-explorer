@@ -17,7 +17,7 @@ signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
 signal open_settings_panel
-signal open_backpack
+signal open_backpack(on_emotes: bool)
 signal open_discover
 signal open_own_profile
 signal open_profile_editor
@@ -553,7 +553,13 @@ func get_explorer() -> Explorer:
 
 func sign_out() -> void:
 	NotificationsManager.stop_polling()
+	social_service.unsubscribe_from_updates()
+	social_service.unsubscribe_from_connectivity_updates()
 	social_service.unsubscribe_from_block_updates()
+	# Drop the gRPC manager so the signed-out session doesn't keep streams open
+	# under the old identity. Next login's initialize_from_player_identity will
+	# recreate it.
+	social_service.disconnect()
 	social_blacklist.clear_blocked()
 	social_blacklist.clear_muted()
 	get_config().session_account = {}
