@@ -34,14 +34,14 @@ func set_places(places: Array[Dictionary]) -> void:
 
 	var cards: Array[Control] = []
 	for place_data in _places:
-		var card: FtueCarouselCard = CARD_SCENE.instantiate()
+		var card: Control = CARD_SCENE.instantiate()
 		cards.append(card)
 
 	carousel.set_cards(cards)
 
 	# Set data after cards are in the tree so @onready nodes resolve
 	for i in cards.size():
-		(cards[i] as FtueCarouselCard).set_data(_places[i])
+		cards[i].set_data(_places[i])
 
 
 func _on_card_changed(index: int) -> void:
