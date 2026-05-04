@@ -118,14 +118,18 @@ func _input(event: InputEvent):
 				dir = 0.2
 
 			if dir != 0.0:
-				camera_3d.size = clampf(camera_3d.size + dir, _min_camera_size(), _fitted_camera_size)
+				camera_3d.size = clampf(
+					camera_3d.size + dir, _min_camera_size(), _fitted_camera_size
+				)
 				_clamp_camera_center()
 
 	if event is InputEventMagnifyGesture and can_drag:
 		if not irect.has_point(event.position):
 			return
 		dirty_is_dragging = false
-		camera_3d.size = clampf(camera_3d.size / event.factor, _min_camera_size(), _fitted_camera_size)
+		camera_3d.size = clampf(
+			camera_3d.size / event.factor, _min_camera_size(), _fitted_camera_size
+		)
 		_clamp_camera_center()
 
 	if event is InputEventMouseMotion:
@@ -139,7 +143,9 @@ func _pan_limits() -> Vector2:
 	)
 	var av_xform: Transform3D = avatar.global_transform
 	var aabb_bottom: float = (av_xform * Vector3(0.0, focus_aabb.position.y, 0.0)).y
-	var aabb_top: float = (av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
+	var aabb_top: float = (
+		(av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
+	)
 	var cam_size: float = camera_3d.size
 	var vp_h: float = size.y
 	var pan_min: float = aabb_bottom + cam_size * (0.5 - float(preview_margin_bottom) / vp_h)
