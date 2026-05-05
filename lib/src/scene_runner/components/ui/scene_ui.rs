@@ -372,6 +372,53 @@ fn update_layout(
             || is_hidden_by_zero_size;
         control.set_visible(!is_hidden);
     }
+
+    // Assign absolute Godot z_index using a z_index-aware DFS traversal.
+    // This implements DCL stacking contexts: siblings are ordered by their DCL z_index,
+    // and a child's z_index never escapes its parent's context.
+    //
+    // Strategy: DFS pre-order, children sorted by DCL z_index (ascending).
+    // Each node is assigned a monotonically increasing counter value as its absolute
+    // Godot z_index. Because the entire subtree of a lower-z_index sibling is visited
+    // before the next sibling, containment is enforced automatically.
+    let mut children_by_parent: HashMap<SceneEntityId, Vec<(SceneEntityId, i32)>> =
+        HashMap::new();
+    for (entity, _) in processed_nodes_sorted.iter() {
+        let ui_node = godot_dcl_scene.get_node_or_null_ui(entity).unwrap();
+        let parent = ui_node.ui_transform.parent;
+        let z_index = ui_node.ui_transform.z_index;
+        children_by_parent
+            .entry(parent)
+            .or_default()
+            .push((*entity, z_index));
+    }
+    for children in children_by_parent.values_mut() {
+        children.sort_by_key(|(_, z)| *z);
+    }
+
+    let mut z_counter: i32 = 0;
+    let initial_children = children_by_parent
+        .get(&SceneEntityId::ROOT)
+        .cloned()
+        .unwrap_or_default();
+    let mut dfs_stack: Vec<SceneEntityId> = initial_children
+        .into_iter()
+        .rev()
+        .map(|(e, _)| e)
+        .collect();
+
+    while let Some(entity) = dfs_stack.pop() {
+        if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(&entity) {
+            ui_node.base_control.set_z_index(z_counter);
+            ui_node.base_control.set_z_as_relative(false);
+            z_counter += 1;
+        }
+        if let Some(children) = children_by_parent.get(&entity) {
+            for (child_entity, _) in children.iter().rev() {
+                dfs_stack.push(*child_entity);
+            }
+        }
+    }
 }
 
 pub fn update_scene_ui(
