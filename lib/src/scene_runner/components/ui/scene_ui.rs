@@ -49,9 +49,10 @@ fn assign_z_index_recursive(
     let last_idx = children.len().saturating_sub(1);
     for (i, (entity, _)) in children.iter().enumerate() {
         if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(entity) {
-            ui_node.base_control.set_z_index(
-                (*z_counter).clamp(RenderingServer::CANVAS_ITEM_Z_MIN, RenderingServer::CANVAS_ITEM_Z_MAX),
-            );
+            ui_node.base_control.set_z_index((*z_counter).clamp(
+                RenderingServer::CANVAS_ITEM_Z_MIN,
+                RenderingServer::CANVAS_ITEM_Z_MAX,
+            ));
             ui_node.base_control.set_z_as_relative(false);
         }
         let entity_children = children_by_parent.get(entity).cloned().unwrap_or_default();
@@ -433,7 +434,12 @@ fn update_layout(
         .get(&SceneEntityId::ROOT)
         .cloned()
         .unwrap_or_default();
-    assign_z_index_recursive(&root_children, &mut z_counter, &children_by_parent, godot_dcl_scene);
+    assign_z_index_recursive(
+        &root_children,
+        &mut z_counter,
+        &children_by_parent,
+        godot_dcl_scene,
+    );
 }
 
 pub fn update_scene_ui(
