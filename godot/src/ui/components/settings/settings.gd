@@ -727,6 +727,10 @@ func _on_button_discord_pressed() -> void:
 	Global.open_url(DISCORD_URL)
 
 
+func _on_button_marketplace_pressed() -> void:
+	Global.open_webview_url(DclUrls.marketplace())
+
+
 func _on_button_storage_pressed() -> void:
 	show_control(container_storage)
 	_async_scroll_to_tab_button(%Button_Storage)

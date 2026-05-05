@@ -209,6 +209,8 @@ func _ready():
 		if dcl_ios_singleton:
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
+	_dcl_swift_lib_smoke_test()
+
 	# Setup
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
@@ -384,6 +386,22 @@ func _ready():
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
+
+
+# Smoke test for the Swift GDExtension (iOS-only). Verifies DclSwiftLib loads
+# and Callable methods round-trip. TODO: remove once StoreKit feature lands.
+func _dcl_swift_lib_smoke_test() -> void:
+	if not ClassDB.class_exists("DclSwiftLib"):
+		print("[DclSwiftLib] class not registered (expected on non-iOS platforms)")
+		return
+	print("[DclSwiftLib] class registered, instantiating...")
+	var instance = ClassDB.instantiate("DclSwiftLib")
+	if instance == null:
+		printerr("[DclSwiftLib] instantiate returned null")
+		return
+	var ping_result = instance.call("ping")
+	var version_result = instance.call("version")
+	print("[DclSwiftLib] ping() -> ", ping_result, " | version() -> ", version_result)
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
