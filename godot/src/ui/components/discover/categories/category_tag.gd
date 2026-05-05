@@ -14,8 +14,6 @@ func set_category(category: String) -> void:
 
 	if category == "poi":
 		label.text = "point of interest"
-	elif category == "gaming":
-		label.text = "game"
 	elif category == "featured":
 		icon_file_name = "poi"
 
