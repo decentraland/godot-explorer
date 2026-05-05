@@ -52,8 +52,17 @@ func _ready():
 func start():
 	async_update_avatar(0)
 
-	# Visual enhance
-	var viewport: Viewport = avatar_preview.subviewport.get_viewport()
+	# Visual enhance — match the project's highest defined quality knobs
+	# for an off-screen capture (no realtime perf budget here).
+	#   anti_aliasing: project defines 0=Off, 1=x2, 2=x4, 3=x8 in
+	#     config_data.gd; we use the max (3 -> MSAA_8X). Same enum/order
+	#     as Viewport.MSAA_*.
+	#   scaling_3d_scale = 2.0: 2x SSAA on top of MSAA. Helps with the
+	#     toon shader's shading-derived edges (MSAA only smooths
+	#     geometry edges).
+	#   use_debanding: smooths gradient banding in the LDR output.
+	var viewport: Viewport = avatar_preview.subviewport
+	viewport.msaa_3d = Viewport.MSAA_8X
 	viewport.use_debanding = true
 	viewport.scaling_3d_scale = 2.0
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
