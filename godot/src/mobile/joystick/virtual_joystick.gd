@@ -61,6 +61,7 @@ var touch_index: int = -1
 var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
 var _joystick_visible := false
+var _is_navbar_open := false
 
 @onready var _sprint_timer := %SprintTimer
 
@@ -100,15 +101,16 @@ func _on_loading_scene() -> void:
 
 
 func _on_navbar_opened() -> void:
-	_button_camera.hide()
-
-
-func _on_navbar_closed() -> void:
+	_is_navbar_open = true
 	_refresh_camera_button_visibility()
 
 
-func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
-	prints(camera_mode, Global.CameraMode.CINEMATIC, camera_mode != Global.CameraMode.CINEMATIC)
+func _on_navbar_closed() -> void:
+	_is_navbar_open = false
+	_refresh_camera_button_visibility()
+
+
+func _on_camera_mode_set(_camera_mode: Global.CameraMode) -> void:
 	_refresh_camera_button_visibility()
 
 
@@ -118,7 +120,9 @@ func _on_camera_mode_block_changed(_blocked: bool) -> void:
 
 func _refresh_camera_button_visibility() -> void:
 	var should_show := (
-		Global.current_camera_mode != Global.CameraMode.CINEMATIC and not Global.camera_mode_blocked
+		not _is_navbar_open
+		and Global.current_camera_mode != Global.CameraMode.CINEMATIC
+		and not Global.camera_mode_blocked
 	)
 	_button_camera.visible = should_show
 
