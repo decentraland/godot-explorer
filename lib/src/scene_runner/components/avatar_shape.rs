@@ -119,6 +119,13 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 // Build AvatarShape-specific config dictionary
                 let mut avatar_shape_config = VarDictionary::new();
                 avatar_shape_config.set("is_avatar_shape", true);
+                // Forward the AvatarShape.id when it looks like an eth address.
+                // GDScript uses this to route the impostor capture path through
+                // the catalyst body-texture endpoint (cheap, pre-baked) instead
+                // of an off-screen avatar render (heavy, ~1 frame each).
+                if new_value.id.starts_with("0x") && new_value.id.len() == 42 {
+                    avatar_shape_config.set("id", new_value.id.clone());
+                }
                 if let Some(expression_trigger_id) = &new_value.expression_trigger_id {
                     // Check if this is a scene emote (GLB/GLTF path)
                     let is_scene_emote = expression_trigger_id.contains(".glb")

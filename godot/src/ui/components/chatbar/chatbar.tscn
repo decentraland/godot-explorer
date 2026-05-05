@@ -1,10 +1,23 @@
 [gd_scene format=3 uid="uid://dfi5ql6ogtlxc"]
 
 [ext_resource type="Script" uid="uid://iot0yhkloep2" path="res://src/ui/components/chatbar/chatbar.gd" id="1_8wxvk"]
-[ext_resource type="Texture2D" uid="uid://u3i0iq64assb" path="res://assets/chathud.svg" id="2_8wxvk"]
+[ext_resource type="Texture2D" uid="uid://dok63temwifxk" path="res://assets/button-chat-default.svg" id="2_8t8cm"]
 [ext_resource type="Texture2D" uid="uid://cytpdlax4ble0" path="res://src/ui/components/menu/icons/discover-outlined.svg" id="3_2fmgn"]
+[ext_resource type="Texture2D" uid="uid://dk5w8vi7brgtt" path="res://assets/button-chat-selected.svg" id="3_tw2ns"]
 [ext_resource type="Texture2D" uid="uid://bhiwoh5dwudbo" path="res://assets/sharehud.svg" id="4_o1l3x"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_coord"]
+[ext_resource type="Texture2D" uid="uid://cfncbhirsbuo" path="res://assets/flip-button-default.svg" id="5_grvqo"]
+[ext_resource type="Texture2D" uid="uid://l2psogj3gtew" path="res://assets/flip-button-pressed.svg" id="6_akf1h"]
+[ext_resource type="Texture2D" uid="uid://gamhtrgpywdx" path="res://assets/tooltip-arrow-left.svg" id="7_tw2ns"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="8_vm240"]
+[ext_resource type="Texture2D" uid="uid://c4vnarw7wx36n" path="res://assets/ui/Reset.png" id="9_reset"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vm240"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.69803923)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tw2ns"]
 bg_color = Color(0, 0, 0, 0.9019608)
@@ -20,59 +33,90 @@ corner_radius_top_right = 24
 corner_radius_bottom_right = 24
 corner_radius_bottom_left = 24
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_grvqo"]
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_2fmgn"]
 
-[node name="Chatbar" type="Control" unique_id=200774648]
-custom_minimum_size = Vector2(328, 66)
-layout_mode = 3
-anchors_preset = 0
-offset_right = 228.0
+[node name="Chatbar" type="MarginContainer" unique_id=1474819563]
+offset_right = 328.0
 offset_bottom = 66.0
+size_flags_horizontal = 0
+size_flags_vertical = 4
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 10
 script = ExtResource("1_8wxvk")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=760837206]
-layout_mode = 0
-offset_right = 192.0
-offset_bottom = 66.0
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1972815801]
+layout_mode = 2
+size_flags_horizontal = 0
 theme_override_constants/separation = 12
 
-[node name="PanelContainer" type="PanelContainer" parent="HBoxContainer" unique_id=408418703]
-custom_minimum_size = Vector2(60, 0)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
-
-[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer" unique_id=593684146]
-layout_mode = 2
-alignment = 1
-
-[node name="Button_Chat" type="Button" parent="HBoxContainer/PanelContainer/VBoxContainer_Buttons" unique_id=1501062508]
+[node name="Button_Chat" type="TextureButton" parent="HBoxContainer" unique_id=1791709263]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
-theme_override_constants/icon_max_width = 35
-theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
 toggle_mode = true
-button_group = SubResource("ButtonGroup_grvqo")
-icon = ExtResource("2_8wxvk")
-flat = true
-icon_alignment = 1
+texture_normal = ExtResource("2_8t8cm")
+texture_pressed = ExtResource("3_tw2ns")
+ignore_texture_size = true
+stretch_mode = 5
 
-[node name="PanelContainer3" type="PanelContainer" parent="HBoxContainer" unique_id=1400130125]
+[node name="Button_Flip" type="TextureButton" parent="HBoxContainer" unique_id=1364102949]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+texture_normal = ExtResource("5_grvqo")
+texture_pressed = ExtResource("6_akf1h")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="HBoxContainer_Tooltip" type="HBoxContainer" parent="HBoxContainer" unique_id=1598671432]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer/HBoxContainer_Tooltip" unique_id=1987457932]
+modulate = Color(0.20784314, 0.03137255, 0.32941177, 0.69803923)
+custom_minimum_size = Vector2(10, 20)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("7_tw2ns")
+expand_mode = 1
+
+[node name="Panel_Tooltip" type="PanelContainer" parent="HBoxContainer/HBoxContainer_Tooltip" unique_id=1143137681]
+custom_minimum_size = Vector2(182, 52)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_vm240")
+
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/HBoxContainer_Tooltip/Panel_Tooltip" unique_id=1298985607]
+layout_mode = 2
+theme_override_constants/margin_left = 11
+
+[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/HBoxContainer_Tooltip/Panel_Tooltip/MarginContainer" unique_id=204339448]
+layout_mode = 2
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("8_vm240")
+theme_override_font_sizes/normal_font_size = 18
+text = "You can switch vertical chat mode"
+vertical_alignment = 1
+
+[node name="DiscoverPanel" type="PanelContainer" parent="HBoxContainer" unique_id=876948222]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
 
-[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer3" unique_id=1521525064]
+[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/DiscoverPanel" unique_id=135716532]
 layout_mode = 2
 alignment = 1
 
-[node name="HudButton_Discover" type="Button" parent="HBoxContainer/PanelContainer3/VBoxContainer_Buttons" unique_id=1750426776]
+[node name="HudButton_Discover" type="Button" parent="HBoxContainer/DiscoverPanel/VBoxContainer_Buttons" unique_id=552290416]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -82,28 +126,27 @@ theme_override_constants/icon_max_width = 54
 theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
-toggle_mode = true
-button_group = SubResource("ButtonGroup_grvqo")
 icon = ExtResource("3_2fmgn")
 flat = true
 icon_alignment = 1
 
-[node name="PanelContainer2" type="PanelContainer" parent="HBoxContainer" unique_id=113781214]
+[node name="ScenePanel" type="PanelContainer" parent="HBoxContainer" unique_id=825060229]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(172, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
 
-[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/PanelContainer2" unique_id=1934011185]
+[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="HBoxContainer/ScenePanel" unique_id=1294924568]
 layout_mode = 2
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="HSeparator2" type="HSeparator" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons" unique_id=1528366858]
+[node name="HSeparator2" type="HSeparator" parent="HBoxContainer/ScenePanel/VBoxContainer_Buttons" unique_id=292220761]
 custom_minimum_size = Vector2(16, 0)
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_2fmgn")
 
-[node name="HudButton_Share" type="Button" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons" unique_id=1029223742]
+[node name="HudButton_Share" type="Button" parent="HBoxContainer/ScenePanel/VBoxContainer_Buttons" unique_id=1773781672]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -113,12 +156,10 @@ theme_override_constants/icon_max_width = 54
 theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
-toggle_mode = true
-button_group = SubResource("ButtonGroup_grvqo")
 icon = ExtResource("4_o1l3x")
 flat = true
 
-[node name="Label_Coordinates" type="Label" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons" unique_id=1938242100]
+[node name="Label_Coordinates" type="Label" parent="HBoxContainer/ScenePanel/VBoxContainer_Buttons" unique_id=1019155716]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
@@ -130,11 +171,30 @@ text = "0,0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="HBoxContainer/PanelContainer2/VBoxContainer_Buttons" unique_id=834760773]
+[node name="HSeparator" type="HSeparator" parent="HBoxContainer/ScenePanel/VBoxContainer_Buttons" unique_id=883302927]
 custom_minimum_size = Vector2(24, 0)
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_2fmgn")
 
-[connection signal="pressed" from="HBoxContainer/PanelContainer/VBoxContainer_Buttons/Button_Chat" to="." method="_on_button_chat_pressed"]
-[connection signal="pressed" from="HBoxContainer/PanelContainer3/VBoxContainer_Buttons/HudButton_Discover" to="." method="_on_hud_button_discover_pressed"]
-[connection signal="pressed" from="HBoxContainer/PanelContainer2/VBoxContainer_Buttons/HudButton_Share" to="." method="_on_hud_button_share_pressed"]
+[node name="Panel_LoadScenes" type="PanelContainer" parent="HBoxContainer" unique_id=1690380546]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
+
+[node name="Button_LoadScenes" type="Button" parent="HBoxContainer/Panel_LoadScenes" unique_id=1070848901]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 60)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 30
+icon = ExtResource("9_reset")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[connection signal="pressed" from="HBoxContainer/Button_Chat" to="." method="_on_button_chat_pressed"]
+[connection signal="pressed" from="HBoxContainer/Button_Flip" to="." method="_on_button_flip_pressed"]
+[connection signal="pressed" from="HBoxContainer/DiscoverPanel/VBoxContainer_Buttons/HudButton_Discover" to="." method="_on_hud_button_discover_pressed"]
+[connection signal="pressed" from="HBoxContainer/ScenePanel/VBoxContainer_Buttons/HudButton_Share" to="." method="_on_hud_button_share_pressed"]
+[connection signal="pressed" from="HBoxContainer/Panel_LoadScenes/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]

@@ -2,16 +2,51 @@
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
+[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_lt7hs"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_euk1h"]
+[ext_resource type="Texture2D" uid="uid://cqjwja1mdqpus" path="res://assets/ui/menu-icon.svg" id="5_0pohw"]
 [ext_resource type="FontVariation" uid="uid://buop40k3e4u13" path="res://assets/themes/fonts/multilanguage/multilanguage_font-SemiBold.tres" id="6_mb7k1"]
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="8_0pohw"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_5a8fu"]
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lt7hs"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ttgy1"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+
+[sub_resource type="LabelSettings" id="LabelSettings_8p6lu"]
+font = ExtResource("4_euk1h")
+font_size = 17
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lt7hs"]
 bg_color = Color(0, 0, 0, 0.4)
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_euk1h"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bhyuy"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8980392)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.44313726, 0.41960785, 0.4862745, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ac_panel"]
 bg_color = Color(0.13333334, 0.12941177, 0.14509805, 1)
@@ -95,12 +130,13 @@ expand_margin_bottom = 2.0
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ttgy1"]
 
-[node name="Panel_Chat" type="Control" unique_id=675203837]
-custom_minimum_size = Vector2(1370, 0)
+[node name="Chat" type="Control" unique_id=1728761599]
 layout_mode = 3
-anchors_preset = 0
-offset_right = 1370.0
-offset_bottom = 418.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
@@ -108,7 +144,7 @@ theme = ExtResource("1_ytipc")
 script = ExtResource("1_llfi5")
 metadata/mobile_preview_orientation = "landscape"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=723468704]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=368200761]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -118,18 +154,60 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1683683258]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1187645142]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=1420448833]
-custom_minimum_size = Vector2(709, 0)
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=1856710129]
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_lt7hs")
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer" unique_id=489412950]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="PanelContainer_Header" type="PanelContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2" unique_id=744162545]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 53)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ttgy1")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Header" unique_id=1327801627]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Header/HBoxContainer" unique_id=2067743780]
+custom_minimum_size = Vector2(29, 29)
+layout_mode = 2
+texture = ExtResource("3_lt7hs")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Header/HBoxContainer" unique_id=2054773896]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "NEARBY"
+label_settings = SubResource("LabelSettings_8p6lu")
+
+[node name="TextureButton" type="Button" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Header/HBoxContainer" unique_id=1835704905]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+disabled = true
+icon = ExtResource("5_0pohw")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[node name="PanelContainer_Chat" type="PanelContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2" unique_id=1903918523]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_lt7hs")
 
-[node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer/HBoxContainer/PanelContainer" unique_id=281446772]
+[node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat" unique_id=2053832575]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -140,29 +218,66 @@ theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat" unique_id=1518286057]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat/MarginContainer_Chat" unique_id=342298855]
 layout_mode = 2
+theme_override_constants/separation = 0
 
-[node name="ScrollContainer_ChatsList" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer" unique_id=951018539]
+[node name="ScrollContainer_ChatsList" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat/MarginContainer_Chat/VBoxContainer" unique_id=1979197061]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="VBoxContainerChat" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" unique_id=432900112]
+[node name="VBoxContainerChat" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList" unique_id=16598862]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/HBoxContainer/PanelContainer/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList/VBoxContainerChat" unique_id=1437532205]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat/MarginContainer_Chat/VBoxContainer/ScrollContainer_ChatsList/VBoxContainerChat" unique_id=1809799090]
 layout_mode = 2
 theme_override_constants/separation = 8
 theme_override_styles/separator = SubResource("StyleBoxEmpty_euk1h")
 
-[node name="AutocompletePanel" type="PanelContainer" parent="VBoxContainer/HBoxContainer/PanelContainer" unique_id=1513873772]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat/MarginContainer_Chat/VBoxContainer" unique_id=1912942172]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_euk1h")
+
+[node name="Button_Write" type="Button" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat/MarginContainer_Chat/VBoxContainer" unique_id=471454]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/font_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/font_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/font_hover_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/font_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/font_outline_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/icon_focus_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/icon_hover_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/icon_hover_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_colors/icon_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.5019608)
+theme_override_styles/normal = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/hover = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_bhyuy")
+theme_override_styles/focus = SubResource("StyleBoxFlat_bhyuy")
+text = "Write a message"
+alignment = 0
+
+[node name="AutocompletePanel" type="PanelContainer" parent="VBoxContainer/HBoxContainer/PanelContainer" unique_id=83779740]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -171,7 +286,7 @@ size_flags_vertical = 8
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ac_panel")
 
-[node name="AutocompleteScroll" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel" unique_id=1437342991]
+[node name="AutocompleteScroll" type="ScrollContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel" unique_id=690065605]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -179,7 +294,7 @@ size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel/AutocompleteScroll" unique_id=797719541]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel/AutocompleteScroll" unique_id=153935206]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -189,26 +304,28 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 18
 theme_override_constants/margin_bottom = 8
 
-[node name="AutocompleteItems" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel/AutocompleteScroll/MarginContainer" unique_id=911362068]
+[node name="AutocompleteItems" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/AutocompletePanel/AutocompleteScroll/MarginContainer" unique_id=1099261136]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/HBoxContainer" unique_id=362487141]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/HBoxContainer" unique_id=839891689]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 50
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0pohw")
 
-[node name="MarginContainer_GoToNewMessages" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VSeparator" unique_id=619715685]
+[node name="MarginContainer_GoToNewMessages" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VSeparator" unique_id=1592561722]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = -4.5
+offset_right = 4.5
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -216,7 +333,7 @@ theme_override_constants/margin_left = 5
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 5
 
-[node name="Button_GoToLast" type="Button" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages" unique_id=551370394]
+[node name="Button_GoToLast" type="Button" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages" unique_id=1353317941]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
@@ -227,7 +344,7 @@ icon = ExtResource("8_0pohw")
 icon_alignment = 1
 expand_icon = true
 
-[node name="PanelContainer_NewMessages" type="PanelContainer" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast" unique_id=1942484526]
+[node name="PanelContainer_NewMessages" type="PanelContainer" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast" unique_id=404559674]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(34, 0)
 layout_mode = 1
@@ -245,14 +362,14 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_5a8fu")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages" unique_id=1298490703]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages" unique_id=48969382]
 layout_mode = 2
 theme_override_constants/margin_left = 3
 theme_override_constants/margin_top = 3
 theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 3
 
-[node name="Label_NewMessages" type="Label" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages/MarginContainer" unique_id=2046098247]
+[node name="Label_NewMessages" type="Label" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages/MarginContainer" unique_id=1660260250]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -261,23 +378,29 @@ label_settings = SubResource("LabelSettings_bhyuy")
 horizontal_alignment = 1
 vertical_alignment = 2
 
-[node name="PanelLineEdit" type="PanelContainer" parent="VBoxContainer" unique_id=701695377]
+[node name="MarginContainer_LineEditSafeArea" type="MarginContainer" parent="VBoxContainer" unique_id=1100066028]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="PanelLineEdit" type="PanelContainer" parent="VBoxContainer/MarginContainer_LineEditSafeArea" unique_id=133145994]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_askrr")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelLineEdit" unique_id=815343771]
+[node name="MarginContainer_ForKeyboard" type="MarginContainer" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit" unique_id=917645293]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 14
+theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer_LineEdit" type="HBoxContainer" parent="VBoxContainer/PanelLineEdit/MarginContainer" unique_id=1818959008]
+[node name="HBoxContainer_LineEdit" type="HBoxContainer" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard" unique_id=1555914194]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="LineEdit_Command" type="LineEdit" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit" unique_id=194010800]
+[node name="LineEdit_Command" type="LineEdit" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit" unique_id=1450378077]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -285,18 +408,17 @@ size_flags_vertical = 4
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_colors/caret_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("6_mb7k1")
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_16cr1")
 theme_override_styles/read_only = SubResource("StyleBoxFlat_2je12")
 theme_override_styles/focus = SubResource("StyleBoxFlat_rmgsi")
 placeholder_text = "Write a message..."
 max_length = 155
 keep_editing_on_text_submit = true
-clear_button_enabled = true
 deselect_on_focus_loss_enabled = false
 caret_blink = true
 
-[node name="Button_Send" type="Button" parent="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit" unique_id=141404662]
+[node name="Button_Send" type="Button" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit" unique_id=1485754093]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(108, 0)
 layout_mode = 2
@@ -309,18 +431,19 @@ theme_override_colors/font_hover_color = Color(0.9098039, 0.7254902, 1, 1)
 theme_override_colors/font_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 0.8)
 theme_override_colors/font_disabled_color = Color(0.9098039, 0.7254902, 1, 0.4)
 theme_override_constants/icon_max_width = 16
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "SEND"
 flat = true
 icon_alignment = 2
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1237156629]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1410606471]
 layout_mode = 2
 theme_override_constants/separation = 4
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ttgy1")
 
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Chat/MarginContainer_Chat/VBoxContainer/Button_Write" to="." method="_on_button_write_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast" to="." method="_on_button_go_to_last_pressed"]
-[connection signal="focus_exited" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
-[connection signal="text_changed" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_changed"]
-[connection signal="text_submitted" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
-[connection signal="pressed" from="VBoxContainer/PanelLineEdit/MarginContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]
+[connection signal="focus_exited" from="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
+[connection signal="text_changed" from="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_changed"]
+[connection signal="text_submitted" from="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]

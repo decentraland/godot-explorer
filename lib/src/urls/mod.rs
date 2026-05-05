@@ -62,6 +62,14 @@ pub fn auth_api_requests() -> String {
     }
 }
 
+// Asset Bundle Registry
+pub fn asset_bundle_registry_profiles() -> String {
+    format!(
+        "https://asset-bundle-registry.decentraland.{}/profiles",
+        suffix(ServiceGroup::Catalyst)
+    )
+}
+
 // Catalyst
 pub fn main_realm() -> String {
     format!(
