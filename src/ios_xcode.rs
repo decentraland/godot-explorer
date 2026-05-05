@@ -295,6 +295,160 @@ fn update_pck() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Source path of the canonical StoreKit Configuration File (versioned).
+const STOREKIT_SOURCE: &str = "godot/ios/LocalStoreKit.storekit";
+/// File name as it lands inside `exports/`. The scheme references it as
+/// `../../<name>` (resolved relative to `xcshareddata/`).
+const STOREKIT_DEST_NAME: &str = "LocalStoreKit.storekit";
+
+/// Copies the canonical .storekit into `exports/` and patches the freshly
+/// regenerated Xcode scheme so Run intercepts StoreKit with the local mock.
+///
+/// Godot rewrites the entire xcodeproj on every export, including the scheme,
+/// so this must run AFTER the export completes. Idempotent: re-running is
+/// safe, the scheme is overwritten with a single canonical reference.
+pub fn apply_storekit_patch() -> anyhow::Result<()> {
+    let source = Path::new(STOREKIT_SOURCE);
+    if !source.exists() {
+        print_message(
+            MessageType::Warning,
+            &format!(
+                "StoreKit source not found at {}; skipping patch",
+                STOREKIT_SOURCE
+            ),
+        );
+        return Ok(());
+    }
+
+    let dest = format!("{}{}", EXPORTS_FOLDER, STOREKIT_DEST_NAME);
+    fs::copy(source, &dest)?;
+
+    let scheme_path = format!(
+        "{}{}.xcodeproj/xcshareddata/xcschemes/{}.xcscheme",
+        EXPORTS_FOLDER, IOS_EXPORT_NAME, IOS_EXPORT_NAME
+    );
+    if !Path::new(&scheme_path).exists() {
+        print_message(
+            MessageType::Warning,
+            &format!("Scheme not found at {}; skipping patch", scheme_path),
+        );
+        return Ok(());
+    }
+
+    let original = fs::read_to_string(&scheme_path)?;
+    let patched = inject_storekit_reference(&original, STOREKIT_DEST_NAME)?;
+    fs::write(&scheme_path, patched)?;
+
+    // Best-effort cleanup of the legacy filename Xcode created via the wizard
+    // earlier in development. Safe no-op once it's gone.
+    let legacy = format!("{}LocalNewStoreKit.storekit", EXPORTS_FOLDER);
+    let _ = fs::remove_file(legacy);
+
+    print_message(
+        MessageType::Success,
+        &format!(
+            "StoreKit Configuration applied: exports/{} (scheme patched)",
+            STOREKIT_DEST_NAME
+        ),
+    );
+    Ok(())
+}
+
+/// Inserts a `<StoreKitConfigurationFileReference>` inside `<LaunchAction>`,
+/// replacing any existing reference. Path is `../../<filename>`, the format
+/// Xcode itself emits (resolved relative to `xcshareddata/`).
+fn inject_storekit_reference(scheme_xml: &str, filename: &str) -> anyhow::Result<String> {
+    const OPEN: &str = "<StoreKitConfigurationFileReference";
+    const CLOSE: &str = "</StoreKitConfigurationFileReference>";
+    const LAUNCH_CLOSE: &str = "</LaunchAction>";
+
+    // Strip any existing block first so re-runs don't duplicate.
+    let stripped = if let (Some(start), Some(end_rel)) = (
+        scheme_xml.find(OPEN),
+        scheme_xml[scheme_xml.find(OPEN).unwrap_or(0)..].find(CLOSE),
+    ) {
+        let end = scheme_xml.find(OPEN).unwrap() + end_rel + CLOSE.len();
+        // Also drop the leading whitespace + newline before OPEN, and the
+        // trailing newline after CLOSE, to avoid blank lines piling up.
+        let line_start = scheme_xml[..start]
+            .rfind('\n')
+            .map(|p| p + 1)
+            .unwrap_or(start);
+        let line_end = scheme_xml[end..]
+            .find('\n')
+            .map(|p| end + p + 1)
+            .unwrap_or(end);
+        format!("{}{}", &scheme_xml[..line_start], &scheme_xml[line_end..])
+    } else {
+        scheme_xml.to_string()
+    };
+
+    let snippet = format!(
+        "      <StoreKitConfigurationFileReference\n         identifier = \"../../{filename}\">\n      </StoreKitConfigurationFileReference>\n"
+    );
+
+    // Insert at the start of the line containing </LaunchAction>, so the
+    // existing 3-space indent of that closing tag is preserved on its own line.
+    let close_pos = stripped.find(LAUNCH_CLOSE).ok_or_else(|| {
+        anyhow::anyhow!("scheme XML missing <LaunchAction> closing tag; cannot patch")
+    })?;
+    let line_start = stripped[..close_pos]
+        .rfind('\n')
+        .map(|p| p + 1)
+        .unwrap_or(close_pos);
+    Ok(format!(
+        "{}{}{}",
+        &stripped[..line_start],
+        snippet,
+        &stripped[line_start..]
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SCHEME_BASE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Scheme>
+   <LaunchAction
+      buildConfiguration = "Debug">
+      <CommandLineArguments>
+      </CommandLineArguments>
+   </LaunchAction>
+</Scheme>
+"#;
+
+    #[test]
+    fn injects_into_clean_scheme() {
+        let out = inject_storekit_reference(SCHEME_BASE, "LocalStoreKit.storekit").unwrap();
+        assert!(out.contains("StoreKitConfigurationFileReference"));
+        assert!(out.contains("../../LocalStoreKit.storekit"));
+        assert_eq!(
+            out.matches("StoreKitConfigurationFileReference").count(),
+            2,
+            "expected exactly one open + one close tag"
+        );
+        // Indentation check: open and close tags at 6 spaces, identifier at 9.
+        assert!(out.contains("\n      <StoreKitConfigurationFileReference\n"));
+        assert!(out.contains("\n         identifier = \"../../LocalStoreKit.storekit\">\n"));
+        assert!(out.contains("\n      </StoreKitConfigurationFileReference>\n"));
+        // Closing </LaunchAction> still at 3 spaces on its own line.
+        assert!(out.contains("\n   </LaunchAction>"));
+    }
+
+    #[test]
+    fn replaces_existing_reference_idempotently() {
+        let with_old = inject_storekit_reference(SCHEME_BASE, "Old.storekit").unwrap();
+        let with_new = inject_storekit_reference(&with_old, "LocalStoreKit.storekit").unwrap();
+        assert!(with_new.contains("../../LocalStoreKit.storekit"));
+        assert!(!with_new.contains("Old.storekit"));
+        assert_eq!(
+            with_new.matches("StoreKitConfigurationFileReference").count(),
+            2
+        );
+    }
+}
+
 /// Main entry point for update-ios-xcode command
 pub fn update_ios_xcode(
     update_godot: bool,
