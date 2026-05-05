@@ -8,7 +8,7 @@ use godot::{
     builtin::math::FloatExt,
     classes::{
         text_server::{JustificationFlag, LineBreakFlag},
-        Node,
+        Node, RenderingServer,
     },
     obj::Gd,
 };
@@ -33,11 +33,41 @@ use crate::{
             ui_background::update_ui_background, ui_text::update_ui_text,
             ui_transform::update_ui_transform,
         },
+        godot_dcl_scene::GodotDclScene,
         scene::{Scene, SceneType},
     },
 };
 
 use super::{ui_dropdown::update_ui_dropdown, ui_input::update_ui_input};
+
+fn assign_z_index_recursive(
+    children: &[(SceneEntityId, i32)],
+    z_counter: &mut i32,
+    children_by_parent: &HashMap<SceneEntityId, Vec<(SceneEntityId, i32)>>,
+    godot_dcl_scene: &mut GodotDclScene,
+) {
+    let last_idx = children.len().saturating_sub(1);
+    for (i, (entity, _)) in children.iter().enumerate() {
+        if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(entity) {
+            ui_node.base_control.set_z_index(
+                (*z_counter).clamp(RenderingServer::CANVAS_ITEM_Z_MIN, RenderingServer::CANVAS_ITEM_Z_MAX),
+            );
+            ui_node.base_control.set_z_as_relative(false);
+        }
+        let entity_children = children_by_parent.get(entity).cloned().unwrap_or_default();
+        if !entity_children.is_empty() {
+            assign_z_index_recursive(
+                &entity_children,
+                z_counter,
+                children_by_parent,
+                godot_dcl_scene,
+            );
+        }
+        if i < last_idx {
+            *z_counter += 1;
+        }
+    }
+}
 
 pub struct UiResults {
     pub pointer_event_results: Vec<(SceneEntityId, PbPointerEventsResult)>,
@@ -395,26 +425,15 @@ fn update_layout(
         children.sort_by_key(|(_, z)| *z);
     }
 
-    let mut z_counter: i32 = 0;
-    let initial_children = children_by_parent
+    // SDK UI occupies the low end of the z_index range so it always renders behind the app UI.
+    // A margin of 1000 is reserved at the bottom for scenes that use negative z_index values.
+    const SDK_UI_Z_MARGIN: i32 = 1000;
+    let mut z_counter: i32 = RenderingServer::CANVAS_ITEM_Z_MIN + SDK_UI_Z_MARGIN;
+    let root_children = children_by_parent
         .get(&SceneEntityId::ROOT)
         .cloned()
         .unwrap_or_default();
-    let mut dfs_stack: Vec<SceneEntityId> =
-        initial_children.into_iter().rev().map(|(e, _)| e).collect();
-
-    while let Some(entity) = dfs_stack.pop() {
-        if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(&entity) {
-            ui_node.base_control.set_z_index(z_counter);
-            ui_node.base_control.set_z_as_relative(false);
-            z_counter += 1;
-        }
-        if let Some(children) = children_by_parent.get(&entity) {
-            for (child_entity, _) in children.iter().rev() {
-                dfs_stack.push(*child_entity);
-            }
-        }
-    }
+    assign_z_index_recursive(&root_children, &mut z_counter, &children_by_parent, godot_dcl_scene);
 }
 
 pub fn update_scene_ui(
