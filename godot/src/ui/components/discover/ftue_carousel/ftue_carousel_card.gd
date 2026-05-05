@@ -10,7 +10,7 @@ var _data: Dictionary = {}
 
 func set_data(place_data: Dictionary) -> void:
 	_data = place_data
-	var image_url: String = place_data.get("image", "")
+	var image_url: String = place_data.get("image", place_data.get("imageUrl", ""))
 	if not image_url.is_empty():
 		_async_download_image(image_url)
 

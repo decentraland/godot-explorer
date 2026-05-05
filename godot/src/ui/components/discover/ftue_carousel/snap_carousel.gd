@@ -1,83 +1,146 @@
+@tool
 class_name SnapCarousel
-extends Control
+extends VBoxContainer
 
 signal card_changed(index: int)
 
 enum Mode { FTUE, BANNER }
 
-@export var mode: Mode = Mode.FTUE
-@export var center_card_size: Vector2 = Vector2(600, 480)
-@export var side_card_size: Vector2 = Vector2(550, 440)
-@export var card_gap: float = 20.0
-@export var swipe_threshold: float = 80.0
-@export var tween_duration: float = 0.3
+@export var mode: Mode = Mode.FTUE:
+	set(v):
+		mode = v
+		if is_inside_tree():
+			_apply_mode()
+			_layout_cards()
 
-var _cards: Array[Control] = []
-var _current_index: int = 0
+@export var selected_index: int = 1:
+	set(v):
+		var old := selected_index
+		selected_index = v
+		if is_inside_tree():
+			_layout_cards()
+			if old != selected_index:
+				_update_dot_selection()
+
+## Minimum drag distance to advance to next/previous card
+@export var swipe_threshold: float = 60.0
+## Snap animation duration in seconds
+@export var snap_duration: float = 0.25
+
 var _is_touching: bool = false
 var _touch_start_x: float = 0.0
 var _drag_offset: float = 0.0
 var _is_dragging: bool = false
-var _active_tween: Tween = null
+var _is_animating: bool = false
+var _snap_tween: Tween = null
 var _dot_indicators: Array[Control] = []
 
+@onready var card_area: Control = $CardArea
+@onready var item_container: HBoxContainer = %HBoxContainer_Items
 @onready var dots_container: HBoxContainer = %DotsContainer
 
 
 func _ready() -> void:
 	clip_contents = true
-	_update_dots_visibility()
+	_apply_mode()
+
+	if not Engine.is_editor_hint():
+		await get_tree().process_frame
+		_apply_card_sizes(false)
+		await get_tree().process_frame
+		_layout_cards()
+
+
+func _process(_delta: float) -> void:
+	if Engine.is_editor_hint():
+		return
+	# Keep selected card centered while sizes are animating
+	if _is_animating and not _is_dragging:
+		var offset_x: float = _get_scroll_offset_for_index(selected_index)
+		item_container.position.x = offset_x
+
+
+const FTUE_SELECTED_SIZE := Vector2(600, 480)
+const FTUE_UNSELECTED_SIZE := Vector2(550, 440)
+const BANNER_SELECTED_SIZE := Vector2(624, 350)
+const BANNER_UNSELECTED_SIZE := Vector2(530, 300)
+
+
+func _get_selected_size() -> Vector2:
+	return FTUE_SELECTED_SIZE if mode == Mode.FTUE else BANNER_SELECTED_SIZE
+
+
+func _get_unselected_size() -> Vector2:
+	return FTUE_UNSELECTED_SIZE if mode == Mode.FTUE else BANNER_UNSELECTED_SIZE
+
+
+func _apply_mode() -> void:
+	if is_instance_valid(dots_container):
+		dots_container.visible = mode == Mode.BANNER
+	if is_instance_valid(item_container):
+		item_container.add_theme_constant_override(
+			"separation", 32 if mode == Mode.FTUE else 16
+		)
+	if is_instance_valid(card_area):
+		card_area.custom_minimum_size.y = _get_selected_size().y
+	_apply_card_sizes(false)
 
 
 func get_current_index() -> int:
-	return _current_index
-
-
-func get_current_card() -> Control:
-	if _current_index >= 0 and _current_index < _cards.size():
-		return _cards[_current_index]
-	return null
+	return selected_index
 
 
 func get_card_count() -> int:
-	return _cards.size()
+	if not is_instance_valid(item_container):
+		return 0
+	return item_container.get_child_count()
 
 
-func set_cards(cards: Array[Control]) -> void:
-	for card in _cards:
-		if is_instance_valid(card):
-			card.queue_free()
-	_cards.clear()
-	_clear_dots()
-
-	for card in cards:
-		add_child(card)
-		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_cards.append(card)
-
-	_current_index = 0
-	_create_dots()
-	_update_dots_visibility()
-	_layout_cards_immediate()
-
-	if _cards.size() > 0:
-		card_changed.emit(_current_index)
+func _get_card_separation() -> float:
+	if not is_instance_valid(item_container):
+		return 32.0
+	return float(item_container.get_theme_constant("separation"))
 
 
-func select_card(index: int) -> void:
-	if _cards.is_empty():
+func _get_scroll_offset_for_index(index: int) -> float:
+	# Calculate the x-offset of item_container so that card[index] is centered
+	if not is_instance_valid(item_container) or item_container.get_child_count() == 0:
+		return 0.0
+	if index < 0 or index >= item_container.get_child_count():
+		return 0.0
+	var card: Control = item_container.get_child(index)
+	var card_center_in_container: float = card.position.x + card.size.x / 2.0
+	return (size.x / 2.0) - card_center_in_container
+
+
+func _layout_cards() -> void:
+	if not is_instance_valid(item_container):
 		return
-	index = clampi(index, 0, _cards.size() - 1)
-	if index == _current_index:
+	_apply_card_sizes(false)
+	var offset_x: float = _get_scroll_offset_for_index(selected_index) + _drag_offset
+	item_container.position.x = offset_x
+
+
+func _apply_card_sizes(animate: bool) -> void:
+	if not is_instance_valid(item_container):
 		return
-	_current_index = index
-	_animate_cards()
-	_update_dot_selection()
-	card_changed.emit(_current_index)
+	for i in item_container.get_child_count():
+		var card: Control = item_container.get_child(i)
+		var target_size := _get_selected_size() if i == selected_index else _get_unselected_size()
+
+		if animate and not Engine.is_editor_hint():
+			if _snap_tween and _snap_tween.is_valid():
+				_snap_tween.tween_property(
+					card, "custom_minimum_size", target_size, snap_duration
+				)
+		else:
+			card.custom_minimum_size = target_size
 
 
 func _gui_input(event: InputEvent) -> void:
-	if _cards.size() <= 1:
+	if Engine.is_editor_hint():
+		return
+	if get_card_count() <= 1:
 		return
 
 	if event is InputEventScreenTouch:
@@ -86,123 +149,77 @@ func _gui_input(event: InputEvent) -> void:
 			_is_dragging = false
 			_touch_start_x = event.position.x
 			_drag_offset = 0.0
-			if _active_tween and _active_tween.is_valid():
-				_active_tween.kill()
+			if _snap_tween and _snap_tween.is_valid():
+				_snap_tween.kill()
 		else:
 			if _is_dragging:
-				_on_swipe_end()
+				_on_touch_released()
 				accept_event()
 			_is_touching = false
 			_is_dragging = false
+			_drag_offset = 0.0
 
 	elif event is InputEventScreenDrag:
 		if _is_touching:
-			var offset_x: float = event.position.x - _touch_start_x
-			if not _is_dragging and abs(offset_x) > 30:
+			var delta_x: float = event.position.x - _touch_start_x
+			if not _is_dragging and abs(delta_x) > 20:
 				_is_dragging = true
 			if _is_dragging:
-				_drag_offset = offset_x
-				_layout_cards_with_offset(_drag_offset)
+				_drag_offset = delta_x
+				_layout_cards()
 				accept_event()
 
 
-func _on_swipe_end() -> void:
-	var new_index := _current_index
+func _on_touch_released() -> void:
+	var max_index: int = get_card_count() - 1
+	var new_index: int = selected_index
+
 	if abs(_drag_offset) > swipe_threshold:
-		if _drag_offset < 0 and _current_index < _cards.size() - 1:
-			new_index = _current_index + 1
-		elif _drag_offset > 0 and _current_index > 0:
-			new_index = _current_index - 1
+		if _drag_offset < 0:
+			new_index = mini(selected_index + 1, max_index)
+		else:
+			new_index = maxi(selected_index - 1, 0)
 
 	_drag_offset = 0.0
-	if new_index != _current_index:
-		_current_index = new_index
+
+	if new_index != selected_index:
+		selected_index = new_index
+		card_changed.emit(selected_index)
 		_update_dot_selection()
-		card_changed.emit(_current_index)
-	_animate_cards()
+
+	_animate_to_selected()
 
 
-func _get_card_target_x(card_index: int) -> float:
-	var center_x: float = (size.x - center_card_size.x) / 2.0
-	var offset_from_center: int = card_index - _current_index
+func _animate_to_selected() -> void:
+	if not is_instance_valid(item_container):
+		return
 
-	if offset_from_center == 0:
-		return center_x
-	if offset_from_center < 0:
-		return center_x + offset_from_center * (side_card_size.x + card_gap)
-	return (
-		center_x
-		+ center_card_size.x
-		+ card_gap
-		+ (offset_from_center - 1) * (side_card_size.x + card_gap)
-	)
+	if _snap_tween and _snap_tween.is_valid():
+		_snap_tween.kill()
 
+	_is_animating = true
+	_snap_tween = create_tween().set_parallel(true)
+	_snap_tween.set_ease(Tween.EASE_OUT)
+	_snap_tween.set_trans(Tween.TRANS_SINE)
 
-func _get_card_target_size(card_index: int) -> Vector2:
-	if card_index == _current_index:
-		return center_card_size
-	return side_card_size
+	# Animate card sizes
+	for i in item_container.get_child_count():
+		var card: Control = item_container.get_child(i)
+		var target_size := _get_selected_size() if i == selected_index else _get_unselected_size()
+		_snap_tween.tween_property(card, "custom_minimum_size", target_size, snap_duration)
 
-
-func _get_card_target_y(card_index: int) -> float:
-	var card_size := _get_card_target_size(card_index)
-	return (size.y - card_size.y) / 2.0
-
-
-func _layout_cards_immediate() -> void:
-	for i in _cards.size():
-		var card := _cards[i]
-		var target_size := _get_card_target_size(i)
-		var target_x := _get_card_target_x(i)
-		var target_y := _get_card_target_y(i)
-		card.position = Vector2(target_x, target_y)
-		card.size = target_size
-		card.custom_minimum_size = target_size
-
-
-func _layout_cards_with_offset(offset: float) -> void:
-	for i in _cards.size():
-		var card := _cards[i]
-		var target_size := _get_card_target_size(i)
-		var target_x := _get_card_target_x(i) + offset
-		var target_y := _get_card_target_y(i)
-		card.position = Vector2(target_x, target_y)
-		card.size = target_size
-		card.custom_minimum_size = target_size
-
-
-func _animate_cards() -> void:
-	if _active_tween and _active_tween.is_valid():
-		_active_tween.kill()
-
-	_active_tween = create_tween().set_parallel(true)
-	_active_tween.set_ease(Tween.EASE_OUT)
-	_active_tween.set_trans(Tween.TRANS_QUART)
-
-	for i in _cards.size():
-		var card := _cards[i]
-		var target_size := _get_card_target_size(i)
-		var target_x := _get_card_target_x(i)
-		var target_y := _get_card_target_y(i)
-
-		_active_tween.tween_property(
-			card, "position", Vector2(target_x, target_y), tween_duration
-		)
-		_active_tween.tween_property(card, "size", target_size, tween_duration)
-		_active_tween.tween_property(
-			card, "custom_minimum_size", target_size, tween_duration
-		)
+	_snap_tween.chain().tween_callback(func(): _is_animating = false)
 
 
 # --- Dot indicators ---
 
 
-func _create_dots() -> void:
-	if not is_instance_valid(dots_container):
-		return
+func rebuild_dots() -> void:
 	_clear_dots()
-	for i in _cards.size():
-		var dot := _create_dot(i == _current_index)
+	if not is_instance_valid(dots_container) or not is_instance_valid(item_container):
+		return
+	for i in item_container.get_child_count():
+		var dot := _create_dot(i == selected_index)
 		dots_container.add_child(dot)
 		_dot_indicators.append(dot)
 
@@ -223,10 +240,7 @@ func _create_dot(is_active: bool) -> Control:
 	style.corner_radius_top_right = 6
 	style.corner_radius_bottom_left = 6
 	style.corner_radius_bottom_right = 6
-	if is_active:
-		style.bg_color = Color(1, 1, 1, 1)
-	else:
-		style.bg_color = Color(1, 1, 1, 0.4)
+	style.bg_color = Color("E8B9FF") if is_active else Color("00000066")
 	dot.add_theme_stylebox_override("panel", style)
 	return dot
 
@@ -236,11 +250,4 @@ func _update_dot_selection() -> void:
 		var dot := _dot_indicators[i]
 		var style: StyleBoxFlat = dot.get_theme_stylebox("panel") as StyleBoxFlat
 		if style:
-			style.bg_color = (
-				Color(1, 1, 1, 1) if i == _current_index else Color(1, 1, 1, 0.4)
-			)
-
-
-func _update_dots_visibility() -> void:
-	if is_instance_valid(dots_container):
-		dots_container.visible = mode == Mode.BANNER
+			style.bg_color = Color("E8B9FF") if i == selected_index else Color("00000066")

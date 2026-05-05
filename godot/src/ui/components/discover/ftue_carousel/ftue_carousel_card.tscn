@@ -42,6 +42,8 @@ layout_mode = 3
 anchors_preset = 0
 offset_right = 600.0
 offset_bottom = 480.0
+size_flags_vertical = 4
+mouse_filter = 1
 script = ExtResource("1_card")
 
 [node name="Panel_Container_NoImage" type="PanelContainer" parent="." unique_id=401457251]
@@ -53,7 +55,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_noimg")
 
 [node name="TextureRect_NoImage" type="TextureRect" parent="Panel_Container_NoImage" unique_id=2030029525]
@@ -75,7 +77,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_img")
 
 [node name="TextureRect_Image" type="TextureRect" parent="Panel_Container_Image" unique_id=127026310]
@@ -99,5 +101,5 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_border")

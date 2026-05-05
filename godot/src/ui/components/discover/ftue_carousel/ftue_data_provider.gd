@@ -1,22 +1,49 @@
 class_name FtueDataProvider
 
-## Placeholder place IDs for FTUE carousel.
-## Replace with a real endpoint call when available.
-const FTUE_PLACE_IDS: Array[String] = [
-	"780f04dd-eba1-41a8-b109-74896c87e98b",  # Genesis Plaza
-]
+## Fetches featured scenes for the FTUE carousel.
+## Tries the dedicated mobile-bff endpoint first, falls back to destinations API.
+
+const FALLBACK_LIMIT: int = 3
 
 
 static func async_fetch_ftue_places() -> Array[Dictionary]:
-	var places: Array[Dictionary] = []
-	for place_id in FTUE_PLACE_IDS:
-		var response = await PlacesHelper.async_get_place_by_id(place_id)
-		if response is PromiseError:
-			printerr("[FtueDataProvider] Failed to fetch place: ", place_id)
-			continue
-		var json: Dictionary = response.get_string_response_as_json()
-		var place_data: Dictionary = json.get("data", json)
-		if not place_data.is_empty():
-			places.append(place_data)
+	# Try dedicated endpoint first
+	var places := await _async_fetch_from_bff()
+	if places.is_empty():
+		# Fallback to destinations API featured places
+		places = await _async_fetch_from_destinations()
 	places.shuffle()
+	return places
+
+
+static func _async_fetch_from_bff() -> Array[Dictionary]:
+	var url := DclUrls.mobile_bff() + "/discover-featured/scenes"
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	if response is PromiseError:
+		printerr("[FtueDataProvider] BFF endpoint failed: ", response.get_error())
+		return []
+
+	var json = response.get_string_response_as_json()
+	var places: Array[Dictionary] = []
+	var data: Array = json if json is Array else json.get("data", [])
+	for item in data:
+		if item is Dictionary:
+			places.append(item)
+	return places
+
+
+static func _async_fetch_from_destinations() -> Array[Dictionary]:
+	var url := PlacesHelper.get_api_url() + "?offset=0&limit=%d&tag=featured&sdk=7" % FALLBACK_LIMIT
+	if Global.is_ios_or_emulating():
+		url += "&tag=allowed_ios"
+
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	if response is PromiseError:
+		printerr("[FtueDataProvider] Fallback fetch failed: ", response.get_error())
+		return []
+
+	var json: Dictionary = response.get_string_response_as_json()
+	var places: Array[Dictionary] = []
+	for item in json.get("data", []):
+		places.append(item)
 	return places

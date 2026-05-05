@@ -1,12 +1,10 @@
-extends MarginContainer
+extends Control
 
 signal ftue_completed
 signal jump_in(parcel_position: Vector2i, realm_str: String)
 signal jump_in_world(realm_str: String)
 
-const CARD_SCENE = preload(
-	"res://src/ui/components/discover/ftue_carousel/ftue_carousel_card.tscn"
-)
+const CARD_SCENE_PATH = "res://src/ui/components/discover/ftue_carousel/ftue_carousel_card.tscn"
 
 var _places: Array[Dictionary] = []
 
@@ -32,16 +30,26 @@ func set_places(places: Array[Dictionary]) -> void:
 	_places.clear()
 	_places.assign(places)
 
-	var cards: Array[Control] = []
+	var container: HBoxContainer = carousel.item_container
+	for child in container.get_children():
+		container.remove_child(child)
+		child.queue_free()
+
+	var card_scene: PackedScene = load(CARD_SCENE_PATH)
 	for place_data in _places:
-		var card: Control = CARD_SCENE.instantiate()
-		cards.append(card)
+		var card: Control = card_scene.instantiate()
+		container.add_child(card)
+		card.set_data(place_data)
 
-	carousel.set_cards(cards)
-
-	# Set data after cards are in the tree so @onready nodes resolve
-	for i in cards.size():
-		cards[i].set_data(_places[i])
+	carousel.rebuild_dots()
+	var idx := 1 if _places.size() >= 3 else 0
+	carousel.selected_index = idx
+	_on_card_changed(idx)
+	# Wait for layout then re-apply sizes and center
+	await get_tree().process_frame
+	carousel._apply_card_sizes(false)
+	await get_tree().process_frame
+	carousel._layout_cards()
 
 
 func _on_card_changed(index: int) -> void:
