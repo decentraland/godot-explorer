@@ -33,6 +33,20 @@ impl DclUserProfile {
         Self::from_gd(self.inner.clone())
     }
 
+    /// Generate a randomized profile (varied wearables, colors, snapshots)
+    /// suitable for stress testing. Mirrors the comms randomize_profile path.
+    #[func]
+    fn randomized() -> Gd<DclUserProfile> {
+        Self::from_gd(UserProfile::randomize())
+    }
+
+    /// Same as `randomized` but with a fixed seed so the resulting profile
+    /// is reproducible across runs (used by the avatar impostor benchmark).
+    #[func]
+    fn randomized_with_seed(seed: i64) -> Gd<DclUserProfile> {
+        Self::from_gd(UserProfile::randomize_with_seed(seed as u64))
+    }
+
     /// Returns a copy of the inner avatar. Use `set_avatar` to modify the avatar.
     #[func]
     fn get_avatar(&self) -> Gd<DclAvatarWireFormat> {
