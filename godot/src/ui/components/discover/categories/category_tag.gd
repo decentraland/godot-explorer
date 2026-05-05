@@ -11,12 +11,12 @@ const CATEGORIES_ICONS_PATH = "res://assets/ui/places_categories/"
 func set_category(category: String) -> void:
 	var icon_file_name = category
 	label.text = category
-	
+
 	if category == "poi":
 		label.text = "point of interest"
 	elif category == "gaming":
 		label.text = "game"
 	elif category == "featured":
 		icon_file_name = "poi"
-	
+
 	texture_rect.texture = load(CATEGORIES_ICONS_PATH + icon_file_name + ".svg")
