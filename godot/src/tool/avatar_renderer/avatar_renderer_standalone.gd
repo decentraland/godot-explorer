@@ -58,14 +58,25 @@ func start():
 	viewport.scaling_3d_scale = 2.0
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
 
-	# Compatibility renderer (GLES3) goes through an LDR sRGB framebuffer and
-	# loses ~1.7x of brightness vs Mobile/Vulkan's HDR linear pipeline. Bump
-	# tonemap_exposure on the avatar's Environment when running on GLES3 so
-	# the captured PNG matches the Mobile/prod look.
-	if RenderingServer.get_rendering_device() == null:
-		var env: Environment = avatar_preview.world_environment.environment
-		if env != null:
+	# Brightness compensation for the toon shader (EMISSION = ALBEDO * 0.4
+	# floor). avatar_preview.tscn ships with `adjustment_brightness = 1.4`
+	# for the in-game UI, but Environment.adjustment_* is silently dropped
+	# in the GLES3 Compatibility renderer (Godot issue #92853). Replace it
+	# with `tonemap_exposure` here, scoped to the snapshot tool so the
+	# backpack/lobby/profile UIs keep their existing tuning.
+	#
+	# Compat goes through an LDR sRGB framebuffer (RGBA8) while Mobile/Vulkan
+	# uses HDR linear, so the same exposure value lands ~1.7x dimmer in
+	# Compat after the gamma round-trip. Apply a 2.8x boost on top when
+	# running GLES3 (no rendering device) so the PNG matches Mobile/prod.
+	var shared_env: Environment = avatar_preview.world_environment.environment
+	if shared_env != null:
+		var env: Environment = shared_env.duplicate()
+		env.adjustment_enabled = false
+		env.tonemap_exposure = 1.4
+		if RenderingServer.get_rendering_device() == null:
 			env.tonemap_exposure *= 2.8
+		avatar_preview.world_environment.environment = env
 
 
 func flush_logs():
