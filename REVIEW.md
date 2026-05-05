@@ -3,6 +3,23 @@
 > **Purpose.** This file is the context a Claude reviewer reads before commenting on a PR in `decentraland/godot-explorer`. It should let a model with no prior knowledge of the repo produce a review that matches the tone, priorities, and depth established by the team.
 >
 > **Companion files.** Read `CLAUDE.md` (architecture, commands, tooling) before this. This file focuses on *what matters during review*, not how to build.
+>
+> **You are Claude Opus 4.7.** Be decisive. Front-load blockers. Cite file paths and PR numbers. Skip hedging when the codebase has a clear precedent — those are listed below.
+
+---
+
+## 0. Pre-flight — do this before reviewing
+
+These are blocking prerequisites. Resolve each one (or explicitly note its status in your review) before reading the diff.
+
+1. **Branch must be up to date with `main`.** Run `gh pr view <pr> --json mergeStateStatus,headRefOid,baseRefOid` (or check the PR page). If the PR is behind `main`, **request the author update the branch before a substantive review** — CI signals (especially Android/iOS artifacts) are not trustworthy on a stale base, and recently-merged fixes (autoload ordering, mouse-filter changes, skeleton recycling) frequently invalidate older diffs. A one-line "please rebase / merge `main` and I'll re-review" is the right output if the branch is stale.
+2. **iOS build must be present for platform-sensitive changes.** iOS builds are gated on the `build-ios` label and skipped by default. Check the PR's checks/comments for a `🍏 iOS` artifact in the sticky build report.
+   - If the PR touches: native iOS plugins (`plugins/dcl-godot-ios/**`), `OS.get_name() == "iOS"` branches, deeplinks, virtual keyboard / safe-area / `UIView` paths, audio/video/livekit interop, or anything under `lib/src/comms/` or `lib/src/av/` → **an iOS build is required**.
+   - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build-ios` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
+   - If the PR is purely backend / GDScript-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
+3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes under `plugins/dcl-godot-ios/godot` or any submodule and the PR description does not mention it, treat it as accidental and ask the author to confirm.
+
+If any of (1) or (2) fail and you proceed anyway, say so explicitly in the review header.
 
 ---
 
@@ -12,14 +29,14 @@ Decentraland's cross-platform metaverse client — the "Godot Explorer". Three l
 
 | Layer | Language | Role |
 |---|---|---|
-| Engine / rendering / UI / scene tree | **Godot 4.6.2 (custom fork)** + GDScript | `godot/` |
+| Engine / rendering / UI / scene tree | **Godot (custom fork)** + GDScript | `godot/` |
 | Core systems (scene runner, comms, content, wallet, avatars, social) | **Rust** (compiled as GDExtension) | `lib/` |
 | Decentraland SDK7 scene code at runtime | **JavaScript / V8 / deno_core** | per-scene threads driven by `lib/src/scene_runner` |
 | `xtask` build system (doctor / install / build / run / export) | Rust | `src/` |
 
 Target platforms: Linux, Windows, macOS, Android (API 29+), iOS, Meta Quest (OpenXR). The same binary ships to desktop and mobile — **any change has to be evaluated across touch *and* keyboard/mouse*, and on small screens as well as desktop.**
 
-A custom Godot fork is used — **do not suggest upgrading the engine version** and do not suggest APIs that only exist on upstream Godot past 4.6.2.
+The engine is pinned to a custom Godot fork. The exact version lives in `project.godot` and is documented in `CLAUDE.md` — **do not hardcode the version into reviews**, and **do not suggest upgrading the engine** or using APIs that only exist on upstream Godot beyond the pinned version.
 
 The project converges on visual and behavioral parity with Decentraland's **Unity Foundation Client**. Several fixes explicitly match the Unity implementation (e.g. camera FOV = 60°, avatar `rotation_y` wire convention, skybox GenesisSky port). If a PR cites Unity parity, treat Unity's behavior as the ground truth.
 
@@ -68,7 +85,7 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 1. **Crashes, hangs, and nil-access on autoloads.** `Global`, `DclGlobal`, `modal_manager`, `notifications_manager` come up frequently in review. Autoload `_ready()` order is load-bearing; the common fix is `call_deferred` (see #1874). If a PR adds an autoload or a new signal connection on one, verify the connected-to node exists by that frame.
 2. **Decentraland SDK contract breaks.** Pointer/proximity events, CRDT state, component IDs, protocol field numbers, scene lifecycle (`SceneInit → OnStart → OnUpdate → SceneShutdown`). If a proto or component behavior changes, existing scenes in production must keep working — flag any breaking wire change.
 3. **Debug prints / commented-out code / dead config left in.** `print("[DEBUG] …")`, `prints(…)`, `print_verbose` left behind, or orphaned `shader_parameter/foo` lines after a shader uniform is removed (see #1823, #1878). Cheap to flag, and the team consistently asks for it.
-4. **Committed `.claude/` memory files.** Files under `.claude/projects/<someone>/memory/*.md` belong to individual contributors, not the repo. Call it out whenever it appears (precedent: #1852 existed just to remove them; #1823 was asked to clean them up).
+4. **Committed `.claude/` memory files.** Files under `.claude/projects/<someone>/memory/*.md` are per-contributor Claude Code state and do not belong in the repo. Call it out whenever it appears (precedent: #1852 existed just to remove them; #1823 was asked to clean them up). If the team eventually adds `.claude/` to `.gitignore`, this check becomes moot — flag that as a worthwhile follow-up if you see the pattern repeat.
 5. **Changes to `project.godot` editor run args, local paths, or personal export presets.** e.g. flipping `--emulate-ios` ↔ `--emulate-android --landscape` is usually someone's local setting that leaked in (#1823). Hardcoded `/Users/<name>/…` absolute paths are always wrong (#1878).
 
 ### Tier 2 — Correctness
@@ -126,7 +143,7 @@ The PR-level workflows a reviewer should expect green before approving:
 - `Clippy` — `-D warnings`
 - `🐧 Linux`, `🪟 Windows`, `🍎 macOS` builds
 - `🤖 Android` builds (APK/AAB posted as a sticky comment on the PR)
-- `🍏 iOS` is **opt-in** — gated on the `build-ios` label. **Absence of an iOS build is not a review blocker**, but flag platform-sensitive changes (native plugins, deep links, `UIView` work) as needing the label.
+- `🍏 iOS` is **opt-in** — gated on the `build-ios` label. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
 
 ### Release flow
 `release` branch is used for production cuts. PRs titled `Release: merge release into main` / `Merge main into release` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).
@@ -160,6 +177,12 @@ All `tracing` output is routed through Godot's print functions. `RUST_LOG`, `--r
 
 ### Unity parity
 When review cites `SkyboxRenderController.cs:183`, `avatar rotation_y wire convention`, `camera FOV 60°`, or similar, the reference is the **Unity Foundation Client**. The reviewer is comparing byte-for-byte / degree-for-degree, and the PR should match unless it explains why not.
+
+### Platform detection — prefer `OS.get_name()` over `DclGlobal.is_*`
+The codebase has both `DclGlobal.is_ios`, `is_android`, `is_mobile` (defined in `lib/src/godot_classes/dcl_global.rs`) **and** direct `OS.get_name() == "iOS" / "Android"` checks. The convention in this repo is the latter — `connection_quality_monitor.gd`, `notifications_manager.gd`, and the example scripts all use `OS.get_name()`. **Flag new code that uses `DclGlobal.is_ios()` / `is_android()` / `is_mobile()` and ask for `OS.get_name() == "iOS"` instead** unless there's a specific reason (e.g. the Rust-side flag is already cached and the call is on a hot path). When checking platform branches, also verify the author covered every relevant target — see the red-flag note about incomplete `OS.get_name()` matches.
+
+### `_process` vs `_physics_process`
+`_process(delta)` runs at frame rate (variable), `_physics_process(delta)` runs at the fixed physics tick. Camera follows, input polling, and UI animation belong in `_process`; physics integration, character controller updates, and anything that interacts with `move_and_slide` / `RigidBody3D` belong in `_physics_process`. Frame-rate-dependent logic (e.g. `position += velocity * delta` for a kinematic body that participates in collisions) placed in `_process` is a real bug class here — flag it. Conversely, UI tweens or HUD updates running in `_physics_process` will look stuttery on high-refresh displays.
 
 ---
 
@@ -203,6 +226,9 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - `.unwrap()` / `.expect("…")` on `FromGodot` / `try_to` conversions inside the scene-thread hot path → will crash the scene instead of logging.
 - Any change to `rust-toolchain.toml`, `Cargo.lock` across the whole dependency tree, or the Godot version → escalate; these need a human-stakeholder call.
 - Modifications under `plugins/dcl-godot-ios/godot` or any submodule pointer → verify intentional and not a submodule-drift side-effect.
+- `DclGlobal.is_ios()` / `is_android()` / `is_mobile()` in new GDScript → request `OS.get_name() == "iOS"` / `"Android"` to match the repo convention.
+- `OS.get_name()` checks that handle some but not all relevant targets (e.g. branches on `"Android"` but silently falls through on `"iOS"`, or covers mobile but ignores `"Web"` / `"macOS"`) → ask which platforms were considered and verify every target the change is supposed to support is covered.
+- `_process` doing physics-coupled work, or `_physics_process` doing UI work → see the pattern note in Section 5.
 
 ---
 
