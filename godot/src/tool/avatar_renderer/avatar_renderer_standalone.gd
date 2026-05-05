@@ -50,21 +50,6 @@ func _ready():
 
 
 func start():
-	# Restore pre-PR-#1438 PBR lighting for snapshot generation only.
-	#
-	# Background: PR #1438 ("feat: migrate avatar materials to DCL_Toon
-	# shader") swapped every BaseMaterial3D on avatar meshes for a
-	# ShaderMaterial backed by dcl_toon.gdshader. The toon shader pins
-	# EMISSION = ALBEDO * 0.4, ignores LIGHT_COLOR, and disables ambient
-	# — which produces a flat / washed-out look in headless captures
-	# (visible vs the prod-style PBR rendering used before that PR).
-	#
-	# We don't touch the toon shader. Instead, after the avatar loads
-	# we walk every MeshInstance3D and put a StandardMaterial3D
-	# reconstructed from the toon ShaderMaterial's parameters in the
-	# surface override slot. The override beats the mesh's surface
-	# material, so this avatar instance renders with normal PBR while
-	# the rest of the app keeps the toon shader.
 	async_update_avatar(0)
 
 	# Visual enhance
@@ -72,6 +57,15 @@ func start():
 	viewport.use_debanding = true
 	viewport.scaling_3d_scale = 2.0
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
+
+	# Compatibility renderer (GLES3) goes through an LDR sRGB framebuffer and
+	# loses ~1.7x of brightness vs Mobile/Vulkan's HDR linear pipeline. Bump
+	# tonemap_exposure on the avatar's Environment when running on GLES3 so
+	# the captured PNG matches the Mobile/prod look.
+	if RenderingServer.get_rendering_device() == null:
+		var env: Environment = avatar_preview.world_environment.environment
+		if env != null:
+			env.tonemap_exposure *= 2.8
 
 
 func flush_logs():
@@ -115,12 +109,9 @@ func _async_on_avatar_avatar_loaded():
 	var profile := profiles_to_process.profiles[current_profile_index]
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 
-	# Replace the toon ShaderMaterials applied by avatar.gd with PBR
-	# StandardMaterial3D overrides for the snapshot tool only. See the
-	# block-comment in start() for context.
-	_apply_pbr_overrides(avatar_preview.avatar)
-	# Give Godot a couple of frames to register material changes.
-	await get_tree().process_frame
+	# Toon shader is now used directly. Brightness compensation moved to
+	# Environment.tonemap_exposure (renderer-agnostic, works in
+	# Compatibility unlike adjustment_brightness). See avatar_preview.tscn.
 	await get_tree().process_frame
 
 	var dest_path := ensure_ends_with(profile.dest_path, ".png")
@@ -149,63 +140,3 @@ func _async_on_avatar_avatar_loaded():
 		Global.testing_tools.exit_gracefully(0)
 	else:
 		async_update_avatar.call_deferred(current_profile_index + 1)
-
-
-# Walk the avatar tree and replace each toon ShaderMaterial with an
-# equivalent StandardMaterial3D placed in the surface override slot.
-# Used only by the snapshot tool — does not affect the in-game avatar.
-func _apply_pbr_overrides(root: Node) -> void:
-	if root == null:
-		return
-	if root is MeshInstance3D and root.mesh != null:
-		for surface_idx in range(root.mesh.get_surface_count()):
-			var mat = root.mesh.surface_get_material(surface_idx)
-			if mat is ShaderMaterial:
-				var pbr = _toon_to_pbr(mat)
-				if pbr != null:
-					root.set_surface_override_material(surface_idx, pbr)
-	for child in root.get_children():
-		_apply_pbr_overrides(child)
-
-
-func _toon_to_pbr(toon: ShaderMaterial) -> StandardMaterial3D:
-	var shader := toon.shader
-	if shader == null:
-		return null
-	# Use the shader's resource path to recover transparency / cull mode.
-	var path: String = shader.resource_path
-	if not path.contains("dcl_toon"):
-		# Not one of our toon variants — leave it alone.
-		return null
-
-	var pbr := StandardMaterial3D.new()
-
-	var albedo_color = toon.get_shader_parameter("albedo_color")
-	if albedo_color is Color:
-		pbr.albedo_color = albedo_color
-	var albedo_tex = toon.get_shader_parameter("albedo_texture")
-	if albedo_tex is Texture2D:
-		pbr.albedo_texture = albedo_tex
-
-	var emission_color = toon.get_shader_parameter("emission_color")
-	if emission_color is Color and (emission_color.r + emission_color.g + emission_color.b) > 0.0:
-		pbr.emission_enabled = true
-		pbr.emission = emission_color
-		var emission_tex = toon.get_shader_parameter("emission_texture")
-		if emission_tex is Texture2D:
-			pbr.emission_texture = emission_tex
-
-	if path.contains("alpha_clip"):
-		pbr.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-		var thresh = toon.get_shader_parameter("alpha_scissor_threshold")
-		if thresh is float:
-			pbr.alpha_scissor_threshold = thresh
-	elif path.contains("alpha_blend"):
-		pbr.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-
-	if path.contains("double"):
-		pbr.cull_mode = BaseMaterial3D.CULL_DISABLED
-
-	pbr.roughness = 1.0
-	pbr.metallic = 0.0
-	return pbr

@@ -18,8 +18,7 @@ background_mode = 2
 sky = SubResource("Sky_0qr0h")
 ambient_light_color = Color(0.501961, 0.501961, 0.501961, 1)
 ambient_light_sky_contribution = 0.6
-adjustment_enabled = true
-adjustment_brightness = 1.4
+tonemap_exposure = 1.4
 
 [node name="AvatarPreview" type="SubViewportContainer" unique_id=1871875129]
 anchors_preset = 15
