@@ -2,6 +2,12 @@ extends Node
 
 const USE_TEST_INPUT = false
 
+# Manual supersampling factor on top of viewport.scaling_3d_scale.
+# Effective SSAA = SSAA_FACTOR * scaling_3d_scale (= 2 * 2 = 4x here).
+# Internal framebuffer = dest_size * SSAA_FACTOR * scaling_3d_scale, e.g.
+# a 256x512 capture renders at 1024x2048 internally.
+const SSAA_FACTOR = 2
+
 var logs: Array[String] = []
 
 var profiles_to_process: AvatarRendererHelper.AvatarFile
@@ -52,19 +58,26 @@ func _ready():
 func start():
 	async_update_avatar(0)
 
-	# Visual enhance — match the project's highest defined quality knobs
-	# for an off-screen capture (no realtime perf budget here).
-	#   anti_aliasing: project defines 0=Off, 1=x2, 2=x4, 3=x8 in
-	#     config_data.gd; we use the max (3 -> MSAA_8X). Same enum/order
-	#     as Viewport.MSAA_*.
-	#   scaling_3d_scale = 2.0: 2x SSAA on top of MSAA. Helps with the
-	#     toon shader's shading-derived edges (MSAA only smooths
-	#     geometry edges).
+	# Visual enhance — off-screen capture, no realtime perf budget, so
+	# stack every AA + quality lever Godot has.
+	#   msaa_3d = MSAA_8X: project's defined max for anti_aliasing
+	#     (config_data.gd: 0=Off, 1=x2, 2=x4, 3=x8). Smooths geometry
+	#     edges (multi-sampled per fragment).
+	#   scaling_3d_scale = 2.0: hard-clamped to [0.1, 2.0] in
+	#     Viewport::set_scaling_3d_scale. Adds 2x SSAA on top of the
+	#     manual SSAA below (so effective SSAA = 2 * SSAA_FACTOR).
+	#   screen_space_aa = FXAA: cheap final-pass post AA on top of MSAA
+	#     + SSAA. Catches sub-pixel jaggies the upstream passes missed
+	#     (especially around alpha cutouts).
+	#   mesh_lod_threshold = 0.0: forces every mesh to its highest LOD
+	#     regardless of camera distance.
 	#   use_debanding: smooths gradient banding in the LDR output.
-	var viewport: Viewport = avatar_preview.subviewport
+	var viewport: SubViewport = avatar_preview.subviewport
 	viewport.msaa_3d = Viewport.MSAA_8X
-	viewport.use_debanding = true
 	viewport.scaling_3d_scale = 2.0
+	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+	viewport.mesh_lod_threshold = 0.0
+	viewport.use_debanding = true
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
 
 	# Brightness compensation for the toon shader (EMISSION = ALBEDO * 0.4
@@ -138,7 +151,7 @@ func _async_on_avatar_avatar_loaded():
 	ensure_base_dir_exists(dest_path)
 
 	var body_image = await avatar_preview.async_get_viewport_image(
-		false, Vector2i(profile.width, profile.height)
+		false, Vector2i(profile.width, profile.height), 2.5, SSAA_FACTOR
 	)
 	body_image.save_png(dest_path)
 	logs.push_back("🟢 " + dest_path)
@@ -148,7 +161,7 @@ func _async_on_avatar_avatar_loaded():
 		ensure_base_dir_exists(face_dest_path)
 
 		var face_image = await avatar_preview.async_get_viewport_image(
-			true, Vector2i(profile.face_width, profile.face_height), profile.face_zoom
+			true, Vector2i(profile.face_width, profile.face_height), profile.face_zoom, SSAA_FACTOR
 		)
 		face_image.save_png(face_dest_path)
 		logs.push_back("🟢 " + face_dest_path)
