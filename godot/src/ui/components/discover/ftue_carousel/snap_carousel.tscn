@@ -7,11 +7,12 @@
 clip_contents = true
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 392.0
+offset_right = 833.0
+offset_bottom = 378.0
 grow_horizontal = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0
-theme_override_constants/separation = 30
+theme_override_constants/separation = 16
 script = ExtResource("1_snap")
 mode = 1
 

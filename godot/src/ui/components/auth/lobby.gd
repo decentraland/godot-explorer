@@ -26,7 +26,6 @@ signal change_scene(new_scene_path: String)
 
 const FTUE_PLACE_ID: String = "780f04dd-eba1-41a8-b109-74896c87e98b"
 const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
-const _FtueDataProvider = preload("res://src/ui/components/discover/ftue_carousel/ftue_data_provider.gd")
 
 var is_creating_account: bool = false
 
@@ -243,18 +242,7 @@ func show_control_ftue():
 	if current_profile:
 		ftue_screen.set_username(current_profile.get_name())
 	show_panel(control_ftue)
-	_async_fetch_ftue_places()
-
-
-func _async_fetch_ftue_places() -> void:
-	var places := await _FtueDataProvider.async_fetch_ftue_places()
-	if places.is_empty():
-		printerr("[Lobby] No FTUE places loaded, skipping FTUE")
-		async_close_sign_in()
-		return
-	if not is_instance_valid(ftue_screen):
-		return
-	ftue_screen.set_places(places)
+	ftue_screen.load_places()
 
 
 func show_avatar_create_screen():
@@ -745,7 +733,8 @@ func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
 func _on_ftue_ftue_completed() -> void:
 	Global.get_config().discover_ftue_completed = true
 	Global.get_config().save_to_settings_file()
-	async_close_sign_in()
+	if is_inside_tree():
+		async_close_sign_in()
 
 
 func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:

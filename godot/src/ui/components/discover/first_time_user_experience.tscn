@@ -4,6 +4,7 @@
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_font700"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_font600"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_dcltheme"]
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="5_ilnjm"]
 [ext_resource type="Texture2D" uid="uid://bpaccmjtefhdy" path="res://src/ui/components/discover/icons/jump-in.svg" id="5_jumpin"]
 [ext_resource type="PackedScene" uid="uid://byp4n7u2145fx" path="res://src/ui/components/discover/ftue_carousel/snap_carousel.tscn" id="6_carousel"]
 
@@ -22,6 +23,13 @@ font_color = Color(0.9098039, 0.7254902, 1, 1)
 font = ExtResource("3_font600")
 font_size = 44
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar"]
+bg_color = Color(1, 1, 1, 0.08)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="LabelSettings" id="LabelSettings_creator_by"]
 font = ExtResource("3_font600")
@@ -70,6 +78,7 @@ alignment = 1
 [node name="MarginContainer" type="MarginContainer" parent="FTUE" unique_id=1657604065]
 layout_mode = 2
 theme_override_constants/margin_left = 85
+theme_override_constants/margin_top = 150
 theme_override_constants/margin_right = 85
 
 [node name="VBoxContainer" type="VBoxContainer" parent="FTUE/MarginContainer" unique_id=576045331]
@@ -107,8 +116,10 @@ mode = 0
 
 [node name="MarginContainer2" type="MarginContainer" parent="FTUE" unique_id=436761302]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/margin_left = 85
 theme_override_constants/margin_right = 85
+theme_override_constants/margin_bottom = 150
 
 [node name="VBoxContainer" type="VBoxContainer" parent="FTUE/MarginContainer2" unique_id=802839910]
 layout_mode = 2
@@ -121,21 +132,42 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_spacer")
 
 [node name="Label_Title" type="Label" parent="FTUE/MarginContainer2/VBoxContainer" unique_id=1692438807]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 54)
+visible = false
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Place Name"
 label_settings = SubResource("LabelSettings_title")
 horizontal_alignment = 1
-clip_text = true
+autowrap_mode = 2
 text_overrun_behavior = 3
 max_lines_visible = 2
+
+[node name="TitleSkeleton" type="PanelContainer" parent="FTUE/MarginContainer2/VBoxContainer" unique_id=1084502125]
+unique_name_in_owner = true
+material = ExtResource("5_ilnjm")
+custom_minimum_size = Vector2(300, 54)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
 
 [node name="HSeparator_TitleCreator" type="HSeparator" parent="FTUE/MarginContainer2/VBoxContainer" unique_id=1371576176]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_spacer")
 
+[node name="CreatorSkeleton" type="PanelContainer" parent="FTUE/MarginContainer2/VBoxContainer" unique_id=1820531336]
+unique_name_in_owner = true
+material = ExtResource("5_ilnjm")
+custom_minimum_size = Vector2(190, 31)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
+
 [node name="HBoxContainer_Creator" type="HBoxContainer" parent="FTUE/MarginContainer2/VBoxContainer" unique_id=1923447439]
+unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 31)
 layout_mode = 2
 theme_override_constants/separation = 0
@@ -156,7 +188,7 @@ horizontal_alignment = 1
 
 [node name="HSeparator_BeforeButton" type="HSeparator" parent="FTUE/MarginContainer2/VBoxContainer" unique_id=1970885351]
 layout_mode = 2
-theme_override_constants/separation = 82
+size_flags_vertical = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_spacer")
 
 [node name="Button_JumpIn_FTUE" type="Button" parent="FTUE/MarginContainer2/VBoxContainer" unique_id=233231716]
@@ -223,22 +255,20 @@ theme_override_font_sizes/font_size = 30
 text = "Skip"
 flat = true
 
-[node name="HSeparator_Underline" type="HSeparator" parent="FTUE/MarginContainer2/VBoxContainer/Button_Skip" unique_id=487206858]
-custom_minimum_size = Vector2(70, 25)
+[node name="MarginContainer" type="MarginContainer" parent="FTUE/MarginContainer2/VBoxContainer/Button_Skip" unique_id=1416310653]
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
+anchors_preset = 15
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -1.5
-offset_top = -4.0
-offset_right = 1.5
 grow_horizontal = 2
-grow_vertical = 0
-theme_override_styles/separator = SubResource("StyleBoxLine_underline")
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 10
 
-[node name="HSeparator_Bottom" type="HSeparator" parent="FTUE/MarginContainer2/VBoxContainer" unique_id=806221258]
+[node name="HSeparator_Underline" type="HSeparator" parent="FTUE/MarginContainer2/VBoxContainer/Button_Skip/MarginContainer" unique_id=487206858]
+custom_minimum_size = Vector2(70, 25)
 layout_mode = 2
-theme_override_constants/separation = 24
-theme_override_styles/separator = SubResource("StyleBoxEmpty_spacer")
+size_flags_horizontal = 4
+size_flags_vertical = 8
+mouse_filter = 2
+theme_override_styles/separator = SubResource("StyleBoxLine_underline")

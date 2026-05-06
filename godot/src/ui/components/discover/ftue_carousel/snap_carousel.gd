@@ -3,6 +3,8 @@ class_name SnapCarousel
 extends VBoxContainer
 
 signal card_changed(index: int)
+signal all_cards_loaded
+signal items_loaded(places: Array[Dictionary])
 
 enum Mode { FTUE, BANNER }
 
@@ -40,15 +42,15 @@ var _dot_indicators: Array[Control] = []
 @onready var dots_container: HBoxContainer = %DotsContainer
 
 
+@export var auto_fetch: bool = false
+
+
 func _ready() -> void:
 	clip_contents = true
 	_apply_mode()
 
-	if not Engine.is_editor_hint():
-		await get_tree().process_frame
-		_apply_card_sizes(false)
-		await get_tree().process_frame
-		_layout_cards()
+	if not Engine.is_editor_hint() and auto_fetch:
+		fetch()
 
 
 func _process(_delta: float) -> void:
@@ -81,9 +83,55 @@ func _apply_mode() -> void:
 		item_container.add_theme_constant_override(
 			"separation", 32 if mode == Mode.FTUE else 16
 		)
+		for i in item_container.get_child_count():
+			var card: Control = item_container.get_child(i)
+			if card.has_method("set_card_mode"):
+				card.set_card_mode(mode)
 	if is_instance_valid(card_area):
 		card_area.custom_minimum_size.y = _get_selected_size().y
 	_apply_card_sizes(false)
+
+
+const CARD_SCENE_PATH = "res://src/ui/components/discover/ftue_carousel/ftue_carousel_card.tscn"
+const _FtueDataProvider = preload("res://src/ui/components/discover/ftue_carousel/ftue_data_provider.gd")
+
+
+func fetch() -> void:
+	print("[SnapCarousel] fetching places...")
+	var places := await _FtueDataProvider.async_fetch_ftue_places()
+	print("[SnapCarousel] fetched ", places.size(), " places")
+	if not is_instance_valid(self) or places.is_empty():
+		print("[SnapCarousel] no places or invalid self, aborting")
+		return
+	set_items(places)
+
+
+func set_items(data_list: Array[Dictionary]) -> void:
+	if not is_instance_valid(item_container):
+		return
+
+	# Clear existing cards
+	for child in item_container.get_children():
+		item_container.remove_child(child)
+		child.queue_free()
+
+	# Instantiate cards with correct mode and size from the start
+	var idx := 1 if data_list.size() >= 3 else 0
+	var card_scene: PackedScene = load(CARD_SCENE_PATH)
+	for i in data_list.size():
+		var card: Control = card_scene.instantiate()
+		item_container.add_child(card)
+		card.set_card_mode(mode)
+		card.set_selected(i == idx)
+		card.set_data(data_list[i])
+
+	rebuild_dots()
+	watch_card_loading()
+	selected_index = idx
+	items_loaded.emit(data_list)
+
+	await get_tree().process_frame
+	_layout_cards()
 
 
 func get_current_index() -> int:
@@ -102,6 +150,12 @@ func _get_card_separation() -> float:
 	return float(item_container.get_theme_constant("separation"))
 
 
+func _get_visible_width() -> float:
+	if is_instance_valid(card_area):
+		return card_area.size.x
+	return size.x
+
+
 func _get_scroll_offset_for_index(index: int) -> float:
 	# Calculate the x-offset of item_container so that card[index] is centered
 	if not is_instance_valid(item_container) or item_container.get_child_count() == 0:
@@ -110,7 +164,7 @@ func _get_scroll_offset_for_index(index: int) -> float:
 		return 0.0
 	var card: Control = item_container.get_child(index)
 	var card_center_in_container: float = card.position.x + card.size.x / 2.0
-	return (size.x / 2.0) - card_center_in_container
+	return (_get_visible_width() / 2.0) - card_center_in_container
 
 
 func _layout_cards() -> void:
@@ -126,7 +180,14 @@ func _apply_card_sizes(animate: bool) -> void:
 		return
 	for i in item_container.get_child_count():
 		var card: Control = item_container.get_child(i)
-		var target_size := _get_selected_size() if i == selected_index else _get_unselected_size()
+		var is_sel: bool = i == selected_index
+		if card.has_method("set_selected"):
+			card.set_selected(is_sel)
+		var target_size: Vector2
+		if card.has_method("get_target_size"):
+			target_size = card.get_target_size()
+		else:
+			target_size = _get_selected_size() if is_sel else _get_unselected_size()
 
 		if animate and not Engine.is_editor_hint():
 			if _snap_tween and _snap_tween.is_valid():
@@ -209,6 +270,33 @@ func _animate_to_selected() -> void:
 		_snap_tween.tween_property(card, "custom_minimum_size", target_size, snap_duration)
 
 	_snap_tween.chain().tween_callback(func(): _is_animating = false)
+
+
+func watch_card_loading() -> void:
+	if not is_instance_valid(item_container):
+		return
+	for i in item_container.get_child_count():
+		var card: Control = item_container.get_child(i)
+		if card.has_signal("image_loaded") and not card.is_image_ready():
+			card.image_loaded.connect(_check_all_loaded)
+	_check_all_loaded()
+
+
+func _check_all_loaded() -> void:
+	if not is_instance_valid(item_container):
+		return
+	for i in item_container.get_child_count():
+		var card: Control = item_container.get_child(i)
+		if card.has_method("is_image_ready") and not card.is_image_ready():
+			print("[SnapCarousel] card ", i, " not ready yet")
+			return
+	print("[SnapCarousel] all cards loaded!")
+	# All loaded — disconnect to avoid duplicate emissions
+	for i in item_container.get_child_count():
+		var card: Control = item_container.get_child(i)
+		if card.has_signal("image_loaded") and card.image_loaded.is_connected(_check_all_loaded):
+			card.image_loaded.disconnect(_check_all_loaded)
+	all_cards_loaded.emit()
 
 
 # --- Dot indicators ---

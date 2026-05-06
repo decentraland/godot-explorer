@@ -4,8 +4,6 @@ signal ftue_completed
 signal jump_in(parcel_position: Vector2i, realm_str: String)
 signal jump_in_world(realm_str: String)
 
-const CARD_SCENE_PATH = "res://src/ui/components/discover/ftue_carousel/ftue_carousel_card.tscn"
-
 var _places: Array[Dictionary] = []
 
 @onready var carousel: Control = %SnapCarousel
@@ -14,42 +12,41 @@ var _places: Array[Dictionary] = []
 @onready var label_nickname: Label = %Label_NickNameFTUE
 @onready var button_jump_in: Button = %Button_JumpIn_FTUE
 @onready var button_skip: Button = %Button_Skip
+@onready var title_skeleton: Control = %TitleSkeleton
+@onready var creator_skeleton: Control = %CreatorSkeleton
+@onready var hbox_creator: HBoxContainer = %HBoxContainer_Creator
 
 
 func _ready() -> void:
 	carousel.card_changed.connect(_on_card_changed)
+	carousel.all_cards_loaded.connect(_on_all_cards_loaded)
+	carousel.items_loaded.connect(_on_items_loaded)
 	button_jump_in.pressed.connect(_on_button_jump_in_pressed)
 	button_skip.pressed.connect(_on_button_skip_pressed)
+	label_title.hide()
+	hbox_creator.hide()
+	title_skeleton.show()
+	creator_skeleton.show()
 
 
 func set_username(display_name: String) -> void:
 	label_nickname.text = display_name
 
 
-func set_places(places: Array[Dictionary]) -> void:
-	_places.clear()
+func load_places() -> void:
+	carousel.fetch()
+
+
+func _on_items_loaded(places: Array[Dictionary]) -> void:
 	_places.assign(places)
+	_on_card_changed(carousel.selected_index)
 
-	var container: HBoxContainer = carousel.item_container
-	for child in container.get_children():
-		container.remove_child(child)
-		child.queue_free()
 
-	var card_scene: PackedScene = load(CARD_SCENE_PATH)
-	for place_data in _places:
-		var card: Control = card_scene.instantiate()
-		container.add_child(card)
-		card.set_data(place_data)
-
-	carousel.rebuild_dots()
-	var idx := 1 if _places.size() >= 3 else 0
-	carousel.selected_index = idx
-	_on_card_changed(idx)
-	# Wait for layout then re-apply sizes and center
-	await get_tree().process_frame
-	carousel._apply_card_sizes(false)
-	await get_tree().process_frame
-	carousel._layout_cards()
+func _on_all_cards_loaded() -> void:
+	label_title.show()
+	hbox_creator.show()
+	title_skeleton.hide()
+	creator_skeleton.hide()
 
 
 func _on_card_changed(index: int) -> void:
@@ -68,17 +65,21 @@ func _on_button_jump_in_pressed() -> void:
 		return
 	var place: Dictionary = _places[carousel.get_current_index()]
 	var scene_name: String = place.get("title", "")
+	# Debug print — remove after testing
+	print("[FtueScreen] FTUE jump_in: ", scene_name)
 	Global.metrics.track_click_button(
 		"JUMP_IN", "DISCOVER_FTUE_CLICK", JSON.stringify({"scene": scene_name})
 	)
-	_do_jump_in(place)
 	ftue_completed.emit()
+	_do_jump_in(place)
 
 
 func _on_button_skip_pressed() -> void:
 	var scene_name := ""
 	if not _places.is_empty():
 		scene_name = _places[carousel.get_current_index()].get("title", "")
+	# Debug print — remove after testing
+	print("[FtueScreen] FTUE skip, current scene: ", scene_name)
 	Global.metrics.track_click_button(
 		"SKIP", "DISCOVER_FTUE_CLICK", JSON.stringify({"scene": scene_name})
 	)

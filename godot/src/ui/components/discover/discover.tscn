@@ -22,6 +22,7 @@
 [ext_resource type="PackedScene" uid="uid://b8k2m5nf3qr7x" path="res://src/ui/components/discover/friends/friends_generator.tscn" id="19_fgen"]
 [ext_resource type="PackedScene" uid="uid://c7n3k8p2xq4rf" path="res://src/ui/components/discover/friends/friend_jump_in.tscn" id="20_fjump"]
 [ext_resource type="PackedScene" uid="uid://bk7m3n5xp2qrf" path="res://src/ui/components/discover/friends/friend_discover_skeleton.tscn" id="21_fskel"]
+[ext_resource type="PackedScene" uid="uid://byp4n7u2145fx" path="res://src/ui/components/discover/ftue_carousel/snap_carousel.tscn" id="22_snap"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
@@ -113,7 +114,7 @@ size_flags_horizontal = 3
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer" unique_id=921349866]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/margin_top = 24
+theme_override_constants/margin_top = 32
 theme_override_constants/margin_bottom = 24
 
 [node name="ScrollContainer_Content" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1734613381]
@@ -230,17 +231,12 @@ horizontal_alignment = 1
 
 [node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=1835596805]
 layout_mode = 2
-theme_override_constants/separation = 32
+theme_override_constants/separation = 40
 
-[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1265686382 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1265686382 instance=ExtResource("22_snap")]
 unique_name_in_owner = true
 layout_mode = 2
-generator = NodePath("PlacesFeaturedGenerator")
-title = "Featured"
-
-[node name="PlacesFeaturedGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesFeatured" unique_id=673317586 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
-only_featured = true
-discover = NodePath("../../../../../../../..")
+auto_fetch = true
 
 [node name="FriendsOnline" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=411918289 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
@@ -316,6 +312,7 @@ layout_mode = 2
 
 [node name="SearchSugestionsContainer" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1120422632 instance=ExtResource("14_5g6gd")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=485396354]

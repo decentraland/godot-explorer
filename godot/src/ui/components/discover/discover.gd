@@ -11,7 +11,7 @@ var _generator_statuses: Dictionary = {}
 
 @onready var friends_online: VBoxContainer = %FriendsOnline
 @onready var last_visited: VBoxContainer = %LastVisited
-@onready var places_featured: VBoxContainer = %PlacesFeatured
+@onready var places_featured: Control = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
 @onready var places_favorites: VBoxContainer = %PlacesFavorites
@@ -54,9 +54,6 @@ func _ready():
 	)
 	last_visited.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(last_visited)
-	)
-	places_featured.generator.report_loading_status.connect(
-		_on_report_loading_status.bind(places_featured)
 	)
 	places_most_active.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_most_active)
@@ -334,7 +331,6 @@ func _get_active_carousels() -> Array:
 		return [
 			friends_online,
 			last_visited,
-			places_featured,
 			places_most_active,
 			events,
 			places_favorites
@@ -422,7 +418,6 @@ func _update_global_messages() -> void:
 func _collect_carousel_data() -> Dictionary:
 	var result := {}
 	var carousel_map := {
-		"featured": places_featured,
 		"most_active": places_most_active,
 		"events": events,
 		"last_visited": last_visited,
