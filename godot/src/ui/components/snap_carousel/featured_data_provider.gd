@@ -1,4 +1,4 @@
-class_name FtueDataProvider
+class_name FeaturedDataProvider
 
 ## Fetches featured scenes for the FTUE carousel.
 ## Tries the dedicated mobile-bff endpoint first, falls back to destinations API.
@@ -20,7 +20,7 @@ static func _async_fetch_from_bff() -> Array[Dictionary]:
 	var url := DclUrls.mobile_bff() + "/discover-featured/scenes"
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 	if response is PromiseError:
-		printerr("[FtueDataProvider] BFF endpoint failed: ", response.get_error())
+		printerr("[FeaturedDataProvider] BFF endpoint failed:", response.get_error())
 		return []
 
 	var json = response.get_string_response_as_json()
@@ -39,7 +39,7 @@ static func _async_fetch_from_destinations() -> Array[Dictionary]:
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 	if response is PromiseError:
-		printerr("[FtueDataProvider] Fallback fetch failed: ", response.get_error())
+		printerr("[FeaturedDataProvider] Fallback fetch failed:", response.get_error())
 		return []
 
 	var json: Dictionary = response.get_string_response_as_json()

@@ -1,4 +1,4 @@
-class_name FtueCarouselCard
+class_name SnapCarouselCard
 extends Control
 
 signal image_loaded

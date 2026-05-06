@@ -92,13 +92,13 @@ func _apply_mode() -> void:
 	_apply_card_sizes(false)
 
 
-const CARD_SCENE_PATH = "res://src/ui/components/discover/ftue_carousel/ftue_carousel_card.tscn"
-const _FtueDataProvider = preload("res://src/ui/components/discover/ftue_carousel/ftue_data_provider.gd")
+const CARD_SCENE_PATH = "res://src/ui/components/snap_carousel/snap_carousel_card.tscn"
+const _FeaturedDataProvider = preload("res://src/ui/components/snap_carousel/featured_data_provider.gd")
 
 
 func fetch() -> void:
 	print("[SnapCarousel] fetching places...")
-	var places := await _FtueDataProvider.async_fetch_ftue_places()
+	var places := await _FeaturedDataProvider.async_fetch_ftue_places()
 	print("[SnapCarousel] fetched ", places.size(), " places")
 	if not is_instance_valid(self) or places.is_empty():
 		print("[SnapCarousel] no places or invalid self, aborting")

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://byp4n7u2145fx"]
 
-[ext_resource type="Script" uid="uid://cml07tp7nuhck" path="res://src/ui/components/discover/ftue_carousel/snap_carousel.gd" id="1_snap"]
-[ext_resource type="PackedScene" uid="uid://532ab3qicjp6" path="res://src/ui/components/discover/ftue_carousel/ftue_carousel_card.tscn" id="3_2oyge"]
+[ext_resource type="Script" uid="uid://cml07tp7nuhck" path="res://src/ui/components/snap_carousel/snap_carousel.gd" id="1_snap"]
+[ext_resource type="PackedScene" uid="uid://532ab3qicjp6" path="res://src/ui/components/snap_carousel/snap_carousel_card.tscn" id="3_2oyge"]
 
 [node name="SnapCarousel" type="VBoxContainer" unique_id=1417653535]
 clip_contents = true
@@ -31,15 +31,15 @@ size_flags_horizontal = 0
 size_flags_vertical = 4
 theme_override_constants/separation = 16
 
-[node name="FtueCarouselCard" parent="CardArea/HBoxContainer_Items" unique_id=353149603 instance=ExtResource("3_2oyge")]
+[node name="SnapCarouselCard" parent="CardArea/HBoxContainer_Items" unique_id=353149603 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(530, 300)
 layout_mode = 2
 
-[node name="FtueCarouselCard2" parent="CardArea/HBoxContainer_Items" unique_id=1324026161 instance=ExtResource("3_2oyge")]
+[node name="SnapCarouselCard2" parent="CardArea/HBoxContainer_Items" unique_id=1324026161 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(624, 350)
 layout_mode = 2
 
-[node name="FtueCarouselCard3" parent="CardArea/HBoxContainer_Items" unique_id=1837558481 instance=ExtResource("3_2oyge")]
+[node name="SnapCarouselCard3" parent="CardArea/HBoxContainer_Items" unique_id=1837558481 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(530, 300)
 layout_mode = 2
 

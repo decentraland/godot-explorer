@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://532ab3qicjp6"]
 
-[ext_resource type="Script" uid="uid://b5cers4xltxt0" path="res://src/ui/components/discover/ftue_carousel/ftue_carousel_card.gd" id="1_card"]
+[ext_resource type="Script" uid="uid://b5cers4xltxt0" path="res://src/ui/components/snap_carousel/snap_carousel_card.gd" id="1_card"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_pjqmr"]
 [ext_resource type="Texture2D" uid="uid://bpaccmjtefhdy" path="res://src/ui/components/discover/icons/jump-in.svg" id="6_jx4n8"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="6_vlvar"]
@@ -11,7 +11,7 @@ font = ExtResource("6_vlvar")
 font_size = 22
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[node name="FtueCarouselCard" type="Control" unique_id=353149603]
+[node name="SnapCarouselCard" type="Control" unique_id=353149603]
 custom_minimum_size = Vector2(600, 480)
 layout_mode = 3
 anchors_preset = 0
