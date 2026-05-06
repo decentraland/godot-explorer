@@ -328,13 +328,7 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, contain
 
 func _get_active_carousels() -> Array:
 	if search_text.is_empty():
-		return [
-			friends_online,
-			last_visited,
-			places_most_active,
-			events,
-			places_favorites
-		]
+		return [friends_online, last_visited, places_most_active, events, places_favorites]
 	return [places_most_active, events]
 
 

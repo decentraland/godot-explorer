@@ -119,7 +119,9 @@ func set_card_mode(mode: int) -> void:
 	_card_mode = mode
 	_apply_size()
 	if is_instance_valid(async_image):
-		async_image.border_radius = FTUE_BORDER_RADIUS if mode == CardMode.FTUE else BANNER_BORDER_RADIUS
+		async_image.border_radius = (
+			FTUE_BORDER_RADIUS if mode == CardMode.FTUE else BANNER_BORDER_RADIUS
+		)
 	_update_jump_in_visibility()
 
 

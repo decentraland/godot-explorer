@@ -41,7 +41,6 @@ var _dot_indicators: Array[Control] = []
 @onready var item_container: HBoxContainer = %HBoxContainer_Items
 @onready var dots_container: HBoxContainer = %DotsContainer
 
-
 @export var auto_fetch: bool = false
 
 
@@ -80,9 +79,7 @@ func _apply_mode() -> void:
 	if is_instance_valid(dots_container):
 		dots_container.visible = mode == Mode.BANNER
 	if is_instance_valid(item_container):
-		item_container.add_theme_constant_override(
-			"separation", 32 if mode == Mode.FTUE else 16
-		)
+		item_container.add_theme_constant_override("separation", 32 if mode == Mode.FTUE else 16)
 		for i in item_container.get_child_count():
 			var card: Control = item_container.get_child(i)
 			if card.has_method("set_card_mode"):
@@ -93,7 +90,9 @@ func _apply_mode() -> void:
 
 
 const CARD_SCENE_PATH = "res://src/ui/components/snap_carousel/snap_carousel_card.tscn"
-const _FeaturedDataProvider = preload("res://src/ui/components/snap_carousel/featured_data_provider.gd")
+const _FeaturedDataProvider = preload(
+	"res://src/ui/components/snap_carousel/featured_data_provider.gd"
+)
 
 
 func fetch() -> void:
@@ -191,9 +190,7 @@ func _apply_card_sizes(animate: bool) -> void:
 
 		if animate and not Engine.is_editor_hint():
 			if _snap_tween and _snap_tween.is_valid():
-				_snap_tween.tween_property(
-					card, "custom_minimum_size", target_size, snap_duration
-				)
+				_snap_tween.tween_property(card, "custom_minimum_size", target_size, snap_duration)
 		else:
 			card.custom_minimum_size = target_size
 
