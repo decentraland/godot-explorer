@@ -54,6 +54,21 @@ adb shell "rm -f /data/local/tmp/perf.data; \
 
 adb pull /data/local/tmp/perf.data "$OUT_DIR/perf.data" 2>&1 | tail -1
 
+# Populate binary_cache so libdclgodot.so (and libgodot_android.so when the
+# debug template was used via build_for_profile.sh) can be symbolicated.
+RUST_LIB_DIR="lib/target/aarch64-linux-android/dev-release"
+LIB_DIRS=()
+[[ -d "$RUST_LIB_DIR" ]] && LIB_DIRS+=("$RUST_LIB_DIR")
+if (( ${#LIB_DIRS[@]} > 0 )); then
+  echo "[profile] populating binary_cache from ${LIB_DIRS[*]}"
+  python3 "$SP_DIR/binary_cache_builder.py" -i "$OUT_DIR/perf.data" \
+    -lib "${LIB_DIRS[@]}" 2>&1 | tail -3 || true
+  # Symlink the cache where report_html.py auto-discovers it.
+  if [[ -d "$OUT_DIR/binary_cache" && ! -L "binary_cache" ]]; then
+    ln -sf "$OUT_DIR/binary_cache" "binary_cache" 2>/dev/null || true
+  fi
+fi
+
 echo "[profile] generating report.txt"
 python3 "$SP_DIR/report.py" -i "$OUT_DIR/perf.data" -g --no_browser \
     > "$OUT_DIR/report.txt" 2>&1 || true
