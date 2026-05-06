@@ -336,6 +336,8 @@ func _ready():
 		_skip_lobby = true
 	if Global.cli.skip_lobby_to_menu:
 		_skip_lobby_to_menu = true
+	if Global.is_gp_benchmark():
+		_skip_lobby = true
 
 	# Preview deeplink: create guest and skip lobby for hot reload development
 	if not Global.deep_link_obj.preview.is_empty():
@@ -343,7 +345,11 @@ func _ready():
 
 	var session_account: Dictionary = Global.get_config().session_account
 
-	if Global.cli.guest_profile or not Global.deep_link_obj.preview.is_empty():
+	if (
+		Global.cli.guest_profile
+		or Global.is_gp_benchmark()
+		or not Global.deep_link_obj.preview.is_empty()
+	):
 		# Mark session as ephemeral so guest data is never persisted to disk,
 		# preserving any previously saved wallet session.
 		Global.get_config().session_is_ephemeral = true
@@ -352,7 +358,12 @@ func _ready():
 		# copy loop in save_to_settings_file() to lose the saved wallet session.
 		session_account = {}
 		Global.player_identity.create_guest_account()
-		Global.player_identity.set_random_profile()
+		if Global.is_gp_benchmark():
+			var fixed_profile := DclUserProfile.randomized_with_seed(1862)
+			fixed_profile.set_ethereum_address(Global.player_identity.get_address_str())
+			Global.player_identity.set_profile(fixed_profile)
+		else:
+			Global.player_identity.set_random_profile()
 		var random_profile = Global.player_identity.get_profile_or_null()
 		if random_profile != null:
 			Global.get_config().guest_profile = random_profile.to_godot_dictionary()

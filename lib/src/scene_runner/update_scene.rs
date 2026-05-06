@@ -49,7 +49,7 @@ use crate::{
                 PbCameraMode, PbEngineInfo, PbMainCamera, PbPointerLock, PbUiCanvasInformation,
             },
             transform_and_parent::DclTransformAndParent,
-            SceneEntityId,
+            SceneComponentId, SceneEntityId,
         },
         crdt::{
             grow_only_set::GenericGrowOnlySetComponentOperation,
@@ -79,6 +79,8 @@ pub fn _process_scene(
     ui_canvas_information: &PbUiCanvasInformation,
     pool_manager: &RefCell<PoolManager>,
     force_complete: bool,
+    bench_disable_tweens: bool,
+    bench_disable_transforms: bool,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
 
@@ -250,11 +252,29 @@ pub fn _process_scene(
                     false
                 }
                 SceneUpdateState::Tween => {
-                    update_tween(scene, crdt_state);
+                    if !bench_disable_tweens {
+                        update_tween(scene, crdt_state);
+                    }
                     false
                 }
                 SceneUpdateState::TransformAndParent => {
-                    !update_transform_and_parent(scene, crdt_state, ref_time, effective_end_time_us)
+                    if bench_disable_transforms {
+                        // Drop the dirty set for this component without applying it,
+                        // so the next state advances normally and we don't re-enter
+                        // this branch every tick.
+                        scene
+                            .current_dirty
+                            .lww_components
+                            .remove(&SceneComponentId::TRANSFORM);
+                        false
+                    } else {
+                        !update_transform_and_parent(
+                            scene,
+                            crdt_state,
+                            ref_time,
+                            effective_end_time_us,
+                        )
+                    }
                 }
                 SceneUpdateState::VisibilityComponent => {
                     update_visibility(scene, crdt_state);

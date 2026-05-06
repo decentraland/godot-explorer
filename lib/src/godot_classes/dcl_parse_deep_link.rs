@@ -71,6 +71,11 @@ pub struct DclParseDeepLink {
     /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
     #[var]
     low_spec_warning: bool,
+
+    /// Genesis Plaza profiling benchmark trigger (gp-benchmark=true).
+    /// Mobile alternative to the desktop `--gp-benchmark` CLI flag.
+    #[var]
+    gp_benchmark: bool,
 }
 
 #[godot_api]
@@ -101,6 +106,7 @@ impl DclParseDeepLink {
             scene_inspector: GString::new(),
             scene_inspector_file: false,
             low_spec_warning: false,
+            gp_benchmark: false,
         }
     }
 
@@ -132,6 +138,7 @@ impl DclParseDeepLink {
             scene_inspector: GString::from(&r.scene_inspector),
             scene_inspector_file: r.scene_inspector_file,
             low_spec_warning: r.low_spec_warning,
+            gp_benchmark: r.gp_benchmark,
         }
     }
 }

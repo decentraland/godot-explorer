@@ -35,3 +35,10 @@ __pycache__
 .DS_Store
 benchmark-results/
 tasks/
+
+# GP benchmark experiment outputs (issue #1862) — local-only, never commit
+bench-results/
+bench-results-latest.log
+# Per-developer benchmark config (host IPs, signing team, device UDIDs).
+# .env.example is tracked; .env is yours.
+scripts/bench/.env

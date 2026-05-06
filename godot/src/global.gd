@@ -126,6 +126,12 @@ func is_emulating_safe_area() -> bool:
 	return cli.emulate_ios or cli.emulate_android
 
 
+## True when GP benchmark was triggered, either via desktop CLI (`--gp-benchmark`)
+## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
+func is_gp_benchmark() -> bool:
+	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
+
+
 func _get_safe_area_presets() -> GDScript:
 	if _safe_area_presets == null:
 		_safe_area_presets = load("res://assets/no-export/safe_area_presets.gd")
@@ -289,6 +295,15 @@ func _ready():
 		fi_runner.set_name("FIBenchmarkRunner")
 		get_tree().root.add_child.call_deferred(fi_runner)
 		return
+
+	# Genesis Plaza profiling benchmark (issue #1862). Lives alongside the full
+	# explorer flow: it primes realm/parcel, then samples once the scene loads.
+	# Skip if the deeplink path already spawned the runner (mobile cold-start race).
+	if is_gp_benchmark() and get_node_or_null("GPBenchmarkRunner") == null:
+		print("Running Genesis Plaza Benchmark...")
+		var gp_runner = load("res://src/tools/gp_benchmark_runner.gd").new()
+		gp_runner.set_name("GPBenchmarkRunner")
+		add_child(gp_runner)
 
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")

@@ -106,6 +106,8 @@ pub struct DclCli {
     pub fi_benchmark_size: i32,
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
+    #[var(get)]
+    pub gp_benchmark: bool,
 
     // Arguments with values
     #[var(get)]
@@ -419,6 +421,15 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            // Genesis Plaza Benchmark (issue #1862). Trigger only — all knobs
+            // (toggles, durations, output path, tag) live in
+            // godot/bench/genesis_plaza.config.json so the CLI doesn't bloat.
+            ArgDefinition {
+                name: "--gp-benchmark".to_string(),
+                description: "Run Genesis Plaza profiling benchmark (config in godot/bench/genesis_plaza.config.json)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
             // Authentication
             ArgDefinition {
                 name: "--saved-profile".to_string(),
@@ -612,6 +623,7 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
+        let gp_benchmark = args_map.contains_key("--gp-benchmark");
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -722,6 +734,7 @@ impl INode for DclCli {
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
+            gp_benchmark,
             asset_server_port,
             realm,
             location,

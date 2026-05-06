@@ -552,9 +552,7 @@ func get_scene_by_req_id(request_id: int):
 
 
 func is_using_floating_islands() -> bool:
-	return not (
-		Global.cli.scene_test_mode or Global.cli.scene_renderer_mode or Global.cli.preview_mode
-	)
+	return not (Global.cli.scene_test_mode or Global.cli.scene_renderer_mode)
 
 
 func _unload_scenes_except_current(current_scene_id: int) -> void:

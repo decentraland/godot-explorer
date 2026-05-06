@@ -124,6 +124,13 @@ pub struct SceneManager {
     // Loading session tracking
     current_loading_session: Option<LoadingSession>,
     next_session_id: u64,
+
+    // Benchmark toggles (issue #1862). Set by gp_benchmark_runner.gd from
+    // godot/bench/genesis_plaza.config.json before scenes start ticking.
+    #[var(get, set)]
+    bench_disable_tweens: bool,
+    #[var(get, set)]
+    bench_disable_transforms: bool,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -978,6 +985,8 @@ impl SceneManager {
                     &self.ui_canvas_information,
                     &self.pool_manager,
                     force_complete,
+                    self.bench_disable_tweens,
+                    self.bench_disable_transforms,
                 ) {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -1769,6 +1778,8 @@ impl INode for SceneManager {
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
+            bench_disable_tweens: false,
+            bench_disable_transforms: false,
         }
     }
 
