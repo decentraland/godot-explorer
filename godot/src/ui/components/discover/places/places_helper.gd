@@ -31,14 +31,14 @@ static func get_sign_api_url() -> String:
 	return DclUrls.places_api() + "/destinations/"
 
 
-static func get_status_url(place_id: String, is_world: bool) -> String:
-	if is_world:
+static func get_status_url(place_id: String, _is_world: bool) -> String:
+	if _is_world:
 		return DclUrls.places_api() + "/worlds?names=" + place_id.uri_encode()
 	return DclUrls.places_api() + "/places/" + place_id
 
 
-static func async_patch_like(place_id: String, like: LIKE, is_world: bool = false) -> Variant:
-	var endpoint := "/worlds/" if is_world else "/places/"
+static func async_patch_like(place_id: String, like: LIKE, _is_world: bool = false) -> Variant:
+	var endpoint := "/worlds/" if _is_world else "/places/"
 	var url := DclUrls.places_api() + endpoint + place_id + "/likes"
 	var body: String
 	match like:
@@ -53,9 +53,9 @@ static func async_patch_like(place_id: String, like: LIKE, is_world: bool = fals
 
 
 static func async_patch_favorite(
-	place_id: String, toggled_on: bool, is_world: bool = false
+	place_id: String, toggled_on: bool, _is_world: bool = false
 ) -> Variant:
-	var endpoint := "/worlds/" if is_world else "/places/"
+	var endpoint := "/worlds/" if _is_world else "/places/"
 	var url := DclUrls.places_api() + endpoint + place_id + "/favorites"
 
 	var body: String
@@ -69,6 +69,55 @@ static func async_patch_favorite(
 	Global.favorite_destination_set.emit()
 
 	return respnse
+
+
+## Returns true when the place dictionary describes a world (not genesis city).
+static func is_world(item_data: Dictionary) -> bool:
+	if item_data.is_empty():
+		return false
+	if item_data.get("world", false):
+		return true
+	var server = item_data.get("server", null)
+	if server == null:
+		return false
+	var s := str(server).strip_edges()
+	return s != "" and s != "main"
+
+
+## Extracts a Vector2i position from a place/event dictionary, trying several key formats.
+static func parse_position(item_data: Dictionary) -> Vector2i:
+	var coords = item_data.get("coordinates", null)
+	var pos_arr = item_data.get("position", null)
+	var base_pos = item_data.get("base_position", null)
+	if coords is Array and coords.size() >= 2:
+		return Vector2i(int(coords[0]), int(coords[1]))
+	if pos_arr is Array and pos_arr.size() >= 2:
+		return Vector2i(int(pos_arr[0]), int(pos_arr[1]))
+	if item_data.get("x") != null and item_data.get("y") != null:
+		return Vector2i(int(item_data.x), int(item_data.y))
+	if base_pos:
+		var parts = str(base_pos).split(",")
+		if parts.size() >= 2:
+			return Vector2i(int(parts[0]), int(parts[1]))
+	return Vector2i.ZERO
+
+
+## Returns [Vector2i position, String realm] from a place dictionary.
+static func get_position_and_realm(item_data: Dictionary) -> Array:
+	var server = item_data.get("server", null)
+	var world_name = item_data.get("world_name", null)
+	var r: String
+	if server and str(server) != "main":
+		r = str(server)
+		if not r.ends_with(".dcl.eth"):
+			r = r + ".dcl.eth"
+	elif item_data.get("world", false) and world_name:
+		r = str(world_name)
+		if not r.ends_with(".dcl.eth"):
+			r = r + ".dcl.eth"
+	else:
+		r = DclUrls.main_realm()
+	return [parse_position(item_data), r]
 
 
 static func async_get_by_position(pos: Vector2i) -> Variant:

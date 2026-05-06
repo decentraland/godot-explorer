@@ -425,21 +425,13 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 
 	if loading_first_profile:
 		loading_first_profile = false
-		print(
-			"[Lobby] loading_first_profile, has_name=",
-			profile_has_name(),
-			" ftue_completed=",
-			Global.get_config().discover_ftue_completed
-		)
 		if profile_has_name():
 			Global.metrics.update_identity(
 				Global.player_identity.get_address_str(), Global.player_identity.is_guest
 			)
 			if not Global.get_config().discover_ftue_completed:
-				print("[Lobby] showing FTUE")
 				show_control_ftue()
 			else:
-				print("[Lobby] FTUE already completed, closing sign in")
 				await async_close_sign_in()
 			return
 # gdlint: ignore=no-else-return

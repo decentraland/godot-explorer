@@ -389,7 +389,7 @@ func set_server_or_location(unlimited: bool = false) -> void:
 	else:
 		realm = DclUrls.main_realm()
 
-	location = _parse_position_from_item(_data)
+	location = PlacesHelper.parse_position(_data)
 	var is_world_place = (server and str(server) != "main") or is_world
 	if not is_world_place:
 		set_location(location)
@@ -627,56 +627,9 @@ func _on_button_jump_in_pressed():
 	_do_jump_in()
 
 
-static func _parse_position_from_item(item_data: Dictionary) -> Vector2i:
-	var coords = item_data.get("coordinates", null)
-	var pos_arr = item_data.get("position", null)
-	var base_pos = item_data.get("base_position", null)
-	if coords is Array and coords.size() >= 2:
-		return Vector2i(int(coords[0]), int(coords[1]))
-	if pos_arr is Array and pos_arr.size() >= 2:
-		return Vector2i(int(pos_arr[0]), int(pos_arr[1]))
-	if item_data.get("x") != null and item_data.get("y") != null:
-		return Vector2i(int(item_data.x), int(item_data.y))
-	if base_pos:
-		var parts = str(base_pos).split(",")
-		if parts.size() >= 2:
-			return Vector2i(int(parts[0]), int(parts[1]))
-	return Vector2i.ZERO
-
-
-func _get_jump_in_position_and_realm_from_data(item_data: Dictionary) -> Array:
-	var server = item_data.get("server", null)
-	var world_name = item_data.get("world_name", null)
-	var r: String
-	if server and str(server) != "main":
-		r = str(server)
-		if not r.ends_with(".dcl.eth"):
-			r = r + ".dcl.eth"
-	elif item_data.get("world", false) and world_name:
-		r = str(world_name)
-		if not r.ends_with(".dcl.eth"):
-			r = r + ".dcl.eth"
-	else:
-		r = DclUrls.main_realm()
-	var pos := _parse_position_from_item(item_data)
-	return [pos, r]
-
-
-static func _is_world(item_data: Dictionary) -> bool:
-	if not item_data is Dictionary or item_data.is_empty():
-		return false
-	if item_data.get("world", false):
-		return true
-	var server = item_data.get("server", null)
-	if server == null:
-		return false
-	var s = str(server).strip_edges()
-	return s != "" and s != "main"
-
-
 func _do_jump_in() -> void:
-	if _data is Dictionary and not _data.is_empty() and _is_world(_data):
-		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+	if _data is Dictionary and not _data.is_empty() and PlacesHelper.is_world(_data):
+		var pos_realm = PlacesHelper.get_position_and_realm(_data)
 		var world_realm: String = pos_realm[1]
 		jump_in_world.emit(world_realm)
 		return
@@ -684,7 +637,7 @@ func _do_jump_in() -> void:
 	var jump_pos := location
 	var jump_realm := realm
 	if _data is Dictionary and not _data.is_empty():
-		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+		var pos_realm = PlacesHelper.get_position_and_realm(_data)
 		jump_pos = pos_realm[0]
 		jump_realm = pos_realm[1]
 	jump_in.emit(jump_pos, jump_realm)
@@ -905,7 +858,7 @@ func _share_place_or_event() -> void:
 
 	if _data is Dictionary and not _data.is_empty():
 		is_event = _is_place_item_event(_data)
-		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+		var pos_realm = PlacesHelper.get_position_and_realm(_data)
 		var share_pos: Vector2i = pos_realm[0]
 		var share_realm: String = pos_realm[1]
 		var is_main = share_realm == DclUrls.main_realm()

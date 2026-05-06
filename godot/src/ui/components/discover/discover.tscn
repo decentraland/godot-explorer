@@ -312,7 +312,6 @@ layout_mode = 2
 
 [node name="SearchSugestionsContainer" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1120422632 instance=ExtResource("14_5g6gd")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=485396354]

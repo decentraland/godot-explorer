@@ -93,11 +93,8 @@ func _apply_mode() -> void:
 
 # gdlint: ignore=async-function-name
 func fetch() -> void:
-	print("[SnapCarousel] fetching places...")
 	var places := await FeaturedDataProvider.async_fetch_ftue_places()
-	print("[SnapCarousel] fetched ", places.size(), " places")
 	if not is_instance_valid(self) or places.is_empty():
-		print("[SnapCarousel] no places or invalid self, aborting")
 		return
 	set_items(places)
 
@@ -283,9 +280,7 @@ func _check_all_loaded() -> void:
 	for i in item_container.get_child_count():
 		var card: Control = item_container.get_child(i)
 		if card.has_method("is_image_ready") and not card.is_image_ready():
-			print("[SnapCarousel] card ", i, " not ready yet")
 			return
-	print("[SnapCarousel] all cards loaded!")
 	# All loaded — disconnect to avoid duplicate emissions
 	for i in item_container.get_child_count():
 		var card: Control = item_container.get_child(i)
