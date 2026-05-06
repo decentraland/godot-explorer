@@ -13,6 +13,7 @@ const BANNER_UNSELECTED_SIZE := Vector2(530, 300)
 
 const FTUE_BORDER_RADIUS := 12
 const BANNER_BORDER_RADIUS := 8
+const TAP_THRESHOLD := 20.0
 
 var _data: Dictionary = {}
 var _card_mode: int = CardMode.FTUE
@@ -20,7 +21,6 @@ var _is_selected: bool = false
 
 var _touch_start: Vector2 = Vector2.ZERO
 var _touch_active: bool = false
-const TAP_THRESHOLD := 20.0
 
 @onready var async_image: AsyncImage = %AsyncImage
 @onready var button_jump_in: Button = %Button_JumpIn_Banner

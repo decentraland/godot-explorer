@@ -8,6 +8,15 @@ signal items_loaded(places: Array[Dictionary])
 
 enum Mode { FTUE, BANNER }
 
+const FTUE_SELECTED_SIZE := Vector2(600, 480)
+const FTUE_UNSELECTED_SIZE := Vector2(550, 440)
+const BANNER_SELECTED_SIZE := Vector2(624, 350)
+const BANNER_UNSELECTED_SIZE := Vector2(530, 300)
+const CARD_SCENE_PATH = "res://src/ui/components/snap_carousel/snap_carousel_card.tscn"
+const FeaturedDataProvider = preload(
+	"res://src/ui/components/snap_carousel/featured_data_provider.gd"
+)
+
 @export var mode: Mode = Mode.FTUE:
 	set(v):
 		mode = v
@@ -28,6 +37,7 @@ enum Mode { FTUE, BANNER }
 @export var swipe_threshold: float = 60.0
 ## Snap animation duration in seconds
 @export var snap_duration: float = 0.25
+@export var auto_fetch: bool = false
 
 var _is_touching: bool = false
 var _touch_start_x: float = 0.0
@@ -40,8 +50,6 @@ var _dot_indicators: Array[Control] = []
 @onready var card_area: Control = $CardArea
 @onready var item_container: HBoxContainer = %HBoxContainer_Items
 @onready var dots_container: HBoxContainer = %DotsContainer
-
-@export var auto_fetch: bool = false
 
 
 func _ready() -> void:
@@ -59,12 +67,6 @@ func _process(_delta: float) -> void:
 	if _is_animating and not _is_dragging:
 		var offset_x: float = _get_scroll_offset_for_index(selected_index)
 		item_container.position.x = offset_x
-
-
-const FTUE_SELECTED_SIZE := Vector2(600, 480)
-const FTUE_UNSELECTED_SIZE := Vector2(550, 440)
-const BANNER_SELECTED_SIZE := Vector2(624, 350)
-const BANNER_UNSELECTED_SIZE := Vector2(530, 300)
 
 
 func _get_selected_size() -> Vector2:
@@ -89,15 +91,10 @@ func _apply_mode() -> void:
 	_apply_card_sizes(false)
 
 
-const CARD_SCENE_PATH = "res://src/ui/components/snap_carousel/snap_carousel_card.tscn"
-const _FeaturedDataProvider = preload(
-	"res://src/ui/components/snap_carousel/featured_data_provider.gd"
-)
-
-
+# gdlint: ignore=async-function-name
 func fetch() -> void:
 	print("[SnapCarousel] fetching places...")
-	var places := await _FeaturedDataProvider.async_fetch_ftue_places()
+	var places := await FeaturedDataProvider.async_fetch_ftue_places()
 	print("[SnapCarousel] fetched ", places.size(), " places")
 	if not is_instance_valid(self) or places.is_empty():
 		print("[SnapCarousel] no places or invalid self, aborting")
@@ -105,6 +102,7 @@ func fetch() -> void:
 	set_items(places)
 
 
+# gdlint: ignore=async-function-name
 func set_items(data_list: Array[Dictionary]) -> void:
 	if not is_instance_valid(item_container):
 		return

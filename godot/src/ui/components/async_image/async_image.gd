@@ -6,19 +6,18 @@ extends Control
 
 signal image_loaded
 
-var _image_ready: bool = false
-var _is_loading: bool = true
-
 @export var border_radius: int = 12
 @export var border_color: Color = Color("E8B9FF")
 @export var background_color: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5)
+
+var _image_ready: bool = false
+var _is_loading: bool = true
+var _skeleton_material: Material = null
 
 @onready var panel: PanelContainer = %Panel
 @onready var panel_border: PanelContainer = %Panel_Border
 @onready var texture_image: TextureRect = %TextureRect_Image
 @onready var texture_no_image: TextureRect = %TextureRect_NoImage
-
-var _skeleton_material: Material = null
 
 
 func _ready() -> void:
