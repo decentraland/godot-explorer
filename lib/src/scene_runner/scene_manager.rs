@@ -1374,15 +1374,25 @@ impl SceneManager {
 
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
+        // BorderRect carries indents (in canvas pixels) from each canvas edge to the
+        // safe/interactable rectangle. Clamp to [0, canvas] so a stale or oversized
+        // interactable_area never produces negative or out-of-canvas indents.
+        let ia_pos = self.interactable_area.position;
+        let ia_end = self.interactable_area.end();
+        let top = (ia_pos.y as f32).clamp(0.0, canvas_size.y);
+        let left = (ia_pos.x as f32).clamp(0.0, canvas_size.x);
+        let right = (canvas_size.x - ia_end.x as f32).clamp(0.0, canvas_size.x);
+        let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
+
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
             interactable_area: Some(BorderRect {
-                top: self.interactable_area.position.x as f32,
-                left: self.interactable_area.position.y as f32,
-                right: self.interactable_area.end().x as f32,
-                bottom: self.interactable_area.end().y as f32,
+                top,
+                left,
+                right,
+                bottom,
             }),
         }
     }
