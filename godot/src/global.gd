@@ -294,14 +294,19 @@ func _ready():
 		DirAccess.make_dir_absolute("user://content/")
 
 	session_id = DclConfig.generate_uuid_v4()
-	# Initialize metrics with proper user_id and session_id (skip in asset server mode)
-	if not cli.asset_server:
+	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
+	# telemetry is disabled at build time (CI desktop builds use the
+	# `disable_telemetry` cargo feature).
+	var telemetry_enabled := not cli.asset_server and not DclGlobal.is_telemetry_disabled()
+
+	# Initialize metrics with proper user_id and session_id
+	if telemetry_enabled:
 		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
 		self.metrics.set_debug_level(0)  # 0 off - 1 on
 		self.metrics.set_name("metrics")
 
-	# Skip Sentry setup in asset server mode
-	if not cli.asset_server:
+	# Sentry user / session tagging
+	if telemetry_enabled:
 		var sentry_user = SentryUser.new()
 		sentry_user.id = self.config.analytics_user_id
 		SentrySDK.set_tag("dcl_session_id", session_id)

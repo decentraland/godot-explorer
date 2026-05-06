@@ -473,6 +473,11 @@ impl DclGlobal {
     }
 
     #[func]
+    fn is_telemetry_disabled(&self) -> bool {
+        cfg!(feature = "disable_telemetry")
+    }
+
+    #[func]
     fn is_android(&self) -> bool {
         self.is_android
     }
