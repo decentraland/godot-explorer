@@ -1436,6 +1436,7 @@ impl ContentProvider {
 
     /// Fetches a texture by URL, bypassing the optimization pipeline.
     /// Uses Source quality to preserve original texture resolution.
+    #[func]
     pub fn fetch_texture_by_url_original(
         &mut self,
         file_hash: GString,

@@ -96,7 +96,7 @@ func _apply_size() -> void:
 
 func _update_jump_in_visibility() -> void:
 	if is_instance_valid(button_jump_in):
-		button_jump_in.visible = _card_mode == CardMode.BANNER and _is_selected
+		button_jump_in.visible = _card_mode == CardMode.BANNER
 
 
 func set_data(place_data: Dictionary) -> void:

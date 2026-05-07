@@ -6,6 +6,11 @@ extends Control
 
 signal image_loaded
 
+## ORIGINAL fetches at full resolution (bypasses global texture quality).
+## DEFAULT uses the global texture quality setting (typically Medium = 512px max).
+enum Quality { ORIGINAL, DEFAULT }
+
+@export var quality: Quality = Quality.ORIGINAL
 @export var border_radius: int = 12
 @export var border_color: Color = Color("E8B9FF")
 @export var background_color: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5)
@@ -117,7 +122,11 @@ static func _get_hash_from_url(url: String) -> String:
 
 func _async_download(url: String) -> void:
 	var url_hash := _get_hash_from_url(url)
-	var content_mapping = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	var content_mapping
+	if quality == Quality.ORIGINAL:
+		content_mapping = Global.content_provider.fetch_texture_by_url_original(url_hash, url)
+	else:
+		content_mapping = Global.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(content_mapping)
 	if result is PromiseError:
 		printerr("AsyncImage: download error: ", result.get_error())
