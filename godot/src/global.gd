@@ -261,6 +261,11 @@ func _ready():
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
+	# Ensure the content cache folder exists before clearing — clear runs against
+	# this directory and would log an error if it doesn't exist yet (fresh install).
+	if not DirAccess.dir_exists_absolute("user://content/"):
+		DirAccess.make_dir_absolute("user://content/")
+
 	# Clear cache if needed (startup flag or version changed) - await completion
 	print(
 		"[Startup] global._async_clear_cache start: %dms" % (Time.get_ticks_msec() - _startup_time)
@@ -291,9 +296,6 @@ func _ready():
 		fi_runner.set_name("FIBenchmarkRunner")
 		get_tree().root.add_child.call_deferred(fi_runner)
 		return
-
-	if not DirAccess.dir_exists_absolute("user://content/"):
-		DirAccess.make_dir_absolute("user://content/")
 
 	session_id = DclConfig.generate_uuid_v4()
 	# Initialize metrics with proper user_id and session_id (skip in asset server mode)
