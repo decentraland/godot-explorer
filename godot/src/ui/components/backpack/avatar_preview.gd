@@ -1,8 +1,8 @@
 class_name AvatarPreview
 extends SubViewportContainer
 
-const MIN_CAMERA_SIZE_OVERALL = 1.0
-const MIN_CAMERA_SIZE_PART = 0.2
+const MIN_CAMERA_SIZE_OVERALL = 2.0
+const MIN_CAMERA_SIZE_PART = 0.8
 const MAX_CAMERA_SIZE = 5.0
 const CAMERA_PAN_SMOOTH = 4.0
 const CAMERA_ZOOM_SMOOTH = 8.0
@@ -115,7 +115,11 @@ func _process(delta: float) -> void:
 
 func focus_camera_on(type):
 	match type:
-		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
+		Wearables.Categories.FACIAL_HAIR:
+			_camera_focus = "head_base_facial"
+		Wearables.Categories.EYES, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH:
+			_camera_focus = "head_base"
+		Wearables.Categories.HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD:
 			_camera_focus = "head"
 		Wearables.Categories.UPPER_BODY:
 			_camera_focus = "torso"
@@ -134,26 +138,23 @@ func focus_camera_on(type):
 
 
 func _min_camera_size() -> float:
-	var floor_size := (
-		MIN_CAMERA_SIZE_OVERALL if _camera_focus == "overall" else MIN_CAMERA_SIZE_PART
-	)
-	return (_fitted_camera_size + floor_size) / 2.0
+	return MIN_CAMERA_SIZE_OVERALL if _camera_focus == "overall" else MIN_CAMERA_SIZE_PART
 
 
 func _focus_padding() -> float:
 	match _camera_focus:
 		"hands":
 			return 0.3
-		"feet", "torso":
+		"torso":
 			return 0.2
-		"head":
+		"head", "head_base", "head_base_facial":
 			return 0.1
 		_:
 			return 0.0
 
 
 func _focus_aabb_center_y(aabb: AABB) -> float:
-	if _camera_focus == "head":
+	if _camera_focus in ["head", "head_base", "head_base_facial"]:
 		return aabb.position.y + aabb.size.y * 0.3
 	return aabb.get_center().y
 
@@ -162,7 +163,7 @@ func _focus_extra_margin() -> int:
 	match _camera_focus:
 		"hands":
 			return 80
-		"feet", "head", "torso":
+		"feet", "head", "head_base", "head_base_facial", "torso":
 			return 40
 		_:
 			return 0
@@ -292,8 +293,12 @@ func disable_outline():
 func _on_avatar_loaded():
 	_cached_aabbs = _compute_avatar_aabbs()
 	_update_aabb_debug_box(_cached_aabbs)
-	if not _user_has_panned and _camera_focus in _cached_aabbs:
-		_fit_camera_to_aabb(_cached_aabbs[_camera_focus], _focus_extra_margin())
+	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
+	if aabb_key in _cached_aabbs:
+		if _user_has_panned:
+			_update_fit_limits(_cached_aabbs[aabb_key], _focus_extra_margin())
+		else:
+			_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
 
 
 func _get_mesh_category(mesh_name: String) -> String:
@@ -416,7 +421,14 @@ func _compute_avatar_aabbs() -> Dictionary:
 	var avatar_xform_inv: Transform3D = (avatar.global_transform as Transform3D).affine_inverse()
 	var results: Dictionary = {}
 	var firsts: Dictionary = {
-		"overall": true, "head": true, "torso": true, "legs": true, "feet": true, "hands": true
+		"overall": true,
+		"head": true,
+		"torso": true,
+		"legs": true,
+		"feet": true,
+		"hands": true,
+		"head_base": true,
+		"head_base_facial": true,
 	}
 	for child in skeleton.get_children():
 		var mi := child as MeshInstance3D
@@ -463,6 +475,26 @@ func _compute_avatar_aabbs() -> Dictionary:
 				firsts["legs"] = false
 			else:
 				results["legs"] = (results["legs"] as AABB).merge(mesh_aabb)
+		if "_head_basemesh" in mi.name:
+			if firsts["head_base"]:
+				results["head_base"] = mesh_aabb
+				firsts["head_base"] = false
+			else:
+				results["head_base"] = (results["head_base"] as AABB).merge(mesh_aabb)
+			if firsts["head_base_facial"]:
+				results["head_base_facial"] = mesh_aabb
+				firsts["head_base_facial"] = false
+			else:
+				results["head_base_facial"] = (results["head_base_facial"] as AABB).merge(mesh_aabb)
+		if "__facial_hair" in mi.name and mi.visible:
+			if firsts["head_base_facial"]:
+				results["head_base_facial"] = mesh_aabb
+				firsts["head_base_facial"] = false
+			else:
+				results["head_base_facial"] = (results["head_base_facial"] as AABB).merge(mesh_aabb)
+	if "feet" in results:
+		var feet: AABB = results["feet"]
+		results["feet"] = AABB(feet.position + Vector3(0.0, -0.2, 0.0), feet.size)
 	return results
 
 
@@ -482,13 +514,9 @@ func _effective_margin_bottom() -> float:
 	return base
 
 
-func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
-	if not is_inside_tree():
+func _update_fit_limits(aabb: AABB, extra_margin: int = 0) -> void:
+	if not is_inside_tree() or size.x <= 0.0 or size.y <= 0.0:
 		return
-	if size.x <= 0.0 or size.y <= 0.0:
-		_pending_camera_fit = true
-		return
-	_pending_camera_fit = false
 	var padding: float = _focus_padding()
 	if padding > 0.0:
 		aabb = aabb.grow(maxf(aabb.size.x, aabb.size.y) * padding * 0.5)
@@ -501,13 +529,32 @@ func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
 		1.0, vp_w - preview_margin_left - preview_margin_right - extra_margin * 2
 	)
 	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
-	cam_size = maxf(cam_size, MIN_CAMERA_SIZE_PART)
-	_fitted_camera_size = cam_size
+	_fitted_camera_size = maxf(cam_size, MIN_CAMERA_SIZE_PART)
 	_fitted_aabb_center_y = _focus_aabb_center_y(aabb)
+
+
+func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
+	if not is_inside_tree():
+		return
+	if size.x <= 0.0 or size.y <= 0.0:
+		_pending_camera_fit = true
+		return
+	_pending_camera_fit = false
+	_update_fit_limits(aabb, extra_margin)
+	var cam_size: float = _fitted_camera_size
+	var vp_h: float = size.y
+	var eff_top: float = _effective_margin_top()
+	var eff_bottom: float = _effective_margin_bottom()
 	var center_y: float = _fitted_aabb_center_y + (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)
-	var aabb_bottom_w: float = (avatar.global_transform * Vector3(0.0, aabb.position.y, 0.0)).y
+	var padding: float = _focus_padding()
+	var aabb_grown: AABB = aabb
+	if padding > 0.0:
+		aabb_grown = aabb.grow(maxf(aabb.size.x, aabb.size.y) * padding * 0.5)
+	var aabb_bottom_w: float = (
+		(avatar.global_transform * Vector3(0.0, aabb_grown.position.y, 0.0)).y
+	)
 	var aabb_top_w: float = (
-		(avatar.global_transform * Vector3(0.0, aabb.position.y + aabb.size.y, 0.0)).y
+		(avatar.global_transform * Vector3(0.0, aabb_grown.position.y + aabb_grown.size.y, 0.0)).y
 	)
 	var pan_min: float = aabb_bottom_w + cam_size * (0.5 - eff_bottom / vp_h)
 	var pan_max: float = aabb_top_w - cam_size * (0.5 - eff_top / vp_h)
@@ -555,6 +602,8 @@ func _update_aabb_debug_box(aabbs: Dictionary) -> void:
 		"legs": Color(1, 0.5, 0, 0.20),
 		"feet": Color(0, 0.5, 1, 0.20),
 		"hands": Color(1, 0, 1, 0.20),
+		"head_base": Color(1, 0, 0, 0.20),
+		"head_base_facial": Color(1, 0.5, 0.5, 0.20),
 	}
 	for key in box_colors:
 		if key not in aabbs:
