@@ -31,14 +31,14 @@ static func get_sign_api_url() -> String:
 	return DclUrls.places_api() + "/destinations/"
 
 
-static func get_status_url(place_id: String, _is_world: bool) -> String:
-	if _is_world:
+static func get_status_url(place_id: String, is_world_place: bool) -> String:
+	if is_world_place:
 		return DclUrls.places_api() + "/worlds?names=" + place_id.uri_encode()
 	return DclUrls.places_api() + "/places/" + place_id
 
 
-static func async_patch_like(place_id: String, like: LIKE, _is_world: bool = false) -> Variant:
-	var endpoint := "/worlds/" if _is_world else "/places/"
+static func async_patch_like(place_id: String, like: LIKE, is_world_place: bool = false) -> Variant:
+	var endpoint := "/worlds/" if is_world_place else "/places/"
 	var url := DclUrls.places_api() + endpoint + place_id + "/likes"
 	var body: String
 	match like:
@@ -53,9 +53,9 @@ static func async_patch_like(place_id: String, like: LIKE, _is_world: bool = fal
 
 
 static func async_patch_favorite(
-	place_id: String, toggled_on: bool, _is_world: bool = false
+	place_id: String, toggled_on: bool, is_world_place: bool = false
 ) -> Variant:
-	var endpoint := "/worlds/" if _is_world else "/places/"
+	var endpoint := "/worlds/" if is_world_place else "/places/"
 	var url := DclUrls.places_api() + endpoint + place_id + "/favorites"
 
 	var body: String

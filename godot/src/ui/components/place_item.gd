@@ -78,12 +78,7 @@ func _ready():
 	if description_container:
 		description_container.show()
 
-	# Set user name from player profile when used as FTUE
-	var label_nickname_ftue = _get_label_nickname_ftue()
-	if label_nickname_ftue:
-		var player_profile = Global.player_identity.get_profile_or_null()
-		if player_profile:
-			label_nickname_ftue.text = player_profile.get_name()
+
 
 	if is_draggable and card:
 		var header = _get_header()
@@ -318,8 +313,7 @@ func _get_fav_button() -> FavButton:
 
 
 
-func _get_label_nickname_ftue() -> Label:
-	return _get_node_safe("Label_NickNameFTUE")
+
 
 
 func _connect_signals():
