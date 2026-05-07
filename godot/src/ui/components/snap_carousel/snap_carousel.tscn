@@ -24,24 +24,24 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="HBoxContainer_Items" type="HBoxContainer" parent="CardArea" unique_id=1139719504]
+[node name="CardContainer" type="Control" parent="CardArea" unique_id=1139719504]
 unique_name_in_owner = true
-layout_mode = 0
-size_flags_horizontal = 0
-size_flags_vertical = 4
-theme_override_constants/separation = 16
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
-[node name="SnapCarouselCard" parent="CardArea/HBoxContainer_Items" unique_id=353149603 instance=ExtResource("3_2oyge")]
+[node name="SnapCarouselCard" parent="CardArea/CardContainer" unique_id=353149603 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(530, 300)
-layout_mode = 2
 
-[node name="SnapCarouselCard2" parent="CardArea/HBoxContainer_Items" unique_id=1324026161 instance=ExtResource("3_2oyge")]
+[node name="SnapCarouselCard2" parent="CardArea/CardContainer" unique_id=1324026161 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(624, 350)
-layout_mode = 2
 
-[node name="SnapCarouselCard3" parent="CardArea/HBoxContainer_Items" unique_id=1837558481 instance=ExtResource("3_2oyge")]
+[node name="SnapCarouselCard3" parent="CardArea/CardContainer" unique_id=1837558481 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(530, 300)
-layout_mode = 2
 
 [node name="DotsContainer" type="HBoxContainer" parent="." unique_id=1645889567]
 unique_name_in_owner = true

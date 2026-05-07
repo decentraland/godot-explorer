@@ -237,6 +237,7 @@ theme_override_constants/separation = 40
 unique_name_in_owner = true
 layout_mode = 2
 auto_fetch = true
+auto_scroll = true
 
 [node name="FriendsOnline" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=411918289 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
