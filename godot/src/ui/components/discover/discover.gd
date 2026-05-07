@@ -441,7 +441,7 @@ func _collect_carousel_data() -> Dictionary:
 	# Collect featured SnapCarousel data
 	if places_featured.visible and places_featured.get_card_count() > 0:
 		var featured_items := []
-		var cards := places_featured.get_cards()
+		var cards = places_featured.get_cards()
 		for i in cards.size():
 			var card = cards[i]
 			if card.has_method("get_place_data"):
