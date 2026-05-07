@@ -24,8 +24,16 @@ static func _async_fetch_from_bff() -> Array[Dictionary]:
 		return []
 
 	var json = response.get_string_response_as_json()
+	if json == null:
+		return []
 	var places: Array[Dictionary] = []
-	var data: Array = json if json is Array else json.get("data", [])
+	var data: Array
+	if json is Array:
+		data = json
+	elif json is Dictionary:
+		data = json.get("data", [])
+	else:
+		return []
 	for item in data:
 		if item is Dictionary:
 			places.append(item)

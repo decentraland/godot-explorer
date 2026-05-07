@@ -125,6 +125,8 @@ func set_items(data_list: Array[Dictionary]) -> void:
 	items_loaded.emit(data_list)
 
 	await get_tree().process_frame
+	if not is_instance_valid(self):
+		return
 	_layout_cards()
 
 
@@ -136,6 +138,12 @@ func get_card_count() -> int:
 	if not is_instance_valid(item_container):
 		return 0
 	return item_container.get_child_count()
+
+
+func get_cards() -> Array:
+	if not is_instance_valid(item_container):
+		return []
+	return item_container.get_children()
 
 
 func _get_card_separation() -> float:
