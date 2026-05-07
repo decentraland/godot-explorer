@@ -4,7 +4,7 @@ extends SubViewportContainer
 const MIN_CAMERA_SIZE_OVERALL = 1.0
 const MIN_CAMERA_SIZE_PART = 0.2
 const MAX_CAMERA_SIZE = 5.0
-const CAMERA_PAN_SMOOTH = 10.0
+const CAMERA_PAN_SMOOTH = 4.0
 const CAMERA_ZOOM_SMOOTH = 8.0
 const AVATAR_ROTATION_SMOOTH = 15.0
 
@@ -93,12 +93,23 @@ func _ready():
 func _process(delta: float) -> void:
 	if _lerp_paused:
 		return
+	if can_drag and can_move and _pinch_start_distance > 0.0 and _touch_points.size() >= 2:
+		var current_dist: float = _get_touch_distance()
+		if current_dist > 0.0:
+			_target_camera_size = clampf(
+				_pinch_start_camera_size * _pinch_start_distance / current_dist,
+				_min_camera_size(),
+				_fitted_camera_size
+			)
+			_clamp_camera_center()
 	camera_center.position.y = lerpf(
-		camera_center.position.y, _target_camera_center_y, CAMERA_PAN_SMOOTH * delta
+		camera_center.position.y, _target_camera_center_y, 1.0 - exp(-CAMERA_PAN_SMOOTH * delta)
 	)
-	camera_3d.size = lerpf(camera_3d.size, _target_camera_size, CAMERA_ZOOM_SMOOTH * delta)
+	camera_3d.size = lerpf(
+		camera_3d.size, _target_camera_size, 1.0 - exp(-CAMERA_ZOOM_SMOOTH * delta)
+	)
 	avatar.rotation.y = lerpf(
-		avatar.rotation.y, _target_avatar_rotation_y, AVATAR_ROTATION_SMOOTH * delta
+		avatar.rotation.y, _target_avatar_rotation_y, 1.0 - exp(-AVATAR_ROTATION_SMOOTH * delta)
 	)
 
 
@@ -205,14 +216,6 @@ func _input(event: InputEvent):
 
 	if event is InputEventScreenDrag:
 		_touch_points[event.index] = event.position
-		if _touch_points.size() == 2 and can_drag and _pinch_start_distance > 0.0:
-			var current_dist: float = _get_touch_distance()
-			_target_camera_size = clampf(
-				_pinch_start_camera_size * _pinch_start_distance / current_dist,
-				_min_camera_size(),
-				_fitted_camera_size
-			)
-			_clamp_camera_center()
 
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging:
