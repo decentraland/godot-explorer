@@ -113,6 +113,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_spacer")
 unique_name_in_owner = true
 layout_mode = 2
 mode = 0
+auto_scroll = true
 
 [node name="MarginContainer2" type="MarginContainer" parent="FTUE" unique_id=436761302]
 layout_mode = 2
