@@ -64,21 +64,18 @@ func _on_button_jump_in_pressed() -> void:
 	if _places.is_empty():
 		return
 	var place: Dictionary = _places[carousel.get_current_index()]
-	var scene_name: String = place.get("title", "")
 	Global.metrics.track_click_button(
-		"JUMP_IN", "DISCOVER_FTUE_CLICK", JSON.stringify({"scene": scene_name})
+		"JUMP_IN", "FTUE_CLICK", JSON.stringify({"place_id": place.get("id", "")})
 	)
 	ftue_completed.emit()
 	_do_jump_in(place)
 
 
 func _on_button_skip_pressed() -> void:
-	var scene_name := ""
+	var place_id := ""
 	if not _places.is_empty():
-		scene_name = _places[carousel.get_current_index()].get("title", "")
-	Global.metrics.track_click_button(
-		"SKIP", "DISCOVER_FTUE_CLICK", JSON.stringify({"scene": scene_name})
-	)
+		place_id = _places[carousel.get_current_index()].get("id", "")
+	Global.metrics.track_click_button("SKIP", "FTUE_CLICK", JSON.stringify({"place_id": place_id}))
 	ftue_completed.emit()
 
 

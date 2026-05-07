@@ -52,9 +52,8 @@ func _gui_input(event: InputEvent) -> void:
 func _do_banner_jump_in() -> void:
 	if _data.is_empty():
 		return
-	var scene_name: String = _data.get("title", "")
 	Global.metrics.track_click_button(
-		"JUMP_IN", "DISCOVER_BANNER_CLICK", JSON.stringify({"scene": scene_name})
+		"JUMP_IN", "DISCOVER_BANNER_CLICK", JSON.stringify({"place_id": _data.get("id", "")})
 	)
 	jump_in_pressed.emit()
 	if PlacesHelper.is_world(_data):
