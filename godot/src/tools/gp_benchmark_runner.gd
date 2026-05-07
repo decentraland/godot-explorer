@@ -95,6 +95,10 @@ func _process(_delta: float) -> void:
 		"warmup":
 			_enforce_pinned_pose()
 			if _phase_elapsed_ms() >= int(config.get("warmup_seconds", 30)) * 1000:
+				# Reset per-state CPU timing + CRDT throughput counters so the
+				# sampling-window numbers aren't polluted by load-time spikes.
+				Global.scene_runner.reset_state_timing()
+				Global.scene_runner.reset_crdt_metrics()
 				_set_phase("sampling")
 		"sampling":
 			_enforce_pinned_pose()
@@ -172,12 +176,25 @@ func _finish() -> void:
 	_set_phase("done")
 
 	var node_types := _count_node_types()
+	# Per-state CPU timing accumulated during the sampling window only.
+	# Format: "State=us(count)\n..." (newline-separated). See
+	# lib/src/scene_runner/update_scene.rs::drain_state_timing.
+	var state_timing: String = Global.scene_runner.drain_state_timing()
+	# CRDT cross-boundary throughput during sampling. See
+	# lib/src/dcl/js/engine.rs::drain_crdt_metrics.
+	var crdt_metrics: String = Global.scene_runner.drain_crdt_metrics()
+	# Per-component-id breakdown of dirty entries on the Rust→V8 path.
+	# Identifies which SDK7 components dominate the round-trip pressure.
+	var crdt_component_breakdown: String = Global.scene_runner.drain_crdt_component_breakdown()
 
 	var result := {
 		"tag": config.get("tag", ""),
 		"genesis_plaza_commit": config.get("genesis_plaza_commit", ""),
 		"toggles": config.get("toggles", {}),
 		"node_type_breakdown": node_types,
+		"state_timing_us": state_timing,
+		"crdt_metrics": crdt_metrics,
+		"crdt_component_breakdown": crdt_component_breakdown,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -188,10 +205,6 @@ func _finish() -> void:
 	}
 
 	_write_result(result)
-	# Sanity-check screenshot. Compared against the prior run's image by
-	# scripts/bench/compare_screenshots.py — if it diverges too far the run
-	# is flagged (different scene loaded, character moved, asset failed).
-	_save_screenshot()
 	# Mirror to a public path on Android so it's pullable from a
 	# non-debuggable release APK (user:// lives in the app's private sandbox).
 	if OS.get_name() == "Android":
@@ -233,6 +246,13 @@ func _finish() -> void:
 		)
 	)
 	print("[GP Benchmark] END_RESULT_JSON")
+	# Sanity-check screenshot. Compared against the prior run's image by
+	# scripts/bench/compare_screenshots.py — if it diverges too far the run
+	# is flagged (different scene loaded, character moved, asset failed).
+	# Runs LAST so a slow/failed screenshot can't block result delivery, and
+	# the PNG encode (~200-500 ms zlib on 1080p) doesn't contaminate the
+	# preceding sample window in profiles.
+	_save_screenshot()
 	_async_force_quit(0)
 
 
@@ -435,6 +455,7 @@ func _load_config() -> Dictionary:
 ##   bench-disable-transforms=true|false
 ##   bench-warmup=<seconds>
 ##   bench-sample=<seconds>
+##   rs-gltf-direct=true|false  -- GLTF→RenderingServer migration toggle
 func _apply_deeplink_overrides() -> void:
 	if Global.deep_link_obj == null:
 		return
@@ -461,6 +482,14 @@ func _apply_deeplink_overrides() -> void:
 	var sample: String = params.get("bench-sample", "")
 	if not sample.is_empty() and sample.is_valid_int():
 		config["sample_seconds"] = sample.to_int()
+
+	# RenderingServer migration flags. Writes back to DclCli so the Rust side
+	# (mesh_renderer, gltf_container) and any GDScript that reads Global.cli
+	# observe the same value. See plan in
+	# ~/.claude/plans/https-github-com-decentraland-godot-expl-precious-nest.md
+	var rs_gltf_direct: String = params.get("rs-gltf-direct", "")
+	if not rs_gltf_direct.is_empty():
+		Global.cli.rs_gltf_direct = rs_gltf_direct.to_lower() in ["true", "1", "yes"]
 
 
 func _set_phase(p: String) -> void:
