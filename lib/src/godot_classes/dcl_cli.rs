@@ -109,6 +109,20 @@ pub struct DclCli {
     #[var(get)]
     pub gp_benchmark: bool,
 
+    // RenderingServer-direct migration flag. Default OFF; flipped via
+    // --rs-gltf-direct CLI flag or rs-gltf-direct deeplink param. See plan in
+    // ~/.claude/plans/https-github-com-decentraland-godot-expl-precious-nest.md
+    #[var]
+    pub rs_gltf_direct: bool,
+
+    // V8 inspector target. When non-empty AND the build has the
+    // `enable_inspector` feature, the SDK7 scene whose title matches
+    // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
+    // Title-match (instead of hash id) so it works from deeplinks without
+    // having to discover the scene id beforehand.
+    #[var]
+    pub inspect_scene_title: GString,
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -430,6 +444,18 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Performance".to_string(),
             },
+            ArgDefinition {
+                name: "--rs-gltf-direct".to_string(),
+                description: "Migrate SDK7 GltfContainer rendering to direct RenderingServer instances (drops per-entity MeshInstance3D wrappers). Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--inspect-scene-title".to_string(),
+                description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
+                arg_type: ArgType::Value("<title>".to_string()),
+                category: "Debugging".to_string(),
+            },
             // Authentication
             ArgDefinition {
                 name: "--saved-profile".to_string(),
@@ -624,6 +650,12 @@ impl INode for DclCli {
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
+        let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
+        let inspect_scene_title = args_map
+            .get("--inspect-scene-title")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -735,6 +767,8 @@ impl INode for DclCli {
             fi_benchmark_size,
             avatar_impostor_benchmark,
             gp_benchmark,
+            rs_gltf_direct,
+            inspect_scene_title,
             asset_server_port,
             realm,
             location,
