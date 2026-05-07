@@ -415,9 +415,7 @@ func _should_go_to_explorer_from_deeplink() -> bool:
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
-	print("[Lobby] _async_on_profile_changed: updating avatar...")
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
-	print("[Lobby] _async_on_profile_changed: avatar updated")
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()

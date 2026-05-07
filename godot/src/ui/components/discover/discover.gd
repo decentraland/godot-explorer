@@ -437,6 +437,27 @@ func _collect_carousel_data() -> Dictionary:
 				idx += 1
 		if not items.is_empty():
 			result[key] = items
+
+	# Collect featured SnapCarousel data
+	if places_featured.visible and places_featured.get_card_count() > 0:
+		var featured_items := []
+		for i in places_featured.item_container.get_child_count():
+			var card = places_featured.item_container.get_child(i)
+			if card.has_method("get_place_data"):
+				var data: Dictionary = card.get_place_data()
+				(
+					featured_items
+					. append(
+						{
+							"id": data.get("id", ""),
+							"type": "world" if PlacesHelper.is_world(data) else "scene",
+							"position": i,
+						}
+					)
+				)
+		if not featured_items.is_empty():
+			result["featured"] = featured_items
+
 	return result
 
 
