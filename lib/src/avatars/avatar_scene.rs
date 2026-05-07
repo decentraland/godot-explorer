@@ -29,6 +29,7 @@ use crate::{
         dcl_avatar::{AvatarMovementType, DclAvatar},
         dcl_global::DclGlobal,
     },
+    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 type AvatarAlias = u32;
@@ -592,6 +593,17 @@ impl AvatarScene {
         if img.get_format() != Format::RGBA8 {
             img.convert(Format::RGBA8);
         }
+
+        // Snapshot the base RGBA8 mip BEFORE mipmaps are appended — the worker
+        // thread that encodes the PNG only wants mip0, and slicing post-mipmap
+        // would force us to recompute the chain layout.
+        let cache_key = avatar_id.to_string().to_lowercase();
+        let png_payload: Option<Vec<u8>> = if cache_key.is_empty() {
+            None
+        } else {
+            Some(img.get_data().to_vec())
+        };
+
         // The texture array was created with mipmaps; the layer upload must
         // include the same mip chain or update_layer rejects it.
         let mip_err = img.generate_mipmaps();
@@ -604,7 +616,6 @@ impl AvatarScene {
         }
 
         tex_array.update_layer(&img, layer_index as i32);
-        let cache_key = avatar_id.to_string().to_lowercase();
         if let Some(slot) = self.impostor_slots.get_mut(&impostor_id) {
             slot.texture_loaded = true;
             slot.cache_key = cache_key.clone();
@@ -612,8 +623,8 @@ impl AvatarScene {
 
         // Mirror to disk so the avatar doesn't need to re-capture next time
         // it gets a real slot (after frustum churn or session restart).
-        if !cache_key.is_empty() {
-            self.save_cached_texture(&cache_key, &img);
+        if let Some(rgba) = png_payload {
+            self.save_cached_texture_async(&cache_key, rgba);
         }
     }
 
@@ -1022,10 +1033,22 @@ impl AvatarScene {
     /// The decoded Image is dropped after upload so it doesn't sit in RAM.
     fn try_load_cached_texture(&mut self, cache_key: &str, layer_index: u32) -> bool {
         let path = Self::cache_path_for(cache_key);
-        let img_opt = Image::load_from_file(&path);
-        let Some(mut img) = img_opt else {
+        // `Image::load_from_file` routes through ResourceLoader which doesn't
+        // resolve `user://` runtime-written files reliably on Android (we
+        // measured ~7% CPU lost to repeated re-captures + save_png because
+        // every read returned ERR_CANT_OPEN even though the PNG was on disk).
+        // Read raw bytes via FileAccess + decode in memory — bypasses the
+        // ResourceLoader path entirely.
+        let bytes = godot::classes::FileAccess::get_file_as_bytes(&path);
+        if bytes.is_empty() {
             return false;
-        };
+        }
+        let mut img = godot::classes::Image::new_gd();
+        let err = img.load_png_from_buffer(&bytes);
+        if err != godot::global::Error::OK {
+            tracing::warn!("Impostor cache decode failed for {}: {:?}", path, err);
+            return false;
+        }
         if img.is_empty() {
             return false;
         }
@@ -1048,16 +1071,57 @@ impl AvatarScene {
         true
     }
 
-    fn save_cached_texture(&mut self, cache_key: &str, image: &Gd<Image>) {
+    /// Encode + write the impostor PNG on a tokio blocking worker. Godot's
+    /// `Image::save_png` is synchronous and runs zlib compression on the render
+    /// thread (~13.8 % inclusive in the Genesis Plaza profile, with
+    /// `longest_match` alone at 6.4 % self-time on VkThread). We extract raw
+    /// RGBA8 bytes on the main thread (cheap memcpy) and hand them to a worker
+    /// that does the encode + atomic file write.
+    fn save_cached_texture_async(&mut self, cache_key: &str, rgba: Vec<u8>) {
         Self::ensure_cache_dir();
-        let path = Self::cache_path_for(cache_key);
-        let err = image.clone().save_png(&path);
-        if err == godot::global::Error::OK {
-            self.impostor_cache_last_used
-                .insert(cache_key.to_string(), Self::now_ms());
-        } else {
-            tracing::warn!("Failed to save impostor PNG to {}: {:?}", path, err);
+        let Some(abs_path) = Self::absolute_cache_path_for(cache_key) else {
+            tracing::warn!(
+                "Failed to resolve absolute path for impostor cache key {}",
+                cache_key
+            );
+            return;
+        };
+        // Mark cache as warm immediately. If the disk write fails the worst
+        // case is a stale entry that gets re-captured on the next miss.
+        self.impostor_cache_last_used
+            .insert(cache_key.to_string(), Self::now_ms());
+        let key_for_log = cache_key.to_string();
+        TokioRuntime::spawn(async move {
+            let result = tokio::task::spawn_blocking(move || {
+                encode_and_write_impostor_png(&abs_path, &rgba)
+            })
+            .await;
+            match result {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => {
+                    tracing::warn!("Failed to save impostor PNG for {}: {}", key_for_log, e)
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Impostor PNG encode task panicked for {}: {}",
+                        key_for_log,
+                        e
+                    )
+                }
+            }
+        });
+    }
+
+    /// Resolve `user://impostor_cache/<key>.png` to an absolute filesystem
+    /// path. Must be called on the main thread (touches Godot Os singleton).
+    fn absolute_cache_path_for(key: &str) -> Option<String> {
+        let user_dir = godot::classes::Os::singleton()
+            .get_user_data_dir()
+            .to_string();
+        if user_dir.is_empty() {
+            return None;
         }
+        Some(format!("{}/impostor_cache/{}.png", user_dir, key))
     }
 
     fn delete_cached_texture(&mut self, cache_key: &str) {
@@ -1670,4 +1734,49 @@ impl AvatarScene {
             }),
         );
     }
+}
+
+/// Encode an RGBA8 buffer (mip0 only, IMPOSTOR_TEX_WIDTH × IMPOSTOR_TEX_HEIGHT)
+/// as a PNG and atomically write it to `abs_path`. Runs on a tokio blocking
+/// worker — no Godot types touched here.
+///
+/// Atomic write: stage to `<path>.tmp` then rename, so a partially-written
+/// file never wins a race with `try_load_cached_texture`.
+fn encode_and_write_impostor_png(abs_path: &str, rgba: &[u8]) -> std::io::Result<()> {
+    use std::io::{BufWriter, Write};
+
+    let expected = (IMPOSTOR_TEX_WIDTH as usize) * (IMPOSTOR_TEX_HEIGHT as usize) * 4;
+    if rgba.len() < expected {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!(
+                "RGBA buffer too small: got {} bytes, expected {}",
+                rgba.len(),
+                expected
+            ),
+        ));
+    }
+
+    let tmp_path = format!("{}.tmp", abs_path);
+    {
+        let file = std::fs::File::create(&tmp_path)?;
+        let mut writer = BufWriter::new(file);
+        let mut encoder = png::Encoder::new(
+            &mut writer,
+            IMPOSTOR_TEX_WIDTH as u32,
+            IMPOSTOR_TEX_HEIGHT as u32,
+        );
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        // Default compression. The Godot encoder also defaults; matching it
+        // keeps file sizes comparable so the eviction TTL math doesn't change.
+        let mut png_writer = encoder.write_header().map_err(std::io::Error::other)?;
+        png_writer
+            .write_image_data(&rgba[..expected])
+            .map_err(std::io::Error::other)?;
+        png_writer.finish().map_err(std::io::Error::other)?;
+        writer.flush()?;
+    }
+    std::fs::rename(&tmp_path, abs_path)?;
+    Ok(())
 }

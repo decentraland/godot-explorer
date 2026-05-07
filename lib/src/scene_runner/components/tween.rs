@@ -33,6 +33,13 @@ pub struct Tween {
     pub playing: Option<bool>,
     /// Last update time for delta time calculation (used by continuous modes)
     pub last_update: std::time::Instant,
+    /// Last `TweenStateStatus` emitted to the CRDT recv path. Used to skip
+    /// per-frame `put()` calls when the state hasn't transitioned — SDK7
+    /// userland reads `TweenState` only at start/pause/completion (it polls
+    /// `state`, not `current_time` mid-flight). Skipping the redundant put
+    /// removes ~50 % of all `dirty_lww_entries/frame` in GP (measured
+    /// 2026-05-06: TweenState=135/frame, ≈51 % of recv pressure).
+    pub last_emitted_state: Option<i32>,
 }
 
 impl Tween {
@@ -219,6 +226,7 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             paused_time,
                             playing: None,
                             last_update: now,
+                            last_emitted_state: None,
                         },
                     );
                 };
@@ -276,14 +284,22 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             tween.paused_time = Some(now);
         }
 
-        // update tween state
-        SceneCrdtStateProtoComponents::get_tween_state_mut(crdt_state).put(
-            *entity,
-            Some(PbTweenState {
-                current_time: progress,
-                state: current_tween_state as i32,
-            }),
-        );
+        // Update TweenState only on transitions (TsActive → TsPaused / TsCompleted,
+        // or first frame after creation). SDK7 userland reads `state`, not
+        // `current_time` mid-flight — emitting the same TsActive every frame
+        // pumps ~135 dirty entries/frame into the V8 recv path for nothing.
+        // See docs/bench/profile-deep-2026-05.md for measurement.
+        let new_state = current_tween_state as i32;
+        if tween.last_emitted_state != Some(new_state) {
+            SceneCrdtStateProtoComponents::get_tween_state_mut(crdt_state).put(
+                *entity,
+                Some(PbTweenState {
+                    current_time: progress,
+                    state: new_state,
+                }),
+            );
+            tween.last_emitted_state = Some(new_state);
+        }
 
         // if we paused the tween, we skip the transform update
         if tween.playing == Some(false) {
