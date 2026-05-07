@@ -6,7 +6,7 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal jump_in_world(realm: String)
 signal close
-signal ftue_completed
+
 
 enum DragState { HIDDEN, HALF, FULL }
 enum DragGesture { IDLE, UP, DOWN }
@@ -316,12 +316,6 @@ func _get_fav_button() -> FavButton:
 	return _get_node_safe("FavButton")
 
 
-func _get_button_jump_in_ftue() -> Button:
-	return _get_node_safe("Button_JumpIn_FTUE")
-
-
-func _get_button_skip() -> Button:
-	return _get_node_safe("Button_Skip")
 
 
 func _get_label_nickname_ftue() -> Label:
@@ -358,15 +352,6 @@ func _connect_signals():
 		if not button_share.pressed.is_connected(_on_button_share_pressed):
 			button_share.pressed.connect(_on_button_share_pressed)
 
-	var button_jump_in_ftue = _get_button_jump_in_ftue()
-	if button_jump_in_ftue:
-		if not button_jump_in_ftue.pressed.is_connected(_on_button_jump_in_ftue_pressed):
-			button_jump_in_ftue.pressed.connect(_on_button_jump_in_ftue_pressed)
-
-	var button_skip = _get_button_skip()
-	if button_skip:
-		if not button_skip.pressed.is_connected(_on_button_skip_pressed):
-			button_skip.pressed.connect(_on_button_skip_pressed)
 
 
 func set_server_or_location(unlimited: bool = false) -> void:
@@ -598,19 +583,6 @@ func _async_download_image(url: String):
 	set_image(result.texture)
 
 
-func _on_button_jump_in_ftue_pressed() -> void:
-	Global.metrics.track_click_button("JUMP_IN", "DISCOVER_FTUE_CLICK", "")
-	_complete_discover_ftue()
-	_do_jump_in()
-
-
-func _on_button_skip_pressed() -> void:
-	Global.metrics.track_click_button("SKIP", "DISCOVER_FTUE_CLICK", "")
-	_complete_discover_ftue()
-
-
-func _complete_discover_ftue() -> void:
-	ftue_completed.emit()
 
 
 func _on_button_jump_in_pressed():
