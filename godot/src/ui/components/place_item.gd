@@ -7,7 +7,6 @@ signal jump_in(position: Vector2i, realm: String)
 signal jump_in_world(realm: String)
 signal close
 
-
 enum DragState { HIDDEN, HALF, FULL }
 enum DragGesture { IDLE, UP, DOWN }
 
@@ -77,8 +76,6 @@ func _ready():
 	var description_container = _get_hide_from_here()
 	if description_container:
 		description_container.show()
-
-
 
 	if is_draggable and card:
 		var header = _get_header()
@@ -311,11 +308,6 @@ func _get_fav_button() -> FavButton:
 	return _get_node_safe("FavButton")
 
 
-
-
-
-
-
 func _connect_signals():
 	var button_close = _get_button_close()
 	if button_close:
@@ -345,7 +337,6 @@ func _connect_signals():
 	if button_share:
 		if not button_share.pressed.is_connected(_on_button_share_pressed):
 			button_share.pressed.connect(_on_button_share_pressed)
-
 
 
 func set_server_or_location(unlimited: bool = false) -> void:
@@ -575,8 +566,6 @@ func _async_download_image(url: String):
 		printerr("places_generator::_async_download_image promise error: ", result.get_error())
 		return
 	set_image(result.texture)
-
-
 
 
 func _on_button_jump_in_pressed():
