@@ -136,8 +136,23 @@ use super::{
 
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_crdt_send_to_renderer(), op_crdt_recv_from_renderer()]
+    vec![
+        op_crdt_send_to_renderer(),
+        op_crdt_recv_wait(),
+        op_crdt_recv_drain(),
+    ]
 }
+
+/// Framed recv buffer produced by `op_crdt_recv_wait`, drained into a
+/// JS-owned `Uint8Array` by `op_crdt_recv_drain`.
+///
+/// Layout: `[u32 LE main_crdt_len][main_crdt bytes][data bytes]`.
+///
+/// Two ops because async ops can't take `#[buffer] &mut [u8]` (deno_core:
+/// the borrow can't span an `await`). The split lets JS reuse the same
+/// `Uint8Array` across every recv — no per-call V8 BackingStore allocation
+/// in steady state.
+struct PendingRecvBuffer(Vec<u8>);
 
 // receive and process a buffer of crdt messages
 #[op2(fast)]
@@ -195,11 +210,16 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
         .expect("error sending scene response!!")
 }
 
+/// Awaits the renderer response, builds the framed CRDT payload, stashes
+/// it for `op_crdt_recv_drain` to copy into JS memory. Returns the total
+/// framed length so JS can grow its persistent recv buffer before draining.
+///
+/// Frame layout: `[u32 LE main_crdt_len][main_crdt bytes][data bytes]`.
+/// `main_crdt_len` is 0 in steady state; main_crdt bytes only present on
+/// the first recv per scene (carries the snapshot from disk). Length is
+/// always >= 4 (the prefix).
 #[op2(async)]
-#[serde]
-async fn op_crdt_recv_from_renderer(
-    op_state: Rc<RefCell<OpState>>,
-) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow::Error> {
     let receiver = op_state
         .borrow_mut()
         .borrow_mut::<Arc<tokio::sync::Mutex<Receiver<RendererResponse>>>>()
@@ -398,14 +418,46 @@ async fn op_crdt_recv_from_renderer(
 
     op_state.put(Vec::<LocalCall>::new());
     op_state.put(mutex_scene_crdt_state);
-    let mut ret = Vec::<Vec<u8>>::with_capacity(1);
-    if let Some(main_crdt) = op_state.try_take::<SceneMainCrdtFileContent>() {
-        CRDT_RECV_BYTES.fetch_add(main_crdt.0.len() as u64, Ordering::Relaxed);
-        ret.push(main_crdt.0);
+
+    // Build the framed payload directly into a Vec<u8>. EngineApi.js
+    // reconstructs the (optional main_crdt, data) split from the leading
+    // u32 length prefix.
+    let main_crdt = op_state
+        .try_take::<SceneMainCrdtFileContent>()
+        .map(|m| m.0)
+        .unwrap_or_default();
+    if !main_crdt.is_empty() {
+        CRDT_RECV_BYTES.fetch_add(main_crdt.len() as u64, Ordering::Relaxed);
     }
     CRDT_RECV_BYTES.fetch_add(data.len() as u64, Ordering::Relaxed);
-    ret.push(data);
-    Ok(ret)
+
+    let main_len = main_crdt.len() as u32;
+    let mut framed = Vec::with_capacity(4 + main_crdt.len() + data.len());
+    framed.extend_from_slice(&main_len.to_le_bytes());
+    framed.extend_from_slice(&main_crdt);
+    framed.extend_from_slice(&data);
+    let total_len = framed.len() as u32;
+    op_state.put(PendingRecvBuffer(framed));
+    Ok(total_len)
+}
+
+/// Copies the buffer stashed by `op_crdt_recv_wait` into the JS-owned
+/// `Uint8Array out`. Returns the byte count written, or 0 if `out` was
+/// too small (the stash is preserved so the caller can grow + retry) or
+/// no pending buffer exists.
+#[op2(fast)]
+fn op_crdt_recv_drain(state: &mut OpState, #[buffer] out: &mut [u8]) -> u32 {
+    let Some(pending) = state.try_take::<PendingRecvBuffer>() else {
+        return 0;
+    };
+    let len = pending.0.len();
+    if len > out.len() {
+        // Buffer too small. Put the stash back so the caller can grow + retry.
+        state.put(pending);
+        return 0;
+    }
+    out[..len].copy_from_slice(&pending.0);
+    len as u32
 }
 
 /// Build the per-call CRDT logging context for the scene→renderer direction.
