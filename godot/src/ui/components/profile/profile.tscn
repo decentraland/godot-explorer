@@ -328,8 +328,8 @@ mouse_filter = 0
 stretch = true
 hide_name = true
 can_drag = false
-preview_margin_top = 20
-preview_margin_bottom = 20
+preview_margin_top = 64
+preview_margin_bottom = 26
 preview_margin_left = 20
 preview_margin_right = 20
 

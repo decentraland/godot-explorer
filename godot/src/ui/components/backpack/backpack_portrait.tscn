@@ -25,6 +25,13 @@
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/emote_editor/emote_editor.tscn" id="30_vfwc7"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="34_gaa2l"]
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hpvfb"]
+shader = ExtResource("17_4j6ii")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5q7io"]
+atlas = ExtResource("18_wp3bp")
+region = Rect2(0, 0, 343, 580)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_no6vh"]
 bg_color = Color(0, 0, 0, 0)
 
@@ -60,13 +67,6 @@ resource_name = "CollectiblesFilter"
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yj6kw"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_hpvfb"]
-shader = ExtResource("17_4j6ii")
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_5q7io"]
-atlas = ExtResource("18_wp3bp")
-region = Rect2(0, 0, 343, 580)
-
 [sub_resource type="Gradient" id="Gradient_k780d"]
 colors = PackedColorArray(0.27450982, 0.05882353, 0.43529412, 1, 0.20784314, 0.03137255, 0.32941177, 1)
 
@@ -92,8 +92,6 @@ resource_local_to_scene = false
 [sub_resource type="ButtonGroup" id="ButtonGroup_meiko"]
 resource_local_to_scene = false
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_18vfg"]
-
 [sub_resource type="Gradient" id="Gradient_v8iop"]
 colors = PackedColorArray(0.58431375, 0.1764706, 0.7764706, 1, 0.19607843, 0.07450981, 0.29803923, 1)
 
@@ -116,6 +114,66 @@ theme = ExtResource("1_0pkvk")
 script = ExtResource("1_a5ql5")
 default_main_category = "body"
 metadata/mobile_preview_orientation = "portrait"
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="." unique_id=1104831289]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Control" type="Control" parent="VBoxContainer2" unique_id=250811452]
+layout_mode = 2
+size_flags_vertical = 3
+metadata/_edit_use_anchors_ = true
+
+[node name="AvatarPreview" parent="VBoxContainer2/Control" unique_id=1038323443 node_paths=PackedStringArray("top_node_margin", "bottom_node_margin") instance=ExtResource("4_4kxkq")]
+unique_name_in_owner = true
+layout_mode = 1
+size_flags_horizontal = 1
+mouse_filter = 2
+stretch = true
+hide_name = true
+preview_margin_top = 25
+preview_margin_bottom = 35
+top_node_margin = NodePath("../../../VBoxContainer/PanelContainer_Navbar")
+bottom_node_margin = NodePath("../../../VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer")
+
+[node name="AvatarVFX" type="TextureRect" parent="VBoxContainer2/Control" unique_id=1182366062]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_hpvfb")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("AtlasTexture_5q7io")
+stretch_mode = 3
+script = ExtResource("19_ku1si")
+atlas = ExtResource("18_wp3bp")
+frame_count = 13
+x_offset = 343
+fps = 20.0
+metadata/_custom_type_script = "uid://drm7w13o3wggu"
+
+[node name="ColorRect" type="ColorRect" parent="VBoxContainer2/Control" unique_id=1745470339]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.6666667, 1, 1, 0.29411766)
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer2" unique_id=455295049]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.8
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1909251923]
 layout_mode = 1
@@ -381,55 +439,10 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="AvatarPreview" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1038323443 instance=ExtResource("4_4kxkq")]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = -1
-anchor_top = -0.30654207
-anchor_bottom = 1.0598131
-size_flags_horizontal = 1
-mouse_filter = 2
-stretch = true
-hide_name = true
-preview_margin_top = 140
-preview_margin_bottom = 45
-metadata/_edit_use_anchors_ = true
-
 [node name="EmoteNameAnim" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1913936065 instance=ExtResource("16_u1xb7")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
-
-[node name="AvatarVFX" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1182366062]
-unique_name_in_owner = true
-material = SubResource("ShaderMaterial_hpvfb")
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = SubResource("AtlasTexture_5q7io")
-stretch_mode = 3
-script = ExtResource("19_ku1si")
-atlas = ExtResource("18_wp3bp")
-frame_count = 13
-x_offset = 343
-fps = 20.0
-metadata/_custom_type_script = "uid://drm7w13o3wggu"
-
-[node name="ColorRect" type="ColorRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=1745470339]
-visible = false
-layout_mode = 1
-anchors_preset = -1
-anchor_top = -0.31214952
-anchor_right = 1.0
-anchor_bottom = 1.0560747
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.6666667, 1, 1, 0.29411766)
-metadata/_edit_use_anchors_ = true
 
 [node name="RightEditorContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack" unique_id=1039508584]
 unique_name_in_owner = true
@@ -437,10 +450,10 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 size_flags_stretch_ratio = 1.45
-theme_override_constants/margin_left = 20
+theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer" unique_id=2107457233]
 layout_mode = 2
@@ -767,7 +780,7 @@ filter_category = 21
 [node name="HSeparator_SizeMaintainer" type="HSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector" unique_id=228069180]
 editor_description = "This node keeps the right size of the WearableEditor (min size X: 630).
 Otherwise the Editor shrinks if there is less than 3 wearables."
-custom_minimum_size = Vector2(630, 0)
+custom_minimum_size = Vector2(632, 0)
 layout_mode = 2
 theme_override_constants/separation = 0
 theme_override_styles/separator = SubResource("StyleBoxEmpty_yjmsa")
@@ -862,14 +875,6 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" unique_id=227469305]
-visible = false
-layout_mode = 2
-theme_override_constants/separation = 95
-theme_override_styles/separator = SubResource("StyleBoxEmpty_18vfg")
-script = ExtResource("34_gaa2l")
-hide_on_portrait = true
 
 [node name="TextureProgressBar_BackpackLoading" parent="." unique_id=1912826069 instance=ExtResource("4_saosw")]
 unique_name_in_owner = true

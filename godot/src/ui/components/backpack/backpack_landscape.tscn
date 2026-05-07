@@ -332,7 +332,7 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="AvatarPreview" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=677460621 instance=ExtResource("16_hsr60")]
+[node name="AvatarPreview" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=677460621 node_paths=PackedStringArray("top_node_margin") instance=ExtResource("16_hsr60")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
@@ -343,8 +343,9 @@ size_flags_horizontal = 1
 mouse_filter = 2
 stretch = true
 hide_name = true
-preview_margin_top = 110
-preview_margin_bottom = 20
+preview_margin_top = 40
+preview_margin_bottom = 70
+top_node_margin = NodePath("../../../HBoxContainer_SizeCanary/ControlContainer_Canary/ControlContent_Canary")
 metadata/_edit_use_anchors_ = true
 
 [node name="EmoteNameAnim" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=948887334 instance=ExtResource("12_qqh12")]

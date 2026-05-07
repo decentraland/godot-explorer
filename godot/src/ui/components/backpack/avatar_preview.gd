@@ -4,6 +4,9 @@ extends SubViewportContainer
 const MIN_CAMERA_SIZE_OVERALL = 1.0
 const MIN_CAMERA_SIZE_PART = 0.2
 const MAX_CAMERA_SIZE = 5.0
+const CAMERA_PAN_SMOOTH = 10.0
+const CAMERA_ZOOM_SMOOTH = 8.0
+const AVATAR_ROTATION_SMOOTH = 15.0
 
 @export var hide_name: bool = false
 @export var show_platform: bool = false
@@ -17,6 +20,10 @@ const MAX_CAMERA_SIZE = 5.0
 @export var preview_margin_bottom: int = 0
 @export var preview_margin_left: int = 0
 @export var preview_margin_right: int = 0
+## Optional Control whose bottom edge defines the top margin boundary.
+@export var top_node_margin: Control = null
+## Optional Control whose top edge defines the bottom margin boundary.
+@export var bottom_node_margin: Control = null
 @export var show_aabb_debug: bool = false
 
 var start_angle
@@ -26,10 +33,14 @@ var dirty_is_dragging
 var _camera_focus: String = "overall"
 
 var _cached_aabbs: Dictionary = {}
-var _camera_tween: Tween = null
 var _user_has_panned: bool = false
 var _pending_camera_fit: bool = false
 var _fitted_camera_size: float = MAX_CAMERA_SIZE
+var _fitted_aabb_center_y: float = 0.0
+var _target_camera_center_y: float = 0.0
+var _target_camera_size: float = MAX_CAMERA_SIZE
+var _target_avatar_rotation_y: float = 0.0
+var _lerp_paused: bool = false
 var _touch_points: Dictionary = {}
 var _pinch_start_distance: float = 0.0
 var _pinch_start_camera_size: float = 0.0
@@ -62,13 +73,33 @@ func _ready():
 	#	gui_input.connect(self._on_gui_input)
 	set_process_input(true)
 
+	_target_camera_center_y = camera_center.position.y
+	_target_camera_size = camera_3d.size
+	_target_avatar_rotation_y = avatar.rotation.y
+
 	avatar.avatar_loaded.connect(_on_avatar_loaded)
 	resized.connect(_on_resized)
+	if top_node_margin:
+		top_node_margin.resized.connect(_on_resized)
+	if bottom_node_margin:
+		bottom_node_margin.resized.connect(_on_resized)
 
 	if Global.standalone:
 		Global.player_identity.set_default_profile()
 		var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 		avatar.async_update_avatar_from_profile(profile)
+
+
+func _process(delta: float) -> void:
+	if _lerp_paused:
+		return
+	camera_center.position.y = lerpf(
+		camera_center.position.y, _target_camera_center_y, CAMERA_PAN_SMOOTH * delta
+	)
+	camera_3d.size = lerpf(camera_3d.size, _target_camera_size, CAMERA_ZOOM_SMOOTH * delta)
+	avatar.rotation.y = lerpf(
+		avatar.rotation.y, _target_avatar_rotation_y, AVATAR_ROTATION_SMOOTH * delta
+	)
 
 
 func focus_camera_on(type):
@@ -88,11 +119,42 @@ func focus_camera_on(type):
 	_user_has_panned = false
 	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 	if aabb_key in _cached_aabbs:
-		_fit_camera_to_aabb(_cached_aabbs[aabb_key], 0.2 if _camera_focus == "feet" else 0.0)
+		_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
 
 
 func _min_camera_size() -> float:
-	return MIN_CAMERA_SIZE_OVERALL if _camera_focus == "overall" else MIN_CAMERA_SIZE_PART
+	var floor_size := (
+		MIN_CAMERA_SIZE_OVERALL if _camera_focus == "overall" else MIN_CAMERA_SIZE_PART
+	)
+	return (_fitted_camera_size + floor_size) / 2.0
+
+
+func _focus_padding() -> float:
+	match _camera_focus:
+		"hands":
+			return 0.3
+		"feet", "torso":
+			return 0.2
+		"head":
+			return 0.1
+		_:
+			return 0.0
+
+
+func _focus_aabb_center_y(aabb: AABB) -> float:
+	if _camera_focus == "head":
+		return aabb.position.y + aabb.size.y * 0.3
+	return aabb.get_center().y
+
+
+func _focus_extra_margin() -> int:
+	match _camera_focus:
+		"hands":
+			return 80
+		"feet", "head", "torso":
+			return 40
+		_:
+			return 0
 
 
 func _input(event: InputEvent):
@@ -108,8 +170,8 @@ func _input(event: InputEvent):
 					return
 				dirty_is_dragging = true
 				start_dragging_position = get_global_mouse_position()
-				start_angle = avatar.rotation.y
-				start_camera_center_y = camera_center.position.y
+				start_angle = _target_avatar_rotation_y
+				start_camera_center_y = _target_camera_center_y
 			else:
 				dirty_is_dragging = false
 
@@ -121,8 +183,8 @@ func _input(event: InputEvent):
 				dir = 0.2
 
 			if dir != 0.0:
-				camera_3d.size = clampf(
-					camera_3d.size + dir, _min_camera_size(), _fitted_camera_size
+				_target_camera_size = clampf(
+					_target_camera_size + dir, _min_camera_size(), _fitted_camera_size
 				)
 				_clamp_camera_center()
 
@@ -136,7 +198,7 @@ func _input(event: InputEvent):
 			if _touch_points.size() == 2 and can_drag:
 				dirty_is_dragging = false
 				_pinch_start_distance = _get_touch_distance()
-				_pinch_start_camera_size = camera_3d.size
+				_pinch_start_camera_size = _target_camera_size
 		else:
 			_touch_points.erase(event.index)
 			_pinch_start_distance = 0.0
@@ -145,7 +207,7 @@ func _input(event: InputEvent):
 		_touch_points[event.index] = event.position
 		if _touch_points.size() == 2 and can_drag and _pinch_start_distance > 0.0:
 			var current_dist: float = _get_touch_distance()
-			camera_3d.size = clampf(
+			_target_camera_size = clampf(
 				_pinch_start_camera_size * _pinch_start_distance / current_dist,
 				_min_camera_size(),
 				_fitted_camera_size
@@ -168,24 +230,33 @@ func _pan_limits() -> Vector2:
 	)
 	var cam_size: float = camera_3d.size
 	var vp_h: float = size.y
-	var pan_min: float = aabb_bottom + cam_size * (0.5 - float(preview_margin_bottom) / vp_h)
-	var pan_max: float = aabb_top - cam_size * (0.5 - float(preview_margin_top) / vp_h)
+	var pan_min: float = aabb_bottom + cam_size * (0.5 - _effective_margin_bottom() / vp_h)
+	var pan_max: float = aabb_top - cam_size * (0.5 - _effective_margin_top() / vp_h)
 	return Vector2(minf(pan_min, pan_max), maxf(pan_min, pan_max))
 
 
 func _clamp_camera_center() -> void:
+	if not _user_has_panned:
+		_target_camera_center_y = (
+			_fitted_aabb_center_y
+			+ (
+				(_effective_margin_top() - _effective_margin_bottom())
+				* _target_camera_size
+				/ (2.0 * size.y)
+			)
+		)
 	var limits: Vector2 = _pan_limits()
-	camera_center.position.y = clampf(camera_center.position.y, limits.x, limits.y)
+	_target_camera_center_y = clampf(_target_camera_center_y, limits.x, limits.y)
 
 
 func _apply_drag(current_pos: Vector2) -> void:
 	var drag_pixels: Vector2 = current_pos - start_dragging_position
-	avatar.rotation.y = start_angle + drag_pixels.x * 0.005
+	_target_avatar_rotation_y = start_angle + drag_pixels.x * 0.005
 	if not can_drag:
 		return
 	var limits: Vector2 = _pan_limits()
-	var pan: float = drag_pixels.y * camera_3d.size / size.y
-	camera_center.position.y = clampf(start_camera_center_y + pan, limits.x, limits.y)
+	var pan: float = drag_pixels.y * _target_camera_size / size.y
+	_target_camera_center_y = clampf(start_camera_center_y + pan, limits.x, limits.y)
 	_user_has_panned = true
 
 
@@ -195,14 +266,14 @@ func _get_touch_distance() -> float:
 
 
 func reset_avatar_rotation() -> void:
-	avatar.rotation.y = 0.0
+	_target_avatar_rotation_y = 0.0
 
 
 func _on_resized() -> void:
 	if _pending_camera_fit and size.x > 0.0 and size.y > 0.0:
 		var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 		if aabb_key in _cached_aabbs:
-			_fit_camera_to_aabb(_cached_aabbs[aabb_key], 0.2 if _camera_focus == "feet" else 0.0)
+			_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
 
 
 func enable_outline():
@@ -219,7 +290,7 @@ func _on_avatar_loaded():
 	_cached_aabbs = _compute_avatar_aabbs()
 	_update_aabb_debug_box(_cached_aabbs)
 	if not _user_has_panned and _camera_focus in _cached_aabbs:
-		_fit_camera_to_aabb(_cached_aabbs[_camera_focus], 0.2 if _camera_focus == "feet" else 0.0)
+		_fit_camera_to_aabb(_cached_aabbs[_camera_focus], _focus_extra_margin())
 
 
 func _get_mesh_category(mesh_name: String) -> String:
@@ -373,34 +444,73 @@ func _compute_avatar_aabbs() -> Dictionary:
 				firsts["hands"] = false
 			else:
 				results["hands"] = (results["hands"] as AABB).merge(mesh_aabb)
+		if "_lbody_basemesh" in mi.name:
+			var knee_aabb := AABB(
+				mesh_aabb.position,
+				Vector3(mesh_aabb.size.x, mesh_aabb.size.y * 0.5, mesh_aabb.size.z)
+			)
+			if firsts["feet"]:
+				results["feet"] = knee_aabb
+				firsts["feet"] = false
+			else:
+				results["feet"] = (results["feet"] as AABB).merge(knee_aabb)
+		if "_feet_basemesh" in mi.name:
+			if firsts["legs"]:
+				results["legs"] = mesh_aabb
+				firsts["legs"] = false
+			else:
+				results["legs"] = (results["legs"] as AABB).merge(mesh_aabb)
 	return results
 
 
-func _fit_camera_to_aabb(aabb: AABB, padding: float = 0.0) -> void:
+func _effective_margin_top() -> float:
+	var base: float = float(preview_margin_top)
+	if top_node_margin and is_inside_tree():
+		base += maxf(
+			0.0, top_node_margin.global_position.y + top_node_margin.size.y - global_position.y
+		)
+	return base
+
+
+func _effective_margin_bottom() -> float:
+	var base: float = float(preview_margin_bottom)
+	if bottom_node_margin and is_inside_tree():
+		base += maxf(0.0, global_position.y + size.y - bottom_node_margin.global_position.y)
+	return base
+
+
+func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
 	if not is_inside_tree():
 		return
 	if size.x <= 0.0 or size.y <= 0.0:
 		_pending_camera_fit = true
 		return
 	_pending_camera_fit = false
-	if _camera_tween:
-		_camera_tween.kill()
+	var padding: float = _focus_padding()
 	if padding > 0.0:
 		aabb = aabb.grow(maxf(aabb.size.x, aabb.size.y) * padding * 0.5)
 	var vp_w: float = size.x
 	var vp_h: float = size.y
-	var inner_h: float = maxf(1.0, vp_h - preview_margin_top - preview_margin_bottom)
-	var inner_w: float = maxf(1.0, vp_w - preview_margin_left - preview_margin_right)
+	var eff_top: float = _effective_margin_top()
+	var eff_bottom: float = _effective_margin_bottom()
+	var inner_h: float = maxf(1.0, vp_h - eff_top - eff_bottom - extra_margin * 2)
+	var inner_w: float = maxf(
+		1.0, vp_w - preview_margin_left - preview_margin_right - extra_margin * 2
+	)
 	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
 	cam_size = maxf(cam_size, MIN_CAMERA_SIZE_PART)
 	_fitted_camera_size = cam_size
-	var center_y: float = (
-		aabb.get_center().y
-		+ float(preview_margin_top - preview_margin_bottom) * cam_size / (2.0 * vp_h)
+	_fitted_aabb_center_y = _focus_aabb_center_y(aabb)
+	var center_y: float = _fitted_aabb_center_y + (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)
+	var aabb_bottom_w: float = (avatar.global_transform * Vector3(0.0, aabb.position.y, 0.0)).y
+	var aabb_top_w: float = (
+		(avatar.global_transform * Vector3(0.0, aabb.position.y + aabb.size.y, 0.0)).y
 	)
-	_camera_tween = create_tween().set_parallel()
-	_camera_tween.tween_property(camera_center, "position:y", center_y, 0.5)
-	_camera_tween.tween_property(camera_3d, "size", cam_size, 0.5)
+	var pan_min: float = aabb_bottom_w + cam_size * (0.5 - eff_bottom / vp_h)
+	var pan_max: float = aabb_top_w - cam_size * (0.5 - eff_top / vp_h)
+	center_y = clampf(center_y, minf(pan_min, pan_max), maxf(pan_min, pan_max))
+	_target_camera_center_y = center_y
+	_target_camera_size = cam_size
 
 
 func _make_aabb_box(aabb: AABB, color: Color) -> MeshInstance3D:
@@ -466,11 +576,10 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float
 	var original_camera_center_y: float = camera_center.position.y
 	var original_camera_position: Vector3 = camera_3d.position
 	var original_camera_size: float = camera_3d.size
+	var original_target_center_y: float = _target_camera_center_y
+	var original_target_size: float = _target_camera_size
 
-	if _camera_tween:
-		_camera_tween.kill()
-		_camera_tween = null
-
+	_lerp_paused = true
 	camera_center.position.y = 0.0
 	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION
 	camera_3d.size = ortho_size
@@ -492,7 +601,10 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float
 	camera_center.position.y = original_camera_center_y
 	camera_3d.position = original_camera_position
 	camera_3d.size = original_camera_size
+	_target_camera_center_y = original_target_center_y
+	_target_camera_size = original_target_size
 	stretch = original_stretch
 	set_size(original_size)
+	_lerp_paused = false
 
 	return img
