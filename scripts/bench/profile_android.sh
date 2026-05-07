@@ -54,11 +54,35 @@ adb shell "rm -f /data/local/tmp/perf.data; \
 
 adb pull /data/local/tmp/perf.data "$OUT_DIR/perf.data" 2>&1 | tail -1
 
-# Populate binary_cache so libdclgodot.so (and libgodot_android.so when the
-# debug template was used via build_for_profile.sh) can be symbolicated.
+# Populate binary_cache so both libdclgodot.so (Rust dev-release) and
+# libgodot_android.so (Godot debug template — unstripped + GNU build-id)
+# resolve to function names. Without the Godot lib, ~50% of CPU
+# (VkThread + Thread-16) is the unsymbolicated bulk we care about.
 RUST_LIB_DIR="lib/target/aarch64-linux-android/dev-release"
+GODOT_LIB_DIR="$OUT_DIR/_godot_libs"
 LIB_DIRS=()
 [[ -d "$RUST_LIB_DIR" ]] && LIB_DIRS+=("$RUST_LIB_DIR")
+
+# Extract libgodot_android.so from the installed APK so the offsets match
+# what's actually running on the device. android_debug.apk template has
+# the right unstripped .so (build-id matches when build_for_profile.sh was
+# used); release template ships a stripped one — symbolication will fail
+# silently in that case, which is fine: libdclgodot still resolves.
+APK_PATH="exports/decentraland.godot.client.apk"
+if [[ -f "$APK_PATH" ]]; then
+  mkdir -p "$GODOT_LIB_DIR"
+  if unzip -p "$APK_PATH" "lib/arm64-v8a/libgodot_android.so" \
+       > "$GODOT_LIB_DIR/libgodot_android.so" 2>/dev/null \
+     && [[ -s "$GODOT_LIB_DIR/libgodot_android.so" ]]; then
+    SIZE_MB=$(du -m "$GODOT_LIB_DIR/libgodot_android.so" | awk '{print $1}')
+    echo "[profile] extracted libgodot_android.so (${SIZE_MB} MB) from APK"
+    LIB_DIRS+=("$GODOT_LIB_DIR")
+  else
+    rm -rf "$GODOT_LIB_DIR"
+    echo "[profile] couldn't extract libgodot_android.so from APK, skipping" >&2
+  fi
+fi
+
 if (( ${#LIB_DIRS[@]} > 0 )); then
   echo "[profile] populating binary_cache from ${LIB_DIRS[*]}"
   python3 "$SP_DIR/binary_cache_builder.py" -i "$OUT_DIR/perf.data" \

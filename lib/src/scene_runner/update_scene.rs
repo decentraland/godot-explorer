@@ -1,9 +1,112 @@
-use std::{cell::RefCell, time::Instant};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    sync::{atomic::Ordering, Mutex},
+    time::Instant,
+};
 
 use godot::{
     obj::Singleton,
     prelude::{varray, Callable, ToGodot, Transform3D},
 };
+
+/// Per-state cumulative CPU timing across all scene threads. Read+reset from
+/// the GP benchmark runner to dump a per-state breakdown of where the per-frame
+/// scene_runner cost actually goes (the existing 16ms warning logs only catch
+/// load-time spikes — steady-state per-frame timing needs aggregation).
+///
+/// Gated on `STATE_TIMING_ENABLED` because the per-state lock acquire is
+/// hit ~30 times per scene per tick, and across many scene threads the
+/// global mutex serializes everything — measured 50 % FPS regression on
+/// Genesis Plaza when always-on. The bench runner flips it on right before
+/// the sampling window.
+static STATE_TIMING: Mutex<Option<HashMap<&'static str, (u64, u64)>>> = Mutex::new(None);
+static STATE_TIMING_ENABLED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+#[inline]
+fn record_state_timing(state_name: &'static str, us: u64) {
+    if !STATE_TIMING_ENABLED.load(Ordering::Relaxed) {
+        return;
+    }
+    if let Ok(mut guard) = STATE_TIMING.lock() {
+        let map = guard.get_or_insert_with(HashMap::new);
+        let entry = map.entry(state_name).or_insert((0u64, 0u64));
+        entry.0 = entry.0.saturating_add(us);
+        entry.1 = entry.1.saturating_add(1);
+    }
+}
+
+/// Drain and clear the per-state timing buckets. Returns a multiline string
+/// like `MeshRenderer=12345us(120)\n...` for embedding in benchmark JSON.
+/// Side-effect: leaves recording disabled so post-sampling work doesn't
+/// pollute the next sample window.
+pub fn drain_state_timing() -> String {
+    STATE_TIMING_ENABLED.store(false, Ordering::Relaxed);
+    let Ok(mut guard) = STATE_TIMING.lock() else {
+        return String::new();
+    };
+    let Some(map) = guard.take() else {
+        return String::new();
+    };
+    let mut entries: Vec<(&'static str, u64, u64)> =
+        map.into_iter().map(|(k, (us, n))| (k, us, n)).collect();
+    entries.sort_unstable_by_key(|e| std::cmp::Reverse(e.1));
+    let mut out = String::new();
+    for (name, us, n) in entries {
+        out.push_str(&format!("{}={}us({})\n", name, us, n));
+    }
+    out
+}
+
+pub fn reset_state_timing() {
+    if let Ok(mut guard) = STATE_TIMING.lock() {
+        *guard = None;
+    }
+    STATE_TIMING_ENABLED.store(true, Ordering::Relaxed);
+}
+
+fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
+    use super::scene::SceneUpdateState as S;
+    match state {
+        S::None => "None",
+        S::PrintLogs => "PrintLogs",
+        S::DeletedEntities => "DeletedEntities",
+        S::Tween => "Tween",
+        S::TransformAndParent => "TransformAndParent",
+        S::VisibilityComponent => "VisibilityComponent",
+        S::MeshRenderer => "MeshRenderer",
+        S::ScenePointerEvents => "ScenePointerEvents",
+        S::Material => "Material",
+        S::TextShape => "TextShape",
+        S::Billboard => "Billboard",
+        S::MeshCollider => "MeshCollider",
+        S::GltfContainer => "GltfContainer",
+        S::SyncGltfContainer => "SyncGltfContainer",
+        S::GltfNodeModifiers => "GltfNodeModifiers",
+        S::NftShape => "NftShape",
+        S::Animator => "Animator",
+        S::AvatarShape => "AvatarShape",
+        S::AvatarShapeEmoteCommand => "AvatarShapeEmoteCommand",
+        S::Raycasts => "Raycasts",
+        S::AvatarAttach => "AvatarAttach",
+        S::SceneUi => "SceneUi",
+        S::VideoPlayer => "VideoPlayer",
+        S::AudioStream => "AudioStream",
+        S::AvatarModifierArea => "AvatarModifierArea",
+        S::AvatarLocomotionSettings => "AvatarLocomotionSettings",
+        S::CameraModeArea => "CameraModeArea",
+        S::InputModifier => "InputModifier",
+        S::SkyboxTime => "SkyboxTime",
+        S::TriggerArea => "TriggerArea",
+        S::VirtualCameras => "VirtualCameras",
+        S::AudioSource => "AudioSource",
+        S::ProcessRpcs => "ProcessRpcs",
+        S::ComputeCrdtState => "ComputeCrdtState",
+        S::SendToThread => "SendToThread",
+        S::Processed => "Processed",
+    }
+}
 
 use super::{
     components::{
@@ -547,6 +650,10 @@ pub fn _process_scene(
             const TICK_TIME_LOGABLE_MS: i64 = 16000;
             let this_update_us =
                 (std::time::Instant::now() - before_compute_update).as_micros() as i64;
+            record_state_timing(
+                state_name(&scene.current_dirty.update_state),
+                this_update_us as u64,
+            );
             if this_update_us > TICK_TIME_LOGABLE_MS {
                 tracing::warn!(
                 "Scene \"{:?}\"(tick={:?}) in state {:?} takes more than {TICK_TIME_LOGABLE_MS}: {:?}us",

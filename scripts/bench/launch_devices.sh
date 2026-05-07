@@ -56,6 +56,7 @@ GP_BENCHMARK=0
 EXTRA_PARAMS=()
 TAIL=1
 PULL_RESULTS=0
+PROFILE=0
 
 urlencode() {
   python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
@@ -73,6 +74,7 @@ while [[ $# -gt 0 ]]; do
     --param)         EXTRA_PARAMS+=("$2"); shift ;;
     --no-tail)       TAIL=0 ;;
     --pull-results)  PULL_RESULTS=1 ;;
+    --profile)       PROFILE=1 ;;
     -h|--help)       sed -n '1,33p' "$0"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -200,6 +202,38 @@ ensure_pinned_preview() {
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 if [[ "$GP_BENCHMARK" -eq 1 && -z "$REALM" ]]; then
   ensure_pinned_preview
+fi
+
+# --profile spawns the matching profile_*.sh per device in parallel. Each
+# profiler waits on its device's log for `PROFILE_WINDOW_BEGIN` and runs
+# simpleperf (Android) / xctrace (iOS) for the duration emitted by
+# gp_benchmark_runner.gd. Output → bench-results/profiles/<platform>-<tag>-<ts>/.
+if [[ "$PROFILE" -eq 1 ]]; then
+  bench_tag="profile"
+  for p in "${EXTRA_PARAMS[@]:-}"; do
+    [[ "$p" == bench-tag=* ]] && bench_tag="${p#bench-tag=}"
+  done
+  script_dir="$(dirname "$0")"
+  if [[ "$DEVICES" == "android" || "$DEVICES" == "both" ]]; then
+    if [[ -x "$script_dir/profile_android.sh" ]]; then
+      echo "[profile] spawning Android profiler (tag=$bench_tag)"
+      ( "$script_dir/profile_android.sh" "$bench_tag" 2>&1 \
+          | sed -u 's/^/[profile-android] /' ) &
+      PIDS+=($!)
+    else
+      echo "[profile] WARN: profile_android.sh not executable, skipping" >&2
+    fi
+  fi
+  if [[ "$DEVICES" == "ios" || "$DEVICES" == "both" ]]; then
+    if [[ -x "$script_dir/profile_ios.sh" ]]; then
+      echo "[profile] spawning iOS profiler (tag=$bench_tag)"
+      ( "$script_dir/profile_ios.sh" "$bench_tag" 2>&1 \
+          | sed -u 's/^/[profile-ios] /' ) &
+      PIDS+=($!)
+    else
+      echo "[profile] WARN: profile_ios.sh not present yet, skipping iOS profile" >&2
+    fi
+  fi
 fi
 
 launch_android() {

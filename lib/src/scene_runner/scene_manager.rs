@@ -410,6 +410,59 @@ impl SceneManager {
         }
     }
 
+    /// Reset per-state CPU timing buckets used by the GP benchmark to measure
+    /// where steady-state per-frame work goes (call right before sampling).
+    #[func]
+    pub fn reset_state_timing(&mut self) {
+        super::update_scene::reset_state_timing();
+    }
+
+    /// Drain per-state CPU timing buckets as `State=us(count)\n...` lines.
+    /// Call right after sampling; embed in benchmark JSON for analysis.
+    #[func]
+    pub fn drain_state_timing(&mut self) -> GString {
+        let s = super::update_scene::drain_state_timing();
+        GString::from(s.as_str())
+    }
+
+    /// Reset CRDT cross-boundary metrics (send/recv bytes, op counts, dirty
+    /// entries). Call right before sampling.
+    #[func]
+    pub fn reset_crdt_metrics(&mut self) {
+        crate::dcl::js::engine::reset_crdt_metrics();
+    }
+
+    /// Drain CRDT cross-boundary metrics as `key=value\n...` lines. Call right
+    /// after sampling; embed in benchmark JSON.
+    #[func]
+    pub fn drain_crdt_metrics(&mut self) -> GString {
+        let m = crate::dcl::js::engine::drain_crdt_metrics();
+        let s = format!(
+            "send_bytes={}\nsend_ops={}\nrecv_bytes={}\nrecv_ops={}\ndirty_lww_entries={}\ndirty_gos_entries={}\n",
+            m.send_bytes, m.send_ops, m.recv_bytes, m.recv_ops, m.dirty_lww_entries, m.dirty_gos_entries,
+        );
+        GString::from(s.as_str())
+    }
+
+    /// Drain per-component-id breakdown of dirty entries from the Rust→V8 path.
+    /// Returns a multi-line string: `lww:<name>(<id>)=<count>` then
+    /// `gos:<name>(<id>)=<count>`, sorted descending. Bench runner embeds this
+    /// in JSON to identify which SDK7 components dominate the round-trip.
+    #[func]
+    pub fn drain_crdt_component_breakdown(&mut self) -> GString {
+        let breakdown = crate::dcl::js::engine::drain_crdt_component_breakdown();
+        let mut out = String::new();
+        for (id, count) in breakdown.lww {
+            let name = crate::dcl::components::component_id_to_name(id);
+            out.push_str(&format!("lww:{}({})={}\n", name, id, count));
+        }
+        for (id, count) in breakdown.gos {
+            let name = crate::dcl::components::component_id_to_name(id);
+            out.push_str(&format!("gos:{}({})={}\n", name, id, count));
+        }
+        GString::from(out.as_str())
+    }
+
     /// Report that a scene was spawned and is now loading assets
     #[func]
     pub fn report_scene_spawned(&mut self, scene_id: i32, expected_assets: i32) {
