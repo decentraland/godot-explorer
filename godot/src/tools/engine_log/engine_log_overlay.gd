@@ -20,7 +20,7 @@ const MAX_PANEL_SIZE := Vector2(2200, 1600)
 const VIEWPORT_MARGIN := 24.0
 const HEADER_HEIGHT := 52.0
 const RESIZE_CORNER_SIZE := 50.0
-const RESIZE_EDGE_THICKNESS := 24.0
+const RESIZE_EDGE_THICKNESS := 45.0
 const AUTO_SCROLL_THRESHOLD := 24.0
 
 var _service: Node = null
@@ -301,15 +301,6 @@ func _make_header_button(text: String) -> Button:
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.add_theme_font_size_override("font_size", 14)
-
-	button.button_down.connect(func():
-		_begin_local_focus_block(-1)
-	)
-
-	button.button_up.connect(func():
-		_end_local_focus_block(-1)
-	)
-
 	return button
 
 
@@ -344,35 +335,48 @@ func _update_interaction_zones() -> void:
 
 	var p := _panel.position
 	var s := _panel.size
+	var outer_padding := INPUT_BLOCK_MARGIN
 	var corner_size := minf(RESIZE_CORNER_SIZE, minf(s.x, s.y) * 0.5)
 	var edge_thickness := minf(RESIZE_EDGE_THICKNESS, minf(s.x, s.y) * 0.5)
 
-	var corner_zone_size := Vector2(corner_size, corner_size)
+	var corner_zone_size := Vector2(
+		corner_size + outer_padding,
+		corner_size + outer_padding
+	)
 
 	for zone in _resize_zones:
 		match zone.name:
 			"ResizeLeft":
-				zone.position = p + Vector2(0, corner_size)
-				zone.size = Vector2(edge_thickness, maxf(0.0, s.y - corner_size * 2.0))
+				zone.position = p + Vector2(-outer_padding, corner_size)
+				zone.size = Vector2(
+					edge_thickness + outer_padding,
+					maxf(0.0, s.y - corner_size * 2.0)
+				)
 
 			"ResizeRight":
 				zone.position = p + Vector2(s.x - edge_thickness, corner_size)
-				zone.size = Vector2(edge_thickness, maxf(0.0, s.y - corner_size * 2.0))
+				zone.size = Vector2(
+					edge_thickness + outer_padding,
+					maxf(0.0, s.y - corner_size * 2.0)
+				)
 
 			"ResizeBottom":
 				zone.position = p + Vector2(corner_size, s.y - edge_thickness)
-				zone.size = Vector2(maxf(0.0, s.x - corner_size * 2.0), edge_thickness)
+				zone.size = Vector2(
+					maxf(0.0, s.x - corner_size * 2.0),
+					edge_thickness + outer_padding
+				)
 
 			"ResizeTopLeft":
-				zone.position = p
+				zone.position = p + Vector2(-outer_padding, -outer_padding)
 				zone.size = corner_zone_size
 
 			"ResizeTopRight":
-				zone.position = p + Vector2(s.x - corner_size, 0)
+				zone.position = p + Vector2(s.x - corner_size, -outer_padding)
 				zone.size = corner_zone_size
 
 			"ResizeBottomLeft":
-				zone.position = p + Vector2(0, s.y - corner_size)
+				zone.position = p + Vector2(-outer_padding, s.y - corner_size)
 				zone.size = corner_zone_size
 
 			"ResizeBottomRight":
@@ -682,15 +686,11 @@ func _input(event: InputEvent) -> void:
 			and _focus_block_touch_index == -1
 		):
 			_end_local_focus_block(-1)
-			get_viewport().set_input_as_handled()
-			return
 
 		if event is InputEventScreenTouch and not event.pressed:
 			if _focus_block_touch_index == -1 or event.index == _focus_block_touch_index:
 				var ended_touch_index := _focus_block_touch_index
 				_end_local_focus_block(ended_touch_index)
-				get_viewport().set_input_as_handled()
-				return
 
 	if _dragging_panel:
 		if event is InputEventMouseMotion and _drag_touch_index == -1:
@@ -733,6 +733,7 @@ func _input(event: InputEvent) -> void:
 			_end_edge_resize()
 			get_viewport().set_input_as_handled()
 			return
+
 
 func _begin_panel_drag(pointer_pos: Vector2, touch_index: int) -> void:
 	if _resizing:
@@ -883,6 +884,11 @@ func _update_input_blocker_rect() -> void:
 	var rect := _get_input_block_rect()
 	_input_blocker.position = rect.position
 	_input_blocker.size = rect.size
+	
+	# Keep resize handles above the input blocker so edge/corner resizing works
+	# even when the hit area extends outside the panel.
+	for zone in _resize_zones:
+		_root.move_child(zone, _root.get_child_count() - 1)
 
 func _on_input_blocker_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
