@@ -2,7 +2,11 @@ extends GLTFDocumentExtension
 
 
 func _import_preflight(state: GLTFState, _extensions: PackedStringArray) -> Error:
-	var placeholder_image = state.get_additional_data("placeholder_image")
+	# Guard with has_additional_data() — bare get_additional_data() emits a
+	# Dictionary engine warning when the key is missing, captured by Sentry.
+	var placeholder_image: Variant = null
+	if state.has_additional_data("placeholder_image"):
+		placeholder_image = state.get_additional_data("placeholder_image")
 	if placeholder_image:
 		var dependencies: Array[String] = []
 		for image in state.json.get("images", []):
@@ -18,16 +22,16 @@ func _import_preflight(state: GLTFState, _extensions: PackedStringArray) -> Erro
 				buf["uri"] = "empty_buffer.bin"
 
 		state.set_additional_data("dependencies", dependencies)
-	else:
-		var base_path = state.get_additional_data("base_path")
-		if base_path != null:
-			var mappings = state.get_additional_data("mappings")
-			for image in state.json.get("images", []):
-				var uri = image.get("uri", "")
-				if not uri.is_empty() and not uri.begins_with("data:"):
-					image["uri"] = mappings.get(uri, uri)
-			for buf in state.json.get("buffers", []):
-				var uri = buf.get("uri", "")
-				if not uri.is_empty() and not uri.begins_with("data:"):
-					buf["uri"] = mappings.get(uri, uri)
+	elif state.has_additional_data("base_path"):
+		var mappings: Dictionary = (
+			state.get_additional_data("mappings") if state.has_additional_data("mappings") else {}
+		)
+		for image in state.json.get("images", []):
+			var uri = image.get("uri", "")
+			if not uri.is_empty() and not uri.begins_with("data:"):
+				image["uri"] = mappings.get(uri, uri)
+		for buf in state.json.get("buffers", []):
+			var uri = buf.get("uri", "")
+			if not uri.is_empty() and not uri.begins_with("data:"):
+				buf["uri"] = mappings.get(uri, uri)
 	return OK
