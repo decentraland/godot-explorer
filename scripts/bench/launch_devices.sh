@@ -101,12 +101,96 @@ fi
 echo "[launch] deeplink: $DEEPLINK"
 
 PIDS=()
+PREVIEW_OWNED_PID=""
 cleanup() {
   for p in "${PIDS[@]:-}"; do
     [[ -n "$p" ]] && kill "$p" 2>/dev/null || true
   done
+  # Only kill the preview if we spawned it ourselves; pre-existing servers
+  # belong to the user.
+  if [[ -n "$PREVIEW_OWNED_PID" ]]; then
+    kill "$PREVIEW_OWNED_PID" 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT INT TERM
+
+# When --gp-benchmark is set and the user didn't pass --realm, spin up a
+# pinned local preview from the commit declared in
+# godot/bench/genesis_plaza.config.json. Idempotent: clones into
+# ~/.cache/dcl-bench/Genesis-Plaza-2025-<short-sha>/ — outside any worktree
+# so multiple branches share the same checkout. Reuses any preview already
+# listening on port 8000.
+ensure_pinned_preview() {
+  local config="$REPO_ROOT/godot/bench/genesis_plaza.config.json"
+  if [[ ! -f "$config" ]]; then
+    echo "[gp-preview] config not found at $config; skipping clone" >&2
+    return
+  fi
+  local repo_url commit
+  repo_url=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("genesis_plaza_repo",""))' "$config")
+  commit=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("genesis_plaza_commit",""))' "$config")
+  if [[ -z "$repo_url" || -z "$commit" ]]; then
+    echo "[gp-preview] config missing genesis_plaza_repo / genesis_plaza_commit; skipping" >&2
+    return
+  fi
+
+  local short="${commit:0:8}"
+  local cache_dir="${HOME}/.cache/dcl-bench/Genesis-Plaza-2025-${short}"
+
+  if [[ ! -d "$cache_dir/.git" ]]; then
+    echo "[gp-preview] cloning $repo_url @ $short -> $cache_dir"
+    mkdir -p "$(dirname "$cache_dir")"
+    # No --depth: we need to be able to checkout an arbitrary commit. The
+    # repo is small enough that a full clone is cheap.
+    git clone "$repo_url" "$cache_dir"
+  fi
+
+  local current_head
+  current_head=$(git -C "$cache_dir" rev-parse HEAD 2>/dev/null || echo "")
+  if [[ "$current_head" != "$commit" ]]; then
+    echo "[gp-preview] checking out pinned commit $short"
+    git -C "$cache_dir" fetch origin "$commit" 2>/dev/null || git -C "$cache_dir" fetch --all
+    git -C "$cache_dir" -c advice.detachedHead=false checkout "$commit"
+  fi
+
+  local scene_dir="$cache_dir/central-plaza"
+  if [[ ! -f "$scene_dir/scene.json" ]]; then
+    echo "[gp-preview] central-plaza/scene.json not found in clone; aborting" >&2
+    return
+  fi
+
+  if lsof -iTCP:8000 -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "[gp-preview] port 8000 already in use; reusing existing server"
+    return
+  fi
+
+  local log_file="/tmp/gp-preview-${short}.log"
+  echo "[gp-preview] starting sdk-commands from $scene_dir (logs: $log_file)"
+  ( cd "$scene_dir" && nohup npx -y @dcl/sdk-commands@latest start \
+      --no-debug --skip-build --no-browser --web-explorer --port 8000 \
+      > "$log_file" 2>&1 & echo $! ) > /tmp/gp-preview-pid
+  PREVIEW_OWNED_PID=$(cat /tmp/gp-preview-pid)
+  rm -f /tmp/gp-preview-pid
+
+  # Wait up to 90 s for the port to come up. First run downloads
+  # @dcl/sdk-commands so the install can dominate the timeout.
+  local waited=0
+  while ! lsof -iTCP:8000 -sTCP:LISTEN >/dev/null 2>&1; do
+    sleep 2
+    waited=$((waited + 2))
+    if [[ $waited -ge 90 ]]; then
+      echo "[gp-preview] timed out waiting for port 8000; tail log:" >&2
+      tail -20 "$log_file" >&2 || true
+      return
+    fi
+  done
+  echo "[gp-preview] preview ready (pid=$PREVIEW_OWNED_PID, ${waited}s)"
+}
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [[ "$GP_BENCHMARK" -eq 1 && -z "$REALM" ]]; then
+  ensure_pinned_preview
+fi
 
 launch_android() {
   if ! command -v adb >/dev/null 2>&1; then
