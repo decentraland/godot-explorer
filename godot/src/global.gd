@@ -117,6 +117,17 @@ var _hardware_benchmark: HardwareBenchmark = null
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
 
+## Lazy-init owner for the RenderingServer-direct GLTF rendering pipeline.
+## Created on first access so the cost is paid only when `--rs-gltf-direct`
+## is on. See gltf_container.gd / dcl_gltf_render_manager.rs for the contract.
+var _gltf_render_manager: DclGltfRenderManager = null
+
+## Coalescer for GltfContainer load-timeouts. Lazy-init child node.
+## Adding `_process` directly on DclGlobal triggers a Godot Vulkan crash —
+## the coalescer must live on a separate Node to keep `_process` off the
+## autoload itself.
+var _gltf_load_timeout_coalescer: Node = null
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
@@ -130,6 +141,31 @@ func is_emulating_safe_area() -> bool:
 ## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
 func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
+
+
+## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
+## per-container Timer (~1419 in Genesis Plaza). Called from
+## gltf_container.gd; created on first use, persists for the app's lifetime.
+func get_gltf_load_timeout_coalescer() -> Node:
+	if _gltf_load_timeout_coalescer == null:
+		var coalescer_script = load(
+			"res://src/decentraland_components/gltf_load_timeout_coalescer.gd"
+		)
+		_gltf_load_timeout_coalescer = coalescer_script.new()
+		_gltf_load_timeout_coalescer.name = "GltfLoadTimeoutCoalescer"
+		add_child(_gltf_load_timeout_coalescer)
+	return _gltf_load_timeout_coalescer
+
+
+## Lazy-init the render manager. Called from gltf_container.gd when
+## `cli.rs_gltf_direct` is on. Lives as a child of Global so its `_process`
+## (transform sync for batched MultiMesh slots) fires every frame.
+func get_gltf_render_manager() -> DclGltfRenderManager:
+	if _gltf_render_manager == null:
+		_gltf_render_manager = DclGltfRenderManager.new()
+		_gltf_render_manager.name = "GltfRenderManager"
+		add_child(_gltf_render_manager)
+	return _gltf_render_manager
 
 
 func _get_safe_area_presets() -> GDScript:
