@@ -22,16 +22,16 @@ func _import_preflight(state: GLTFState, _extensions: PackedStringArray) -> Erro
 				buf["uri"] = "empty_buffer.bin"
 
 		state.set_additional_data("dependencies", dependencies)
-	elif state.has_additional_data("base_path"):
-		var mappings: Dictionary = (
-			state.get_additional_data("mappings") if state.has_additional_data("mappings") else {}
-		)
-		for image in state.json.get("images", []):
-			var uri = image.get("uri", "")
-			if not uri.is_empty() and not uri.begins_with("data:"):
-				image["uri"] = mappings.get(uri, uri)
-		for buf in state.json.get("buffers", []):
-			var uri = buf.get("uri", "")
-			if not uri.is_empty() and not uri.begins_with("data:"):
-				buf["uri"] = mappings.get(uri, uri)
+	else:
+		var base_path = state.get_additional_data("base_path")
+		if base_path != null:
+			var mappings = state.get_additional_data("mappings")
+			for image in state.json.get("images", []):
+				var uri = image.get("uri", "")
+				if not uri.is_empty() and not uri.begins_with("data:"):
+					image["uri"] = mappings.get(uri, uri)
+			for buf in state.json.get("buffers", []):
+				var uri = buf.get("uri", "")
+				if not uri.is_empty() and not uri.begins_with("data:"):
+					buf["uri"] = mappings.get(uri, uri)
 	return OK
