@@ -79,6 +79,16 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# gp-benchmark needs `position` in the deeplink to seed scene_fetcher's
+# first update_position(). Without it, fresh-state runs (after pm clear /
+# first install) hang at "loading 0%" because explorer.gd:262 only
+# overrides last_parcel_position when `cmd_location != Vector2i.ZERO`.
+# gp_benchmark_runner pins the pose post-load, but scene_fetcher needs the
+# initial parcel set explicitly to start fetching.
+if [[ "$GP_BENCHMARK" -eq 1 && -z "$POSITION" ]]; then
+  POSITION="0,0"
+fi
+
 # Build the deeplink query string
 PARAMS=()
 [[ -n "$REALM"    ]] && PARAMS+=("realm=$(urlencode "$REALM")")
