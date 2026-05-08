@@ -53,8 +53,10 @@ func set_shadow(shadow_quality: int):
 			sky.main_light.shadow_enabled = true
 			# Use base light energy when shadows are on
 			sky.main_light.light_energy = 0.7
-			# Shorter shadow distance for better performance
-			sky.main_light.directional_shadow_max_distance = 30.0
+			# Mobile-tuned: 20 m frustum dropped ~5 ms GPU on Mali-G68 in
+			# Genesis Plaza A/B; off-screen shadow casters past 20 m
+			# dominate the vertex side of the cascaded shadow map.
+			sky.main_light.directional_shadow_max_distance = 20.0
 		2:  # high res shadow
 			sky.main_light.shadow_enabled = true
 			sky.main_light.light_energy = 0.7
@@ -70,7 +72,9 @@ func set_bloom(bloom_quality: int):
 	match bloom_quality:
 		0:  # Off
 			environment.glow_enabled = false
-		1:  # Low quality
+		1:  # Low quality — bilinear upscale + only 2 active levels.
+			# Bicubic upscale costs ~3x extra fragment ops per upsample
+			# pass; bilinear is indistinguishable at 0.7 intensity.
 			environment.glow_enabled = true
 			environment.glow_intensity = 0.7
 			environment.glow_hdr_threshold = 1.0
@@ -79,6 +83,7 @@ func set_bloom(bloom_quality: int):
 			environment.set("glow_levels/2", 0.15)
 			environment.set("glow_levels/3", 0.0)
 			environment.set("glow_levels/5", 0.0)
+			RenderingServer.environment_glow_set_use_bicubic_upscale(false)
 		2:  # High quality
 			environment.glow_enabled = true
 			environment.glow_intensity = 1.5
