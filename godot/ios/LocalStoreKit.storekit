@@ -30,6 +30,21 @@
       "type" : "Consumable"
     },
     {
+      "displayPrice" : "24.99",
+      "familyShareable" : false,
+      "internalID" : "DCLPRD03",
+      "localizations" : [
+        {
+          "description" : "Get 50 credits to spend in Decentraland.",
+          "displayName" : "50 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "local_credits_50",
+      "referenceName" : "Local Credits 50",
+      "type" : "Consumable"
+    },
+    {
       "displayPrice" : "49.99",
       "familyShareable" : false,
       "internalID" : "DCLPRD02",

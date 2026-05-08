@@ -1,0 +1,8 @@
+node_modules/
+data/*.db
+data/*.db-journal
+secrets/
+.env
+.env.local
+dist/
+*.log

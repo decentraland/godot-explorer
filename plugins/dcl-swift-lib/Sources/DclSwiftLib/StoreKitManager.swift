@@ -1,6 +1,7 @@
 import SwiftGodotRuntime
 import Foundation
 import StoreKit
+import CryptoKit
 
 /// Logs to both NSLog (Console.app) and Godot's stdout so messages show up
 /// in `cargo run -- run --target ios` output as well as the device console.
@@ -122,18 +123,30 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
         return url.lastPathComponent == "sandboxReceipt"
     }
 
+    /// Initiates a purchase. `walletAddress` is REQUIRED — it's hashed into a
+    /// UUID that's passed to StoreKit as `appAccountToken`, embedded inside
+    /// Apple's signed JWS. The backend re-derives this UUID from the wallet
+    /// to prove the buyer actually intended to credit that address (defends
+    /// against stolen-JWS redirect attacks). Without a wallet, the backend
+    /// will reject the resulting transaction.
     @Callable(autoSnakeCase: true)
-    func purchase(productId: String) {
+    func purchase(productId: String, walletAddress: String) {
         guard let product = loadedProducts[productId] else {
             gdLog("[DclStoreKit] purchase: product not loaded: \(productId)")
             purchaseFailed.emit(productId, "product not loaded; call load_products first")
             return
         }
-        gdLog("[DclStoreKit] purchase: starting \(productId)")
+        var options: Set<Product.PurchaseOption> = []
+        if let token = appAccountToken(forWallet: walletAddress) {
+            options.insert(.appAccountToken(token))
+            gdLog("[DclStoreKit] purchase: starting \(productId) appAccountToken=\(token)")
+        } else {
+            gdLog("[DclStoreKit] purchase: starting \(productId) WITHOUT appAccountToken — backend will reject")
+        }
         Task { [weak self] in
             guard let self = self else { return }
             do {
-                let result = try await product.purchase()
+                let result = try await product.purchase(options: options)
                 switch result {
                 case .success(let verification):
                     self.handlePurchaseVerification(verification, productId: productId)
@@ -173,6 +186,24 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
     }
 
     // MARK: - Private
+
+    /// Deterministic wallet → UUID. Same algorithm as the backend's
+    /// `wallet.ts::uuidFromWallet` so the appAccountToken inside the JWS
+    /// matches what the server expects from the wallet param.
+    private func appAccountToken(forWallet wallet: String) -> UUID? {
+        let normalized = wallet.lowercased()
+        guard !normalized.isEmpty else { return nil }
+        let input = "dcl-iap:" + normalized
+        let hash = SHA256.hash(data: Data(input.utf8))
+        let bytes = Array(hash.prefix(16))
+        guard bytes.count == 16 else { return nil }
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
 
     private func handlePurchaseVerification(_ result: VerificationResult<Transaction>, productId: String) {
         switch result {

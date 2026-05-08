@@ -20,6 +20,8 @@ var _generator_statuses: Dictionary = {}
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 #@onready var discover_content: VBoxContainer = %DiscoverContent
+@onready var button_credits: Button = %Button_Credits
+@onready var credits_option = %CreditsOption
 
 static var _low_spec_warning_shown: bool = false
 
@@ -30,6 +32,8 @@ func _ready():
 	jump_in.hide()
 	event_details.hide()
 	search_bar.close_searchbar()
+
+	_setup_credits_button()
 
 	jump_in.jump_in.connect(_on_jump_in_jump_in)
 	jump_in.jump_in_world.connect(_on_jump_in_world)
@@ -147,6 +151,7 @@ func _on_search_bar_opened() -> void:
 	container_content.hide()
 	search_container.set_keyword_search_text("")
 	Global.metrics.track_click_button("SEARCH_SELECT_INPUT", "SEARCH_CLICK", "")
+	button_credits.hide()
 
 
 func _on_search_bar_cleared() -> void:
@@ -156,6 +161,7 @@ func _on_search_bar_cleared() -> void:
 	search_container.show()
 	search_container.set_keyword_search_text("")
 	Global.metrics.track_click_button("SEARCH_ERASE", "SEARCH_CLICK", "")
+	_show_credits_button()
 
 
 func set_search_filter_text(new_text: String) -> void:
@@ -450,10 +456,53 @@ func _on_button_back_to_explorer_pressed() -> void:
 		label_title.show()
 		if not Global.get_explorer():
 			button_back_to_explorer.hide()
+		_show_credits_button()
 		return
+
+	if credits_option.visible:
+		search_bar.show()
+		credits_option.hide()
+		_show_credits_button()
+		container_content.show()
+		label_title.show()
+		label_title.text = "Discover"
+		if not Global.get_explorer():
+			button_back_to_explorer.hide()
+		return
+
 	if Global.get_explorer():
 		if Global.modal_manager.ban_pre_check_active:
 			Global.modal_manager.async_show_ban_pre_check_modal()
 			return
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
+
+
+func _on_button_credits_pressed() -> void:
+	button_back_to_explorer.show()
+	label_title.text = "Credits"
+	search_container.hide()
+	container_content.hide()
+	Global.metrics.track_click_button("BUTTON_CREDITS", "DISCOVER", "")
+	_show_credits_button()
+	credits_option.show()
+	search_bar.hide()
+
+
+# Credits / IAP entry. The button doubles as a balance display, so we show it
+# only when StoreKit is wired up (iOS today). On Android/desktop we never
+# offer the entry — there's no payment path behind it.
+func _setup_credits_button() -> void:
+	if not Iap.is_available():
+		button_credits.hide()
+		return
+	button_credits.text = str(Iap.get_balance())
+	Iap.balance_changed.connect(_on_iap_balance_changed)
+
+
+func _show_credits_button() -> void:
+	button_credits.visible = Iap.is_available()
+
+
+func _on_iap_balance_changed(new_balance: int) -> void:
+	button_credits.text = str(new_balance)

@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_73ifx"]
+[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/credits-icon.svg" id="9_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="10_q2sj0"]
 [ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/components/discover/icons/not-found.svg" id="12_g4fdo"]
@@ -16,9 +18,10 @@
 [ext_resource type="PackedScene" uid="uid://ct64rhq0dtpa3" path="res://src/ui/components/discover/search_bar/search_suggestions.tscn" id="14_5g6gd"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/components/events/events_generator.tscn" id="15_edk0s"]
-[ext_resource type="PackedScene" path="res://src/ui/components/events/event_discover_skeleton.tscn" id="16_skel"]
+[ext_resource type="PackedScene" uid="uid://cwlnydq8rjjxt" path="res://src/ui/components/events/event_discover_skeleton.tscn" id="16_skel"]
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/components/events/event_details.tscn" id="17_lvgj0"]
 [ext_resource type="PackedScene" uid="uid://3uibe7yuvd3j" path="res://src/ui/components/search-bar/search_bar.tscn" id="18_sbar"]
+[ext_resource type="PackedScene" uid="uid://dv5qtn5it8js0" path="res://src/ui/components/discover/credits_option.tscn" id="20_dn5gj"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
@@ -81,6 +84,7 @@ use_bottom = false
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer" unique_id=2084974317]
+custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 14
@@ -106,6 +110,23 @@ label_settings = ExtResource("5_q2sj0")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_stretch_ratio = 20.0
+
+[node name="Button_Credits" type="Button" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=532861808]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+size_flags_vertical = 5
+focus_mode = 0
+mouse_filter = 1
+theme = ExtResource("9_73ifx")
+theme_type_variation = &"SettingsButton"
+theme_override_constants/h_separation = 8
+theme_override_constants/icon_max_width = 48
+theme_override_font_sizes/font_size = 30
+text = "0"
+icon = ExtResource("9_g4fdo")
+alignment = 0
 
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer" unique_id=921349866]
 layout_mode = 2
@@ -302,7 +323,24 @@ layout_mode = 2
 
 [node name="SearchSugestionsContainer" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1120422632 instance=ExtResource("14_5g6gd")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
+
+[node name="CreditsOption" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1831528012]
+unique_name_in_owner = true
+visible = false
+clip_contents = true
+layout_mode = 2
+script = ExtResource("10_q2sj0")
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+scroll_deadzone = 100
+drag = 6.0
+metadata/_custom_type_script = "uid://c3wphp306q0w"
+
+[node name="CreditsOptionInner" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption" unique_id=257827310 instance=ExtResource("20_dn5gj")]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=485396354]
 
@@ -319,3 +357,4 @@ visible = false
 [connection signal="focus_entered" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_search_bar_opened"]
 [connection signal="text_changed" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
 [connection signal="text_submitted" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Button_Credits" to="." method="_on_button_credits_pressed"]
