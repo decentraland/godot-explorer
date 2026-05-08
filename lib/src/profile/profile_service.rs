@@ -146,7 +146,7 @@ impl ProfileService {
         let profile_content_url = global_bind
             .get_realm()
             .bind()
-            .get_profile_content_url()
+            .get_profile_deployment_url()
             .to_string();
 
         TokioRuntime::spawn(async move {

@@ -2083,6 +2083,99 @@ impl ContentProvider {
         promise
     }
 
+    /// Fetches an avatar's body snapshot texture by user ID.
+    /// Mirrors `fetch_avatar_texture` but reads `snapshots.body_url` instead of `face256`.
+    /// The result is cached with key `avatar_body_texture_{user_id_hex}`.
+    #[func]
+    pub fn fetch_avatar_body_texture(&mut self, user_id: GString) -> Gd<Promise> {
+        let user_id_str = user_id.to_string();
+
+        let (user_id_h160, cache_key) = match user_id_str.as_str().as_h160() {
+            Some(h160) => (Some(h160), format!("avatar_body_texture_{:x}", h160)),
+            None => (None, format!("avatar_body_texture_invalid_{}", user_id_str)),
+        };
+
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            return promise;
+        }
+
+        let Some(user_id_h160) = user_id_h160 else {
+            let rejected_promise = Promise::from_rejected("Invalid user id".to_string());
+            self.cache_promise(cache_key, &rejected_promise);
+            return rejected_promise;
+        };
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let (lambda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        TokioRuntime::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let profile_result = request_lambda_profile(
+                user_id_h160,
+                lambda_server_base_url.as_str(),
+                profile_base_url.as_str(),
+                http_requester,
+            )
+            .await;
+
+            let profile = match profile_result {
+                Ok(profile) => profile,
+                Err(e) => {
+                    loaded_resources.fetch_add(1, Ordering::Relaxed);
+                    then_promise(
+                        get_promise,
+                        Err(anyhow::anyhow!("Failed to fetch profile: {}", e)),
+                    );
+                    return;
+                }
+            };
+
+            let Some(snapshots) = profile.content.avatar.snapshots.as_ref() else {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no snapshots")),
+                );
+                return;
+            };
+
+            let body_url_raw = snapshots
+                .body_url
+                .clone()
+                .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.body));
+
+            if body_url_raw.is_empty()
+                || body_url_raw.ends_with('/')
+                || body_url_raw == profile.base_url
+            {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no body snapshot")),
+                );
+                return;
+            }
+
+            let texture_hash = format!("avatar_body_{:x}", user_id_h160);
+
+            let result = load_image_texture(body_url_raw, texture_hash, ctx).await;
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            then_promise(get_promise, result);
+        });
+
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
     /// Gets the avatar face texture from cache if available.
     #[func]
     pub fn get_avatar_texture(&mut self, user_id: GString) -> Option<Gd<Texture2D>> {

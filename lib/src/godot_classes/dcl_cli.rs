@@ -104,6 +104,8 @@ pub struct DclCli {
     pub low_spec_warning: bool,
     #[var(get)]
     pub fi_benchmark_size: i32,
+    #[var(get)]
+    pub avatar_impostor_benchmark: bool,
 
     // Arguments with values
     #[var(get)]
@@ -122,6 +124,8 @@ pub struct DclCli {
     pub fake_deeplink: GString,
     #[var(get)]
     pub fi_benchmark_output: GString,
+    #[var(get)]
+    pub avatar_impostor_benchmark_output: GString,
     #[var(get)]
     pub saved_profile: GString,
 }
@@ -401,6 +405,20 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            ArgDefinition {
+                name: "--avatar-impostor-benchmark".to_string(),
+                description: "Launch the avatar impostor benchmark scene at startup, run both phases, write results, and quit"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--avatar-impostor-benchmark-output".to_string(),
+                description: "Output file path for avatar impostor benchmark results (text)"
+                    .to_string(),
+                arg_type: ArgType::Value("<file>".to_string()),
+                category: "Performance".to_string(),
+            },
             // Authentication
             ArgDefinition {
                 name: "--saved-profile".to_string(),
@@ -593,6 +611,7 @@ impl INode for DclCli {
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
+        let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -642,6 +661,11 @@ impl INode for DclCli {
             .unwrap_or_default();
         let fi_benchmark_output = args_map
             .get("--fi-benchmark-output")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
+        let avatar_impostor_benchmark_output = args_map
+            .get("--avatar-impostor-benchmark-output")
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
@@ -697,6 +721,7 @@ impl INode for DclCli {
             scene_inspector_file,
             low_spec_warning,
             fi_benchmark_size,
+            avatar_impostor_benchmark,
             asset_server_port,
             realm,
             location,
@@ -705,6 +730,7 @@ impl INode for DclCli {
             snapshot_folder,
             fake_deeplink,
             fi_benchmark_output,
+            avatar_impostor_benchmark_output,
             saved_profile,
         }
     }

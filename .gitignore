@@ -35,3 +35,5 @@ __pycache__
 .DS_Store
 # Sentry analysis dumps (contain potentially sensitive event data)
 .sentry-dump/
+benchmark-results/
+tasks/
