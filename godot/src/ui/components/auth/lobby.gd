@@ -427,7 +427,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			Global.metrics.update_identity(
 				Global.player_identity.get_address_str(), Global.player_identity.is_guest
 			)
-			if not Global.get_config().discover_ftue_completed:
+			if not Global.get_config().discover_ftue_completed and not _should_go_to_explorer_from_deeplink():
 				show_control_ftue()
 			else:
 				await async_close_sign_in()
@@ -689,7 +689,7 @@ func _show_avatar_preview():
 # gdlint:ignore = async-function-name
 func _on_button_jump_in_pressed():
 	Global.metrics.track_click_button("lets_go", current_screen_name, "")
-	if not Global.get_config().discover_ftue_completed:
+	if not Global.get_config().discover_ftue_completed and not _should_go_to_explorer_from_deeplink():
 		show_control_ftue()
 	else:
 		await async_close_sign_in()
