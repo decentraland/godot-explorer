@@ -425,6 +425,16 @@ impl SceneManager {
         GString::from(s.as_str())
     }
 
+    /// Drain global textureless-merger classifier stats as a single key=value
+    /// line. Embed in benchmark JSON; lets the matrix verify the classifier
+    /// saw the entities it expected (issue #1948).
+    #[func]
+    pub fn drain_textureless_merger_stats(&mut self) -> GString {
+        let s =
+            super::components::textureless_merger::drain_global_stats();
+        GString::from(s.as_str())
+    }
+
     /// Reset CRDT cross-boundary metrics (send/recv bytes, op counts, dirty
     /// entries). Call right before sampling.
     #[func]

@@ -84,6 +84,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::GltfContainer => "GltfContainer",
         S::SyncGltfContainer => "SyncGltfContainer",
         S::GltfNodeModifiers => "GltfNodeModifiers",
+        S::TexturelessMerger => "TexturelessMerger",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
         S::AvatarShape => "AvatarShape",
@@ -133,6 +134,7 @@ use super::{
         realm_info::sync_realm_info,
         skybox_time::update_skybox_time,
         text_shape::update_text_shape,
+        textureless_merger::update_textureless_merger,
         transform_and_parent::update_transform_and_parent,
         trigger_area::update_trigger_area,
         tween::update_tween,
@@ -435,6 +437,12 @@ pub fn _process_scene(
                     }
                     still_processing
                 }
+                SceneUpdateState::TexturelessMerger => !update_textureless_merger(
+                    scene,
+                    crdt_state,
+                    ref_time,
+                    effective_end_time_us,
+                ),
                 SceneUpdateState::NftShape => {
                     update_nft_shape(scene, crdt_state);
                     false

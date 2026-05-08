@@ -115,6 +115,12 @@ pub struct DclCli {
     #[var]
     pub rs_gltf_direct: bool,
 
+    // Textureless mesh-merge experiment (issue #1948). Default OFF; flipped
+    // via --textureless-merge CLI flag or textureless-merge deeplink param.
+    // See docs/bench/material-atlas-mesh-merge-design.md.
+    #[var]
+    pub textureless_merge_enabled: bool,
+
     // V8 inspector target. When non-empty AND the build has the
     // `enable_inspector` feature, the SDK7 scene whose title matches
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
@@ -451,6 +457,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--textureless-merge".to_string(),
+                description: "Merge textureless static meshes per scene to reduce draw calls (issue #1948). Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -651,6 +663,7 @@ impl INode for DclCli {
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
         let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
+        let textureless_merge_enabled = args_map.contains_key("--textureless-merge");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -768,6 +781,7 @@ impl INode for DclCli {
             avatar_impostor_benchmark,
             gp_benchmark,
             rs_gltf_direct,
+            textureless_merge_enabled,
             inspect_scene_title,
             asset_server_port,
             realm,

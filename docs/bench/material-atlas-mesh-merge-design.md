@@ -179,6 +179,35 @@ We tried a GDScript prototype (`_apply_textureless_merge` in `gp_benchmark_runne
 - Classifier must exclude collision-only meshes (e.g., entities whose visual mesh is hidden / whose material has `transparency=DISABLED` and exists only for the GltfContainer's invisible-collision mask).
 - Merged ArrayMesh must preserve index buffer (append unique vertices + remap indices), or vertex bloat eats the draw-call savings.
 
+## Rust port findings (Genesis Plaza, run `tm-real2`)
+
+The Rust classifier landed and produced a per-frame skip-reason histogram. Genesis Plaza counts:
+
+```
+mergeable          =   32
+skipped/not_visible=  816   ← collider-named meshes that DCL hid at import (lib/src/content/gltf/scene.rs:100)
+skipped/textured   =  987   ← have at least one texture; need atlas (Phase 2.1)
+skipped/multi_surf =  377   ← multi-surface meshes; classifier rejects but each is N draws
+skipped/modifier   =  579
+skipped/tween      =  184
+skipped/skeleton   =  179
+skipped/blend      =    1
+```
+
+Two big lessons:
+
+1. **The textureless win is small.** Only ~32 meshes pass the strict classifier. Best case ~8 merged buckets → ~24 draws saved. Not enough to move FPS on its own. The GDScript prototype's "1093 textureless" headline was inflated by the 816 `not_visible` collider meshes which never produced a draw call to begin with.
+
+2. **`multi_surf` (377 meshes) is the bigger lever.** A multi-surface mesh = N draw calls per frame. Even if average N is 4, that's ~1500 draws inside a single category we currently skip. Two paths:
+   - Per-surface classify+merge: walk surfaces, keep textureless ones, merge each into the per-cell bucket; leave textured surfaces standalone.
+   - Atlas (Phase 2.1) which subsumes both `textured` (987) and the textured surfaces inside `multi_surf`.
+
+Practical reordering of the phasing:
+
+- **Phase 2.0** (current): textureless single-surface merger → small win, but the framework is now landed (classifier, bucket builder, ArrayMesh combiner with index reuse, suppression via `mesh = null`, per-cell flush). It's the foundation atlas builds on.
+- **Phase 2.1** (next): per-surface textureless extraction. Reuse the bucket+combiner; the only addition is iterating each surface of multi-surface meshes instead of bailing.
+- **Phase 2.2** (the big one): material atlas for textured surfaces. Texture array + vertex-encoded material id + custom shader.
+
 ### Phase 2.0 (real) — Textureless bucket in Rust scene_runner
 
 The 1016-mesh textureless bucket is the highest-leverage / lowest-effort target. The prototype proved the *technique* works (1093 → 41 merged meshes with 32 m cells, classifier solid) but the *integration* must own the entity→node mapping.

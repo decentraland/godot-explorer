@@ -280,6 +280,9 @@ func _finish() -> void:
 	# Per-component-id breakdown of dirty entries on the Rust→V8 path.
 	# Identifies which SDK7 components dominate the round-trip pressure.
 	var crdt_component_breakdown: String = Global.scene_runner.drain_crdt_component_breakdown()
+	# Textureless mesh merger classifier stats (issue #1948). Empty when the
+	# flag is OFF — useful as a sanity check for `tm-rust-off` baseline runs.
+	var textureless_merger_stats: String = Global.scene_runner.drain_textureless_merger_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -289,6 +292,7 @@ func _finish() -> void:
 		"state_timing_us": state_timing,
 		"crdt_metrics": crdt_metrics,
 		"crdt_component_breakdown": crdt_component_breakdown,
+		"textureless_merger_stats": textureless_merger_stats,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -622,14 +626,19 @@ func _apply_deeplink_overrides() -> void:
 		if s > 0.1 and s <= 2.0:
 			config["viewport_scale_3d"] = s
 
-	# Phase 2.0: merge all textureless `BaseMaterial3D` MeshInstance3D's into
-	# one combined mesh per (cull_mode, alpha_mode) bucket. Source albedo_color
-	# is baked into vertex COLOR; the merged material uses
-	# vertex_color_use_as_albedo. Eligibility ignores skinned / animated /
-	# tween / modifier entities (same classifier as the merge profile).
+	# Rust merger. Sets DclCli.textureless_merge_enabled, which
+	# drives `update_textureless_merger` in lib/. Eligibility (skinned /
+	# animated / tween / modifier exclusion) is mirrored by the Rust
+	# classifier — see lib/src/scene_runner/components/textureless_merger/.
+	# The legacy GDScript prototype (`_apply_textureless_merge`) is kept for
+	# `textureless-merge-gd=true` only, so A/B against the prototype stays
+	# possible.
 	var tm: String = params.get("textureless-merge", "")
 	if not tm.is_empty():
-		config["textureless_merge"] = tm.to_lower() in ["true", "1", "yes"]
+		Global.cli.textureless_merge_enabled = tm.to_lower() in ["true", "1", "yes"]
+	var tm_gd: String = params.get("textureless-merge-gd", "")
+	if not tm_gd.is_empty():
+		config["textureless_merge"] = tm_gd.to_lower() in ["true", "1", "yes"]
 
 
 ## Apply the deeplink-forced graphic profile, if any. Called at
@@ -649,7 +658,7 @@ func _apply_forced_graphic_profile() -> void:
 		_log("viewport scaling_3d_scale=%.2f (post-load)" % s)
 
 
-## Phase 2.0 prototype: merge textureless BaseMaterial3D MeshInstance3Ds.
+## Prototype: merge textureless BaseMaterial3D MeshInstance3Ds.
 ##
 ## Walks the SceneTree, finds eligible meshes (no textures, classifier-pass),
 ## and combines them into one ArrayMesh per (cull_mode, transparency) bucket.

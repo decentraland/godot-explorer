@@ -20,6 +20,7 @@ pub mod raycast;
 pub mod realm_info;
 pub mod skybox_time;
 pub mod text_shape;
+pub mod textureless_merger;
 pub mod transform_and_parent;
 pub mod trigger_area;
 pub mod tween;

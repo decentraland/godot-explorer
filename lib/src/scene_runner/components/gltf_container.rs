@@ -203,6 +203,12 @@ pub fn sync_gltf_loading_state(
                     tracing::debug!("sync_gltf_loading_state: Adding entity {:?} to gltf_node_modifiers_pending (will be removed from gltf_loading)", entity);
                     scene.gltf_node_modifiers_pending.insert(*entity);
                 }
+
+                // Promote into the textureless-merger queue. The classifier
+                // re-runs the modifier check itself; we don't need to wait
+                // for modifier application here (`update_gltf_node_modifiers`
+                // runs in the same tick before `update_textureless_merger`).
+                scene.pending_textureless_promotion.insert(*entity);
             }
         }
 
