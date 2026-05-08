@@ -4,8 +4,8 @@ extends SubViewportContainer
 const MIN_CAMERA_SIZE_OVERALL = 2.0
 const MIN_CAMERA_SIZE_PART = 0.8
 const MAX_CAMERA_SIZE = 5.0
-const CAMERA_PAN_SMOOTH = 4.0
-const CAMERA_ZOOM_SMOOTH = 8.0
+const CAMERA_PAN_SMOOTH = 2.0
+const CAMERA_ZOOM_SMOOTH = 2.0
 const AVATAR_ROTATION_SMOOTH = 15.0
 
 @export var hide_name: bool = false
@@ -25,6 +25,7 @@ const AVATAR_ROTATION_SMOOTH = 15.0
 ## Optional Control whose top edge defines the bottom margin boundary.
 @export var bottom_node_margin: Control = null
 @export var show_aabb_debug: bool = false
+@export var fit_avatar: bool = true
 
 var start_angle
 var start_dragging_position
@@ -37,6 +38,8 @@ var _user_has_panned: bool = false
 var _pending_camera_fit: bool = false
 var _fitted_camera_size: float = MAX_CAMERA_SIZE
 var _fitted_aabb_center_y: float = 0.0
+var _last_fit_stable_aabb: AABB = AABB()
+var _last_fit_extra_margin: int = -1
 var _target_camera_center_y: float = 0.0
 var _target_camera_size: float = MAX_CAMERA_SIZE
 var _target_avatar_rotation_y: float = 0.0
@@ -44,6 +47,8 @@ var _lerp_paused: bool = false
 var _touch_points: Dictionary = {}
 var _pinch_start_distance: float = 0.0
 var _pinch_start_camera_size: float = 0.0
+var _pinch_start_midpoint: Vector2 = Vector2.ZERO
+var _pinch_start_center_y: float = 0.0
 
 var _aabb_debug_nodes: Array[MeshInstance3D] = []
 
@@ -77,7 +82,7 @@ func _ready():
 	_target_camera_size = camera_3d.size
 	_target_avatar_rotation_y = avatar.rotation.y
 
-	avatar.avatar_loaded.connect(_on_avatar_loaded)
+	avatar.avatar_loaded.connect(async_on_avatar_loaded)
 	resized.connect(_on_resized)
 	if top_node_margin:
 		top_node_margin.resized.connect(_on_resized)
@@ -101,7 +106,11 @@ func _process(delta: float) -> void:
 				_min_camera_size(),
 				_fitted_camera_size
 			)
-			_clamp_camera_center()
+		var mid_delta_y: float = _get_touch_midpoint().y - _pinch_start_midpoint.y
+		var pan: float = mid_delta_y * _target_camera_size / size.y
+		var limits: Vector2 = _pan_limits()
+		_target_camera_center_y = clampf(_pinch_start_center_y + pan, limits.x, limits.y)
+		_user_has_panned = true
 	camera_center.position.y = lerpf(
 		camera_center.position.y, _target_camera_center_y, 1.0 - exp(-CAMERA_PAN_SMOOTH * delta)
 	)
@@ -119,7 +128,7 @@ func focus_camera_on(type):
 			_camera_focus = "head_base_facial"
 		Wearables.Categories.EYES, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH:
 			_camera_focus = "head_base"
-		Wearables.Categories.HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD:
+		Wearables.Categories.HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.ALL_EXTRAS:
 			_camera_focus = "head"
 		Wearables.Categories.UPPER_BODY:
 			_camera_focus = "torso"
@@ -131,10 +140,15 @@ func focus_camera_on(type):
 			_camera_focus = "feet"
 		_:
 			_camera_focus = "overall"
-	_user_has_panned = false
 	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
-	if aabb_key in _cached_aabbs:
-		_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
+	if aabb_key not in _cached_aabbs:
+		return
+	var new_margin: int = _focus_extra_margin()
+	if _stable_aabb() == _last_fit_stable_aabb and new_margin == _last_fit_extra_margin:
+		_update_fit_limits(_cached_aabbs[aabb_key], new_margin)
+		return
+	_user_has_panned = false
+	_fit_camera_to_aabb(_cached_aabbs[aabb_key], new_margin)
 
 
 func _min_camera_size() -> float:
@@ -211,15 +225,22 @@ func _input(event: InputEvent):
 				dirty_is_dragging = false
 				_pinch_start_distance = _get_touch_distance()
 				_pinch_start_camera_size = _target_camera_size
+				_pinch_start_midpoint = _get_touch_midpoint()
+				_pinch_start_center_y = _target_camera_center_y
 		else:
 			_touch_points.erase(event.index)
 			_pinch_start_distance = 0.0
+			if _touch_points.size() == 1:
+				dirty_is_dragging = true
+				start_dragging_position = _touch_points.values()[0]
+				start_angle = _target_avatar_rotation_y
+				start_camera_center_y = _target_camera_center_y
 
 	if event is InputEventScreenDrag:
 		_touch_points[event.index] = event.position
 
 	if event is InputEventMouseMotion:
-		if dirty_is_dragging:
+		if dirty_is_dragging and _touch_points.size() < 2:
 			_apply_drag(get_global_mouse_position())
 
 
@@ -232,7 +253,7 @@ func _pan_limits() -> Vector2:
 	var aabb_top: float = (
 		(av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
 	)
-	var cam_size: float = camera_3d.size
+	var cam_size: float = _target_camera_size
 	var vp_h: float = size.y
 	var pan_min: float = aabb_bottom + cam_size * (0.5 - _effective_margin_bottom() / vp_h)
 	var pan_max: float = aabb_top - cam_size * (0.5 - _effective_margin_top() / vp_h)
@@ -256,17 +277,16 @@ func _clamp_camera_center() -> void:
 func _apply_drag(current_pos: Vector2) -> void:
 	var drag_pixels: Vector2 = current_pos - start_dragging_position
 	_target_avatar_rotation_y = start_angle + drag_pixels.x * 0.005
-	if not can_drag:
-		return
-	var limits: Vector2 = _pan_limits()
-	var pan: float = drag_pixels.y * _target_camera_size / size.y
-	_target_camera_center_y = clampf(start_camera_center_y + pan, limits.x, limits.y)
-	_user_has_panned = true
 
 
 func _get_touch_distance() -> float:
 	var keys: Array = _touch_points.keys()
 	return (_touch_points[keys[0]] as Vector2).distance_to(_touch_points[keys[1]])
+
+
+func _get_touch_midpoint() -> Vector2:
+	var keys: Array = _touch_points.keys()
+	return ((_touch_points[keys[0]] as Vector2) + (_touch_points[keys[1]] as Vector2)) * 0.5
 
 
 func reset_avatar_rotation() -> void:
@@ -290,15 +310,24 @@ func disable_outline():
 		outline_system.set_outlined_avatar(null)
 
 
-func _on_avatar_loaded():
+func async_on_avatar_loaded():
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	var first_load: bool = _cached_aabbs.is_empty()
 	_cached_aabbs = _compute_avatar_aabbs()
 	_update_aabb_debug_box(_cached_aabbs)
 	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 	if aabb_key in _cached_aabbs:
-		if _user_has_panned:
-			_update_fit_limits(_cached_aabbs[aabb_key], _focus_extra_margin())
+		if first_load:
+			if fit_avatar:
+				_fit_to_overall()
+			else:
+				_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
 		else:
-			_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
+			_update_fit_limits(_cached_aabbs[aabb_key], _focus_extra_margin())
 
 
 func _get_mesh_category(mesh_name: String) -> String:
@@ -414,6 +443,16 @@ func _compute_skinned_mesh_aabb(
 	return result
 
 
+func _symmetrize_aabb_x(aabb: AABB) -> AABB:
+	var left_half: float = -aabb.position.x
+	var right_half: float = aabb.position.x + aabb.size.x
+	var max_half: float = maxf(left_half, right_half)
+	return AABB(
+		Vector3(-max_half, aabb.position.y, aabb.position.z),
+		Vector3(max_half * 2.0, aabb.size.y, aabb.size.z)
+	)
+
+
 func _compute_avatar_aabbs() -> Dictionary:
 	var skeleton: Skeleton3D = avatar.body_shape_skeleton_3d
 	if skeleton == null:
@@ -429,6 +468,11 @@ func _compute_avatar_aabbs() -> Dictionary:
 		"hands": true,
 		"head_base": true,
 		"head_base_facial": true,
+		"body_base": true,
+		"torso_base": true,
+		"legs_base": true,
+		"feet_base": true,
+		"hands_base": true,
 	}
 	for child in skeleton.get_children():
 		var mi := child as MeshInstance3D
@@ -440,6 +484,12 @@ func _compute_avatar_aabbs() -> Dictionary:
 		var mesh_aabb: AABB = _compute_skinned_mesh_aabb(mi, skeleton, avatar_xform_inv)
 		if mesh_aabb.size == Vector3.ZERO:
 			continue
+		if is_basemesh:
+			if firsts["body_base"]:
+				results["body_base"] = mesh_aabb
+				firsts["body_base"] = false
+			else:
+				results["body_base"] = (results["body_base"] as AABB).merge(mesh_aabb)
 		if mi.visible:
 			if firsts["overall"]:
 				results["overall"] = mesh_aabb
@@ -459,6 +509,17 @@ func _compute_avatar_aabbs() -> Dictionary:
 				firsts["hands"] = false
 			else:
 				results["hands"] = (results["hands"] as AABB).merge(mesh_aabb)
+			if firsts["hands_base"]:
+				results["hands_base"] = mesh_aabb
+				firsts["hands_base"] = false
+			else:
+				results["hands_base"] = (results["hands_base"] as AABB).merge(mesh_aabb)
+		if "_ubody_basemesh" in mi.name:
+			if firsts["torso_base"]:
+				results["torso_base"] = mesh_aabb
+				firsts["torso_base"] = false
+			else:
+				results["torso_base"] = (results["torso_base"] as AABB).merge(mesh_aabb)
 		if "_lbody_basemesh" in mi.name:
 			var knee_aabb := AABB(
 				mesh_aabb.position,
@@ -469,12 +530,27 @@ func _compute_avatar_aabbs() -> Dictionary:
 				firsts["feet"] = false
 			else:
 				results["feet"] = (results["feet"] as AABB).merge(knee_aabb)
+			if firsts["feet_base"]:
+				results["feet_base"] = knee_aabb
+				firsts["feet_base"] = false
+			else:
+				results["feet_base"] = (results["feet_base"] as AABB).merge(knee_aabb)
+			if firsts["legs_base"]:
+				results["legs_base"] = mesh_aabb
+				firsts["legs_base"] = false
+			else:
+				results["legs_base"] = (results["legs_base"] as AABB).merge(mesh_aabb)
 		if "_feet_basemesh" in mi.name:
 			if firsts["legs"]:
 				results["legs"] = mesh_aabb
 				firsts["legs"] = false
 			else:
 				results["legs"] = (results["legs"] as AABB).merge(mesh_aabb)
+			if firsts["legs_base"]:
+				results["legs_base"] = mesh_aabb
+				firsts["legs_base"] = false
+			else:
+				results["legs_base"] = (results["legs_base"] as AABB).merge(mesh_aabb)
 		if "_head_basemesh" in mi.name:
 			if firsts["head_base"]:
 				results["head_base"] = mesh_aabb
@@ -492,9 +568,12 @@ func _compute_avatar_aabbs() -> Dictionary:
 				firsts["head_base_facial"] = false
 			else:
 				results["head_base_facial"] = (results["head_base_facial"] as AABB).merge(mesh_aabb)
-	if "feet" in results:
-		var feet: AABB = results["feet"]
-		results["feet"] = AABB(feet.position + Vector3(0.0, -0.2, 0.0), feet.size)
+	for key in ["feet", "feet_base"]:
+		if key in results:
+			var a: AABB = results[key]
+			results[key] = AABB(a.position + Vector3(0.0, -0.05, 0.0), a.size)
+	for key in results:
+		results[key] = _symmetrize_aabb_x(results[key])
 	return results
 
 
@@ -533,6 +612,47 @@ func _update_fit_limits(aabb: AABB, extra_margin: int = 0) -> void:
 	_fitted_aabb_center_y = _focus_aabb_center_y(aabb)
 
 
+func _stable_aabb() -> AABB:
+	var fallback: AABB = _cached_aabbs.get("overall", AABB(Vector3.ZERO, Vector3.ONE * 2.0))
+	match _camera_focus:
+		"head", "head_base", "head_base_facial":
+			return _cached_aabbs.get("head_base", fallback)
+		"torso":
+			return _cached_aabbs.get("torso_base", fallback)
+		"legs":
+			return _cached_aabbs.get("legs_base", fallback)
+		"feet":
+			return _cached_aabbs.get("feet_base", fallback)
+		"hands":
+			return _cached_aabbs.get("hands_base", fallback)
+	return _cached_aabbs.get("body_base", fallback)
+
+
+func _fit_to_overall() -> void:
+	if not is_inside_tree() or size.x <= 0.0 or size.y <= 0.0:
+		return
+	if "overall" not in _cached_aabbs:
+		return
+	var aabb: AABB = _cached_aabbs["overall"]
+	var vp_h: float = size.y
+	var vp_w: float = size.x
+	var eff_top: float = _effective_margin_top()
+	var eff_bottom: float = _effective_margin_bottom()
+	var inner_h: float = maxf(1.0, vp_h - eff_top - eff_bottom)
+	var inner_w: float = maxf(1.0, vp_w - preview_margin_left - preview_margin_right)
+	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
+	cam_size = maxf(cam_size, MIN_CAMERA_SIZE_OVERALL)
+	var center_y: float = aabb.get_center().y + (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)
+	var av_xform: Transform3D = avatar.global_transform
+	var bottom_w: float = (av_xform * Vector3(0.0, aabb.position.y, 0.0)).y
+	var top_w: float = (av_xform * Vector3(0.0, aabb.position.y + aabb.size.y, 0.0)).y
+	var pan_min: float = bottom_w + cam_size * (0.5 - eff_bottom / vp_h)
+	var pan_max: float = top_w - cam_size * (0.5 - eff_top / vp_h)
+	center_y = clampf(center_y, minf(pan_min, pan_max), maxf(pan_min, pan_max))
+	_target_camera_center_y = center_y
+	_target_camera_size = cam_size
+
+
 func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
 	if not is_inside_tree():
 		return
@@ -541,23 +661,28 @@ func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
 		return
 	_pending_camera_fit = false
 	_update_fit_limits(aabb, extra_margin)
-	var cam_size: float = _fitted_camera_size
+	var stable: AABB = _stable_aabb()
+	if stable == _last_fit_stable_aabb and extra_margin == _last_fit_extra_margin:
+		return
+	_last_fit_stable_aabb = stable
+	_last_fit_extra_margin = extra_margin
 	var vp_h: float = size.y
+	var vp_w: float = size.x
 	var eff_top: float = _effective_margin_top()
 	var eff_bottom: float = _effective_margin_bottom()
-	var center_y: float = _fitted_aabb_center_y + (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)
-	var padding: float = _focus_padding()
-	var aabb_grown: AABB = aabb
-	if padding > 0.0:
-		aabb_grown = aabb.grow(maxf(aabb.size.x, aabb.size.y) * padding * 0.5)
-	var aabb_bottom_w: float = (
-		(avatar.global_transform * Vector3(0.0, aabb_grown.position.y, 0.0)).y
+	var inner_h: float = maxf(1.0, vp_h - eff_top - eff_bottom - extra_margin * 2)
+	var inner_w: float = maxf(
+		1.0, vp_w - preview_margin_left - preview_margin_right - extra_margin * 2
 	)
-	var aabb_top_w: float = (
-		(avatar.global_transform * Vector3(0.0, aabb_grown.position.y + aabb_grown.size.y, 0.0)).y
+	var cam_size: float = maxf(stable.size.y * vp_h / inner_h, stable.size.x * vp_h / inner_w)
+	cam_size = clampf(cam_size, _min_camera_size(), _fitted_camera_size)
+	var center_y: float = stable.get_center().y + (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)
+	var focus_bottom_w: float = (avatar.global_transform * Vector3(0.0, aabb.position.y, 0.0)).y
+	var focus_top_w: float = (
+		(avatar.global_transform * Vector3(0.0, aabb.position.y + aabb.size.y, 0.0)).y
 	)
-	var pan_min: float = aabb_bottom_w + cam_size * (0.5 - eff_bottom / vp_h)
-	var pan_max: float = aabb_top_w - cam_size * (0.5 - eff_top / vp_h)
+	var pan_min: float = focus_bottom_w + cam_size * (0.5 - eff_bottom / vp_h)
+	var pan_max: float = focus_top_w - cam_size * (0.5 - eff_top / vp_h)
 	center_y = clampf(center_y, minf(pan_min, pan_max), maxf(pan_min, pan_max))
 	_target_camera_center_y = center_y
 	_target_camera_size = cam_size

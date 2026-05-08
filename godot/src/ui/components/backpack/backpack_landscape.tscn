@@ -343,9 +343,10 @@ size_flags_horizontal = 1
 mouse_filter = 2
 stretch = true
 hide_name = true
-preview_margin_top = 40
-preview_margin_bottom = 70
+preview_margin_top = 30
+preview_margin_bottom = 30
 top_node_margin = NodePath("../../../HBoxContainer_SizeCanary/ControlContainer_Canary/ControlContent_Canary")
+fit_avatar = false
 metadata/_edit_use_anchors_ = true
 
 [node name="EmoteNameAnim" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=948887334 instance=ExtResource("12_qqh12")]
