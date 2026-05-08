@@ -1281,7 +1281,11 @@ func _process(delta):
 	if not animation_tree.active:
 		animation_tree.active = true
 
-	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
+	# #b18: `is_grounded` guard suppresses the all-false condition window at the
+	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.
+	var self_idle = (
+		self.is_grounded && !self.jog && !self.walk && !self.run && !self.rise && !self.fall
+	)
 	emote_controller.process(self_idle)
 
 	var is_emoting = self_idle && emote_controller.is_playing()
