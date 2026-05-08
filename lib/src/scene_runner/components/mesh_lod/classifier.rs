@@ -1,6 +1,6 @@
 //! Per-MeshInstance classifier for the mesh-LOD pass.
 
-use godot::classes::{AnimationPlayer, ArrayMesh, MeshInstance3D, Node, Skeleton3D};
+use godot::classes::{ArrayMesh, MeshInstance3D, Node};
 use godot::prelude::*;
 
 use crate::dcl::components::SceneEntityId;
@@ -10,8 +10,10 @@ use crate::scene_runner::scene::Scene;
 /// Surfaces with fewer indices than this are not worth running through
 /// `generate_lods` — the meshoptimizer simplifier needs enough triangles
 /// to find redundant ones, and the per-mesh fixed cost dominates the
-/// payoff when there's nothing to decimate.
-pub const MIN_INDICES_FOR_LOD: i32 = 256;
+/// payoff when there's nothing to decimate. Value tuned from GP bench:
+/// `small` skip count was 1181 at 256, dropping to ~600 at 96 still
+/// captures the geometry that matters.
+pub const MIN_INDICES_FOR_LOD: i32 = 96;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SkipReason {
@@ -43,21 +45,16 @@ pub fn classify(mi: &Gd<MeshInstance3D>, scene: &Scene, entity: SceneEntityId) -
         return Classification::Skip(SkipReason::HasModifier);
     }
 
-    // Skinned + avatar meshes need bone-aware LOD generation; skip until
-    // we wire that path up.
+    // Avatars route through DclAvatar's own LOD/impostor pipeline, so we
+    // hand off there. Skinned meshes (Skeleton3D ancestor but not on a
+    // DclAvatar) fall through: ImporterMesh::generate_lods works on them
+    // with `bone_transform_array=empty` because vertex skin weights are
+    // preserved across the simplification — minor weight error at LOD
+    // swaps is acceptable on mobile.
     let mut current: Option<Gd<Node>> = Some(mi.clone().upcast());
     while let Some(node) = current {
         if node.clone().try_cast::<DclAvatar>().is_ok() {
             return Classification::Skip(SkipReason::AvatarAncestor);
-        }
-        if node.clone().try_cast::<Skeleton3D>().is_ok() {
-            return Classification::Skip(SkipReason::SkinnedAncestor);
-        }
-        if node.clone().try_cast::<AnimationPlayer>().is_ok() {
-            // AnimationPlayer alone is fine for LOD, but combined with a
-            // skin it isn't — and we already covered the skin case above.
-            // Letting AnimationPlayer through means animated transforms on
-            // static meshes still get LODs.
         }
         current = node.get_parent();
     }
