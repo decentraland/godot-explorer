@@ -87,6 +87,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::TexturelessMerger => "TexturelessMerger",
         S::MaterialAtlas => "MaterialAtlas",
         S::MeshLod => "MeshLod",
+        S::AutoDistanceCull => "AutoDistanceCull",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
         S::AvatarShape => "AvatarShape",
@@ -128,6 +129,7 @@ use super::{
         },
         input_modifier::update_input_modifier,
         material::{update_material, update_video_material_textures},
+        auto_distance_cull::update_auto_distance_cull,
         material_atlas::update_material_atlas,
         mesh_collider::update_mesh_collider,
         mesh_lod::update_mesh_lod,
@@ -450,6 +452,12 @@ pub fn _process_scene(
                 SceneUpdateState::MeshLod => {
                     !update_mesh_lod(scene, crdt_state, ref_time, effective_end_time_us)
                 }
+                SceneUpdateState::AutoDistanceCull => !update_auto_distance_cull(
+                    scene,
+                    crdt_state,
+                    ref_time,
+                    effective_end_time_us,
+                ),
                 SceneUpdateState::NftShape => {
                     update_nft_shape(scene, crdt_state);
                     false

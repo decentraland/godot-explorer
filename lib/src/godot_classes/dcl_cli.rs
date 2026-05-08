@@ -134,6 +134,11 @@ pub struct DclCli {
     #[var]
     pub mesh_lod_enabled: bool,
 
+    // Auto-distance-cull: at GLTF load, set visibility_range_end on each
+    // MeshInstance3D from its AABB diagonal. Pure perf, no fidelity loss.
+    #[var]
+    pub auto_distance_cull_enabled: bool,
+
     // V8 inspector target. When non-empty AND the build has the
     // `enable_inspector` feature, the SDK7 scene whose title matches
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
@@ -488,6 +493,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--auto-distance-cull".to_string(),
+                description: "Auto-set visibility_range_end on each MeshInstance3D from its AABB diagonal so distant small props get frustum-culled. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -691,6 +702,7 @@ impl INode for DclCli {
         let textureless_merge_enabled = args_map.contains_key("--textureless-merge");
         let material_atlas_enabled = args_map.contains_key("--material-atlas");
         let mesh_lod_enabled = args_map.contains_key("--mesh-lod");
+        let auto_distance_cull_enabled = args_map.contains_key("--auto-distance-cull");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -811,6 +823,7 @@ impl INode for DclCli {
             textureless_merge_enabled,
             material_atlas_enabled,
             mesh_lod_enabled,
+            auto_distance_cull_enabled,
             inspect_scene_title,
             asset_server_port,
             realm,

@@ -285,6 +285,7 @@ func _finish() -> void:
 	var textureless_merger_stats: String = Global.scene_runner.drain_textureless_merger_stats()
 	var material_atlas_stats: String = Global.scene_runner.drain_material_atlas_stats()
 	var mesh_lod_stats: String = Global.scene_runner.drain_mesh_lod_stats()
+	var auto_distance_cull_stats: String = Global.scene_runner.drain_auto_distance_cull_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -297,6 +298,7 @@ func _finish() -> void:
 		"textureless_merger_stats": textureless_merger_stats,
 		"material_atlas_stats": material_atlas_stats,
 		"mesh_lod_stats": mesh_lod_stats,
+		"auto_distance_cull_stats": auto_distance_cull_stats,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -649,6 +651,9 @@ func _apply_deeplink_overrides() -> void:
 	var mlod: String = params.get("mesh-lod", "")
 	if not mlod.is_empty():
 		Global.cli.mesh_lod_enabled = mlod.to_lower() in ["true", "1", "yes"]
+	var adc: String = params.get("auto-distance-cull", "")
+	if not adc.is_empty():
+		Global.cli.auto_distance_cull_enabled = adc.to_lower() in ["true", "1", "yes"]
 	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
 	# conservative); raising it picks lower-detail LODs sooner and is the
 	# whole point of the LOD bake on mobile. Stash here, apply at

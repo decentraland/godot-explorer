@@ -217,6 +217,10 @@ pub fn sync_gltf_loading_state(
                 // to lower-poly chains at distance. Runs after the atlas
                 // so it sees only meshes that weren't merged away.
                 scene.pending_mesh_lod.insert(*entity);
+                // Auto distance cull — sets visibility_range_end on each
+                // MI from its AABB. Runs after mesh_lod so the lod-baked
+                // mesh's AABB is what we read.
+                scene.pending_auto_distance_cull.insert(*entity);
             }
         }
 

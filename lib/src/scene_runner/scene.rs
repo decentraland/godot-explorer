@@ -34,8 +34,9 @@ use crate::{
 
 use super::{
     components::{
-        gltf_node_modifiers::GltfNodeModifierState, mesh_lod::MeshLodState,
-        textureless_merger::TexturelessMergerState, trigger_area::TriggerAreaState, tween::Tween,
+        auto_distance_cull::AutoDistanceCullState, gltf_node_modifiers::GltfNodeModifierState,
+        mesh_lod::MeshLodState, textureless_merger::TexturelessMergerState,
+        trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -110,6 +111,7 @@ pub enum SceneUpdateState {
     TexturelessMerger,
     MaterialAtlas,
     MeshLod,
+    AutoDistanceCull,
     NftShape,
     Animator,
     AvatarShape,
@@ -153,7 +155,8 @@ impl SceneUpdateState {
             Self::GltfNodeModifiers => Self::TexturelessMerger,
             Self::TexturelessMerger => Self::MaterialAtlas,
             Self::MaterialAtlas => Self::MeshLod,
-            Self::MeshLod => Self::NftShape,
+            Self::MeshLod => Self::AutoDistanceCull,
+            Self::AutoDistanceCull => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -294,6 +297,11 @@ pub struct Scene {
     // atlas: enqueued at GLTF load complete, processed by `update_mesh_lod`.
     pub pending_mesh_lod: HashSet<SceneEntityId>,
     pub mesh_lod: MeshLodState,
+
+    // Auto distance cull: sets visibility_range_end on every loaded
+    // MeshInstance3D from its AABB diagonal. Pure perf, fidelity-neutral.
+    pub pending_auto_distance_cull: HashSet<SceneEntityId>,
+    pub auto_distance_cull: AutoDistanceCullState,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -424,6 +432,8 @@ impl Scene {
             material_atlas: super::components::material_atlas::MaterialAtlasState::default(),
             pending_mesh_lod: HashSet::new(),
             mesh_lod: MeshLodState::default(),
+            pending_auto_distance_cull: HashSet::new(),
+            auto_distance_cull: AutoDistanceCullState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -508,6 +518,8 @@ impl Scene {
             material_atlas: super::components::material_atlas::MaterialAtlasState::default(),
             pending_mesh_lod: HashSet::new(),
             mesh_lod: MeshLodState::default(),
+            pending_auto_distance_cull: HashSet::new(),
+            auto_distance_cull: AutoDistanceCullState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
