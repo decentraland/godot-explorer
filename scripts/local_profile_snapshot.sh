@@ -30,6 +30,13 @@
 #                       (default: https://peer.decentraland.org/lambdas).
 #   --content URL       Content base URL used by the renderer
 #                       (default: https://peer.decentraland.org/content).
+#   --dclenv ENV        Decentraland environment for the renderer's wearable
+#                       lookups (org, zone, today). Forwarded to the renderer
+#                       as `--dclenv <env>`. Required to render testnet
+#                       wearables; --catalyst/--content alone are not enough.
+#                       When set to zone/today, the catalyst/content defaults
+#                       are switched to the matching peer URLs unless the
+#                       caller overrides them explicitly.
 #   --output DIR        Host output directory (default: ./avatars-output).
 #                       In --mobile mode, defaults to ./avatars-output-mobile
 #                       unless overridden, so files don't overwrite the
@@ -50,8 +57,11 @@ SKIP_BUILD=0
 RELEASE_MODE=1
 HEADLESS=0
 RENDER_MODE="compatibility"   # one of: compatibility | mobile
-CATALYST_URL="https://peer.decentraland.org/lambdas"
-CONTENT_URL="https://peer.decentraland.org/content"
+CATALYST_URL=""               # resolved below from DCL_ENV unless overridden
+CONTENT_URL=""                # resolved below from DCL_ENV unless overridden
+CATALYST_URL_OVERRIDDEN=0
+CONTENT_URL_OVERRIDDEN=0
+DCL_ENV=""                    # forwarded to the renderer as --dclenv <env>
 OUTPUT_DIR=""                 # resolved below depending on RENDER_MODE
 OUTPUT_DIR_OVERRIDDEN=0
 BODY_W=256
@@ -69,7 +79,7 @@ warn()  { color "1;33" "[warn]  $*"; }
 fail()  { color "1;31" "[fail]  $*"; }
 die()   { fail "$*"; exit 1; }
 
-print_help() { sed -n '2,42p' "$0" | sed 's/^# \{0,1\}//'; }
+print_help() { sed -n '2,49p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -78,8 +88,10 @@ while [ $# -gt 0 ]; do
     --skip-build) SKIP_BUILD=1 ;;
     --debug) RELEASE_MODE=0 ;;
     --headless) HEADLESS=1 ;;
-    --catalyst) shift; CATALYST_URL="${1:?--catalyst needs a value}" ;;
-    --content) shift; CONTENT_URL="${1:?--content needs a value}" ;;
+    --catalyst) shift; CATALYST_URL="${1:?--catalyst needs a value}"; CATALYST_URL_OVERRIDDEN=1 ;;
+    --content) shift; CONTENT_URL="${1:?--content needs a value}"; CONTENT_URL_OVERRIDDEN=1 ;;
+    --dclenv) shift; DCL_ENV="${1:?--dclenv needs a value}" ;;
+    --dclenv=*) DCL_ENV="${1#--dclenv=}" ;;
     --output) shift; OUTPUT_DIR="${1:?--output needs a value}"; OUTPUT_DIR_OVERRIDDEN=1 ;;
     --width) shift; BODY_W="${1:?--width needs a value}" ;;
     --height) shift; BODY_H="${1:?--height needs a value}" ;;
@@ -93,6 +105,21 @@ while [ $# -gt 0 ]; do
   esac
   shift || true
 done
+
+# Resolve catalyst/content defaults from --dclenv when not overridden.
+# Mainnet wearables live on .org; Amoy testnet wearables live on .zone;
+# the internal dev catalyst lives at peer-testing.decentraland.org.
+case "$DCL_ENV" in
+  "")        PEER_BASE="https://peer.decentraland.org" ;;
+  org)       PEER_BASE="https://peer.decentraland.org" ;;
+  zone)      PEER_BASE="https://peer.decentraland.zone" ;;
+  today)     PEER_BASE="https://peer-testing.decentraland.org" ;;
+  *)         # Per-group overrides (e.g. "auth::zone,org") — fall back to the
+             # default peer and rely on the renderer to apply the override.
+             PEER_BASE="https://peer.decentraland.org" ;;
+esac
+[ "$CATALYST_URL_OVERRIDDEN" -eq 0 ] && CATALYST_URL="${PEER_BASE}/lambdas"
+[ "$CONTENT_URL_OVERRIDDEN"  -eq 0 ] && CONTENT_URL="${PEER_BASE}/content"
 
 # Default output dir depends on render mode (so runs don't overwrite each other)
 if [ "$OUTPUT_DIR_OVERRIDDEN" -eq 0 ]; then
@@ -222,6 +249,7 @@ esac
 info "Render mode: $RENDER_MODE  (${RENDER_ARGS[*]})"
 
 RUN_ARGS=("${RENDER_ARGS[@]}" --avatar-renderer --avatars "$JSON_TMP")
+[ -n "$DCL_ENV" ] && RUN_ARGS+=(--dclenv "$DCL_ENV")
 [ "$HEADLESS" -eq 1 ] && RUN_ARGS=(--headless "${RUN_ARGS[@]}")
 
 info "Running: $EXPORT_BIN ${RUN_ARGS[*]}"

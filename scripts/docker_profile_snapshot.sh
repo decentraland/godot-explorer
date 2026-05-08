@@ -25,6 +25,11 @@
 #                        (default: https://peer.decentraland.org/lambdas).
 #   --content URL        Content base URL used by the renderer
 #                        (default: https://peer.decentraland.org/content).
+#   --dclenv ENV         Decentraland environment for the renderer's wearable
+#                        lookups (org, zone, today). Forwarded to the
+#                        container via PRESET_ARGS as `--dclenv <env>`.
+#                        Required to render testnet wearables.
+#                        --catalyst/--content alone are not enough.
 #   --output DIR         Host output directory (default: ./avatars-output).
 #   --width N            Body image width (default: 256).
 #   --height N           Body image height (default: 512).
@@ -44,8 +49,11 @@ SKIP_BUILD=0
 SKIP_IMAGE=0
 RELEASE_MODE=1
 IMAGE_TAG="godot-explorer:profile-snapshot"
-CATALYST_URL="https://peer.decentraland.org/lambdas"
-CONTENT_URL="https://peer.decentraland.org/content"
+CATALYST_URL=""
+CONTENT_URL=""
+CATALYST_URL_OVERRIDDEN=0
+CONTENT_URL_OVERRIDDEN=0
+DCL_ENV=""
 OUTPUT_DIR="${REPO_ROOT}/avatars-output"
 BODY_W=256
 BODY_H=512
@@ -67,7 +75,7 @@ fail()  { color "1;31" "[fail]  $*"; }
 die()   { fail "$*"; exit 1; }
 
 print_help() {
-  sed -n '2,38p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -76,8 +84,10 @@ while [ $# -gt 0 ]; do
     --skip-image) SKIP_IMAGE=1 ;;
     --debug) RELEASE_MODE=0 ;;
     --image) shift; IMAGE_TAG="${1:?--image needs a value}" ;;
-    --catalyst) shift; CATALYST_URL="${1:?--catalyst needs a value}" ;;
-    --content) shift; CONTENT_URL="${1:?--content needs a value}" ;;
+    --catalyst) shift; CATALYST_URL="${1:?--catalyst needs a value}"; CATALYST_URL_OVERRIDDEN=1 ;;
+    --content) shift; CONTENT_URL="${1:?--content needs a value}"; CONTENT_URL_OVERRIDDEN=1 ;;
+    --dclenv) shift; DCL_ENV="${1:?--dclenv needs a value}" ;;
+    --dclenv=*) DCL_ENV="${1#--dclenv=}" ;;
     --output) shift; OUTPUT_DIR="${1:?--output needs a value}" ;;
     --width) shift; BODY_W="${1:?--width needs a value}" ;;
     --height) shift; BODY_H="${1:?--height needs a value}" ;;
@@ -92,6 +102,17 @@ while [ $# -gt 0 ]; do
   esac
   shift || true
 done
+
+# Resolve catalyst/content defaults from --dclenv when not overridden.
+case "$DCL_ENV" in
+  "")        PEER_BASE="https://peer.decentraland.org" ;;
+  org)       PEER_BASE="https://peer.decentraland.org" ;;
+  zone)      PEER_BASE="https://peer.decentraland.zone" ;;
+  today)     PEER_BASE="https://peer-testing.decentraland.org" ;;
+  *)         PEER_BASE="https://peer.decentraland.org" ;;
+esac
+[ "$CATALYST_URL_OVERRIDDEN" -eq 0 ] && CATALYST_URL="${PEER_BASE}/lambdas"
+[ "$CONTENT_URL_OVERRIDDEN"  -eq 0 ] && CONTENT_URL="${PEER_BASE}/content"
 
 [ "${#ADDRESSES[@]}" -gt 0 ] || die "at least one wallet address is required"
 
@@ -234,9 +255,14 @@ ok "Wrote payload: $JSON_TMP"
 
 # 4. Run the container
 info "Running snapshot generator (output: $OUTPUT_DIR)..."
+DOCKER_ENV_ARGS=()
+if [ -n "$DCL_ENV" ]; then
+  DOCKER_ENV_ARGS=(-e "PRESET_ARGS=--avatar-renderer --avatars avatars.json --dclenv $DCL_ENV")
+fi
 docker run --rm \
   -v "$JSON_TMP:/app/avatars.json:ro" \
   -v "$OUTPUT_DIR:/app/output" \
+  "${DOCKER_ENV_ARGS[@]}" \
   "$IMAGE_TAG"
 
 # 5. Verify output

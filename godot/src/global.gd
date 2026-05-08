@@ -231,11 +231,18 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
-	# Initialize environment from deep link or default to "org"
-	var env = deep_link_obj.dclenv if not deep_link_obj.dclenv.is_empty() else "org"
+	# Initialize environment. Precedence: --dclenv CLI flag > deeplink dclenv param > "org".
+	var env := "org"
+	var env_source := "default"
+	if not cli.dcl_env.is_empty():
+		env = cli.dcl_env
+		env_source = "--dclenv"
+	elif not deep_link_obj.dclenv.is_empty():
+		env = deep_link_obj.dclenv
+		env_source = "deeplink"
 	DclGlobal.set_dcl_environment(env)
 	if env != "org":
-		print("[GLOBAL] Environment set to: ", env)
+		print("[GLOBAL] Environment set to: ", env, " (source: ", env_source, ")")
 
 	# Dev/testing: disable profile deploys so fake-owned wearables never publish.
 	if deep_link_obj.disable_profile_deploy:

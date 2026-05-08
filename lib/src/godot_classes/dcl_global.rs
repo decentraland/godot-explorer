@@ -473,7 +473,7 @@ impl DclGlobal {
     }
 
     #[func]
-    fn is_telemetry_disabled(&self) -> bool {
+    fn is_telemetry_disabled() -> bool {
         cfg!(feature = "disable_telemetry")
     }
 
