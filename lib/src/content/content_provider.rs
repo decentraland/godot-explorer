@@ -1442,7 +1442,7 @@ impl ContentProvider {
         file_hash: GString,
         url: GString,
     ) -> Gd<Promise> {
-        let file_hash = file_hash.to_string();
+        let file_hash = format!("{}_original", file_hash);
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;
         }
