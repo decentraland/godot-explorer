@@ -36,6 +36,7 @@ var loading_complete_seen: bool = false
 var pinned_transform: Transform3D
 var pinned_camera_basis: Basis
 var pose_pinned: bool = false
+var _textureless_merge_done: bool = false
 
 
 func _ready() -> void:
@@ -87,6 +88,15 @@ func _process(_delta: float) -> void:
 		"waiting_for_load":
 			if loading_complete_seen:
 				_pin_pose()
+				# Apply forced graphic profile here, after the auto first-launch
+				# HardwareBenchmark has finished writing its picked profile.
+				# Applying earlier (in `_ready`) gets clobbered by HW bench.
+				_apply_forced_graphic_profile()
+				# Bench: uncap FPS so measurements reflect the device's real
+				# ceiling, not a profile's FpsLimitMode (FPS_18 / FPS_30 / FPS_60).
+				if bool(config.get("uncap_fps", true)):
+					Engine.max_fps = 0
+					_log("FPS cap removed (Engine.max_fps=0) for measurement")
 				_set_phase("warmup")
 			elif _phase_elapsed_ms() >= LOAD_TIMEOUT_MS:
 				_log("WARN: loading_complete never fired in %d ms; aborting" % LOAD_TIMEOUT_MS)
@@ -94,6 +104,9 @@ func _process(_delta: float) -> void:
 				_async_force_quit(2)
 		"warmup":
 			_enforce_pinned_pose()
+			if not _textureless_merge_done and bool(config.get("textureless_merge", false)):
+				_apply_textureless_merge()
+				_textureless_merge_done = true
 			if _phase_elapsed_ms() >= int(config.get("warmup_seconds", 30)) * 1000:
 				# Reset per-state CPU timing + CRDT throughput counters so the
 				# sampling-window numbers aren't polluted by load-time spikes.
@@ -108,11 +121,16 @@ func _process(_delta: float) -> void:
 
 
 func _collect_sample() -> Dictionary:
+	var viewport_rid: RID = get_tree().root.get_viewport_rid()
+	var render_cpu_ms: float = RenderingServer.viewport_get_measured_render_time_cpu(viewport_rid)
+	var render_gpu_ms: float = RenderingServer.viewport_get_measured_render_time_gpu(viewport_rid)
 	return {
 		"t_ms": _phase_elapsed_ms(),
 		"fps": Performance.get_monitor(Performance.TIME_FPS),
 		"frame_time_process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
 		"frame_time_physics_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+		"render_cpu_ms": render_cpu_ms,
+		"render_gpu_ms": render_gpu_ms,
 		"memory_static_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
 		"memory_rss_mb": OS.get_static_memory_usage() / 1048576.0,
 		"memory_peak_mb": OS.get_static_memory_peak_usage() / 1048576.0,
@@ -141,34 +159,110 @@ func _count_node_types() -> Dictionary:
 	# therefore convertible to RenderingServer-direct, vs UI/logic nodes.
 	var counts := {}
 	var mesh_resource_ids := {}
+	var merge_buckets := {}
+	var unique_materials := {}
+	var skipped := {"animated": 0, "skinned": 0, "shadermat": 0, "no_mesh": 0, "no_material": 0}
 	var stack: Array = [get_tree().root]
 	while not stack.is_empty():
 		var n: Node = stack.pop_back()
 		var t := n.get_class()
 		counts[t] = counts.get(t, 0) + 1
 		if n is MeshInstance3D:
-			var mesh := (n as MeshInstance3D).mesh
+			var mi := n as MeshInstance3D
+			var mesh := mi.mesh
 			if mesh != null:
 				var rid := mesh.get_rid()
 				mesh_resource_ids[rid] = mesh_resource_ids.get(rid, 0) + 1
+				_classify_mesh_mergeable(mi, merge_buckets, unique_materials, skipped)
+			else:
+				skipped.no_mesh += 1
 		for c in n.get_children():
 			stack.push_back(c)
 	# How many MeshInstance3D instances share each unique Mesh resource —
 	# anything > 1 is a candidate for MultiMesh batching.
 	var dup_buckets := {"unique": 0, "dup_2_to_5": 0, "dup_6_to_20": 0, "dup_21_plus": 0}
 	for rid in mesh_resource_ids:
-		var n: int = mesh_resource_ids[rid]
-		if n == 1:
+		var dn: int = mesh_resource_ids[rid]
+		if dn == 1:
 			dup_buckets.unique += 1
-		elif n <= 5:
+		elif dn <= 5:
 			dup_buckets.dup_2_to_5 += 1
-		elif n <= 20:
+		elif dn <= 20:
 			dup_buckets.dup_6_to_20 += 1
 		else:
 			dup_buckets.dup_21_plus += 1
 	counts["_unique_meshes"] = mesh_resource_ids.size()
 	counts["_mesh_dup_buckets"] = dup_buckets
+	counts["_merge_buckets"] = merge_buckets
+	counts["_unique_materials"] = unique_materials.size()
+	counts["_merge_skipped"] = skipped
 	return counts
+
+
+## Classify a MeshInstance3D for merge eligibility.
+##
+## Skip rules (any one disqualifies the mesh):
+## - Has AnimationPlayer / Skeleton3D / DclAvatar in ancestor chain
+##   (skinned or animated transform — vertices can't be baked)
+## - Mesh has blend shapes (morph targets)
+## - Container has a tween / gltf-modifier / visibility-toggle component
+##   (can move, hide, or change material per-frame)
+## - Material is ShaderMaterial (custom shader, not classifiable into
+##   a bucket — would need separate atlas per shader)
+##
+## Bucket key combines pipeline-state features that MUST match between
+## merge candidates: alpha_mode + double_sided + vertex format. Texture
+## sets are handled by the atlas at merge time.
+func _classify_mesh_mergeable(
+	mi: MeshInstance3D, buckets: Dictionary, unique_mats: Dictionary, skipped: Dictionary
+) -> void:
+	if mi.skeleton != NodePath(""):
+		skipped.skinned += 1
+		return
+	var p: Node = mi.get_parent()
+	while p != null:
+		if p is AnimationPlayer or p is Skeleton3D:
+			skipped.animated += 1
+			return
+		var c := p.get_class()
+		if c == "DclAvatar":
+			skipped.animated += 1
+			return
+		# DCL components: any gltf-container with a tween or modifier on
+		# this entity will mutate the subtree per-frame; can't bake.
+		if p.has_meta("dcl_has_tween") or p.has_meta("dcl_has_modifier"):
+			skipped.animated += 1
+			return
+		p = p.get_parent()
+	var mesh := mi.mesh
+	if mesh != null and mesh is ArrayMesh:
+		if (mesh as ArrayMesh).get_blend_shape_count() > 0:
+			skipped.animated += 1
+			return
+	var mat: Material = mi.get_active_material(0)
+	if mat == null:
+		skipped.no_material += 1
+		return
+	if mat is ShaderMaterial:
+		skipped.shadermat += 1
+		return
+	unique_mats[mat.get_rid()] = true
+	# Bucket by pipeline state only — texture atlas resolves per-bucket.
+	var key: String = ""
+	if mat is BaseMaterial3D:
+		var bm := mat as BaseMaterial3D
+		var tex_albedo := 1 if bm.albedo_texture != null else 0
+		var tex_normal := 1 if bm.normal_texture != null else 0
+		var tex_emissive := 1 if bm.emission_texture != null else 0
+		var tex_orm := 1 if bm.orm_texture != null else 0
+		var ds := 1 if bm.cull_mode == BaseMaterial3D.CULL_DISABLED else 0
+		key = (
+			"transp=%d cull=%d alb=%d nrm=%d em=%d orm=%d"
+			% [bm.transparency, ds, tex_albedo, tex_normal, tex_emissive, tex_orm]
+		)
+	else:
+		key = "other_basemat"
+	buckets[key] = buckets.get(key, 0) + 1
 
 
 func _finish() -> void:
@@ -245,6 +339,27 @@ func _finish() -> void:
 			]
 		)
 	)
+	print("[GP Benchmark] unique_materials=%d" % node_types.get("_unique_materials", 0))
+	var skipped: Dictionary = node_types.get("_merge_skipped", {})
+	print(
+		(
+			"[GP Benchmark] merge_skipped animated=%d skinned=%d shadermat=%d no_mat=%d no_mesh=%d"
+			% [
+				skipped.get("animated", 0),
+				skipped.get("skinned", 0),
+				skipped.get("shadermat", 0),
+				skipped.get("no_material", 0),
+				skipped.get("no_mesh", 0),
+			]
+		)
+	)
+	var bk: Dictionary = node_types.get("_merge_buckets", {})
+	var bk_sorted := []
+	for k in bk:
+		bk_sorted.append([k, bk[k]])
+	bk_sorted.sort_custom(func(a, b): return a[1] > b[1])
+	for i in range(min(10, bk_sorted.size())):
+		print("[GP Benchmark] merge_bucket [%s] count=%d" % [bk_sorted[i][0], bk_sorted[i][1]])
 	print("[GP Benchmark] END_RESULT_JSON")
 	# Sanity-check screenshot. Compared against the prior run's image by
 	# scripts/bench/compare_screenshots.py — if it diverges too far the run
@@ -490,6 +605,200 @@ func _apply_deeplink_overrides() -> void:
 	var rs_gltf_direct: String = params.get("rs-gltf-direct", "")
 	if not rs_gltf_direct.is_empty():
 		Global.cli.rs_gltf_direct = rs_gltf_direct.to_lower() in ["true", "1", "yes"]
+
+	# Force a graphic profile for the bench. Index matches GraphicSettings
+	# PROFILE_NAMES: 0=Very Low, 1=Low, 2=Medium, 3=High, 4=Custom. Stashed
+	# here, applied at loading_complete (after HardwareBenchmark would clobber
+	# it with its own auto-pick).
+	var force_graphic_profile: String = params.get("force-graphic-profile", "")
+	if not force_graphic_profile.is_empty() and force_graphic_profile.is_valid_int():
+		var idx: int = force_graphic_profile.to_int()
+		if idx >= 0 and idx <= 4:
+			config["force_graphic_profile"] = idx
+
+	var viewport_scale: String = params.get("viewport-scale-3d", "")
+	if not viewport_scale.is_empty() and viewport_scale.is_valid_float():
+		var s: float = viewport_scale.to_float()
+		if s > 0.1 and s <= 2.0:
+			config["viewport_scale_3d"] = s
+
+	# Phase 2.0: merge all textureless `BaseMaterial3D` MeshInstance3D's into
+	# one combined mesh per (cull_mode, alpha_mode) bucket. Source albedo_color
+	# is baked into vertex COLOR; the merged material uses
+	# vertex_color_use_as_albedo. Eligibility ignores skinned / animated /
+	# tween / modifier entities (same classifier as the merge profile).
+	var tm: String = params.get("textureless-merge", "")
+	if not tm.is_empty():
+		config["textureless_merge"] = tm.to_lower() in ["true", "1", "yes"]
+
+
+## Apply the deeplink-forced graphic profile, if any. Called at
+## loading_complete so HardwareBenchmark's auto-pick has already run and
+## won't overwrite us.
+func _apply_forced_graphic_profile() -> void:
+	var idx_v = config.get("force_graphic_profile", null)
+	if idx_v != null:
+		var idx: int = idx_v
+		GraphicSettings.apply_graphic_profile(idx)
+		_log("forced graphic_profile=%d (post-load)" % idx)
+	var scale_v = config.get("viewport_scale_3d", null)
+	if scale_v != null:
+		var s: float = scale_v
+		var vp: Viewport = get_tree().root
+		vp.scaling_3d_scale = s
+		_log("viewport scaling_3d_scale=%.2f (post-load)" % s)
+
+
+## Phase 2.0 prototype: merge textureless BaseMaterial3D MeshInstance3Ds.
+##
+## Walks the SceneTree, finds eligible meshes (no textures, classifier-pass),
+## and combines them into one ArrayMesh per (cull_mode, transparency) bucket.
+## Source albedo_color is baked into vertex COLOR; the merged material uses
+## vertex_color_use_as_albedo so each source's color is preserved.
+##
+## World-space bake: the combined MeshInstance3D sits at root identity; source
+## vertices are pre-multiplied by their global transform.
+##
+## Source MeshInstance3Ds are freed (no demote support in this prototype).
+func _apply_textureless_merge() -> void:
+	var t0_us := Time.get_ticks_usec()
+	# Spatial partition: 32 m × 32 m horizontal cells. Without this the merged
+	# mesh AABB covers all of Genesis Plaza and frustum culling is lost; with
+	# it each cell becomes its own merged mesh with a local AABB the culler
+	# can early-out on.
+	var cell_size: float = float(config.get("textureless_merge_cell_m", 32.0))
+	# group key -> SurfaceTool / count. Key = "transp=N cull=N cx=N cz=N".
+	var groups: Dictionary = {}
+	var stack: Array = [get_tree().root]
+	var sources_to_free: Array[MeshInstance3D] = []
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for c in n.get_children():
+			stack.push_back(c)
+		if not (n is MeshInstance3D):
+			continue
+		var mi := n as MeshInstance3D
+		if not _is_textureless_mergeable(mi):
+			continue
+		var mat := mi.get_active_material(0) as BaseMaterial3D
+		var mesh := mi.mesh
+		if mesh == null:
+			continue
+		var origin: Vector3 = mi.global_transform.origin
+		var cx: int = int(floor(origin.x / cell_size))
+		var cz: int = int(floor(origin.z / cell_size))
+		var key := (
+			"transp=%d cull=%d cx=%d cz=%d" % [mat.transparency, int(mat.cull_mode), cx, cz]
+		)
+		if not groups.has(key):
+			groups[key] = {"st": SurfaceTool.new(), "count": 0}
+			(groups[key]["st"] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
+		var st: SurfaceTool = groups[key]["st"]
+		var xform: Transform3D = mi.global_transform
+		var color: Color = mat.albedo_color
+		_append_mesh_to_surface(st, mesh, xform, color)
+		groups[key]["count"] += 1
+		sources_to_free.append(mi)
+	# Build merged mesh per group + spawn one MeshInstance3D each.
+	var holder := Node3D.new()
+	holder.name = "_textureless_merged_root"
+	get_tree().root.add_child(holder)
+	var merged_total: int = 0
+	for key in groups:
+		var info: Dictionary = groups[key]
+		var st: SurfaceTool = info["st"]
+		st.generate_normals()
+		var arr_mesh: ArrayMesh = st.commit()
+		var merged_mat := StandardMaterial3D.new()
+		merged_mat.vertex_color_use_as_albedo = true
+		# Match transparency / cull state of the source bucket. Key format:
+		# "transp=N cull=N cx=N cz=N" — first two tokens carry the state.
+		var parts: PackedStringArray = key.split(" ")
+		merged_mat.transparency = int(parts[0].split("=")[1])
+		merged_mat.cull_mode = int(parts[1].split("=")[1])
+		var inst := MeshInstance3D.new()
+		inst.name = "_merged_%s" % key.replace(" ", "_")
+		inst.mesh = arr_mesh
+		inst.set_surface_override_material(0, merged_mat)
+		holder.add_child(inst)
+		merged_total += info["count"]
+		_log(
+			"textureless merge bucket [%s] sources=%d -> 1 mesh" % [key, int(info["count"])]
+		)
+	# Suppress originals AFTER merged spawn. queue_free races the scene_runner
+	# Rust thread holding references → SIGABRT. `visible = false` gets
+	# overwritten by DCL Visibility / GltfModifier cascades each frame. Set
+	# `layers = 0` (cull mask) which removes the instance from every viewport's
+	# render set without touching the tree or visibility — DCL components
+	# don't write to layers, so it sticks.
+	for mi in sources_to_free:
+		mi.layers = 0
+	var dt_ms := (Time.get_ticks_usec() - t0_us) / 1000.0
+	_log(
+		"textureless merge: %d sources -> %d merged meshes in %.1f ms"
+		% [merged_total, groups.size(), dt_ms]
+	)
+
+
+## Eligibility test for textureless merging. Mirror of `_classify_mesh_mergeable`
+## but stricter — only opaque/cutoff `BaseMaterial3D` with zero textures.
+func _is_textureless_mergeable(mi: MeshInstance3D) -> bool:
+	if mi.skeleton != NodePath(""):
+		return false
+	var p: Node = mi.get_parent()
+	while p != null:
+		if p is AnimationPlayer or p is Skeleton3D:
+			return false
+		var c := p.get_class()
+		if c == "DclAvatar":
+			return false
+		if p.has_meta("dcl_has_tween") or p.has_meta("dcl_has_modifier"):
+			return false
+		p = p.get_parent()
+	var mesh := mi.mesh
+	if mesh == null:
+		return false
+	if mesh is ArrayMesh and (mesh as ArrayMesh).get_blend_shape_count() > 0:
+		return false
+	var mat := mi.get_active_material(0)
+	if mat == null or not (mat is BaseMaterial3D):
+		return false
+	var bm := mat as BaseMaterial3D
+	if bm.albedo_texture != null:
+		return false
+	if bm.normal_texture != null:
+		return false
+	if bm.emission_texture != null:
+		return false
+	if bm.orm_texture != null:
+		return false
+	return true
+
+
+## Append one source mesh's surface 0 vertices to a SurfaceTool, transformed
+## to world-space and colored by the source material's albedo_color.
+func _append_mesh_to_surface(
+	st: SurfaceTool, mesh: Mesh, xform: Transform3D, color: Color
+) -> void:
+	var basis_inv_t := xform.basis.inverse().transposed()
+	for s in range(mesh.get_surface_count()):
+		var arrays := mesh.surface_get_arrays(s)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var norms: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var has_norms := norms != null and norms.size() == verts.size()
+		# Index source vertices into the SurfaceTool. We use add_vertex per
+		# triangle vertex (no shared index reuse across sources — fine for
+		# prototype, costs some bandwidth).
+		var tri_count := idx.size() if idx.size() > 0 else verts.size()
+		var step := 1 if idx.size() > 0 else 1
+		for i in range(0, tri_count, step):
+			var vi: int = idx[i] if idx.size() > 0 else i
+			var v: Vector3 = xform * verts[vi]
+			st.set_color(color)
+			if has_norms:
+				st.set_normal((basis_inv_t * norms[vi]).normalized())
+			st.add_vertex(v)
 
 
 func _set_phase(p: String) -> void:
