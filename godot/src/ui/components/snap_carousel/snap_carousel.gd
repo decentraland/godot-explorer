@@ -104,6 +104,7 @@ func set_items(data_list: Array[Dictionary]) -> void:
 	for i in data_list.size():
 		var card: Control = card_scene.instantiate()
 		card_container.add_child(card)
+		card._card_index = i
 		card.set_card_mode(mode)
 		card.set_data(data_list[i])
 		_cards.append(card)

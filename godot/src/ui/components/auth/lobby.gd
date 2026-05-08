@@ -237,7 +237,7 @@ func show_auth_browser_open_screen(
 
 
 func show_control_ftue():
-	track_lobby_screen("DISCOVER_FTUE")
+	current_screen_name = "FTUE"
 	button_back.hide()
 	if current_profile:
 		ftue_screen.set_username(current_profile.get_name())
