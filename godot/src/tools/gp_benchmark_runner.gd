@@ -631,6 +631,15 @@ func _apply_deeplink_overrides() -> void:
 	if not tm.is_empty():
 		config["textureless_merge"] = tm.to_lower() in ["true", "1", "yes"]
 
+	# Per-feature graphics overrides applied AFTER `force-graphic-profile` so
+	# we can isolate the GPU cost of one feature at a time. Each accepts an
+	# int 0..2 (off / low / high). Useful for fragment-bound A/B: bench at
+	# Medium with `gfx-shadow=0` to see how much shadows alone cost.
+	for key in ["gfx-aa", "gfx-shadow", "gfx-bloom", "gfx-skybox", "gfx-texture"]:
+		var v: String = params.get(key, "")
+		if not v.is_empty() and v.is_valid_int():
+			config[key] = v.to_int()
+
 
 ## Apply the deeplink-forced graphic profile, if any. Called at
 ## loading_complete so HardwareBenchmark's auto-pick has already run and
@@ -647,6 +656,25 @@ func _apply_forced_graphic_profile() -> void:
 		var vp: Viewport = get_tree().root
 		vp.scaling_3d_scale = s
 		_log("viewport scaling_3d_scale=%.2f (post-load)" % s)
+
+	# Per-feature graphics overrides — applied after the forced profile so
+	# we can A/B "Medium with feature X off" to isolate that feature's cost.
+	var cfg = Global.get_config()
+	if config.has("gfx-aa"):
+		cfg.anti_aliasing = config["gfx-aa"]
+		_log("gfx-aa override = %d" % config["gfx-aa"])
+	if config.has("gfx-shadow"):
+		cfg.shadow_quality = config["gfx-shadow"]
+		_log("gfx-shadow override = %d" % config["gfx-shadow"])
+	if config.has("gfx-bloom"):
+		cfg.bloom_quality = config["gfx-bloom"]
+		_log("gfx-bloom override = %d" % config["gfx-bloom"])
+	if config.has("gfx-skybox"):
+		cfg.skybox_quality = config["gfx-skybox"]
+		_log("gfx-skybox override = %d" % config["gfx-skybox"])
+	if config.has("gfx-texture"):
+		cfg.texture_quality = config["gfx-texture"]
+		_log("gfx-texture override = %d" % config["gfx-texture"])
 
 
 ## Phase 2.0 prototype: merge textureless BaseMaterial3D MeshInstance3Ds.
