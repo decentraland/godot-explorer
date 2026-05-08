@@ -224,6 +224,10 @@ pub fn sync_gltf_loading_state(
                 // Occluder auto-gen — spawn BoxOccluder3D for big opaque
                 // meshes so Godot's culler can skip everything behind.
                 scene.pending_occluder_gen.insert(*entity);
+                // Asset preprocessor — aggressive decimation + vertex
+                // strip + mesh-shaped occluder. Runs last in the chain
+                // so it sees the lod-baked + atlas-merged tree.
+                scene.pending_asset_preprocessor.insert(*entity);
             }
         }
 

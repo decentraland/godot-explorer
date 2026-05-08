@@ -144,6 +144,11 @@ pub struct DclCli {
     #[var]
     pub occluder_gen_enabled: bool,
 
+    // Asset preprocessor: aggressive offline-style transforms at GLTF
+    // load (decimation, vertex strip, mesh-shaped occluder).
+    #[var]
+    pub asset_preproc_enabled: bool,
+
     // V8 inspector target. When non-empty AND the build has the
     // `enable_inspector` feature, the SDK7 scene whose title matches
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
@@ -510,6 +515,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--asset-preproc".to_string(),
+                description: "Run aggressive offline-style asset preprocessing at GLTF load (decimation, vertex strip, mesh occluder). Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -715,6 +726,7 @@ impl INode for DclCli {
         let mesh_lod_enabled = args_map.contains_key("--mesh-lod");
         let auto_distance_cull_enabled = args_map.contains_key("--auto-distance-cull");
         let occluder_gen_enabled = args_map.contains_key("--occluder-gen");
+        let asset_preproc_enabled = args_map.contains_key("--asset-preproc");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -837,6 +849,7 @@ impl INode for DclCli {
             mesh_lod_enabled,
             auto_distance_cull_enabled,
             occluder_gen_enabled,
+            asset_preproc_enabled,
             inspect_scene_title,
             asset_server_port,
             realm,

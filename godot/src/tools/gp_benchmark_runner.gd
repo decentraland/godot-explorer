@@ -287,6 +287,7 @@ func _finish() -> void:
 	var mesh_lod_stats: String = Global.scene_runner.drain_mesh_lod_stats()
 	var auto_distance_cull_stats: String = Global.scene_runner.drain_auto_distance_cull_stats()
 	var occluder_gen_stats: String = Global.scene_runner.drain_occluder_gen_stats()
+	var asset_preproc_stats: String = Global.scene_runner.drain_asset_preproc_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -301,6 +302,7 @@ func _finish() -> void:
 		"mesh_lod_stats": mesh_lod_stats,
 		"auto_distance_cull_stats": auto_distance_cull_stats,
 		"occluder_gen_stats": occluder_gen_stats,
+		"asset_preproc_stats": asset_preproc_stats,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -659,6 +661,9 @@ func _apply_deeplink_overrides() -> void:
 	var ocg: String = params.get("occluder-gen", "")
 	if not ocg.is_empty():
 		Global.cli.occluder_gen_enabled = ocg.to_lower() in ["true", "1", "yes"]
+	var apr: String = params.get("asset-preproc", "")
+	if not apr.is_empty():
+		Global.cli.asset_preproc_enabled = apr.to_lower() in ["true", "1", "yes"]
 	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
 	# conservative); raising it picks lower-detail LODs sooner and is the
 	# whole point of the LOD bake on mobile. Stash here, apply at

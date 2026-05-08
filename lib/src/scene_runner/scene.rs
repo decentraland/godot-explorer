@@ -34,9 +34,10 @@ use crate::{
 
 use super::{
     components::{
-        auto_distance_cull::AutoDistanceCullState, gltf_node_modifiers::GltfNodeModifierState,
-        mesh_lod::MeshLodState, occluder_gen::OccluderGenState,
-        textureless_merger::TexturelessMergerState, trigger_area::TriggerAreaState, tween::Tween,
+        asset_preprocessor::AssetPreprocessorState, auto_distance_cull::AutoDistanceCullState,
+        gltf_node_modifiers::GltfNodeModifierState, mesh_lod::MeshLodState,
+        occluder_gen::OccluderGenState, textureless_merger::TexturelessMergerState,
+        trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -113,6 +114,7 @@ pub enum SceneUpdateState {
     MeshLod,
     AutoDistanceCull,
     OccluderGen,
+    AssetPreprocessor,
     NftShape,
     Animator,
     AvatarShape,
@@ -158,7 +160,8 @@ impl SceneUpdateState {
             Self::MaterialAtlas => Self::MeshLod,
             Self::MeshLod => Self::AutoDistanceCull,
             Self::AutoDistanceCull => Self::OccluderGen,
-            Self::OccluderGen => Self::NftShape,
+            Self::OccluderGen => Self::AssetPreprocessor,
+            Self::AssetPreprocessor => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -309,6 +312,11 @@ pub struct Scene {
     // meshes so Godot's culler can early-out objects behind them.
     pub pending_occluder_gen: HashSet<SceneEntityId>,
     pub occluder_gen: OccluderGenState,
+
+    // Asset preprocessor: aggressive offline-style transforms
+    // (decimation, vertex strip, mesh occluder) at GLTF post-load.
+    pub pending_asset_preprocessor: HashSet<SceneEntityId>,
+    pub asset_preprocessor: AssetPreprocessorState,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -443,6 +451,8 @@ impl Scene {
             auto_distance_cull: AutoDistanceCullState::default(),
             pending_occluder_gen: HashSet::new(),
             occluder_gen: OccluderGenState::default(),
+            pending_asset_preprocessor: HashSet::new(),
+            asset_preprocessor: AssetPreprocessorState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -531,6 +541,8 @@ impl Scene {
             auto_distance_cull: AutoDistanceCullState::default(),
             pending_occluder_gen: HashSet::new(),
             occluder_gen: OccluderGenState::default(),
+            pending_asset_preprocessor: HashSet::new(),
+            asset_preprocessor: AssetPreprocessorState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
