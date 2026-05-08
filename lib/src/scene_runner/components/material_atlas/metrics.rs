@@ -44,7 +44,9 @@ impl MergerStats {
                     SkipReason::MultiSurface => &mut self.skipped_multi_surface,
                     SkipReason::HasTween => &mut self.skipped_tween,
                     SkipReason::HasModifier => &mut self.skipped_modifier,
-                    SkipReason::UnsupportedTransparency => &mut self.skipped_unsupported_transparency,
+                    SkipReason::UnsupportedTransparency => {
+                        &mut self.skipped_unsupported_transparency
+                    }
                     SkipReason::UnsupportedFeature => &mut self.skipped_unsupported_feature,
                 };
                 *s = s.saturating_add(1);

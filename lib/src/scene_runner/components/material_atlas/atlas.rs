@@ -146,15 +146,15 @@ fn make_blank_albedo() -> Gd<Image> {
 }
 
 fn make_blank_param_texture(rows: i32) -> Gd<ImageTexture> {
-    let mut img = Image::create(1, rows, false, Format::RGBAF)
-        .expect("param texture must allocate");
+    let mut img =
+        Image::create(1, rows, false, Format::RGBAF).expect("param texture must allocate");
     img.fill(Color::from_rgba(0.0, 1.0, 0.0, 0.5));
     ImageTexture::create_from_image(&img).unwrap_or_else(ImageTexture::new_gd)
 }
 
 fn make_blank_color_texture(rows: i32) -> Gd<ImageTexture> {
-    let mut img = Image::create(1, rows, false, Format::RGBAF)
-        .expect("color texture must allocate");
+    let mut img =
+        Image::create(1, rows, false, Format::RGBAF).expect("color texture must allocate");
     img.fill(Color::from_rgba(1.0, 1.0, 1.0, 1.0));
     ImageTexture::create_from_image(&img).unwrap_or_else(ImageTexture::new_gd)
 }

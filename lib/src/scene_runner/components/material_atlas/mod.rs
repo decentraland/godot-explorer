@@ -126,7 +126,11 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
         return;
     };
 
-    let Some(gltf_container) = node_3d.try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>("GltfContainer") else {
+    let Some(gltf_container) = node_3d
+        .try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>(
+            "GltfContainer",
+        )
+    else {
         return;
     };
 
@@ -194,7 +198,10 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
 
             if let Some(shared_material) = shared_material {
                 mi.set_mesh(&baked_mesh.upcast::<godot::classes::Mesh>());
-                mi.set_surface_override_material(0, &shared_material.upcast::<godot::classes::Material>());
+                mi.set_surface_override_material(
+                    0,
+                    &shared_material.upcast::<godot::classes::Material>(),
+                );
                 metrics::record_mi_replace();
                 scene.material_atlas.mis_replaced =
                     scene.material_atlas.mis_replaced.saturating_add(1);

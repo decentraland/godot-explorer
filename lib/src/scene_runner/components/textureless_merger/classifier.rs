@@ -42,11 +42,7 @@ pub enum Classification {
     Skip(SkipReason),
 }
 
-pub fn classify(
-    mi: &Gd<MeshInstance3D>,
-    scene: &Scene,
-    entity: SceneEntityId,
-) -> Classification {
+pub fn classify(mi: &Gd<MeshInstance3D>, scene: &Scene, entity: SceneEntityId) -> Classification {
     if scene.tweens.contains_key(&entity) {
         return Classification::Skip(SkipReason::HasTween);
     }

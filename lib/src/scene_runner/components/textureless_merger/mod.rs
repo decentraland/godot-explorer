@@ -18,8 +18,8 @@
 //!
 //! Design doc: `docs/bench/material-atlas-mesh-merge-design.md`.
 
-mod classifier;
 mod cell_grid;
+mod classifier;
 mod combiner;
 mod metrics;
 mod state;
@@ -123,7 +123,11 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
         return;
     };
 
-    let Some(gltf_container) = node_3d.try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>("GltfContainer") else {
+    let Some(gltf_container) = node_3d
+        .try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>(
+            "GltfContainer",
+        )
+    else {
         return;
     };
 
@@ -220,7 +224,9 @@ fn flush_ready_buckets(scene: &mut Scene) {
         let parts = std::mem::take(&mut bucket.parts);
         bucket.flushed = true;
 
-        let Some(built) = build_merged_mesh(&parts, (key.cx, key.cz), key.transparency, key.cull_mode) else {
+        let Some(built) =
+            build_merged_mesh(&parts, (key.cx, key.cz), key.transparency, key.cull_mode)
+        else {
             continue;
         };
 
@@ -247,19 +253,14 @@ fn flush_ready_buckets(scene: &mut Scene) {
             built.index_count,
         );
 
-        scene
-            .textureless_merger
-            .merged_nodes
-            .insert(key, merged_mi);
+        scene.textureless_merger.merged_nodes.insert(key, merged_mi);
 
         scene.textureless_merger.merged_vertex_total = scene
             .textureless_merger
             .merged_vertex_total
             .saturating_add(built.vertex_count as u64);
-        scene.textureless_merger.buckets_flushed = scene
-            .textureless_merger
-            .buckets_flushed
-            .saturating_add(1);
+        scene.textureless_merger.buckets_flushed =
+            scene.textureless_merger.buckets_flushed.saturating_add(1);
 
         // Queue source originals for suppression next frame.
         for part in parts {

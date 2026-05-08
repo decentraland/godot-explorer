@@ -80,9 +80,7 @@ impl MergerStats {
         dst.skipped_multi_surface = dst
             .skipped_multi_surface
             .saturating_add(self.skipped_multi_surface);
-        dst.skipped_has_tween = dst
-            .skipped_has_tween
-            .saturating_add(self.skipped_has_tween);
+        dst.skipped_has_tween = dst.skipped_has_tween.saturating_add(self.skipped_has_tween);
         dst.skipped_has_modifier = dst
             .skipped_has_modifier
             .saturating_add(self.skipped_has_modifier);
@@ -137,10 +135,7 @@ pub fn record_global(classification: &Classification) {
 /// Snapshot the global stats without resetting. Used by HUD readers that
 /// poll continuously.
 pub fn snapshot_global_stats() -> MergerStats {
-    GLOBAL_STATS
-        .lock()
-        .map(|g| g.clone())
-        .unwrap_or_default()
+    GLOBAL_STATS.lock().map(|g| g.clone()).unwrap_or_default()
 }
 
 /// Drain the global stats and return a multiline summary, then reset to zero.

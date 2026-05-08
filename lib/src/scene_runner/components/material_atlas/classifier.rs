@@ -2,9 +2,7 @@
 //!
 //! Skip rules mirror the textureless merger but accept textured meshes.
 
-use godot::classes::base_material_3d::{
-    DiffuseMode, Feature, Flags, SpecularMode, TextureParam,
-};
+use godot::classes::base_material_3d::{DiffuseMode, Feature, Flags, SpecularMode, TextureParam};
 use godot::classes::{
     AnimationPlayer, BaseMaterial3D, MeshInstance3D, Node, ShaderMaterial, Skeleton3D, Texture2D,
 };
@@ -45,11 +43,7 @@ pub enum Classification {
     Skip(SkipReason),
 }
 
-pub fn classify(
-    mi: &Gd<MeshInstance3D>,
-    scene: &Scene,
-    entity: SceneEntityId,
-) -> Classification {
+pub fn classify(mi: &Gd<MeshInstance3D>, scene: &Scene, entity: SceneEntityId) -> Classification {
     if scene.tweens.contains_key(&entity) {
         return Classification::Skip(SkipReason::HasTween);
     }
