@@ -212,6 +212,11 @@ pub fn sync_gltf_loading_state(
                 // Same trigger for the material atlas. Both run after
                 // GltfNodeModifiers in the same dispatch loop.
                 scene.pending_material_atlas.insert(*entity);
+                // Mesh LOD pass — replays each MI's ArrayMesh through
+                // ImporterMesh::generate_lods so the viewport can swap
+                // to lower-poly chains at distance. Runs after the atlas
+                // so it sees only meshes that weren't merged away.
+                scene.pending_mesh_lod.insert(*entity);
             }
         }
 

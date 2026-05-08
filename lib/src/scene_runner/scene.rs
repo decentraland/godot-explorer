@@ -34,7 +34,7 @@ use crate::{
 
 use super::{
     components::{
-        gltf_node_modifiers::GltfNodeModifierState,
+        gltf_node_modifiers::GltfNodeModifierState, mesh_lod::MeshLodState,
         textureless_merger::TexturelessMergerState, trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
@@ -109,6 +109,7 @@ pub enum SceneUpdateState {
     GltfNodeModifiers,
     TexturelessMerger,
     MaterialAtlas,
+    MeshLod,
     NftShape,
     Animator,
     AvatarShape,
@@ -151,7 +152,8 @@ impl SceneUpdateState {
             Self::SyncGltfContainer => Self::GltfNodeModifiers,
             Self::GltfNodeModifiers => Self::TexturelessMerger,
             Self::TexturelessMerger => Self::MaterialAtlas,
-            Self::MaterialAtlas => Self::NftShape,
+            Self::MaterialAtlas => Self::MeshLod,
+            Self::MeshLod => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -285,6 +287,13 @@ pub struct Scene {
     // load complete; processed by `update_material_atlas`.
     pub pending_material_atlas: HashSet<SceneEntityId>,
     pub material_atlas: super::components::material_atlas::MaterialAtlasState,
+
+    // Runtime mesh-LOD pass — replays each mergeable MeshInstance3D's
+    // ArrayMesh through ImporterMesh::generate_lods so the viewport can
+    // swap to lower-poly chains at distance. Same lifecycle as material
+    // atlas: enqueued at GLTF load complete, processed by `update_mesh_lod`.
+    pub pending_mesh_lod: HashSet<SceneEntityId>,
+    pub mesh_lod: MeshLodState,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -413,6 +422,8 @@ impl Scene {
             textureless_merger: TexturelessMergerState::default(),
             pending_material_atlas: HashSet::new(),
             material_atlas: super::components::material_atlas::MaterialAtlasState::default(),
+            pending_mesh_lod: HashSet::new(),
+            mesh_lod: MeshLodState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -495,6 +506,8 @@ impl Scene {
             textureless_merger: TexturelessMergerState::default(),
             pending_material_atlas: HashSet::new(),
             material_atlas: super::components::material_atlas::MaterialAtlasState::default(),
+            pending_mesh_lod: HashSet::new(),
+            mesh_lod: MeshLodState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

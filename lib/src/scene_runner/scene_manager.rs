@@ -430,8 +430,7 @@ impl SceneManager {
     /// saw the entities it expected (issue #1948).
     #[func]
     pub fn drain_textureless_merger_stats(&mut self) -> GString {
-        let s =
-            super::components::textureless_merger::drain_global_stats();
+        let s = super::components::textureless_merger::drain_global_stats();
         GString::from(s.as_str())
     }
 
@@ -441,6 +440,15 @@ impl SceneManager {
     #[func]
     pub fn drain_material_atlas_stats(&mut self) -> GString {
         let s = super::components::material_atlas::drain_global_stats();
+        GString::from(s.as_str())
+    }
+
+    /// Drain global mesh-LOD stats (skip-reason histogram, baked count,
+    /// cache hits, source/lod0 index totals). Embed in benchmark JSON to
+    /// quantify how much geometry the LOD pass touched.
+    #[func]
+    pub fn drain_mesh_lod_stats(&mut self) -> GString {
+        let s = super::components::mesh_lod::drain_global_stats();
         GString::from(s.as_str())
     }
 

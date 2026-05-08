@@ -127,6 +127,13 @@ pub struct DclCli {
     #[var]
     pub material_atlas_enabled: bool,
 
+    // Runtime mesh-LOD pass: replays each mergeable MeshInstance3D's
+    // ArrayMesh through `ImporterMesh::generate_lods` so the viewport can
+    // swap to lower-poly chains at distance. Default OFF; flipped via
+    // --mesh-lod CLI flag or mesh-lod deeplink param.
+    #[var]
+    pub mesh_lod_enabled: bool,
+
     // V8 inspector target. When non-empty AND the build has the
     // `enable_inspector` feature, the SDK7 scene whose title matches
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
@@ -475,6 +482,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--mesh-lod".to_string(),
+                description: "Bake an LOD chain into each loaded MeshInstance3D's ArrayMesh via ImporterMesh::generate_lods. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -677,6 +690,7 @@ impl INode for DclCli {
         let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
         let textureless_merge_enabled = args_map.contains_key("--textureless-merge");
         let material_atlas_enabled = args_map.contains_key("--material-atlas");
+        let mesh_lod_enabled = args_map.contains_key("--mesh-lod");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -796,6 +810,7 @@ impl INode for DclCli {
             rs_gltf_direct,
             textureless_merge_enabled,
             material_atlas_enabled,
+            mesh_lod_enabled,
             inspect_scene_title,
             asset_server_port,
             realm,

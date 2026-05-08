@@ -284,6 +284,7 @@ func _finish() -> void:
 	# flag is OFF — useful as a sanity check for `tm-rust-off` baseline runs.
 	var textureless_merger_stats: String = Global.scene_runner.drain_textureless_merger_stats()
 	var material_atlas_stats: String = Global.scene_runner.drain_material_atlas_stats()
+	var mesh_lod_stats: String = Global.scene_runner.drain_mesh_lod_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -295,6 +296,7 @@ func _finish() -> void:
 		"crdt_component_breakdown": crdt_component_breakdown,
 		"textureless_merger_stats": textureless_merger_stats,
 		"material_atlas_stats": material_atlas_stats,
+		"mesh_lod_stats": mesh_lod_stats,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -644,6 +646,18 @@ func _apply_deeplink_overrides() -> void:
 	var ma: String = params.get("material-atlas", "")
 	if not ma.is_empty():
 		Global.cli.material_atlas_enabled = ma.to_lower() in ["true", "1", "yes"]
+	var mlod: String = params.get("mesh-lod", "")
+	if not mlod.is_empty():
+		Global.cli.mesh_lod_enabled = mlod.to_lower() in ["true", "1", "yes"]
+	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
+	# conservative); raising it picks lower-detail LODs sooner and is the
+	# whole point of the LOD bake on mobile. Stash here, apply at
+	# loading_complete so HardwareBenchmark + GraphicSettings can't clobber.
+	var mlod_thr: String = params.get("mesh-lod-threshold", "")
+	if not mlod_thr.is_empty() and mlod_thr.is_valid_float():
+		var thr: float = mlod_thr.to_float()
+		if thr >= 0.0 and thr <= 64.0:
+			config["mesh_lod_threshold"] = thr
 
 	# Pin skybox time of day so screenshots / textures are deterministic
 	# across runs. `fixed-skybox-time=true` clamps to ~3pm (DclGlobal sets
@@ -670,6 +684,12 @@ func _apply_forced_graphic_profile() -> void:
 		var vp: Viewport = get_tree().root
 		vp.scaling_3d_scale = s
 		_log("viewport scaling_3d_scale=%.2f (post-load)" % s)
+	var mlod_thr_v = config.get("mesh_lod_threshold", null)
+	if mlod_thr_v != null:
+		var thr: float = mlod_thr_v
+		var vp2: Viewport = get_tree().root
+		vp2.mesh_lod_threshold = thr
+		_log("viewport mesh_lod_threshold=%.2f (post-load)" % thr)
 
 
 ## Prototype: merge textureless BaseMaterial3D MeshInstance3Ds.
@@ -710,9 +730,7 @@ func _apply_textureless_merge() -> void:
 		var origin: Vector3 = mi.global_transform.origin
 		var cx: int = int(floor(origin.x / cell_size))
 		var cz: int = int(floor(origin.z / cell_size))
-		var key := (
-			"transp=%d cull=%d cx=%d cz=%d" % [mat.transparency, int(mat.cull_mode), cx, cz]
-		)
+		var key := "transp=%d cull=%d cx=%d cz=%d" % [mat.transparency, int(mat.cull_mode), cx, cz]
 		if not groups.has(key):
 			groups[key] = {"st": SurfaceTool.new(), "count": 0}
 			(groups[key]["st"] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -745,9 +763,7 @@ func _apply_textureless_merge() -> void:
 		inst.set_surface_override_material(0, merged_mat)
 		holder.add_child(inst)
 		merged_total += info["count"]
-		_log(
-			"textureless merge bucket [%s] sources=%d -> 1 mesh" % [key, int(info["count"])]
-		)
+		_log("textureless merge bucket [%s] sources=%d -> 1 mesh" % [key, int(info["count"])])
 	# Suppress originals AFTER merged spawn. queue_free races the scene_runner
 	# Rust thread holding references → SIGABRT. visible/layers were tried in
 	# prior runs but draws didn't drop — either DCL re-applies them or the
@@ -760,8 +776,10 @@ func _apply_textureless_merge() -> void:
 		mi.layers = 0
 	var dt_ms := (Time.get_ticks_usec() - t0_us) / 1000.0
 	_log(
-		"textureless merge: %d sources -> %d merged meshes in %.1f ms"
-		% [merged_total, groups.size(), dt_ms]
+		(
+			"textureless merge: %d sources -> %d merged meshes in %.1f ms"
+			% [merged_total, groups.size(), dt_ms]
+		)
 	)
 
 
@@ -802,9 +820,7 @@ func _is_textureless_mergeable(mi: MeshInstance3D) -> bool:
 
 ## Append one source mesh's surface 0 vertices to a SurfaceTool, transformed
 ## to world-space and colored by the source material's albedo_color.
-func _append_mesh_to_surface(
-	st: SurfaceTool, mesh: Mesh, xform: Transform3D, color: Color
-) -> void:
+func _append_mesh_to_surface(st: SurfaceTool, mesh: Mesh, xform: Transform3D, color: Color) -> void:
 	var basis_inv_t := xform.basis.inverse().transposed()
 	for s in range(mesh.get_surface_count()):
 		var arrays := mesh.surface_get_arrays(s)

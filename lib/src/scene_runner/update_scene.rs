@@ -86,6 +86,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::GltfNodeModifiers => "GltfNodeModifiers",
         S::TexturelessMerger => "TexturelessMerger",
         S::MaterialAtlas => "MaterialAtlas",
+        S::MeshLod => "MeshLod",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
         S::AvatarShape => "AvatarShape",
@@ -129,6 +130,7 @@ use super::{
         material::{update_material, update_video_material_textures},
         material_atlas::update_material_atlas,
         mesh_collider::update_mesh_collider,
+        mesh_lod::update_mesh_lod,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
         pointer_events::update_scene_pointer_events,
@@ -439,18 +441,15 @@ pub fn _process_scene(
                     }
                     still_processing
                 }
-                SceneUpdateState::TexturelessMerger => !update_textureless_merger(
-                    scene,
-                    crdt_state,
-                    ref_time,
-                    effective_end_time_us,
-                ),
-                SceneUpdateState::MaterialAtlas => !update_material_atlas(
-                    scene,
-                    crdt_state,
-                    ref_time,
-                    effective_end_time_us,
-                ),
+                SceneUpdateState::TexturelessMerger => {
+                    !update_textureless_merger(scene, crdt_state, ref_time, effective_end_time_us)
+                }
+                SceneUpdateState::MaterialAtlas => {
+                    !update_material_atlas(scene, crdt_state, ref_time, effective_end_time_us)
+                }
+                SceneUpdateState::MeshLod => {
+                    !update_mesh_lod(scene, crdt_state, ref_time, effective_end_time_us)
+                }
                 SceneUpdateState::NftShape => {
                     update_nft_shape(scene, crdt_state);
                     false
