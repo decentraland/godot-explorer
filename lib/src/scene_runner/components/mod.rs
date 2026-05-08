@@ -18,6 +18,7 @@ pub mod mesh_collider;
 pub mod mesh_lod;
 pub mod mesh_renderer;
 pub mod nft_shape;
+pub mod occluder_gen;
 pub mod pointer_events;
 pub mod raycast;
 pub mod realm_info;

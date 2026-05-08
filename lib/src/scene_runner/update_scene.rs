@@ -88,6 +88,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::MaterialAtlas => "MaterialAtlas",
         S::MeshLod => "MeshLod",
         S::AutoDistanceCull => "AutoDistanceCull",
+        S::OccluderGen => "OccluderGen",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
         S::AvatarShape => "AvatarShape",
@@ -135,6 +136,7 @@ use super::{
         mesh_lod::update_mesh_lod,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
+        occluder_gen::update_occluder_gen,
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         realm_info::sync_realm_info,
@@ -453,6 +455,12 @@ pub fn _process_scene(
                     !update_mesh_lod(scene, crdt_state, ref_time, effective_end_time_us)
                 }
                 SceneUpdateState::AutoDistanceCull => !update_auto_distance_cull(
+                    scene,
+                    crdt_state,
+                    ref_time,
+                    effective_end_time_us,
+                ),
+                SceneUpdateState::OccluderGen => !update_occluder_gen(
                     scene,
                     crdt_state,
                     ref_time,

@@ -35,8 +35,8 @@ use crate::{
 use super::{
     components::{
         auto_distance_cull::AutoDistanceCullState, gltf_node_modifiers::GltfNodeModifierState,
-        mesh_lod::MeshLodState, textureless_merger::TexturelessMergerState,
-        trigger_area::TriggerAreaState, tween::Tween,
+        mesh_lod::MeshLodState, occluder_gen::OccluderGenState,
+        textureless_merger::TexturelessMergerState, trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -112,6 +112,7 @@ pub enum SceneUpdateState {
     MaterialAtlas,
     MeshLod,
     AutoDistanceCull,
+    OccluderGen,
     NftShape,
     Animator,
     AvatarShape,
@@ -156,7 +157,8 @@ impl SceneUpdateState {
             Self::TexturelessMerger => Self::MaterialAtlas,
             Self::MaterialAtlas => Self::MeshLod,
             Self::MeshLod => Self::AutoDistanceCull,
-            Self::AutoDistanceCull => Self::NftShape,
+            Self::AutoDistanceCull => Self::OccluderGen,
+            Self::OccluderGen => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -302,6 +304,11 @@ pub struct Scene {
     // MeshInstance3D from its AABB diagonal. Pure perf, fidelity-neutral.
     pub pending_auto_distance_cull: HashSet<SceneEntityId>,
     pub auto_distance_cull: AutoDistanceCullState,
+
+    // OccluderInstance3D auto-gen: spawns box occluders for big opaque
+    // meshes so Godot's culler can early-out objects behind them.
+    pub pending_occluder_gen: HashSet<SceneEntityId>,
+    pub occluder_gen: OccluderGenState,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -434,6 +441,8 @@ impl Scene {
             mesh_lod: MeshLodState::default(),
             pending_auto_distance_cull: HashSet::new(),
             auto_distance_cull: AutoDistanceCullState::default(),
+            pending_occluder_gen: HashSet::new(),
+            occluder_gen: OccluderGenState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -520,6 +529,8 @@ impl Scene {
             mesh_lod: MeshLodState::default(),
             pending_auto_distance_cull: HashSet::new(),
             auto_distance_cull: AutoDistanceCullState::default(),
+            pending_occluder_gen: HashSet::new(),
+            occluder_gen: OccluderGenState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

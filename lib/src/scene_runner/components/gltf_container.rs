@@ -221,6 +221,9 @@ pub fn sync_gltf_loading_state(
                 // MI from its AABB. Runs after mesh_lod so the lod-baked
                 // mesh's AABB is what we read.
                 scene.pending_auto_distance_cull.insert(*entity);
+                // Occluder auto-gen — spawn BoxOccluder3D for big opaque
+                // meshes so Godot's culler can skip everything behind.
+                scene.pending_occluder_gen.insert(*entity);
             }
         }
 
