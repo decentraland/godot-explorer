@@ -108,6 +108,7 @@ pub enum SceneUpdateState {
     SyncGltfContainer,
     GltfNodeModifiers,
     TexturelessMerger,
+    MaterialAtlas,
     NftShape,
     Animator,
     AvatarShape,
@@ -149,7 +150,8 @@ impl SceneUpdateState {
             Self::GltfContainer => Self::SyncGltfContainer,
             Self::SyncGltfContainer => Self::GltfNodeModifiers,
             Self::GltfNodeModifiers => Self::TexturelessMerger,
-            Self::TexturelessMerger => Self::NftShape,
+            Self::TexturelessMerger => Self::MaterialAtlas,
+            Self::MaterialAtlas => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -276,6 +278,13 @@ pub struct Scene {
     pub pending_textureless_promotion: HashSet<SceneEntityId>,
     pub merged_entities: HashSet<SceneEntityId>,
     pub textureless_merger: TexturelessMergerState,
+
+    // Material atlas — collapses N PBR-with-albedo-only materials onto a
+    // single shared `ShaderMaterial` whose albedo is a `Texture2DArray`.
+    // Same lifecycle pattern: `pending_material_atlas` enqueued at GLTF
+    // load complete; processed by `update_material_atlas`.
+    pub pending_material_atlas: HashSet<SceneEntityId>,
+    pub material_atlas: super::components::material_atlas::MaterialAtlasState,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -402,6 +411,8 @@ impl Scene {
             pending_textureless_promotion: HashSet::new(),
             merged_entities: HashSet::new(),
             textureless_merger: TexturelessMergerState::default(),
+            pending_material_atlas: HashSet::new(),
+            material_atlas: super::components::material_atlas::MaterialAtlasState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -482,6 +493,8 @@ impl Scene {
             pending_textureless_promotion: HashSet::new(),
             merged_entities: HashSet::new(),
             textureless_merger: TexturelessMergerState::default(),
+            pending_material_atlas: HashSet::new(),
+            material_atlas: super::components::material_atlas::MaterialAtlasState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

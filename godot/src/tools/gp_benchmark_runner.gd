@@ -283,6 +283,7 @@ func _finish() -> void:
 	# Textureless mesh merger classifier stats (issue #1948). Empty when the
 	# flag is OFF — useful as a sanity check for `tm-rust-off` baseline runs.
 	var textureless_merger_stats: String = Global.scene_runner.drain_textureless_merger_stats()
+	var material_atlas_stats: String = Global.scene_runner.drain_material_atlas_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -293,6 +294,7 @@ func _finish() -> void:
 		"crdt_metrics": crdt_metrics,
 		"crdt_component_breakdown": crdt_component_breakdown,
 		"textureless_merger_stats": textureless_merger_stats,
+		"material_atlas_stats": material_atlas_stats,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -639,6 +641,18 @@ func _apply_deeplink_overrides() -> void:
 	var tm_gd: String = params.get("textureless-merge-gd", "")
 	if not tm_gd.is_empty():
 		config["textureless_merge"] = tm_gd.to_lower() in ["true", "1", "yes"]
+	var ma: String = params.get("material-atlas", "")
+	if not ma.is_empty():
+		Global.cli.material_atlas_enabled = ma.to_lower() in ["true", "1", "yes"]
+
+	# Pin skybox time of day so screenshots / textures are deterministic
+	# across runs. `fixed-skybox-time=true` clamps to ~3pm (DclGlobal sets
+	# `target_time = 0.625` in time.gd:53). Recommended for any A/B run
+	# whose conclusion involves comparing visuals or draw counts under
+	# different lighting.
+	var fst: String = params.get("fixed-skybox-time", "")
+	if not fst.is_empty():
+		Global.fixed_skybox_time = fst.to_lower() in ["true", "1", "yes"]
 
 
 ## Apply the deeplink-forced graphic profile, if any. Called at

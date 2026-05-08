@@ -435,6 +435,15 @@ impl SceneManager {
         GString::from(s.as_str())
     }
 
+    /// Drain the material atlas global stats (skip-reason histogram, layer
+    /// allocation count, MIs replaced). Mirrors the textureless merger
+    /// drain so the bench JSON has parallel fields for both.
+    #[func]
+    pub fn drain_material_atlas_stats(&mut self) -> GString {
+        let s = super::components::material_atlas::drain_global_stats();
+        GString::from(s.as_str())
+    }
+
     /// Reset CRDT cross-boundary metrics (send/recv bytes, op counts, dirty
     /// entries). Call right before sampling.
     #[func]

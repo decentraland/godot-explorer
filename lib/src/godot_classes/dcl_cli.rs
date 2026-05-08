@@ -121,6 +121,12 @@ pub struct DclCli {
     #[var]
     pub textureless_merge_enabled: bool,
 
+    // Material atlas: collapse N PBR-with-albedo-only materials onto a
+    // shared `ShaderMaterial` whose albedo is a `Texture2DArray`. Default
+    // OFF; flipped via --material-atlas CLI flag or material-atlas deeplink.
+    #[var]
+    pub material_atlas_enabled: bool,
+
     // V8 inspector target. When non-empty AND the build has the
     // `enable_inspector` feature, the SDK7 scene whose title matches
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
@@ -463,6 +469,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--material-atlas".to_string(),
+                description: "Pack textured PBR materials into a Texture2DArray atlas + shared shader for batching. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -664,6 +676,7 @@ impl INode for DclCli {
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
         let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
         let textureless_merge_enabled = args_map.contains_key("--textureless-merge");
+        let material_atlas_enabled = args_map.contains_key("--material-atlas");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -782,6 +795,7 @@ impl INode for DclCli {
             gp_benchmark,
             rs_gltf_direct,
             textureless_merge_enabled,
+            material_atlas_enabled,
             inspect_scene_title,
             asset_server_port,
             realm,

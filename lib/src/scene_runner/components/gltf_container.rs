@@ -209,6 +209,9 @@ pub fn sync_gltf_loading_state(
                 // for modifier application here (`update_gltf_node_modifiers`
                 // runs in the same tick before `update_textureless_merger`).
                 scene.pending_textureless_promotion.insert(*entity);
+                // Same trigger for the material atlas. Both run after
+                // GltfNodeModifiers in the same dispatch loop.
+                scene.pending_material_atlas.insert(*entity);
             }
         }
 
