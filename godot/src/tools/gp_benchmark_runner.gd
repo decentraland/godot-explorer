@@ -726,12 +726,14 @@ func _apply_textureless_merge() -> void:
 			"textureless merge bucket [%s] sources=%d -> 1 mesh" % [key, int(info["count"])]
 		)
 	# Suppress originals AFTER merged spawn. queue_free races the scene_runner
-	# Rust thread holding references → SIGABRT. `visible = false` gets
-	# overwritten by DCL Visibility / GltfModifier cascades each frame. Set
-	# `layers = 0` (cull mask) which removes the instance from every viewport's
-	# render set without touching the tree or visibility — DCL components
-	# don't write to layers, so it sticks.
+	# Rust thread holding references → SIGABRT. visible/layers were tried in
+	# prior runs but draws didn't drop — either DCL re-applies them or the
+	# draw counter measures a stage that doesn't honor cull_mask. Detaching
+	# the mesh resource is the strongest stop: the MeshInstance3D node stays
+	# in the tree (no race), but with no Mesh there's nothing to draw.
 	for mi in sources_to_free:
+		mi.mesh = null
+		mi.visible = false
 		mi.layers = 0
 	var dt_ms := (Time.get_ticks_usec() - t0_us) / 1000.0
 	_log(

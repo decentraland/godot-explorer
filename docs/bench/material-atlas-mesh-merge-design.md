@@ -156,6 +156,7 @@ We tried a GDScript prototype (`_apply_textureless_merge` in `gp_benchmark_runne
 | tm-on (no cells) | `queue_free` originals | crashed (Scudo: race on chunk header → SIGABRT) | — | — |
 | tm-c4 (32 m cells, `visible=false`) | `mi.visible = false` | 14.09 | 63.29 | 1575 |
 | tm-c5 (32 m cells, `layers=0`) | `mi.layers = 0` | 14.14 | 64.00 | 1699 |
+| tm-mn2 (32 m cells, `mesh=null`) | `mi.mesh = null` + visible + layers | 16.71 | 52.99 | **1373** |
 
 **Three lessons:**
 
@@ -166,6 +167,17 @@ We tried a GDScript prototype (`_apply_textureless_merge` in `gp_benchmark_runne
 3. **`visible = false` and `layers = 0` are both overwritten by DCL each tick.** The scene_runner's MeshRenderer / GltfContainer state re-applies visibility / cull-mask on every tick based on SDK7 component state. A GDScript-side flip is a one-frame write that gets stomped immediately. **The merge cannot live outside the Rust scene_runner.**
 
 **Implication:** Phase 2.0 must move into Rust, integrated with `mesh_renderer.rs` / `gltf_container.rs`. The merge cannot be retrofitted from GDScript; it must own the entity→node mapping it manipulates.
+
+**Update — `mesh = null` works.** The `tm-mn2` follow-up dropped draws from 1645 → 1373 (-272). So setting the resource pointer to null *does* prevent rendering and *does* stick across frames. The previous variants failed because the Godot draw-call counter doesn't fully honor `visible=false` / `layers=0`, not because DCL was re-applying them. Two new findings from this run:
+
+- Of the 1093 classifier-matched textureless meshes, only ~272 were producing visible draw calls. The other ~820 were collision-only / decorative-with-collider meshes which never rendered to begin with. Hiding them visually exposed underlying collider visualizers (the "veo meshes de colisión" report from the user).
+- Even with 272 fewer source draws, FPS was -1.1 vs baseline because the merged meshes were built without index reuse — the prototype emits one vertex per *index* (`st.add_vertex(v)` per `idx[i]`), so shared vertices in source meshes get duplicated 6× on average. The 41 merged meshes ended up doing more vertex work than the 272 they replaced.
+
+**Concrete API/algorithm requirements for the Rust port (validated):**
+
+- Suppress originals via `mesh = null`, not `visible` or `layers`.
+- Classifier must exclude collision-only meshes (e.g., entities whose visual mesh is hidden / whose material has `transparency=DISABLED` and exists only for the GltfContainer's invisible-collision mask).
+- Merged ArrayMesh must preserve index buffer (append unique vertices + remap indices), or vertex bloat eats the draw-call savings.
 
 ### Phase 2.0 (real) — Textureless bucket in Rust scene_runner
 
