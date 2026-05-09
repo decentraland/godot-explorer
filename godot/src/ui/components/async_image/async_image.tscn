@@ -1,0 +1,78 @@
+[gd_scene format=3 uid="uid://chxo1eeeses1w"]
+
+[ext_resource type="Script" uid="uid://dgsb7d0hg1o2l" path="res://src/ui/components/async_image/async_image.gd" id="1_async"]
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/components/discover/carrousel/discover_carrousel_skeleton_material.tres" id="2_skel"]
+[ext_resource type="Texture2D" uid="uid://bmp45tu2kem55" path="res://assets/ui/no-image.svg" id="3_noimg"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="4_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_default"]
+bg_color = Color(1, 1, 1, 0.08)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_border"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="AsyncImage" type="Control" unique_id=1913986068]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_async")
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=153289327]
+unique_name_in_owner = true
+clip_children = 2
+material = ExtResource("2_skel")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_default")
+
+[node name="TextureRect_NoImage" type="TextureRect" parent="Panel" unique_id=96848392]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme = ExtResource("4_theme")
+texture = ExtResource("3_noimg")
+stretch_mode = 3
+
+[node name="TextureRect_Image" type="TextureRect" parent="Panel" unique_id=1042875397]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme = ExtResource("4_theme")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Panel_Border" type="PanelContainer" parent="." unique_id=307747312]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_border")
