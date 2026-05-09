@@ -88,6 +88,18 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var button_sign_out: CustomButton = %CustomButton_SignOut
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
 
+# Lights debug controls
+@onready var check_button_light_debug_gizmos: CheckButton = %CheckButton_LightDebugGizmos
+@onready var check_button_auto_activation_range: CheckButton = %CheckButton_AutoActivationRange
+@onready var check_button_global_light_budget: CheckButton = %CheckButton_GlobalLightBudget
+@onready var check_button_lights_enabled: CheckButton = %CheckButton_LightsEnabled
+@onready var check_button_light_shadows_enabled: CheckButton = %CheckButton_LightShadowsEnabled
+@onready var button_max_active_lights_minus: Button = %Button_MaxActiveLightsMinus
+@onready var button_max_active_lights_plus: Button = %Button_MaxActiveLightsPlus
+@onready var label_max_active_lights_value: Label = %Label_MaxActiveLightsValue
+
+const MIN_ACTIVE_DCL_LIGHTS: int = 0
+const MAX_ACTIVE_DCL_LIGHTS: int = 64
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
@@ -140,6 +152,7 @@ func _ready():
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
 	refresh_graphic_settings()
+	_sync_light_settings_ui()
 
 	var j = 0
 	for profile in GraphicSettings.SKYBOX_TIME_NAMES:
@@ -231,6 +244,25 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	button_clear_cache.theme_type_variation = button_theme_variation
 	button_sign_out.custom_minimum_size.y = button_h
 	button_sign_out.theme_type_variation = button_theme_variation
+
+	var light_stepper_button_size: Vector2 = Vector2(64, 56)
+	var light_stepper_value_size: Vector2 = Vector2(72, 56)
+	var light_stepper_font_size: int = 22
+
+	if is_orientation_portrait:
+		light_stepper_button_size = Vector2(82, 72)
+		light_stepper_value_size = Vector2(88, 72)
+		light_stepper_font_size = 28
+
+	if is_instance_valid(button_max_active_lights_minus):
+		button_max_active_lights_minus.custom_minimum_size = light_stepper_button_size
+
+	if is_instance_valid(button_max_active_lights_plus):
+		button_max_active_lights_plus.custom_minimum_size = light_stepper_button_size
+
+	if is_instance_valid(label_max_active_lights_value):
+		label_max_active_lights_value.custom_minimum_size = light_stepper_value_size
+		label_max_active_lights_value.add_theme_font_size_override("font_size", light_stepper_font_size)
 
 	preview_viewport_container.custom_minimum_size.y = preview_h
 
@@ -833,3 +865,81 @@ func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
 
 func _on_custom_button_sign_out_pressed() -> void:
 	Global.sign_out()
+
+
+func _sync_light_settings_ui() -> void:
+	if not is_node_ready():
+		return
+
+	var light_settings: Dictionary = DclLightSourceComponent.get_light_settings()
+
+	check_button_lights_enabled.set_pressed_no_signal(light_settings["lights_enabled"])
+	check_button_light_shadows_enabled.set_pressed_no_signal(light_settings["shadows_enabled"])
+	_set_max_active_lights_ui_value(int(light_settings["max_lights"]))
+	check_button_light_debug_gizmos.set_pressed_no_signal(light_settings["debug_enabled"])
+	check_button_auto_activation_range.set_pressed_no_signal(light_settings["auto_activation_range"])
+	check_button_global_light_budget.set_pressed_no_signal(light_settings["use_global_light_budget"])
+
+
+func _apply_light_settings_from_ui() -> void:
+	DclLightSourceComponent.apply_light_settings(
+		check_button_lights_enabled.button_pressed,
+		check_button_light_shadows_enabled.button_pressed,
+		_get_max_active_lights_ui_value(),
+		check_button_light_debug_gizmos.button_pressed,
+		check_button_auto_activation_range.button_pressed,
+		check_button_global_light_budget.button_pressed
+	)
+
+
+func _get_max_active_lights_ui_value() -> int:
+	if label_max_active_lights_value == null:
+		return MIN_ACTIVE_DCL_LIGHTS
+
+	var text_value: String = label_max_active_lights_value.text.strip_edges()
+
+	if not text_value.is_valid_int():
+		return MIN_ACTIVE_DCL_LIGHTS
+
+	return clampi(
+		int(text_value),
+		MIN_ACTIVE_DCL_LIGHTS,
+		MAX_ACTIVE_DCL_LIGHTS
+	)
+
+
+func _set_max_active_lights_ui_value(value: int) -> void:
+	var clamped_value: int = clampi(value, MIN_ACTIVE_DCL_LIGHTS, MAX_ACTIVE_DCL_LIGHTS)
+
+	label_max_active_lights_value.text = str(clamped_value)
+
+	button_max_active_lights_minus.disabled = clamped_value <= MIN_ACTIVE_DCL_LIGHTS
+	button_max_active_lights_plus.disabled = clamped_value >= MAX_ACTIVE_DCL_LIGHTS
+
+
+func _change_max_active_lights(delta: int) -> void:
+	var current_value: int = _get_max_active_lights_ui_value()
+	var next_value: int = clampi(
+		current_value + delta,
+		MIN_ACTIVE_DCL_LIGHTS,
+		MAX_ACTIVE_DCL_LIGHTS
+	)
+
+	if next_value == current_value:
+		_set_max_active_lights_ui_value(next_value)
+		return
+
+	_set_max_active_lights_ui_value(next_value)
+	_apply_light_settings_from_ui()
+
+
+func _on_button_max_active_lights_minus_pressed() -> void:
+	_change_max_active_lights(-1)
+
+
+func _on_button_max_active_lights_plus_pressed() -> void:
+	_change_max_active_lights(1)
+
+
+func _on_light_setting_toggled(_toggled_on: bool) -> void:
+	_apply_light_settings_from_ui()
