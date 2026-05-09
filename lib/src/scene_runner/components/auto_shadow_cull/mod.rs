@@ -34,8 +34,10 @@ pub use state::AutoShadowCullState;
 
 const MAX_ENTITIES_PER_FRAME: usize = 64;
 /// Below this AABB diagonal (meters), the mesh's shadow is too small to
-/// notice. Tuned conservatively — bigger threshold = more savings, but
-/// risk of culling shadows on visible objects.
+/// notice. 2 m kept after 4 m experiment: at 4 m the cull set includes
+/// 1785 meshes (-305 shadow draws) but fps regressed -2 vs off — at 4 m
+/// we start culling medium props whose shadows ARE visible at 5-15 m.
+/// 2 m is the safe sweet spot.
 pub const MIN_SHADOW_DIAG_M: f32 = 2.0;
 
 #[derive(Debug, Clone, Copy)]
