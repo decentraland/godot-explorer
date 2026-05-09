@@ -934,6 +934,210 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
+[node name="Container_LightsDevTools" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SectionTittle_LightsDevTools" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer" instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "LIGHTS DEBUG"
+
+[node name="HSeparator_LightsDevTools" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="LightsEnabled" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightsEnabled"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Lights"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_LightsEnabled" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightsEnabled"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+button_pressed = true
+
+[node name="HSeparator_Lights1" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="LightShadowsEnabled" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightShadowsEnabled"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Light Shadows"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_LightShadowsEnabled" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightShadowsEnabled"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+button_pressed = true
+
+[node name="HSeparator_Lights2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="MaxActiveLights" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/MaxActiveLights"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Max Active Lights"
+label_settings = ExtResource("17_67hd5")
+
+[node name="HBoxContainer_MaxActiveLightsStepper" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/MaxActiveLights"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 10
+
+[node name="Button_MaxActiveLightsMinus" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/MaxActiveLights/HBoxContainer_MaxActiveLightsStepper"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 56)
+layout_mode = 2
+focus_mode = 0
+mouse_filter = 1
+theme = ExtResource("12_sa1v7")
+theme_type_variation = &"SecondaryOutlinedButton"
+text = "-"
+
+[node name="Label_MaxActiveLightsValue" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/MaxActiveLights/HBoxContainer_MaxActiveLightsStepper"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 56)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 22
+text = "8"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Button_MaxActiveLightsPlus" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/MaxActiveLights/HBoxContainer_MaxActiveLightsStepper"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 56)
+layout_mode = 2
+focus_mode = 0
+mouse_filter = 1
+theme = ExtResource("12_sa1v7")
+theme_type_variation = &"SecondaryOutlinedButton"
+text = "+"
+
+[node name="HSeparator_Lights3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="LightDebugGizmos" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightDebugGizmos"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Light Debug Gizmos"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_LightDebugGizmos" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightDebugGizmos"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+
+[node name="HSeparator_LightsDevTools1" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="AutoActivationRange" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/AutoActivationRange"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Auto Activation Range"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_AutoActivationRange" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/AutoActivationRange"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+button_pressed = true
+
+[node name="HSeparator_LightsDevTools2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="GlobalLightBudget" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/GlobalLightBudget"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Global Light Budget"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_GlobalLightBudget" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/GlobalLightBudget"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+button_pressed = true
+
+[node name="MarginContainer_LightsDebugDivider" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5"]
+layout_mode = 2
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_bottom = 0
+
+[node name="SectionTittle_LiveKitDevTools" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5" instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "LIVEKIT"
+
 [node name="LiveKitDebug" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5" unique_id=520005061]
 layout_mode = 2
 theme_override_constants/separation = 32
@@ -1261,3 +1465,10 @@ font = ExtResource("25_jf4mt")
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_Discord" to="." method="_on_button_discord_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer/CustomButton_SignOut" to="." method="_on_custom_button_sign_out_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer/UnderlinedButton_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightsEnabled/CheckButton_LightsEnabled" to="." method="_on_light_setting_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightShadowsEnabled/CheckButton_LightShadowsEnabled" to="." method="_on_light_setting_toggled"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/MaxActiveLights/HBoxContainer_MaxActiveLightsStepper/Button_MaxActiveLightsMinus" to="." method="_on_button_max_active_lights_minus_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/MaxActiveLights/HBoxContainer_MaxActiveLightsStepper/Button_MaxActiveLightsPlus" to="." method="_on_button_max_active_lights_plus_pressed"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/LightDebugGizmos/CheckButton_LightDebugGizmos" to="." method="_on_light_setting_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/AutoActivationRange/CheckButton_AutoActivationRange" to="." method="_on_light_setting_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/Container_LightsDevTools/VBoxContainer/GlobalLightBudget/CheckButton_GlobalLightBudget" to="." method="_on_light_setting_toggled"]
