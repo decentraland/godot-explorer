@@ -57,6 +57,7 @@ EXTRA_PARAMS=()
 TAIL=1
 PULL_RESULTS=0
 PROFILE=0
+PROFILE_GPU=0
 
 urlencode() {
   python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
@@ -75,6 +76,7 @@ while [[ $# -gt 0 ]]; do
     --no-tail)       TAIL=0 ;;
     --pull-results)  PULL_RESULTS=1 ;;
     --profile)       PROFILE=1 ;;
+    --profile-gpu)   PROFILE_GPU=1 ;;
     -h|--help)       sed -n '1,33p' "$0"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -232,6 +234,28 @@ if [[ "$PROFILE" -eq 1 ]]; then
       PIDS+=($!)
     else
       echo "[profile] WARN: profile_ios.sh not present yet, skipping iOS profile" >&2
+    fi
+  fi
+fi
+
+# --profile-gpu spawns the perfetto/AGI Mali GPU profiler in parallel.
+# Captures gpu.renderstages + gpu.counters during the bench's sampling
+# window (matches duration_s emitted by gp_benchmark_runner.gd). Output
+# → bench-results/profiles/android-gpu-<tag>-<ts>/.
+if [[ "$PROFILE_GPU" -eq 1 ]]; then
+  bench_tag="profile-gpu"
+  for p in "${EXTRA_PARAMS[@]:-}"; do
+    [[ "$p" == bench-tag=* ]] && bench_tag="${p#bench-tag=}"
+  done
+  script_dir="$(dirname "$0")"
+  if [[ "$DEVICES" == "android" || "$DEVICES" == "both" ]]; then
+    if [[ -x "$script_dir/profile_android_gpu.sh" ]]; then
+      echo "[profile-gpu] spawning Android GPU profiler (tag=$bench_tag)"
+      ( "$script_dir/profile_android_gpu.sh" "$bench_tag" 2>&1 \
+          | sed -u 's/^/[profile-gpu-android] /' ) &
+      PIDS+=($!)
+    else
+      echo "[profile-gpu] WARN: profile_android_gpu.sh not executable, skipping" >&2
     fi
   fi
 fi
