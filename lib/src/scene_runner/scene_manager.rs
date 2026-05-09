@@ -473,6 +473,13 @@ impl SceneManager {
         GString::from(s.as_str())
     }
 
+    /// Drain auto-shadow-cull stats (small MIs with cast_shadow disabled).
+    #[func]
+    pub fn drain_auto_shadow_cull_stats(&mut self) -> GString {
+        let s = super::components::auto_shadow_cull::drain_global_stats();
+        GString::from(s.as_str())
+    }
+
     /// Reset CRDT cross-boundary metrics (send/recv bytes, op counts, dirty
     /// entries). Call right before sampling.
     #[func]

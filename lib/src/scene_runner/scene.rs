@@ -35,9 +35,9 @@ use crate::{
 use super::{
     components::{
         asset_preprocessor::AssetPreprocessorState, auto_distance_cull::AutoDistanceCullState,
-        gltf_node_modifiers::GltfNodeModifierState, mesh_lod::MeshLodState,
-        occluder_gen::OccluderGenState, textureless_merger::TexturelessMergerState,
-        trigger_area::TriggerAreaState, tween::Tween,
+        auto_shadow_cull::AutoShadowCullState, gltf_node_modifiers::GltfNodeModifierState,
+        mesh_lod::MeshLodState, occluder_gen::OccluderGenState,
+        textureless_merger::TexturelessMergerState, trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -115,6 +115,7 @@ pub enum SceneUpdateState {
     AutoDistanceCull,
     OccluderGen,
     AssetPreprocessor,
+    AutoShadowCull,
     NftShape,
     Animator,
     AvatarShape,
@@ -161,7 +162,8 @@ impl SceneUpdateState {
             Self::MeshLod => Self::AutoDistanceCull,
             Self::AutoDistanceCull => Self::OccluderGen,
             Self::OccluderGen => Self::AssetPreprocessor,
-            Self::AssetPreprocessor => Self::NftShape,
+            Self::AssetPreprocessor => Self::AutoShadowCull,
+            Self::AutoShadowCull => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -317,6 +319,11 @@ pub struct Scene {
     // (decimation, vertex strip, mesh occluder) at GLTF post-load.
     pub pending_asset_preprocessor: HashSet<SceneEntityId>,
     pub asset_preprocessor: AssetPreprocessorState,
+
+    // Auto shadow cull: cast_shadow=OFF on small meshes to drop shadow
+    // pass primitive count (~50% in GP per the per-pass instrumentation).
+    pub pending_auto_shadow_cull: HashSet<SceneEntityId>,
+    pub auto_shadow_cull: AutoShadowCullState,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -453,6 +460,8 @@ impl Scene {
             occluder_gen: OccluderGenState::default(),
             pending_asset_preprocessor: HashSet::new(),
             asset_preprocessor: AssetPreprocessorState::default(),
+            pending_auto_shadow_cull: HashSet::new(),
+            auto_shadow_cull: AutoShadowCullState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -543,6 +552,8 @@ impl Scene {
             occluder_gen: OccluderGenState::default(),
             pending_asset_preprocessor: HashSet::new(),
             asset_preprocessor: AssetPreprocessorState::default(),
+            pending_auto_shadow_cull: HashSet::new(),
+            auto_shadow_cull: AutoShadowCullState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

@@ -228,6 +228,10 @@ pub fn sync_gltf_loading_state(
                 // strip + mesh-shaped occluder. Runs last in the chain
                 // so it sees the lod-baked + atlas-merged tree.
                 scene.pending_asset_preprocessor.insert(*entity);
+                // Auto shadow cull — cast_shadow=OFF on small props.
+                // Cuts the shadow pass primitive count substantially in
+                // dense scenes like Genesis Plaza.
+                scene.pending_auto_shadow_cull.insert(*entity);
             }
         }
 

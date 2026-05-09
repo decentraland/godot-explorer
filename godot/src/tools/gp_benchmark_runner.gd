@@ -124,6 +124,48 @@ func _collect_sample() -> Dictionary:
 	var viewport_rid: RID = get_tree().root.get_viewport_rid()
 	var render_cpu_ms: float = RenderingServer.viewport_get_measured_render_time_cpu(viewport_rid)
 	var render_gpu_ms: float = RenderingServer.viewport_get_measured_render_time_gpu(viewport_rid)
+
+	# Per-pass draw / objects / primitives split. Forward Mobile renderer
+	# tracks these separately for the SHADOW pass (cascaded directional
+	# shadow render), VISIBLE pass (main 3D forward — opaque + transparent
+	# combined; godot doesn't split further) and CANVAS pass (2D / UI on
+	# top). Combined with the gfx-* feature A/B (shadow=10ms, bloom=10ms,
+	# AA=8ms, skybox=8ms) this lets us infer cost-per-draw per pass.
+	var visible_draws: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
+	)
+	var visible_objects: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+		RenderingServer.VIEWPORT_RENDER_INFO_OBJECTS_IN_FRAME
+	)
+	var visible_prim: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+		RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME
+	)
+	var shadow_draws: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW,
+		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
+	)
+	var shadow_objects: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW,
+		RenderingServer.VIEWPORT_RENDER_INFO_OBJECTS_IN_FRAME
+	)
+	var shadow_prim: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW,
+		RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME
+	)
+	var canvas_draws: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_CANVAS,
+		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
+	)
 	return {
 		"t_ms": _phase_elapsed_ms(),
 		"fps": Performance.get_monitor(Performance.TIME_FPS),
@@ -145,6 +187,15 @@ func _collect_sample() -> Dictionary:
 		"render_objects_in_frame":
 		Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
 		"primitives": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+		# Per-pass split: lets us see what fraction of draws/prims goes to
+		# the shadow render vs the main 3D pass vs UI canvas.
+		"visible_draws": visible_draws,
+		"visible_objects": visible_objects,
+		"visible_prim": visible_prim,
+		"shadow_draws": shadow_draws,
+		"shadow_objects": shadow_objects,
+		"shadow_prim": shadow_prim,
+		"canvas_draws": canvas_draws,
 		"physics_active_objects": Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS),
 		"physics_collision_pairs": Performance.get_monitor(Performance.PHYSICS_3D_COLLISION_PAIRS),
 		"physics_island_count": Performance.get_monitor(Performance.PHYSICS_3D_ISLAND_COUNT),
@@ -288,6 +339,7 @@ func _finish() -> void:
 	var auto_distance_cull_stats: String = Global.scene_runner.drain_auto_distance_cull_stats()
 	var occluder_gen_stats: String = Global.scene_runner.drain_occluder_gen_stats()
 	var asset_preproc_stats: String = Global.scene_runner.drain_asset_preproc_stats()
+	var auto_shadow_cull_stats: String = Global.scene_runner.drain_auto_shadow_cull_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -303,6 +355,7 @@ func _finish() -> void:
 		"auto_distance_cull_stats": auto_distance_cull_stats,
 		"occluder_gen_stats": occluder_gen_stats,
 		"asset_preproc_stats": asset_preproc_stats,
+		"auto_shadow_cull_stats": auto_shadow_cull_stats,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -664,6 +717,9 @@ func _apply_deeplink_overrides() -> void:
 	var apr: String = params.get("asset-preproc", "")
 	if not apr.is_empty():
 		Global.cli.asset_preproc_enabled = apr.to_lower() in ["true", "1", "yes"]
+	var asc: String = params.get("auto-shadow-cull", "")
+	if not asc.is_empty():
+		Global.cli.auto_shadow_cull_enabled = asc.to_lower() in ["true", "1", "yes"]
 	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
 	# conservative); raising it picks lower-detail LODs sooner and is the
 	# whole point of the LOD bake on mobile. Stash here, apply at
@@ -691,6 +747,21 @@ func _apply_deeplink_overrides() -> void:
 		var v: String = params.get(key, "")
 		if not v.is_empty() and v.is_valid_int():
 			config[key] = v.to_int()
+
+	# Debug-draw mode override. Sets viewport.debug_draw at pose-pin so the
+	# bench screenshot captures a heatmap (overdraw / wireframe / lighting /
+	# unshaded etc.). Pure visual diagnostic — no perf change. Useful when
+	# proper GPU profiling tooling isn't available on the host platform.
+	#
+	# Accepted values map to Viewport.DebugDraw enum:
+	#   unshaded, lighting, overdraw, wireframe, normal-buffer,
+	#   shadow-atlas, directional-shadow-atlas, scene-luminance, ssao,
+	#   ssil, motion-vectors, gi-buffer, disable-lod, cluster-omni,
+	#   cluster-spot, cluster-decals, cluster-reflection-probes,
+	#   occluders, motion-vectors
+	var dd: String = params.get("debug-draw", "")
+	if not dd.is_empty():
+		config["debug_draw"] = dd.to_lower()
 
 
 ## Apply the deeplink-forced graphic profile, if any. Called at
@@ -733,6 +804,48 @@ func _apply_forced_graphic_profile() -> void:
 	if config.has("gfx-texture"):
 		cfg.texture_quality = config["gfx-texture"]
 		_log("gfx-texture override = %d" % config["gfx-texture"])
+
+	# Debug-draw heatmap. Set last so it overrides any rendering-mode
+	# changes the graphic profile applied. Bench screenshot captures
+	# whatever debug-draw mode is active — useful for "where is fragment
+	# work happening" without a frame profiler.
+	var dd_v = config.get("debug_draw", "")
+	if not dd_v.is_empty():
+		var vp_dd: Viewport = get_tree().root
+		var mode := _resolve_debug_draw(dd_v)
+		if mode >= 0:
+			vp_dd.debug_draw = mode
+			_log("debug_draw override = %s (mode=%d)" % [dd_v, mode])
+		else:
+			_log("WARN: unknown debug-draw value '%s', leaving disabled" % dd_v)
+
+
+func _resolve_debug_draw(name: String) -> int:
+	# Map the deeplink string to the Viewport.DebugDraw enum value. The enum
+	# has many entries; we expose the most useful for diagnostics. Dict
+	# lookup instead of a long match to keep gdlint's max-returns happy.
+	var table: Dictionary = {
+		"unshaded": Viewport.DEBUG_DRAW_UNSHADED,
+		"lighting": Viewport.DEBUG_DRAW_LIGHTING,
+		"overdraw": Viewport.DEBUG_DRAW_OVERDRAW,
+		"wireframe": Viewport.DEBUG_DRAW_WIREFRAME,
+		"normal-buffer": Viewport.DEBUG_DRAW_NORMAL_BUFFER,
+		"shadow-atlas": Viewport.DEBUG_DRAW_SHADOW_ATLAS,
+		"directional-shadow-atlas": Viewport.DEBUG_DRAW_DIRECTIONAL_SHADOW_ATLAS,
+		"scene-luminance": Viewport.DEBUG_DRAW_SCENE_LUMINANCE,
+		"ssao": Viewport.DEBUG_DRAW_SSAO,
+		"ssil": Viewport.DEBUG_DRAW_SSIL,
+		"motion-vectors": Viewport.DEBUG_DRAW_MOTION_VECTORS,
+		"disable-lod": Viewport.DEBUG_DRAW_DISABLE_LOD,
+		"cluster-omni": Viewport.DEBUG_DRAW_CLUSTER_OMNI_LIGHTS,
+		"cluster-spot": Viewport.DEBUG_DRAW_CLUSTER_SPOT_LIGHTS,
+		"cluster-decals": Viewport.DEBUG_DRAW_CLUSTER_DECALS,
+		"cluster-reflection-probes": Viewport.DEBUG_DRAW_CLUSTER_REFLECTION_PROBES,
+		"occluders": Viewport.DEBUG_DRAW_OCCLUDERS,
+		"disabled": Viewport.DEBUG_DRAW_DISABLED,
+		"off": Viewport.DEBUG_DRAW_DISABLED,
+	}
+	return table.get(name, -1)
 
 
 ## Prototype: merge textureless BaseMaterial3D MeshInstance3Ds.

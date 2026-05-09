@@ -3,6 +3,7 @@ pub mod asset_preprocessor;
 pub mod audio_source;
 pub mod audio_stream;
 pub mod auto_distance_cull;
+pub mod auto_shadow_cull;
 pub mod avatar_attach;
 pub mod avatar_data;
 pub mod avatar_locomotion_settings;

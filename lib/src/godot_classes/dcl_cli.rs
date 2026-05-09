@@ -149,6 +149,12 @@ pub struct DclCli {
     #[var]
     pub asset_preproc_enabled: bool,
 
+    // Auto shadow cull: at GLTF load, set cast_shadow=OFF on small MIs
+    // (AABB diagonal < 2 m). Pure perf, fidelity-neutral; small props
+    // don't project meaningful shadows at typical view distance.
+    #[var]
+    pub auto_shadow_cull_enabled: bool,
+
     // V8 inspector target. When non-empty AND the build has the
     // `enable_inspector` feature, the SDK7 scene whose title matches
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
@@ -521,6 +527,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--auto-shadow-cull".to_string(),
+                description: "Disable cast_shadow on MeshInstance3Ds with AABB diagonal < 2 m. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -727,6 +739,7 @@ impl INode for DclCli {
         let auto_distance_cull_enabled = args_map.contains_key("--auto-distance-cull");
         let occluder_gen_enabled = args_map.contains_key("--occluder-gen");
         let asset_preproc_enabled = args_map.contains_key("--asset-preproc");
+        let auto_shadow_cull_enabled = args_map.contains_key("--auto-shadow-cull");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -850,6 +863,7 @@ impl INode for DclCli {
             auto_distance_cull_enabled,
             occluder_gen_enabled,
             asset_preproc_enabled,
+            auto_shadow_cull_enabled,
             inspect_scene_title,
             asset_server_port,
             realm,
