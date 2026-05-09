@@ -132,6 +132,8 @@ var _anim_throttle_acc: float = 0.0
 var _anim_throttle_counter: int = 0
 var _anim_throttle_active: bool = false
 
+var _light_reference_update_timer: float = 0.25
+
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
 
@@ -1299,6 +1301,13 @@ func _tick_animation_throttle(delta: float) -> void:
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
+
+	if is_local_player:
+		_light_reference_update_timer -= delta
+
+		if _light_reference_update_timer <= 0.0:
+			_light_reference_update_timer = 0.25
+			DclLightSourceComponent.set_global_light_reference_position(global_position)
 
 	if nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
