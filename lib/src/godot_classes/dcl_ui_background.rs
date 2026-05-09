@@ -129,35 +129,30 @@ impl DclUiBackground {
         }
     }
 
-    /// Check if UVs are non-trivial (rotated, skewed, or non-rectangular)
-    /// Default UVs are [0,0, 1,0, 1,1, 0,1] (bottom-left, bottom-right, top-right, top-left)
+    /// Check if UVs are non-trivial (rotated, skewed, or non-rectangular).
+    /// UV layout (Unity convention, matches `Extensions.ToDCLUVs`):
+    ///   BL = uvs[0..2], TL = uvs[2..4], TR = uvs[4..6], BR = uvs[6..8].
     fn has_custom_uvs(&self) -> bool {
         let uvs = &self.current_value.uvs;
         if uvs.len() != 8 {
             return false;
         }
 
-        // Check if it's an axis-aligned rectangle
-        // For axis-aligned: all X coords of left vertices should match, all X coords of right should match
-        // and all Y coords of bottom should match, all Y coords of top should match
         let bl_x = uvs[0];
         let bl_y = uvs[1];
-        let br_x = uvs[2];
-        let br_y = uvs[3];
+        let tl_x = uvs[2];
+        let tl_y = uvs[3];
         let tr_x = uvs[4];
         let tr_y = uvs[5];
-        let tl_x = uvs[6];
-        let tl_y = uvs[7];
+        let br_x = uvs[6];
+        let br_y = uvs[7];
 
         const EPSILON: f32 = 0.0001;
 
-        // For an axis-aligned rectangle:
-        // - bl_x == tl_x (left edge is vertical)
-        // - br_x == tr_x (right edge is vertical)
-        // - bl_y == br_y (bottom edge is horizontal)
-        // - tl_y == tr_y (top edge is horizontal)
+        // Axis-aligned: left edge vertical (BL.x == TL.x), right edge vertical (TR.x == BR.x),
+        //               bottom edge horizontal (BL.y == BR.y), top edge horizontal (TL.y == TR.y).
         let is_axis_aligned = (bl_x - tl_x).abs() < EPSILON
-            && (br_x - tr_x).abs() < EPSILON
+            && (tr_x - br_x).abs() < EPSILON
             && (bl_y - br_y).abs() < EPSILON
             && (tl_y - tr_y).abs() < EPSILON;
 
@@ -217,17 +212,15 @@ impl DclUiBackground {
             return;
         }
 
-        // UV format (matching bevy-explorer): [tl.x, tl.y, bl.x, bl.y, br.x, br.y, tr.x, tr.y]
-        // Pack into two Vec4s for shader:
-        // uvs_0 = vec4(tl.x, tl.y, bl.x, bl.y)
-        // uvs_1 = vec4(br.x, br.y, tr.x, tr.y)
+        // Protobuf UV layout (Unity convention): BL=uvs[0..2], TL=uvs[2..4], TR=uvs[4..6], BR=uvs[6..8].
+        // Shader still expects: uvs_0 = vec4(tl.x, tl.y, bl.x, bl.y), uvs_1 = vec4(br.x, br.y, tr.x, tr.y).
         shader_mat.set_shader_parameter(
             "uvs_0",
-            &Vector4::new(uvs[0], uvs[1], uvs[2], uvs[3]).to_variant(),
+            &Vector4::new(uvs[2], uvs[3], uvs[0], uvs[1]).to_variant(),
         );
         shader_mat.set_shader_parameter(
             "uvs_1",
-            &Vector4::new(uvs[4], uvs[5], uvs[6], uvs[7]).to_variant(),
+            &Vector4::new(uvs[6], uvs[7], uvs[4], uvs[5]).to_variant(),
         );
 
         // Set texture on the UV child and also as shader parameter
@@ -390,22 +383,30 @@ impl DclUiBackground {
                     .set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
 
                 let texture_size = godot_texture.get_size();
-                let (patch_margin_left, patch_margin_top, patch_margin_right, patch_margin_bottom) =
+                let (slice_left_n, slice_top_n, slice_right_n, slice_bottom_n) =
                     if let Some(slices) = self.current_value.texture_slices.as_ref() {
-                        (
-                            slices.left * texture_size.x,
-                            slices.top * texture_size.y,
-                            slices.right * texture_size.x,
-                            slices.bottom * texture_size.y,
-                        )
+                        // Match Unity's AdjustSlices: opposing slices must not exceed 1.0.
+                        let mut left = slices.left;
+                        let mut right = slices.right;
+                        if left + right > 1.0 {
+                            left = left.min(1.0);
+                            right = 1.0 - left;
+                        }
+                        let mut top = slices.top;
+                        let mut bottom = slices.bottom;
+                        if top + bottom > 1.0 {
+                            top = top.min(1.0);
+                            bottom = 1.0 - top;
+                        }
+                        (left, top, right, bottom)
                     } else {
-                        (
-                            texture_size.x / 3.0,
-                            texture_size.y / 3.0,
-                            texture_size.x / 3.0,
-                            texture_size.y / 3.0,
-                        )
+                        (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0)
                     };
+
+                let patch_margin_left = slice_left_n * texture_size.x;
+                let patch_margin_top = slice_top_n * texture_size.y;
+                let patch_margin_right = slice_right_n * texture_size.x;
+                let patch_margin_bottom = slice_bottom_n * texture_size.y;
 
                 self.base_mut()
                     .set_patch_margin(godot::builtin::Side::BOTTOM, patch_margin_bottom as i32);
@@ -416,12 +417,12 @@ impl DclUiBackground {
                 self.base_mut()
                     .set_patch_margin(godot::builtin::Side::RIGHT, patch_margin_right as i32);
 
-                // TODO: should be TILE or STRETCH?
+                // Match Unity UI Toolkit: edges and middle are stretched, not tiled.
                 self.base_mut().set_h_axis_stretch_mode(
-                    godot::classes::nine_patch_rect::AxisStretchMode::TILE_FIT,
+                    godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
                 self.base_mut().set_v_axis_stretch_mode(
-                    godot::classes::nine_patch_rect::AxisStretchMode::TILE_FIT,
+                    godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
 
                 let slices_info = if self.current_value.texture_slices.is_some() {
@@ -473,17 +474,18 @@ impl DclUiBackground {
                         let uvs = self.current_value.uvs.as_slice();
                         let image_size = godot_texture.get_size();
 
-                        // default=[0,0,0,1,1,0,1,0]: starting from bottom-left vertex clock-wise
-                        let sx = uvs[0].min(uvs[4]).clamp(0.0, 1.0);
-                        let sw = uvs[0].max(uvs[4]).clamp(0.0, 1.0);
+                        // Unity convention: BL=uvs[0..2], TL=uvs[2..4], TR=uvs[4..6], BR=uvs[6..8].
+                        // BL and TR are diagonally opposite, so they bound the rect.
+                        // UV space is Y-up; Godot's region_rect is Y-down (so flip Y).
+                        let uv_left = uvs[0].min(uvs[4]).clamp(0.0, 1.0);
+                        let uv_right = uvs[0].max(uvs[4]).clamp(0.0, 1.0);
+                        let uv_bottom = uvs[1].min(uvs[3]).clamp(0.0, 1.0);
+                        let uv_top = uvs[1].max(uvs[3]).clamp(0.0, 1.0);
 
-                        let sy = (1.0 - uvs[3].min(uvs[1])).clamp(0.0, 1.0);
-                        let sh = (1.0 - uvs[3].max(uvs[1])).clamp(0.0, 1.0);
-
-                        let sx = sx * image_size.x;
-                        let sw = sw * image_size.x - sx;
-                        let sy = sy * image_size.y;
-                        let sh = sh * image_size.y - sy;
+                        let sx = uv_left * image_size.x;
+                        let sw = (uv_right - uv_left) * image_size.x;
+                        let sy = (1.0 - uv_top) * image_size.y;
+                        let sh = (uv_top - uv_bottom) * image_size.y;
 
                         self.base_mut().set_region_rect(Rect2 {
                             position: Vector2 { x: sx, y: sy },
