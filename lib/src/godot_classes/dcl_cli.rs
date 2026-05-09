@@ -555,9 +555,7 @@ impl INode for DclCli {
                     let value = arg[eq_idx + 1..].to_string();
                     args_map.insert(key, Some(value));
                     i += 1;
-                } else if i + 1 < args_vec.len()
-                    && !args_vec[i + 1].to_string().starts_with("--")
-                {
+                } else if i + 1 < args_vec.len() && !args_vec[i + 1].to_string().starts_with("--") {
                     args_map.insert(arg.clone(), Some(args_vec[i + 1].to_string()));
                     i += 2;
                 } else {
