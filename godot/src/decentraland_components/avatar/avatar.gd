@@ -489,12 +489,16 @@ func set_force_hide_name(value: bool) -> void:
 
 
 ## Bump the nickname SubViewport to redraw exactly one frame. The viewport
-## otherwise stays in UPDATE_ONCE (see _apply_nickname_visibility) so nicknames
-## don't burn a SubViewport render every frame on idle avatars.
+## otherwise stays in UPDATE_DISABLED (UPDATE_ONCE auto-resets to DISABLED
+## after rendering one frame) so nicknames don't burn a SubViewport render
+## every frame on idle avatars. We can't tell "explicitly disabled (hidden)"
+## from "post-render disabled" by reading render_target_update_mode alone —
+## both look the same. Use `nickname_quad.visible` as the source of truth:
+## if the quad is visible, allow the redraw; if hidden/far, skip.
 func _request_nickname_redraw() -> void:
-	if nickname_viewport == null:
+	if nickname_viewport == null or nickname_quad == null:
 		return
-	if nickname_viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED:
+	if not nickname_quad.visible:
 		return
 	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
@@ -1265,6 +1269,10 @@ func _process(delta):
 
 	if nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
+		# Size changed (e.g. after layout settled or text grew) — re-render
+		# so the SubViewport texture matches the new size, otherwise the
+		# Sprite3D shows stale/garbled pixels at the new dimensions.
+		_request_nickname_redraw()
 
 	_maybe_update_lod()
 	_tick_animation_throttle(delta)

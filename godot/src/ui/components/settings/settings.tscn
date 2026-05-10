@@ -769,7 +769,7 @@ stretch = true
 handle_input_locally = false
 size = Vector2i(494, 351)
 render_target_clear_mode = 2
-render_target_update_mode = 4
+render_target_update_mode = 2
 
 [node name="PreviewCamera3D" type="Camera3D" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer/SubViewport" unique_id=2101831196]
 unique_name_in_owner = true

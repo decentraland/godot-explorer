@@ -47,8 +47,11 @@ func _ready() -> void:
 
 
 func _connect_signals() -> void:
-	Global.modal_manager.connection_lost_retry.connect(_on_retry)
-	Global.modal_manager.connection_lost_exit.connect(_on_exit)
+	# Bench / headless paths don't always load modal_manager — guard so we
+	# don't crash before the rest of the monitor (realm signals + poll) wires up.
+	if Global.modal_manager != null:
+		Global.modal_manager.connection_lost_retry.connect(_on_retry)
+		Global.modal_manager.connection_lost_exit.connect(_on_exit)
 
 	# Pause polling while a realm change is in flight so 404s / slow /about calls
 	# on the new realm don't get counted as connection failures.

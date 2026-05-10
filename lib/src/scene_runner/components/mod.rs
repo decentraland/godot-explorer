@@ -11,6 +11,7 @@ pub mod avatar_modifier_area;
 pub mod avatar_shape;
 pub mod billboard;
 pub mod camera_mode_area;
+pub mod cheap_pbr_materials;
 pub mod gltf_container;
 pub mod gltf_node_modifiers;
 pub mod input_modifier;

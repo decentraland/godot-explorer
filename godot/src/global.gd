@@ -443,6 +443,11 @@ func _ready():
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
 ## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI
 func should_run_first_launch_benchmark() -> bool:
+	# Skip during gp-benchmark runs — HardwareBenchmark would otherwise pick a
+	# device-specific profile (often Very Low w/ FPS_18 cap) and stomp on the
+	# bench's controlled config, polluting A/B numbers across runs.
+	if is_gp_benchmark():
+		return false
 	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
 
 
@@ -478,6 +483,27 @@ func _async_clear_cache_if_needed() -> void:
 
 
 func _init_dynamic_graphics_manager() -> void:
+	# In gp-benchmark mode, fully disable DG + thermal cap before they have a
+	# chance to mutate the profile. They'd otherwise re-pin Engine.max_fps
+	# (FPS_18 default in Very Low + thermal cap when device heats up) and
+	# pollute A/B numbers between matrix runs.
+	if is_gp_benchmark():
+		# Force "Custom" profile (4) so apply_graphic_profile is a no-op and
+		# nothing stomps the bench's manual config (no auto FPS cap, no auto
+		# scale, no auto MSAA — bench owns every knob).
+		get_config().graphic_profile = 4  # Custom
+		# Strip per-profile FPS cap. Bench wants the true device ceiling.
+		get_config().limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+		GraphicSettings.apply_fps_limit_with_thermal_cap(ConfigData.FpsLimitMode.NO_LIMIT, 0)
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		dynamic_graphics_manager.initialize(
+			false, get_config().graphic_profile, get_config().limit_fps
+		)
+		dynamic_graphics_manager.set_enabled(false)
+		dynamic_graphics_manager.set_thermal_fps_cap_enabled(false)
+		print("[Bench] profile=Custom, DG/thermal off, fps uncapped for gp-benchmark run")
+		return
 	# Initialize with config values and connect signals
 	dynamic_graphics_manager.initialize(
 		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps

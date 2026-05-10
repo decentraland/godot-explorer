@@ -58,6 +58,7 @@ window/size/viewport_width=1600
 window/size/viewport_height=720
 window/size/window_width_override=720
 window/size/window_height_override=1280
+window/frame_pacing/android/enable_frame_pacing=false
 window/handheld/orientation=6
 
 [editor]

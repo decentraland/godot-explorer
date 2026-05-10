@@ -95,6 +95,14 @@ func async_show_message(message: String):
 		return
 	if message_tween:
 		message_tween.kill()
+	# Animation is about to run for ~6.5s (TWEEN_DURATION + MESSAGE_DURATION
+	# + TWEEN_DURATION). Switch the SubViewport to UPDATE_ALWAYS so each
+	# tween frame actually renders. After the animation we set it back to
+	# UPDATE_DISABLED — avatar.gd's `_request_nickname_redraw` will bump it
+	# to UPDATE_ONCE again on the next state change.
+	var vp := get_viewport()
+	if vp is SubViewport:
+		(vp as SubViewport).render_target_update_mode = SubViewport.UPDATE_ALWAYS
 
 	var message_container = create_message_container(message)
 	var message_label = message_container.get_child(0)
@@ -125,3 +133,8 @@ func async_show_message(message: String):
 	message_tween.tween_subtween(subtween)
 	await message_tween.finished
 	message_container.queue_free()
+	# Animation done — drop back to idle. The container stays UPDATE_DISABLED
+	# until something calls _request_nickname_redraw on the avatar.
+	var vp_after := get_viewport()
+	if vp_after is SubViewport:
+		(vp_after as SubViewport).render_target_update_mode = SubViewport.UPDATE_DISABLED

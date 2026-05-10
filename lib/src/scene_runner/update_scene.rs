@@ -91,6 +91,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::OccluderGen => "OccluderGen",
         S::AssetPreprocessor => "AssetPreprocessor",
         S::AutoShadowCull => "AutoShadowCull",
+        S::CheapPbr => "CheapPbr",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
         S::AvatarShape => "AvatarShape",
@@ -135,6 +136,7 @@ use super::{
         asset_preprocessor::update_asset_preprocessor,
         auto_distance_cull::update_auto_distance_cull,
         auto_shadow_cull::update_auto_shadow_cull,
+        cheap_pbr_materials::update_cheap_pbr_materials,
         material_atlas::update_material_atlas,
         mesh_collider::update_mesh_collider,
         mesh_lod::update_mesh_lod,
@@ -477,6 +479,12 @@ pub fn _process_scene(
                     effective_end_time_us,
                 ),
                 SceneUpdateState::AutoShadowCull => !update_auto_shadow_cull(
+                    scene,
+                    crdt_state,
+                    ref_time,
+                    effective_end_time_us,
+                ),
+                SceneUpdateState::CheapPbr => !update_cheap_pbr_materials(
                     scene,
                     crdt_state,
                     ref_time,

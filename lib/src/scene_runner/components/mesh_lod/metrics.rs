@@ -20,6 +20,9 @@ pub struct LodStats {
     pub bake_failed: u32,
     pub source_index_total: u64,
     pub lod0_index_total: u64,
+    pub shadow_meshes_baked: u32,
+    pub shadow_source_index_total: u64,
+    pub shadow_index_total: u64,
 }
 
 impl LodStats {
@@ -44,13 +47,16 @@ impl LodStats {
 
     pub fn to_summary_string(&self) -> String {
         format!(
-            "eligible={} baked={} cache_hits={} bake_failed={} src_idx={} lod0_idx={} no_mesh={} blend={} avatar={} skinned={} has_lods={} small={} tween={} modifier={}",
+            "eligible={} baked={} cache_hits={} bake_failed={} src_idx={} lod0_idx={} shadow_baked={} shadow_src_idx={} shadow_idx={} no_mesh={} blend={} avatar={} skinned={} has_lods={} small={} tween={} modifier={}",
             self.eligible,
             self.meshes_baked,
             self.bake_cache_hits,
             self.bake_failed,
             self.source_index_total,
             self.lod0_index_total,
+            self.shadow_meshes_baked,
+            self.shadow_source_index_total,
+            self.shadow_index_total,
             self.skipped_no_mesh,
             self.skipped_blend_shapes,
             self.skipped_avatar,
@@ -78,6 +84,9 @@ static GLOBAL_STATS: Mutex<LodStats> = Mutex::new(LodStats {
     bake_failed: 0,
     source_index_total: 0,
     lod0_index_total: 0,
+    shadow_meshes_baked: 0,
+    shadow_source_index_total: 0,
+    shadow_index_total: 0,
 });
 
 pub fn record_global(c: &Classification) {
@@ -97,6 +106,14 @@ pub fn record_bake(source_idx: u64, lod0_idx: u64) {
 pub fn record_cache_hit() {
     if let Ok(mut g) = GLOBAL_STATS.lock() {
         g.bake_cache_hits = g.bake_cache_hits.saturating_add(1);
+    }
+}
+
+#[allow(dead_code)] pub fn record_shadow_bake(source_idx: u64, shadow_idx: u64) {
+    if let Ok(mut g) = GLOBAL_STATS.lock() {
+        g.shadow_meshes_baked = g.shadow_meshes_baked.saturating_add(1);
+        g.shadow_source_index_total = g.shadow_source_index_total.saturating_add(source_idx);
+        g.shadow_index_total = g.shadow_index_total.saturating_add(shadow_idx);
     }
 }
 

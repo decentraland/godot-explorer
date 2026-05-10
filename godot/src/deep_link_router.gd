@@ -34,6 +34,21 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
+	# component dirty-set is processed by `update_gltf_container`. The
+	# bench runner's `_apply_deeplink_overrides` runs too late — by then
+	# the first scene's GLTFs are already instantiated. Apply here, in
+	# the deeplink router, which lands before any scene starts loading.
+	var skip_gltf_value = Global.deep_link_obj.params.get("skip-gltf", "")
+	if not skip_gltf_value.is_empty():
+		Global.cli.set_skip_gltf_load(skip_gltf_value.to_lower() in ["true", "1", "yes"])
+		print("[DEEPLINK] skip-gltf=", Global.cli.get_skip_gltf_load())
+
+	var kill_sky_value = Global.deep_link_obj.params.get("kill-sky", "")
+	if not kill_sky_value.is_empty():
+		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
+		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
+
 	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
 	# runner from Global._ready, but on mobile the deep link is not parsed by
 	# then — spawn here once the deeplink lands and only if no runner exists.

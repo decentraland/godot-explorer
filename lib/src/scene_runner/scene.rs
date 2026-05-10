@@ -35,9 +35,10 @@ use crate::{
 use super::{
     components::{
         asset_preprocessor::AssetPreprocessorState, auto_distance_cull::AutoDistanceCullState,
-        auto_shadow_cull::AutoShadowCullState, gltf_node_modifiers::GltfNodeModifierState,
-        mesh_lod::MeshLodState, occluder_gen::OccluderGenState,
-        textureless_merger::TexturelessMergerState, trigger_area::TriggerAreaState, tween::Tween,
+        auto_shadow_cull::AutoShadowCullState, cheap_pbr_materials::CheapPbrState,
+        gltf_node_modifiers::GltfNodeModifierState, mesh_lod::MeshLodState,
+        occluder_gen::OccluderGenState, textureless_merger::TexturelessMergerState,
+        trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -116,6 +117,7 @@ pub enum SceneUpdateState {
     OccluderGen,
     AssetPreprocessor,
     AutoShadowCull,
+    CheapPbr,
     NftShape,
     Animator,
     AvatarShape,
@@ -163,7 +165,8 @@ impl SceneUpdateState {
             Self::AutoDistanceCull => Self::OccluderGen,
             Self::OccluderGen => Self::AssetPreprocessor,
             Self::AssetPreprocessor => Self::AutoShadowCull,
-            Self::AutoShadowCull => Self::NftShape,
+            Self::AutoShadowCull => Self::CheapPbr,
+            Self::CheapPbr => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -324,6 +327,11 @@ pub struct Scene {
     // pass primitive count (~50% in GP per the per-pass instrumentation).
     pub pending_auto_shadow_cull: HashSet<SceneEntityId>,
     pub auto_shadow_cull: AutoShadowCullState,
+
+    // Cheap PBR materials: tweak BaseMaterial3D mode flags (Lambert
+    // diffuse, no specular for matte) to reduce per-fragment ALU.
+    pub pending_cheap_pbr: HashSet<SceneEntityId>,
+    pub cheap_pbr: CheapPbrState,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -462,6 +470,8 @@ impl Scene {
             asset_preprocessor: AssetPreprocessorState::default(),
             pending_auto_shadow_cull: HashSet::new(),
             auto_shadow_cull: AutoShadowCullState::default(),
+            pending_cheap_pbr: HashSet::new(),
+            cheap_pbr: CheapPbrState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -554,6 +564,8 @@ impl Scene {
             asset_preprocessor: AssetPreprocessorState::default(),
             pending_auto_shadow_cull: HashSet::new(),
             auto_shadow_cull: AutoShadowCullState::default(),
+            pending_cheap_pbr: HashSet::new(),
+            cheap_pbr: CheapPbrState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

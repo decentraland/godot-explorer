@@ -114,7 +114,7 @@ var bloom_quality: int = 0:
 		param_changed.emit(ConfigParams.BLOOM_QUALITY)
 
 # 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
-var graphic_profile: int = 0:
+var graphic_profile: int = 3:
 	set(value):
 		graphic_profile = value
 		param_changed.emit(ConfigParams.GRAPHIC_PROFILE)
@@ -289,7 +289,7 @@ func load_from_default():
 	self.shadow_quality = 0  # disabled
 	self.bloom_quality = 0  # off
 	self.anti_aliasing = 0  # off
-	self.graphic_profile = 0  # Very Low (will be set by benchmark on first launch)
+	self.graphic_profile = 3  # High (HardwareBenchmark may downgrade on first launch)
 	self.first_launch_completed = false
 	self.benchmark_gpu_score = -1.0
 	self.benchmark_ram_gb = -1.0

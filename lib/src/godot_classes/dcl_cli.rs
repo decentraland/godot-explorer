@@ -155,6 +155,31 @@ pub struct DclCli {
     #[var]
     pub auto_shadow_cull_enabled: bool,
 
+    // cheap_pbr_materials: tweak BaseMaterial3D mode flags (Lambert
+    // diffuse, no specular for matte) to reduce per-fragment ALU.
+    #[var]
+    pub cheap_pbr_enabled: bool,
+
+    // shadow_mesh: assign a decimated proxy ArrayMesh as the source
+    // mesh's `shadow_mesh` so the shadow pass rasterizes far fewer
+    // primitives without changing draw count. Off by default while
+    // we stabilize the bake path against DCL's compressed-attribute
+    // GLTFs.
+    #[var]
+    pub shadow_mesh_enabled: bool,
+
+    // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
+    // set in `update_gltf_container` so the bench can measure the rendering
+    // floor without any scene meshes loaded. Pure perf-debug knob.
+    #[var]
+    pub skip_gltf_load: bool,
+
+    // Diagnostic: force every WorldEnvironment to BG_COLOR (no sky shader,
+    // no procedural sky). Combined with `skip-gltf` measures the renderer
+    // floor without sky fragment cost.
+    #[var]
+    pub kill_sky: bool,
+
     // V8 inspector target. When non-empty AND the build has the
     // `enable_inspector` feature, the SDK7 scene whose title matches
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
@@ -533,6 +558,30 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--cheap-pbr".to_string(),
+                description: "Tweak BaseMaterial3D mode flags (Lambert diffuse, no specular for matte) to reduce per-fragment ALU. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--shadow-mesh".to_string(),
+                description: "Assign a decimated proxy ArrayMesh to mesh_lod outputs as `shadow_mesh` so shadow pass rasterizes fewer prims. Default OFF (experimental)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--skip-gltf".to_string(),
+                description: "Diagnostic: skip every GltfContainer instantiation so the renderer floor (sky+UI+avatar) can be measured. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--kill-sky".to_string(),
+                description: "Diagnostic: force WorldEnvironment background_mode=COLOR everywhere — no sky shader, no procedural sky. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -740,6 +789,10 @@ impl INode for DclCli {
         let occluder_gen_enabled = args_map.contains_key("--occluder-gen");
         let asset_preproc_enabled = args_map.contains_key("--asset-preproc");
         let auto_shadow_cull_enabled = args_map.contains_key("--auto-shadow-cull");
+        let cheap_pbr_enabled = args_map.contains_key("--cheap-pbr");
+        let shadow_mesh_enabled = args_map.contains_key("--shadow-mesh");
+        let skip_gltf_load = args_map.contains_key("--skip-gltf");
+        let kill_sky = args_map.contains_key("--kill-sky");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -864,6 +917,10 @@ impl INode for DclCli {
             occluder_gen_enabled,
             asset_preproc_enabled,
             auto_shadow_cull_enabled,
+            cheap_pbr_enabled,
+            shadow_mesh_enabled,
+            skip_gltf_load,
+            kill_sky,
             inspect_scene_title,
             asset_server_port,
             realm,

@@ -94,9 +94,70 @@ func _process(_delta: float) -> void:
 				_apply_forced_graphic_profile()
 				# Bench: uncap FPS so measurements reflect the device's real
 				# ceiling, not a profile's FpsLimitMode (FPS_18 / FPS_30 / FPS_60).
+				# Also disable v-sync — Android forces it on by default at the
+				# display refresh rate (60–120 Hz), which still caps the bench
+				# below the real ceiling on fast frames.
 				if bool(config.get("uncap_fps", true)):
+					# DynamicGraphicsManager emits profile_change_requested
+					# during the bench and cascades into Engine.max_fps via
+					# GraphicSettings.apply_fps_limit. That overrides our
+					# uncap. Turn it off for the duration of the run.
+					if Global.dynamic_graphics_manager != null:
+						Global.dynamic_graphics_manager.set_enabled(false)
+						# `process_thermal_fps_cap` runs INDEPENDENTLY of state
+						# == Disabled — it's gated only by `thermal_fps_cap_enabled`.
+						# Without this, DG keeps emitting `thermal_fps_cap_changed(18)`
+						# and pegs Engine.max_fps via _on_thermal_fps_cap_changed.
+						Global.dynamic_graphics_manager.set_thermal_fps_cap_enabled(false)
+						_log(
+							(
+								"DG disabled + thermal_cap_enabled=false (cap was=%d)"
+								% Global.dynamic_graphics_manager.get_thermal_fps_cap()
+							)
+						)
+						GraphicSettings.apply_fps_limit_with_thermal_cap(
+							ConfigData.FpsLimitMode.NO_LIMIT, 0
+						)
 					Engine.max_fps = 0
-					_log("FPS cap removed (Engine.max_fps=0) for measurement")
+					DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+					OS.low_processor_usage_mode = false
+					# Disconnect both handlers that re-apply the cap when their
+					# signals fire. _on_config_param_changed reacts to
+					# limit_fps changes; _on_thermal_fps_cap_changed reacts to
+					# DG's thermal signal (which keeps firing even if DG state
+					# is Disabled, since process_thermal_fps_cap is gated by a
+					# different field).
+					if Global.get_config().param_changed.is_connected(
+						Global._on_config_param_changed
+					):
+						Global.get_config().param_changed.disconnect(
+							Global._on_config_param_changed
+						)
+						_log("param_changed → _on_config_param_changed disconnected")
+					if (
+						Global.dynamic_graphics_manager != null
+						and Global.dynamic_graphics_manager.thermal_fps_cap_changed.is_connected(
+							Global._on_thermal_fps_cap_changed
+						)
+					):
+						Global.dynamic_graphics_manager.thermal_fps_cap_changed.disconnect(
+							Global._on_thermal_fps_cap_changed
+						)
+						_log("thermal_fps_cap_changed → _on_thermal_fps_cap_changed disconnected")
+					_log(
+						(
+							"FPS cap state: max_fps=%d vsync_mode=%d low_proc=%s"
+							% [
+								Engine.max_fps,
+								DisplayServer.window_get_vsync_mode(),
+								str(OS.low_processor_usage_mode)
+							]
+						)
+					)
+					var fp_setting = ProjectSettings.get_setting(
+						"display/window/frame_pacing/android/enable_frame_pacing", true
+					)
+					_log("frame_pacing project setting = %s" % str(fp_setting))
 				_set_phase("warmup")
 			elif _phase_elapsed_ms() >= LOAD_TIMEOUT_MS:
 				_log("WARN: loading_complete never fired in %d ms; aborting" % LOAD_TIMEOUT_MS)
@@ -112,9 +173,26 @@ func _process(_delta: float) -> void:
 				# sampling-window numbers aren't polluted by load-time spikes.
 				Global.scene_runner.reset_state_timing()
 				Global.scene_runner.reset_crdt_metrics()
+				if Global.cli.get_skip_gltf_load():
+					_purge_existing_gltfs()
+				if Global.cli.get_kill_sky():
+					_purge_existing_skies()
 				_set_phase("sampling")
 		"sampling":
 			_enforce_pinned_pose()
+			if Engine.max_fps != 0:
+				var thermal_cap_now: int = (
+					Global.dynamic_graphics_manager.get_thermal_fps_cap()
+					if Global.dynamic_graphics_manager != null
+					else -1
+				)
+				_log(
+					(
+						"WARN sampling: max_fps=%d (thermal_cap=%d, limit_fps=%d) -> forcing 0"
+						% [Engine.max_fps, thermal_cap_now, Global.get_config().limit_fps]
+					)
+				)
+				Engine.max_fps = 0
 			samples.append(_collect_sample())
 			if _phase_elapsed_ms() >= int(config.get("sample_seconds", 30)) * 1000:
 				_finish()
@@ -340,6 +418,7 @@ func _finish() -> void:
 	var occluder_gen_stats: String = Global.scene_runner.drain_occluder_gen_stats()
 	var asset_preproc_stats: String = Global.scene_runner.drain_asset_preproc_stats()
 	var auto_shadow_cull_stats: String = Global.scene_runner.drain_auto_shadow_cull_stats()
+	var cheap_pbr_stats: String = Global.scene_runner.drain_cheap_pbr_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -356,6 +435,7 @@ func _finish() -> void:
 		"occluder_gen_stats": occluder_gen_stats,
 		"asset_preproc_stats": asset_preproc_stats,
 		"auto_shadow_cull_stats": auto_shadow_cull_stats,
+		"cheap_pbr_stats": cheap_pbr_stats,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -720,6 +800,15 @@ func _apply_deeplink_overrides() -> void:
 	var asc: String = params.get("auto-shadow-cull", "")
 	if not asc.is_empty():
 		Global.cli.auto_shadow_cull_enabled = asc.to_lower() in ["true", "1", "yes"]
+	var cpbr: String = params.get("cheap-pbr", "")
+	if not cpbr.is_empty():
+		Global.cli.cheap_pbr_enabled = cpbr.to_lower() in ["true", "1", "yes"]
+	var smesh: String = params.get("shadow-mesh", "")
+	if not smesh.is_empty():
+		Global.cli.shadow_mesh_enabled = smesh.to_lower() in ["true", "1", "yes"]
+	var skipg: String = params.get("skip-gltf", "")
+	if not skipg.is_empty():
+		Global.cli.set_skip_gltf_load(skipg.to_lower() in ["true", "1", "yes"])
 	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
 	# conservative); raising it picks lower-detail LODs sooner and is the
 	# whole point of the LOD bake on mobile. Stash here, apply at
@@ -772,7 +861,12 @@ func _apply_forced_graphic_profile() -> void:
 	if idx_v != null:
 		var idx: int = idx_v
 		GraphicSettings.apply_graphic_profile(idx)
-		_log("forced graphic_profile=%d (post-load)" % idx)
+		# Override the profile's fps mode to NO_LIMIT so the bench measures
+		# the device's real ceiling. Without this, profile 0=FPS_18,
+		# 1/2=FPS_30, 3=FPS_60 silently cap the run via the
+		# `param_changed → apply_fps_limit → Engine.max_fps=N` path.
+		Global.get_config().limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+		_log("forced graphic_profile=%d, limit_fps=NO_LIMIT (post-load)" % idx)
 	var scale_v = config.get("viewport_scale_3d", null)
 	if scale_v != null:
 		var s: float = scale_v
@@ -1021,3 +1115,33 @@ func _phase_elapsed_ms() -> int:
 
 func _log(msg: String) -> void:
 	print("[GP Benchmark] %s" % msg)
+
+
+func _purge_existing_gltfs() -> void:
+	var stack: Array = [Global.get_tree().root]
+	var freed: int = 0
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n.is_class("DclGltfContainer"):
+			n.queue_free()
+			freed += 1
+			continue
+		for c in n.get_children():
+			stack.append(c)
+	_log("purged %d existing DclGltfContainer nodes" % freed)
+
+
+func _purge_existing_skies() -> void:
+	var stack: Array = [Global.get_tree().root]
+	var stomped: int = 0
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is WorldEnvironment and n.environment != null:
+			n.environment.background_mode = Environment.BG_COLOR
+			n.environment.background_color = Color.BLACK
+			n.environment.background_energy_multiplier = 0.0
+			n.environment.glow_enabled = false
+			stomped += 1
+		for c in n.get_children():
+			stack.append(c)
+	_log("purged %d WorldEnvironments to BG_COLOR" % stomped)

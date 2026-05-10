@@ -36,6 +36,12 @@ struct GlobalCache {
     /// reference the same source mesh resolve to the same baked handle,
     /// so Godot keeps batching their draws together.
     baked: HashMap<i64, Gd<ArrayMesh>>,
+    /// Source `ArrayMesh` RID → baked shadow proxy. Reused across MIs
+    /// the same way as `baked`. Currently unused (shadow_mesh assignment
+    /// disabled — see comment in `process_entity`); retained for the
+    /// re-enable path.
+    #[allow(dead_code)]
+    shadow: HashMap<i64, Gd<ArrayMesh>>,
 }
 
 thread_local! {
@@ -48,6 +54,7 @@ fn with_global<R>(f: impl FnOnce(&mut GlobalCache) -> R) -> R {
         if borrow.is_none() {
             *borrow = Some(GlobalCache {
                 baked: HashMap::new(),
+                shadow: HashMap::new(),
             });
         }
         f(borrow.as_mut().expect("just initialized"))
@@ -154,13 +161,44 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
             continue;
         };
 
+        // Visible decimation: when the cli flag is on, use the
+        // SurfaceTool-decimated ArrayMesh straight as `mi.mesh`. Skips
+        // the ImporterMesh-based LOD chain entirely; `visible_prim`
+        // drops to ~`1/STRIDE` of the source. Reuses the existing
+        // shadow-proxy bake function — same producer, same reliability.
+        let mut chosen_mesh = result.mesh.clone();
+        if shadow_mesh_enabled() {
+            let visible_decim = lod_baker::bake_shadow_mesh(&array_mesh);
+            if let Some(sr) = visible_decim {
+                chosen_mesh = sr.mesh;
+            }
+        }
+        if shadow_mesh_enabled() {
+            let shadow_cached = with_global(|g| g.shadow.get(&source_rid).cloned());
+            let shadow_mesh = shadow_cached.or_else(|| {
+                lod_baker::bake_shadow_mesh(&array_mesh).map(|sr| {
+                    metrics::record_shadow_bake(sr.source_index_total, sr.shadow_index_total);
+                    with_global(|g| g.shadow.insert(source_rid, sr.mesh.clone()));
+                    sr.mesh
+                })
+            });
+            if let Some(sm) = shadow_mesh {
+                chosen_mesh.set_shadow_mesh(Some(&sm));
+            }
+        }
         with_global(|g| {
-            g.baked.insert(source_rid, result.mesh.clone());
+            g.baked.insert(source_rid, chosen_mesh.clone());
         });
         metrics::record_bake(result.source_index_total, result.lod0_index_total);
-        mi.set_mesh(&result.mesh.upcast::<godot::classes::Mesh>());
+        mi.set_mesh(&chosen_mesh.upcast::<godot::classes::Mesh>());
         scene.mesh_lod.meshes_baked = scene.mesh_lod.meshes_baked.saturating_add(1);
     }
+}
+
+fn shadow_mesh_enabled() -> bool {
+    DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().shadow_mesh_enabled)
+        .unwrap_or(false)
 }
 
 fn collect_mesh_instances(node: &Gd<Node3D>, out: &mut Vec<Gd<MeshInstance3D>>) {

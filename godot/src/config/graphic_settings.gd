@@ -23,9 +23,11 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_30,
 		"scale": 0.75
 	},
-	# Medium (2) - Balanced performance and quality
+	# Medium (2) - Balanced performance and quality. AA off (MSAA_DISABLED)
+	# because A/B on Mali-G68 showed it costs ~8ms gpu in Genesis Plaza
+	# without a meaningful look-and-feel change at typical mobile resolution.
 	{
-		"aa": 1,
+		"aa": 0,
 		"shadow": 1,
 		"bloom": 1,
 		"skybox": 1,
