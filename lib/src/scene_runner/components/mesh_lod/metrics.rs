@@ -109,7 +109,8 @@ pub fn record_cache_hit() {
     }
 }
 
-#[allow(dead_code)] pub fn record_shadow_bake(source_idx: u64, shadow_idx: u64) {
+#[allow(dead_code)]
+pub fn record_shadow_bake(source_idx: u64, shadow_idx: u64) {
     if let Ok(mut g) = GLOBAL_STATS.lock() {
         g.shadow_meshes_baked = g.shadow_meshes_baked.saturating_add(1);
         g.shadow_source_index_total = g.shadow_source_index_total.saturating_add(source_idx);

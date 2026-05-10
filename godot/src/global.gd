@@ -200,6 +200,13 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
+	# Force uncapped FPS very early, before any code path can re-pin Engine.max_fps.
+	# DG is disabled (no signal handlers) and HardwareBenchmark too. The config
+	# replacement (`self.config = ConfigData.new()` further down in _ready)
+	# happens later, so we touch only engine-level flags here. Bench-only knob.
+	Engine.max_fps = 0
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	OS.low_processor_usage_mode = false
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
@@ -272,6 +279,14 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+	# Bench: ensure limit_fps stays at NO_LIMIT after the settings file load,
+	# which would otherwise restore a saved FPS_18/FPS_30 cap. Engine.max_fps
+	# was already set to 0 at the top of _ready; this prevents any later
+	# `apply_fps_limit()` call (explorer/menu/main) from re-reading config and
+	# re-pinning the engine.
+	config.limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+	Engine.max_fps = 0
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
 	# Initialize environment from deep link or default to "org"
 	var env = deep_link_obj.dclenv if not deep_link_obj.dclenv.is_empty() else "org"
@@ -421,8 +436,14 @@ func _ready():
 		stress_test_controller.set_name("StressTestController")
 		get_tree().root.add_child.call_deferred(stress_test_controller)
 
-	# Initialize dynamic graphics manager after config is loaded
-	_init_dynamic_graphics_manager.call_deferred()
+	# Initialize dynamic graphics manager after config is loaded.
+	# DISABLED while benching: even the bench-mode branch (set graphic_profile=Custom,
+	# DG.set_enabled(false), thermal_cap off, FPS uncapped) dropped fps 29 → 14 on
+	# A54 (v6 vs v5). The Custom-profile path applies render settings that hurt
+	# perf vs leaving the DG node uninitialized. Cheaper to leave the node parked
+	# in the tree (added at line 413) and never run `.initialize()`. Re-enable for
+	# production builds; bench results are only comparable when this stays off.
+	# _init_dynamic_graphics_manager.call_deferred()
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
@@ -441,14 +462,11 @@ func _ready():
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
-## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI
+## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI.
+## DISABLED while benching: HardwareBenchmark picks profile=Very Low (FPS_18 cap)
+## on the A54 every cold start, which pollutes A/B numbers. Re-enable for prod.
 func should_run_first_launch_benchmark() -> bool:
-	# Skip during gp-benchmark runs — HardwareBenchmark would otherwise pick a
-	# device-specific profile (often Very Low w/ FPS_18 cap) and stomp on the
-	# bench's controlled config, polluting A/B numbers across runs.
-	if is_gp_benchmark():
-		return false
-	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
+	return false
 
 
 ## Run the first launch benchmark. Called by lobby.gd after loading screen is visible.

@@ -139,9 +139,15 @@ impl MaterialAtlas {
 }
 
 fn make_blank_albedo() -> Gd<Image> {
-    let mut img = Image::create(CELL_SIZE, CELL_SIZE, false, Format::RGBA8)
+    // use_mipmaps=true so Texture2DArray.create_from_images allocates the
+    // mipmap chain. Subsequent per-layer updates via texture_2d_update must
+    // also include mipmaps or the size assertion fails:
+    // "Required size for texture update (1048576) does not match data
+    // supplied size (1398100)" — 1398100 ≈ 512×512×4 × 4/3 (mipmap chain).
+    let mut img = Image::create(CELL_SIZE, CELL_SIZE, true, Format::RGBA8)
         .expect("Image::create should succeed for atlas blank");
     img.fill(Color::from_rgba(1.0, 1.0, 1.0, 1.0));
+    img.generate_mipmaps();
     img
 }
 
@@ -160,6 +166,19 @@ fn make_blank_color_texture(rows: i32) -> Gd<ImageTexture> {
 }
 
 fn resize_albedo(mut img: Gd<Image>) -> Gd<Image> {
+    // Android imports GLTF textures as ETC2/ASTC. resize/convert/generate_mipmaps
+    // all error out on compressed formats. Decompress first so the rest of the
+    // chain works on raw RGBA8.
+    if img.is_compressed() {
+        let err = img.decompress();
+        if err != godot::global::Error::OK {
+            tracing::warn!(
+                "material_atlas: Image::decompress failed ({:?}); returning blank albedo",
+                err
+            );
+            return make_blank_albedo();
+        }
+    }
     let w = img.get_width();
     let h = img.get_height();
     if w != CELL_SIZE || h != CELL_SIZE {

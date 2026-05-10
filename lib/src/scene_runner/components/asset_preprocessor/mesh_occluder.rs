@@ -71,7 +71,9 @@ fn is_opaque_material(mi: &Gd<MeshInstance3D>, mesh: &Gd<ArrayMesh>) -> bool {
     false
 }
 
-fn build_occluder_geometry(source: &Gd<ArrayMesh>) -> Option<(PackedVector3Array, PackedInt32Array)> {
+fn build_occluder_geometry(
+    source: &Gd<ArrayMesh>,
+) -> Option<(PackedVector3Array, PackedInt32Array)> {
     let surface_count = source.get_surface_count();
     if surface_count <= 0 {
         return None;

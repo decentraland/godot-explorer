@@ -19,11 +19,13 @@ uniform sampler2D material_colors : filter_nearest, repeat_disable, hint_default
 // Total layers actually populated. Used to clamp out-of-range indices.
 uniform int layer_count : hint_range(1, 256) = 1;
 
-// CUSTOM0.x carries the layer index, baked per-vertex.
+// CUSTOM0 is the default RGBA8_UNORM custom channel — 4 bytes per vertex,
+// each component normalized 0..1 in the vertex stage. The atlas layer index
+// (0..255) is packed in the R byte, so multiply by 255 to recover.
 varying flat float v_layer;
 
 void vertex() {
-    v_layer = CUSTOM0.x;
+    v_layer = CUSTOM0.x * 255.0;
 }
 
 void fragment() {

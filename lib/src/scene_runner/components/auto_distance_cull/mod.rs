@@ -93,7 +93,11 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
         return;
     };
 
-    let Some(gltf_container) = node_3d.try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>("GltfContainer") else {
+    let Some(gltf_container) = node_3d
+        .try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>(
+            "GltfContainer",
+        )
+    else {
         return;
     };
 

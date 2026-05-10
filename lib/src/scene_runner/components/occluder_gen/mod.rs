@@ -85,7 +85,11 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
         return;
     };
 
-    let Some(gltf_container) = node_3d.try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>("GltfContainer") else {
+    let Some(gltf_container) = node_3d
+        .try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>(
+            "GltfContainer",
+        )
+    else {
         return;
     };
 
@@ -123,8 +127,7 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
         let mut mi_parent = mi.clone();
         mi_parent.add_child(&occluder_instance.clone().upcast::<godot::classes::Node>());
 
-        scene.occluder_gen.occluders_added =
-            scene.occluder_gen.occluders_added.saturating_add(1);
+        scene.occluder_gen.occluders_added = scene.occluder_gen.occluders_added.saturating_add(1);
         metrics::record_added(aabb.size.length());
     }
 }

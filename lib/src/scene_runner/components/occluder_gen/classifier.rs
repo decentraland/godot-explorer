@@ -56,10 +56,8 @@ pub fn classify(mi: &Gd<MeshInstance3D>) -> Classification {
     }
 
     let aabb = mesh.get_aabb();
-    let diag = (aabb.size.x * aabb.size.x
-        + aabb.size.y * aabb.size.y
-        + aabb.size.z * aabb.size.z)
-        .sqrt();
+    let diag =
+        (aabb.size.x * aabb.size.x + aabb.size.y * aabb.size.y + aabb.size.z * aabb.size.z).sqrt();
     if diag < MIN_AABB_DIAG_M {
         return Classification::Skip(SkipReason::TooSmall);
     }

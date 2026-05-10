@@ -29,7 +29,8 @@ pub fn update_gltf_container(
         .map(|g| g.bind().cli.bind().skip_gltf_load)
         .unwrap_or(false)
     {
-        scene.current_dirty
+        scene
+            .current_dirty
             .lww_components
             .remove(&SceneComponentId::GLTF_CONTAINER);
         return true;

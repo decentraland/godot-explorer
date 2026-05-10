@@ -170,14 +170,18 @@ fn grow_pool(key: PoolKey, pool: &mut MeshPool, new_capacity: u32) {
     rs.multimesh_set_mesh(new_mm, key.mesh_rid);
     if pool.high_water > 0 {
         // Bulk-copy the live transform buffer (12 floats per instance) instead
-        // of re-pushing every slot through GDExtension.
+        // of re-pushing every slot through GDExtension. The destination buffer
+        // MUST match the new MultiMesh's full capacity — multimesh_set_buffer
+        // asserts `p_buffer.size() == instances * stride_cache`. Padding the
+        // tail with zero (= scale-zero, won't render) is safe because we cap
+        // visible_instances to `high_water` right after.
         let buffer: PackedFloat32Array = rs.multimesh_get_buffer(pool.multimesh_rid);
         let live_floats = (pool.high_water as usize) * 12;
+        let new_floats = (new_capacity as usize) * 12;
         if buffer.len() >= live_floats {
             let mut new_buffer = PackedFloat32Array::new();
-            new_buffer.resize(live_floats);
-            new_buffer
-                .as_mut_slice()
+            new_buffer.resize(new_floats);
+            new_buffer.as_mut_slice()[..live_floats]
                 .copy_from_slice(&buffer.as_slice()[..live_floats]);
             rs.multimesh_set_buffer(new_mm, &new_buffer);
         }

@@ -1040,12 +1040,14 @@ func _is_textureless_mergeable(mi: MeshInstance3D) -> bool:
 		return false
 	var p: Node = mi.get_parent()
 	while p != null:
-		if p is AnimationPlayer or p is Skeleton3D:
-			return false
-		var c := p.get_class()
-		if c == "DclAvatar":
-			return false
-		if p.has_meta("dcl_has_tween") or p.has_meta("dcl_has_modifier"):
+		var bad_parent := (
+			p is AnimationPlayer
+			or p is Skeleton3D
+			or p.get_class() == "DclAvatar"
+			or p.has_meta("dcl_has_tween")
+			or p.has_meta("dcl_has_modifier")
+		)
+		if bad_parent:
 			return false
 		p = p.get_parent()
 	var mesh := mi.mesh
@@ -1057,15 +1059,13 @@ func _is_textureless_mergeable(mi: MeshInstance3D) -> bool:
 	if mat == null or not (mat is BaseMaterial3D):
 		return false
 	var bm := mat as BaseMaterial3D
-	if bm.albedo_texture != null:
-		return false
-	if bm.normal_texture != null:
-		return false
-	if bm.emission_texture != null:
-		return false
-	if bm.orm_texture != null:
-		return false
-	return true
+	var has_any_texture := (
+		bm.albedo_texture != null
+		or bm.normal_texture != null
+		or bm.emission_texture != null
+		or bm.orm_texture != null
+	)
+	return not has_any_texture
 
 
 ## Append one source mesh's surface 0 vertices to a SurfaceTool, transformed

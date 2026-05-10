@@ -54,14 +54,10 @@ pub fn update_textureless_merger(
 ) -> bool {
     let enabled = is_enabled();
     if !enabled {
-        if !scene.pending_textureless_promotion.is_empty() {
-            tracing::info!(
-                target: "textureless_merger",
-                "merger disabled, clearing {} pending entities",
-                scene.pending_textureless_promotion.len()
-            );
-            scene.pending_textureless_promotion.clear();
-        }
+        // Silent drain: the promotion queue keeps re-filling every CRDT tick
+        // even when merger is off (scene_runner pushes entities without a
+        // gate). Logging each clear spams the console at ~30 lines/sec.
+        scene.pending_textureless_promotion.clear();
         return true;
     }
     if !scene.pending_textureless_promotion.is_empty() {

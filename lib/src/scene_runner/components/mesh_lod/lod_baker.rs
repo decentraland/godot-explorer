@@ -70,8 +70,7 @@ pub fn bake_lods(source: &Gd<ArrayMesh>) -> Option<BakeResult> {
                         strided.push(idx.get((base + 1) as usize).unwrap_or(0));
                         strided.push(idx.get((base + 2) as usize).unwrap_or(0));
                     }
-                    decimated_arrays
-                        .set(ArrayType::INDEX.ord() as usize, &strided.to_variant());
+                    decimated_arrays.set(ArrayType::INDEX.ord() as usize, &strided.to_variant());
                 }
             }
         } else if let Ok(idx) = arrays
@@ -113,7 +112,8 @@ pub fn bake_lods(source: &Gd<ArrayMesh>) -> Option<BakeResult> {
     })
 }
 
-#[allow(dead_code)] pub struct ShadowBakeResult {
+#[allow(dead_code)]
+pub struct ShadowBakeResult {
     pub mesh: Gd<ArrayMesh>,
     pub source_index_total: u64,
     pub shadow_index_total: u64,

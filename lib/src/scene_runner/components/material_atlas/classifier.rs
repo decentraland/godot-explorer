@@ -43,6 +43,145 @@ pub enum Classification {
     Skip(SkipReason),
 }
 
+/// Classify every surface of an MI individually. Returns one Classification
+/// per surface; MI-level skip reasons (visibility, ancestors, blend shapes,
+/// missing mesh) cause a single-element vec applied to the whole MI by the
+/// caller. The single-surface `classify()` below is the v1 entry point and
+/// stays for callers that haven't migrated yet.
+pub fn classify_per_surface(
+    mi: &Gd<MeshInstance3D>,
+    scene: &Scene,
+    entity: SceneEntityId,
+) -> Vec<Classification> {
+    if let Some(skip) = mi_level_skip(mi, scene, entity) {
+        return vec![Classification::Skip(skip)];
+    }
+
+    let Some(mesh) = mi.get_mesh() else {
+        return vec![Classification::Skip(SkipReason::NoMesh)];
+    };
+    if mi.get_blend_shape_count() > 0 {
+        return vec![Classification::Skip(SkipReason::BlendShapes)];
+    }
+
+    let surface_count = mesh.get_surface_count();
+    if surface_count == 0 {
+        return vec![Classification::Skip(SkipReason::NoMesh)];
+    }
+
+    (0..surface_count)
+        .map(|i| {
+            let material = mi
+                .get_surface_override_material(i)
+                .or_else(|| mesh.surface_get_material(i));
+            classify_material(material)
+        })
+        .collect()
+}
+
+fn mi_level_skip(
+    mi: &Gd<MeshInstance3D>,
+    scene: &Scene,
+    entity: SceneEntityId,
+) -> Option<SkipReason> {
+    if scene.tweens.contains_key(&entity) {
+        return Some(SkipReason::HasTween);
+    }
+    if scene
+        .gltf_node_modifier_states
+        .get(&entity)
+        .is_some_and(|state| !state.applied_paths.is_empty())
+    {
+        return Some(SkipReason::HasModifier);
+    }
+    if !mi.is_visible_in_tree() {
+        return Some(SkipReason::NotVisible);
+    }
+    if mi
+        .get_name()
+        .to_string()
+        .to_lowercase()
+        .contains("collider")
+    {
+        return Some(SkipReason::ColliderName);
+    }
+    let mut current: Option<Gd<Node>> = Some(mi.clone().upcast());
+    while let Some(node) = current {
+        if node.clone().try_cast::<Skeleton3D>().is_ok() {
+            return Some(SkipReason::SkeletonAncestor);
+        }
+        if node.clone().try_cast::<AnimationPlayer>().is_ok() {
+            return Some(SkipReason::AnimationPlayerAncestor);
+        }
+        if node.clone().try_cast::<DclAvatar>().is_ok() {
+            return Some(SkipReason::AvatarAncestor);
+        }
+        current = node.get_parent();
+    }
+    None
+}
+
+fn classify_material(material: Option<Gd<godot::classes::Material>>) -> Classification {
+    let Some(material) = material else {
+        return Classification::Skip(SkipReason::NoMaterial);
+    };
+    if material.clone().try_cast::<ShaderMaterial>().is_ok() {
+        return Classification::Skip(SkipReason::ShaderMaterial);
+    }
+    let Ok(base) = material.try_cast::<BaseMaterial3D>() else {
+        return Classification::Skip(SkipReason::NoMaterial);
+    };
+    let hard_unsupported = [
+        Feature::REFRACTION,
+        Feature::SUBSURFACE_SCATTERING,
+        Feature::DETAIL,
+        Feature::ANISOTROPY,
+        Feature::CLEARCOAT,
+        Feature::BACKLIGHT,
+        Feature::HEIGHT_MAPPING,
+    ];
+    for feature in hard_unsupported {
+        if base.get_feature(feature) {
+            return Classification::Skip(SkipReason::UnsupportedFeature);
+        }
+    }
+    if base.get_diffuse_mode() != DiffuseMode::BURLEY {
+        return Classification::Skip(SkipReason::UnsupportedFeature);
+    }
+    if base.get_specular_mode() != SpecularMode::SCHLICK_GGX {
+        return Classification::Skip(SkipReason::UnsupportedFeature);
+    }
+    if base.get_flag(Flags::ALBEDO_FROM_VERTEX_COLOR) {
+        return Classification::Skip(SkipReason::UnsupportedFeature);
+    }
+    let transparency = base.get_transparency().ord();
+    if transparency != 0 && transparency != 2 {
+        return Classification::Skip(SkipReason::UnsupportedTransparency);
+    }
+    let albedo_texture = base.get_texture(TextureParam::ALBEDO);
+    let params = LayerParams {
+        albedo_factor: base.get_albedo(),
+        metallic: base.get_metallic(),
+        roughness: base.get_roughness(),
+        emissive_intensity: if base.get_feature(Feature::EMISSION) {
+            base.get_emission_energy_multiplier()
+        } else {
+            0.0
+        },
+        alpha_cutoff: if transparency == 2 {
+            base.get_alpha_scissor_threshold()
+        } else {
+            0.5
+        },
+    };
+    Classification::Mergeable {
+        albedo_texture,
+        params,
+        transparency,
+        cull_mode: base.get_cull_mode().ord(),
+    }
+}
+
 pub fn classify(mi: &Gd<MeshInstance3D>, scene: &Scene, entity: SceneEntityId) -> Classification {
     if scene.tweens.contains_key(&entity) {
         return Classification::Skip(SkipReason::HasTween);

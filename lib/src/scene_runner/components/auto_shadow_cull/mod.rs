@@ -108,7 +108,11 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
         return;
     };
 
-    let Some(gltf_container) = node_3d.try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>("GltfContainer") else {
+    let Some(gltf_container) = node_3d
+        .try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>(
+            "GltfContainer",
+        )
+    else {
         return;
     };
 
@@ -159,10 +163,8 @@ fn classify(mi: &Gd<MeshInstance3D>) -> Classification {
     };
 
     let aabb = mesh.get_aabb();
-    let diag = (aabb.size.x * aabb.size.x
-        + aabb.size.y * aabb.size.y
-        + aabb.size.z * aabb.size.z)
-        .sqrt();
+    let diag =
+        (aabb.size.x * aabb.size.x + aabb.size.y * aabb.size.y + aabb.size.z * aabb.size.z).sqrt();
 
     if diag >= MIN_SHADOW_DIAG_M {
         return Classification::Skip(SkipReason::LargeEnough);

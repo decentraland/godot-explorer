@@ -187,6 +187,34 @@ impl DclGltfRenderManager {
             if !mesh_rid.is_valid() {
                 continue;
             }
+            // Skinned meshes don't fit MultiMesh — MultiMesh has no per-instance
+            // bones channel. Detection by recursive has_skeleton_or_anim above
+            // misses meshes whose Skeleton3D sibling lives outside the immediate
+            // subtree (or doesn't exist but the surface still carries
+            // ARRAY_FORMAT_BONES + WEIGHTS). Without this skip the renderer
+            // would try to fetch bones from a non-existent skeleton and fire
+            // "Bones array must be a PackedInt32Array" once per frame.
+            if mi.get_skin().is_some() {
+                continue;
+            }
+            // Detect skinned surfaces by checking if the BONES slot (ArrayType
+            // index 10) has data. surface_get_format isn't exposed in gdext,
+            // and a Mesh with bones-in-format always populates that slot in
+            // the arrays returned by surface_get_arrays.
+            let mut has_skinned_surface = false;
+            for i in 0..mesh.get_surface_count() {
+                let arrays = mesh.surface_get_arrays(i);
+                if arrays.len() > godot::classes::mesh::ArrayType::BONES.ord() as usize {
+                    let bones_v = arrays.at(godot::classes::mesh::ArrayType::BONES.ord() as usize);
+                    if bones_v.get_type() != godot::builtin::VariantType::NIL {
+                        has_skinned_surface = true;
+                        break;
+                    }
+                }
+            }
+            if has_skinned_surface {
+                continue;
+            }
             // surface_override_material → keep legacy. MultiMesh has no
             // per-instance override slot.
             let override_count = mi.get_surface_override_material_count();

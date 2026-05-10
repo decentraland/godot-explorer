@@ -43,6 +43,12 @@ struct GlobalAtlas {
     /// SAME baked `ArrayMesh` handle, which is what Godot needs to keep
     /// auto-instancing those MIs into a single draw call.
     baked_cache: std::collections::HashMap<(i64, u32), Gd<godot::classes::ArrayMesh>>,
+    /// Cache: `(source_mesh_rid, layer_vec)` → combined-surface mesh. Multi-
+    /// surface MIs collapse their N surfaces into a single surface, with each
+    /// source surface's atlas layer baked into CUSTOM0 per-vertex. The key
+    /// includes the layer vector because two MIs with identical source mesh
+    /// but distinct material→layer fan-outs would produce different bakes.
+    combined_cache: std::collections::HashMap<(i64, Vec<u32>), Gd<godot::classes::ArrayMesh>>,
 }
 
 // Gd<T> is !Send, so a static Mutex won't compile. The scene runner update
@@ -67,6 +73,7 @@ fn with_global<R>(f: impl FnOnce(&mut GlobalAtlas) -> R) -> Option<R> {
                 atlas,
                 shader_material: sm,
                 baked_cache: std::collections::HashMap::new(),
+                combined_cache: std::collections::HashMap::new(),
             });
         }
         let g = borrow.as_mut()?;
@@ -142,70 +149,89 @@ fn process_entity(scene: &mut Scene, entity: &SceneEntityId) {
     collect_mesh_instances(&gltf_root, &mut mesh_instances);
 
     for mut mi in mesh_instances {
-        let classification = classifier::classify(&mi, scene, *entity);
-        scene.material_atlas.stats.record(&classification);
-        metrics::record_global(&classification);
+        let per_surface = classifier::classify_per_surface(&mi, scene, *entity);
+        // Stats/metrics: walk every classification. Single-element vecs from
+        // mi_level_skip get counted once; multi-element vecs (one per surface)
+        // count per surface.
+        for c in &per_surface {
+            scene.material_atlas.stats.record(c);
+            metrics::record_global(c);
+        }
 
-        if let Classification::Mergeable {
-            albedo_texture,
-            params,
-            transparency: _,
-            cull_mode: _,
-        } = classification
-        {
-            let alloc = with_global(|g| g.atlas.allocate_layer(albedo_texture, params));
-            let layer = match alloc.flatten() {
-                Some(l) => l,
-                None => {
-                    metrics::record_atlas_full();
-                    continue;
+        // Combine path: every surface must be mergeable to collapse them into
+        // one draw call. If any surface isn't, keep the MI intact (legacy
+        // path also bailed on multi-surface meshes via SkipReason::MultiSurface,
+        // so this is no worse for those cases and strictly better for the
+        // all-mergeable case which was previously rejected outright).
+        let mut layers: Vec<u32> = Vec::with_capacity(per_surface.len());
+        let mut all_mergeable = !per_surface.is_empty();
+        for c in &per_surface {
+            match c {
+                Classification::Mergeable {
+                    albedo_texture,
+                    params,
+                    ..
+                } => {
+                    let alloc =
+                        with_global(|g| g.atlas.allocate_layer(albedo_texture.clone(), *params));
+                    match alloc.flatten() {
+                        Some(l) => {
+                            metrics::record_layer_alloc();
+                            layers.push(l);
+                        }
+                        None => {
+                            metrics::record_atlas_full();
+                            all_mergeable = false;
+                            break;
+                        }
+                    }
                 }
-            };
-            metrics::record_layer_alloc();
-
-            // The Texture2DArray RID never changes after `MaterialAtlas::new()` —
-            // per-layer updates happen via `RenderingServer::texture_2d_update`.
-            // We only need to bump the `layer_count` clamp uniform.
-            let shared_material = with_global(|g| {
-                g.shader_material.set_shader_parameter(
-                    "layer_count",
-                    &(g.atlas.layer_count as i32).to_variant(),
-                );
-                g.shader_material.clone()
-            });
-
-            let Some(source_mesh) = mi.get_mesh() else {
-                continue;
-            };
-            let source_rid = source_mesh.get_rid().to_u64() as i64;
-
-            // Cache hit: another MI already baked this (mesh, layer) pair —
-            // reuse the baked clone so all consumers share one mesh_rid.
-            // Cache miss: bake once and stash.
-            let baked = with_global(|g| {
-                if let Some(existing) = g.baked_cache.get(&(source_rid, layer)) {
-                    return Some(existing.clone());
+                Classification::Skip(_) => {
+                    all_mergeable = false;
+                    break;
                 }
-                let baked = vertex_baker::bake_layer_into_custom0(&source_mesh, layer)?;
-                g.baked_cache.insert((source_rid, layer), baked.clone());
-                Some(baked)
-            })
-            .flatten();
-
-            let Some(baked_mesh) = baked else {
-                continue;
-            };
-
-            if let Some(shared_material) = shared_material {
-                mi.set_mesh(&baked_mesh.upcast::<godot::classes::Mesh>());
-                mi.set_surface_override_material(
-                    0,
-                    &shared_material.upcast::<godot::classes::Material>(),
-                );
-                metrics::record_mi_replace();
-                scene.material_atlas.mis_replaced =
-                    scene.material_atlas.mis_replaced.saturating_add(1);
             }
+        }
+        if !all_mergeable {
+            continue;
+        }
+
+        // Bump layer_count uniform now that we've allocated more layers.
+        let shared_material = with_global(|g| {
+            g.shader_material
+                .set_shader_parameter("layer_count", &(g.atlas.layer_count as i32).to_variant());
+            g.shader_material.clone()
+        });
+
+        let Some(source_mesh) = mi.get_mesh() else {
+            continue;
+        };
+        let source_rid = source_mesh.get_rid().to_u64() as i64;
+        // Cache key includes the layer assignment so two MIs with the same
+        // source mesh but distinct layer fan-outs don't collide.
+        let cache_key: Vec<u32> = layers.clone();
+        let baked = with_global(|g| {
+            if let Some(existing) = g.combined_cache.get(&(source_rid, cache_key.clone())) {
+                return Some(existing.clone());
+            }
+            let combined = vertex_baker::bake_combined_surfaces(&source_mesh, &cache_key)?;
+            g.combined_cache
+                .insert((source_rid, cache_key), combined.clone());
+            Some(combined)
+        })
+        .flatten();
+        let Some(combined_mesh) = baked else {
+            continue;
+        };
+
+        if let Some(shared_material) = shared_material {
+            mi.set_mesh(&combined_mesh.upcast::<godot::classes::Mesh>());
+            mi.set_surface_override_material(
+                0,
+                &shared_material.upcast::<godot::classes::Material>(),
+            );
+            metrics::record_mi_replace();
+            scene.material_atlas.mis_replaced = scene.material_atlas.mis_replaced.saturating_add(1);
         }
     }
 }
