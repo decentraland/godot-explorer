@@ -50,6 +50,7 @@ func _ready():
 
 
 func start():
+	avatar_preview.fit_avatar = false
 	async_update_avatar(0)
 
 	# Visual enhance
@@ -97,6 +98,7 @@ func ensure_base_dir_exists(path: String) -> void:
 
 
 func _async_on_avatar_avatar_loaded():
+	avatar_preview.fit_avatar = false
 	var profile := profiles_to_process.profiles[current_profile_index]
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 

@@ -152,7 +152,7 @@ func focus_camera_on(type):
 
 
 func _min_camera_size() -> float:
-	return MIN_CAMERA_SIZE_OVERALL if _camera_focus == "overall" else MIN_CAMERA_SIZE_PART
+	return MIN_CAMERA_SIZE_PART
 
 
 func _focus_padding() -> float:
@@ -245,13 +245,13 @@ func _input(event: InputEvent):
 
 
 func _pan_limits() -> Vector2:
-	var focus_aabb: AABB = _cached_aabbs.get(
-		_camera_focus, _cached_aabbs.get("overall", AABB(Vector3.ZERO, Vector3.ONE * 2.0))
+	var bounds_aabb: AABB = _cached_aabbs.get(
+		"overall", _cached_aabbs.get("body_base", AABB(Vector3.ZERO, Vector3.ONE * 2.0))
 	)
 	var av_xform: Transform3D = avatar.global_transform
-	var aabb_bottom: float = (av_xform * Vector3(0.0, focus_aabb.position.y, 0.0)).y
+	var aabb_bottom: float = (av_xform * Vector3(0.0, bounds_aabb.position.y, 0.0)).y
 	var aabb_top: float = (
-		(av_xform * Vector3(0.0, focus_aabb.position.y + focus_aabb.size.y, 0.0)).y
+		(av_xform * Vector3(0.0, bounds_aabb.position.y + bounds_aabb.size.y, 0.0)).y
 	)
 	var cam_size: float = _target_camera_size
 	var vp_h: float = size.y
@@ -607,7 +607,10 @@ func _update_fit_limits(aabb: AABB, extra_margin: int = 0) -> void:
 	var inner_w: float = maxf(
 		1.0, vp_w - preview_margin_left - preview_margin_right - extra_margin * 2
 	)
-	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
+	var limit_aabb: AABB = _cached_aabbs.get("body_base", aabb)
+	var cam_size: float = maxf(
+		limit_aabb.size.y * vp_h / inner_h, limit_aabb.size.x * vp_h / inner_w
+	)
 	_fitted_camera_size = maxf(cam_size, MIN_CAMERA_SIZE_PART)
 	_fitted_aabb_center_y = _focus_aabb_center_y(aabb)
 

@@ -2,8 +2,19 @@
 
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="1_dtjd5"]
 [ext_resource type="Script" uid="uid://cajm3jjqosrt1" path="res://src/ui/components/backpack/avatar_preview.gd" id="1_sayag"]
+[ext_resource type="Texture2D" uid="uid://yuamaj3mie7a" path="res://src/ui/components/backpack/avatar_preview_background.png" id="2_iil8f"]
 [ext_resource type="PackedScene" uid="uid://0ccix5xpw76a" path="res://assets/ui/backpack/platform_compressed.glb" id="3_i62gc"]
 [ext_resource type="PackedScene" uid="uid://qyi7gcf7tphy" path="res://src/logic/player/outline_system.tscn" id="4_outline"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_thynx"]
+shading_mode = 0
+albedo_color = Color(0.6, 0.6, 0.6, 1)
+albedo_texture = ExtResource("2_iil8f")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_k6gax"]
+material = SubResource("StandardMaterial3D_thynx")
+size = Vector2(6, 6)
+orientation = 0
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6yihh"]
 sky_top_color = Color(1, 1, 1, 1)
@@ -37,6 +48,10 @@ transparent_bg = true
 handle_input_locally = false
 size = Vector2i(256, 500)
 render_target_update_mode = 4
+
+[node name="Background" type="MeshInstance3D" parent="SubViewport" unique_id=1696951051]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 1.5648232e-07, 0.9758246, 3.579898)
+mesh = SubResource("PlaneMesh_k6gax")
 
 [node name="Avatar" parent="SubViewport" unique_id=644824029 instance=ExtResource("1_dtjd5")]
 unique_name_in_owner = true

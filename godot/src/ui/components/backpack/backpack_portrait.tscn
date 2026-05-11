@@ -138,7 +138,6 @@ hide_name = true
 preview_margin_bottom = 30
 top_node_margin = NodePath("../../../VBoxContainer/PanelContainer_Navbar")
 bottom_node_margin = NodePath("../../../VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer")
-show_aabb_debug = true
 fit_avatar = false
 
 [node name="AvatarVFX" type="TextureRect" parent="VBoxContainer2/Control" unique_id=1182366062]
