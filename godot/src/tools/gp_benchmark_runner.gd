@@ -42,6 +42,9 @@ var _visibility_grid_stats: Dictionary = {}
 var _vg_toggled_on_total: int = 0
 var _vg_toggled_off_total: int = 0
 var _vg_last_cells_visible: int = 0
+# Captured at loading_complete; surfaced in JSON as `load_seconds`.
+var _load_seconds: float = 0.0
+var _waiting_for_load_started_ms: int = 0
 
 
 func _ready() -> void:
@@ -80,7 +83,14 @@ func _on_loading_complete(session_id: int) -> void:
 	if session_id < 0:
 		return
 	loading_complete_seen = true
-	_log("scene_runner.loading_complete session=%d" % session_id)
+	if _waiting_for_load_started_ms > 0:
+		_load_seconds = (Time.get_ticks_msec() - _waiting_for_load_started_ms) / 1000.0
+	_log(
+		(
+			"scene_runner.loading_complete session=%d load_seconds=%.2f"
+			% [session_id, _load_seconds]
+		)
+	)
 
 
 func _process(_delta: float) -> void:
@@ -89,6 +99,7 @@ func _process(_delta: float) -> void:
 			var current = get_tree().current_scene
 			if current != null and current.scene_file_path == EXPLORER_SCENE:
 				_apply_toggles()
+				_waiting_for_load_started_ms = Time.get_ticks_msec()
 				_set_phase("waiting_for_load")
 		"waiting_for_load":
 			if loading_complete_seen:
@@ -264,6 +275,7 @@ func _collect_sample() -> Dictionary:
 		"video_mem_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
 		"texture_mem_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
 		"buffer_mem_mb": Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0,
+		"process_rss_mb": _read_process_rss_mb(),
 		"object_count": Performance.get_monitor(Performance.OBJECT_COUNT),
 		"resource_count": Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT),
 		"node_count": Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
@@ -456,6 +468,7 @@ func _finish() -> void:
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
+		"load_seconds": _load_seconds,
 		"build_mode": "debug" if OS.is_debug_build() else "release",
 		"platform": OS.get_name(),
 		"summary": _summarize(samples),
@@ -587,12 +600,15 @@ func _summarize(s: Array) -> Dictionary:
 		"fps",
 		"frame_time_process_ms",
 		"frame_time_physics_ms",
+		"render_cpu_ms",
+		"render_gpu_ms",
 		"memory_static_mb",
 		"memory_rss_mb",
 		"memory_peak_mb",
 		"video_mem_mb",
 		"texture_mem_mb",
 		"buffer_mem_mb",
+		"process_rss_mb",
 		"resource_count",
 		"render_objects_in_frame",
 		"physics_active_objects",
@@ -1211,3 +1227,27 @@ func _run_visibility_grid_update() -> void:
 	_vg_toggled_on_total += int(r.get("toggled_on", 0))
 	_vg_toggled_off_total += int(r.get("toggled_off", 0))
 	_vg_last_cells_visible = int(r.get("cells_visible", 0))
+
+
+## Real process RSS via /proc/self/status — Android. Godot's MEMORY_STATIC tracks
+## the C++ heap only; on Android we also have JNI/Java/native allocations that
+## live outside it. This reads VmRSS (resident set size, kB) so the bench
+## captures the full process footprint, not just Godot's view.
+func _read_process_rss_mb() -> float:
+	if not OS.has_feature("linux") and not OS.has_feature("android"):
+		return 0.0
+	var f := FileAccess.open("/proc/self/status", FileAccess.READ)
+	if f == null:
+		return 0.0
+	while not f.eof_reached():
+		var line: String = f.get_line()
+		if line.begins_with("VmRSS:"):
+			f.close()
+			# Format: "VmRSS:    1234567 kB"
+			var parts: PackedStringArray = line.split(" ", false)
+			for i in range(parts.size()):
+				if parts[i].is_valid_int():
+					return float(parts[i].to_int()) / 1024.0
+			return 0.0
+	f.close()
+	return 0.0
