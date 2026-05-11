@@ -63,7 +63,7 @@ pub fn bake_shadow_mesh(source: &Gd<ArrayMesh>) -> Option<ShadowBakeResult> {
 
         source_index_total = source_index_total.saturating_add(src_indices.len() as u64);
 
-        let triangle_count = (src_indices.len() as usize) / 3;
+        let triangle_count = src_indices.len() / 3;
         let kept = triangle_count.div_ceil(STRIDE);
         let mut decimated = PackedInt32Array::new();
         for t in 0..kept {
@@ -76,7 +76,7 @@ pub fn bake_shadow_mesh(source: &Gd<ArrayMesh>) -> Option<ShadowBakeResult> {
             decimated.push(src_indices.get(base + 1).unwrap_or(0));
             decimated.push(src_indices.get(base + 2).unwrap_or(0));
         }
-        if decimated.len() < 3 || decimated.len() % 3 != 0 {
+        if decimated.len() < 3 || !decimated.len().is_multiple_of(3) {
             continue;
         }
 
