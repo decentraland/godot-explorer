@@ -170,7 +170,7 @@ unique_name_in_owner = true
 layout_mode = 1
 metadata/_edit_lock_ = true
 
-[node name="SceneUIContainer" type="MarginContainer" parent="UI" unique_id=1950684600]
+[node name="SceneUIContainer" type="Control" parent="UI" unique_id=1950684600]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -179,9 +179,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("5_c8ksg")
-use_top = false
-use_bottom = false
 
 [node name="SafeMarginContainerHUD" type="MarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
