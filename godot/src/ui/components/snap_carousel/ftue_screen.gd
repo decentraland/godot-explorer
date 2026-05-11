@@ -71,7 +71,7 @@ func _on_button_jump_in_pressed() -> void:
 		. metrics
 		. track_click_button(
 			"JUMP_IN",
-			"FTUE",
+			"DISCOVER_FTUE",
 			JSON.stringify({"place_id": place.get("id", ""), "position": index}),
 		)
 	)
@@ -80,7 +80,7 @@ func _on_button_jump_in_pressed() -> void:
 
 
 func _on_button_skip_pressed() -> void:
-	Global.metrics.track_click_button("SKIP", "FTUE", "")
+	Global.metrics.track_click_button("SKIP", "DISCOVER_FTUE", "")
 	ftue_completed.emit()
 
 
@@ -97,4 +97,6 @@ func _track_screen_view() -> void:
 	var carousel_items = []
 	for i in _places.size():
 		carousel_items.append({"position": i, "place_id": _places[i].get("id", "")})
-	Global.metrics.track_screen_viewed("FTUE", JSON.stringify({"carousel": carousel_items}))
+	Global.metrics.track_screen_viewed(
+		"DISCOVER_FTUE", JSON.stringify({"carousel": carousel_items})
+	)
