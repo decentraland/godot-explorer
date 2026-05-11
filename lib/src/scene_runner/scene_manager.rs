@@ -2058,8 +2058,7 @@ impl INode for SceneManager {
     // nodes, so they would visibly trail the camera by up to one physics
     // tick if this only ran in physics_process.
     fn process(&mut self, _delta: f64) {
-        let Some(current_camera_node) =
-            self.base().get_viewport().and_then(|x| x.get_camera_3d())
+        let Some(current_camera_node) = self.base().get_viewport().and_then(|x| x.get_camera_3d())
         else {
             return;
         };
