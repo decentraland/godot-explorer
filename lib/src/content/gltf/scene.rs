@@ -2,8 +2,8 @@
 
 use godot::{
     classes::{
-        node::ProcessMode, CollisionShape3D, ConcavePolygonShape3D, MeshInstance3D, Node, Node3D,
-        StaticBody3D,
+        geometry_instance_3d::ShadowCastingSetting, node::ProcessMode, ArrayMesh, CollisionShape3D,
+        ConcavePolygonShape3D, Mesh, MeshInstance3D, Node, Node3D, StaticBody3D,
     },
     meta::ToGodot,
     obj::Gd,
@@ -15,6 +15,8 @@ use super::super::{
     scene_saver::{get_scene_path_for_hash, save_node_as_scene},
 };
 use super::common::{count_nodes, load_gltf_pipeline};
+use crate::godot_classes::dcl_global::DclGlobal;
+use crate::scene_runner::components::mesh_lod::lod_baker::bake_shadow_mesh;
 
 /// Load and save a scene GLTF to disk.
 ///
@@ -43,6 +45,16 @@ pub async fn load_and_save_scene_gltf(
             // Create colliders (with mask=0 initially - will be set by gltf_container.gd after loading)
             let root_node = node.clone();
             create_scene_colliders(node.clone().upcast(), root_node.clone());
+
+            if shadow_mesh_enabled() {
+                let (paired, fallback) = apply_shadow_mesh(&root_node);
+                tracing::info!(
+                    "[shadow-mesh] {}: paired={} fallback={}",
+                    hash,
+                    paired,
+                    fallback
+                );
+            }
 
             // Save the processed scene to disk (in the same cache folder as other content)
             let scene_path = get_scene_path_for_hash(&ctx.content_folder, hash);
@@ -156,6 +168,87 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
         }
 
         create_scene_colliders(child, root_node.clone());
+    }
+}
+
+fn shadow_mesh_enabled() -> bool {
+    DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().shadow_mesh_enabled)
+        .unwrap_or(false)
+}
+
+/// Per `Node3D` parent in a scene GLTF, pair each visible `MeshInstance3D`
+/// with its sibling `*collider*` MI's mesh resource as the visible mesh's
+/// `ArrayMesh.shadow_mesh`. Falls back to a stride-decimated bake when a
+/// visible MI has no collider sibling.
+///
+/// The renderer rasterizes `shadow_mesh` (a cheaper substitute) into the
+/// directional shadow map during the shadow pass while keeping the
+/// full-detail source for the visible pass. Collider MIs themselves stay
+/// `visible=false` for physics-only use.
+///
+/// Returns `(paired_count, fallback_baked_count)` for logging.
+///
+/// Skipped:
+/// - meshes with blend shapes (morph-target shadows need the full mesh)
+/// - collider MIs that have no visible sibling (e.g. trigger-only GLBs)
+pub(super) fn apply_shadow_mesh(root_node: &Gd<Node3D>) -> (u32, u32) {
+    let mut paired = 0u32;
+    let mut fallback = 0u32;
+    apply_shadow_mesh_recursive(&root_node.clone().upcast(), &mut paired, &mut fallback);
+    (paired, fallback)
+}
+
+fn apply_shadow_mesh_recursive(node: &Gd<Node>, paired: &mut u32, fallback: &mut u32) {
+    let mut visible_mis: Vec<Gd<MeshInstance3D>> = Vec::new();
+    let mut collider_mesh: Option<Gd<Mesh>> = None;
+    for child in node.get_children().iter_shared() {
+        if let Ok(mi) = child.clone().try_cast::<MeshInstance3D>() {
+            let is_collider = mi
+                .get_name()
+                .to_string()
+                .to_lowercase()
+                .contains("collider");
+            if is_collider {
+                if collider_mesh.is_none() {
+                    collider_mesh = mi.get_mesh();
+                }
+            } else {
+                visible_mis.push(mi);
+            }
+        }
+    }
+
+    for mut mi in visible_mis {
+        let Some(mesh) = mi.get_mesh() else { continue };
+        let Ok(am) = mesh.try_cast::<ArrayMesh>() else {
+            continue;
+        };
+        if am.get_blend_shape_count() > 0 {
+            continue;
+        }
+        let mut am_mut = am.clone();
+
+        if let Some(coll_mesh) = collider_mesh.clone() {
+            if let Ok(coll_am) = coll_mesh.try_cast::<ArrayMesh>() {
+                am_mut.set_shadow_mesh(&coll_am);
+                // Defensive: a previous legacy proxy pass may have flipped
+                // this off. apply_shadow_mesh always casts shadow from the
+                // visible MI (via the shadow_mesh slot).
+                mi.set_cast_shadows_setting(ShadowCastingSetting::ON);
+                *paired += 1;
+                continue;
+            }
+        }
+        if let Some(result) = bake_shadow_mesh(&am) {
+            am_mut.set_shadow_mesh(&result.mesh);
+            mi.set_cast_shadows_setting(ShadowCastingSetting::ON);
+            *fallback += 1;
+        }
+    }
+
+    for child in node.get_children().iter_shared() {
+        apply_shadow_mesh_recursive(&child, paired, fallback);
     }
 }
 

@@ -107,6 +107,14 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
 
+    /// Paired shadow_mesh import-time pass. Default ON; opt out with
+    /// `--no-shadow-mesh` CLI flag or `shadow-mesh=false` deeplink param.
+    /// When on, scene GLTFs get `apply_shadow_mesh` applied at import,
+    /// wiring sibling collider meshes into each visible MI's
+    /// `ArrayMesh.shadow_mesh` slot.
+    #[var]
+    pub shadow_mesh_enabled: bool,
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -421,6 +429,12 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            ArgDefinition {
+                name: "--no-shadow-mesh".to_string(),
+                description: "Opt out of the paired shadow_mesh import-time pass (sibling-collider → ArrayMesh.shadow_mesh). Default: pass is ON".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
             // Authentication
             ArgDefinition {
                 name: "--saved-profile".to_string(),
@@ -626,6 +640,7 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
+        let shadow_mesh_enabled = !args_map.contains_key("--no-shadow-mesh");
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -741,6 +756,7 @@ impl INode for DclCli {
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
+            shadow_mesh_enabled,
             asset_server_port,
             realm,
             location,
