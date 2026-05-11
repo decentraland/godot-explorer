@@ -160,11 +160,13 @@ pub struct DclCli {
     #[var]
     pub cheap_pbr_enabled: bool,
 
-    // shadow_mesh: assign a decimated proxy ArrayMesh as the source
-    // mesh's `shadow_mesh` so the shadow pass rasterizes far fewer
-    // primitives without changing draw count. Off by default while
-    // we stabilize the bake path against DCL's compressed-attribute
-    // GLTFs.
+    // shadow_mesh: assign a per-GLTF collider's mesh (or a
+    // stride-decimated bake when no collider is paired) as the visible
+    // mesh's `ArrayMesh.shadow_mesh`. The renderer rasterizes the
+    // simpler geometry into the shadow map; visible pass unchanged.
+    // Default ON — also restores the GP zeppelin animation that the
+    // old SHADOWS_ONLY+cull_front shadow-proxy path was breaking.
+    // Opt out with `--no-shadow-mesh`.
     #[var]
     pub shadow_mesh_enabled: bool,
 
@@ -564,8 +566,8 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
-                name: "--shadow-mesh".to_string(),
-                description: "Assign a decimated proxy ArrayMesh to mesh_lod outputs as `shadow_mesh` so shadow pass rasterizes fewer prims. Default OFF (experimental)".to_string(),
+                name: "--no-shadow-mesh".to_string(),
+                description: "Disable shadow_mesh assignment (collider-paired or stride-decimated). Default OFF (shadow_mesh is enabled by default).".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Performance".to_string(),
             },
@@ -790,7 +792,11 @@ impl INode for DclCli {
         let asset_preproc_enabled = args_map.contains_key("--asset-preproc");
         let auto_shadow_cull_enabled = args_map.contains_key("--auto-shadow-cull");
         let cheap_pbr_enabled = args_map.contains_key("--cheap-pbr");
-        let shadow_mesh_enabled = args_map.contains_key("--shadow-mesh");
+        // shadow_mesh is enabled by default — proven safe on A54 and
+        // fixes the GP zeppelin animation regression caused by the old
+        // SHADOWS_ONLY+cull_front shadow-proxy path. `--no-shadow-mesh`
+        // is kept as an explicit opt-out for diagnosis.
+        let shadow_mesh_enabled = !args_map.contains_key("--no-shadow-mesh");
         let skip_gltf_load = args_map.contains_key("--skip-gltf");
         let kill_sky = args_map.contains_key("--kill-sky");
         let inspect_scene_title = args_map
