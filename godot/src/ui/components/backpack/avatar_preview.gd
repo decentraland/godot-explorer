@@ -187,12 +187,12 @@ func _input(event: InputEvent):
 	if not can_move:
 		return
 
-	var irect: Rect2 = get_global_rect()
+	var iinner: Rect2 = _inner_rect()
 
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				if not irect.has_point(event.position):
+				if not iinner.has_point(event.position):
 					return
 				dirty_is_dragging = true
 				start_dragging_position = get_global_mouse_position()
@@ -201,7 +201,7 @@ func _input(event: InputEvent):
 			else:
 				dirty_is_dragging = false
 
-		if not event.pressed and can_drag and irect.has_point(event.position):
+		if not event.pressed and can_drag and iinner.has_point(event.position):
 			var dir: float = 0.0
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				dir = -0.2
@@ -220,6 +220,8 @@ func _input(event: InputEvent):
 
 	if event is InputEventScreenTouch:
 		if event.pressed:
+			if not iinner.has_point(event.position):
+				return
 			_touch_points[event.index] = event.position
 			if _touch_points.size() == 2 and can_drag:
 				dirty_is_dragging = false
@@ -575,6 +577,16 @@ func _compute_avatar_aabbs() -> Dictionary:
 	for key in results:
 		results[key] = _symmetrize_aabb_x(results[key])
 	return results
+
+
+func _inner_rect() -> Rect2:
+	var r: Rect2 = get_global_rect()
+	var mt: float = _effective_margin_top()
+	var mb: float = _effective_margin_bottom()
+	return Rect2(
+		r.position + Vector2(float(preview_margin_left), mt),
+		r.size - Vector2(float(preview_margin_left + preview_margin_right), mt + mb)
+	)
 
 
 func _effective_margin_top() -> float:
