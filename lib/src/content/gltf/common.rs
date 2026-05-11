@@ -75,14 +75,13 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compr
     }
 }
 
-/// Mutate every `BaseMaterial3D` in a freshly-parsed `GltfState` to use
-/// `SHADING_MODE_PER_VERTEX`. Called between `append_from_file_ex` and
-/// `generate_scene`, while the materials are parsed from the file but not
-/// yet bound to any MeshInstance3D nor registered with the renderer's
-/// shader cache — so the *first* shader variant Godot compiles is the
-/// vertex-lighting flavour, with no recompile, no batching invalidation,
-/// and one MaterialKey for all of them. `ShaderMaterial` and other
-/// non-`BaseMaterial3D` materials are left untouched.
+/// Flip every `BaseMaterial3D` to `SHADING_MODE_PER_VERTEX`. Runs between
+/// `append_from_file_ex` and `generate_scene`, before the materials are
+/// bound to mesh instances or registered with the renderer's shader_map,
+/// so the first shader variant compiled is the vertex-lighting one —
+/// no recompile, no batching invalidation, single MaterialKey for the
+/// batch. Pairs with `apply_pre_generate_mesh_simplification` (lod-chain
+/// sibling PR), which lives in the same pre-generate window.
 pub(super) fn apply_pre_generate_material_overrides(state: &mut Gd<GltfState>) {
     let materials = state.get_materials();
     for i in 0..materials.len() {
@@ -348,17 +347,14 @@ where
             .generate_scene(&new_gltf_state)
             .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
 
-        // Post-process textures (compress if on mobile or force_compress is set)
         let max_size = ctx.texture_quality.to_max_size();
         post_import_process(node.clone(), max_size, ctx.force_compress);
 
-        // Cast to Node3D and rotate
         let mut node = node
             .try_cast::<Node3D>()
             .map_err(|err| anyhow::Error::msg(format!("Error casting to Node3D: {err}")))?;
         node.rotate_y(std::f32::consts::PI);
 
-        // Call the type-specific processor
         processor(node, &file_hash, &ctx)?
     };
     // All Godot objects are now dropped, safe to await
