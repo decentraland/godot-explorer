@@ -61,6 +61,7 @@ var touch_index: int = -1
 var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
 var _joystick_visible := false
+var _is_navbar_open := false
 
 @onready var _sprint_timer := %SprintTimer
 
@@ -87,6 +88,7 @@ func _ready() -> void:
 
 	Global.loading_started.connect(_on_loading_scene)
 	Global.camera_mode_set.connect(_on_camera_mode_set)
+	Global.camera_mode_block_changed.connect(_on_camera_mode_block_changed)
 	var connect_explorer_signals := func():
 		Global.get_explorer().navbar.navbar_opened.connect(_on_navbar_opened)
 		Global.get_explorer().navbar.navbar_closed.connect(_on_navbar_closed)
@@ -99,24 +101,41 @@ func _on_loading_scene() -> void:
 
 
 func _on_navbar_opened() -> void:
-	_button_camera.hide()
+	_is_navbar_open = true
+	_refresh_camera_button_visibility()
 
 
 func _on_navbar_closed() -> void:
-	if Global.current_camera_mode != Global.CameraMode.CINEMATIC:
-		_button_camera.show()
+	_is_navbar_open = false
+	_refresh_camera_button_visibility()
 
 
-func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
-	prints(camera_mode, Global.CameraMode.CINEMATIC, camera_mode != Global.CameraMode.CINEMATIC)
-	_button_camera.visible = camera_mode != Global.CameraMode.CINEMATIC
+func _on_camera_mode_set(_camera_mode: Global.CameraMode) -> void:
+	_refresh_camera_button_visibility()
+
+
+func _on_camera_mode_block_changed(_blocked: bool) -> void:
+	_refresh_camera_button_visibility()
+
+
+func _refresh_camera_button_visibility() -> void:
+	var should_show := (
+		not _is_navbar_open
+		and Global.current_camera_mode != Global.CameraMode.CINEMATIC
+		and not Global.camera_mode_blocked
+	)
+	_button_camera.visible = should_show
 
 
 func _on_input(event: InputEvent) -> void:
 	if Global.is_mobile():
 		if event is InputEventScreenTouch:
 			if event.pressed:
-				if _is_point_inside_joystick_area(event.position) and touch_index == -1:
+				if (
+					_is_point_inside_joystick_area(event.position)
+					and touch_index == -1
+					and not _is_hud_ui_at_position(event.position)
+				):
 					if (
 						joystick_mode == JoystickMode.DYNAMIC
 						or (
@@ -302,6 +321,16 @@ func _is_scene_ui_at_position(touch_position: Vector2) -> bool:
 	return _check_children_for_pointer_control(base_ui, touch_position)
 
 
+func _is_hud_ui_at_position(touch_position: Vector2) -> bool:
+	var explorer = Global.get_explorer()
+	if not is_instance_valid(explorer):
+		return false
+	var chat_panel = explorer.chat_panel
+	if is_instance_valid(chat_panel):
+		return chat_panel.is_interactive_area_at(touch_position)
+	return false
+
+
 func _check_children_for_pointer_control(node: Node, touch_position: Vector2) -> bool:
 	for child in node.get_children():
 		if child is Control and child.visible and child.mouse_filter == Control.MOUSE_FILTER_STOP:
@@ -314,6 +343,8 @@ func _check_children_for_pointer_control(node: Node, touch_position: Vector2) ->
 
 
 func _on_button_camera_pressed() -> void:
+	if Global.camera_mode_blocked:
+		return
 	const CAMERA_MODE_1P = preload("res://assets/ui/camera_mode_1p.svg")
 	const CAMERA_MODE_3P = preload("res://assets/ui/camera_mode_3p.svg")
 	match Global.player_camera_node.get_camera_mode():

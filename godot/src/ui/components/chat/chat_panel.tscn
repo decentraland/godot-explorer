@@ -1,0 +1,64 @@
+[gd_scene format=3 uid="uid://bviu1proryfux"]
+
+[ext_resource type="Script" uid="uid://choybu7exwhau" path="res://src/ui/components/chat/chat_panel.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://dfi5ql6ogtlxc" path="res://src/ui/components/chatbar/chatbar.tscn" id="3_chatbar"]
+[ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="5_chat"]
+[ext_resource type="PackedScene" uid="uid://bkjdjy0wlvltq" path="res://src/ui/components/chat/notifications.tscn" id="6_notif"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_safe"]
+
+[node name="ChatPanel" type="MarginContainer" unique_id=270087426]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "both"
+
+[node name="VBoxContainer_LeftSide" type="VBoxContainer" parent="." unique_id=136832159]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Chatbar" parent="VBoxContainer_LeftSide" unique_id=1646440645 instance=ExtResource("3_chatbar")]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 24
+
+[node name="Chat" parent="VBoxContainer_LeftSide" unique_id=602589676 instance=ExtResource("5_chat")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 1
+
+[node name="Notifications" parent="VBoxContainer_LeftSide" unique_id=1410228761 instance=ExtResource("6_notif")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(328, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Control_SafeBottomArea" type="PanelContainer" parent="VBoxContainer_LeftSide" unique_id=115199345]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_safe")
+
+[node name="VirtualKeyboardMargin" type="Control" parent="VBoxContainer_LeftSide" unique_id=127007126]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[connection signal="on_enter_write_mode" from="VBoxContainer_LeftSide/Chat" to="." method="_on_chat_enter_write_mode"]
+[connection signal="on_exit_chat" from="VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_on_exit_chat"]
+[connection signal="on_exit_write_mode" from="VBoxContainer_LeftSide/Chat" to="." method="_on_chat_exit_write_mode"]
+[connection signal="on_open_chat" from="VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_on_open_chat"]
+[connection signal="submit_message" from="VBoxContainer_LeftSide/Chat" to="." method="_on_panel_chat_submit_message"]
