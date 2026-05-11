@@ -1,3 +1,7 @@
+## Pins the three directional-shadow cost knobs tuned for A54-class
+## Mali-G68 mobile fragment work. If a future scene-level edit reverts
+## any of these to the Godot defaults the regression shows up here
+## instead of as a silent 3 ms render_gpu_ms regression on bench.
 extends Node
 
 const SKY_LIGHTS_PATH := "res://assets/environment/sky_lights.tscn"
