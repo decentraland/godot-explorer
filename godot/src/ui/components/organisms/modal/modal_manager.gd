@@ -362,6 +362,7 @@ func _async_create_modal() -> Modal:
 
 	# Wrap in a CanvasLayer with high layer to ensure modals render above all overlays
 	if _canvas_layer and is_instance_valid(_canvas_layer):
+		_canvas_layer.get_parent().remove_child(_canvas_layer)
 		_canvas_layer.queue_free()
 
 	_canvas_layer = CanvasLayer.new()
@@ -405,6 +406,7 @@ func _async_create_travel_modal() -> TravelModal:
 		return null
 
 	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
+		_travel_canvas_layer.get_parent().remove_child(_travel_canvas_layer)
 		_travel_canvas_layer.queue_free()
 
 	_travel_canvas_layer = CanvasLayer.new()
@@ -634,6 +636,9 @@ func _on_loading_finished_clear_suppress() -> void:
 
 func _remove_modal() -> void:
 	if current_modal:
+		_disconnect_button_signals()
+		if current_modal.tree_exited.is_connected(_on_modal_tree_exited):
+			current_modal.tree_exited.disconnect(_on_modal_tree_exited)
 		current_modal.queue_free()
 		current_modal = null
 	if _canvas_layer and is_instance_valid(_canvas_layer):
@@ -641,8 +646,20 @@ func _remove_modal() -> void:
 		_canvas_layer = null
 
 
+func _disconnect_travel_signals() -> void:
+	if not current_travel_modal:
+		return
+	for connection in current_travel_modal.closed.get_connections():
+		current_travel_modal.closed.disconnect(connection.callable)
+	for connection in current_travel_modal.jump_in_pressed.get_connections():
+		current_travel_modal.jump_in_pressed.disconnect(connection.callable)
+
+
 func _remove_travel_modal() -> void:
 	if current_travel_modal:
+		_disconnect_travel_signals()
+		if current_travel_modal.tree_exited.is_connected(_on_travel_modal_tree_exited):
+			current_travel_modal.tree_exited.disconnect(_on_travel_modal_tree_exited)
 		current_travel_modal.queue_free()
 		current_travel_modal = null
 	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
