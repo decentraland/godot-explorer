@@ -44,9 +44,12 @@ pub async fn load_audio(
     let bytes = PackedByteArray::from_vec(&bytes_vec);
     let audio_stream: Option<Gd<AudioStream>> = match extension.as_str() {
         ".wav" => {
-            let mut audio_stream = AudioStreamWav::new_gd();
-            audio_stream.set_data(&bytes);
-            Some(audio_stream.upcast())
+            // AudioStreamWav::set_data expects RAW PCM samples with the format
+            // properties (mix_rate / stereo / format) configured manually. To
+            // play a full RIFF/WAVE container we must parse it via
+            // load_from_buffer, which honors fmt/data chunks and sets the
+            // stream up correctly.
+            AudioStreamWav::load_from_buffer(&bytes).map(|value| value.upcast())
         }
         ".ogg" => AudioStreamOggVorbis::load_from_buffer(&bytes).map(|value| value.upcast()),
         ".mp3" => {

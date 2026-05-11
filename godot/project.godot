@@ -33,6 +33,10 @@ boot_splash/image="uid://de6dww6t0a7v"
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
 
+[audio]
+
+general/ios/session_category=3
+
 [autoload]
 
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
