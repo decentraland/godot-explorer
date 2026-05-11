@@ -31,6 +31,7 @@ const FeaturedDataProvider = preload(
 ## Snap animation duration in seconds
 @export var snap_duration: float = 0.25
 @export var auto_fetch: bool = false
+@export var fetch_tag: String = "featured"
 @export var auto_scroll: bool = false
 @export var auto_scroll_interval: float = 3.0
 
@@ -84,7 +85,7 @@ func _apply_mode() -> void:
 
 # gdlint: ignore=async-function-name
 func fetch() -> void:
-	var places = await FeaturedDataProvider.async_fetch_ftue_places()
+	var places = await FeaturedDataProvider.async_fetch_places(fetch_tag)
 	if not is_instance_valid(self) or places.is_empty():
 		return
 	set_items(places)
