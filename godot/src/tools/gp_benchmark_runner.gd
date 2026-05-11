@@ -37,6 +37,11 @@ var pinned_transform: Transform3D
 var pinned_camera_basis: Basis
 var pose_pinned: bool = false
 var _textureless_merge_done: bool = false
+var _visibility_grid: Node = null  # DclVisibilityGrid; untyped to dodge editor-cache parse fail on fresh checkout
+var _visibility_grid_stats: Dictionary = {}
+var _vg_toggled_on_total: int = 0
+var _vg_toggled_off_total: int = 0
+var _vg_last_cells_visible: int = 0
 
 
 func _ready() -> void:
@@ -94,9 +99,76 @@ func _process(_delta: float) -> void:
 				_apply_forced_graphic_profile()
 				# Bench: uncap FPS so measurements reflect the device's real
 				# ceiling, not a profile's FpsLimitMode (FPS_18 / FPS_30 / FPS_60).
+				# Also disable v-sync — Android forces it on by default at the
+				# display refresh rate (60–120 Hz), which still caps the bench
+				# below the real ceiling on fast frames.
 				if bool(config.get("uncap_fps", true)):
+					# DynamicGraphicsManager emits profile_change_requested
+					# during the bench and cascades into Engine.max_fps via
+					# GraphicSettings.apply_fps_limit. That overrides our
+					# uncap. Turn it off for the duration of the run.
+					if Global.dynamic_graphics_manager != null:
+						Global.dynamic_graphics_manager.set_enabled(false)
+						# `process_thermal_fps_cap` runs INDEPENDENTLY of state
+						# == Disabled — it's gated only by `thermal_fps_cap_enabled`.
+						# Without this, DG keeps emitting `thermal_fps_cap_changed(18)`
+						# and pegs Engine.max_fps via _on_thermal_fps_cap_changed.
+						Global.dynamic_graphics_manager.set_thermal_fps_cap_enabled(false)
+						_log(
+							(
+								"DG disabled + thermal_cap_enabled=false (cap was=%d)"
+								% Global.dynamic_graphics_manager.get_thermal_fps_cap()
+							)
+						)
+						GraphicSettings.apply_fps_limit_with_thermal_cap(
+							ConfigData.FpsLimitMode.NO_LIMIT, 0
+						)
 					Engine.max_fps = 0
-					_log("FPS cap removed (Engine.max_fps=0) for measurement")
+					DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+					OS.low_processor_usage_mode = false
+					# Disconnect both handlers that re-apply the cap when their
+					# signals fire. _on_config_param_changed reacts to
+					# limit_fps changes; _on_thermal_fps_cap_changed reacts to
+					# DG's thermal signal (which keeps firing even if DG state
+					# is Disabled, since process_thermal_fps_cap is gated by a
+					# different field).
+					if Global.get_config().param_changed.is_connected(
+						Global._on_config_param_changed
+					):
+						Global.get_config().param_changed.disconnect(
+							Global._on_config_param_changed
+						)
+						_log("param_changed → _on_config_param_changed disconnected")
+					if (
+						Global.dynamic_graphics_manager != null
+						and Global.dynamic_graphics_manager.thermal_fps_cap_changed.is_connected(
+							Global._on_thermal_fps_cap_changed
+						)
+					):
+						Global.dynamic_graphics_manager.thermal_fps_cap_changed.disconnect(
+							Global._on_thermal_fps_cap_changed
+						)
+						_log("thermal_fps_cap_changed → _on_thermal_fps_cap_changed disconnected")
+					_log(
+						(
+							"FPS cap state: max_fps=%d vsync_mode=%d low_proc=%s"
+							% [
+								Engine.max_fps,
+								DisplayServer.window_get_vsync_mode(),
+								str(OS.low_processor_usage_mode)
+							]
+						)
+					)
+					var fp_setting = ProjectSettings.get_setting(
+						"display/window/frame_pacing/android/enable_frame_pacing", true
+					)
+					_log("frame_pacing project setting = %s" % str(fp_setting))
+					RenderingServer.viewport_set_measure_render_time(
+						get_tree().root.get_viewport_rid(), true
+					)
+					_log("viewport measure_render_time enabled")
+					if bool(config.get("visibility_grid", false)):
+						_build_visibility_grid()
 				_set_phase("warmup")
 			elif _phase_elapsed_ms() >= LOAD_TIMEOUT_MS:
 				_log("WARN: loading_complete never fired in %d ms; aborting" % LOAD_TIMEOUT_MS)
@@ -107,14 +179,27 @@ func _process(_delta: float) -> void:
 			if not _textureless_merge_done and bool(config.get("textureless_merge", false)):
 				_apply_textureless_merge()
 				_textureless_merge_done = true
+			_run_visibility_grid_update()
 			if _phase_elapsed_ms() >= int(config.get("warmup_seconds", 30)) * 1000:
 				# Reset per-state CPU timing + CRDT throughput counters so the
 				# sampling-window numbers aren't polluted by load-time spikes.
 				Global.scene_runner.reset_state_timing()
 				Global.scene_runner.reset_crdt_metrics()
+				if Global.cli.get_skip_gltf_load():
+					_purge_existing_gltfs()
+				if Global.cli.get_kill_sky():
+					_purge_existing_skies()
 				_set_phase("sampling")
 		"sampling":
 			_enforce_pinned_pose()
+			# Silent per-frame uncap insurance. The cap on A54 is real GPU-time +
+			# vsync alignment at 120Hz (slots: 120/60/40/30/24) — these forces
+			# only ensure no software cap re-pins us; logging per-frame here
+			# tanks fps via Sentry breadcrumb queue.
+			Engine.max_fps = 0
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+			OS.low_processor_usage_mode = false
+			_run_visibility_grid_update()
 			samples.append(_collect_sample())
 			if _phase_elapsed_ms() >= int(config.get("sample_seconds", 30)) * 1000:
 				_finish()
@@ -124,6 +209,48 @@ func _collect_sample() -> Dictionary:
 	var viewport_rid: RID = get_tree().root.get_viewport_rid()
 	var render_cpu_ms: float = RenderingServer.viewport_get_measured_render_time_cpu(viewport_rid)
 	var render_gpu_ms: float = RenderingServer.viewport_get_measured_render_time_gpu(viewport_rid)
+
+	# Per-pass draw / objects / primitives split. Forward Mobile renderer
+	# tracks these separately for the SHADOW pass (cascaded directional
+	# shadow render), VISIBLE pass (main 3D forward — opaque + transparent
+	# combined; godot doesn't split further) and CANVAS pass (2D / UI on
+	# top). Combined with the gfx-* feature A/B (shadow=10ms, bloom=10ms,
+	# AA=8ms, skybox=8ms) this lets us infer cost-per-draw per pass.
+	var visible_draws: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
+	)
+	var visible_objects: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+		RenderingServer.VIEWPORT_RENDER_INFO_OBJECTS_IN_FRAME
+	)
+	var visible_prim: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+		RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME
+	)
+	var shadow_draws: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW,
+		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
+	)
+	var shadow_objects: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW,
+		RenderingServer.VIEWPORT_RENDER_INFO_OBJECTS_IN_FRAME
+	)
+	var shadow_prim: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW,
+		RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME
+	)
+	var canvas_draws: int = RenderingServer.viewport_get_render_info(
+		viewport_rid,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_CANVAS,
+		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
+	)
 	return {
 		"t_ms": _phase_elapsed_ms(),
 		"fps": Performance.get_monitor(Performance.TIME_FPS),
@@ -145,11 +272,23 @@ func _collect_sample() -> Dictionary:
 		"render_objects_in_frame":
 		Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
 		"primitives": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+		# Per-pass split: lets us see what fraction of draws/prims goes to
+		# the shadow render vs the main 3D pass vs UI canvas.
+		"visible_draws": visible_draws,
+		"visible_objects": visible_objects,
+		"visible_prim": visible_prim,
+		"shadow_draws": shadow_draws,
+		"shadow_objects": shadow_objects,
+		"shadow_prim": shadow_prim,
+		"canvas_draws": canvas_draws,
 		"physics_active_objects": Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS),
 		"physics_collision_pairs": Performance.get_monitor(Performance.PHYSICS_3D_COLLISION_PAIRS),
 		"physics_island_count": Performance.get_monitor(Performance.PHYSICS_3D_ISLAND_COUNT),
 		"loaded_scene_count":
 		Global.scene_fetcher.loaded_scenes.size() if Global.scene_fetcher != null else 0,
+		"engine_max_fps": Engine.max_fps,
+		"engine_physics_ticks": Engine.physics_ticks_per_second,
+		"vsync_mode": DisplayServer.window_get_vsync_mode(),
 	}
 
 
@@ -280,6 +419,16 @@ func _finish() -> void:
 	# Per-component-id breakdown of dirty entries on the Rust→V8 path.
 	# Identifies which SDK7 components dominate the round-trip pressure.
 	var crdt_component_breakdown: String = Global.scene_runner.drain_crdt_component_breakdown()
+	# Textureless mesh merger classifier stats (issue #1948). Empty when the
+	# flag is OFF — useful as a sanity check for `tm-rust-off` baseline runs.
+	var textureless_merger_stats: String = Global.scene_runner.drain_textureless_merger_stats()
+	var material_atlas_stats: String = Global.scene_runner.drain_material_atlas_stats()
+	var mesh_lod_stats: String = Global.scene_runner.drain_mesh_lod_stats()
+	var auto_distance_cull_stats: String = Global.scene_runner.drain_auto_distance_cull_stats()
+	var occluder_gen_stats: String = Global.scene_runner.drain_occluder_gen_stats()
+	var asset_preproc_stats: String = Global.scene_runner.drain_asset_preproc_stats()
+	var auto_shadow_cull_stats: String = Global.scene_runner.drain_auto_shadow_cull_stats()
+	var cheap_pbr_stats: String = Global.scene_runner.drain_cheap_pbr_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -289,6 +438,21 @@ func _finish() -> void:
 		"state_timing_us": state_timing,
 		"crdt_metrics": crdt_metrics,
 		"crdt_component_breakdown": crdt_component_breakdown,
+		"textureless_merger_stats": textureless_merger_stats,
+		"material_atlas_stats": material_atlas_stats,
+		"mesh_lod_stats": mesh_lod_stats,
+		"auto_distance_cull_stats": auto_distance_cull_stats,
+		"occluder_gen_stats": occluder_gen_stats,
+		"asset_preproc_stats": asset_preproc_stats,
+		"auto_shadow_cull_stats": auto_shadow_cull_stats,
+		"cheap_pbr_stats": cheap_pbr_stats,
+		"visibility_grid_stats": _visibility_grid_stats,
+		"visibility_grid_runtime":
+		{
+			"toggled_on_total": _vg_toggled_on_total,
+			"toggled_off_total": _vg_toggled_off_total,
+			"cells_visible_last": _vg_last_cells_visible,
+		},
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -616,20 +780,77 @@ func _apply_deeplink_overrides() -> void:
 		if idx >= 0 and idx <= 4:
 			config["force_graphic_profile"] = idx
 
+	# GDScript cell-based visibility culling (visibility_grid.gd). Stored in
+	# config and consumed at loading_complete to build the grid; the per-frame
+	# update runs in warmup/sampling.
+	var vg: String = params.get("visibility-grid", "")
+	if not vg.is_empty():
+		config["visibility_grid"] = vg.to_lower() in ["true", "1", "yes"]
+
 	var viewport_scale: String = params.get("viewport-scale-3d", "")
 	if not viewport_scale.is_empty() and viewport_scale.is_valid_float():
 		var s: float = viewport_scale.to_float()
 		if s > 0.1 and s <= 2.0:
 			config["viewport_scale_3d"] = s
 
-	# Phase 2.0: merge all textureless `BaseMaterial3D` MeshInstance3D's into
-	# one combined mesh per (cull_mode, alpha_mode) bucket. Source albedo_color
-	# is baked into vertex COLOR; the merged material uses
-	# vertex_color_use_as_albedo. Eligibility ignores skinned / animated /
-	# tween / modifier entities (same classifier as the merge profile).
+	# Rust merger. Sets DclCli.textureless_merge_enabled, which
+	# drives `update_textureless_merger` in lib/. Eligibility (skinned /
+	# animated / tween / modifier exclusion) is mirrored by the Rust
+	# classifier — see lib/src/scene_runner/components/textureless_merger/.
+	# The legacy GDScript prototype (`_apply_textureless_merge`) is kept for
+	# `textureless-merge-gd=true` only, so A/B against the prototype stays
+	# possible.
 	var tm: String = params.get("textureless-merge", "")
 	if not tm.is_empty():
-		config["textureless_merge"] = tm.to_lower() in ["true", "1", "yes"]
+		Global.cli.textureless_merge_enabled = tm.to_lower() in ["true", "1", "yes"]
+	var tm_gd: String = params.get("textureless-merge-gd", "")
+	if not tm_gd.is_empty():
+		config["textureless_merge"] = tm_gd.to_lower() in ["true", "1", "yes"]
+	var ma: String = params.get("material-atlas", "")
+	if not ma.is_empty():
+		Global.cli.material_atlas_enabled = ma.to_lower() in ["true", "1", "yes"]
+	var mlod: String = params.get("mesh-lod", "")
+	if not mlod.is_empty():
+		Global.cli.mesh_lod_enabled = mlod.to_lower() in ["true", "1", "yes"]
+	var adc: String = params.get("auto-distance-cull", "")
+	if not adc.is_empty():
+		Global.cli.auto_distance_cull_enabled = adc.to_lower() in ["true", "1", "yes"]
+	var ocg: String = params.get("occluder-gen", "")
+	if not ocg.is_empty():
+		Global.cli.occluder_gen_enabled = ocg.to_lower() in ["true", "1", "yes"]
+	var apr: String = params.get("asset-preproc", "")
+	if not apr.is_empty():
+		Global.cli.asset_preproc_enabled = apr.to_lower() in ["true", "1", "yes"]
+	var asc: String = params.get("auto-shadow-cull", "")
+	if not asc.is_empty():
+		Global.cli.auto_shadow_cull_enabled = asc.to_lower() in ["true", "1", "yes"]
+	var cpbr: String = params.get("cheap-pbr", "")
+	if not cpbr.is_empty():
+		Global.cli.cheap_pbr_enabled = cpbr.to_lower() in ["true", "1", "yes"]
+	var smesh: String = params.get("shadow-mesh", "")
+	if not smesh.is_empty():
+		Global.cli.shadow_mesh_enabled = smesh.to_lower() in ["true", "1", "yes"]
+	var skipg: String = params.get("skip-gltf", "")
+	if not skipg.is_empty():
+		Global.cli.set_skip_gltf_load(skipg.to_lower() in ["true", "1", "yes"])
+	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
+	# conservative); raising it picks lower-detail LODs sooner and is the
+	# whole point of the LOD bake on mobile. Stash here, apply at
+	# loading_complete so HardwareBenchmark + GraphicSettings can't clobber.
+	var mlod_thr: String = params.get("mesh-lod-threshold", "")
+	if not mlod_thr.is_empty() and mlod_thr.is_valid_float():
+		var thr: float = mlod_thr.to_float()
+		if thr >= 0.0 and thr <= 64.0:
+			config["mesh_lod_threshold"] = thr
+
+	# Pin skybox time of day so screenshots / textures are deterministic
+	# across runs. `fixed-skybox-time=true` clamps to ~3pm (DclGlobal sets
+	# `target_time = 0.625` in time.gd:53). Recommended for any A/B run
+	# whose conclusion involves comparing visuals or draw counts under
+	# different lighting.
+	var fst: String = params.get("fixed-skybox-time", "")
+	if not fst.is_empty():
+		Global.fixed_skybox_time = fst.to_lower() in ["true", "1", "yes"]
 
 	# Per-feature graphics overrides applied AFTER `force-graphic-profile` so
 	# we can isolate the GPU cost of one feature at a time. Each accepts an
@@ -640,6 +861,21 @@ func _apply_deeplink_overrides() -> void:
 		if not v.is_empty() and v.is_valid_int():
 			config[key] = v.to_int()
 
+	# Debug-draw mode override. Sets viewport.debug_draw at pose-pin so the
+	# bench screenshot captures a heatmap (overdraw / wireframe / lighting /
+	# unshaded etc.). Pure visual diagnostic — no perf change. Useful when
+	# proper GPU profiling tooling isn't available on the host platform.
+	#
+	# Accepted values map to Viewport.DebugDraw enum:
+	#   unshaded, lighting, overdraw, wireframe, normal-buffer,
+	#   shadow-atlas, directional-shadow-atlas, scene-luminance, ssao,
+	#   ssil, motion-vectors, gi-buffer, disable-lod, cluster-omni,
+	#   cluster-spot, cluster-decals, cluster-reflection-probes,
+	#   occluders, motion-vectors
+	var dd: String = params.get("debug-draw", "")
+	if not dd.is_empty():
+		config["debug_draw"] = dd.to_lower()
+
 
 ## Apply the deeplink-forced graphic profile, if any. Called at
 ## loading_complete so HardwareBenchmark's auto-pick has already run and
@@ -649,13 +885,24 @@ func _apply_forced_graphic_profile() -> void:
 	if idx_v != null:
 		var idx: int = idx_v
 		GraphicSettings.apply_graphic_profile(idx)
-		_log("forced graphic_profile=%d (post-load)" % idx)
+		# Override the profile's fps mode to NO_LIMIT so the bench measures
+		# the device's real ceiling. Without this, profile 0=FPS_18,
+		# 1/2=FPS_30, 3=FPS_60 silently cap the run via the
+		# `param_changed → apply_fps_limit → Engine.max_fps=N` path.
+		Global.get_config().limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+		_log("forced graphic_profile=%d, limit_fps=NO_LIMIT (post-load)" % idx)
 	var scale_v = config.get("viewport_scale_3d", null)
 	if scale_v != null:
 		var s: float = scale_v
 		var vp: Viewport = get_tree().root
 		vp.scaling_3d_scale = s
 		_log("viewport scaling_3d_scale=%.2f (post-load)" % s)
+	var mlod_thr_v = config.get("mesh_lod_threshold", null)
+	if mlod_thr_v != null:
+		var thr: float = mlod_thr_v
+		var vp2: Viewport = get_tree().root
+		vp2.mesh_lod_threshold = thr
+		_log("viewport mesh_lod_threshold=%.2f (post-load)" % thr)
 
 	# Per-feature graphics overrides — applied after the forced profile so
 	# we can A/B "Medium with feature X off" to isolate that feature's cost.
@@ -676,8 +923,50 @@ func _apply_forced_graphic_profile() -> void:
 		cfg.texture_quality = config["gfx-texture"]
 		_log("gfx-texture override = %d" % config["gfx-texture"])
 
+	# Debug-draw heatmap. Set last so it overrides any rendering-mode
+	# changes the graphic profile applied. Bench screenshot captures
+	# whatever debug-draw mode is active — useful for "where is fragment
+	# work happening" without a frame profiler.
+	var dd_v = config.get("debug_draw", "")
+	if not dd_v.is_empty():
+		var vp_dd: Viewport = get_tree().root
+		var mode := _resolve_debug_draw(dd_v)
+		if mode >= 0:
+			vp_dd.debug_draw = mode
+			_log("debug_draw override = %s (mode=%d)" % [dd_v, mode])
+		else:
+			_log("WARN: unknown debug-draw value '%s', leaving disabled" % dd_v)
 
-## Phase 2.0 prototype: merge textureless BaseMaterial3D MeshInstance3Ds.
+
+func _resolve_debug_draw(name: String) -> int:
+	# Map the deeplink string to the Viewport.DebugDraw enum value. The enum
+	# has many entries; we expose the most useful for diagnostics. Dict
+	# lookup instead of a long match to keep gdlint's max-returns happy.
+	var table: Dictionary = {
+		"unshaded": Viewport.DEBUG_DRAW_UNSHADED,
+		"lighting": Viewport.DEBUG_DRAW_LIGHTING,
+		"overdraw": Viewport.DEBUG_DRAW_OVERDRAW,
+		"wireframe": Viewport.DEBUG_DRAW_WIREFRAME,
+		"normal-buffer": Viewport.DEBUG_DRAW_NORMAL_BUFFER,
+		"shadow-atlas": Viewport.DEBUG_DRAW_SHADOW_ATLAS,
+		"directional-shadow-atlas": Viewport.DEBUG_DRAW_DIRECTIONAL_SHADOW_ATLAS,
+		"scene-luminance": Viewport.DEBUG_DRAW_SCENE_LUMINANCE,
+		"ssao": Viewport.DEBUG_DRAW_SSAO,
+		"ssil": Viewport.DEBUG_DRAW_SSIL,
+		"motion-vectors": Viewport.DEBUG_DRAW_MOTION_VECTORS,
+		"disable-lod": Viewport.DEBUG_DRAW_DISABLE_LOD,
+		"cluster-omni": Viewport.DEBUG_DRAW_CLUSTER_OMNI_LIGHTS,
+		"cluster-spot": Viewport.DEBUG_DRAW_CLUSTER_SPOT_LIGHTS,
+		"cluster-decals": Viewport.DEBUG_DRAW_CLUSTER_DECALS,
+		"cluster-reflection-probes": Viewport.DEBUG_DRAW_CLUSTER_REFLECTION_PROBES,
+		"occluders": Viewport.DEBUG_DRAW_OCCLUDERS,
+		"disabled": Viewport.DEBUG_DRAW_DISABLED,
+		"off": Viewport.DEBUG_DRAW_DISABLED,
+	}
+	return table.get(name, -1)
+
+
+## Prototype: merge textureless BaseMaterial3D MeshInstance3Ds.
 ##
 ## Walks the SceneTree, finds eligible meshes (no textures, classifier-pass),
 ## and combines them into one ArrayMesh per (cull_mode, transparency) bucket.
@@ -715,9 +1004,7 @@ func _apply_textureless_merge() -> void:
 		var origin: Vector3 = mi.global_transform.origin
 		var cx: int = int(floor(origin.x / cell_size))
 		var cz: int = int(floor(origin.z / cell_size))
-		var key := (
-			"transp=%d cull=%d cx=%d cz=%d" % [mat.transparency, int(mat.cull_mode), cx, cz]
-		)
+		var key := "transp=%d cull=%d cx=%d cz=%d" % [mat.transparency, int(mat.cull_mode), cx, cz]
 		if not groups.has(key):
 			groups[key] = {"st": SurfaceTool.new(), "count": 0}
 			(groups[key]["st"] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -750,21 +1037,23 @@ func _apply_textureless_merge() -> void:
 		inst.set_surface_override_material(0, merged_mat)
 		holder.add_child(inst)
 		merged_total += info["count"]
-		_log(
-			"textureless merge bucket [%s] sources=%d -> 1 mesh" % [key, int(info["count"])]
-		)
+		_log("textureless merge bucket [%s] sources=%d -> 1 mesh" % [key, int(info["count"])])
 	# Suppress originals AFTER merged spawn. queue_free races the scene_runner
-	# Rust thread holding references → SIGABRT. `visible = false` gets
-	# overwritten by DCL Visibility / GltfModifier cascades each frame. Set
-	# `layers = 0` (cull mask) which removes the instance from every viewport's
-	# render set without touching the tree or visibility — DCL components
-	# don't write to layers, so it sticks.
+	# Rust thread holding references → SIGABRT. visible/layers were tried in
+	# prior runs but draws didn't drop — either DCL re-applies them or the
+	# draw counter measures a stage that doesn't honor cull_mask. Detaching
+	# the mesh resource is the strongest stop: the MeshInstance3D node stays
+	# in the tree (no race), but with no Mesh there's nothing to draw.
 	for mi in sources_to_free:
+		mi.mesh = null
+		mi.visible = false
 		mi.layers = 0
 	var dt_ms := (Time.get_ticks_usec() - t0_us) / 1000.0
 	_log(
-		"textureless merge: %d sources -> %d merged meshes in %.1f ms"
-		% [merged_total, groups.size(), dt_ms]
+		(
+			"textureless merge: %d sources -> %d merged meshes in %.1f ms"
+			% [merged_total, groups.size(), dt_ms]
+		)
 	)
 
 
@@ -775,12 +1064,14 @@ func _is_textureless_mergeable(mi: MeshInstance3D) -> bool:
 		return false
 	var p: Node = mi.get_parent()
 	while p != null:
-		if p is AnimationPlayer or p is Skeleton3D:
-			return false
-		var c := p.get_class()
-		if c == "DclAvatar":
-			return false
-		if p.has_meta("dcl_has_tween") or p.has_meta("dcl_has_modifier"):
+		var bad_parent := (
+			p is AnimationPlayer
+			or p is Skeleton3D
+			or p.get_class() == "DclAvatar"
+			or p.has_meta("dcl_has_tween")
+			or p.has_meta("dcl_has_modifier")
+		)
+		if bad_parent:
 			return false
 		p = p.get_parent()
 	var mesh := mi.mesh
@@ -792,22 +1083,18 @@ func _is_textureless_mergeable(mi: MeshInstance3D) -> bool:
 	if mat == null or not (mat is BaseMaterial3D):
 		return false
 	var bm := mat as BaseMaterial3D
-	if bm.albedo_texture != null:
-		return false
-	if bm.normal_texture != null:
-		return false
-	if bm.emission_texture != null:
-		return false
-	if bm.orm_texture != null:
-		return false
-	return true
+	var has_any_texture := (
+		bm.albedo_texture != null
+		or bm.normal_texture != null
+		or bm.emission_texture != null
+		or bm.orm_texture != null
+	)
+	return not has_any_texture
 
 
 ## Append one source mesh's surface 0 vertices to a SurfaceTool, transformed
 ## to world-space and colored by the source material's albedo_color.
-func _append_mesh_to_surface(
-	st: SurfaceTool, mesh: Mesh, xform: Transform3D, color: Color
-) -> void:
+func _append_mesh_to_surface(st: SurfaceTool, mesh: Mesh, xform: Transform3D, color: Color) -> void:
 	var basis_inv_t := xform.basis.inverse().transposed()
 	for s in range(mesh.get_surface_count()):
 		var arrays := mesh.surface_get_arrays(s)
@@ -852,3 +1139,75 @@ func _phase_elapsed_ms() -> int:
 
 func _log(msg: String) -> void:
 	print("[GP Benchmark] %s" % msg)
+
+
+func _purge_existing_gltfs() -> void:
+	var stack: Array = [Global.get_tree().root]
+	var freed: int = 0
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n.is_class("DclGltfContainer"):
+			n.queue_free()
+			freed += 1
+			continue
+		for c in n.get_children():
+			stack.append(c)
+	_log("purged %d existing DclGltfContainer nodes" % freed)
+
+
+func _purge_existing_skies() -> void:
+	var stack: Array = [Global.get_tree().root]
+	var stomped: int = 0
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is WorldEnvironment and n.environment != null:
+			n.environment.background_mode = Environment.BG_COLOR
+			n.environment.background_color = Color.BLACK
+			n.environment.background_energy_multiplier = 0.0
+			n.environment.glow_enabled = false
+			stomped += 1
+		for c in n.get_children():
+			stack.append(c)
+	_log("purged %d WorldEnvironments to BG_COLOR" % stomped)
+
+
+## Build the visibility cell grid once after loading_complete. Walks the
+## scene tree (Rust scene_runner root), buckets static MeshInstance3Ds into
+## 16x16m cells, computes per-cell world AABBs. The per-frame update lives
+## in `_run_visibility_grid_update`.
+func _build_visibility_grid() -> void:
+	# Load by path instead of class_name so a stale editor script-class cache
+	# (e.g. editor started before visibility_grid.gd existed) can still parse
+	# this file. Once the cache rescan picks up the new class_name, this is
+	# functionally identical to `DclVisibilityGrid.new()`.
+	_visibility_grid = load("res://src/tools/visibility_grid.gd").new()
+	var t0 := Time.get_ticks_msec()
+	var scene_root: Node = Global.scene_runner if Global.scene_runner != null else get_tree().root
+	_visibility_grid_stats = _visibility_grid.build_from_scene_tree(scene_root)
+	_visibility_grid_stats["build_ms"] = Time.get_ticks_msec() - t0
+	_log(
+		(
+			"visibility_grid built in %dms: cells=%d/%d MIs=%d skipped[avatar=%d hud=%d animated=%d tween=%d modifier=%d oog=%d]"
+			% [
+				int(_visibility_grid_stats.get("build_ms", 0)),
+				int(_visibility_grid_stats.get("cells_with_content", 0)),
+				int(_visibility_grid_stats.get("cells_total", 0)),
+				int(_visibility_grid_stats.get("total_mis", 0)),
+				int(_visibility_grid_stats.get("skipped_avatar", 0)),
+				int(_visibility_grid_stats.get("skipped_hud", 0)),
+				int(_visibility_grid_stats.get("skipped_animated", 0)),
+				int(_visibility_grid_stats.get("skipped_tween", 0)),
+				int(_visibility_grid_stats.get("skipped_modifier", 0)),
+				int(_visibility_grid_stats.get("skipped_out_of_grid", 0)),
+			]
+		)
+	)
+
+
+func _run_visibility_grid_update() -> void:
+	if _visibility_grid == null or Global.player_camera_node == null:
+		return
+	var r: Dictionary = _visibility_grid.update_visibility(Global.player_camera_node)
+	_vg_toggled_on_total += int(r.get("toggled_on", 0))
+	_vg_toggled_off_total += int(r.get("toggled_off", 0))
+	_vg_last_cells_visible = int(r.get("cells_visible", 0))
