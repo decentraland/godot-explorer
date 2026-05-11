@@ -37,7 +37,7 @@ var pinned_transform: Transform3D
 var pinned_camera_basis: Basis
 var pose_pinned: bool = false
 var _textureless_merge_done: bool = false
-var _visibility_grid: DclVisibilityGrid = null
+var _visibility_grid: Node = null  # DclVisibilityGrid; untyped to dodge editor-cache parse fail on fresh checkout
 var _visibility_grid_stats: Dictionary = {}
 var _vg_toggled_on_total: int = 0
 var _vg_toggled_off_total: int = 0
@@ -1176,7 +1176,11 @@ func _purge_existing_skies() -> void:
 ## 16x16m cells, computes per-cell world AABBs. The per-frame update lives
 ## in `_run_visibility_grid_update`.
 func _build_visibility_grid() -> void:
-	_visibility_grid = DclVisibilityGrid.new()
+	# Load by path instead of class_name so a stale editor script-class cache
+	# (e.g. editor started before visibility_grid.gd existed) can still parse
+	# this file. Once the cache rescan picks up the new class_name, this is
+	# functionally identical to `DclVisibilityGrid.new()`.
+	_visibility_grid = load("res://src/tools/visibility_grid.gd").new()
 	var t0 := Time.get_ticks_msec()
 	var scene_root: Node = Global.scene_runner if Global.scene_runner != null else get_tree().root
 	_visibility_grid_stats = _visibility_grid.build_from_scene_tree(scene_root)
@@ -1203,7 +1207,7 @@ func _build_visibility_grid() -> void:
 func _run_visibility_grid_update() -> void:
 	if _visibility_grid == null or Global.player_camera_node == null:
 		return
-	var r := _visibility_grid.update_visibility(Global.player_camera_node)
+	var r: Dictionary = _visibility_grid.update_visibility(Global.player_camera_node)
 	_vg_toggled_on_total += int(r.get("toggled_on", 0))
 	_vg_toggled_off_total += int(r.get("toggled_off", 0))
 	_vg_last_cells_visible = int(r.get("cells_visible", 0))
