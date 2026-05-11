@@ -110,25 +110,46 @@ fn get_static_body_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<Sta
     None
 }
 
+/// Walk a subtree and report whether any MeshInstance3D in it has
+/// "collider" in its name. We use this to decide whether the shadow-proxy
+/// swap is safe for a given GLTF: scenes WITHOUT author-named collider
+/// meshes would lose all shadows otherwise (visible MIs flipped to
+/// cast_shadow=OFF with no proxy to replace them).
+fn tree_has_named_collider(node: &Gd<Node>) -> bool {
+    for child in node.get_children().iter_shared() {
+        if let Ok(mi) = child.clone().try_cast::<MeshInstance3D>() {
+            if mi.get_name().to_string().to_lowercase().contains("collider") {
+                return true;
+            }
+        }
+        if tree_has_named_collider(&child) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Create colliders for all mesh instances in a scene GLTF.
 /// Note: Colliders are created with mask=0 (disabled) and no scene_id/entity_id.
 /// The masks and metadata should be set by the caller after instantiating the scene.
 fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
-    // Shadow-proxy swap (gated by `cheap-pbr`): use the simplified collider
-    // mesh as the shadow caster instead of the high-poly visible mesh.
-    // - Colliders: stay in the scene tree, made visible=true, but cast_shadow=
-    //   SHADOW_ONLY so they only contribute depth to the shadow map and
-    //   never appear in the visible pass.
-    // - Visible meshes: cast_shadow=OFF so they don't double-shadow.
-    // The shadow pass renders ~10-100× fewer primitives (collider geometry
-    // is much simpler) AND its draw set is independent of visible-pass
-    // culling — vgrid can hide visible MIs without invalidating the shadow
-    // cascade setup. Same scene-loading flag enables it.
-    let shadow_proxy = DclGlobal::try_singleton()
+    let shadow_proxy_flag = DclGlobal::try_singleton()
         .map(|g| g.bind().cli.bind().cheap_pbr_enabled)
         .unwrap_or(false);
-    // Built lazily on first collider — many GLTFs don't have any.
-    let mut shadow_proxy_mat: Option<Gd<BaseMaterial3D>> = None;
+    // Shadow-proxy only safe to enable for THIS GLTF if at least one
+    // mesh in it is named `*collider*`. Otherwise the visible-mesh
+    // `cast_shadow = OFF` switch would have no replacement caster and
+    // the scene would lose all its shadows.
+    let shadow_proxy = shadow_proxy_flag && tree_has_named_collider(&node_to_inspect);
+    create_scene_colliders_inner(node_to_inspect, root_node, shadow_proxy, &mut None);
+}
+
+fn create_scene_colliders_inner(
+    node_to_inspect: Gd<Node>,
+    root_node: Gd<Node3D>,
+    shadow_proxy: bool,
+    shadow_proxy_mat: &mut Option<Gd<BaseMaterial3D>>,
+) {
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mut mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             let invisible_mesh = mesh_instance_3d
@@ -212,7 +233,7 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
             }
         }
 
-        create_scene_colliders(child, root_node.clone());
+        create_scene_colliders_inner(child, root_node.clone(), shadow_proxy, shadow_proxy_mat);
     }
 }
 

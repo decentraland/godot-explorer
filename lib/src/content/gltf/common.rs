@@ -79,27 +79,36 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compr
     }
 }
 
-/// Mesh simplification on the GLTFState's ImporterMesh array, run between
-/// `append_from_file_ex` and `generate_scene`. Doing the decimation here
-/// (rather than after generate_scene) lets Godot's `generate_scene` apply
-/// its post-import optimizations — vertex cache reorder
-/// (`optimize_vertex_cache`), vertex format compression, attribute
-/// packing — ON TOP of our simplified result. Post-generate decimation
-/// bypasses all of that.
+/// Per-surface LOD chain generation on the GLTFState's ImporterMesh
+/// array, run between `append_from_file_ex` and `generate_scene`. LOD0
+/// (full quality) is preserved — every additional level is added via the
+/// `lods` Dictionary slot on `add_surface`, keyed by screen-space error
+/// threshold. Godot's renderer picks a lower LOD when an instance's
+/// screen-space projection error exceeds the threshold (controlled by
+/// the viewport's `mesh_lod_threshold` in pixels).
 ///
-/// Each surface goes through `meshopt::simplify` with the `Permissive`
-/// flag, which allows the topology-preserving algorithm to collapse
-/// across attribute discontinuities (split UV/normal seams) — DCL GLTFs
-/// have many of those, and without `Permissive` the algorithm bails and
-/// returns nearly the input. Surfaces that still can't be usefully
-/// simplified (result ≥ 90% of source indices) are left untouched.
-fn apply_pre_generate_mesh_simplification(state: &mut Gd<GltfState>, target_ratio: f32) {
+/// LOD generation uses `meshopt::simplify` with `Permissive | Sparse`:
+/// vanilla simplify bails on DCL's user-authored GLBs (attribute
+/// discontinuities at every UV seam → nothing to collapse) and would
+/// return nearly the source. Permissive lifts that restriction.
+fn apply_pre_generate_mesh_simplification(state: &mut Gd<GltfState>, _target_ratio: f32) {
+    /// Ratios for additional LOD levels (LOD0 stays at full quality).
+    /// Screen-space error keys are picked roughly proportional to the
+    /// inverse of `1.0 / ratio`; the exact values matter less than their
+    /// ordering — Godot picks the highest LOD whose error <= viewport
+    /// `mesh_lod_threshold` at the instance's screen size.
+    const LOD_LEVELS: &[(f32, f32)] = &[
+        (0.5, 0.5),  // LOD1: half the indices, mid distance
+        (0.25, 1.5), // LOD2: quarter, far distance
+        (0.1, 3.0),  // LOD3: tenth, very far
+    ];
+
     let mut meshes = state.get_meshes();
     let n = meshes.len();
-    let mut surfaces_simplified = 0u32;
-    let mut surfaces_passthrough = 0u32;
-    let mut src_total: u64 = 0;
-    let mut kept_total: u64 = 0;
+    let mut surfaces_with_lods = 0u32;
+    let mut surfaces_no_lods = 0u32;
+    let mut src_idx_total: u64 = 0;
+    let mut lod_idx_total: u64 = 0;
     for mi in 0..n {
         let mut gltf_mesh = meshes.at(mi);
         let Some(mut importer) = gltf_mesh.get_mesh() else {
@@ -109,13 +118,24 @@ fn apply_pre_generate_mesh_simplification(state: &mut Gd<GltfState>, target_rati
         if surface_count == 0 {
             continue;
         }
-        // Snapshot the surfaces — we need to clear before re-adding since
-        // ImporterMesh doesn't expose per-surface index buffer mutation.
+        // Skip meshes with blend shapes (morph targets) — `add_surface`'s
+        // `blend_shapes` parameter takes the full per-shape vertex stream
+        // array, which we don't snapshot. Tweaking these meshes would
+        // drop the morph target data and break any animation that drives
+        // them (facial expressions, plant-sway micro-animations).
+        if importer.get_blend_shape_count() > 0 {
+            continue;
+        }
         struct Snapshot {
             primitive: PrimitiveType,
             arrays: VarArray,
             material: Option<Gd<godot::classes::Material>>,
             name: String,
+            flags: u64,
+            // Empty when no LODs can/should be generated for this surface;
+            // Godot then renders LOD0 (the unmodified arrays) at all
+            // distances, identical to the pre-cheap-pbr behavior.
+            lods: VarDictionary,
         }
         let mut snapshots: Vec<Snapshot> = Vec::with_capacity(surface_count as usize);
         for s in 0..surface_count {
@@ -124,78 +144,65 @@ fn apply_pre_generate_mesh_simplification(state: &mut Gd<GltfState>, target_rati
                 arrays: importer.get_surface_arrays(s),
                 material: importer.get_surface_material(s),
                 name: importer.get_surface_name(s).to_string(),
+                flags: importer.get_surface_format(s),
+                lods: VarDictionary::new(),
             });
         }
 
-        let mut any_change = false;
-        let mut new_snapshots: Vec<Snapshot> = Vec::with_capacity(snapshots.len());
-        for snap in snapshots {
-            let Snapshot {
-                primitive,
-                arrays,
-                material,
-                name,
-            } = snap;
-            if primitive != PrimitiveType::TRIANGLES {
-                new_snapshots.push(Snapshot {
-                    primitive,
-                    arrays,
-                    material,
-                    name,
-                });
-                surfaces_passthrough += 1;
+        let mut any_lod_built = false;
+        for snap in snapshots.iter_mut() {
+            if snap.primitive != PrimitiveType::TRIANGLES {
+                surfaces_no_lods += 1;
                 continue;
             }
-            let Ok(idx) = arrays
+            let Ok(idx) = snap
+                .arrays
                 .at(ArrayType::INDEX.ord() as usize)
                 .try_to::<PackedInt32Array>()
             else {
-                new_snapshots.push(Snapshot {
-                    primitive,
-                    arrays,
-                    material,
-                    name,
-                });
-                surfaces_passthrough += 1;
+                surfaces_no_lods += 1;
                 continue;
             };
-            if idx.len() < 6 {
-                src_total = src_total.saturating_add(idx.len() as u64);
-                kept_total = kept_total.saturating_add(idx.len() as u64);
-                new_snapshots.push(Snapshot {
-                    primitive,
-                    arrays,
-                    material,
-                    name,
-                });
-                surfaces_passthrough += 1;
+            // Below ~33 triangles (100 indices) the per-LOD overhead is
+            // bigger than the rendering win, and meshopt's quadric error
+            // metric becomes noisy on tiny meshes (sign of decoration
+            // props that should stay full-res).
+            if idx.len() < 100 {
+                surfaces_no_lods += 1;
                 continue;
             }
-            let Ok(verts) = arrays
+            let Ok(verts) = snap
+                .arrays
                 .at(ArrayType::VERTEX.ord() as usize)
                 .try_to::<PackedVector3Array>()
             else {
-                new_snapshots.push(Snapshot {
-                    primitive,
-                    arrays,
-                    material,
-                    name,
-                });
-                surfaces_passthrough += 1;
+                surfaces_no_lods += 1;
                 continue;
             };
             if verts.is_empty() {
-                new_snapshots.push(Snapshot {
-                    primitive,
-                    arrays,
-                    material,
-                    name,
-                });
-                surfaces_passthrough += 1;
+                surfaces_no_lods += 1;
                 continue;
             }
-            src_total = src_total.saturating_add(idx.len() as u64);
-
+            // Skinned surfaces (ARRAY_BONES non-null) deform under animation
+            // — a decimated LOD with collapsed vertices doesn't follow the
+            // bone-weighted transforms cleanly and visibly stretches or
+            // collapses during animation. Leave skinned meshes at LOD0.
+            let has_bones = snap
+                .arrays
+                .at(ArrayType::BONES.ord() as usize)
+                .try_to::<PackedInt32Array>()
+                .map(|a| !a.is_empty())
+                .unwrap_or(false)
+                || snap
+                    .arrays
+                    .at(ArrayType::BONES.ord() as usize)
+                    .try_to::<PackedFloat32Array>()
+                    .map(|a| !a.is_empty())
+                    .unwrap_or(false);
+            if has_bones {
+                surfaces_no_lods += 1;
+                continue;
+            }
             let indices_u32: Vec<u32> =
                 idx.as_slice().iter().map(|&i| i as u32).collect();
             let mut vbytes: Vec<u8> = Vec::with_capacity(verts.len() * 12);
@@ -205,99 +212,77 @@ fn apply_pre_generate_mesh_simplification(state: &mut Gd<GltfState>, target_rati
                 vbytes.extend_from_slice(&v.z.to_le_bytes());
             }
             let Ok(adapter) = VertexDataAdapter::new(&vbytes, 12, 0) else {
-                kept_total = kept_total.saturating_add(idx.len() as u64);
-                new_snapshots.push(Snapshot {
-                    primitive,
-                    arrays,
-                    material,
-                    name,
-                });
-                surfaces_passthrough += 1;
+                surfaces_no_lods += 1;
                 continue;
             };
 
-            let target_count = ((idx.len() as f32) * target_ratio).round() as usize;
-            let target_count = target_count - (target_count % 3);
-            if target_count < 3 || target_count >= idx.len() {
-                kept_total = kept_total.saturating_add(idx.len() as u64);
-                new_snapshots.push(Snapshot {
-                    primitive,
-                    arrays,
-                    material,
-                    name,
-                });
-                surfaces_passthrough += 1;
-                continue;
+            src_idx_total = src_idx_total.saturating_add(idx.len() as u64);
+            let mut surface_had_lod = false;
+            for &(ratio, sse_key) in LOD_LEVELS {
+                let target_count = ((idx.len() as f32) * ratio).round() as usize;
+                let target_count = target_count - (target_count % 3);
+                if target_count < 3 || target_count >= idx.len() {
+                    continue;
+                }
+                let lod_indices = simplify(
+                    &indices_u32,
+                    &adapter,
+                    target_count,
+                    0.02,
+                    SimplifyOptions::Permissive | SimplifyOptions::Sparse,
+                    None,
+                );
+                // Skip if meshopt couldn't get useful reduction at this
+                // level — too close to source, not worth a draw-state
+                // switch.
+                if lod_indices.is_empty()
+                    || lod_indices.len() as f32 / idx.len() as f32 > 0.9
+                    || lod_indices.len() % 3 != 0
+                {
+                    continue;
+                }
+                let mut packed = PackedInt32Array::new();
+                packed.resize(lod_indices.len());
+                let slc = packed.as_mut_slice();
+                for (k, &i) in lod_indices.iter().enumerate() {
+                    slc[k] = i as i32;
+                }
+                snap.lods.insert(sse_key.to_variant(), packed.to_variant());
+                lod_idx_total = lod_idx_total.saturating_add(lod_indices.len() as u64);
+                surface_had_lod = true;
             }
-
-            let simplified = simplify(
-                &indices_u32,
-                &adapter,
-                target_count,
-                0.02,
-                SimplifyOptions::Permissive | SimplifyOptions::Sparse,
-                None,
-            );
-            if simplified.is_empty()
-                || simplified.len() as f32 / idx.len() as f32 > 0.9
-                || simplified.len() % 3 != 0
-            {
-                kept_total = kept_total.saturating_add(idx.len() as u64);
-                new_snapshots.push(Snapshot {
-                    primitive,
-                    arrays,
-                    material,
-                    name,
-                });
-                surfaces_passthrough += 1;
-                continue;
+            if surface_had_lod {
+                surfaces_with_lods += 1;
+                any_lod_built = true;
+            } else {
+                surfaces_no_lods += 1;
             }
-
-            // Build new arrays preserving all other attribute slots (UVs,
-            // normals, tangents, colors, weights, …) — only INDEX changes.
-            let mut new_arrays = arrays.clone();
-            let mut new_idx = PackedInt32Array::new();
-            new_idx.resize(simplified.len());
-            let slc = new_idx.as_mut_slice();
-            for (k, &i) in simplified.iter().enumerate() {
-                slc[k] = i as i32;
-            }
-            new_arrays.set(ArrayType::INDEX.ord() as usize, &new_idx.to_variant());
-            kept_total = kept_total.saturating_add(simplified.len() as u64);
-            surfaces_simplified += 1;
-            any_change = true;
-            new_snapshots.push(Snapshot {
-                primitive,
-                arrays: new_arrays,
-                material,
-                name,
-            });
         }
-        if !any_change {
+        if !any_lod_built {
             continue;
         }
         // Clear and re-add. `add_surface` rebuilds the internal vertex
-        // buffer and bookkeeping for each surface — what Godot would
-        // have done on the original mesh anyway.
+        // buffer and bookkeeping for each surface; LOD0 stays the source
+        // arrays, additional LODs come in via `lods()`.
         importer.clear();
-        for snap in new_snapshots {
+        for snap in snapshots {
             let name_gs = GString::from(snap.name.as_str());
             importer
                 .add_surface_ex(snap.primitive, &snap.arrays)
                 .name(&name_gs)
                 .material(snap.material.as_ref())
+                .lods(&snap.lods)
+                .flags(snap.flags)
                 .done();
         }
     }
-    if src_total > 0 {
-        let ratio = (kept_total as f64) / (src_total as f64) * 100.0;
+    if src_idx_total > 0 {
         godot::global::godot_print!(
-            "[mesh-simplify] surfaces simplified={} pass={} src_idx={} kept_idx={} ({:.1}%)",
-            surfaces_simplified,
-            surfaces_passthrough,
-            src_total,
-            kept_total,
-            ratio
+            "[mesh-lod-chain] surfaces with_lods={} no_lods={} src_idx={} lod_idx={}",
+            surfaces_with_lods,
+            surfaces_no_lods,
+            src_idx_total,
+            lod_idx_total,
         );
     }
 }
