@@ -282,7 +282,7 @@ mod lod_chain_tests {
     #[godot::test::itest]
     fn lod_chain_preserves_per_surface_flags(_ctx: &TestContext) {
         let arrays = make_grid_arrays(11, 11);
-        let flag = ArrayFormat::FLAG_USE_DYNAMIC_UPDATE.ord() as u64;
+        let flag = ArrayFormat::FLAG_USE_DYNAMIC_UPDATE.ord();
         let mut importer = ImporterMesh::new_gd();
         importer
             .add_surface_ex(PrimitiveType::TRIANGLES, &arrays)
@@ -293,7 +293,7 @@ mod lod_chain_tests {
 
         apply_pre_generate_mesh_simplification(&mut state, 0.5);
 
-        let mut importer = first_importer(&mut state);
+        let importer = first_importer(&mut state);
         let post = importer.get_surface_format(0);
         assert!(
             (post & flag) == flag,

@@ -107,6 +107,13 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
 
+    // Gates the import-time LOD-chain pre-generate hook (uses cheap-pbr's
+    // flag as the gate). Default OFF on this branch; flipped via the
+    // `cheap-pbr=true` deeplink param. Read at GLTF load time from Rust.
+    #[var]
+    pub cheap_pbr_enabled: bool,
+
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -741,6 +748,7 @@ impl INode for DclCli {
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
+            cheap_pbr_enabled: false,
             asset_server_port,
             realm,
             location,
