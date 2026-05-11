@@ -11,7 +11,7 @@ var _generator_statuses: Dictionary = {}
 
 @onready var friends_online: VBoxContainer = %FriendsOnline
 @onready var last_visited: VBoxContainer = %LastVisited
-@onready var places_featured: VBoxContainer = %PlacesFeatured
+@onready var places_featured: Control = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
 @onready var places_favorites: VBoxContainer = %PlacesFavorites
@@ -58,9 +58,6 @@ func _ready():
 	)
 	last_visited.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(last_visited)
-	)
-	places_featured.generator.report_loading_status.connect(
-		_on_report_loading_status.bind(places_featured)
 	)
 	places_most_active.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_most_active)
@@ -337,14 +334,7 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, contain
 
 func _get_active_carousels() -> Array:
 	if search_text.is_empty():
-		return [
-			friends_online,
-			last_visited,
-			places_featured,
-			places_most_active,
-			events,
-			places_favorites
-		]
+		return [friends_online, last_visited, places_most_active, events, places_favorites]
 	return [places_most_active, events]
 
 
@@ -428,7 +418,6 @@ func _update_global_messages() -> void:
 func _collect_carousel_data() -> Dictionary:
 	var result := {}
 	var carousel_map := {
-		"featured": places_featured,
 		"most_active": places_most_active,
 		"events": events,
 		"last_visited": last_visited,
@@ -454,6 +443,28 @@ func _collect_carousel_data() -> Dictionary:
 				idx += 1
 		if not items.is_empty():
 			result[key] = items
+
+	# Collect featured SnapCarousel data
+	if places_featured.visible and places_featured.get_card_count() > 0:
+		var featured_items := []
+		var cards = places_featured.get_cards()
+		for i in cards.size():
+			var card = cards[i]
+			if card.has_method("get_place_data"):
+				var data: Dictionary = card.get_place_data()
+				(
+					featured_items
+					. append(
+						{
+							"id": data.get("id", ""),
+							"type": "world" if PlacesHelper.is_world(data) else "scene",
+							"position": i,
+						}
+					)
+				)
+		if not featured_items.is_empty():
+			result["featured"] = featured_items
+
 	return result
 
 

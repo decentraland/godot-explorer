@@ -47,6 +47,10 @@ func _ready() -> void:
 
 
 func _connect_signals() -> void:
+	if Global.modal_manager == null:
+		# modal_manager not ready yet; retry next frame
+		_connect_signals.call_deferred()
+		return
 	Global.modal_manager.connection_lost_retry.connect(_on_retry)
 	Global.modal_manager.connection_lost_exit.connect(_on_exit)
 
