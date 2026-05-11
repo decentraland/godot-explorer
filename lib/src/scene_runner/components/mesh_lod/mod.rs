@@ -8,7 +8,7 @@
 //! Godot's auto-instancing).
 
 mod classifier;
-mod lod_baker;
+pub mod lod_baker;
 mod metrics;
 mod state;
 

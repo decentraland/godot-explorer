@@ -203,8 +203,7 @@ fn apply_pre_generate_mesh_simplification(state: &mut Gd<GltfState>, _target_rat
                 surfaces_no_lods += 1;
                 continue;
             }
-            let indices_u32: Vec<u32> =
-                idx.as_slice().iter().map(|&i| i as u32).collect();
+            let indices_u32: Vec<u32> = idx.as_slice().iter().map(|&i| i as u32).collect();
             let mut vbytes: Vec<u8> = Vec::with_capacity(verts.len() * 12);
             for v in verts.as_slice() {
                 vbytes.extend_from_slice(&v.x.to_le_bytes());
