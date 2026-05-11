@@ -106,21 +106,18 @@ pub(super) fn apply_pre_generate_mesh_simplification(
     state: &mut Gd<GltfState>,
     _target_ratio: f32,
 ) {
-    const LOD_LEVELS: &[(f32, f32)] = &[
-        (0.5, 0.5),  // LOD1: ~50% indices, near distance
-        (0.25, 1.5), // LOD2: ~25%, mid distance
-        (0.1, 3.0),  // LOD3: ~10%, far distance
-    ];
+    // (target index ratio, SSE key in pixels).
+    const LOD_LEVELS: &[(f32, f32)] = &[(0.5, 0.5), (0.25, 1.5), (0.1, 3.0)];
     const MIN_INDICES_FOR_LOD: usize = 100;
+    const MAX_KEPT_RATIO: f32 = 0.9;
 
     let meshes = state.get_meshes();
-    let mesh_count = meshes.len();
     let mut surfaces_with_lods = 0u32;
     let mut surfaces_no_lods = 0u32;
     let mut src_idx_total: u64 = 0;
     let mut lod_idx_total: u64 = 0;
 
-    for mi in 0..mesh_count {
+    for mi in 0..meshes.len() {
         let mut gltf_mesh = meshes.at(mi);
         let Some(mut importer) = gltf_mesh.get_mesh() else {
             continue;
@@ -230,7 +227,7 @@ pub(super) fn apply_pre_generate_mesh_simplification(
                     None,
                 );
                 if lod_indices.is_empty()
-                    || lod_indices.len() as f32 / idx.len() as f32 > 0.9
+                    || lod_indices.len() as f32 / idx.len() as f32 > MAX_KEPT_RATIO
                     || !lod_indices.len().is_multiple_of(3)
                 {
                     continue;
