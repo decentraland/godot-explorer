@@ -5,14 +5,16 @@ use std::sync::Arc;
 use godot::{
     builtin::GString,
     classes::{
-        base_material_3d::TextureParam, BaseMaterial3D, GltfDocument, GltfState, ImageTexture,
-        MeshInstance3D, Node, Node3D,
+        base_material_3d::{ShadingMode, TextureParam},
+        BaseMaterial3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D,
     },
     global::Error,
     meta::ToGodot,
     obj::Gd,
     prelude::*,
 };
+
+use crate::godot_classes::dcl_global::DclGlobal;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::sync::Semaphore;
 
@@ -71,6 +73,27 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compr
         }
 
         post_import_process(child, max_size, force_compress);
+    }
+}
+
+/// Mutate materials in `GLTFState` after `append_from_file_ex` but before
+/// `generate_scene`. At this point the BaseMaterial3D resources are parsed
+/// from the GLTF file but not yet bound to any scene node or rendered, so
+/// changing MaterialKey-affecting properties (shading_mode, diffuse_mode)
+/// does not trigger a shader variant recompile — the very first variant
+/// compiled by the renderer will be the one we want.
+fn apply_pre_generate_material_overrides(state: &mut Gd<GltfState>) {
+    let materials = state.get_materials();
+    for i in 0..materials.len() {
+        let mat = materials.at(i);
+        let Ok(mut base) = mat.try_cast::<BaseMaterial3D>() else {
+            continue;
+        };
+        // Per-vertex lighting: cuts fragment ALU drastically on Mali, the
+        // visual hit on opaque flat surfaces (DCL plaza walls) is small.
+        // Setting it here keeps every material on a SINGLE MaterialKey
+        // entry — they're all PER_VERTEX from the start, no fragmentation.
+        base.set_shading_mode(ShadingMode::PER_VERTEX);
     }
 }
 
@@ -315,6 +338,21 @@ where
 
         if err != Error::OK {
             return Err(anyhow::Error::msg(format!("Error loading gltf: {:?}", err)));
+        }
+
+        // Pre-generate hook: GLTFState now contains the BaseMaterial3D
+        // resources parsed from the file but the scene tree has NOT been
+        // generated yet. Materials are not bound to any MeshInstance3D,
+        // not registered with the renderer's shader_map. This is the
+        // right place to mutate the material's MaterialKey-affecting
+        // properties (shading_mode, diffuse_mode, etc) so that the FIRST
+        // shader variant compiled is the desired one — no recompile, no
+        // batching invalidation, no Mali driver lockup.
+        if DclGlobal::try_singleton()
+            .map(|g| g.bind().cli.bind().cheap_pbr_enabled)
+            .unwrap_or(false)
+        {
+            apply_pre_generate_material_overrides(&mut new_gltf_state);
         }
 
         let node = new_gltf

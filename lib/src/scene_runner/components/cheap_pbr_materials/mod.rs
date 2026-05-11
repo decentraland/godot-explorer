@@ -42,6 +42,30 @@ const ROUGHNESS_NO_SPECULAR_THRESHOLD: f32 = 0.7;
 pub fn update_cheap_pbr_materials(
     scene: &mut Scene,
     _crdt_state: &mut SceneCrdtState,
+    _ref_time: &Instant,
+    _end_time_us: i64,
+) -> bool {
+    // The cheap-pbr flag now means: at GLTF import time set
+    // `shading_mode = PER_VERTEX` on every BaseMaterial3D
+    // (content/gltf/common.rs). Per-material runtime mode mutation is a
+    // dead end on Forward Mobile: (a) `force_lambert_over_burley.mobile`
+    // is the engine default → diffuse is already Lambert, (b) flipping
+    // `diffuse_mode` per material after init fragments the engine's
+    // shader_map by MaterialKey and costs GPU state switches, (c) the
+    // engine-wide `force_vertex_shading` global hangs the Mali driver via
+    // a synchronous mass-recompile. Importer-side PER_VERTEX avoids all
+    // three. Runtime pass kept as a queue drainer so the state machine
+    // still advances.
+    if !scene.pending_cheap_pbr.is_empty() {
+        scene.pending_cheap_pbr.clear();
+    }
+    true
+}
+
+#[allow(dead_code)]
+fn _update_cheap_pbr_materials_legacy(
+    scene: &mut Scene,
+    _crdt_state: &mut SceneCrdtState,
     ref_time: &Instant,
     end_time_us: i64,
 ) -> bool {
