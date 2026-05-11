@@ -2,12 +2,31 @@
 
 use godot::{
     classes::{
-        node::ProcessMode, CollisionShape3D, ConcavePolygonShape3D, MeshInstance3D, Node, Node3D,
-        StaticBody3D,
+        base_material_3d::{CullMode, ShadingMode, Transparency},
+        geometry_instance_3d::ShadowCastingSetting,
+        node::ProcessMode,
+        BaseMaterial3D, CollisionShape3D, ConcavePolygonShape3D, MeshInstance3D, Node, Node3D,
+        StaticBody3D, StandardMaterial3D,
     },
     meta::ToGodot,
-    obj::Gd,
+    obj::{Gd, NewGd},
 };
+
+use crate::godot_classes::dcl_global::DclGlobal;
+
+/// Shared material override for shadow-proxy colliders: cull FRONT faces so
+/// only the inner (back) faces rasterize into the shadow map. Because DCL
+/// colliders are slightly larger than the visible mesh they wrap, leaving
+/// front-face culling on would self-shadow the visible mesh. PER_VERTEX
+/// shading keeps the shader path consistent with the importer's cheap-pbr
+/// path; transparency is OFF, alpha not used.
+fn build_shadow_proxy_material() -> Gd<BaseMaterial3D> {
+    let mut mat = StandardMaterial3D::new_gd();
+    mat.set_cull_mode(CullMode::FRONT);
+    mat.set_shading_mode(ShadingMode::PER_VERTEX);
+    mat.set_transparency(Transparency::DISABLED);
+    mat.upcast()
+}
 
 use super::super::{
     content_mapping::ContentMappingAndUrlRef,
@@ -95,6 +114,21 @@ fn get_static_body_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<Sta
 /// Note: Colliders are created with mask=0 (disabled) and no scene_id/entity_id.
 /// The masks and metadata should be set by the caller after instantiating the scene.
 fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
+    // Shadow-proxy swap (gated by `cheap-pbr`): use the simplified collider
+    // mesh as the shadow caster instead of the high-poly visible mesh.
+    // - Colliders: stay in the scene tree, made visible=true, but cast_shadow=
+    //   SHADOW_ONLY so they only contribute depth to the shadow map and
+    //   never appear in the visible pass.
+    // - Visible meshes: cast_shadow=OFF so they don't double-shadow.
+    // The shadow pass renders ~10-100× fewer primitives (collider geometry
+    // is much simpler) AND its draw set is independent of visible-pass
+    // culling — vgrid can hide visible MIs without invalidating the shadow
+    // cascade setup. Same scene-loading flag enables it.
+    let shadow_proxy = DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().cheap_pbr_enabled)
+        .unwrap_or(false);
+    // Built lazily on first collider — many GLTFs don't have any.
+    let mut shadow_proxy_mat: Option<Gd<BaseMaterial3D>> = None;
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mut mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             let invisible_mesh = mesh_instance_3d
@@ -104,7 +138,30 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
                 .contains("collider");
 
             if invisible_mesh {
-                mesh_instance_3d.set_visible(false);
+                if shadow_proxy {
+                    // Keep the collider in the visible tree (so the renderer
+                    // submits it to the shadow pass) but flag it as
+                    // SHADOW_ONLY — the visible pass skips it entirely.
+                    mesh_instance_3d
+                        .set_cast_shadows_setting(ShadowCastingSetting::SHADOWS_ONLY);
+                    // Cull FRONT faces so only the inner back faces write to
+                    // the shadow map. DCL colliders are slightly inflated
+                    // relative to the visible mesh; without front-cull the
+                    // collider's front face would project a shadow onto the
+                    // visible mesh's surface (self-shadow acne / Peter
+                    // Panning).
+                    let mat = shadow_proxy_mat
+                        .get_or_insert_with(build_shadow_proxy_material)
+                        .clone();
+                    mesh_instance_3d
+                        .set_material_override(&mat.upcast::<godot::classes::Material>());
+                } else {
+                    mesh_instance_3d.set_visible(false);
+                }
+            } else if shadow_proxy {
+                // Visible mesh in a scene that has a shadow proxy chain:
+                // hand off shadow-casting to the collider sibling.
+                mesh_instance_3d.set_cast_shadows_setting(ShadowCastingSetting::OFF);
             }
 
             // First check if there's already a StaticBody3D (created by create_trimesh_collision)
