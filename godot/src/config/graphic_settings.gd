@@ -191,18 +191,24 @@ static func apply_full_processor_mode() -> void:
 	Global.get_window().get_viewport().disable_3d = false
 
 
-## Apply a graphic profile by index
-## 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
-## Sets ALL graphics parameters including FPS limit, bloom, and 3D resolution scale
+## Apply a graphic profile by index (0=Very Low, 1=Low, 2=Medium, 3=High, 4=Custom).
+##
+## Mirrors PROFILE_DEFINITIONS[index] into DclConfig, then pushes the
+## viewport-side knobs (scaling_3d_scale, mesh_lod_threshold) and the FPS
+## limit. Index 4 (Custom) and out-of-range values are ignored — the
+## caller keeps whatever is already in DclConfig.
+##
+## HardwareBenchmark writes its picked profile to DclConfig once at
+## first launch; this function reads from PROFILE_DEFINITIONS by index
+## and is agnostic to who set graphic_profile (HW-bench, settings UI,
+## or the force-graphic-profile deeplink override).
 static func apply_graphic_profile(profile_index: int) -> void:
-	# Custom or invalid index - do nothing
 	if profile_index < 0 or profile_index >= PROFILE_DEFINITIONS.size():
 		return
 
 	var config: DclConfig = Global.get_config()
 	var profile: Dictionary = PROFILE_DEFINITIONS[profile_index]
 
-	# Apply all settings from profile definition
 	config.anti_aliasing = profile.aa
 	config.shadow_quality = profile.shadow
 	config.bloom_quality = profile.bloom
@@ -212,10 +218,8 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	config.resolution_3d_scale = profile.scale
 	config.graphic_profile = profile_index
 
-	# Apply FPS limit immediately
 	apply_fps_limit()
 
-	# Apply 3D resolution scale to viewport
 	var viewport := Global.get_tree().root.get_viewport()
 	if viewport:
 		viewport.scaling_3d_scale = config.resolution_3d_scale
