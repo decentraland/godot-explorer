@@ -7,7 +7,9 @@ signal toggled(is_open: bool)
 
 const ITEM_HEIGHT: float = 68.0
 const ITEM_GAP: float = 8.0
-const DROPDOWN_ITEM_SCENE = preload("res://src/ui/components/molecules/dropdown_list/dropdown_item.tscn")
+const DROPDOWN_ITEM_SCENE = preload(
+	"res://src/ui/components/molecules/dropdown_list/dropdown_item.tscn"
+)
 const COLOR_ARROW_NORMAL := Color(236, 235, 237, 1)
 const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
 

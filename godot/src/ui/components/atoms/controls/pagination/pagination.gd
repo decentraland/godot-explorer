@@ -1,7 +1,9 @@
 @tool
 extends HBoxContainer
 
-var carrousel_item = preload("res://src/ui/components/molecules/carrousel_page_item/carrousel_page_item.tscn")
+var carrousel_item = preload(
+	"res://src/ui/components/molecules/carrousel_page_item/carrousel_page_item.tscn"
+)
 
 
 # Called when the node enters the scene tree for the first time.

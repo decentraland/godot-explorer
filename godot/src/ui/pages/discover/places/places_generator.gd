@@ -137,9 +137,7 @@ func async_request_from_api(offset: int, limit: int) -> void:
 			_discover_carrousel_item_loading.show()
 		else:
 			_discover_carrousel_item_loading = (
-				load(
-					"res://src/ui/pages/discover/carrousel/discover_carrousel_item_loading.tscn"
-				)
+				load("res://src/ui/pages/discover/carrousel/discover_carrousel_item_loading.tscn")
 				. instantiate()
 			)
 			item_container.add_child(_discover_carrousel_item_loading)

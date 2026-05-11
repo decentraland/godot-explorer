@@ -1,8 +1,6 @@
 extends Control
 
-const AVATAR_PREVIEW_SCENE: PackedScene = preload(
-	"res://src/ui/pages/backpack/avatar_preview.tscn"
-)
+const AVATAR_PREVIEW_SCENE: PackedScene = preload("res://src/ui/pages/backpack/avatar_preview.tscn")
 
 var _avatar_preview: AvatarPreview
 var _opened_from_landscape: bool = false

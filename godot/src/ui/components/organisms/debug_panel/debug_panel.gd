@@ -10,7 +10,9 @@ const ICON_COLUMN_WIDTH = 20
 
 var icon_log: Texture2D = preload("res://src/ui/components/organisms/debug_panel/icons/Log.svg")
 var icon_error: Texture2D = preload("res://src/ui/components/organisms/debug_panel/icons/Error.svg")
-var icon_warning: Texture2D = preload("res://src/ui/components/organisms/debug_panel/icons/Warning.svg")
+var icon_warning: Texture2D = preload(
+	"res://src/ui/components/organisms/debug_panel/icons/Warning.svg"
+)
 var icon_action_copy: Texture2D = preload(
 	"res://src/ui/components/organisms/debug_panel/icons/ActionCopy.svg"
 )

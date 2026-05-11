@@ -42,7 +42,9 @@ func _update():
 		var request_control: NetworkInspectorRequestEntryControl = requests.get(id, null)
 		if request_control == null:
 			request_control = (
-				load("res://src/ui/components/organisms/debug_panel/network_inspector/request_entry.tscn")
+				load(
+					"res://src/ui/components/organisms/debug_panel/network_inspector/request_entry.tscn"
+				)
 				. instantiate()
 			)
 			request_control.click.connect(self.on_request_click.bind(id))

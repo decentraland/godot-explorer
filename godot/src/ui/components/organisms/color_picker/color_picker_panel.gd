@@ -37,7 +37,9 @@ var color_type: ColorTargetType = ColorTargetType.SKIN
 
 var color_button_group: ButtonGroup = ButtonGroup.new()
 
-var colorable_square = preload("res://src/ui/components/organisms/color_picker/colorable_square.tscn")
+var colorable_square = preload(
+	"res://src/ui/components/organisms/color_picker/colorable_square.tscn"
+)
 
 @onready var v_box_container_hair = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair
 @onready

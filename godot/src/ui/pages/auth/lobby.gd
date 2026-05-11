@@ -350,7 +350,9 @@ func _ready():
 		go_to_explorer.call_deferred()
 	elif _skip_lobby_to_menu:
 		show_loading_screen()
-		get_tree().change_scene_to_file.call_deferred("res://src/ui/components/organisms/menu/menu.tscn")
+		get_tree().change_scene_to_file.call_deferred(
+			"res://src/ui/components/organisms/menu/menu.tscn"
+		)
 	else:
 		var current_eula_version: int = Global.get_config().terms_and_conditions_version
 		# Force show EULA when benchmarking (even if already accepted)

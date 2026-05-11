@@ -33,9 +33,7 @@ func on_request(_offset: int, limit: int) -> void:
 			discover_carrousel_item_loading.show()
 		else:
 			discover_carrousel_item_loading = (
-				load(
-					"res://src/ui/pages/discover/carrousel/discover_carrousel_item_loading.tscn"
-				)
+				load("res://src/ui/pages/discover/carrousel/discover_carrousel_item_loading.tscn")
 				. instantiate()
 			)
 			discover_carrousel_item_loading.custom_minimum_size = Vector2(406, 359)

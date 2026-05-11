@@ -5,7 +5,12 @@ extends Button
 
 var _button_unpressed_icon: Texture
 @onready var highlight: Control = (
-	preload("res://src/ui/components/atoms/buttons/menu_navbar_button/menu_navbar_highlight.tscn").instantiate()
+	(
+		preload(
+			"res://src/ui/components/atoms/buttons/menu_navbar_button/menu_navbar_highlight.tscn"
+		)
+		. instantiate()
+	)
 	as Control
 )
 
