@@ -1,7 +1,14 @@
 class_name GraphicSettings extends RefCounted
 
 ## Profile definitions as data - easier to tune without code changes
-## Keys: aa, shadow, bloom, skybox, texture, fps, scale
+## Keys: aa, shadow, bloom, skybox, texture, fps, scale, mesh_lod_threshold
+##
+## mesh_lod_threshold (pixels of screen-space error before swapping to a
+## lower-detail LOD). Default Godot=1.0 — very conservative. Genesis Plaza
+## scenes ship a full LOD chain via the Rust import pipeline; raising the
+## threshold makes that chain do real work by swapping farther/smaller MIs
+## to LOD1/2/3 sooner. Tuned per profile so HIGH stays visually crisp
+## while lower profiles trade detail for fragment cost.
 const PROFILE_DEFINITIONS: Array[Dictionary] = [
 	# Very Low (0) - Maximum battery savings
 	{
@@ -11,7 +18,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 0,
 		"texture": 0,
 		"fps": ConfigData.FpsLimitMode.FPS_18,
-		"scale": 0.5
+		"scale": 0.5,
+		"mesh_lod_threshold": 8.0
 	},
 	# Low (1) - Battery savings with better visuals
 	{
@@ -21,7 +29,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 0,
 		"texture": 0,
 		"fps": ConfigData.FpsLimitMode.FPS_30,
-		"scale": 0.75
+		"scale": 0.75,
+		"mesh_lod_threshold": 6.0
 	},
 	# Medium (2) - Balanced performance and quality. AA off (MSAA_DISABLED)
 	# because A/B on Mali-G68 showed it costs ~8ms gpu in Genesis Plaza
@@ -33,7 +42,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 1,
 		"texture": 1,
 		"fps": ConfigData.FpsLimitMode.FPS_30,
-		"scale": 1.0
+		"scale": 1.0,
+		"mesh_lod_threshold": 3.0
 	},
 	# High (3) - Best quality
 	{
@@ -43,7 +53,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 2,
 		"texture": 2,
 		"fps": ConfigData.FpsLimitMode.FPS_60,
-		"scale": 1.0
+		"scale": 1.0,
+		"mesh_lod_threshold": 2.0
 	},
 ]
 
@@ -209,3 +220,9 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	var viewport := Global.get_tree().root.get_viewport()
 	if viewport:
 		viewport.scaling_3d_scale = config.resolution_3d_scale
+		# Apply per-profile mesh-LOD pixel threshold. Higher value = swap
+		# to lower-detail LOD sooner (more aggressive). LOD chain is
+		# baked at GLTF import time; this is the only knob that decides
+		# how aggressively the renderer picks LOD1/2/3 at distance.
+		var lod_thr: float = profile.get("mesh_lod_threshold", 1.0)
+		viewport.mesh_lod_threshold = lod_thr
