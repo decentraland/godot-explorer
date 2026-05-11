@@ -37,6 +37,11 @@ var pinned_transform: Transform3D
 var pinned_camera_basis: Basis
 var pose_pinned: bool = false
 var _textureless_merge_done: bool = false
+var _visibility_grid: DclVisibilityGrid = null
+var _visibility_grid_stats: Dictionary = {}
+var _vg_toggled_on_total: int = 0
+var _vg_toggled_off_total: int = 0
+var _vg_last_cells_visible: int = 0
 
 
 func _ready() -> void:
@@ -158,6 +163,12 @@ func _process(_delta: float) -> void:
 						"display/window/frame_pacing/android/enable_frame_pacing", true
 					)
 					_log("frame_pacing project setting = %s" % str(fp_setting))
+					RenderingServer.viewport_set_measure_render_time(
+						get_tree().root.get_viewport_rid(), true
+					)
+					_log("viewport measure_render_time enabled")
+					if bool(config.get("visibility_grid", false)):
+						_build_visibility_grid()
 				_set_phase("warmup")
 			elif _phase_elapsed_ms() >= LOAD_TIMEOUT_MS:
 				_log("WARN: loading_complete never fired in %d ms; aborting" % LOAD_TIMEOUT_MS)
@@ -168,6 +179,7 @@ func _process(_delta: float) -> void:
 			if not _textureless_merge_done and bool(config.get("textureless_merge", false)):
 				_apply_textureless_merge()
 				_textureless_merge_done = true
+			_run_visibility_grid_update()
 			if _phase_elapsed_ms() >= int(config.get("warmup_seconds", 30)) * 1000:
 				# Reset per-state CPU timing + CRDT throughput counters so the
 				# sampling-window numbers aren't polluted by load-time spikes.
@@ -180,19 +192,14 @@ func _process(_delta: float) -> void:
 				_set_phase("sampling")
 		"sampling":
 			_enforce_pinned_pose()
-			if Engine.max_fps != 0:
-				var thermal_cap_now: int = (
-					Global.dynamic_graphics_manager.get_thermal_fps_cap()
-					if Global.dynamic_graphics_manager != null
-					else -1
-				)
-				_log(
-					(
-						"WARN sampling: max_fps=%d (thermal_cap=%d, limit_fps=%d) -> forcing 0"
-						% [Engine.max_fps, thermal_cap_now, Global.get_config().limit_fps]
-					)
-				)
-				Engine.max_fps = 0
+			# Silent per-frame uncap insurance. The cap on A54 is real GPU-time +
+			# vsync alignment at 120Hz (slots: 120/60/40/30/24) — these forces
+			# only ensure no software cap re-pins us; logging per-frame here
+			# tanks fps via Sentry breadcrumb queue.
+			Engine.max_fps = 0
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+			OS.low_processor_usage_mode = false
+			_run_visibility_grid_update()
 			samples.append(_collect_sample())
 			if _phase_elapsed_ms() >= int(config.get("sample_seconds", 30)) * 1000:
 				_finish()
@@ -279,6 +286,9 @@ func _collect_sample() -> Dictionary:
 		"physics_island_count": Performance.get_monitor(Performance.PHYSICS_3D_ISLAND_COUNT),
 		"loaded_scene_count":
 		Global.scene_fetcher.loaded_scenes.size() if Global.scene_fetcher != null else 0,
+		"engine_max_fps": Engine.max_fps,
+		"engine_physics_ticks": Engine.physics_ticks_per_second,
+		"vsync_mode": DisplayServer.window_get_vsync_mode(),
 	}
 
 
@@ -436,6 +446,13 @@ func _finish() -> void:
 		"asset_preproc_stats": asset_preproc_stats,
 		"auto_shadow_cull_stats": auto_shadow_cull_stats,
 		"cheap_pbr_stats": cheap_pbr_stats,
+		"visibility_grid_stats": _visibility_grid_stats,
+		"visibility_grid_runtime":
+		{
+			"toggled_on_total": _vg_toggled_on_total,
+			"toggled_off_total": _vg_toggled_off_total,
+			"cells_visible_last": _vg_last_cells_visible,
+		},
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -762,6 +779,13 @@ func _apply_deeplink_overrides() -> void:
 		var idx: int = force_graphic_profile.to_int()
 		if idx >= 0 and idx <= 4:
 			config["force_graphic_profile"] = idx
+
+	# GDScript cell-based visibility culling (visibility_grid.gd). Stored in
+	# config and consumed at loading_complete to build the grid; the per-frame
+	# update runs in warmup/sampling.
+	var vg: String = params.get("visibility-grid", "")
+	if not vg.is_empty():
+		config["visibility_grid"] = vg.to_lower() in ["true", "1", "yes"]
 
 	var viewport_scale: String = params.get("viewport-scale-3d", "")
 	if not viewport_scale.is_empty() and viewport_scale.is_valid_float():
@@ -1145,3 +1169,41 @@ func _purge_existing_skies() -> void:
 		for c in n.get_children():
 			stack.append(c)
 	_log("purged %d WorldEnvironments to BG_COLOR" % stomped)
+
+
+## Build the visibility cell grid once after loading_complete. Walks the
+## scene tree (Rust scene_runner root), buckets static MeshInstance3Ds into
+## 16x16m cells, computes per-cell world AABBs. The per-frame update lives
+## in `_run_visibility_grid_update`.
+func _build_visibility_grid() -> void:
+	_visibility_grid = DclVisibilityGrid.new()
+	var t0 := Time.get_ticks_msec()
+	var scene_root: Node = Global.scene_runner if Global.scene_runner != null else get_tree().root
+	_visibility_grid_stats = _visibility_grid.build_from_scene_tree(scene_root)
+	_visibility_grid_stats["build_ms"] = Time.get_ticks_msec() - t0
+	_log(
+		(
+			"visibility_grid built in %dms: cells=%d/%d MIs=%d skipped[avatar=%d hud=%d animated=%d tween=%d modifier=%d oog=%d]"
+			% [
+				int(_visibility_grid_stats.get("build_ms", 0)),
+				int(_visibility_grid_stats.get("cells_with_content", 0)),
+				int(_visibility_grid_stats.get("cells_total", 0)),
+				int(_visibility_grid_stats.get("total_mis", 0)),
+				int(_visibility_grid_stats.get("skipped_avatar", 0)),
+				int(_visibility_grid_stats.get("skipped_hud", 0)),
+				int(_visibility_grid_stats.get("skipped_animated", 0)),
+				int(_visibility_grid_stats.get("skipped_tween", 0)),
+				int(_visibility_grid_stats.get("skipped_modifier", 0)),
+				int(_visibility_grid_stats.get("skipped_out_of_grid", 0)),
+			]
+		)
+	)
+
+
+func _run_visibility_grid_update() -> void:
+	if _visibility_grid == null or Global.player_camera_node == null:
+		return
+	var r := _visibility_grid.update_visibility(Global.player_camera_node)
+	_vg_toggled_on_total += int(r.get("toggled_on", 0))
+	_vg_toggled_off_total += int(r.get("toggled_off", 0))
+	_vg_last_cells_visible = int(r.get("cells_visible", 0))
