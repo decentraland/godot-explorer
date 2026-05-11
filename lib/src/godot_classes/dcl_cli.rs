@@ -107,6 +107,14 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
 
+    // cheap-pbr: at GLTF import, flip every BaseMaterial3D from PER_PIXEL
+    // to PER_VERTEX shading. Trades fragment ALU for vertex ALU — wins on
+    // tile-based mobile GPUs (Mali-G68) that are fragment-bound. Default
+    // ON; opt out with --no-cheap-pbr or deeplink param cheap-pbr=false.
+    #[var]
+    pub cheap_pbr_enabled: bool,
+
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -421,6 +429,12 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            ArgDefinition {
+                name: "--no-cheap-pbr".to_string(),
+                description: "Opt out of the cheap-pbr import-time pass (flip BaseMaterial3D to SHADING_MODE_PER_VERTEX). Default: pass is ON".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
             // Authentication
             ArgDefinition {
                 name: "--saved-profile".to_string(),
@@ -626,6 +640,7 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
+        let cheap_pbr_enabled = !args_map.contains_key("--no-cheap-pbr");
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -741,6 +756,7 @@ impl INode for DclCli {
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
+            cheap_pbr_enabled,
             asset_server_port,
             realm,
             location,

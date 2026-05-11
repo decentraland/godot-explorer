@@ -5,8 +5,8 @@ use std::sync::Arc;
 use godot::{
     builtin::GString,
     classes::{
-        base_material_3d::TextureParam, BaseMaterial3D, GltfDocument, GltfState, ImageTexture,
-        MeshInstance3D, Node, Node3D,
+        base_material_3d::{ShadingMode, TextureParam},
+        BaseMaterial3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D,
     },
     global::Error,
     meta::ToGodot,
@@ -17,6 +17,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::sync::Semaphore;
 
 use crate::content::texture::resize_image;
+use crate::godot_classes::dcl_global::DclGlobal;
 
 use super::super::{
     content_mapping::ContentMappingAndUrlRef, content_provider::SceneGltfContext,
@@ -71,6 +72,25 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compr
         }
 
         post_import_process(child, max_size, force_compress);
+    }
+}
+
+/// Mutate every `BaseMaterial3D` in a freshly-parsed `GltfState` to use
+/// `SHADING_MODE_PER_VERTEX`. Called between `append_from_file_ex` and
+/// `generate_scene`, while the materials are parsed from the file but not
+/// yet bound to any MeshInstance3D nor registered with the renderer's
+/// shader cache — so the *first* shader variant Godot compiles is the
+/// vertex-lighting flavour, with no recompile, no batching invalidation,
+/// and one MaterialKey for all of them. `ShaderMaterial` and other
+/// non-`BaseMaterial3D` materials are left untouched.
+pub(super) fn apply_pre_generate_material_overrides(state: &mut Gd<GltfState>) {
+    let materials = state.get_materials();
+    for i in 0..materials.len() {
+        let material = materials.at(i);
+        let Ok(mut base) = material.try_cast::<BaseMaterial3D>() else {
+            continue;
+        };
+        base.set_shading_mode(ShadingMode::PER_VERTEX);
     }
 }
 
@@ -315,6 +335,13 @@ where
 
         if err != Error::OK {
             return Err(anyhow::Error::msg(format!("Error loading gltf: {:?}", err)));
+        }
+
+        if DclGlobal::try_singleton()
+            .map(|g| g.bind().cli.bind().cheap_pbr_enabled)
+            .unwrap_or(false)
+        {
+            apply_pre_generate_material_overrides(&mut new_gltf_state);
         }
 
         let node = new_gltf

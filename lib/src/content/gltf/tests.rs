@@ -64,12 +64,13 @@ fn apply_pre_generate_material_overrides_sets_per_vertex_on_every_base_material(
 #[test]
 #[ignore = "needs live Godot runtime (Gd::new_gd SIGSEGVs outside the engine)"]
 fn apply_pre_generate_material_overrides_preserves_textures_and_albedo_color() {
-    let mut mat = fresh_standard_material();
+    let mat = fresh_standard_material();
     let texture = ImageTexture::new_gd();
     let albedo = Color::from_rgba(0.2, 0.5, 0.8, 1.0);
+    let texture2d = texture.clone().upcast::<godot::classes::Texture2D>();
     mat.clone()
         .upcast::<BaseMaterial3D>()
-        .set_texture(TextureParam::ALBEDO, &texture.clone().upcast());
+        .set_texture(TextureParam::ALBEDO, &texture2d);
     mat.clone().upcast::<BaseMaterial3D>().set_albedo(albedo);
 
     let mut state = make_state_with_materials(vec![mat.upcast::<godot::classes::Material>()]);
