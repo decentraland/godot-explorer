@@ -64,3 +64,5 @@ where
         json5::from_str(json_str.as_str()).map_err(|e| e.to_string())
     }
 }
+pub mod dcl_gltf_render_manager;
+pub mod gltf_render;
