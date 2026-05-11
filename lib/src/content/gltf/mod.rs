@@ -8,6 +8,9 @@ mod emote;
 mod scene;
 mod wearable;
 
+#[cfg(test)]
+mod tests;
+
 // Re-export public API (maintains compatibility with content_provider.rs)
 pub use common::get_dependencies;
 pub use emote::{
