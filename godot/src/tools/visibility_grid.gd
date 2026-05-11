@@ -118,8 +118,7 @@ func build_from_scene_tree(scene_root: Node) -> Dictionary:
 		return _stats_dict()
 
 	cell_origin_xz = Vector2(
-		floor(min_xz.x / CELL_SIZE_M) * CELL_SIZE_M,
-		floor(min_xz.y / CELL_SIZE_M) * CELL_SIZE_M
+		floor(min_xz.x / CELL_SIZE_M) * CELL_SIZE_M, floor(min_xz.y / CELL_SIZE_M) * CELL_SIZE_M
 	)
 	cols = int(ceil((max_xz.x - cell_origin_xz.x) / CELL_SIZE_M)) + 1
 	rows = int(ceil((max_xz.y - cell_origin_xz.y) / CELL_SIZE_M)) + 1
@@ -168,12 +167,12 @@ func build_from_scene_tree(scene_root: Node) -> Dictionary:
 		if diag_xz >= MULTI_CELL_BUCKET_THRESHOLD_M:
 			cx_min = int(floor((world_aabb.position.x - cell_origin_xz.x) / CELL_SIZE_M))
 			cz_min = int(floor((world_aabb.position.z - cell_origin_xz.y) / CELL_SIZE_M))
-			cx_max = int(floor(
-				(world_aabb.position.x + world_aabb.size.x - cell_origin_xz.x) / CELL_SIZE_M
-			))
-			cz_max = int(floor(
-				(world_aabb.position.z + world_aabb.size.z - cell_origin_xz.y) / CELL_SIZE_M
-			))
+			cx_max = int(
+				floor((world_aabb.position.x + world_aabb.size.x - cell_origin_xz.x) / CELL_SIZE_M)
+			)
+			cz_max = int(
+				floor((world_aabb.position.z + world_aabb.size.z - cell_origin_xz.y) / CELL_SIZE_M)
+			)
 		else:
 			var center_cx := int(floor((center.x - cell_origin_xz.x) / CELL_SIZE_M))
 			var center_cz := int(floor((center.z - cell_origin_xz.y) / CELL_SIZE_M))
