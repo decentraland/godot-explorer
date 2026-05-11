@@ -290,7 +290,7 @@ func _ready():
 
 	# Add disconnect handler for reconnection logic
 	var disconnect_handler = (
-		load("res://src/ui/components/disconnect_handler/disconnect_handler.tscn").instantiate()
+		load("res://src/ui/components/organisms/disconnect_handler/disconnect_handler.tscn").instantiate()
 	)
 	add_child(disconnect_handler)
 
@@ -870,7 +870,7 @@ func _on_control_menu_request_livekit_debug(enabled):
 	if enabled:
 		if not is_instance_valid(livekit_debug_panel):
 			livekit_debug_panel = (
-				load("res://src/ui/components/livekit_debug/livekit_debug_panel.tscn").instantiate()
+				load("res://src/ui/components/organisms/livekit_debug/livekit_debug_panel.tscn").instantiate()
 			)
 			ui_root.add_child(livekit_debug_panel)
 	else:
@@ -1045,7 +1045,7 @@ func _update_debug_ui():
 
 	if should_show:
 		if not is_instance_valid(debug_panel):
-			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
+			debug_panel = load("res://src/ui/components/organisms/debug_panel/debug_panel.tscn").instantiate()
 			safe_margin_container_debug.add_child(debug_panel)
 	else:
 		if is_instance_valid(debug_panel):
@@ -1355,9 +1355,9 @@ func _show_notification_toast(notification_d: Dictionary) -> void:
 
 	# Create and show toast notification
 	var style = notification_d.get("toast_style", "default")
-	var scene_path := "res://src/ui/components/notifications/notification_toast.tscn"
+	var scene_path := "res://src/ui/components/organisms/notifications/notification_toast.tscn"
 	if style == "alert":
-		scene_path = "res://src/ui/components/notifications/alert_toast.tscn"
+		scene_path = "res://src/ui/components/organisms/notifications/alert_toast.tscn"
 	var toast_scene = load(scene_path)
 	var toast = toast_scene.instantiate()
 	ui_root.add_child(toast)
