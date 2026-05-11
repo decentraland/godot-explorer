@@ -40,6 +40,7 @@ func load_places() -> void:
 func _on_items_loaded(places: Array[Dictionary]) -> void:
 	_places.assign(places)
 	_on_card_changed(carousel.selected_index)
+	_track_screen_view()
 
 
 func _on_all_cards_loaded() -> void:
@@ -86,3 +87,12 @@ func _do_jump_in(place_data: Dictionary) -> void:
 		return
 	var pos_realm := PlacesHelper.get_position_and_realm(place_data)
 	jump_in.emit(pos_realm[0], pos_realm[1])
+
+
+func _track_screen_view() -> void:
+	var carousel_items = []
+	for i in _places.size():
+		carousel_items.append({"position": i, "place_id": _places[i].get("id", "")})
+	Global.metrics.track_screen_viewed(
+		"DISCOVER_FTUE", JSON.stringify({"carousel": carousel_items})
+	)
