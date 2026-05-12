@@ -1302,6 +1302,7 @@ func _process(delta):
 
 	if nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
+		_request_nickname_redraw()
 
 	_maybe_update_lod()
 	_tick_animation_throttle(delta)
@@ -1488,6 +1489,14 @@ func _play_glider_clip_if_different(clip: String, blend_time: float = -1.0) -> v
 		return
 	if ap.current_animation != clip:
 		ap.play(clip, blend_time)
+
+
+func _request_nickname_redraw() -> void:
+	if nickname_viewport == null or nickname_quad == null:
+		return
+	if not nickname_quad.visible:
+		return
+	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):
