@@ -35,3 +35,7 @@ __pycache__
 .DS_Store
 benchmark-results/
 tasks/
+
+# Local snapshot tool outputs (scripts/local_*_snapshot.sh)
+avatars-output/
+avatars-output-*/
