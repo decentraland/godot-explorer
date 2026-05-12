@@ -5,3 +5,8 @@ compatibility_minimum = "4.4"
 [libraries]
 ios.debug.arm64 = "res://ios/dcl-swift-lib/DclSwiftLib.framework"
 ios.release.arm64 = "res://ios/dcl-swift-lib/DclSwiftLib.framework"
+; No-op stub on desktop — silences Godot's "library not found" error and
+; lets ClassDB.class_exists("DclStoreKit") report false cleanly.
+; Build with plugins/dcl-swift-lib/stub/build_stub.sh
+macos.debug.arm64 = "res://macos/dcl-swift-lib/libdcl_swift_lib_stub.macos.arm64.dylib"
+macos.release.arm64 = "res://macos/dcl-swift-lib/libdcl_swift_lib_stub.macos.arm64.dylib"
