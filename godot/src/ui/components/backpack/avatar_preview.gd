@@ -295,6 +295,7 @@ func reset_avatar_rotation() -> void:
 	_target_avatar_rotation_y = 0.0
 
 
+
 func _on_resized() -> void:
 	if _pending_camera_fit and size.x > 0.0 and size.y > 0.0:
 		var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
@@ -763,19 +764,22 @@ func async_get_viewport_image(
 	avatar.rotation.y = 0.0
 	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 1.25, -3.5)
 	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.70, -1.25)
+	const PROFILE_BODY_CAMERA_ROTATION = Vector3(-5.0, 180.0, 0.0)
+	const PROFILE_HEAD_CAMERA_ROTATION = Vector3(0.0, 180.0, 0.0)
 
 	# Store original values to restore after capture
 	var original_stretch = stretch
 	var original_size = size
-	var original_camera_center_y: float = camera_center.position.y
 	var original_camera_position: Vector3 = camera_3d.position
+	var original_camera_rotation: Vector3 = camera_3d.rotation_degrees
 	var original_camera_size: float = camera_3d.size
 	var original_target_center_y: float = _target_camera_center_y
 	var original_target_size: float = _target_camera_size
 
 	_lerp_paused = true
-	camera_center.position.y = 0.0
+	camera_3d.top_level = true
 	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION
+	camera_3d.rotation_degrees = PROFILE_HEAD_CAMERA_ROTATION if face else PROFILE_BODY_CAMERA_ROTATION
 	camera_3d.size = ortho_size
 
 	# Disable stretch to allow manual SubViewport sizing.
@@ -799,8 +803,9 @@ func async_get_viewport_image(
 		img.resize(dest_size.x, dest_size.y, Image.INTERPOLATE_LANCZOS)
 
 	# Restore original camera and viewport state
-	camera_center.position.y = original_camera_center_y
+	camera_3d.top_level = false
 	camera_3d.position = original_camera_position
+	camera_3d.rotation_degrees = original_camera_rotation
 	camera_3d.size = original_camera_size
 	_target_camera_center_y = original_target_center_y
 	_target_camera_size = original_target_size
