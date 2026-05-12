@@ -6,10 +6,8 @@
 mod common;
 mod emote;
 mod scene;
-mod wearable;
-
-#[cfg(test)]
 mod tests;
+mod wearable;
 
 // Re-export public API (maintains compatibility with content_provider.rs)
 pub use common::get_dependencies;

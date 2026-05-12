@@ -1,16 +1,11 @@
 //! Behavioural fixtures for the cheap-pbr import hook.
 //!
-//! These tests need a live Godot runtime to instantiate `Gd<GltfState>` and
-//! `Gd<StandardMaterial3D>`, so they are gated behind `--ignored` for the
-//! plain `cargo test` runner (which does not initialise the engine and will
-//! SIGSEGV on `Gd::new_gd`). They still serve their TDD purpose: the module
-//! imports `super::common::apply_pre_generate_material_overrides`, so before
-//! the implementation exists the file fails to *compile* — that is the "red"
-//! state the green commit must turn into a "compiles" state.
-//!
-//! To execute the bodies, run them under an `--itest` Godot harness or call
-//! them from a `#[godot_api]` test scene.
+//! Registered with the godot-rust `#[itest]` framework, so they run inside a
+//! live Godot scene tree (where `Gd<T>` instantiation works) via
+//! `cargo run -- run --itest` — i.e. Phase 3 ("Integration tests") of
+//! `cargo run -- full-tests`. Plain `cargo test` does NOT pick them up.
 
+#![cfg(debug_assertions)]
 #![allow(dead_code)]
 
 use godot::builtin::Color;
@@ -18,6 +13,7 @@ use godot::classes::base_material_3d::{ShadingMode, TextureParam};
 use godot::classes::{BaseMaterial3D, GltfState, ImageTexture, ShaderMaterial, StandardMaterial3D};
 use godot::meta::ToGodot;
 use godot::obj::{Gd, NewGd};
+use godot::test::itest;
 
 use super::common::apply_pre_generate_material_overrides;
 
@@ -41,8 +37,7 @@ fn fresh_standard_material() -> Gd<StandardMaterial3D> {
     mat
 }
 
-#[test]
-#[ignore = "needs live Godot runtime (Gd::new_gd SIGSEGVs outside the engine)"]
+#[itest]
 fn apply_pre_generate_material_overrides_sets_per_vertex_on_every_base_material() {
     let materials: Vec<Gd<godot::classes::Material>> = (0..4)
         .map(|_| fresh_standard_material().upcast::<godot::classes::Material>())
@@ -61,8 +56,7 @@ fn apply_pre_generate_material_overrides_sets_per_vertex_on_every_base_material(
     }
 }
 
-#[test]
-#[ignore = "needs live Godot runtime (Gd::new_gd SIGSEGVs outside the engine)"]
+#[itest]
 fn apply_pre_generate_material_overrides_preserves_textures_and_albedo_color() {
     let mat = fresh_standard_material();
     let texture = ImageTexture::new_gd();
@@ -87,8 +81,7 @@ fn apply_pre_generate_material_overrides_preserves_textures_and_albedo_color() {
     );
 }
 
-#[test]
-#[ignore = "needs live Godot runtime (Gd::new_gd SIGSEGVs outside the engine)"]
+#[itest]
 fn apply_pre_generate_material_overrides_skips_shader_materials() {
     let shader_mat = ShaderMaterial::new_gd();
     let pre = shader_mat.to_variant();
@@ -109,10 +102,9 @@ fn apply_pre_generate_material_overrides_skips_shader_materials() {
     );
 }
 
-#[test]
-#[ignore = "needs live Godot runtime (Gd::new_gd SIGSEGVs outside the engine)"]
+#[itest]
 fn apply_pre_generate_material_overrides_is_idempotent() {
-    let mut mat = fresh_standard_material();
+    let mat = fresh_standard_material();
     mat.clone()
         .upcast::<BaseMaterial3D>()
         .set_shading_mode(ShadingMode::PER_VERTEX);
