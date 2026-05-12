@@ -60,6 +60,7 @@ impl ResourceProvider {
     // Private asynchronous function to initialize the cache
     async fn initialize(&self) -> Result<(), io::Error> {
         let mut existing_files = self.existing_files.write().await;
+        fs::create_dir_all(&self.cache_folder).await?;
         let dir = std::fs::read_dir(&self.cache_folder)?;
         for entry in dir {
             let entry = entry?;
@@ -615,8 +616,11 @@ impl ResourceProvider {
 
     // Method to clear the cache and delete all files from the file system
     pub async fn clear(&self) {
-        if self.ensure_initialized().await.is_err() {
-            tracing::error!("ResourceLoader failed to load!");
+        if let Err(e) = self.ensure_initialized().await {
+            tracing::error!(
+                "ResourceProvider::clear failed to initialize cache folder: {}",
+                e
+            );
             return;
         }
 
