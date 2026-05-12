@@ -168,7 +168,6 @@ var local_notifications_version: int = 0
 var day1_notification_scheduled: bool = false
 
 var low_spec_warning_shown: bool = false
-var discover_ftue_completed: bool = false
 
 var last_places: Array[Dictionary] = []:
 	set(value):
@@ -468,9 +467,6 @@ func load_from_settings_file():
 	self.low_spec_warning_shown = settings_file.get_value(
 		"config", "low_spec_warning_shown", data_default.low_spec_warning_shown
 	)
-	self.discover_ftue_completed = settings_file.get_value(
-		"user", "discover_ftue_completed", data_default.discover_ftue_completed
-	)
 
 
 func save_to_settings_file():
@@ -544,6 +540,5 @@ func save_to_settings_file():
 		"config", "day1_notification_scheduled", self.day1_notification_scheduled
 	)
 	new_settings_file.set_value("config", "low_spec_warning_shown", self.low_spec_warning_shown)
-	new_settings_file.set_value("user", "discover_ftue_completed", self.discover_ftue_completed)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())
