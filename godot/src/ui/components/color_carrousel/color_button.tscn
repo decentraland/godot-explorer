@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://c23lk3g2cnolg"]
+[gd_scene format=3 uid="uid://c23lk3g2cnolg"]
 
 [ext_resource type="Script" uid="uid://cu0ehwf1yo4r6" path="res://src/ui/components/color_carrousel/color_button.gd" id="1_v4hss"]
 [ext_resource type="Texture2D" uid="uid://c8hks8fuayh76" path="res://src/ui/components/color_carrousel/color-swatch.png" id="2_q408p"]
@@ -57,7 +57,7 @@ corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
-[node name="Control" type="Button"]
+[node name="Control" type="Button" unique_id=1862678675]
 custom_minimum_size = Vector2(70, 70)
 offset_right = 70.0
 offset_bottom = 70.0
@@ -72,7 +72,7 @@ flat = true
 script = ExtResource("1_v4hss")
 metadata/_custom_type_script = "uid://dq2es2bh7xr7j"
 
-[node name="ColorButton" type="Panel" parent="."]
+[node name="ColorButton" type="Panel" parent="." unique_id=1034725510]
 modulate = Color(0.80703396, 0.00065092026, 0.83292043, 1)
 custom_minimum_size = Vector2(70, 70)
 layout_mode = 0
@@ -80,7 +80,7 @@ offset_right = 70.0
 offset_bottom = 70.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_mgcx2")
 
-[node name="ColorSwatch" type="TextureRect" parent="."]
+[node name="ColorSwatch" type="TextureRect" parent="." unique_id=538224134]
 unique_name_in_owner = true
 layout_mode = 0
 offset_right = 70.0
@@ -88,7 +88,7 @@ offset_bottom = 70.0
 texture = ExtResource("2_q408p")
 expand_mode = 3
 
-[node name="ColorButtonBorder" type="TextureRect" parent="."]
+[node name="ColorButtonBorder" type="TextureRect" parent="." unique_id=1603398276]
 custom_minimum_size = Vector2(70, 70)
 layout_mode = 0
 offset_right = 70.0
@@ -96,7 +96,7 @@ offset_bottom = 70.0
 texture = ExtResource("2_vwwex")
 expand_mode = 1
 
-[node name="PressedBorder" type="Panel" parent="."]
+[node name="PressedBorder" type="Panel" parent="." unique_id=1138918761]
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 0
 offset_left = -5.0
@@ -106,7 +106,7 @@ offset_bottom = 75.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_vwwex")
 metadata/_edit_horizontal_guides_ = [-18.0]
 
-[node name="SelectedBorder" type="Panel" parent="."]
+[node name="SelectedBorder" type="Panel" parent="." unique_id=585032164]
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 0
 offset_left = -5.0

@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://0qdwoj2popk7"]
+[gd_scene format=3 uid="uid://0qdwoj2popk7"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lj3bd"]
 transparency = 1
@@ -8,10 +8,10 @@ material = SubResource("StandardMaterial3D_lj3bd")
 flip_faces = true
 size = Vector2(1, 1)
 
-[node name="EmptyFrame" type="Node3D"]
+[node name="EmptyFrame" type="Node3D" unique_id=161799842]
 
-[node name="RootNode" type="Node3D" parent="."]
+[node name="RootNode" type="Node3D" parent="." unique_id=955149123]
 
-[node name="NftEmptyFrame" type="MeshInstance3D" parent="RootNode"]
+[node name="NftEmptyFrame" type="MeshInstance3D" parent="RootNode" unique_id=1669967421]
 mesh = SubResource("PlaneMesh_83e61")
 skeleton = NodePath("../../..")

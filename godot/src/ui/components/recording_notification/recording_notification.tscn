@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://e18p6cp0duuu"]
+[gd_scene format=3 uid="uid://e18p6cp0duuu"]
 
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="1_aattd"]
 [ext_resource type="Script" uid="uid://654skxxieysf" path="res://src/ui/components/recording_notification/recording_notification.gd" id="1_m8t70"]
@@ -149,20 +149,18 @@ _data = {
 &"default": SubResource("Animation_8v7qj")
 }
 
-[node name="RecordingNotification" type="PanelContainer"]
+[node name="RecordingNotification" type="PanelContainer" unique_id=635077479]
 offset_right = 48.0
 offset_bottom = 48.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_rv1co")
 script = ExtResource("1_m8t70")
 
-[node name="TextureRect" type="TextureRect" parent="."]
+[node name="TextureRect" type="TextureRect" parent="." unique_id=678413832]
 layout_mode = 2
 texture = ExtResource("1_aattd")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-libraries = {
-&"": SubResource("AnimationLibrary_r6m7u")
-}
-autoplay = "default"
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=538596870]
+libraries/ = SubResource("AnimationLibrary_r6m7u")
+autoplay = &"default"

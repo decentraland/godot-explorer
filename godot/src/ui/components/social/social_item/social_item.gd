@@ -261,7 +261,7 @@ func _notify_other_components_of_change() -> void:
 
 func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 	if social_data and social_data.address == changed_avatar_id:
-		call_deferred("_update_buttons")
+		call_deferred("_update_blocked_visibility_for_type")
 
 
 func _update_elements_visibility() -> void:
@@ -420,7 +420,7 @@ func _on_button_jump_in_pressed() -> void:
 	if parcel.size() >= 2:
 		var parcel_position = Vector2i(parcel[0], parcel[1])
 		# Fixed realm to main because we only know our friends positions in Genesis City
-		Global.teleport_to(parcel_position, DclUrls.main_realm())
+		Global.async_teleport_to(parcel_position, DclUrls.main_realm())
 	else:
 		push_error("Invalid parcel coordinates")
 
@@ -480,7 +480,9 @@ func _async_unblock_user(address: String) -> void:
 		var unblock_button = %Button_Unblock
 		if unblock_button:
 			unblock_button.disabled = false
-		printerr("Unblock failed: ", PromiseUtils.get_error_message(promise))
+		var error_msg := PromiseUtils.get_error_message(promise)
+		printerr("Unblock failed: ", error_msg)
+		NotificationsManager.show_system_toast("Unblock failed", error_msg, "error", "alert")
 		return
 
 	Global.social_blacklist.remove_blocked(address)  # Update local cache

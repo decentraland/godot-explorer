@@ -1,11 +1,11 @@
-[gd_scene load_steps=2 format=3 uid="uid://bbhylh7hx01q0"]
+[gd_scene format=3 uid="uid://bbhylh7hx01q0"]
 
 [ext_resource type="Script" uid="uid://muu2slwih3l2" path="res://src/decentraland_components/gltf_container.gd" id="1_t3d20"]
 
-[node name="gltf_container" type="DclGltfContainer"]
+[node name="gltf_container" type="DclGltfContainer" unique_id=204718555]
 script = ExtResource("1_t3d20")
 
-[node name="Timer" type="Timer" parent="."]
+[node name="Timer" type="Timer" parent="." unique_id=1596006982]
 wait_time = 120.0
 one_shot = true
 

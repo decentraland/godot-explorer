@@ -34,6 +34,19 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	# Trigger avatar impostor benchmark
+	var bench_param = Global.deep_link_obj.params.get("benchmark", "")
+	if bench_param == "avatar-impostors":
+		print("[DEEPLINK] Triggering avatar impostor benchmark")
+		if Global.player_identity.get_profile_or_null() == null:
+			Global.player_identity.set_default_profile()
+		Global.set_meta("avatar_impostor_benchmark_auto_quit", true)
+		Global.get_tree().change_scene_to_file.call_deferred(
+			"res://src/tools/avatar_impostor_benchmark.tscn"
+		)
+		_clear_deep_link()
+		return
+
 	# Ignore WalletConnect callbacks (decentraland://walletconnect)
 	if Global.deep_link_obj.is_walletconnect_callback:
 		print("[DEEPLINK] Ignoring WalletConnect callback")
@@ -102,17 +115,25 @@ func route() -> void:
 
 
 func _route_teleport() -> void:
+	var realm = Global.deep_link_obj.preview
+	if realm.is_empty():
+		realm = Global.deep_link_obj.realm
+
+	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
+	if (
+		not realm.is_empty()
+		and Realm.is_dcl_ens(realm)
+		and not Global.deep_link_obj.is_location_defined()
+	):
+		Global.async_join_world(realm)
+		return
+
 	if Global.deep_link_obj.is_location_defined():
-		var realm = Global.deep_link_obj.preview
-		if realm.is_empty():
-			realm = Global.deep_link_obj.realm
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.teleport_to(Global.deep_link_obj.location, realm)
-	elif not Global.deep_link_obj.preview.is_empty():
-		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.preview)
-	elif not Global.deep_link_obj.realm.is_empty():
-		Global.teleport_to(Vector2i.ZERO, Global.deep_link_obj.realm)
+		Global.async_teleport_to(Global.deep_link_obj.location, realm)
+	elif not realm.is_empty():
+		Global.async_teleport_to(Vector2i.ZERO, realm)
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:

@@ -27,6 +27,14 @@ EXCLUDED_DIRS = {
     'exports',  # Export output folder
 }
 
+# Specific files exempt from the VRAM-compression rule. These are sliced atlas sources
+# imported as Cubemap / CubemapArray; VRAM block compression quantizes per-block and
+# produces visible seams across cubemap face boundaries, so lossless is required.
+LOSSLESS_EXEMPT_FILES = {
+    'assets/environment/atm_array.png',
+    'assets/environment/horizon_clouds.png',
+}
+
 
 def should_exclude(path: Path, godot_dir: Path) -> bool:
     """Check if a path should be excluded from validation."""
@@ -35,6 +43,12 @@ def should_exclude(path: Path, godot_dir: Path) -> bool:
         if str(rel_path).startswith(excluded):
             return True
     return False
+
+
+def is_lossless_exempt(import_path: Path, godot_dir: Path) -> bool:
+    """Check if a file is exempt from VRAM compression (must remain lossless)."""
+    source_rel = str(import_path.relative_to(godot_dir).with_suffix(''))
+    return source_rel in LOSSLESS_EXEMPT_FILES
 
 
 def parse_import_file(import_path: Path) -> dict:
@@ -195,6 +209,8 @@ def find_and_check_assets(godot_dir: Path, fix: bool = False) -> Tuple[List[str]
                     svg_errors.append(f"  {rel_path}: {issue}")
 
         elif source_ext in IMAGE_EXTENSIONS:
+            if is_lossless_exempt(import_path, godot_dir):
+                continue
             is_valid, issue = check_image_import(import_path, settings)
             if not is_valid:
                 if fix:

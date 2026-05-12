@@ -43,7 +43,6 @@ func _physics_process(_dt: float) -> void:
 
 	if right_x != 0.0 or right_y != 0.0:
 		_player.rotate_y(deg_to_rad(-right_x) * _camera_sensitivity_multiplier)
-		_player.avatar.rotate_y(deg_to_rad(right_x) * _camera_sensitivity_multiplier)
 		_player.mount_camera.rotate_x(deg_to_rad(-right_y) * _camera_sensitivity_multiplier)
 		_player.clamp_camera_rotation()
 

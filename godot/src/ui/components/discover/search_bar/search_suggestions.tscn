@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://ct64rhq0dtpa3"]
+[gd_scene format=3 uid="uid://ct64rhq0dtpa3"]
 
 [ext_resource type="Script" uid="uid://8804vpyob5mu" path="res://src/ui/components/discover/search_bar/search_suggestions.gd" id="1_dpmtn"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_2i8jq"]
@@ -20,7 +20,7 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
-[node name="SearchSugestionsContainer" type="Control"]
+[node name="SearchSugestionsContainer" type="Control" unique_id=1763006794]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -30,7 +30,7 @@ grow_vertical = 2
 size_flags_vertical = 3
 script = ExtResource("1_dpmtn")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1458345179]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -41,27 +41,27 @@ theme_override_constants/margin_left = 48
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 16
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1562703419]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="MarginContainer_RecentSearchs" type="MarginContainer" parent="MarginContainer/VBoxContainer"]
+[node name="MarginContainer_RecentSearchs" type="MarginContainer" parent="MarginContainer/VBoxContainer" unique_id=2041392729]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs" unique_id=381941103]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer"]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer" unique_id=1064501968]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Recent searches"
 label_settings = SubResource("LabelSettings_prili")
 
-[node name="Button_ClearHistory_base" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer"]
+[node name="Button_ClearHistory_base" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer" unique_id=2135209517]
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/h_separation = 0
@@ -76,7 +76,7 @@ toggle_mode = true
 text = "Clean all"
 flat = true
 
-[node name="Button_ClearHistory" type="TextureButton" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer/Button_ClearHistory_base"]
+[node name="Button_ClearHistory" type="TextureButton" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer/Button_ClearHistory_base" unique_id=1198487179]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -91,7 +91,7 @@ offset_bottom = 39.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer/Button_ClearHistory_base"]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/MarginContainer_RecentSearchs/HBoxContainer/Button_ClearHistory_base" unique_id=146688388]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -101,13 +101,13 @@ offset_top = -4.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=1157008401]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="SearchSugestions" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+[node name="SearchSugestions" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=847476723]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

@@ -633,6 +633,15 @@ fn check_texture(
             //
             // The actual texture binding happens in update_video_material_textures()
             // which is called after the main material loop.
+            //
+            // Set a black placeholder immediately so the material doesn't show GPU
+            // garbage (pink) before the video player is created or delivers its
+            // first frame. update_video_material_textures() will replace this with
+            // the real texture once available.
+            material.set_texture(
+                param,
+                &get_black_placeholder_texture().upcast::<Texture2D>(),
+            );
             false
         }
     }
@@ -783,12 +792,33 @@ pub fn update_video_material_textures(scene: &mut Scene) {
                     param
                 );
                 material.set_texture(param, &texture_to_set);
+
+                // ExternalTexture (ExoPlayer/AVPlayer) does not create an sRGB texture
+                // view in Godot's renderer, so `source_color` hint has no effect and
+                // hardware sRGB→linear conversion never happens. We need FORCE_SRGB=true
+                // to get the conversion done in the shader instead.
+                //
+                // ImageTexture (LiveKit) does have an sRGB view, so `source_color`
+                // already handles conversion — FORCE_SRGB must remain false to avoid
+                // double gamma correction.
+                if param == godot::classes::base_material_3d::TextureParam::ALBEDO {
+                    let force_srgb = video_player.bind().uses_external_texture();
+                    material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, force_srgb);
+                }
             }
         } else {
-            tracing::warn!(
-                "update_video_material_textures: video_player not found for entity {:?}",
-                video_entity_id
-            );
+            // Video player not created yet — set black placeholder to avoid pink garbage.
+            // This happens when the material component is processed before the video player
+            // component in the same tick.
+            let mut material = material_ref.to::<Gd<StandardMaterial3D>>();
+            let current_texture = material.get_texture(param);
+            let placeholder = get_black_placeholder_texture().upcast::<Texture2D>();
+            let needs_placeholder = current_texture
+                .as_ref()
+                .is_none_or(|current| current.instance_id() != placeholder.instance_id());
+            if needs_placeholder {
+                material.set_texture(param, &placeholder);
+            }
         }
     }
 }

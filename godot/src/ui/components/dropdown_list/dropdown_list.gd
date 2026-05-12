@@ -7,10 +7,12 @@ signal toggled(is_open: bool)
 
 const ITEM_HEIGHT: float = 68.0
 const ITEM_GAP: float = 8.0
-const MAX_VISIBLE_ITEMS: int = 5
 const DROPDOWN_ITEM_SCENE = preload("res://src/ui/components/dropdown_list/dropdown_item.tscn")
 const COLOR_ARROW_NORMAL := Color(236, 235, 237, 1)
 const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
+
+## Maximum number of items visible at once before the popup scrolls.
+@export var max_visible_items: int = 5
 
 ## Title displayed above the dropdown button. Hidden when empty.
 @export var title: String = "":
@@ -160,8 +162,8 @@ func _async_open_popup() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	_popup_layer.size = viewport_size
 
-	# Constrain scroll height: grow up to MAX_VISIBLE_ITEMS, then scroll
-	var visible_count := mini(_items.size(), MAX_VISIBLE_ITEMS)
+	# Constrain scroll height: grow up to max_visible_items, then scroll
+	var visible_count := mini(_items.size(), max_visible_items)
 	var max_popup_height := visible_count * ITEM_HEIGHT + maxi(visible_count - 1, 0) * ITEM_GAP
 	var items_height := _items_container.get_combined_minimum_size().y
 	_scroll_container.custom_minimum_size.y = min(max_popup_height, items_height)

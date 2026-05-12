@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://buu3ox7iefpgx"]
+[gd_scene format=3 uid="uid://buu3ox7iefpgx"]
 
 [ext_resource type="Texture2D" uid="uid://dx7vyin0sc2ne" path="res://assets/ui/loading_spinner_progress.png" id="1_roup2"]
 [ext_resource type="Script" uid="uid://chldogpo72e70" path="res://src/ui/components/loading_spinner/loading_spinner.gd" id="2_rds4p"]
@@ -25,7 +25,7 @@ _data = {
 &"spin": SubResource("Animation_h8jfn")
 }
 
-[node name="TextureProgressBar" type="TextureProgressBar"]
+[node name="TextureProgressBar" type="TextureProgressBar" unique_id=1364957813]
 offset_right = 40.0
 offset_bottom = 40.0
 value = 100.0
@@ -34,7 +34,7 @@ radial_fill_degrees = 60.0
 texture_progress = ExtResource("1_roup2")
 script = ExtResource("2_rds4p")
 
-[node name="BackgroundCircle" type="TextureRect" parent="."]
+[node name="BackgroundCircle" type="TextureRect" parent="." unique_id=1703723515]
 unique_name_in_owner = true
 modulate = Color(0, 0, 0, 0.4)
 show_behind_parent = true
@@ -43,10 +43,8 @@ offset_right = 40.0
 offset_bottom = 40.0
 texture = ExtResource("1_roup2")
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-libraries = {
-&"": SubResource("AnimationLibrary_rrpsh")
-}
-autoplay = "spin"
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1006979125]
+libraries/ = SubResource("AnimationLibrary_rrpsh")
+autoplay = &"spin"
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

@@ -29,6 +29,16 @@ func _is_joystick_finger(index: int) -> bool:
 	return _virtual_joystick and _virtual_joystick.touch_index == index
 
 
+func _is_touch_over_chat(position: Vector2) -> bool:
+	var explorer = Global.get_explorer()
+	if not explorer:
+		return false
+	var chat_panel = explorer.chat_panel
+	if is_instance_valid(chat_panel):
+		return chat_panel.is_interactive_area_at(position)
+	return false
+
+
 func _input(event):
 	if not event:
 		return
@@ -39,6 +49,8 @@ func _input(event):
 	# Receives touchscreen motion
 	if Global.is_mobile() and (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		if _is_joystick_finger(event.index):
+			return
+		if _is_touch_over_chat(event.position):
 			return
 
 		var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
@@ -54,9 +66,8 @@ func _input(event):
 
 		if event is InputEventScreenDrag and !_two_fingers:
 			_touch_position = event.relative
-			# Only rotate the player on Y-axis, camera mount Y offset is preserved in local space
+			# Avatar is top-level, so player Y rotation does not propagate to it
 			_player.rotate_y(deg_to_rad(-_touch_position.x) * HORIZONTAL_SENS)
-			_player.avatar.rotate_y(deg_to_rad(_touch_position.x) * HORIZONTAL_SENS)
 			_player.mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * VERTICAL_SENS)
 			_player.clamp_camera_rotation()
 

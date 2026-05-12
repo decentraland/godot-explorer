@@ -1,4 +1,4 @@
-[gd_resource type="Environment" load_steps=3 format=3 uid="uid://c6yftsnvufsg8"]
+[gd_resource type="Environment" format=3 uid="uid://c6yftsnvufsg8"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6yihh"]
 sky_top_color = Color(1, 1, 1, 1)
@@ -19,8 +19,6 @@ glow_enabled = true
 glow_levels/1 = 0.1
 glow_levels/2 = 0.1
 glow_levels/3 = 0.01
-glow_levels/5 = 0.0
 glow_normalized = true
 glow_intensity = 1.0
 glow_strength = 1.5
-glow_blend_mode = 1

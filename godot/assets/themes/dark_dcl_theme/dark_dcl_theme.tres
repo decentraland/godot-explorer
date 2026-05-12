@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=27 format=3 uid="uid://chwr8vock83p4"]
+[gd_resource type="Theme" format=3 uid="uid://chwr8vock83p4"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="1_sfndp"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="2_rgmxq"]

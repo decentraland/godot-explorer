@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 xtaskops = "^0.4.1"
 anyhow = "1"
+base64 = "0.21"
 clap = "3"
 serde = "1.0.152"
 flate2 = "1.0.*"

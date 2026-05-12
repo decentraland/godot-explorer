@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://mv4erfb0rl17"]
+[gd_scene format=3 uid="uid://mv4erfb0rl17"]
 
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="1_f3ecm"]
 [ext_resource type="Script" uid="uid://kwou02w231xf" path="res://src/ui/components/discover/event_pills_bar/event_pills_bar.gd" id="1_l6yuq"]
@@ -64,25 +64,25 @@ colors = PackedColorArray(0.20392157, 0.7529412, 0.4392157, 1, 0.13333334, 0.756
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_m0v8u"]
 gradient = SubResource("Gradient_xxfdn")
 
-[node name="EventPillsBar" type="HBoxContainer"]
+[node name="EventPillsBar" type="HBoxContainer" unique_id=65623515]
 custom_minimum_size = Vector2(0, 32)
 size_flags_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 12
 script = ExtResource("1_l6yuq")
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="."]
+[node name="HBoxContainer2" type="HBoxContainer" parent="." unique_id=42586363]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 12
 
-[node name="LivePill" type="PanelContainer" parent="HBoxContainer2"]
+[node name="LivePill" type="PanelContainer" parent="HBoxContainer2" unique_id=1173167181]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qwmgv")
 
-[node name="Label_LivePill" type="Label" parent="HBoxContainer2/LivePill"]
+[node name="Label_LivePill" type="Label" parent="HBoxContainer2/LivePill" unique_id=795671707]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -93,14 +93,14 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="TimePill" type="PanelContainer" parent="HBoxContainer2"]
+[node name="TimePill" type="PanelContainer" parent="HBoxContainer2" unique_id=681845765]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_mwxpt")
 
-[node name="Label_TimePill" type="Label" parent="HBoxContainer2/TimePill"]
+[node name="Label_TimePill" type="Label" parent="HBoxContainer2/TimePill" unique_id=804326398]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -110,31 +110,31 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="UsersPill" type="PanelContainer" parent="HBoxContainer2"]
+[node name="UsersPill" type="PanelContainer" parent="HBoxContainer2" unique_id=1040189943]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_co2lx")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer2/UsersPill"]
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer2/UsersPill" unique_id=890358823]
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="ColorRect" type="Control" parent="HBoxContainer2/UsersPill/HBoxContainer"]
+[node name="ColorRect" type="Control" parent="HBoxContainer2/UsersPill/HBoxContainer" unique_id=463818396]
 custom_minimum_size = Vector2(10, 10)
 layout_mode = 2
 script = ExtResource("3_wwodl")
 color = Color(0.1882353, 0.8039216, 0, 1)
 radius = 5.0
 
-[node name="TextureRect" type="TextureRect" parent="HBoxContainer2/UsersPill/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer2/UsersPill/HBoxContainer" unique_id=1620337980]
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 2
 texture = ExtResource("4_364oa")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_UsersInEvent" type="Label" parent="HBoxContainer2/UsersPill/HBoxContainer"]
+[node name="Label_UsersInEvent" type="Label" parent="HBoxContainer2/UsersPill/HBoxContainer" unique_id=725855529]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -145,13 +145,13 @@ horizontal_alignment = 1
 vertical_alignment = 1
 uppercase = true
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="."]
+[node name="HBoxContainer3" type="HBoxContainer" parent="." unique_id=583852687]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 12
 alignment = 2
 
-[node name="FeaturedPill" type="PanelContainer" parent="HBoxContainer3"]
+[node name="FeaturedPill" type="PanelContainer" parent="HBoxContainer3" unique_id=129804018]
 unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(0, 22)
@@ -159,17 +159,17 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_gtyy7")
 
-[node name="TextureRect" type="TextureRect" parent="HBoxContainer3/FeaturedPill"]
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer3/FeaturedPill" unique_id=246288565]
 layout_mode = 2
 texture = SubResource("GradientTexture1D_m4dx6")
 expand_mode = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer3/FeaturedPill"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer3/FeaturedPill" unique_id=1382973046]
 layout_mode = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_right = 8
 
-[node name="Label" type="Label" parent="HBoxContainer3/FeaturedPill/MarginContainer"]
+[node name="Label" type="Label" parent="HBoxContainer3/FeaturedPill/MarginContainer" unique_id=2121768779]
 layout_mode = 2
 size_flags_vertical = 1
 text = "Featured"
@@ -177,7 +177,7 @@ label_settings = SubResource("LabelSettings_kdyy4")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="TrendingPill" type="PanelContainer" parent="HBoxContainer3"]
+[node name="TrendingPill" type="PanelContainer" parent="HBoxContainer3" unique_id=293350527]
 unique_name_in_owner = true
 clip_children = 2
 custom_minimum_size = Vector2(0, 22)
@@ -185,17 +185,17 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_gtyy7")
 
-[node name="TextureRect" type="TextureRect" parent="HBoxContainer3/TrendingPill"]
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer3/TrendingPill" unique_id=1865098272]
 layout_mode = 2
 texture = SubResource("GradientTexture1D_m0v8u")
 expand_mode = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer3/TrendingPill"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer3/TrendingPill" unique_id=548700643]
 layout_mode = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_right = 8
 
-[node name="Label" type="Label" parent="HBoxContainer3/TrendingPill/MarginContainer"]
+[node name="Label" type="Label" parent="HBoxContainer3/TrendingPill/MarginContainer" unique_id=340272572]
 layout_mode = 2
 size_flags_vertical = 1
 text = "Trending"

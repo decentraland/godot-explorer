@@ -598,7 +598,10 @@ func _on_debug_timer_timeout() -> void:
 ## @param description: The notification description
 ## @param notification_type: Type identifier (default: "system")
 func show_system_toast(
-	title: String, description: String, notification_type: String = "system"
+	title: String,
+	description: String,
+	notification_type: String = "system",
+	toast_style: String = "default"
 ) -> void:
 	var timestamp = Time.get_unix_time_from_system() * 1000  # milliseconds
 	var notif: Dictionary = {
@@ -607,7 +610,8 @@ func show_system_toast(
 		"address": "",
 		"timestamp": int(timestamp),
 		"read": true,  # Mark as read so it doesn't persist
-		"metadata": {"title": title, "description": description, "link": ""}
+		"metadata": {"title": title, "description": description, "link": ""},
+		"toast_style": toast_style,
 	}
 
 	# Add to queue for toast display
@@ -856,6 +860,12 @@ func _check_and_handle_version_change() -> bool:
 	Global.get_config().local_notifications_version = LOCAL_NOTIFICATIONS_VERSION
 	Global.get_config().save_to_settings_file()
 
+	# Day 1 retention notif is local-only — server sync won't restore it after the wipe.
+	if Global.get_config().day1_notification_scheduled:
+		Global.get_config().day1_notification_scheduled = false
+		Global.get_config().save_to_settings_file()
+		async_schedule_day1_notification.call_deferred()
+
 	_debug_log("All notifications cleared, version updated to v%d" % LOCAL_NOTIFICATIONS_VERSION)
 	return true
 
@@ -884,6 +894,10 @@ func async_sync_attended_events() -> void:
 			_debug_log(
 				"Notification permission not granted yet, scheduling anyway (OS will handle)"
 			)
+
+	# iOS plugin doesn't emit permission_changed, so the lobby grant never reaches
+	# _on_permission_changed. Trigger day1 here instead — its own guards handle dedup.
+	async_schedule_day1_notification.call_deferred()
 
 	var url = DclUrls.mobile_events_api() + "/?only_attendee=true"
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
@@ -1213,7 +1227,7 @@ func async_schedule_day1_notification() -> void:
 		"People are hanging out in Decentraland.",
 		trigger_timestamp,
 		"",
-		"decentraland://open?position=-7,-2",
+		"decentraland://open?position=0,0",
 	)
 
 	if scheduled:

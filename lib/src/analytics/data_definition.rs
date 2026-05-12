@@ -60,6 +60,7 @@ pub enum SegmentEvent {
     AcceptFriend(SegmentEventAcceptFriend),
     BlockUser(SegmentEventBlockUser),
     Unfriend(SegmentEventUnfriend),
+    InstallAttribution(SegmentEventInstallAttribution),
 }
 
 #[derive(Serialize, Clone)]
@@ -298,6 +299,33 @@ pub struct SegmentEventUnfriend {
     pub receiver_id: String,
 }
 
+#[derive(Serialize, Clone)]
+pub struct SegmentEventInstallAttribution {
+    // Raw referrer string (e.g. "utm_source=youtube&utm_campaign=xyz")
+    pub referrer: String,
+    // Parsed UTM source
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_source: Option<String>,
+    // Parsed UTM medium
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_medium: Option<String>,
+    // Parsed UTM campaign
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_campaign: Option<String>,
+    // Parsed UTM content
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_content: Option<String>,
+    // Parsed UTM term
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utm_term: Option<String>,
+    // Seconds since epoch when the referrer click happened
+    pub click_timestamp: i64,
+    // Seconds since epoch when the install began
+    pub install_timestamp: i64,
+    // Whether the app was launched as a Google Play Instant app
+    pub google_play_instant: bool,
+}
+
 pub fn build_segment_event_batch_item(
     user_id: String,
     common: &SegmentEventCommonExplorerFields,
@@ -361,6 +389,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::Unfriend(event) => (
             "Unfriend".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::InstallAttribution(event) => (
+            "Install Attribution".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

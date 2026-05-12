@@ -72,6 +72,7 @@ pub fn update_audio_source(
                 audio_source.set_dcl_pitch(new_value.pitch.unwrap_or(1.0));
                 audio_source.set_dcl_volume(new_value.volume.unwrap_or(1.0).clamp(0.0, 1.0));
                 audio_source.set_dcl_current_time(new_value.current_time.unwrap_or(0.0));
+                audio_source.set_dcl_global(new_value.global.unwrap_or(false));
                 audio_source.set_dcl_scene_id(scene.scene_id.0);
 
                 let dcl_enable = if let SceneType::Parcel = scene.scene_type {

@@ -1,6 +1,7 @@
 extends Node
 
 const DEFAULT_TRANSITION_TIME = 0.35  # in seconds
+const DEFAULT_VIRTUAL_CAMERA_FOV = 60.0
 const PERSISTANT_CAMERA := preload("res://src/helpers_components/persistant_camera.tscn")
 
 var global_virtual_camera_transform: Transform3D
@@ -90,12 +91,14 @@ func _process(delta: float) -> void:
 
 			# Make the global virtual camera current
 			global_virtual_camera.make_current()
+			global_virtual_camera.fov = DEFAULT_VIRTUAL_CAMERA_FOV
 			Global.set_camera_mode(Global.CameraMode.CINEMATIC)
 
-			# When virtual camera is active we always show the primary avatar and hide outlines
+			# When virtual camera is active we always show the primary avatar and hide outlines.
+			# Use set_hidden(false) instead of show() so AvatarModifierArea hide still applies.
 			var explorer = Global.get_explorer()
 			if is_instance_valid(explorer):
-				explorer.player.avatar.show()
+				explorer.player.avatar.set_hidden(false)
 				explorer.player.outline_system.hide()
 
 		# Reset transition counter and store start transform
@@ -155,7 +158,7 @@ func _process(delta: float) -> void:
 				explorer.reset_cursor_position()
 				explorer.player.outline_system.show()
 				if explorer.player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-					explorer.player.avatar.hide()
+					explorer.player.avatar.set_hidden(true)
 	else:
 		# Transitioning to virtual camera target
 		var target_transform = desired_target.global_transform

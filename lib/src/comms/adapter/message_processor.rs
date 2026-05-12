@@ -19,7 +19,9 @@ use crate::{
         },
         profile::{SerializedProfile, UserProfile},
     },
-    content::profile::{prepare_request_requirements, request_lambda_profile},
+    content::profile::{
+        prepare_request_requirements, request_lambda_profile, request_registry_profile,
+    },
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::{dcl_global::DclGlobal, dcl_social_blacklist::DclSocialBlacklist},
     scene_runner::tokio_runtime::TokioRuntime,
@@ -62,6 +64,7 @@ pub enum MessageType {
     PeerLeft,                       // Peer left a room
     Disconnected(DisconnectReason), // Disconnected from the server
     PeerMetadata(String),           // Peer metadata (e.g., version info for staging/dev builds)
+    RoomMetadataChanged(String),    // Room metadata changed (e.g., ban list update)
 }
 
 #[derive(Debug, Clone)]
@@ -127,8 +130,9 @@ struct Peer {
     profile_fetch_failures: u8,              // Count consecutive failures
     profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
     peer_version: Option<String>,            // Client version for staging/dev builds
-    last_movement_timestamp: f32,            // Dedup: last movement timestamp received
-    last_emote_incremental_id: u32,          // Dedup: last emote incremental ID received
+    lambdas_endpoint: Option<String>, // Peer's lambda URL from LiveKit metadata (lambdasEndpoint)
+    last_movement_timestamp: f32,     // Dedup: last movement timestamp received
+    last_emote_incremental_id: u32,   // Dedup: last emote incremental ID received
 }
 
 struct ProfileUpdate {
@@ -213,6 +217,9 @@ pub struct MessageProcessor {
 
     // Disconnect reason if disconnected from the server, along with the room_id
     disconnect_reason: Option<(DisconnectReason, String)>,
+
+    // Set to true when room metadata indicates the local player is banned
+    room_metadata_banned: bool,
 }
 
 fn compare_f64(a: &f64, b: &f64) -> Ordering {
@@ -273,6 +280,7 @@ impl MessageProcessor {
             cached_muted: HashSet::new(),
             active_video_tracks: HashMap::new(),
             disconnect_reason: None,
+            room_metadata_banned: false,
         }
     }
 
@@ -405,6 +413,13 @@ impl MessageProcessor {
     /// CommunicationManager should call this regularly to check for disconnection
     pub fn consume_disconnect_reason(&mut self) -> Option<(DisconnectReason, String)> {
         self.disconnect_reason.take()
+    }
+
+    /// Returns true (and resets) if room metadata indicated the local player was banned.
+    pub fn consume_room_metadata_banned(&mut self) -> bool {
+        let banned = self.room_metadata_banned;
+        self.room_metadata_banned = false;
+        banned
     }
 
     /// Processes all pending messages and performs periodic maintenance
@@ -680,6 +695,12 @@ impl MessageProcessor {
             return;
         }
 
+        // Room-level events (synthetic H160::zero() address) — handle before peer checks
+        if let MessageType::RoomMetadataChanged(ref metadata) = message.message {
+            self.handle_room_metadata_changed(metadata);
+            return;
+        }
+
         // Media messages (video/audio from streamers) use synthetic addresses (H160::zero())
         // and must bypass the player address check — they don't need peer lifecycle management.
         match &message.message {
@@ -763,6 +784,7 @@ impl MessageProcessor {
                     profile_fetch_failures: 0,
                     profile_fetch_banned_until: None,
                     peer_version: None,
+                    lambdas_endpoint: None,
                     last_movement_timestamp: f32::NEG_INFINITY,
                     last_emote_incremental_id: 0,
                 },
@@ -883,7 +905,7 @@ impl MessageProcessor {
                 }
             }
             MessageType::PeerMetadata(ref metadata) => {
-                // Parse metadata JSON to extract version info
+                // Parse metadata JSON to extract version and catalyst info
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(metadata) {
                     if let Some(version) = json.get("dcl_version").and_then(|v| v.as_str()) {
                         tracing::debug!(
@@ -907,8 +929,54 @@ impl MessageProcessor {
                             }
                         }
                     }
+                    if let Some(endpoint) = json.get("lambdasEndpoint").and_then(|v| v.as_str()) {
+                        if let Some(peer) = self.peer_identities.get_mut(&message.address) {
+                            if peer.lambdas_endpoint.as_deref() != Some(endpoint) {
+                                tracing::debug!(
+                                    "Peer {:#x} lambdas endpoint: {}",
+                                    message.address,
+                                    endpoint
+                                );
+                                peer.lambdas_endpoint = Some(endpoint.to_string());
+                                // Reset fetch state so we retry with the new endpoint
+                                peer.profile_fetch_attempted = false;
+                                peer.profile_fetch_failures = 0;
+                                peer.profile_fetch_banned_until = None;
+                            }
+                        }
+                    }
                 }
             }
+            // Handled via early return at the top of process_message()
+            MessageType::RoomMetadataChanged(_) => {}
+        }
+    }
+
+    /// Parse room metadata JSON for `bannedAddresses` and check if the local
+    /// player is in the list.  Metadata format (from comms-gatekeeper):
+    /// `{"bannedAddresses": ["0xabc...", "0xdef..."]}`
+    fn handle_room_metadata_changed(&mut self, metadata: &str) {
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(metadata) else {
+            return;
+        };
+        let Some(banned) = json.get("bannedAddresses").and_then(|v| v.as_array()) else {
+            return;
+        };
+
+        let local_addr = format!("{:#x}", self.player_address);
+        let local_addr_no_prefix = &local_addr[2..]; // strip "0x"
+        let is_banned = banned.iter().any(|v| {
+            v.as_str().is_some_and(|s| {
+                s.eq_ignore_ascii_case(&local_addr) || s.eq_ignore_ascii_case(local_addr_no_prefix)
+            })
+        });
+
+        if is_banned {
+            tracing::warn!(
+                "Room metadata indicates local player {:#x} is banned",
+                self.player_address
+            );
+            self.room_metadata_banned = true;
         }
     }
 
@@ -1026,7 +1094,7 @@ impl MessageProcessor {
                 // Get position from compressed movement with configured realm bounds
                 let pos = movement.position(self.realm_min, self.realm_max);
                 let velocity = movement.velocity();
-                let rotation_rad = -movement.temporal.rotation_f32();
+                let rotation_rad = movement.temporal.rotation_f32();
 
                 tracing::debug!(
                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
@@ -1193,14 +1261,92 @@ impl MessageProcessor {
                     let (lamda_server_base_url, profile_base_url, http_requester) =
                         prepare_request_requirements();
 
+                    // Use the peer's lambdasEndpoint (from LiveKit metadata) as the primary
+                    // fetch target — goes directly to the catalyst the peer deployed to,
+                    // avoiding cross-catalyst propagation delays (issue #1856).
+                    let peer_lambdas_endpoint = self
+                        .peer_identities
+                        .get(&address)
+                        .and_then(|p| p.lambdas_endpoint.clone());
+
                     TokioRuntime::spawn(async move {
-                        let result = request_lambda_profile(
-                            address,
-                            lamda_server_base_url.as_str(),
-                            profile_base_url.as_str(),
-                            http_requester,
-                        )
-                        .await;
+                        // Unity CatalystRetryPolicy: 6 retries, base 2s, multiplier 2x, capped at 60s
+                        // Retry if profile is None OR fetched version < announced version (version mismatch)
+                        const MAX_RETRIES: u32 = 6;
+                        const BASE_DELAY_MS: u64 = 2000;
+                        const BACKOFF_MULTIPLIER: u64 = 2;
+                        const MAX_DELAY_MS: u64 = 60_000;
+
+                        let version_ok = |r: &Result<UserProfile, _>| matches!(r, Ok(p) if p.version >= announced_version_for_retry);
+
+                        // Determine fetch endpoint: peer's lambdas endpoint if available, else realm lambda
+                        let fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
+                            Some(endpoint) if endpoint != lamda_server_base_url => {
+                                endpoint.to_string()
+                            }
+                            _ => lamda_server_base_url.clone(),
+                        };
+
+                        // Step 1: fetch with Unity-matching retry policy (exponential backoff)
+                        let mut result = Err(anyhow::anyhow!("not started"));
+                        for attempt in 0..=MAX_RETRIES {
+                            if attempt > 0 {
+                                let delay = (BASE_DELAY_MS * BACKOFF_MULTIPLIER.pow(attempt - 1))
+                                    .min(MAX_DELAY_MS);
+                                tracing::debug!(
+                                    "profile fetch retry {}/{} for {:#x} in {}ms",
+                                    attempt,
+                                    MAX_RETRIES,
+                                    address,
+                                    delay
+                                );
+                                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                            }
+                            result = request_lambda_profile(
+                                address,
+                                fetch_endpoint.as_str(),
+                                profile_base_url.as_str(),
+                                http_requester.clone(),
+                            )
+                            .await;
+                            if version_ok(&result) {
+                                break;
+                            }
+                        }
+
+                        // Step 2: asset-bundle-registry fallback (for legacy clients without lambdasEndpoint)
+                        let result = if version_ok(&result) {
+                            result
+                        } else {
+                            tracing::debug!("Trying asset-bundle-registry for {:#x}", address);
+                            request_registry_profile(
+                                address,
+                                profile_base_url.as_str(),
+                                http_requester.clone(),
+                            )
+                            .await
+                        };
+
+                        // Step 3: realm lambda fallback (if peer endpoint != realm and registry also failed)
+                        let result = if version_ok(&result) {
+                            result
+                        } else if fetch_endpoint != lamda_server_base_url {
+                            tracing::debug!(
+                                "Falling back to realm lambda for {:#x}: {}",
+                                address,
+                                lamda_server_base_url
+                            );
+                            request_lambda_profile(
+                                address,
+                                lamda_server_base_url.as_str(),
+                                profile_base_url.as_str(),
+                                http_requester,
+                            )
+                            .await
+                        } else {
+                            result
+                        };
+
                         if let Ok(profile) = result {
                             tracing::debug!(
                                 "Fetched profile from lambda for {:#x}: version {}",

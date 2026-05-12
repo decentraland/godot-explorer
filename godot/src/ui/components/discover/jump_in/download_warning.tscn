@@ -1,6 +1,6 @@
-[gd_scene load_steps=7 format=3 uid="uid://dj0cviotsdvg2"]
+[gd_scene format=3 uid="uid://dj0cviotsdvg2"]
 
-[ext_resource type="Script" path="res://src/ui/components/discover/jump_in/download_warning.gd" id="1_wk0wp"]
+[ext_resource type="Script" uid="uid://8r70gxe3s1vx" path="res://src/ui/components/discover/jump_in/download_warning.gd" id="1_wk0wp"]
 [ext_resource type="Texture2D" uid="uid://bldchilj3kjhx" path="res://assets/ui/warning-triangle.svg" id="2_qidsv"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="2_wk0wp"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_ni886"]
@@ -16,13 +16,13 @@ font = ExtResource("4_ni886")
 font_size = 24
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[node name="DownloadWarning" type="PanelContainer"]
+[node name="DownloadWarning" type="PanelContainer" unique_id=1679798069]
 size_flags_horizontal = 3
 size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_g0uym")
 script = ExtResource("1_wk0wp")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=252754862]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -31,19 +31,19 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=1818328198]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer" unique_id=1599230583]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 texture = ExtResource("2_qidsv")
 expand_mode = 1
 
-[node name="Label_DownloadWarning" type="Label" parent="MarginContainer/HBoxContainer"]
+[node name="Label_DownloadWarning" type="Label" parent="MarginContainer/HBoxContainer" unique_id=2075629943]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8784314, 0, 0, 1)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://bpr72166gh2i0"]
+[gd_scene format=3 uid="uid://bpr72166gh2i0"]
 
 [ext_resource type="Script" uid="uid://dw38ta8xe3v8y" path="res://src/ui/color_picker/colorable_square.gd" id="1_ps4c1"]
 
@@ -27,7 +27,7 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 anti_aliasing = false
 
-[node name="colorable_square" type="Button"]
+[node name="colorable_square" type="Button" unique_id=1479368426]
 custom_minimum_size = Vector2(35, 35)
 offset_right = 35.0
 offset_bottom = 35.0
@@ -38,7 +38,7 @@ toggle_mode = true
 flat = true
 script = ExtResource("1_ps4c1")
 
-[node name="PanelContainer_Border" type="PanelContainer" parent="."]
+[node name="PanelContainer_Border" type="PanelContainer" parent="." unique_id=2089748074]
 visible = false
 layout_mode = 0
 offset_right = 35.0
@@ -46,7 +46,7 @@ offset_bottom = 35.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_513wp")
 
-[node name="Panel_Color" type="Panel" parent="."]
+[node name="Panel_Color" type="Panel" parent="." unique_id=830346943]
 layout_mode = 0
 offset_right = 35.0
 offset_bottom = 35.0

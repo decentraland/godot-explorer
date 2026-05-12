@@ -84,12 +84,20 @@ impl DclSocialService {
     #[signal]
     pub fn block_update_received(address: GString, is_blocked: bool);
 
-    /// Initialize the service with DclPlayerIdentity
+    /// Initialize the service with DclPlayerIdentity.
+    /// Safe to call multiple times — skips if already initialized.
     #[func]
     pub fn initialize_from_player_identity(
         &mut self,
         player_identity: Gd<crate::auth::dcl_player_identity::DclPlayerIdentity>,
     ) {
+        // Skip if already initialized
+        if let Ok(guard) = self.manager.try_read() {
+            if guard.is_some() {
+                return;
+            }
+        }
+
         let wallet_option = player_identity.bind().try_get_ephemeral_auth_chain();
 
         let Some(wallet) = wallet_option else {
@@ -1050,7 +1058,7 @@ impl DclSocialService {
                 promise.bind_mut().resolve_with_data(array.to_variant());
             }
             Err(e) => {
-                tracing::error!("get_friends failed: {}", e);
+                tracing::warn!("get_friends failed: {}", e);
                 promise.bind_mut().reject(e.as_str().into())
             }
         }
@@ -1149,11 +1157,26 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.block_user(address)
+        let response = mgr
+            .block_user(address)
             .await
             .map_err(|e| format!("Failed to block user: {}", e))?;
 
-        Ok(())
+        match response.response {
+            Some(block_user_response::Response::Ok(_)) => Ok(()),
+            Some(block_user_response::Response::InternalServerError(e)) => Err(format!(
+                "Server error blocking user: {}",
+                e.message.unwrap_or_default()
+            )),
+            Some(block_user_response::Response::InvalidRequest(e)) => Err(format!(
+                "Invalid request blocking user: {}",
+                e.message.unwrap_or_default()
+            )),
+            Some(block_user_response::Response::ProfileNotFound(_)) => {
+                Err("Profile not found when blocking user".to_string())
+            }
+            None => Err("Empty response from server when blocking user".to_string()),
+        }
     }
 
     async fn async_unblock_user(
@@ -1165,11 +1188,26 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.unblock_user(address)
+        let response = mgr
+            .unblock_user(address)
             .await
             .map_err(|e| format!("Failed to unblock user: {}", e))?;
 
-        Ok(())
+        match response.response {
+            Some(unblock_user_response::Response::Ok(_)) => Ok(()),
+            Some(unblock_user_response::Response::InternalServerError(e)) => Err(format!(
+                "Server error unblocking user: {}",
+                e.message.unwrap_or_default()
+            )),
+            Some(unblock_user_response::Response::InvalidRequest(e)) => Err(format!(
+                "Invalid request unblocking user: {}",
+                e.message.unwrap_or_default()
+            )),
+            Some(unblock_user_response::Response::ProfileNotFound(_)) => {
+                Err("Profile not found when unblocking user".to_string())
+            }
+            None => Err("Empty response from server when unblocking user".to_string()),
+        }
     }
 
     /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, blocked_at)

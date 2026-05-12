@@ -398,6 +398,17 @@ pub fn update_modifier_video_textures(scene: &mut Scene) {
                     material.set_texture(param, &texture.upcast::<Texture2D>());
                 }
             }
+
+            // ExternalTexture (ExoPlayer/AVPlayer) lacks an sRGB texture view,
+            // so `source_color` hint has no effect. Use FORCE_SRGB to compensate.
+            // ImageTexture (LiveKit) has an sRGB view — keep FORCE_SRGB off.
+            if param == TextureParam::ALBEDO {
+                let force_srgb = video_player.bind().uses_external_texture();
+                material.set_flag(
+                    godot::classes::base_material_3d::Flags::ALBEDO_TEXTURE_FORCE_SRGB,
+                    force_srgb,
+                );
+            }
         }
     }
 }

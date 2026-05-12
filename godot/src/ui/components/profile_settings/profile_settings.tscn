@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://cuduuu2b4u4bn"]
+[gd_scene format=3 uid="uid://cuduuu2b4u4bn"]
 
 [ext_resource type="Script" uid="uid://dc2kn2egscg1a" path="res://src/ui/components/profile_settings/profile_settings.gd" id="1_t2la2"]
 [ext_resource type="PackedScene" uid="uid://dcar8bc8rcscu" path="res://src/ui/components/profile/profile.tscn" id="8_m3dyn"]
 
-[node name="ProfileSettings" type="Control"]
+[node name="ProfileSettings" type="Control" unique_id=1409775449]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,6 +12,5 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_t2la2")
 
-[node name="Profile" parent="." instance=ExtResource("8_m3dyn")]
+[node name="Profile" parent="." unique_id=522562408 instance=ExtResource("8_m3dyn")]
 layout_mode = 1
-offset_right = 0.0

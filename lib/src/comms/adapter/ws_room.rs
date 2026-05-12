@@ -452,8 +452,16 @@ impl WebSocketRoom {
                     }
                 }
                 ws_packet::Message::PeerKicked(reason) => {
-                    tracing::debug!("comms > received PeerKicked {:?}", reason);
-                    // TODO: message announcing the kick
+                    tracing::warn!("comms > received PeerKicked {:?}", reason);
+                    if let Some(sender) = &self.message_processor_sender {
+                        let _ = sender.try_send(IncomingMessage {
+                            message: MessageType::Disconnected(
+                                super::message_processor::DisconnectReason::Kicked,
+                            ),
+                            address: H160::zero(),
+                            room_id: self.room_id.clone(),
+                        });
+                    }
                     self.ws_peer.close();
                     self.state = WsRoomState::Connecting;
                 }

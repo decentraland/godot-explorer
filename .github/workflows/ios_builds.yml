@@ -107,6 +107,8 @@ jobs:
 
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ inputs.ref || github.event.inputs.ref }}
 
       - name: Build MacOS
         timeout-minutes: 20

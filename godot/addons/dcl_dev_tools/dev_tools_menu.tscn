@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://bphpsgsi3d3xj"]
+[gd_scene format=3 uid="uid://bphpsgsi3d3xj"]
 
 [sub_resource type="Theme" id="Theme_ile8c"]
 
-[node name="DevToolsMenu" type="MenuButton"]
+[node name="DevToolsMenu" type="MenuButton" unique_id=765074837]
 offset_right = 36.0
 offset_bottom = 22.0
 size_flags_horizontal = 0

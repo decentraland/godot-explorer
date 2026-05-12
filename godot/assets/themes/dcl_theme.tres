@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=120 format=3 uid="uid://bn7q4ap7m5gdu"]
+[gd_resource type="Theme" format=3 uid="uid://bn7q4ap7m5gdu"]
 
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="1_6dlaa"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_lbfoi"]
@@ -19,8 +19,10 @@
 [ext_resource type="StyleBox" uid="uid://bujf67k8oji3g" path="res://assets/themes/general_slider/slider.tres" id="15_wftf5"]
 [ext_resource type="StyleBox" uid="uid://yky3w8m5bb5j" path="res://assets/themes/dcl_theme/engagement_disabled.tres" id="16_1x5yb"]
 [ext_resource type="StyleBox" uid="uid://do8fl73m88q6v" path="res://assets/themes/dcl_theme/engagement_normal.tres" id="16_3kpjx"]
+[ext_resource type="Texture2D" uid="uid://c6tqfc51r5p68" path="res://assets/ui/switch-on-disabled.svg" id="16_b70k2"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="16_k33ds"]
 [ext_resource type="StyleBox" uid="uid://cg1rof45xyk4i" path="res://assets/themes/dcl_theme/engagement_pressed.tres" id="17_1x5yb"]
+[ext_resource type="Texture2D" uid="uid://dlng2xlnaunak" path="res://assets/ui/switch-disabled.svg" id="17_p3sh4"]
 [ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="17_xiu8x"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="18_uv0rg"]
 [ext_resource type="StyleBox" uid="uid://nw2w7vul1wnx" path="res://assets/themes/option_button_disabled.tres" id="19_njqlq"]
@@ -488,12 +490,12 @@ CheckButton/constants/check_v_offset = 0
 CheckButton/constants/h_separation = 4
 CheckButton/constants/outline_size = 0
 CheckButton/icons/checked = ExtResource("8_ec0gy")
-CheckButton/icons/checked_disabled = ExtResource("8_ec0gy")
-CheckButton/icons/checked_disabled_mirrored = ExtResource("8_ec0gy")
+CheckButton/icons/checked_disabled = ExtResource("16_b70k2")
+CheckButton/icons/checked_disabled_mirrored = ExtResource("16_b70k2")
 CheckButton/icons/checked_mirrored = ExtResource("8_ec0gy")
 CheckButton/icons/unchecked = ExtResource("9_rt0af")
-CheckButton/icons/unchecked_disabled = ExtResource("9_rt0af")
-CheckButton/icons/unchecked_disabled_mirrored = ExtResource("9_rt0af")
+CheckButton/icons/unchecked_disabled = ExtResource("17_p3sh4")
+CheckButton/icons/unchecked_disabled_mirrored = ExtResource("17_p3sh4")
 CheckButton/icons/unchecked_mirrored = ExtResource("9_rt0af")
 CheckButton/styles/disabled = SubResource("StyleBoxEmpty_1t6yp")
 CheckButton/styles/focus = SubResource("StyleBoxEmpty_adyih")

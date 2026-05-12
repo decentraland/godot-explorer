@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://dd2w2ysk3akdj"]
+[gd_scene format=3 uid="uid://dd2w2ysk3akdj"]
 
 [ext_resource type="Script" uid="uid://bl72s0o36lbmn" path="res://src/ui/components/friends/friends_panel.gd" id="1_v2dsn"]
 [ext_resource type="StyleBox" uid="uid://c1jov5bbl6rpn" path="res://src/ui/components/friends/friends_separator.tres" id="2_ifioe"]
@@ -83,7 +83,7 @@ border_blend = true
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="FriendsPanel" type="PanelContainer"]
+[node name="FriendsPanel" type="PanelContainer" unique_id=1649513820]
 clip_contents = true
 custom_minimum_size = Vector2(450, 300)
 offset_right = 450.0
@@ -93,33 +93,33 @@ size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_wese4")
 script = ExtResource("1_v2dsn")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=318827913]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer" unique_id=775124553]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ifioe")
 
-[node name="MarginContainer_Header" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
+[node name="MarginContainer_Header" type="MarginContainer" parent="VBoxContainer/PanelContainer" unique_id=443181987]
 layout_mode = 2
 theme_override_constants/margin_left = 2
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 2
 theme_override_constants/margin_bottom = 0
 
-[node name="Header" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header"]
+[node name="Header" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header" unique_id=926793387]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="VBoxContainer_FriendsTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
+[node name="VBoxContainer_FriendsTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header" unique_id=1827543702]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="Button_Friends" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+[node name="Button_Friends" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab" unique_id=965233518]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
@@ -129,19 +129,19 @@ button_group = SubResource("ButtonGroup_v2dsn")
 text = "FRIENDS"
 flat = true
 
-[node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab"]
+[node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab" unique_id=2078883186]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 color = Color(1, 0.1764706, 0.33333334, 1)
 
-[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
+[node name="VBoxContainer_NearbyTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header" unique_id=668152660]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="Button_Nearby" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+[node name="Button_Nearby" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab" unique_id=1364209019]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
@@ -151,19 +151,19 @@ button_group = SubResource("ButtonGroup_v2dsn")
 text = "NEARBY"
 flat = true
 
-[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab"]
+[node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab" unique_id=1791342904]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 color = Color(1, 0.1764706, 0.33333334, 1)
 
-[node name="VBoxContainer_BlockedTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header"]
+[node name="VBoxContainer_BlockedTab" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header" unique_id=202018782]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="Button_Blocked" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
+[node name="Button_Blocked" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab" unique_id=925943708]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 focus_mode = 0
@@ -172,17 +172,17 @@ button_group = SubResource("ButtonGroup_v2dsn")
 text = "BLOCKED"
 flat = true
 
-[node name="ColorRect_Blocked" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab"]
+[node name="ColorRect_Blocked" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab" unique_id=435976666]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 color = Color(1, 0.1764706, 0.33333334, 1)
 
-[node name="MarginContainer" type="Control" parent="VBoxContainer"]
+[node name="MarginContainer" type="Control" parent="VBoxContainer" unique_id=2065141313]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer" unique_id=142362145]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -194,43 +194,43 @@ theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="ScrollContainer_Friends" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
+[node name="ScrollContainer_Friends" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer" unique_id=1823854364]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 scroll_deadzone = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends" unique_id=877019795]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="FriendsList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
+[node name="FriendsList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer" unique_id=1146355648]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="VBoxContainer_Request" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList"]
+[node name="VBoxContainer_Request" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList" unique_id=1692676438]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="RequestContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request"]
+[node name="RequestContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request" unique_id=927550038]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer" unique_id=1634787876]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer" unique_id=125875895]
 layout_mode = 2
 theme_override_styles/separator = ExtResource("2_ifioe")
 
-[node name="RequestButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
+[node name="RequestButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer" unique_id=851011353]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
@@ -248,33 +248,33 @@ flat = true
 alignment = 0
 expand_icon = true
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request/RequestContainer/VBoxContainer" unique_id=175885112]
 layout_mode = 2
 
-[node name="RequestList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request"]
+[node name="RequestList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Request" unique_id=1319376097]
 unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("2_l4o08")
 player_list_type = 2
 
-[node name="VBoxContainer_Online" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList"]
+[node name="VBoxContainer_Online" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList" unique_id=1204242067]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="OnlineContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online"]
+[node name="OnlineContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online" unique_id=162773515]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer" unique_id=1933606510]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer" unique_id=1194047955]
 layout_mode = 2
 
-[node name="OnlineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
+[node name="OnlineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer" unique_id=1013121081]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
@@ -292,32 +292,32 @@ flat = true
 alignment = 0
 expand_icon = true
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer" unique_id=1586506871]
 layout_mode = 2
 
-[node name="OnlineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online"]
+[node name="OnlineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online" unique_id=1961357369]
 unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("2_l4o08")
 
-[node name="VBoxContainer_Offline" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList"]
+[node name="VBoxContainer_Offline" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList" unique_id=1193726402]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="OfflineContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline"]
+[node name="OfflineContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline" unique_id=1161594190]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2vk4g")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer" unique_id=563606878]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer" unique_id=2146472155]
 layout_mode = 2
 
-[node name="OfflineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
+[node name="OfflineButton" type="Button" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer" unique_id=1229702841]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
@@ -335,16 +335,16 @@ flat = true
 alignment = 0
 expand_icon = true
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer" unique_id=1617242083]
 layout_mode = 2
 
-[node name="OfflineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline"]
+[node name="OfflineList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline" unique_id=218097239]
 unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("2_l4o08")
 player_list_type = 1
 
-[node name="VBoxContainer_NoService" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
+[node name="VBoxContainer_NoService" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer" unique_id=1904862732]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -353,43 +353,43 @@ size_flags_vertical = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService" unique_id=1500703893]
 custom_minimum_size = Vector2(90, 60)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService/PanelContainer" unique_id=856748202]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService/PanelContainer/MarginContainer"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService/PanelContainer/MarginContainer" unique_id=387327310]
 layout_mode = 2
 texture = ExtResource("7_ekuv1")
 expand_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService" unique_id=2098266259]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService" unique_id=1634144704]
 layout_mode = 2
 text = "Whoops...
 Friends System is Down!"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService" unique_id=1407974909]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
-[node name="Label_OutOfService" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService"]
+[node name="Label_OutOfService" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService" unique_id=1376774171]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
@@ -402,7 +402,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="VBoxContainer_NoFriends" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
+[node name="VBoxContainer_NoFriends" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer" unique_id=136612733]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -411,32 +411,32 @@ size_flags_vertical = 3
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends" unique_id=1572775642]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends/PanelContainer" unique_id=2034373383]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends/PanelContainer/MarginContainer"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends/PanelContainer/MarginContainer" unique_id=2046823228]
 layout_mode = 2
 texture = ExtResource("8_nlw6c")
 expand_mode = 4
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends" unique_id=2023803526]
 layout_mode = 2
 text = "Time to Make Some Friends!"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
-[node name="Label_NoFriends" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends"]
+[node name="Label_NoFriends" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends" unique_id=597960210]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
@@ -447,7 +447,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="VBoxContainer_Loading" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer"]
+[node name="VBoxContainer_Loading" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer" unique_id=953907516]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -455,7 +455,7 @@ size_flags_vertical = 3
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="ScrollContainer_Nearby" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
+[node name="ScrollContainer_Nearby" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer" unique_id=1542633170]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -463,12 +463,12 @@ size_flags_vertical = 3
 horizontal_scroll_mode = 0
 scroll_deadzone = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby" unique_id=361322051]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="NearbyList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer"]
+[node name="NearbyList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer" unique_id=1298886623]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -477,7 +477,7 @@ size_flags_vertical = 3
 script = ExtResource("2_l4o08")
 player_list_type = 3
 
-[node name="VBoxContainer_NoNearbyPlayers" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer"]
+[node name="VBoxContainer_NoNearbyPlayers" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer" unique_id=1206461141]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -485,43 +485,43 @@ size_flags_vertical = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers" unique_id=2078442245]
 custom_minimum_size = Vector2(90, 90)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers/PanelContainer" unique_id=950146672]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers/PanelContainer/MarginContainer"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers/PanelContainer/MarginContainer" unique_id=2085881617]
 layout_mode = 2
 texture = ExtResource("8_nlw6c")
 expand_mode = 4
 stretch_mode = 3
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers" unique_id=765107408]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers" unique_id=11384551]
 layout_mode = 2
 text = "No One Nearby"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers" unique_id=361195298]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
-[node name="Label_NoNearby" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers"]
+[node name="Label_NoNearby" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers" unique_id=839085516]
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -533,7 +533,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="ScrollContainer_Blocked" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer"]
+[node name="ScrollContainer_Blocked" type="ScrollContainer" parent="VBoxContainer/MarginContainer/MarginContainer" unique_id=1978435243]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -541,19 +541,19 @@ size_flags_vertical = 3
 horizontal_scroll_mode = 0
 scroll_deadzone = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked" unique_id=883480059]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="BlockedList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer"]
+[node name="BlockedList" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer" unique_id=1162387491]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("2_l4o08")
 player_list_type = 4
 
-[node name="VBoxContainer_NoBlockeds" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer"]
+[node name="VBoxContainer_NoBlockeds" type="VBoxContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer" unique_id=2070453163]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -561,42 +561,42 @@ size_flags_vertical = 3
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds" unique_id=1902873661]
 custom_minimum_size = Vector2(90, 90)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds/PanelContainer" unique_id=1696553817]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds/PanelContainer/MarginContainer"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds/PanelContainer/MarginContainer" unique_id=1137360699]
 layout_mode = 2
 texture = ExtResource("9_2vk4g")
 expand_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds" unique_id=755640996]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds" unique_id=973907473]
 layout_mode = 2
 text = "No Blocked Accounts Yet"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds" unique_id=1774614859]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
-[node name="Label_NoBlockeds" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds"]
+[node name="Label_NoBlockeds" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds" unique_id=1065528154]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
@@ -609,7 +609,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="FadeOverlayTop" type="Control" parent="VBoxContainer/MarginContainer"]
+[node name="FadeOverlayTop" type="Control" parent="VBoxContainer/MarginContainer" unique_id=1892209461]
 visible = false
 self_modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(0, 64)
@@ -620,14 +620,14 @@ grow_horizontal = 2
 size_flags_vertical = 8
 mouse_filter = 2
 
-[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/FadeOverlayTop"]
+[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/FadeOverlayTop" unique_id=1493090635]
 layout_mode = 0
 offset_right = 448.0
 offset_bottom = 64.0
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_x48bx")
 
-[node name="FadeOverlayBottom" type="VBoxContainer" parent="VBoxContainer/MarginContainer"]
+[node name="FadeOverlayBottom" type="VBoxContainer" parent="VBoxContainer/MarginContainer" unique_id=679966101]
 visible = false
 self_modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(0, 64)
@@ -643,18 +643,18 @@ size_flags_vertical = 8
 mouse_filter = 2
 theme_override_constants/separation = -1
 
-[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/FadeOverlayBottom"]
+[node name="FadeOverlay" type="TextureRect" parent="VBoxContainer/MarginContainer/FadeOverlayBottom" unique_id=1673176902]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_fade")
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/FadeOverlayBottom"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer/FadeOverlayBottom" unique_id=630711207]
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_h1uhn")
 
-[node name="Timer" type="Timer" parent="."]
+[node name="Timer" type="Timer" parent="." unique_id=2000908590]
 unique_name_in_owner = true
 wait_time = 15.0
 

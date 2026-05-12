@@ -3,10 +3,17 @@ extends Control
 ## When true (e.g., notifications with closed chat), the message body is shortened.
 const MAX_CHARS_REDUCED: int = 80
 const TAG_COLOR := "#716B7C"
-const MESSAGE_SIZE := 18
-const MESSAGE_COLOR := "#CFCDD4"
-const TAG_SIZE := 22
-const NICK_SIZE := 22
+
+## Design specs — landscape
+const LANDSCAPE_MARGIN_H := 10
+const LANDSCAPE_MARGIN_V := 8
+const LANDSCAPE_FONT_SIZE := 18
+const LANDSCAPE_BOLD_SIZE := 20
+
+## Design specs — portrait
+const PORTRAIT_MARGIN := 16
+const PORTRAIT_FONT_SIZE := 24
+const PORTRAIT_BOLD_SIZE := 26
 
 ## Bold header ~22pt (theme). Small separator: nick<->tag, tag<->icon, nick<->icon (~4px).
 const SEP_HEADER_SMALL := "[font_size=22]\u200a\u200a[/font_size]"
@@ -26,21 +33,18 @@ var tag: String = ""
 var nickname_color_hex: String = "ffffff"
 var is_own_message: bool = false
 var has_claimed_name: bool = false
-var max_panel_width: int = 370
 var reduce_text: bool = false
 
 var _address: String = ""
 
 @onready var rich_text: RichTextLabel = %RichTextLabel_Message
-@onready var message_row: HBoxContainer = %HBoxContainer_MessageRow
 @onready var message_panel: PanelContainer = %PanelContainer_Message
-@onready var row_spacer: Control = %Control_Spacer
+@onready var content_margin: MarginContainer = %MarginContainer_Content
 
 
 func _ready() -> void:
 	rich_text.meta_clicked.connect(_on_url_clicked)
 	_configure_richtext_theme(rich_text)
-	async_adjust_panel_size()
 
 
 func _configure_richtext_theme(richtext_label: RichTextLabel) -> void:
@@ -88,7 +92,7 @@ func set_chat(address: String, message: String, _timestamp: float) -> void:
 
 	var processed_message = make_urls_clickable(new_text)
 	rich_text.text = _build_chat_rich_text(processed_message)
-	async_adjust_panel_size.call_deferred()
+	_async_update_layout.call_deferred()
 
 
 func _build_chat_rich_text(processed_message: String) -> String:
@@ -195,6 +199,25 @@ func make_urls_clickable(text: String) -> String:
 			)
 			_apply_mention_style()
 
+	# World regex runs before URL regex so .dcl.eth names get wrapped first.
+	# The URL regex won't re-wrap them because _is_safe_url rejects BBCode chars.
+	var world_regex = RegEx.new()
+	world_regex.compile(r"([a-zA-Z0-9][-a-zA-Z0-9]*\.dcl\.eth)")
+
+	var world_results = world_regex.search_all(processed_text)
+	for i in range(world_results.size() - 1, -1, -1):
+		var world_match = world_results[i]
+		var world_name = world_match.get_string()
+		var start_pos = world_match.get_start()
+		var end_pos = world_match.get_end()
+
+		var clickable_world = (
+			"[url=world:%s][color=#66B3FF]%s[/color][/url]" % [world_name, world_name]
+		)
+		processed_text = (
+			processed_text.substr(0, start_pos) + clickable_world + processed_text.substr(end_pos)
+		)
+
 	var coord_regex = RegEx.new()
 	coord_regex.compile(r"(-?\d+,-?\d+)")
 
@@ -214,7 +237,8 @@ func make_urls_clickable(text: String) -> String:
 			)
 
 	var url_regex = RegEx.new()
-	url_regex.compile(r"(https://[^\s]+|www\.[^\s]+)")
+	# Match https://, http://, www., or bare domains (e.g., amazon.com, example.co.uk)
+	url_regex.compile(r"(https?://[^\s]+|www\.[^\s]+|[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}[^\s]*)")
 
 	var url_results = url_regex.search_all(processed_text)
 	for i in range(url_results.size() - 1, -1, -1):
@@ -223,9 +247,13 @@ func make_urls_clickable(text: String) -> String:
 		var start_pos = url_match.get_start()
 		var end_pos = url_match.get_end()
 
-		var full_url = url
-		if url.begins_with("www."):
-			full_url = "https://" + url
+		# Strip trailing punctuation that's likely not part of the URL
+		var trailing_punct = [".", ",", "!", "?", ")", ";", ":"]
+		while url.length() > 0 and url[-1] in trailing_punct:
+			url = url.substr(0, url.length() - 1)
+			end_pos -= 1
+
+		var full_url = Realm.ensure_starts_with_https(url)
 
 		if _is_safe_url(full_url):
 			var sanitized_url = _sanitize_url(full_url)
@@ -362,6 +390,9 @@ func _on_url_clicked(meta) -> void:
 	if meta_str.begins_with("coord:"):
 		var coord_str = meta_str.substr(6)
 		_handle_coordinate_click(coord_str)
+	elif meta_str.begins_with("world:"):
+		var world_name = meta_str.substr(6)
+		Global.modal_manager.async_show_world_modal(world_name)
 	elif meta_str.begins_with("mention:"):
 		var mention_str = meta_str.substr(8)
 		_handle_mention_click(mention_str)
@@ -395,25 +426,52 @@ func _handle_mention_click(mention_str: String) -> void:
 					break
 
 
-func async_adjust_panel_size() -> void:
-	_adjust_panel_size()
+func _async_update_layout() -> void:
+	await get_tree().process_frame
+	if rich_text.size.x <= 0:
+		return  # Chat hidden, will be re-layouted on open
+
+	# Reset to full width so we measure against the real available space
+	rich_text.fit_content = false
+	message_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	message_panel.custom_minimum_size = Vector2.ZERO
+	rich_text.custom_minimum_size = Vector2.ZERO
+	await get_tree().process_frame
+
+	var content_width := rich_text.get_content_width()
+	var available_width := int(rich_text.size.x)
+	var h_padding := (
+		content_margin.get_theme_constant("margin_left")
+		+ content_margin.get_theme_constant("margin_right")
+	)
+
+	if content_width < available_width:
+		message_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		message_panel.custom_minimum_size.x = content_width + h_padding
+
+	rich_text.fit_content = true
 
 
-func _adjust_panel_size() -> void:
-	var margin = 20
-	var parsed_text = rich_text.get_parsed_text()
-	var font = rich_text.get_theme_default_font()
-	var font_size = rich_text.get_theme_font_size("normal_font_size")
-	var text_width = font.get_string_size(parsed_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+func relayout(is_portrait: bool) -> void:
+	set_portrait(is_portrait)
+	_async_update_layout.call_deferred()
 
-	var min_width = 25
-	var desired_width = max(min_width, min(text_width + margin, max_panel_width))
-	message_panel.custom_minimum_size.x = desired_width
 
-	if text_width > desired_width:
-		rich_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+func set_portrait(is_portrait: bool) -> void:
+	if is_portrait:
+		content_margin.add_theme_constant_override("margin_left", PORTRAIT_MARGIN)
+		content_margin.add_theme_constant_override("margin_top", PORTRAIT_MARGIN)
+		content_margin.add_theme_constant_override("margin_right", PORTRAIT_MARGIN)
+		content_margin.add_theme_constant_override("margin_bottom", PORTRAIT_MARGIN)
+		rich_text.add_theme_font_size_override("normal_font_size", PORTRAIT_FONT_SIZE)
+		rich_text.add_theme_font_size_override("bold_font_size", PORTRAIT_BOLD_SIZE)
 	else:
-		rich_text.autowrap_mode = TextServer.AUTOWRAP_OFF
+		content_margin.add_theme_constant_override("margin_left", LANDSCAPE_MARGIN_H)
+		content_margin.add_theme_constant_override("margin_top", LANDSCAPE_MARGIN_V)
+		content_margin.add_theme_constant_override("margin_right", LANDSCAPE_MARGIN_H)
+		content_margin.add_theme_constant_override("margin_bottom", LANDSCAPE_MARGIN_V)
+		rich_text.add_theme_font_size_override("normal_font_size", LANDSCAPE_FONT_SIZE)
+		rich_text.add_theme_font_size_override("bold_font_size", LANDSCAPE_BOLD_SIZE)
 
 
 func escape_bbcode(text: String) -> String:

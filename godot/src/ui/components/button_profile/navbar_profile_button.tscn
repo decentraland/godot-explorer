@@ -1,11 +1,11 @@
-[gd_scene load_steps=8 format=3 uid="uid://bpx10vkib1ix"]
+[gd_scene format=3 uid="uid://bpx10vkib1ix"]
 
 [ext_resource type="ButtonGroup" uid="uid://bxbiah4vi02n2" path="res://src/ui/components/menu/button_group_menu.tres" id="1_hxpg5"]
 [ext_resource type="Texture2D" uid="uid://vi0y7typ76j" path="res://src/ui/components/button_profile/profile-background-1.svg" id="2_hhcdc"]
 [ext_resource type="Texture2D" uid="uid://c3y600q1cirt5" path="res://assets/ui/ProfileExample.png" id="2_kbtey"]
 [ext_resource type="Texture2D" uid="uid://bhj1gnflt1erb" path="res://src/ui/components/button_profile/profile-background-2.svg" id="3_g8i2s"]
 [ext_resource type="Script" uid="uid://bnwc46w3c31uu" path="res://src/ui/components/button_profile/navbar_profile_button.gd" id="3_wyh6g"]
-[ext_resource type="Material" path="res://src/ui/components/button_profile/texture_rect_rounded_material.tres" id="4_material"]
+[ext_resource type="Material" uid="uid://cq1dvbbcpt82c" path="res://src/ui/components/button_profile/texture_rect_rounded_material.tres" id="4_material"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hhcdc"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -19,7 +19,7 @@ corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
-[node name="Navbar_Profile_Button" type="TextureButton"]
+[node name="Navbar_Profile_Button" type="TextureButton" unique_id=36057934]
 custom_minimum_size = Vector2(45, 45)
 offset_right = 45.0
 offset_bottom = 45.0
@@ -36,7 +36,7 @@ stretch_mode = 0
 script = ExtResource("3_wyh6g")
 metadata/disable_ui_sounds = true
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1001942010]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -48,7 +48,7 @@ theme_override_constants/margin_top = 1
 theme_override_constants/margin_right = 1
 theme_override_constants/margin_bottom = 1
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer" unique_id=1754489815]
 unique_name_in_owner = true
 material = ExtResource("4_material")
 layout_mode = 2
@@ -57,7 +57,7 @@ texture = ExtResource("2_kbtey")
 expand_mode = 4
 stretch_mode = 4
 
-[node name="Panel" type="Panel" parent="."]
+[node name="Panel" type="Panel" parent="." unique_id=1879343697]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15

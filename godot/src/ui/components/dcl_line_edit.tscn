@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://fc5fxcmfp4pq"]
+[gd_scene format=3 uid="uid://fc5fxcmfp4pq"]
 
 [ext_resource type="Script" uid="uid://bo6p514e8op0r" path="res://src/ui/components/dcl_line_edit.gd" id="1_gt5hx"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="2_8pd44"]
@@ -16,7 +16,7 @@ font_color = Color(0.687215, 0.687215, 0.687215, 1)
 [sub_resource type="LabelSettings" id="LabelSettings_ao8tk"]
 font_size = 20
 
-[node name="DclLineEdit" type="VBoxContainer"]
+[node name="DclLineEdit" type="VBoxContainer" unique_id=1401595892]
 custom_minimum_size = Vector2(0, 150)
 anchors_preset = 10
 anchor_right = 1.0
@@ -26,11 +26,11 @@ size_flags_vertical = 0
 theme_override_constants/separation = 6
 script = ExtResource("1_gt5hx")
 
-[node name="Control" type="Control" parent="."]
+[node name="Control" type="Control" parent="." unique_id=264049815]
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="Control"]
+[node name="LineEdit" type="LineEdit" parent="Control" unique_id=637718467]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -53,7 +53,7 @@ theme_override_styles/focus = ExtResource("5_rrmjg")
 placeholder_text = "Hint"
 clear_button_enabled = true
 
-[node name="MarginContainer" type="MarginContainer" parent="Control"]
+[node name="MarginContainer" type="MarginContainer" parent="Control" unique_id=1135200480]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -63,7 +63,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/margin_right = 50
 
-[node name="Label_Tag" type="Label" parent="Control/MarginContainer"]
+[node name="Label_Tag" type="Label" parent="Control/MarginContainer" unique_id=692498589]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -74,10 +74,10 @@ label_settings = SubResource("LabelSettings_poknr")
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="."]
+[node name="HBoxContainer2" type="HBoxContainer" parent="." unique_id=999524530]
 layout_mode = 2
 
-[node name="Label_Error" type="RichTextLabel" parent="HBoxContainer2"]
+[node name="Label_Error" type="RichTextLabel" parent="HBoxContainer2" unique_id=1725063823]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -91,7 +91,7 @@ text = "Error example"
 fit_content = true
 autowrap_mode = 2
 
-[node name="Label_Length" type="Label" parent="HBoxContainer2"]
+[node name="Label_Length" type="Label" parent="HBoxContainer2" unique_id=827561636]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1

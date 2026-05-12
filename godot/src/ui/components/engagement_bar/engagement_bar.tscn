@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://cmarw81knjomw"]
+[gd_scene format=3 uid="uid://cmarw81knjomw"]
 
 [ext_resource type="Script" uid="uid://2bpphti4ixii" path="res://src/ui/components/engagement_bar/engagement_bar.gd" id="1_trky3"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_g1nd3"]
@@ -12,13 +12,13 @@ corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
-[node name="EngagementBar" type="HBoxContainer"]
+[node name="EngagementBar" type="HBoxContainer" unique_id=483328018]
 custom_minimum_size = Vector2(0, 96)
 size_flags_horizontal = 0
 theme_override_constants/separation = 18
 script = ExtResource("1_trky3")
 
-[node name="Button_Like" type="Button" parent="."]
+[node name="Button_Like" type="Button" parent="." unique_id=529668029]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
@@ -32,7 +32,7 @@ icon = ExtResource("4_vgr3q")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Like_Pressed" type="Button" parent="Button_Like"]
+[node name="Button_Like_Pressed" type="Button" parent="Button_Like" unique_id=1137895126]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(94, 96)
@@ -51,7 +51,7 @@ icon = ExtResource("4_vgr3q")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Dislike" type="Button" parent="."]
+[node name="Button_Dislike" type="Button" parent="." unique_id=358193754]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(94, 96)
 layout_mode = 2
@@ -65,7 +65,7 @@ icon = ExtResource("6_cp6lm")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Dislike_Pressed" type="Button" parent="Button_Dislike"]
+[node name="Button_Dislike_Pressed" type="Button" parent="Button_Dislike" unique_id=369280362]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(94, 96)

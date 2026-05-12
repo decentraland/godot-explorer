@@ -337,8 +337,16 @@ impl ArchipelagoManager {
         while let Some((_packet_length, message)) = get_next_packet(self.ws_peer.clone()) {
             match message {
                 server_packet::Message::Kicked(msg) => {
-                    tracing::debug!("comms > received PeerKicked {:?}", msg.reason);
-                    // TODO: message announcing the kick
+                    tracing::warn!("comms > received PeerKicked {:?}", msg.reason);
+                    if let Some(sender) = &self.shared_processor_sender {
+                        let _ = sender.try_send(super::message_processor::IncomingMessage {
+                            message: super::message_processor::MessageType::Disconnected(
+                                super::message_processor::DisconnectReason::Kicked,
+                            ),
+                            address: H160::zero(),
+                            room_id: "archipelago".to_string(),
+                        });
+                    }
                     self.ws_peer.close();
                     self.state = ArchipelagoState::Connecting;
                 }

@@ -67,7 +67,7 @@ func _ready():
 
 
 func _process(_delta):
-	if avatar.blocked:
+	if avatar == null or not is_instance_valid(avatar) or avatar.blocked:
 		return
 	var current_time = Time.get_ticks_msec()
 	if !audio_player_steps.is_playing() and avatar.land and current_time > next_tick:

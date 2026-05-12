@@ -12,10 +12,12 @@ signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal open_chat
+signal close_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
-signal open_backpack
+signal open_settings_panel
+signal open_backpack(on_emotes: bool)
 signal open_discover
 signal open_own_profile
 signal open_profile_editor
@@ -28,7 +30,10 @@ signal delete_account
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 signal camera_mode_set(camera_mode: Global.CameraMode)
+signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
+signal orientation_changed(is_portrait: bool)
+signal chat_write_mode_changed(is_writing: bool)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -57,6 +62,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 
 const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
+#const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -100,6 +106,7 @@ var deep_link_router := DeepLinkRouter.new()
 
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
+var camera_mode_blocked: bool = false
 var session_id: String
 
 var _is_portrait: bool = true
@@ -145,9 +152,9 @@ func _instantiate_phone_frame_overlay() -> void:
 
 
 ## Vibrate handheld device
-func send_haptic_feedback() -> void:
+func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> void:
 	if is_mobile():
-		Input.vibrate_handheld(20)
+		Input.vibrate_handheld(duration_ms, amplitude)
 
 
 # gdlint: ignore=async-function-name
@@ -226,14 +233,27 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
-	# Initialize environment from deep link or default to "org"
-	var env = deep_link_obj.dclenv if not deep_link_obj.dclenv.is_empty() else "org"
+	# Initialize environment. Precedence: --dclenv CLI flag > deeplink dclenv param > "org".
+	var env := "org"
+	var env_source := "default"
+	if not cli.dcl_env.is_empty():
+		env = cli.dcl_env
+		env_source = "--dclenv"
+	elif not deep_link_obj.dclenv.is_empty():
+		env = deep_link_obj.dclenv
+		env_source = "deeplink"
 	DclGlobal.set_dcl_environment(env)
 	if env != "org":
-		print("[GLOBAL] Environment set to: ", env)
+		print("[GLOBAL] Environment set to: ", env, " (source: ", env_source, ")")
+
+	# Dev/testing: disable profile deploys so fake-owned wearables never publish.
+	if deep_link_obj.disable_profile_deploy:
+		ProfileService.set_deploy_disabled(true)
+		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
 
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
+	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
@@ -247,6 +267,11 @@ func _ready():
 
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
+
+	# Ensure the content cache folder exists before clearing — clear runs against
+	# this directory and would log an error if it doesn't exist yet (fresh install).
+	if not DirAccess.dir_exists_absolute("user://content/"):
+		DirAccess.make_dir_absolute("user://content/")
 
 	# Clear cache if needed (startup flag or version changed) - await completion
 	print(
@@ -279,18 +304,20 @@ func _ready():
 		get_tree().root.add_child.call_deferred(fi_runner)
 		return
 
-	if not DirAccess.dir_exists_absolute("user://content/"):
-		DirAccess.make_dir_absolute("user://content/")
-
 	session_id = DclConfig.generate_uuid_v4()
-	# Initialize metrics with proper user_id and session_id (skip in asset server mode)
-	if not cli.asset_server:
+	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
+	# telemetry is disabled at build time (CI desktop builds use the
+	# `disable_telemetry` cargo feature).
+	var telemetry_enabled := not cli.asset_server and not DclGlobal.is_telemetry_disabled()
+
+	# Initialize metrics with proper user_id and session_id
+	if telemetry_enabled:
 		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
 		self.metrics.set_debug_level(0)  # 0 off - 1 on
 		self.metrics.set_name("metrics")
 
-	# Skip Sentry setup in asset server mode
-	if not cli.asset_server:
+	# Sentry user / session tagging
+	if telemetry_enabled:
 		var sentry_user = SentryUser.new()
 		sentry_user.id = self.config.analytics_user_id
 		SentrySDK.set_tag("dcl_session_id", session_id)
@@ -325,7 +352,13 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.testing_tools)
 	if self.metrics != null:
 		get_tree().root.add_child.call_deferred(self.metrics)
+		# Fire install attribution once per install (Android only).
+		if self.is_android() and not self.config.install_referrer_sent:
+			self.metrics.track_install_referrer.call_deferred()
+			self.config.install_referrer_sent = true
+			self.config.save_to_settings_file()
 	get_tree().root.add_child.call_deferred(self.network_inspector)
+	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
 
@@ -536,11 +569,20 @@ func get_explorer() -> Explorer:
 
 func sign_out() -> void:
 	NotificationsManager.stop_polling()
+	social_service.unsubscribe_from_updates()
+	social_service.unsubscribe_from_connectivity_updates()
 	social_service.unsubscribe_from_block_updates()
+	# Drop the gRPC manager so the signed-out session doesn't keep streams open
+	# under the old identity. Next login's initialize_from_player_identity will
+	# recreate it.
+	social_service.disconnect()
 	social_blacklist.clear_blocked()
 	social_blacklist.clear_muted()
 	get_config().session_account = {}
 	get_config().save_to_settings_file()
+	# Lobby/login is portrait-only; reset orientation so logging out from a
+	# landscape screen (e.g. settings panel) doesn't strand the user there.
+	set_orientation_portrait()
 	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
 
 
@@ -694,6 +736,7 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
+	orientation_changed.emit(false)
 
 
 func is_orientation_portrait() -> bool:
@@ -716,12 +759,85 @@ func set_orientation_portrait():
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
+	orientation_changed.emit(true)
 
 
-func teleport_to(parcel_position: Vector2i, new_realm: String):
-	Global.set_orientation_landscape()
+func async_resolve_scene_entity_id(coord: Vector2i) -> String:
+	# Try cache first
+	var cached = Global.scene_fetcher.scene_entity_coordinator.get_scene_entity_id(coord)
+	if not cached.is_empty():
+		return cached
+
+	# Make HTTP request to entities/active
+	var content_url = Global.realm.content_base_url
+	if content_url.is_empty():
+		return ""
+
+	var url = content_url.trim_suffix("/") + "/entities/active"
+	var body = JSON.stringify({"pointers": [str(coord.x) + "," + str(coord.y)]})
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_POST, body, headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_warning("Failed to resolve scene entity ID: " + result.get_error())
+		return ""
+
+	var json = result.get_string_response_as_json()
+	if json is Array and not json.is_empty():
+		return json[0].get("id", "")
+	return ""
+
+
+func async_resolve_world_scene_id(world_realm: String) -> String:
+	var scenes_url = Realm.dcl_world_url(world_realm) + "/scenes"
+	var promise: Promise = Global.http_requester.request_json(
+		scenes_url, HTTPClient.METHOD_GET, "", {}
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		push_warning("Failed to resolve world scene ID: " + result.get_error())
+		return ""
+
+	var json = result.get_string_response_as_json()
+	if json is Dictionary:
+		var scenes = json.get("scenes", [])
+		if not scenes.is_empty():
+			return scenes[0].get("entityId", "")
+	return ""
+
+
+func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
+	if scene_id.is_empty():
+		return true  # fail-open
+
+	Global.comms.check_scene_access(scene_id, realm_name)
+
+	# Loop until we get the result for OUR scene_id (discard stale results from
+	# earlier navigations that may still be in-flight).
+	while true:
+		var result = await Global.comms.scene_access_checked
+		# result = [scene_id, allowed, error_message]
+		if str(result[0]) != scene_id:
+			continue
+
+		if not str(result[2]).is_empty():
+			push_warning("Ban check failed, allowing navigation: " + str(result[2]))
+			return true  # fail-open on error
+
+		return result[1]
+
+	return true  # unreachable, keeps compiler happy
+
+
+func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
+		# Show loading screen before orientation change to avoid flashing the scene
+		explorer.loading_ui.enable_loading_screen()
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
@@ -730,32 +846,34 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 			Time.get_unix_time_from_system()
 		)
 	else:
+		Global.set_orientation_landscape()
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func join_world(world_realm: String) -> void:
-	Global.set_orientation_landscape()
-	Global.on_chat_message.emit(
-		"system",
-		"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
-		Time.get_unix_time_from_system()
-	)
-	var loading_data = {
-		"position": str(Global.scene_fetcher.current_position),
-		"realm": world_realm,
-		"when": "on_world"
-	}
-	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
-
+func async_join_world(world_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
+		# Show loading screen before orientation change to avoid flashing the scene
+		explorer.loading_ui.enable_loading_screen()
+		Global.on_chat_message.emit(
+			"system",
+			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+			Time.get_unix_time_from_system()
+		)
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm": world_realm,
+			"when": "on_world"
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 		Global.realm.async_set_realm(world_realm, true)
 		explorer.hide_menu()
 		Global.close_menu.emit()
 	else:
+		Global.set_orientation_landscape()
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = world_realm
 		Global.get_config().last_parcel_position = Vector2i.ZERO
@@ -872,6 +990,15 @@ func _notification(what: int) -> void:
 			if new_url.is_empty():
 				return
 
+			# On cold start (NOTIFICATION_READY), pre-set the environment from the deeplink
+			# BEFORE processing it. This prevents _check_dclenv_change() from seeing a
+			# difference (default "org" vs deeplink env) and calling sign_out() prematurely,
+			# which would skip the orientation/UI zoom setup in main.gd.
+			if what == NOTIFICATION_READY:
+				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
+				if not parsed.dclenv.is_empty():
+					DclGlobal.set_dcl_environment(parsed.dclenv)
+
 			deep_link_router.process_deep_link(new_url)
 
 
@@ -880,6 +1007,26 @@ func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	NotificationsManager.async_sync_attended_events()
 
 
+func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> void:
+	# User-visible feedback when a requested realm cannot be loaded (e.g. /world
+	# pointing at a non-existent world). Only fires for Global.realm — transient
+	# Realm instances created elsewhere (e.g. portable experiences) are not wired
+	# to this handler.
+	NotificationsManager.show_system_toast(
+		"World unavailable",
+		'Could not load "%s": %s' % [new_realm_string, reason],
+		"error",
+		"alert"
+	)
+
+
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
 	current_camera_mode = camera_mode
 	camera_mode_set.emit(camera_mode)
+
+
+func set_camera_mode_blocked(blocked: bool) -> void:
+	if camera_mode_blocked == blocked:
+		return
+	camera_mode_blocked = blocked
+	camera_mode_block_changed.emit(blocked)
