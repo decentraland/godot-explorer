@@ -295,7 +295,6 @@ func reset_avatar_rotation() -> void:
 	_target_avatar_rotation_y = 0.0
 
 
-
 func _on_resized() -> void:
 	if _pending_camera_fit and size.x > 0.0 and size.y > 0.0:
 		var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
@@ -779,7 +778,9 @@ func async_get_viewport_image(
 	_lerp_paused = true
 	camera_3d.top_level = true
 	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION
-	camera_3d.rotation_degrees = PROFILE_HEAD_CAMERA_ROTATION if face else PROFILE_BODY_CAMERA_ROTATION
+	camera_3d.rotation_degrees = (
+		PROFILE_HEAD_CAMERA_ROTATION if face else PROFILE_BODY_CAMERA_ROTATION
+	)
 	camera_3d.size = ortho_size
 
 	# Disable stretch to allow manual SubViewport sizing.
