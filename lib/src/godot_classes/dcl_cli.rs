@@ -104,6 +104,8 @@ pub struct DclCli {
     pub low_spec_warning: bool,
     #[var(get)]
     pub fi_benchmark_size: i32,
+    #[var(get)]
+    pub avatar_impostor_benchmark: bool,
 
     // Arguments with values
     #[var(get)]
@@ -121,7 +123,11 @@ pub struct DclCli {
     #[var(get)]
     pub fake_deeplink: GString,
     #[var(get)]
+    pub dcl_env: GString,
+    #[var(get)]
     pub fi_benchmark_output: GString,
+    #[var(get)]
+    pub avatar_impostor_benchmark_output: GString,
     #[var(get)]
     pub saved_profile: GString,
 }
@@ -401,6 +407,20 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            ArgDefinition {
+                name: "--avatar-impostor-benchmark".to_string(),
+                description: "Launch the avatar impostor benchmark scene at startup, run both phases, write results, and quit"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--avatar-impostor-benchmark-output".to_string(),
+                description: "Output file path for avatar impostor benchmark results (text)"
+                    .to_string(),
+                arg_type: ArgType::Value("<file>".to_string()),
+                category: "Performance".to_string(),
+            },
             // Authentication
             ArgDefinition {
                 name: "--saved-profile".to_string(),
@@ -426,6 +446,13 @@ impl DclCli {
                 description: "Set Rust log filter (e.g., debug, info, warn, dclgodot::comms=debug,info). Works via deeplink on all platforms".to_string(),
                 arg_type: ArgType::Value("<filter>".to_string()),
                 category: "Debugging".to_string(),
+            },
+            // Environment
+            ArgDefinition {
+                name: "--dclenv".to_string(),
+                description: "Set the Decentraland environment (org, zone, today). Accepts the same grammar as the dclenv deeplink param, e.g. \"zone\" or \"auth::zone,org\". Wins over a deeplink-supplied value when both are present.".to_string(),
+                arg_type: ArgType::Value("<env>".to_string()),
+                category: "Environment".to_string(),
             },
             ArgDefinition {
                 name: "--no-pipe-logging".to_string(),
@@ -516,14 +543,19 @@ impl INode for DclCli {
 
         let mut args_map = HashMap::new();
 
-        // Parse command line arguments into a map
+        // Parse command line arguments into a map.
+        // Supports both `--key value` and `--key=value` forms.
         let args_vec = combined_args;
         let mut i = 0;
         while i < args_vec.len() {
             let arg = args_vec[i].to_string();
             if arg.starts_with("--") {
-                // Check if next arg is a value (doesn't start with --)
-                if i + 1 < args_vec.len() && !args_vec[i + 1].to_string().starts_with("--") {
+                if let Some(eq_idx) = arg.find('=') {
+                    let key = arg[..eq_idx].to_string();
+                    let value = arg[eq_idx + 1..].to_string();
+                    args_map.insert(key, Some(value));
+                    i += 1;
+                } else if i + 1 < args_vec.len() && !args_vec[i + 1].to_string().starts_with("--") {
                     args_map.insert(arg.clone(), Some(args_vec[i + 1].to_string()));
                     i += 2;
                 } else {
@@ -593,6 +625,7 @@ impl INode for DclCli {
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
+        let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -640,8 +673,18 @@ impl INode for DclCli {
                 }
             })
             .unwrap_or_default();
+        let dcl_env = args_map
+            .get("--dclenv")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
         let fi_benchmark_output = args_map
             .get("--fi-benchmark-output")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
+        let avatar_impostor_benchmark_output = args_map
+            .get("--avatar-impostor-benchmark-output")
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
@@ -697,6 +740,7 @@ impl INode for DclCli {
             scene_inspector_file,
             low_spec_warning,
             fi_benchmark_size,
+            avatar_impostor_benchmark,
             asset_server_port,
             realm,
             location,
@@ -704,7 +748,9 @@ impl INode for DclCli {
             avatars_file,
             snapshot_folder,
             fake_deeplink,
+            dcl_env,
             fi_benchmark_output,
+            avatar_impostor_benchmark_output,
             saved_profile,
         }
     }

@@ -12,6 +12,7 @@ signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal open_chat
+signal close_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
@@ -29,7 +30,10 @@ signal delete_account
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 signal camera_mode_set(camera_mode: Global.CameraMode)
+signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
+signal orientation_changed(is_portrait: bool)
+signal chat_write_mode_changed(is_writing: bool)
 
 enum CameraMode {
 	FIRST_PERSON = 0,
@@ -102,6 +106,7 @@ var deep_link_router := DeepLinkRouter.new()
 
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
+var camera_mode_blocked: bool = false
 var session_id: String
 
 var _is_portrait: bool = true
@@ -230,11 +235,18 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
-	# Initialize environment from deep link or default to "org"
-	var env = deep_link_obj.dclenv if not deep_link_obj.dclenv.is_empty() else "org"
+	# Initialize environment. Precedence: --dclenv CLI flag > deeplink dclenv param > "org".
+	var env := "org"
+	var env_source := "default"
+	if not cli.dcl_env.is_empty():
+		env = cli.dcl_env
+		env_source = "--dclenv"
+	elif not deep_link_obj.dclenv.is_empty():
+		env = deep_link_obj.dclenv
+		env_source = "deeplink"
 	DclGlobal.set_dcl_environment(env)
 	if env != "org":
-		print("[GLOBAL] Environment set to: ", env)
+		print("[GLOBAL] Environment set to: ", env, " (source: ", env_source, ")")
 
 	# Dev/testing: disable profile deploys so fake-owned wearables never publish.
 	if deep_link_obj.disable_profile_deploy:
@@ -257,6 +269,11 @@ func _ready():
 
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
+
+	# Ensure the content cache folder exists before clearing — clear runs against
+	# this directory and would log an error if it doesn't exist yet (fresh install).
+	if not DirAccess.dir_exists_absolute("user://content/"):
+		DirAccess.make_dir_absolute("user://content/")
 
 	# Clear cache if needed (startup flag or version changed) - await completion
 	print(
@@ -289,18 +306,20 @@ func _ready():
 		get_tree().root.add_child.call_deferred(fi_runner)
 		return
 
-	if not DirAccess.dir_exists_absolute("user://content/"):
-		DirAccess.make_dir_absolute("user://content/")
-
 	session_id = DclConfig.generate_uuid_v4()
-	# Initialize metrics with proper user_id and session_id (skip in asset server mode)
-	if not cli.asset_server:
+	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
+	# telemetry is disabled at build time (CI desktop builds use the
+	# `disable_telemetry` cargo feature).
+	var telemetry_enabled := not cli.asset_server and not DclGlobal.is_telemetry_disabled()
+
+	# Initialize metrics with proper user_id and session_id
+	if telemetry_enabled:
 		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
 		self.metrics.set_debug_level(0)  # 0 off - 1 on
 		self.metrics.set_name("metrics")
 
-	# Skip Sentry setup in asset server mode
-	if not cli.asset_server:
+	# Sentry user / session tagging
+	if telemetry_enabled:
 		var sentry_user = SentryUser.new()
 		sentry_user.id = self.config.analytics_user_id
 		SentrySDK.set_tag("dcl_session_id", session_id)
@@ -568,7 +587,13 @@ func get_explorer() -> Explorer:
 
 func sign_out() -> void:
 	NotificationsManager.stop_polling()
+	social_service.unsubscribe_from_updates()
+	social_service.unsubscribe_from_connectivity_updates()
 	social_service.unsubscribe_from_block_updates()
+	# Drop the gRPC manager so the signed-out session doesn't keep streams open
+	# under the old identity. Next login's initialize_from_player_identity will
+	# recreate it.
+	social_service.disconnect()
 	social_blacklist.clear_blocked()
 	social_blacklist.clear_muted()
 	get_config().session_account = {}
@@ -729,6 +754,7 @@ func set_orientation_landscape():
 	else:
 		get_window().size = Vector2i(1280, 720)
 		get_window().move_to_center()
+	orientation_changed.emit(false)
 
 
 func is_orientation_portrait() -> bool:
@@ -751,6 +777,7 @@ func set_orientation_portrait():
 	else:
 		get_window().size = Vector2i(720, 1280)
 		get_window().move_to_center()
+	orientation_changed.emit(true)
 
 
 func async_resolve_scene_entity_id(coord: Vector2i) -> String:
@@ -1014,3 +1041,10 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
 	current_camera_mode = camera_mode
 	camera_mode_set.emit(camera_mode)
+
+
+func set_camera_mode_blocked(blocked: bool) -> void:
+	if camera_mode_blocked == blocked:
+		return
+	camera_mode_blocked = blocked
+	camera_mode_block_changed.emit(blocked)

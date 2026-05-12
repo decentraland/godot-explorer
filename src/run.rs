@@ -738,10 +738,14 @@ fn get_connected_android_device() -> anyhow::Result<(String, Vec<String>)> {
 }
 
 /// Deploy and run the application on a connected device
-pub fn deploy_and_run_on_device(platform: &str, release: bool) -> anyhow::Result<()> {
+pub fn deploy_and_run_on_device(
+    platform: &str,
+    release: bool,
+    extras: Vec<String>,
+) -> anyhow::Result<()> {
     match platform {
-        "android" => deploy_and_run_android(release),
-        "ios" => deploy_and_run_ios(release),
+        "android" => deploy_and_run_android(release, extras),
+        "ios" => deploy_and_run_ios(release, extras),
         _ => Err(anyhow::anyhow!(
             "Unsupported platform for device deployment: {}",
             platform
@@ -750,7 +754,9 @@ pub fn deploy_and_run_on_device(platform: &str, release: bool) -> anyhow::Result
 }
 
 /// Deploy and run on Android device using adb
-fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
+fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Result<()> {
+    // TODO: wire `_extras` into the `am start` intent via --esa args. For now
+    // keep the behaviour identical to the pre-extras code path.
     // The APK name is always the same regardless of release/debug mode
     let apk_name = "decentraland.godot.client.apk";
     let apk_path = format!("{}/{}", EXPORTS_FOLDER, apk_name);
@@ -840,7 +846,7 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
 const IOS_BUNDLE_ID: &str = "org.decentraland.godotexplorer";
 
 /// Deploy and run on iOS device using xcodebuild and xcrun devicectl
-fn deploy_and_run_ios(release: bool) -> anyhow::Result<()> {
+fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> {
     if std::env::consts::OS != "macos" {
         return Err(anyhow::anyhow!("iOS deployment is only supported on macOS"));
     }
@@ -921,18 +927,24 @@ fn deploy_and_run_ios(release: bool) -> anyhow::Result<()> {
 
     print_message(MessageType::Success, "App installed on device");
 
-    // Launch the app
+    // Launch the app. Positional args after `--` are propagated to the app as
+    // process argv and picked up by Godot's `Os.get_cmdline_user_args()`.
     let spinner = create_spinner("Launching application...");
+    let mut launch_args: Vec<String> = vec![
+        "devicectl".into(),
+        "device".into(),
+        "process".into(),
+        "launch".into(),
+        "--device".into(),
+        device_id.clone(),
+        IOS_BUNDLE_ID.into(),
+    ];
+    if !extras.is_empty() {
+        launch_args.push("--".into());
+        launch_args.extend(extras.iter().cloned());
+    }
     let launch_output = std::process::Command::new("xcrun")
-        .args([
-            "devicectl",
-            "device",
-            "process",
-            "launch",
-            "--device",
-            &device_id,
-            IOS_BUNDLE_ID,
-        ])
+        .args(&launch_args)
         .output()?;
     spinner.finish();
 
