@@ -16,6 +16,7 @@ light_bake_mode = 0
 shadow_enabled = true
 shadow_opacity = 0.7
 directional_shadow_mode = 1
+directional_shadow_split_1 = 0.3
 directional_shadow_max_distance = 30.0
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1628949876]
