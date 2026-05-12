@@ -61,7 +61,6 @@ anchor_bottom = 1.0
 offset_right = 171.45801
 grow_horizontal = 2
 grow_vertical = 0
-mouse_filter = 2
 script = ExtResource("2_gh23i")
 
 [node name="ColorRect" type="ColorRect" parent="ActiveArea" unique_id=297031327]

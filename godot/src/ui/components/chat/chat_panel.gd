@@ -176,6 +176,8 @@ func is_interactive_area_at(position: Vector2) -> bool:
 		return true
 	if chat.visible and chat.is_interactive_area_at(position):
 		return true
+	if notifications.visible and notifications.is_point_over_notification(position):
+		return true
 	return false
 
 

@@ -11,6 +11,7 @@ var _touch_position = Vector2(0.0, 0.0)
 var _positions: Array = [Vector2(), Vector2()]
 var _start_length: int = 0
 var _two_fingers = false
+var _chat_touch_indices: Dictionary = {}
 
 
 func _init(player: Player):
@@ -50,7 +51,15 @@ func _input(event):
 	if Global.is_mobile() and (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		if _is_joystick_finger(event.index):
 			return
-		if _is_touch_over_chat(event.position):
+		if event is InputEventScreenTouch:
+			if event.pressed:
+				if _is_touch_over_chat(event.position):
+					_chat_touch_indices[event.index] = true
+					return
+			else:
+				if _chat_touch_indices.erase(event.index):
+					return
+		elif _chat_touch_indices.has(event.index):
 			return
 
 		var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
@@ -58,8 +67,11 @@ func _input(event):
 			if event is InputEventScreenTouch:
 				_positions[event.index] = event.position
 				if event.index == 1:
-					_two_fingers = event.pressed
-					if event.pressed:
+					var finger0_consumed: bool = (
+						_is_joystick_finger(0) or _chat_touch_indices.has(0)
+					)
+					_two_fingers = event.pressed and not finger0_consumed
+					if _two_fingers:
 						_start_length = (_positions[0] - _positions[1]).length()
 		else:
 			_two_fingers = false
