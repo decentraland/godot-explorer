@@ -492,13 +492,20 @@ func set_force_hide_name(value: bool) -> void:
 		_apply_nickname_visibility()
 
 
-## Bump the nickname SubViewport to redraw exactly one frame. The viewport
-## otherwise stays in UPDATE_ONCE (see _apply_nickname_visibility) so nicknames
-## don't burn a SubViewport render every frame on idle avatars.
+## Bump the nickname SubViewport to redraw exactly one frame. UPDATE_ONCE
+## auto-resets to UPDATE_DISABLED after rendering, so callers must invoke
+## this every time something nickname-related changes — `_apply_nickname_visibility`
+## bumps once on show, individual setters (chat message, mic, etc.) bump as
+## state changes, and `_process` bumps after the viewport resizes.
+##
+## Gate on `nickname_quad.visible` (the source of truth for "is this nickname
+## actually being shown") rather than `render_target_update_mode == UPDATE_DISABLED`
+## — the latter is also the post-render state after UPDATE_ONCE auto-resets, so
+## it can't distinguish "explicitly hidden" from "just finished rendering one frame".
 func _request_nickname_redraw() -> void:
-	if nickname_viewport == null:
+	if nickname_viewport == null or nickname_quad == null:
 		return
-	if nickname_viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED:
+	if not nickname_quad.visible:
 		return
 	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
@@ -1302,6 +1309,7 @@ func _process(delta):
 
 	if nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
+		_request_nickname_redraw()
 
 	_maybe_update_lod()
 	_tick_animation_throttle(delta)
