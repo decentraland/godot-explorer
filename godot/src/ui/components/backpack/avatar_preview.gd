@@ -583,10 +583,12 @@ func _inner_rect() -> Rect2:
 	var r: Rect2 = get_global_rect()
 	var mt: float = _effective_margin_top()
 	var mb: float = _effective_margin_bottom()
-	return Rect2(
-		r.position + Vector2(float(preview_margin_left), mt),
+	var size: Vector2 = (
 		r.size - Vector2(float(preview_margin_left + preview_margin_right), mt + mb)
 	)
+	size.x = maxf(size.x, 0.0)
+	size.y = maxf(size.y, 0.0)
+	return Rect2(r.position + Vector2(float(preview_margin_left), mt), size)
 
 
 func _effective_margin_top() -> float:
