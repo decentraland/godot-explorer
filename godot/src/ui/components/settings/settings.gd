@@ -15,6 +15,9 @@ const _SECTION_TITLE_SCRIPT = preload("res://src/ui/components/settings/section_
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 
+const ENGINE_LOG_SERVICE_SCRIPT = preload("res://src/tools/engine_log/engine_log_service.gd")
+const ENGINE_LOG_SERVICE_NODE_NAME := "EngineLogService"
+
 ## When true, settings operates as a side panel inside the explorer:
 ## orientation is not changed and the background texture is hidden.
 @export var panel_mode: bool = false:
@@ -70,6 +73,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var content_scroll_container: ScrollContainer = %ContentScrollContainer
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
+@onready var check_button_engine_logs_enabled: CheckButton = %CheckButton_EngineLogsEnabled
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
@@ -169,6 +173,7 @@ func _ready():
 	refresh_values()
 
 	# Dev Tools
+	_sync_engine_logs_enabled_ui()
 	dropdown_list_realm.add_item("mannakia.dcl.eth", 0)
 	dropdown_list_realm.add_item("http://127.0.0.1:8000", 1)
 	dropdown_list_realm.add_item("https://sdk-test-scenes.decentraland.org", 2)
@@ -833,3 +838,63 @@ func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
 
 func _on_custom_button_sign_out_pressed() -> void:
 	Global.sign_out()
+
+func _get_engine_log_service() -> Node:
+	if get_tree() == null:
+		return null
+
+	return get_tree().root.get_node_or_null(ENGINE_LOG_SERVICE_NODE_NAME)
+
+
+func _ensure_engine_log_service() -> Node:
+	if get_tree() == null:
+		return null
+
+	var root := get_tree().root
+	var service: Node = root.get_node_or_null(ENGINE_LOG_SERVICE_NODE_NAME)
+
+	if service != null:
+		return service
+
+	service = ENGINE_LOG_SERVICE_SCRIPT.new() as Node
+
+	if service == null:
+		push_error("engine_log_service.gd must extend Node.")
+		return null
+
+	service.name = ENGINE_LOG_SERVICE_NODE_NAME
+	root.add_child(service)
+
+	return service
+
+func _sync_engine_logs_enabled_ui() -> void:
+	if check_button_engine_logs_enabled == null:
+		return
+
+	var service: Node = _get_engine_log_service()
+	var enabled := false
+
+	if service != null and service.has_method("is_installed"):
+		enabled = bool(service.call("is_installed"))
+
+	check_button_engine_logs_enabled.set_pressed_no_signal(enabled)
+
+
+func _on_check_button_engine_logs_enabled_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		var service: Node = _ensure_engine_log_service()
+
+		if service != null and service.has_method("set_installed"):
+			service.call("set_installed", true)
+
+		return
+
+	var service: Node = _get_engine_log_service()
+
+	if service == null:
+		return
+
+	if service.has_method("set_installed"):
+		service.call("set_installed", false)
+
+	service.queue_free()
