@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://ntabesdtqdc1"]
+[gd_scene format=3 uid="uid://ntabesdtqdc1"]
 
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="1_g0h80"]
 [ext_resource type="Script" uid="uid://biymcj6akv6qd" path="res://src/ui/components/dropdown_list/dropdown_item.gd" id="1_script"]
@@ -19,7 +19,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="DropdownItem" type="Button"]
+[node name="DropdownItem" type="Button" unique_id=804628124]
 custom_minimum_size = Vector2(0, 68)
 size_flags_horizontal = 3
 focus_mode = 0

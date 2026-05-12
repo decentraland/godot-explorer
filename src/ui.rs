@@ -127,3 +127,64 @@ pub fn format_bytes(bytes: u64) -> String {
     let size = bytes as f64 / (1024_f64).powi(i as i32);
     format!("{:.2} {}", size, UNITS[i])
 }
+
+/// Format a Duration into a human-readable string
+pub fn format_duration(d: Duration) -> String {
+    let total_secs = d.as_secs();
+    let millis = d.subsec_millis();
+    if total_secs >= 60 {
+        format!("{}m {:02}s", total_secs / 60, total_secs % 60)
+    } else if total_secs > 0 {
+        format!("{}.{}s", total_secs, millis / 100)
+    } else {
+        format!("{}ms", millis)
+    }
+}
+
+/// A row in the summary table
+pub struct SummaryRow {
+    pub name: String,
+    pub duration: String,
+    pub passed: Option<bool>, // None = skip, Some(true) = pass, Some(false) = fail
+}
+
+/// Print a summary table of test steps with timing
+pub fn print_summary_table(rows: &[SummaryRow], total_duration: Duration) {
+    println!();
+    print_section("Full Test Summary");
+    println!(
+        " {:<40} {:<14} {}",
+        "Step".bold(),
+        "Duration".bold(),
+        "Status".bold()
+    );
+    println!(" {} {} {}", "─".repeat(40), "─".repeat(14), "─".repeat(8));
+
+    let mut any_failed = false;
+    for row in rows {
+        let status_colored = match row.passed {
+            Some(true) => "PASS".green().to_string(),
+            Some(false) => {
+                any_failed = true;
+                "FAIL".red().to_string()
+            }
+            None => "SKIP".yellow().to_string(),
+        };
+        println!(" {:<40} {:<14} {}", row.name, row.duration, status_colored);
+    }
+
+    println!(" {} {} {}", "─".repeat(40), "─".repeat(14), "─".repeat(8));
+
+    let total_status = if any_failed {
+        "FAIL".red().to_string()
+    } else {
+        "PASS".green().to_string()
+    };
+    println!(
+        " {:<40} {:<14} {}",
+        "Total".bold(),
+        format_duration(total_duration),
+        total_status
+    );
+    println!();
+}

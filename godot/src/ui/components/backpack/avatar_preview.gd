@@ -125,7 +125,9 @@ func disable_outline():
 		outline_system.set_outlined_avatar(null)
 
 
-func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float = 2.5) -> Image:
+func async_get_viewport_image(
+	face: bool, dest_size: Vector2i, ortho_size: float = 2.5, ssaa: int = 1
+) -> Image:
 	avatar.emote_controller.freeze_on_idle()
 	avatar.rotation.y = 0.0
 	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 1.25, -3.5)
@@ -138,16 +140,23 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, ortho_size: float
 	var original_stretch = stretch
 	var original_size = size
 
-	# Disable stretch to allow manual SubViewport sizing
+	# Disable stretch to allow manual SubViewport sizing.
+	# Render at ssaa * dest_size internally, then Lanczos-downsample to
+	# dest_size for high-quality SSAA on top of the viewport's MSAA / FXAA
+	# / scaling_3d_scale (the latter is hard-clamped to <=2.0 in
+	# viewport.cpp, so this is the only way to push past 2x SSAA).
+	var render_size := dest_size * maxi(1, ssaa)
 	stretch = false
-	set_size(dest_size)
-	subviewport.set_size(dest_size)
+	set_size(render_size)
+	subviewport.set_size(render_size)
 
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
 
 	var img := subviewport.get_texture().get_image()
+	if ssaa > 1:
+		img.resize(dest_size.x, dest_size.y, Image.INTERPOLATE_LANCZOS)
 
 	# Restore original stretch and size
 	stretch = original_stretch

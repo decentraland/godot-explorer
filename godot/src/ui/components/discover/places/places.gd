@@ -15,6 +15,7 @@ enum Categories {
 	CASINO,
 	SPORTS,
 	BUSINESS,
+	FEATURED,
 	POI
 }
 
@@ -31,5 +32,6 @@ const PIN_CATEGORIES = {
 	"CASINO": "casino",
 	"SPORTS": "sports",
 	"BUSINESS": "business",
+	"FEATURED": "featured",
 	"POI": "poi"
 }

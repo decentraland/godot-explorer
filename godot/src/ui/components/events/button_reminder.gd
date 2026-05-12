@@ -14,7 +14,7 @@ var event_name: String = ""
 var event_coordinates: Vector2i = Vector2i(0, 0)
 var event_cover_image_url: String = ""
 var bell_texture = load("res://assets/ui/bell.svg")
-var check_texture = load("res://assets/ui/check.svg")
+var check_texture = load("res://assets/ui/checked.svg")
 var _debounced: DebouncedAction
 
 @onready var texture_rect_icon: TextureRect = %TextureRect_Icon
@@ -40,7 +40,7 @@ func set_data(item_data: Dictionary) -> void:
 	event_name = str(item_data.get("name", ""))
 	event_cover_image_url = str(item_data.get("image", ""))
 	event_start_timestamp = _parse_iso_timestamp(str(item_data.get("next_start_at", "")))
-	event_coordinates = _parse_position_from_item(item_data)
+	event_coordinates = PlacesHelper.parse_position(item_data)
 
 	show()
 	async_update_attending_state()
@@ -69,23 +69,6 @@ func async_update_attending_state() -> void:
 	_get_debounced().set_state_no_send(attending)
 
 	_set_loading(false)
-
-
-static func _parse_position_from_item(item_data: Dictionary) -> Vector2i:
-	var coords = item_data.get("coordinates", null)
-	var pos_arr = item_data.get("position", null)
-	var base_pos = item_data.get("base_position", null)
-	if coords is Array and coords.size() >= 2:
-		return Vector2i(int(coords[0]), int(coords[1]))
-	if pos_arr is Array and pos_arr.size() >= 2:
-		return Vector2i(int(pos_arr[0]), int(pos_arr[1]))
-	if item_data.get("x") != null and item_data.get("y") != null:
-		return Vector2i(int(item_data.x), int(item_data.y))
-	if base_pos:
-		var parts = str(base_pos).split(",")
-		if parts.size() >= 2:
-			return Vector2i(int(parts[0]), int(parts[1]))
-	return Vector2i.ZERO
 
 
 static func _parse_iso_timestamp(iso_string: String) -> int:

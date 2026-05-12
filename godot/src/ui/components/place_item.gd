@@ -6,7 +6,6 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal jump_in_world(realm: String)
 signal close
-signal ftue_completed
 
 enum DragState { HIDDEN, HALF, FULL }
 enum DragGesture { IDLE, UP, DOWN }
@@ -29,6 +28,7 @@ const _TWEEN_DURATION := 0.2
 @export var realm_title: String = "Genesis City"
 @export var categories: Array = []
 @export var is_draggable := false
+@export var allow_full_drag := true
 
 var event_id: String
 var event_status: String
@@ -76,13 +76,6 @@ func _ready():
 	var description_container = _get_hide_from_here()
 	if description_container:
 		description_container.show()
-
-	# Set user name from player profile when used as FTUE
-	var label_nickname_ftue = _get_label_nickname_ftue()
-	if label_nickname_ftue:
-		var player_profile = Global.player_identity.get_profile_or_null()
-		if player_profile:
-			label_nickname_ftue.text = player_profile.get_name()
 
 	if is_draggable and card:
 		var header = _get_header()
@@ -295,10 +288,6 @@ func _get_separator_recurrent() -> VSeparator:
 	return _get_node_safe("VSeparator_Recurrent")
 
 
-func _get_separator_duration() -> VSeparator:
-	return _get_node_safe("VSeparator_Duration")
-
-
 func _get_container_views() -> Control:
 	return _get_node_safe("HBoxContainer_Views")
 
@@ -317,18 +306,6 @@ func _get_texture_image() -> TextureRect:
 
 func _get_fav_button() -> FavButton:
 	return _get_node_safe("FavButton")
-
-
-func _get_button_jump_in_ftue() -> Button:
-	return _get_node_safe("Button_JumpIn_FTUE")
-
-
-func _get_button_skip() -> Button:
-	return _get_node_safe("Button_Skip")
-
-
-func _get_label_nickname_ftue() -> Label:
-	return _get_node_safe("Label_NickNameFTUE")
 
 
 func _connect_signals():
@@ -361,16 +338,6 @@ func _connect_signals():
 		if not button_share.pressed.is_connected(_on_button_share_pressed):
 			button_share.pressed.connect(_on_button_share_pressed)
 
-	var button_jump_in_ftue = _get_button_jump_in_ftue()
-	if button_jump_in_ftue:
-		if not button_jump_in_ftue.pressed.is_connected(_on_button_jump_in_ftue_pressed):
-			button_jump_in_ftue.pressed.connect(_on_button_jump_in_ftue_pressed)
-
-	var button_skip = _get_button_skip()
-	if button_skip:
-		if not button_skip.pressed.is_connected(_on_button_skip_pressed):
-			button_skip.pressed.connect(_on_button_skip_pressed)
-
 
 func set_server_or_location(unlimited: bool = false) -> void:
 	var server = _data.get("server", null)
@@ -392,7 +359,7 @@ func set_server_or_location(unlimited: bool = false) -> void:
 	else:
 		realm = DclUrls.main_realm()
 
-	location = _parse_position_from_item(_data)
+	location = PlacesHelper.parse_position(_data)
 	var is_world_place = (server and str(server) != "main") or is_world
 	if not is_world_place:
 		set_location(location)
@@ -559,7 +526,7 @@ func set_data(item_data):
 		if timestamp > 0:
 			event_start_timestamp = timestamp
 
-	set_server_or_location()
+	set_server_or_location(true)
 
 	var reminder_btn = _get_reminder_button()
 	if reminder_btn:
@@ -601,21 +568,6 @@ func _async_download_image(url: String):
 	set_image(result.texture)
 
 
-func _on_button_jump_in_ftue_pressed() -> void:
-	Global.metrics.track_click_button("JUMP_IN", "DISCOVER_FTUE_CLICK", "")
-	_complete_discover_ftue()
-	_do_jump_in()
-
-
-func _on_button_skip_pressed() -> void:
-	Global.metrics.track_click_button("SKIP", "DISCOVER_FTUE_CLICK", "")
-	_complete_discover_ftue()
-
-
-func _complete_discover_ftue() -> void:
-	ftue_completed.emit()
-
-
 func _on_button_jump_in_pressed():
 	if _data is Dictionary and not _data.is_empty():
 		(
@@ -630,56 +582,9 @@ func _on_button_jump_in_pressed():
 	_do_jump_in()
 
 
-static func _parse_position_from_item(item_data: Dictionary) -> Vector2i:
-	var coords = item_data.get("coordinates", null)
-	var pos_arr = item_data.get("position", null)
-	var base_pos = item_data.get("base_position", null)
-	if coords is Array and coords.size() >= 2:
-		return Vector2i(int(coords[0]), int(coords[1]))
-	if pos_arr is Array and pos_arr.size() >= 2:
-		return Vector2i(int(pos_arr[0]), int(pos_arr[1]))
-	if item_data.get("x") != null and item_data.get("y") != null:
-		return Vector2i(int(item_data.x), int(item_data.y))
-	if base_pos:
-		var parts = str(base_pos).split(",")
-		if parts.size() >= 2:
-			return Vector2i(int(parts[0]), int(parts[1]))
-	return Vector2i.ZERO
-
-
-func _get_jump_in_position_and_realm_from_data(item_data: Dictionary) -> Array:
-	var server = item_data.get("server", null)
-	var world_name = item_data.get("world_name", null)
-	var r: String
-	if server and str(server) != "main":
-		r = str(server)
-		if not r.ends_with(".dcl.eth"):
-			r = r + ".dcl.eth"
-	elif item_data.get("world", false) and world_name:
-		r = str(world_name)
-		if not r.ends_with(".dcl.eth"):
-			r = r + ".dcl.eth"
-	else:
-		r = DclUrls.main_realm()
-	var pos := _parse_position_from_item(item_data)
-	return [pos, r]
-
-
-static func _is_event_in_world(item_data: Dictionary) -> bool:
-	if not item_data is Dictionary or item_data.is_empty():
-		return false
-	if not item_data.has("duration"):
-		return false
-	var server = item_data.get("server", null)
-	if server == null:
-		return false
-	var s = str(server).strip_edges()
-	return s != "" and s != "main"
-
-
 func _do_jump_in() -> void:
-	if _data is Dictionary and not _data.is_empty() and _is_event_in_world(_data):
-		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+	if _data is Dictionary and not _data.is_empty() and PlacesHelper.is_world(_data):
+		var pos_realm = PlacesHelper.get_position_and_realm(_data)
 		var world_realm: String = pos_realm[1]
 		jump_in_world.emit(world_realm)
 		return
@@ -687,7 +592,7 @@ func _do_jump_in() -> void:
 	var jump_pos := location
 	var jump_realm := realm
 	if _data is Dictionary and not _data.is_empty():
-		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+		var pos_realm = PlacesHelper.get_position_and_realm(_data)
 		jump_pos = pos_realm[0]
 		jump_realm = pos_realm[1]
 	jump_in.emit(jump_pos, jump_realm)
@@ -758,17 +663,14 @@ func set_duration(_duration: int) -> void:
 func set_recurrent(_recurrent_frequency: String) -> void:
 	var label = _get_recurrent_label()
 	var separator_recurrent = _get_separator_recurrent()
-	var separator_duration = _get_separator_duration()
 	if label:
 		if _recurrent_frequency != "":
 			label.get_parent().show()
 			separator_recurrent.show()
-			separator_duration.show()
 			label.text = _recurrent_frequency.capitalize()
 		else:
 			label.get_parent().hide()
 			separator_recurrent.hide()
-			separator_duration.hide()
 
 
 func set_recurrent_dates(item_data: Dictionary) -> void:
@@ -911,7 +813,7 @@ func _share_place_or_event() -> void:
 
 	if _data is Dictionary and not _data.is_empty():
 		is_event = _is_place_item_event(_data)
-		var pos_realm = _get_jump_in_position_and_realm_from_data(_data)
+		var pos_realm = PlacesHelper.get_position_and_realm(_data)
 		var share_pos: Vector2i = pos_realm[0]
 		var share_realm: String = pos_realm[1]
 		var is_main = share_realm == DclUrls.main_realm()
@@ -1114,11 +1016,12 @@ func _input(event: InputEvent) -> void:
 
 			match gesture:
 				DragGesture.UP:
-					match drag_state:
-						DragState.HALF:
-							_on_show_more_toggled(true)
-							drag_state = DragState.FULL
-							tween_to(0.0, func(): return, true)
+					if allow_full_drag:
+						match drag_state:
+							DragState.HALF:
+								_on_show_more_toggled(true)
+								drag_state = DragState.FULL
+								tween_to(0.0, func(): return, true)
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:

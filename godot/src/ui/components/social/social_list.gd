@@ -271,7 +271,6 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 			_sync_nearby_list()
 			_update_list_size()
 		SOCIAL_TYPE.BLOCKED:
-			remove_items()
 			await _async_reload_blocked_list(current_request_id)
 		SOCIAL_TYPE.ONLINE:
 			await _async_reload_online_list(current_request_id)
@@ -283,22 +282,40 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 
 
 func _async_reload_blocked_list(request_id: int) -> void:
-	var blocked_social_items = []
 	var blocked_addresses = Global.social_blacklist.get_blocked_list()
 
-	# Fetch profiles for each blocked address
+	# Fetch all profiles in parallel
+	var promises: Array = []
 	for address in blocked_addresses:
-		# Check if request is still valid before each fetch
-		if request_id != _update_request_id:
-			return
+		promises.append(Global.content_provider.fetch_profile(address))
 
-		var social_item_data = await _async_fetch_profile_for_address(address)
+	# Wait for all profile fetches to complete
+	var blocked_social_items: Array = []
+	for i in range(promises.size()):
+		var address = blocked_addresses[i]
+		await PromiseUtils.async_awaiter(promises[i])
+
+		var social_item_data = SocialItemData.new()
+		social_item_data.address = address
+
+		if promises[i].is_rejected():
+			social_item_data.name = address
+			social_item_data.has_claimed_name = false
+			social_item_data.profile_picture_url = ""
+		else:
+			var profile = promises[i].get_data() as DclUserProfile
+			social_item_data.name = profile.get_name()
+			social_item_data.has_claimed_name = profile.has_claimed_name()
+			social_item_data.profile_picture_url = profile.get_avatar().get_snapshots_face_url()
+
 		blocked_social_items.append(social_item_data)
 
 	# Check if this request is still valid (no newer request started)
 	if request_id != _update_request_id:
 		return
 
+	# Replace items only when all data is ready
+	remove_items()
 	var should_load = _is_panel_visible()
 	add_items_by_social_item_data(blocked_social_items, should_load)
 	_update_list_size()
@@ -631,6 +648,34 @@ func async_add_request_by_address(address: String) -> void:
 	if not has_item_with_address(address):
 		var should_load = _is_panel_visible()
 		add_item_by_social_item_data(social_item_data, should_load)
+
+
+func sync_items(new_items: Array) -> void:
+	# Build dict of existing items by address
+	var existing: Dictionary = {}
+	for child in get_children():
+		if child == _nearby_sync_timer:
+			continue
+		if "social_data" in child and child.social_data != null:
+			existing[child.social_data.address] = child
+
+	# Build dict of incoming items by address
+	var incoming: Dictionary = {}
+	for item in new_items:
+		incoming[item.address] = item
+
+	# Remove items no longer in the list
+	for address in existing:
+		if not incoming.has(address):
+			existing[address].queue_free()
+
+	# Add items that are new
+	var should_load = _is_panel_visible()
+	for address in incoming:
+		if not existing.has(address):
+			add_item_by_social_item_data(incoming[address], should_load)
+
+	call_deferred("_update_list_size")
 
 
 func add_items_by_social_item_data(item_list, should_load: bool = true) -> void:

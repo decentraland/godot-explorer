@@ -2,6 +2,8 @@
 #include "NotificationDatabase.h"
 #include "AVPlayerWrapper.h"
 #include "core/version.h"
+#include "core/os/os.h"
+#include "core/string/print_string.h"
 #import <SafariServices/SafariServices.h>
 #import <AuthenticationServices/AuthenticationServices.h>
 #import <UIKit/UIKit.h>
@@ -325,6 +327,9 @@ String DclGodotiOS::get_deeplink_url() {
 
 void DclGodotiOS::emit_deeplink_received(String url) {
     NSLog(@"[DEEPLINK] emit_deeplink_received called with URL: %s", url.utf8().get_data());
+    if (OS::get_singleton() != nullptr) {
+        print_line(String("[DEEPLINK] emit_deeplink_received called with URL: ") + url);
+    }
 
     // Always store the URL in the static variable as a fallback
     // This ensures it's available even if the singleton isn't initialized yet
@@ -347,8 +352,14 @@ void DclGodotiOS::emit_deeplink_received(String url) {
     if (singleton) {
         singleton->emit_signal("deeplink_received", url);
         NSLog(@"[DEEPLINK] Signal emitted successfully");
+        if (OS::get_singleton() != nullptr) {
+            print_line("[DEEPLINK] DclGodotiOS::deeplink_received signal emitted to GDScript");
+        }
     } else {
         NSLog(@"[DEEPLINK] WARNING: Singleton not available yet, URL stored in static variable only");
+        if (OS::get_singleton() != nullptr) {
+            print_line("[DEEPLINK] WARNING: DclGodotiOS singleton not available yet, URL stored in static slot only");
+        }
     }
 }
 
@@ -987,7 +998,7 @@ TypedArray<Dictionary> DclGodotiOS::db_query_notifications(String where_clause, 
             String str_key = String([key UTF8String]);
 
             if ([objc_value isKindOfClass:[NSString class]]) {
-                dict[str_key] = String([(NSString *)objc_value UTF8String]);
+                dict[str_key] = String::utf8([(NSString *)objc_value UTF8String]);
             } else if ([objc_value isKindOfClass:[NSNumber class]]) {
                 NSNumber *num = (NSNumber *)objc_value;
                 // Check if it's a long long or int
@@ -1065,7 +1076,7 @@ Dictionary DclGodotiOS::db_get_notification(String id) {
         String str_key = String([key UTF8String]);
 
         if ([objc_value isKindOfClass:[NSString class]]) {
-            result[str_key] = String([(NSString *)objc_value UTF8String]);
+            result[str_key] = String::utf8([(NSString *)objc_value UTF8String]);
         } else if ([objc_value isKindOfClass:[NSNumber class]]) {
             NSNumber *num = (NSNumber *)objc_value;
             if (strcmp([num objCType], @encode(long long)) == 0) {

@@ -62,6 +62,14 @@ pub fn auth_api_requests() -> String {
     }
 }
 
+// Asset Bundle Registry
+pub fn asset_bundle_registry_profiles() -> String {
+    format!(
+        "https://asset-bundle-registry.decentraland.{}/profiles",
+        suffix(ServiceGroup::Catalyst)
+    )
+}
+
 // Catalyst
 pub fn main_realm() -> String {
     format!(
@@ -76,12 +84,13 @@ pub fn worlds_content_server() -> String {
     )
 }
 
-// Peer (special: zone/today use peer-testing)
+// Peer: org uses peer.decentraland.org, zone uses peer.decentraland.zone,
+// today uses peer-testing.decentraland.org (internal dev catalyst).
 pub fn peer_base() -> String {
-    if resolved_env(ServiceGroup::Catalyst) == DclEnvironment::Org {
-        "https://peer.decentraland.org".to_string()
-    } else {
-        "https://peer-testing.decentraland.org".to_string()
+    match resolved_env(ServiceGroup::Catalyst) {
+        DclEnvironment::Org => "https://peer.decentraland.org".to_string(),
+        DclEnvironment::Zone => "https://peer.decentraland.zone".to_string(),
+        DclEnvironment::Today => "https://peer-testing.decentraland.org".to_string(),
     }
 }
 pub fn peer_content() -> String {
@@ -174,6 +183,12 @@ pub fn mobile_events_api() -> String {
 pub fn account_deletion() -> String {
     format!(
         "https://mobile-bff.decentraland.{}/deletion",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+pub fn app_versions() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/app-versions",
         suffix(ServiceGroup::MobileBff)
     )
 }

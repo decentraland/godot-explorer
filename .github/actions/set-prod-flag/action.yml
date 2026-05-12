@@ -1,18 +1,28 @@
 name: Set Prod Flag
 description: Set PROD_FLAG environment variable based on the current branch (--prod for release, --staging for main and other branches)
 
+inputs:
+  ref:
+    description: 'Override ref to check (defaults to github.ref). Accepts both refs/heads/release and bare release formats.'
+    required: false
+    default: ''
+
 runs:
   using: composite
   steps:
     - name: Set prod/staging flag based on branch
       shell: bash
       run: |
-        if [ "${{ github.ref }}" = "refs/heads/release" ]; then
+        REF="${{ inputs.ref }}"
+        if [ -z "$REF" ]; then
+          REF="${{ github.ref }}"
+        fi
+        if [ "$REF" = "refs/heads/release" ] || [ "$REF" = "release" ]; then
           echo "PROD_FLAG=--prod" >> $GITHUB_ENV
-          echo "Running on release branch - setting PROD_FLAG=--prod"
+          echo "Running on release branch - setting PROD_FLAG=--prod (ref=$REF)"
         else
           echo "PROD_FLAG=--staging" >> $GITHUB_ENV
-          echo "Running on ${{ github.ref }} - setting PROD_FLAG=--staging"
+          echo "Running on $REF - setting PROD_FLAG=--staging"
         fi
     - name: Set branch name for Sentry tags
       shell: bash

@@ -80,6 +80,23 @@ static func async_request_emotes(
 	return await _async_request(url, page_number, page_size)
 
 
+static func async_request_all_emotes() -> LambdaWearableResponse:
+	var response: LambdaWearableResponse = LambdaWearableResponse.new()
+	var page_number = 1
+	while true:
+		var emotes = await async_request_emotes(page_number, WEARABLE_PAGE_SIZE)
+		if not is_instance_valid(emotes):
+			return null
+		response.total_amount = emotes.total_amount
+		response.elements.append_array(emotes.elements)
+		var loaded_elements = page_number * WEARABLE_PAGE_SIZE
+		if loaded_elements >= response.total_amount:
+			break
+		page_number += 1
+
+	return response
+
+
 static func async_request_all_wearables() -> LambdaWearableResponse:
 	var response: LambdaWearableResponse = LambdaWearableResponse.new()
 	var page_number = 1

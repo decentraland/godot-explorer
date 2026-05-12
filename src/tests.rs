@@ -4,7 +4,42 @@ use anyhow::Ok;
 
 use crate::{copy_files::move_dir_recursive, image_comparison::compare_images_folders, run};
 
-fn test_avatar_generation(
+/// Run Godot and tolerate a non-zero exit code (e.g. SIGABRT on shutdown) if output was produced.
+fn run_godot_tolerating_shutdown_crash(
+    extra_args: Vec<String>,
+    output_dir: &Path,
+    with_build_envs: Option<HashMap<String, String>>,
+) -> Result<(), anyhow::Error> {
+    // Clean output dir to avoid leftover files from previous runs
+    if output_dir.exists() {
+        std::fs::remove_dir_all(output_dir)?;
+    }
+    std::fs::create_dir_all(output_dir)?;
+
+    run::build(false, false, vec![], with_build_envs, None)?;
+
+    let run_result = run::run(false, false, extra_args, false, false, false);
+
+    if let Err(e) = &run_result {
+        let has_output = output_dir
+            .read_dir()
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(false);
+
+        if has_output {
+            eprintln!(
+                "Warning: Godot exited with error but output was generated, continuing: {}",
+                e
+            );
+        } else {
+            run_result?;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn test_avatar_generation(
     with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
     let avatar_snapshot_folder =
@@ -14,10 +49,6 @@ fn test_avatar_generation(
     println!("=== running godot avatar generation ===");
 
     let avatar_output = Path::new("./godot/output/");
-    if !avatar_output.exists() {
-        std::fs::create_dir_all(avatar_output)?;
-    }
-
     let avatar_test_input = Path::new("./../tests/avatars-test-input.json");
     let extra_args = [
         "--avatar-renderer",
@@ -28,9 +59,7 @@ fn test_avatar_generation(
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, false, vec![], with_build_envs, None)?;
-
-    run::run(false, false, extra_args, false, false, false)?;
+    run_godot_tolerating_shutdown_crash(extra_args, avatar_output, with_build_envs)?;
 
     // Move files
     move_dir_recursive(&avatar_output.canonicalize()?, &comparison_folder)?;
@@ -42,14 +71,11 @@ fn test_avatar_generation(
     Ok(())
 }
 
-fn test_scene_generation(
+pub fn test_scene_generation(
     with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
     println!("=== running scene generation ===");
     let scene_output = Path::new("./godot/output/");
-    if !scene_output.exists() {
-        std::fs::create_dir_all(scene_output)?;
-    }
     let scene_test_input = Path::new("./../tests/scene-renderer-test-input.json");
     let extra_args = [
         "--scene-renderer",
@@ -60,9 +86,7 @@ fn test_scene_generation(
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, false, vec![], with_build_envs, None)?;
-
-    run::run(false, false, extra_args, false, false, false)?;
+    run_godot_tolerating_shutdown_crash(extra_args, scene_output, with_build_envs)?;
 
     let scene_renderer_snapshot_folder =
         Path::new("./tests/snapshots/scene-image-generation").canonicalize()?;

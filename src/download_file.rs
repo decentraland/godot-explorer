@@ -55,7 +55,18 @@ async fn download_file_thread(
 
 pub fn _download_file(url: &str, path: &str) -> Result<(), anyhow::Error> {
     let (sender, receiver) = std::sync::mpsc::channel::<DownloadEvent>();
-    let url = Url::parse(url)?;
+    // Append a cache-busting query param so any intermediate CDN/proxy
+    // (and the upstream object store) always serves the latest object.
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let busted_url = if url.contains('?') {
+        format!("{url}&t={ts}")
+    } else {
+        format!("{url}?t={ts}")
+    };
+    let url = Url::parse(&busted_url)?;
     let path = PathBuf::from(path);
 
     tokio::spawn(async move {

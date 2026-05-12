@@ -234,7 +234,7 @@ func handle_explorer_scene(_scene):
 			await get_tree().create_timer(10.0).timeout
 
 			# Teleport and wait for loading to complete
-			Global.teleport_to(next_loc.pos, next_loc.realm)
+			Global.async_teleport_to(next_loc.pos, next_loc.realm)
 			await _wait_for_loading_complete()
 
 			# Wait 20 seconds for memory to stabilize before collecting next metrics

@@ -82,6 +82,10 @@ dependencies {
     api("androidx.media3:media3-exoplayer-hls:1.4.1")
     api("androidx.media3:media3-ui:1.4.1")
 
+    // Google Play Install Referrer for install attribution tracking
+    // Using 'api' to make the dependency transitive so it's included in the final APK
+    api("com.android.installreferrer:installreferrer:2.2")
+
     // Reown Sign SDK (WalletConnect successor) for native wallet connection
     api(platform("com.reown:android-bom:1.5.2"))
     api("com.reown:android-core") {

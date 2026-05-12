@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://ul7c6ys6568e"]
+[gd_scene format=3 uid="uid://ul7c6ys6568e"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_q0jet"]
 [ext_resource type="StyleBox" uid="uid://cvd354aiai815" path="res://assets/themes/dcl_theme/snow_outlined_black_pressed.tres" id="2_k4dph"]
@@ -11,7 +11,7 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_k4dph"]
 
-[node name="TestingTheme" type="Control"]
+[node name="TestingTheme" type="Control" unique_id=595899488]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,7 +20,7 @@ offset_bottom = 214.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=405786521]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -35,27 +35,27 @@ theme_override_constants/margin_top = 100
 theme_override_constants/margin_right = 100
 theme_override_constants/margin_bottom = 100
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer" unique_id=664828984]
 layout_mode = 2
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer" unique_id=1939299606]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/HBoxContainer" unique_id=918188550]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 15
 
-[node name="Button" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer"]
+[node name="Button" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer" unique_id=1584149344]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("1_q0jet")
 text = "PRIMARY BUTTON"
 
-[node name="Button3" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer"]
+[node name="Button3" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer" unique_id=1187386404]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -65,7 +65,7 @@ theme = ExtResource("1_q0jet")
 theme_type_variation = &"TouchableButton"
 text = "F"
 
-[node name="Button4" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer"]
+[node name="Button4" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer" unique_id=883472754]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -76,7 +76,7 @@ theme_type_variation = &"TouchableButton"
 icon = ExtResource("2_yh6su")
 icon_alignment = 1
 
-[node name="Button2" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer"]
+[node name="Button2" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer" unique_id=155651624]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -84,7 +84,7 @@ theme = ExtResource("1_q0jet")
 theme_type_variation = &"SecondaryButton"
 text = "SECONDARY BUTTON"
 
-[node name="Button5" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer"]
+[node name="Button5" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer" unique_id=372227841]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -92,7 +92,7 @@ theme = ExtResource("1_q0jet")
 theme_type_variation = &"SnowButton"
 text = "SNOW BUTTON"
 
-[node name="Button8" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer"]
+[node name="Button8" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer" unique_id=916706022]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -101,7 +101,7 @@ theme_type_variation = &"WearableButton"
 toggle_mode = true
 text = "WEARABLE BUTTON"
 
-[node name="Button11" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer"]
+[node name="Button11" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer" unique_id=391338127]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -110,7 +110,7 @@ theme_type_variation = &"SnowOutlinedToggleButton"
 toggle_mode = true
 text = "TOGGLE OUTLINED"
 
-[node name="Button_Reminder" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer"]
+[node name="Button_Reminder" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer" unique_id=1273848581]
 custom_minimum_size = Vector2(250, 60)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -140,12 +140,12 @@ toggle_mode = true
 text = "REMINDER"
 expand_icon = true
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/ScrollContainer/HBoxContainer" unique_id=38898212]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 15
 
-[node name="Button" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2"]
+[node name="Button" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2" unique_id=1420606079]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -154,7 +154,7 @@ toggle_mode = true
 button_pressed = true
 text = "PRIMARY BUTTON"
 
-[node name="Button3" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2"]
+[node name="Button3" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2" unique_id=521980692]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -166,7 +166,7 @@ toggle_mode = true
 button_pressed = true
 text = "F"
 
-[node name="Button4" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2"]
+[node name="Button4" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2" unique_id=168811796]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -179,7 +179,7 @@ button_pressed = true
 icon = ExtResource("2_yh6su")
 icon_alignment = 1
 
-[node name="Button2" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2"]
+[node name="Button2" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2" unique_id=218204644]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -189,7 +189,7 @@ toggle_mode = true
 button_pressed = true
 text = "SECONDARY BUTTON"
 
-[node name="Button5" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2"]
+[node name="Button5" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2" unique_id=1653511971]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -199,7 +199,7 @@ toggle_mode = true
 button_pressed = true
 text = "SNOW BUTTON"
 
-[node name="Button8" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2"]
+[node name="Button8" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2" unique_id=2079910510]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -209,7 +209,7 @@ toggle_mode = true
 button_pressed = true
 text = "WEARABLE BUTTON"
 
-[node name="Button11" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2"]
+[node name="Button11" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2" unique_id=516937144]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -219,7 +219,7 @@ toggle_mode = true
 button_pressed = true
 text = "TOGGLE OUTLINED"
 
-[node name="Button_Reminder" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2"]
+[node name="Button_Reminder" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer2" unique_id=1450718469]
 custom_minimum_size = Vector2(250, 60)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -250,12 +250,12 @@ button_pressed = true
 text = "REMOVE REMINDER"
 expand_icon = true
 
-[node name="VBoxContainer3" type="VBoxContainer" parent="MarginContainer/ScrollContainer/HBoxContainer"]
+[node name="VBoxContainer3" type="VBoxContainer" parent="MarginContainer/ScrollContainer/HBoxContainer" unique_id=1423079516]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 15
 
-[node name="Button" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3"]
+[node name="Button" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3" unique_id=454924063]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -265,7 +265,7 @@ toggle_mode = true
 button_pressed = true
 text = "PRIMARY BUTTON"
 
-[node name="Button3" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3"]
+[node name="Button3" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3" unique_id=1972542961]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -278,7 +278,7 @@ toggle_mode = true
 button_pressed = true
 text = "F"
 
-[node name="Button4" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3"]
+[node name="Button4" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3" unique_id=1581723784]
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -292,7 +292,7 @@ button_pressed = true
 icon = ExtResource("2_yh6su")
 icon_alignment = 1
 
-[node name="Button2" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3"]
+[node name="Button2" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3" unique_id=316284178]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -303,7 +303,7 @@ toggle_mode = true
 button_pressed = true
 text = "SECONDARY BUTTON"
 
-[node name="Button5" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3"]
+[node name="Button5" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3" unique_id=1896108323]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0
@@ -314,7 +314,7 @@ toggle_mode = true
 button_pressed = true
 text = "SNOW BUTTON"
 
-[node name="Button8" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3"]
+[node name="Button8" type="Button" parent="MarginContainer/ScrollContainer/HBoxContainer/VBoxContainer3" unique_id=1546237360]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 focus_mode = 0

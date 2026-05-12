@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://c7bnh6p6qygxu"]
+[gd_scene format=3 uid="uid://c7bnh6p6qygxu"]
 
 [ext_resource type="Texture2D" uid="uid://c3tpoj72yuxp4" path="res://src/ui/components/emotes/emote_item.svg" id="1_qctv4"]
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="2_jdnf4"]
@@ -13,13 +13,13 @@ fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.75, 0.25)
 
-[node name="EmoteWheelItem" type="TextureButton"]
+[node name="EmoteWheelItem" type="TextureButton" unique_id=304691548]
 offset_right = 140.0
 offset_bottom = 140.0
 pivot_offset = Vector2(-38, 215)
 script = ExtResource("2_jdnf4")
 
-[node name="Control_Inner" type="Control" parent="."]
+[node name="Control_Inner" type="Control" parent="." unique_id=588235276]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -29,7 +29,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Equiped" type="TextureRect" parent="Control_Inner"]
+[node name="Equiped" type="TextureRect" parent="Control_Inner" unique_id=1801573588]
 unique_name_in_owner = true
 visible = false
 modulate = Color(1, 0.501961, 0, 1)
@@ -43,7 +43,7 @@ mouse_filter = 2
 texture = ExtResource("1_qctv4")
 expand_mode = 2
 
-[node name="Pressed" type="TextureRect" parent="Control_Inner"]
+[node name="Pressed" type="TextureRect" parent="Control_Inner" unique_id=619388594]
 unique_name_in_owner = true
 visible = false
 modulate = Color(0.501961, 0, 0, 1)
@@ -57,7 +57,7 @@ mouse_filter = 2
 texture = ExtResource("1_qctv4")
 expand_mode = 2
 
-[node name="Background" type="TextureRect" parent="Control_Inner"]
+[node name="Background" type="TextureRect" parent="Control_Inner" unique_id=1042860826]
 texture_filter = 4
 layout_mode = 1
 offset_right = 139.0
@@ -66,7 +66,7 @@ mouse_filter = 2
 texture = ExtResource("1_qctv4")
 expand_mode = 1
 
-[node name="Inner" type="TextureRect" parent="Control_Inner/Background"]
+[node name="Inner" type="TextureRect" parent="Control_Inner/Background" unique_id=1951861724]
 unique_name_in_owner = true
 self_modulate = Color(0.92549, 0.92157, 0.92941, 1)
 texture_filter = 4
@@ -87,7 +87,7 @@ mouse_filter = 2
 texture = ExtResource("1_qctv4")
 expand_mode = 1
 
-[node name="Glow" type="TextureRect" parent="Control_Inner/Background/Inner"]
+[node name="Glow" type="TextureRect" parent="Control_Inner/Background/Inner" unique_id=1546861576]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -97,7 +97,7 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_oacma")
 
-[node name="TextureRect_Picture" type="TextureRect" parent="Control_Inner/Background/Inner"]
+[node name="TextureRect_Picture" type="TextureRect" parent="Control_Inner/Background/Inner" unique_id=176726945]
 unique_name_in_owner = true
 texture_filter = 2
 layout_mode = 1
@@ -115,14 +115,14 @@ grow_vertical = 2
 pivot_offset = Vector2(40, 40)
 expand_mode = 1
 
-[node name="ControlsWithoutFunction" type="Control" parent="."]
+[node name="ControlsWithoutFunction" type="Control" parent="." unique_id=1533658465]
 editor_description = "This nodes are only to satisfy the script. And don't have any function here."
 visible = false
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="TextureRect_Background" type="TextureRect" parent="ControlsWithoutFunction"]
+[node name="TextureRect_Background" type="TextureRect" parent="ControlsWithoutFunction" unique_id=990508003]
 unique_name_in_owner = true
 visible = false
 texture_filter = 2
@@ -136,7 +136,7 @@ pivot_offset = Vector2(32, 32)
 texture = ExtResource("3_ap2cx")
 expand_mode = 1
 
-[node name="TextureRect_Equiped" type="TextureRect" parent="ControlsWithoutFunction"]
+[node name="TextureRect_Equiped" type="TextureRect" parent="ControlsWithoutFunction" unique_id=288758585]
 unique_name_in_owner = true
 visible = false
 texture_filter = 2
@@ -150,7 +150,7 @@ pivot_offset = Vector2(32, 32)
 texture = ExtResource("3_ap2cx")
 expand_mode = 1
 
-[node name="TextureRect_Skeleton" type="TextureRect" parent="ControlsWithoutFunction"]
+[node name="TextureRect_Skeleton" type="TextureRect" parent="ControlsWithoutFunction" unique_id=1021987130]
 unique_name_in_owner = true
 texture_filter = 2
 layout_mode = 1
@@ -163,7 +163,7 @@ pivot_offset = Vector2(32, 32)
 texture = ExtResource("3_ap2cx")
 expand_mode = 1
 
-[node name="Pressed_bold" type="TextureRect" parent="ControlsWithoutFunction"]
+[node name="Pressed_bold" type="TextureRect" parent="ControlsWithoutFunction" unique_id=1833801176]
 unique_name_in_owner = true
 texture_filter = 2
 layout_mode = 1

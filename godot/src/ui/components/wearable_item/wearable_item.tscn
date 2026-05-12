@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bahsrsgo0jx48"]
+[gd_scene format=3 uid="uid://bahsrsgo0jx48"]
 
 [ext_resource type="Script" uid="uid://diff1e0rtmlew" path="res://src/ui/components/wearable_item/wearable_item.gd" id="1_vccc4"]
 [ext_resource type="Texture2D" uid="uid://bgjf4umjbsjvm" path="res://assets/ui/BaseThumbnail.png" id="2_225su"]
@@ -29,7 +29,7 @@ corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
-[node name="WearableItem" type="Button"]
+[node name="WearableItem" type="Button" unique_id=631880418]
 custom_minimum_size = Vector2(192, 192)
 offset_right = 160.0
 offset_bottom = 160.0
@@ -42,7 +42,7 @@ button_mask = 0
 flat = true
 script = ExtResource("1_vccc4")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=69364620]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -52,12 +52,12 @@ grow_vertical = 2
 mouse_filter = 2
 metadata/_edit_use_anchors_ = true
 
-[node name="PanelContainer_White" type="PanelContainer" parent="MarginContainer"]
+[node name="PanelContainer_White" type="PanelContainer" parent="MarginContainer" unique_id=1743873967]
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_m2ljc")
 
-[node name="TextureRect_Background" type="TextureRect" parent="MarginContainer/PanelContainer_White"]
+[node name="TextureRect_Background" type="TextureRect" parent="MarginContainer/PanelContainer_White" unique_id=737979903]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_stretch_ratio = 0.0
@@ -66,14 +66,14 @@ texture = ExtResource("2_225su")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="TextureRect_Preview" type="TextureRect" parent="MarginContainer/PanelContainer_White"]
+[node name="TextureRect_Preview" type="TextureRect" parent="MarginContainer/PanelContainer_White" unique_id=1417444879]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 expand_mode = 3
 stretch_mode = 5
 
-[node name="TextureRect_Equiped" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+[node name="TextureRect_Equiped" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=97707038]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 1
@@ -89,7 +89,7 @@ grow_horizontal = 2
 grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_225su")
 
-[node name="TextureRect_EquipedB" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/TextureRect_Equiped"]
+[node name="TextureRect_EquipedB" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/TextureRect_Equiped" unique_id=594947545]
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -99,7 +99,7 @@ texture = ExtResource("3_225su")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="TextureRect_Preview3" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+[node name="TextureRect_Preview3" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=502159764]
 visible = false
 custom_minimum_size = Vector2(42, 42)
 layout_mode = 1
@@ -111,7 +111,7 @@ texture = ExtResource("5_dtfap")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="TextureRect_Preview4" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+[node name="TextureRect_Preview4" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=294941566]
 visible = false
 custom_minimum_size = Vector2(42, 42)
 layout_mode = 1
@@ -123,7 +123,7 @@ texture = ExtResource("6_ckipv")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="TextureRect_Category" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+[node name="TextureRect_Category" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=1952531428]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(10, 10)
@@ -141,7 +141,7 @@ texture = ExtResource("7_h4p8s")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="TextureRect_Skeleton" type="TextureRect" parent="MarginContainer/PanelContainer_White"]
+[node name="TextureRect_Skeleton" type="TextureRect" parent="MarginContainer/PanelContainer_White" unique_id=10976566]
 unique_name_in_owner = true
 material = ExtResource("3_m2ljc")
 layout_mode = 2
@@ -151,7 +151,7 @@ texture = ExtResource("4_5rb3a")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="PanelContainer_External" type="PanelContainer" parent="."]
+[node name="PanelContainer_External" type="PanelContainer" parent="." unique_id=790276365]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5

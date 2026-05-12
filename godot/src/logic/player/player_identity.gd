@@ -116,8 +116,11 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	_current_profile = new_profile.duplicated()
 	_mutable_avatar = _mutable_profile.get_avatar()
 
-	# Update social blacklist from the profile
-	Global.social_blacklist.init_from_profile(new_profile)
+	# Blocked users are managed by the Social Service (get_blocking_status), not the profile.
+	# Only load muted users from profile (no Social Service RPC for muted).
+	var muted_list = new_profile.get_muted()
+	if muted_list.size() > 0:
+		Global.social_blacklist.append_muted(muted_list)
 
 
 func get_mutable_avatar() -> DclAvatarWireFormat:

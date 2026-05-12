@@ -1,0 +1,27 @@
+[remap]
+
+importer="cubemap_texture"
+type="CompressedCubemap"
+uid="uid://dm7cqly71j3q8"
+path="res://.godot/imported/horizon_clouds.png-89784512f4c170c16ac71a67a16f6d15.ccube"
+metadata={
+"vram_texture": false
+}
+
+[deps]
+
+source_file="res://assets/environment/horizon_clouds.png"
+dest_files=["res://.godot/imported/horizon_clouds.png-89784512f4c170c16ac71a67a16f6d15.ccube"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/channel_pack=0
+mipmaps/generate=false
+mipmaps/limit=-1
+slices/arrangement=3

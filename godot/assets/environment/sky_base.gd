@@ -1,50 +1,34 @@
 class_name SkyBase
 extends Node
 
-# Day/night phase timing constants (normalized 0.0-1.0)
-# Sun is active for 70% of the day (0.15-0.85), moon for 30% (0.85-0.15 wrapping)
-const SUNRISE_START = 0.12  # Dawn begins
-const SUNRISE_END = 0.15  # Sun fully up, moon down
-const SUNSET_START = 0.85  # Dusk begins
-const SUNSET_END = 0.88  # Moon fully up, sun down
-
-# Derived constants for phase durations
-const SUN_PHASE_DURATION = SUNSET_START - SUNRISE_END  # 0.7 (70% of day)
-const MOON_PHASE_DURATION = 1.0 - SUN_PHASE_DURATION  # 0.3 (30% of day)
-
-# Transition fade window (how far before/after phase change to fade light)
-const TRANSITION_FADE_MARGIN = 0.03
-
-# Horizon colors for transitions
-@export var moon_horizon_color := Color("#ff7534")  # Orange
-@export var sun_horizon_color := Color("#8f0025")  # Deep red
-
 # External gradient resources for time-of-day lighting
 @export var directional_light_gradient: Gradient
 @export var ambient_light_gradient: Gradient
 @export var fog_color_gradient: Gradient
 
-var last_time := 0.0
+# Curve resources for sun/moon sky rendering
+@export var sun_opacity_curve: Curve
+@export var sun_size_curve: Curve
+@export var moon_mask_size_curve: Curve
 
-# Moon properties (night time) - hardcoded since we only have one physical light
-var initial_moon_energy: float = 0.3
-var initial_moon_color: Color = Color(0.77, 0.992333, 1, 1)
-var initial_moon_transform: Transform3D
+# Debug: when > 0, override Global.skybox_time with a fast cycle of N seconds for the
+# whole day. Useful for verifying day/night transitions without waiting 24 in-game hours.
+# Set to 0 in production.
+@export var debug_cycle_seconds: float = 0.0
+
+var _moon_smooth_dir := Vector3(0.0, 1.0, 0.0)
 
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var main_light: DirectionalLight3D = $SkyLights/MainLight
-
-# Sun properties (day time)
+@onready var anim_player: AnimationPlayer = $SkyLights/AnimationPlayer
 @onready var initial_sun_energy = main_light.light_energy
-@onready var initial_sun_transform = main_light.global_transform
-@onready var initial_sun_color = main_light.light_color
-
 @onready var sky_material = world_environment.environment.sky.sky_material
 
 
 func _ready():
-	# Calculate moon transform (opposite side of sky from sun)
-	initial_moon_transform = initial_sun_transform.rotated(Vector3(0.0, 1.0, 0.0), PI)
+	# Set up animation: play, sample at position, stop
+	anim_player.play("light_cycle")
+	anim_player.pause()
 
 	if Global.is_xr():
 		Global.loading_started.connect(self._on_loading_started)
@@ -83,101 +67,61 @@ func _on_loading_finished():
 
 
 func _process(_delta: float) -> void:
-	var skybox_time = Global.skybox_time.get_normalized_time()
-
-	# Calculate angular positions (0 = horizon rise, 0.5 = zenith, 1.0 = horizon set)
-	var sun_angle: float
-	var moon_angle: float
-
-	# Sun phase: SUNRISE_END -> noon -> SUNSET_START
-	if skybox_time >= SUNRISE_END and skybox_time < SUNSET_START:
-		sun_angle = (skybox_time - SUNRISE_END) / SUN_PHASE_DURATION
+	var skybox_time: float
+	if debug_cycle_seconds > 0.0:
+		skybox_time = fmod(Time.get_ticks_msec() / (debug_cycle_seconds * 1000.0), 1.0)
 	else:
-		sun_angle = 0.0  # Below horizon
+		skybox_time = Global.skybox_time.get_normalized_time()
 
-	# Moon phase: SUNSET_START -> midnight -> SUNRISE_END (wraps around)
-	if skybox_time >= SUNSET_START:
-		# Rising half: SUNSET_START to 1.0 maps to 0.0-0.5
-		moon_angle = (skybox_time - SUNSET_START) / MOON_PHASE_DURATION
-	elif skybox_time < SUNRISE_END:
-		# Setting half: 0.0 to SUNRISE_END maps to 0.5-1.0
-		moon_angle = 0.5 + (skybox_time / MOON_PHASE_DURATION)
-	else:
-		moon_angle = 0.0  # Below horizon
+	# Sample the imported 144-keyframe sun rotation animation at current time
+	anim_player.seek(skybox_time, true)
 
-	# Calculate blend factor between sun and moon (0.0 = full sun, 1.0 = full moon)
-	var sun_to_moon_blend: float
-	if skybox_time < SUNRISE_START:
-		# Deep night - full moon
-		sun_to_moon_blend = 1.0
-	elif skybox_time < SUNRISE_END:
-		# Dawn transition - moon to sun
-		sun_to_moon_blend = 1.0 - smoothstep(SUNRISE_START, SUNRISE_END, skybox_time)
-	elif skybox_time < SUNSET_START:
-		# Day - full sun
-		sun_to_moon_blend = 0.0
-	elif skybox_time < SUNSET_END:
-		# Dusk transition - sun to moon
-		sun_to_moon_blend = smoothstep(SUNSET_START, SUNSET_END, skybox_time)
-	else:
-		# Night - full moon
-		sun_to_moon_blend = 1.0
+	# Drive day_night_cycle global so the shader's cloud color, sun/moon color, and floor
+	# gradients all advance with skybox_time. The shader derives the baked CubemapArray
+	# layer indices and blend factor from this same global, so no extra push needed.
+	RenderingServer.global_shader_parameter_set("day_night_cycle", skybox_time)
 
-	# Determine which phase we're in (snap, not blend for rotation/transform)
-	var is_sun_phase = skybox_time >= SUNRISE_END and skybox_time < SUNSET_START
+	# Energy from light elevation (positive when sun above horizon)
+	var light_dir = -main_light.global_transform.basis.z
+	var elevation = -light_dir.y
+	var energy_factor = smoothstep(-0.05, 0.3, elevation)
 
-	# Rotation/transform: snap to sun or moon (no blending)
-	var current_angle: float
-	var current_transform: Transform3D
-	if is_sun_phase:
-		current_angle = sun_angle
-		current_transform = initial_sun_transform
-	else:
-		current_angle = moon_angle
-		current_transform = initial_moon_transform
+	main_light.visible = energy_factor > 0.01
+	main_light.light_energy = initial_sun_energy * energy_factor
 
-	# Color and energy: blend smoothly for visual transitions
-	var current_color = initial_sun_color.lerp(initial_moon_color, sun_to_moon_blend)
-	var current_horizon_color = sun_horizon_color.lerp(moon_horizon_color, sun_to_moon_blend)
-	var current_energy = lerp(initial_sun_energy, initial_moon_energy, sun_to_moon_blend)
+	# Visual sun direction — driven by the animation. The 180° rotation around Y mirrors
+	# the X/Z components to compensate for the Unity (left-handed) → Godot (right-handed)
+	# coordinate flip that wasn't applied when the keyframes were imported.
+	var sun_dir = main_light.global_transform.basis.z
+	sun_dir = Vector3(-sun_dir.x, sun_dir.y, -sun_dir.z)
+	RenderingServer.global_shader_parameter_set("sun_direction", sun_dir)
 
-	# Calculate brightness based on angle (0=horizon, 0.5=overhead, 1.0=horizon)
-	var t = smoothstep(0.0, 0.2, current_angle) * smoothstep(1.0, 0.8, current_angle)
+	# Moon = opposite of visual sun. The sun stays mostly above horizon in the animation,
+	# so -sun_dir puts the moon mostly below — only briefly above during dusk/dawn.
+	# Visibility is gated by moon_mask_size_curve. Slerp filters dusk/dawn jumps.
+	var moon_target = -sun_dir
+	_moon_smooth_dir = _moon_smooth_dir.slerp(moon_target, clampf(_delta * 3.0, 0.0, 1.0))
+	RenderingServer.global_shader_parameter_set("moon_direction", _moon_smooth_dir)
 
-	# Fade light to zero near phase transitions to hide rotation snap
-	var transition_fade = 1.0
-	if skybox_time >= SUNRISE_START and skybox_time < SUNRISE_END + TRANSITION_FADE_MARGIN:
-		# Dawn transition - fade centered around SUNRISE_END
-		var dist = abs(skybox_time - SUNRISE_END)
-		transition_fade = smoothstep(0.0, TRANSITION_FADE_MARGIN, dist)
-	elif skybox_time >= SUNSET_START - TRANSITION_FADE_MARGIN and skybox_time < SUNSET_END:
-		# Dusk transition - fade centered around SUNSET_START
-		var dist = abs(skybox_time - SUNSET_START)
-		transition_fade = smoothstep(0.0, TRANSITION_FADE_MARGIN, dist)
+	if sun_opacity_curve:
+		RenderingServer.global_shader_parameter_set(
+			"sun_opacity", sun_opacity_curve.sample(skybox_time)
+		)
+	if sun_size_curve:
+		RenderingServer.global_shader_parameter_set("sun_size", sun_size_curve.sample(skybox_time))
+	if moon_mask_size_curve:
+		RenderingServer.global_shader_parameter_set(
+			"moon_mask_size", moon_mask_size_curve.sample(skybox_time)
+		)
 
-	# Apply transformations
-	main_light.visible = transition_fade > 0.01
-	main_light.light_energy = current_energy * t * transition_fade
-
-	# Rotate light through full arc based on angle (0 = rising, 0.5 = zenith, 1.0 = setting)
-	# Map angle from 0-1 to a rotation - negate to flip direction
-	var rotation_angle = -(current_angle - 0.5) * PI  # Flip: PI/2 to -PI/2
-	main_light.global_transform = current_transform.rotated(Vector3(1.0, 0.0, 0.0), rotation_angle)
-
-	main_light.light_color = lerp(current_horizon_color, current_color, t)
-
-	# Update colors based on time of day using gradients
-	if last_time != skybox_time:
-		last_time = skybox_time
-
-		if directional_light_gradient:
-			var gradient_color = directional_light_gradient.sample(skybox_time)
-			main_light.light_color = main_light.light_color.lerp(gradient_color, 0.5)
-
-		if ambient_light_gradient:
-			world_environment.environment.ambient_light_color = ambient_light_gradient.sample(
-				skybox_time
-			)
-
-		if fog_color_gradient:
-			world_environment.environment.fog_light_color = fog_color_gradient.sample(skybox_time)
+	# Gradients drive light/ambient/fog color. Direct assignment — no .lerp(0.5) bug.
+	# No early-out: the Curve sample above runs every frame anyway, so gating gradient
+	# samples doesn't save anything and risks falling out of sync.
+	if directional_light_gradient:
+		main_light.light_color = directional_light_gradient.sample(skybox_time)
+	if ambient_light_gradient:
+		world_environment.environment.ambient_light_color = ambient_light_gradient.sample(
+			skybox_time
+		)
+	if fog_color_gradient:
+		world_environment.environment.fog_light_color = fog_color_gradient.sample(skybox_time)

@@ -3,8 +3,9 @@ use zip::ZipArchive;
 
 use crate::{
     consts::{
-        EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
-        GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
+        godot_templates_base_url_for_branch, sanitize_branch_for_url, EXPORTS_FOLDER,
+        GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION, GODOT_PLATFORM_FILES,
+        GODOT_PROJECT_FOLDER,
     },
     helpers::get_exe_extension,
     install_dependency::{
@@ -430,6 +431,7 @@ pub fn prepare_templates(
     platforms: &[String],
     use_cache: bool,
     strip_ios: bool,
+    branch: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     // Convert GODOT_PLATFORM_FILES into a HashMap
     let file_map: HashMap<&str, Vec<&str>> = GODOT_PLATFORM_FILES
@@ -463,19 +465,25 @@ pub fn prepare_templates(
         }
     };
 
+    let templates_base_url = match branch {
+        Some(b) => godot_templates_base_url_for_branch(b),
+        None => GODOT4_EXPORT_TEMPLATES_BASE_URL.to_string(),
+    };
+
     for template in &templates {
         if let Some(files) = file_map.get(template.as_str()) {
             for file in files {
                 println!("Downloading file for {}: {}", template, file);
 
-                let url = format!("{}{}.zip", GODOT4_EXPORT_TEMPLATES_BASE_URL, file);
-                download_and_extract_zip(
-                    url.as_str(),
-                    dest_path.as_str(),
-                    cache_key(format!(
-                        "{GODOT_CURRENT_VERSION}.{file}.export-templates.zip"
-                    )),
-                )?;
+                let url = format!("{}{}.zip", templates_base_url, file);
+                let cache_id = match branch {
+                    Some(b) => format!(
+                        "{GODOT_CURRENT_VERSION}.branch-{}.{file}.export-templates.zip",
+                        sanitize_branch_for_url(b)
+                    ),
+                    None => format!("{GODOT_CURRENT_VERSION}.{file}.export-templates.zip"),
+                };
+                download_and_extract_zip(url.as_str(), dest_path.as_str(), cache_key(cache_id))?;
             }
         } else {
             println!("No files mapped for template: {}", template);

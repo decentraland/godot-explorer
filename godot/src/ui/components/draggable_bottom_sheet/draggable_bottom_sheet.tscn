@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://bmmj6rsmuc0rq"]
+[gd_scene format=3 uid="uid://bmmj6rsmuc0rq"]
 
 [ext_resource type="Script" uid="uid://csd03lrkrqety" path="res://src/ui/components/draggable_bottom_sheet/draggable_bottom_sheet.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_exit"]
@@ -18,7 +18,7 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="DraggableBottomSheet" type="VBoxContainer"]
+[node name="DraggableBottomSheet" type="VBoxContainer" unique_id=1373478605]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -28,27 +28,27 @@ mouse_filter = 2
 theme_override_constants/separation = 0
 script = ExtResource("1_script")
 
-[node name="PanelContainer_Header" type="PanelContainer" parent="."]
+[node name="PanelContainer_Header" type="PanelContainer" parent="." unique_id=127206851]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_header")
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Header"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Header" unique_id=207085877]
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 40
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer_Header/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer_Header/MarginContainer" unique_id=372249331]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Header/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Header/MarginContainer/HBoxContainer" unique_id=59074999]
 layout_mode = 2
 alignment = 2
 
-[node name="TextureButton_Close" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="TextureButton_Close" type="TextureButton" parent="PanelContainer_Header/MarginContainer/HBoxContainer/VBoxContainer" unique_id=1177798095]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(55, 55)
 layout_mode = 2
@@ -61,12 +61,12 @@ ignore_texture_size = true
 stretch_mode = 6
 flip_h = true
 
-[node name="Control_Card" type="Control" parent="."]
+[node name="Control_Card" type="Control" parent="." unique_id=1107714842]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="PanelContainer_Card" type="PanelContainer" parent="Control_Card"]
+[node name="PanelContainer_Card" type="PanelContainer" parent="Control_Card" unique_id=99478717]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -76,17 +76,17 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_Card/PanelContainer_Card" unique_id=1123769697]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer_ShowMore" type="MarginContainer" parent="Control_Card/PanelContainer_Card/VBoxContainer"]
+[node name="MarginContainer_ShowMore" type="MarginContainer" parent="Control_Card/PanelContainer_Card/VBoxContainer" unique_id=1487308021]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_bottom = 40
 
-[node name="Button_ShowMore" type="Button" parent="Control_Card/PanelContainer_Card/VBoxContainer/MarginContainer_ShowMore"]
+[node name="Button_ShowMore" type="Button" parent="Control_Card/PanelContainer_Card/VBoxContainer/MarginContainer_ShowMore" unique_id=1870179303]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 8)
 layout_mode = 2
@@ -104,7 +104,7 @@ theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_d6lng")
 theme_override_styles/focus = SubResource("StyleBoxFlat_d6lng")
 toggle_mode = true
 
-[node name="ScrollContent" type="ScrollContainer" parent="Control_Card/PanelContainer_Card/VBoxContainer"]
+[node name="ScrollContent" type="ScrollContainer" parent="Control_Card/PanelContainer_Card/VBoxContainer" unique_id=641172299]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3

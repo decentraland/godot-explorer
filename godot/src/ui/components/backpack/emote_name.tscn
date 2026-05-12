@@ -1,0 +1,88 @@
+[gd_scene format=3 uid="uid://md6xoha44tbf"]
+
+[ext_resource type="Script" uid="uid://cymlvgm8oq6n2" path="res://src/ui/components/backpack/emote_name.gd" id="1_l6o2s"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="1_y86wg"]
+[ext_resource type="Texture2D" uid="uid://cg8riejty6306" path="res://src/ui/components/dropdown_list/icons/check.svg" id="4_f4k8i"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fi3i1"]
+bg_color = Color(0.086104214, 0.07846785, 0.09320182, 0.8)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_left = 16.0
+expand_margin_right = 16.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_k5k0a"]
+font = ExtResource("1_y86wg")
+font_size = 24
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="EmoteNameAnim" type="Control" unique_id=670657309]
+clip_contents = true
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -56.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("1_l6o2s")
+
+[node name="EmoteName" type="Label" parent="." unique_id=950469410]
+visible = false
+custom_minimum_size = Vector2(196, 56)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -106.5
+offset_right = 106.5
+offset_bottom = 56.0
+grow_horizontal = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_fi3i1")
+text = "Emote nameeeeee"
+label_settings = SubResource("LabelSettings_k5k0a")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EquippedNotification" type="MarginContainer" parent="." unique_id=1690825422]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -84.0
+offset_right = 84.0
+offset_bottom = 56.0
+grow_horizontal = 2
+
+[node name="Panel" type="Panel" parent="EquippedNotification" unique_id=2014704997]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fi3i1")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="EquippedNotification" unique_id=1881242582]
+layout_mode = 2
+alignment = 1
+
+[node name="Equiped" type="Label" parent="EquippedNotification/HBoxContainer" unique_id=810861956]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+text = "Equipped"
+label_settings = SubResource("LabelSettings_k5k0a")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="EquippedNotification/HBoxContainer" unique_id=1100066527]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="TextureRect" type="TextureRect" parent="EquippedNotification/HBoxContainer/MarginContainer" unique_id=968411289]
+self_modulate = Color(0.9098039, 0.7254902, 1, 1)
+layout_mode = 2
+texture = ExtResource("4_f4k8i")
+expand_mode = 3
+stretch_mode = 4

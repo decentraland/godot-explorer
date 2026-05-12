@@ -97,7 +97,15 @@ pub struct DclCli {
     #[var(get)]
     pub asset_server: bool,
     #[var(get)]
+    pub scene_inspector: GString,
+    #[var(get)]
+    pub scene_inspector_file: bool,
+    #[var(get)]
+    pub low_spec_warning: bool,
+    #[var(get)]
     pub fi_benchmark_size: i32,
+    #[var(get)]
+    pub avatar_impostor_benchmark: bool,
 
     // Arguments with values
     #[var(get)]
@@ -115,7 +123,11 @@ pub struct DclCli {
     #[var(get)]
     pub fake_deeplink: GString,
     #[var(get)]
+    pub dcl_env: GString,
+    #[var(get)]
     pub fi_benchmark_output: GString,
+    #[var(get)]
+    pub avatar_impostor_benchmark_output: GString,
     #[var(get)]
     pub saved_profile: GString,
 }
@@ -395,12 +407,38 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            ArgDefinition {
+                name: "--avatar-impostor-benchmark".to_string(),
+                description: "Launch the avatar impostor benchmark scene at startup, run both phases, write results, and quit"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--avatar-impostor-benchmark-output".to_string(),
+                description: "Output file path for avatar impostor benchmark results (text)"
+                    .to_string(),
+                arg_type: ArgType::Value("<file>".to_string()),
+                category: "Performance".to_string(),
+            },
             // Authentication
             ArgDefinition {
                 name: "--saved-profile".to_string(),
                 description: "Use a numbered profile slot for identity storage (e.g., 2 uses account_2/guest_profile_2)".to_string(),
                 arg_type: ArgType::Value("<number>".to_string()),
                 category: "Authentication".to_string(),
+            },
+            ArgDefinition {
+                name: "--scene-inspector".to_string(),
+                description: "Enable the Scene Inspector. 'true' = use the preview WebSocket channel, or 'ws://host:port' for a custom WebSocket target. Also passable via deeplink (?scene-inspector=true)".to_string(),
+                arg_type: ArgType::Value("<target>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--scene-inspector-file".to_string(),
+                description: "Write Scene Inspector entries to JSONL files on disk (user://scene_inspector/)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
             },
             // Logging
             ArgDefinition {
@@ -409,11 +447,24 @@ impl DclCli {
                 arg_type: ArgType::Value("<filter>".to_string()),
                 category: "Debugging".to_string(),
             },
+            // Environment
+            ArgDefinition {
+                name: "--dclenv".to_string(),
+                description: "Set the Decentraland environment (org, zone, today). Accepts the same grammar as the dclenv deeplink param, e.g. \"zone\" or \"auth::zone,org\". Wins over a deeplink-supplied value when both are present.".to_string(),
+                arg_type: ArgType::Value("<env>".to_string()),
+                category: "Environment".to_string(),
+            },
             ArgDefinition {
                 name: "--no-pipe-logging".to_string(),
                 description: "Disable piping Rust logs to Godot console (use platform default: stdout/logcat/oslog)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--low-spec-warning".to_string(),
+                description: "Simulate low-spec iPhone warnings (for testing on desktop)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
             },
         ]
     }
@@ -492,14 +543,19 @@ impl INode for DclCli {
 
         let mut args_map = HashMap::new();
 
-        // Parse command line arguments into a map
+        // Parse command line arguments into a map.
+        // Supports both `--key value` and `--key=value` forms.
         let args_vec = combined_args;
         let mut i = 0;
         while i < args_vec.len() {
             let arg = args_vec[i].to_string();
             if arg.starts_with("--") {
-                // Check if next arg is a value (doesn't start with --)
-                if i + 1 < args_vec.len() && !args_vec[i + 1].to_string().starts_with("--") {
+                if let Some(eq_idx) = arg.find('=') {
+                    let key = arg[..eq_idx].to_string();
+                    let value = arg[eq_idx + 1..].to_string();
+                    args_map.insert(key, Some(value));
+                    i += 1;
+                } else if i + 1 < args_vec.len() && !args_vec[i + 1].to_string().starts_with("--") {
                     args_map.insert(arg.clone(), Some(args_vec[i + 1].to_string()));
                     i += 2;
                 } else {
@@ -554,10 +610,22 @@ impl INode for DclCli {
         let emulate_android = args_map.contains_key("--emulate-android");
         let landscape = args_map.contains_key("--landscape");
         let asset_server = args_map.contains_key("--asset-server");
+        // --scene-inspector accepts an optional value; bare flag means "true"
+        let scene_inspector = args_map
+            .get("--scene-inspector")
+            .map(|v| {
+                v.as_ref()
+                    .map(GString::from)
+                    .unwrap_or_else(|| GString::from("true"))
+            })
+            .unwrap_or_default();
+        let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
+        let low_spec_warning = args_map.contains_key("--low-spec-warning");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
+        let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -605,8 +673,18 @@ impl INode for DclCli {
                 }
             })
             .unwrap_or_default();
+        let dcl_env = args_map
+            .get("--dclenv")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
         let fi_benchmark_output = args_map
             .get("--fi-benchmark-output")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
+        let avatar_impostor_benchmark_output = args_map
+            .get("--avatar-impostor-benchmark-output")
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
@@ -658,7 +736,11 @@ impl INode for DclCli {
             emulate_android,
             landscape,
             asset_server,
+            scene_inspector,
+            scene_inspector_file,
+            low_spec_warning,
             fi_benchmark_size,
+            avatar_impostor_benchmark,
             asset_server_port,
             realm,
             location,
@@ -666,7 +748,9 @@ impl INode for DclCli {
             avatars_file,
             snapshot_folder,
             fake_deeplink,
+            dcl_env,
             fi_benchmark_output,
+            avatar_impostor_benchmark_output,
             saved_profile,
         }
     }

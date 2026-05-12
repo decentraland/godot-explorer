@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://ks0sxu8dsf66"]
+[gd_scene format=3 uid="uid://ks0sxu8dsf66"]
 
 [ext_resource type="Script" uid="uid://lvl1rom2ixgt" path="res://src/ui/components/jump_in_popup/jump_in_popup.gd" id="1_kciwf"]
 [ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="2_81dhg"]
@@ -13,7 +13,7 @@ corner_radius_top_right = 24
 corner_radius_bottom_right = 24
 corner_radius_bottom_left = 24
 
-[node name="JumpInPopup" type="ColorRect"]
+[node name="JumpInPopup" type="ColorRect" unique_id=1582465713]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -22,7 +22,7 @@ grow_vertical = 2
 color = Color(0, 0, 0, 0.784314)
 script = ExtResource("1_kciwf")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=2113779001]
 clip_children = 2
 custom_minimum_size = Vector2(450, 0)
 layout_mode = 1
@@ -39,16 +39,16 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qbeay")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer" unique_id=1110098952]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="PanelContainer/VBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="PanelContainer/VBoxContainer" unique_id=182724489]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 300)
 layout_mode = 2
 texture = ExtResource("2_uyx8q")
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer" unique_id=1588598718]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/margin_left = 30
@@ -56,20 +56,20 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer" unique_id=2055098694]
 layout_mode = 2
 theme_override_constants/separation = 40
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2" unique_id=1111496742]
 layout_mode = 2
 
-[node name="Label_Title" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/VBoxContainer" unique_id=159672980]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Scene Title"
 label_settings = ExtResource("2_81dhg")
 
-[node name="Label_Creator" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/VBoxContainer"]
+[node name="Label_Creator" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/VBoxContainer" unique_id=1846793905]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
@@ -77,20 +77,20 @@ text = "creator"
 label_settings = ExtResource("3_uyx8q")
 autowrap_mode = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2" unique_id=928866216]
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 theme_override_constants/separation = 15
 alignment = 2
 
-[node name="Button_JumpInCancel" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2"]
+[node name="Button_JumpInCancel" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2" unique_id=1311534406]
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"DarkButton"
 text = "CANCEL"
 
-[node name="Button_JumpIn" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2"]
+[node name="Button_JumpIn" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2" unique_id=1419505444]
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3

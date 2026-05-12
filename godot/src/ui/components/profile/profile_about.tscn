@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://ddgiwkq38wjib"]
+[gd_scene format=3 uid="uid://ddgiwkq38wjib"]
 
 [ext_resource type="Script" uid="uid://d1xg5skmioapy" path="res://src/ui/components/profile/profile_about.gd" id="1_about"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_font700"]
@@ -33,7 +33,7 @@ draw_center = false
 border_width_bottom = 2
 border_color = Color(0.627451, 0.67058825, 1, 1)
 
-[node name="ProfileAbout" type="VBoxContainer"]
+[node name="ProfileAbout" type="VBoxContainer" unique_id=912205610]
 offset_right = 773.0
 offset_bottom = 458.0
 size_flags_vertical = 0
@@ -41,7 +41,7 @@ mouse_filter = 2
 theme_override_constants/separation = 0
 script = ExtResource("1_about")
 
-[node name="Label" type="Label" parent="."]
+[node name="Label" type="Label" parent="." unique_id=1626307579]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 13
@@ -53,18 +53,18 @@ text = "About me"
 label_settings = SubResource("LabelSettings_title")
 uppercase = true
 
-[node name="HSeparator2" type="HSeparator" parent="."]
+[node name="HSeparator2" type="HSeparator" parent="." unique_id=1692176206]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 theme_override_styles/separator = SubResource("StyleBoxEmpty_w128x")
 
-[node name="MarginContainer_Description" type="MarginContainer" parent="."]
+[node name="MarginContainer_Description" type="MarginContainer" parent="." unique_id=106655363]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_top = 0
 
-[node name="Label_InfoDescription" type="Label" parent="MarginContainer_Description"]
+[node name="Label_InfoDescription" type="Label" parent="MarginContainer_Description" unique_id=1798021201]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -77,17 +77,17 @@ text = "Use this space to describe yourself in a few words."
 label_settings = SubResource("LabelSettings_p128h")
 autowrap_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="."]
+[node name="HSeparator" type="HSeparator" parent="." unique_id=696433129]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_w128x")
 
-[node name="MarginContainer_DataAbout" type="MarginContainer" parent="."]
+[node name="MarginContainer_DataAbout" type="MarginContainer" parent="." unique_id=2136248611]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="GridContainer_About" type="GridContainer" parent="MarginContainer_DataAbout"]
+[node name="GridContainer_About" type="GridContainer" parent="MarginContainer_DataAbout" unique_id=1516369846]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -95,83 +95,83 @@ theme_override_constants/h_separation = 32
 theme_override_constants/v_separation = 24
 columns = 3
 
-[node name="AboutData_Country" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_Country" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=1957787459 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Country"
 icon = ExtResource("5_3dgdc")
 
-[node name="AboutData_Language" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_Language" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=892303063 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Language"
 icon = ExtResource("5_8teom")
 
-[node name="AboutData_Pronouns" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_Pronouns" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=1376139703 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Pronouns"
 icon = ExtResource("6_72d1u")
 
-[node name="AboutData_Gender" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_Gender" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=1369717917 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Gender"
 icon = ExtResource("8_w128x")
 
-[node name="AboutData_RelationshipStatus" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_RelationshipStatus" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=265882428 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Relationship Status"
 icon = ExtResource("7_7vv4g")
 
-[node name="AboutData_SexualOrientation" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_SexualOrientation" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=208982004 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Sexual Orientation"
 icon = ExtResource("7_72d1u")
 
-[node name="AboutData_EmploymentStatus" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_EmploymentStatus" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=488842101 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Employment Status"
 icon = ExtResource("11_p128h")
 
-[node name="AboutData_Profession" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_Profession" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=122094646 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Profession"
 icon = ExtResource("10_1kjum")
 
-[node name="AboutData_RealName" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_RealName" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=666850709 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "Real Name"
 icon = ExtResource("11_wv437")
 
-[node name="AboutData_Hobby" parent="MarginContainer_DataAbout/GridContainer_About" instance=ExtResource("4_about_data")]
+[node name="AboutData_Hobby" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=1966669248 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
 title = "HOBBY"
 icon = ExtResource("14_li7if")
 
-[node name="MarginContainer_SeeMore" type="MarginContainer" parent="."]
+[node name="MarginContainer_SeeMore" type="MarginContainer" parent="." unique_id=1619399916]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/margin_top = 18
 
-[node name="HBoxContainer_SeeMore" type="HBoxContainer" parent="MarginContainer_SeeMore"]
+[node name="HBoxContainer_SeeMore" type="HBoxContainer" parent="MarginContainer_SeeMore" unique_id=580978114]
 layout_mode = 2
 alignment = 2
 
-[node name="Button_BigSeeMore" type="Button" parent="MarginContainer_SeeMore/HBoxContainer_SeeMore"]
+[node name="Button_BigSeeMore" type="Button" parent="MarginContainer_SeeMore/HBoxContainer_SeeMore" unique_id=849769118]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 toggle_mode = true
 flat = true
 
-[node name="VBoxContainer" type="PanelContainer" parent="MarginContainer_SeeMore/HBoxContainer_SeeMore/Button_BigSeeMore"]
+[node name="VBoxContainer" type="PanelContainer" parent="MarginContainer_SeeMore/HBoxContainer_SeeMore/Button_BigSeeMore" unique_id=531545642]
 layout_mode = 1
 anchors_preset = 6
 anchor_left = 1.0
@@ -186,7 +186,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_wv437")
 
-[node name="Label_SeeMore" type="Label" parent="MarginContainer_SeeMore/HBoxContainer_SeeMore/Button_BigSeeMore/VBoxContainer"]
+[node name="Label_SeeMore" type="Label" parent="MarginContainer_SeeMore/HBoxContainer_SeeMore/Button_BigSeeMore/VBoxContainer" unique_id=280513340]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4

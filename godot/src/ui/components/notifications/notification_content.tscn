@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://bkst8nn51e4iu"]
+[gd_scene format=3 uid="uid://bkst8nn51e4iu"]
 
 [ext_resource type="Script" uid="uid://tvxd1qqaqmaj" path="res://src/ui/components/notifications/notification_content.gd" id="1_content"]
 
@@ -14,18 +14,18 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="NotificationContent" type="HBoxContainer"]
+[node name="NotificationContent" type="HBoxContainer" unique_id=1021925750]
 size_flags_horizontal = 3
 theme_override_constants/separation = 12
 script = ExtResource("1_content")
 
-[node name="ImageContainerWrapper" type="Control" parent="."]
+[node name="ImageContainerWrapper" type="Control" parent="." unique_id=128714356]
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 
-[node name="ImageContainer" type="Panel" parent="ImageContainerWrapper"]
+[node name="ImageContainer" type="Panel" parent="ImageContainerWrapper" unique_id=134717449]
 unique_name_in_owner = true
 clip_children = 2
 layout_mode = 1
@@ -37,7 +37,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ld77n")
 
-[node name="NotificationImage" type="TextureRect" parent="ImageContainerWrapper/ImageContainer"]
+[node name="NotificationImage" type="TextureRect" parent="ImageContainerWrapper/ImageContainer" unique_id=1415805150]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -49,7 +49,7 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="IconTexture" type="TextureRect" parent="ImageContainerWrapper"]
+[node name="IconTexture" type="TextureRect" parent="ImageContainerWrapper" unique_id=1034901061]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(24, 24)
@@ -69,7 +69,7 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1170504368]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -77,7 +77,7 @@ mouse_filter = 2
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="LabelTitle" type="RichTextLabel" parent="VBoxContainer"]
+[node name="LabelTitle" type="RichTextLabel" parent="VBoxContainer" unique_id=2082664271]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -92,7 +92,7 @@ bbcode_enabled = true
 text = "[b]New Notification[/b]"
 scroll_active = false
 
-[node name="LabelDescription" type="RichTextLabel" parent="VBoxContainer"]
+[node name="LabelDescription" type="RichTextLabel" parent="VBoxContainer" unique_id=1103578988]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2

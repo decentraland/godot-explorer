@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://ijchr0b1hj8w"]
+[gd_scene format=3 uid="uid://ijchr0b1hj8w"]
 
 [ext_resource type="Script" uid="uid://bcv68bucyd0ey" path="res://src/ui/components/menu/menu_profile_button.gd" id="1_8lo53"]
 [ext_resource type="Texture2D" uid="uid://c3y600q1cirt5" path="res://assets/ui/ProfileExample.png" id="3_1yd2v"]
@@ -24,30 +24,30 @@ corner_radius_bottom_left = 23
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wap7v"]
 
-[node name="MenuProfileButton" type="PanelContainer"]
+[node name="MenuProfileButton" type="PanelContainer" unique_id=451339048]
 size_flags_horizontal = 4
 size_flags_vertical = 4
 mouse_force_pass_scroll_events = false
 theme_override_styles/panel = SubResource("StyleBoxFlat_qellx")
 script = ExtResource("1_8lo53")
 
-[node name="ProfileButton" type="TextureButton" parent="."]
+[node name="ProfileButton" type="TextureButton" parent="." unique_id=1153218780]
 unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1111854517]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Panel_Profile_Picture" type="Control" parent="HBoxContainer"]
+[node name="Panel_Profile_Picture" type="Control" parent="HBoxContainer" unique_id=147221679]
 unique_name_in_owner = true
 clip_contents = true
 custom_minimum_size = Vector2(45, 45)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Panel" type="PanelContainer" parent="HBoxContainer/Panel_Profile_Picture"]
+[node name="Panel" type="PanelContainer" parent="HBoxContainer/Panel_Profile_Picture" unique_id=1863675895]
 clip_children = 2
 layout_mode = 1
 anchors_preset = 8
@@ -64,7 +64,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_3crdu")
 
-[node name="TextureRect_Profile" type="TextureRect" parent="HBoxContainer/Panel_Profile_Picture/Panel"]
+[node name="TextureRect_Profile" type="TextureRect" parent="HBoxContainer/Panel_Profile_Picture/Panel" unique_id=1521785725]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
@@ -72,7 +72,7 @@ texture = ExtResource("3_1yd2v")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="LabelAvatarName" parent="HBoxContainer" instance=ExtResource("3_31d1k")]
+[node name="LabelAvatarName" parent="HBoxContainer" unique_id=1245024553 instance=ExtResource("3_31d1k")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 20)
 layout_mode = 2
@@ -81,17 +81,13 @@ size_flags_vertical = 4
 fit_text_to_label = true
 font = ExtResource("4_vryu4")
 
-[node name="Container_Label" parent="HBoxContainer/LabelAvatarName" index="0"]
-offset_right = 100.0
-offset_bottom = 20.0
-
-[node name="Label_Name" parent="HBoxContainer/LabelAvatarName/Container_Label" index="0"]
+[node name="Label_Name" parent="HBoxContainer/LabelAvatarName/Container_Label" parent_id_path=PackedInt32Array(1245024553, 567804642) index="0" unique_id=55778102]
 theme_override_fonts/font = ExtResource("4_vryu4")
 
-[node name="Label_Subaddress" parent="HBoxContainer/LabelAvatarName/Container_Label" index="1"]
+[node name="Label_Subaddress" parent="HBoxContainer/LabelAvatarName/Container_Label" parent_id_path=PackedInt32Array(1245024553, 567804642) index="1" unique_id=750153987]
 theme_override_fonts/font = ExtResource("4_vryu4")
 
-[node name="Separator" type="VSeparator" parent="HBoxContainer"]
+[node name="Separator" type="VSeparator" parent="HBoxContainer" unique_id=1677966322]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 6

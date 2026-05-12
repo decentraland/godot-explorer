@@ -1,9 +1,9 @@
-[gd_scene load_steps=7 format=3 uid="uid://jinshx5k4hax"]
+[gd_scene format=3 uid="uid://jinshx5k4hax"]
 
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_o3tuu"]
 [ext_resource type="Texture2D" uid="uid://c2b5kvxnhtgok" path="res://assets/themes/dark_dcl_theme/icons/Delay.svg" id="2_7p6xw"]
 [ext_resource type="Script" uid="uid://bfjd5bja07wth" path="res://src/ui/components/popup_warning/popup_warning.gd" id="2_t8rdc"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_m5dsw"]
+[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_m5dsw"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vtq8r"]
 bg_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -23,7 +23,7 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="PopupWarning" type="PanelContainer"]
+[node name="PopupWarning" type="PanelContainer" unique_id=588221494]
 custom_minimum_size = Vector2(358, 84)
 anchors_preset = 5
 anchor_left = 0.5
@@ -38,25 +38,25 @@ theme = ExtResource("1_o3tuu")
 theme_override_styles/panel = SubResource("StyleBoxFlat_vtq8r")
 script = ExtResource("2_t8rdc")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=569437585]
 layout_mode = 2
 theme_override_constants/margin_left = 13
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 13
 theme_override_constants/margin_bottom = 20
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=1147655960]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer" unique_id=1936818039]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 
-[node name="HBoxContainer_Title" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer_Title" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer" unique_id=1587568353]
 layout_mode = 2
 
-[node name="TextureRect_Icon" type="TextureRect" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
+[node name="TextureRect_Icon" type="TextureRect" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title" unique_id=417103846]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(25, 25)
 layout_mode = 2
@@ -64,7 +64,7 @@ texture = ExtResource("2_7p6xw")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Title" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
+[node name="Label_Title" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title" unique_id=608201635]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -72,17 +72,17 @@ theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 text = "Load the scenes arround you"
 clip_text = true
 
-[node name="Label_Description" type="RichTextLabel" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label_Description" type="RichTextLabel" parent="MarginContainer/HBoxContainer/VBoxContainer" unique_id=1880737375]
 unique_name_in_owner = true
 layout_mode = 2
 bbcode_enabled = true
 text = "[center]You have scenes pending to be loaded. To maintain a smooth experience, loading will occur only when you change scenes. If you prefer to load them immediately, please press the [b]Refresh[/b] button at the Top Left of the screen with icon [img]res://assets/ui/Reset.png[/img]"
 fit_content = true
 
-[node name="Control" type="Control" parent="."]
+[node name="Control" type="Control" parent="." unique_id=2016356211]
 layout_mode = 2
 
-[node name="TextureButton_Exit" type="Button" parent="Control"]
+[node name="TextureButton_Exit" type="Button" parent="Control" unique_id=1551942501]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0

@@ -3,9 +3,11 @@ extends ColorRect
 
 const MODAL_ALERT_ICON = preload("res://assets/ui/modal-alert-icon.svg")
 const MODAL_BLOCK_ICON = preload("res://assets/ui/modal-block-icon.svg")
+const MODAL_BAN_ICON = preload("res://assets/ui/modal-ban-icon.svg")
 const MODAL_CONNECTION_ICON = preload("res://assets/ui/modal-connection-icon.svg")
 
-var dismissable: bool = true
+# When true, the modal cannot be dismissed and consumes all input behind it.
+var blocker: bool = false
 
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
 @onready var label_title: Label = %Label_Title
@@ -16,6 +18,8 @@ var dismissable: bool = true
 @onready var button_secondary: Button = %Button_Secondary
 @onready var button_primary: Button = %Button_Primary
 @onready var panel_container: PanelContainer = $PanelContainer
+@onready var buttons_separator: HSeparator = %HSeparator_ButtonsSeparator
+@onready var buttons_container: HBoxContainer = %HBoxContainer_Buttons
 
 
 func _ready() -> void:
@@ -43,6 +47,11 @@ func set_body(body: String) -> void:
 ## Sets the primary button text
 func set_primary_button_text(text: String) -> void:
 	button_primary.text = text
+
+
+## Sets the primary button font size
+func set_primary_button_font_size(size: int) -> void:
+	button_primary.add_theme_font_size_override("font_size", size)
 
 
 ## Sets the secondary button text
@@ -99,8 +108,14 @@ func _async_update_modal_size() -> void:
 		panel_container._request_update()
 
 
+func _unhandled_input(_event: InputEvent) -> void:
+	if not visible or not blocker:
+		return
+	get_viewport().set_input_as_handled()
+
+
 func _on_gui_input(event: InputEvent) -> void:
-	if not dismissable:
+	if blocker:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:

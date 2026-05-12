@@ -572,7 +572,7 @@ impl SceneEntityCoordinator {
     /// - If no fixed entities: Requests scene at current coordinate (fallback for genesis city teleports)
     pub fn update_position(&mut self, x: i16, z: i16) {
         if self.entities_active_url.is_empty() {
-            tracing::error!("entities_active_url is empty, cannot update position");
+            tracing::warn!("entities_active_url is empty, cannot update position");
             return;
         }
 

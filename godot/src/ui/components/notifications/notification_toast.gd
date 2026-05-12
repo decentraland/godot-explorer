@@ -42,6 +42,7 @@ func async_show_notification(notification: Dictionary) -> void:
 	notification_content.set_notification(notification)
 
 	# Start above screen (position the Control node)
+	await get_tree().process_frame
 	position.y = -size.y
 
 	# Animate slide in from top (align visible panel with profile button at 20px from top)

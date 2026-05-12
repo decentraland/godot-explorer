@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://bykgikku3dda2"]
+[gd_scene format=3 uid="uid://bykgikku3dda2"]
 
 [ext_resource type="Script" uid="uid://dxp3n8cbqyp6d" path="res://src/ui/components/loading_screen/carousel.gd" id="1_ioipx"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_p56uk"]
@@ -92,7 +92,7 @@ _data = {
 &"default": SubResource("Animation_524wq")
 }
 
-[node name="Carousel" type="Control"]
+[node name="Carousel" type="Control" unique_id=796719293]
 custom_minimum_size = Vector2(946, 546)
 layout_mode = 3
 anchors_preset = 0
@@ -100,7 +100,7 @@ offset_right = 946.0
 offset_bottom = 546.0
 script = ExtResource("1_ioipx")
 
-[node name="Item1" type="HBoxContainer" parent="."]
+[node name="Item1" type="HBoxContainer" parent="." unique_id=400570914]
 visible = false
 custom_minimum_size = Vector2(946, 546)
 layout_direction = 2
@@ -108,7 +108,7 @@ layout_mode = 0
 offset_right = 946.0
 offset_bottom = 546.0
 
-[node name="VBox_Data" type="VBoxContainer" parent="Item1"]
+[node name="VBox_Data" type="VBoxContainer" parent="Item1" unique_id=1093550952]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
@@ -116,7 +116,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="Item1/VBox_Data"]
+[node name="Label_Title" type="Label" parent="Item1/VBox_Data" unique_id=119113599]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -126,7 +126,7 @@ text = "Genesis Plaza,
 heart of city"
 autowrap_mode = 2
 
-[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item1/VBox_Data"]
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item1/VBox_Data" unique_id=1638226646]
 custom_minimum_size = Vector2(442, 210)
 layout_mode = 2
 mouse_filter = 2
@@ -135,14 +135,14 @@ text = "Genesis Plaza is built and maintained by the Decentraland Foundation but
 scroll_active = false
 shortcut_keys_enabled = false
 
-[node name="Control_Image" type="Control" parent="Item1"]
+[node name="Control_Image" type="Control" parent="Item1" unique_id=1256557504]
 custom_minimum_size = Vector2(500, 500)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
 mouse_filter = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="Item1/Control_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Item1/Control_Image" unique_id=651103611]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -159,7 +159,7 @@ mouse_filter = 2
 texture = ExtResource("4_4k1g3")
 stretch_mode = 4
 
-[node name="Item2" type="HBoxContainer" parent="."]
+[node name="Item2" type="HBoxContainer" parent="." unique_id=1797014322]
 visible = false
 custom_minimum_size = Vector2(946, 546)
 layout_direction = 2
@@ -167,7 +167,7 @@ layout_mode = 0
 offset_right = 946.0
 offset_bottom = 546.0
 
-[node name="VBox_Data" type="VBoxContainer" parent="Item2"]
+[node name="VBox_Data" type="VBoxContainer" parent="Item2" unique_id=975561695]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
@@ -175,7 +175,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="Item2/VBox_Data"]
+[node name="Label_Title" type="Label" parent="Item2/VBox_Data" unique_id=1309146897]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -184,7 +184,7 @@ theme_override_font_sizes/font_size = 40
 text = "MANA"
 autowrap_mode = 2
 
-[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item2/VBox_Data"]
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item2/VBox_Data" unique_id=472125577]
 custom_minimum_size = Vector2(442, 170)
 layout_mode = 2
 mouse_filter = 2
@@ -193,14 +193,14 @@ text = "MANA is Decentraland’s virtual currency. Use it to buy LAND, Unique NA
 scroll_active = false
 shortcut_keys_enabled = false
 
-[node name="Control_Image" type="Control" parent="Item2"]
+[node name="Control_Image" type="Control" parent="Item2" unique_id=1488509681]
 custom_minimum_size = Vector2(500, 500)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
 mouse_filter = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="Item2/Control_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Item2/Control_Image" unique_id=379751956]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -217,7 +217,7 @@ mouse_filter = 2
 texture = ExtResource("5_33rqf")
 stretch_mode = 4
 
-[node name="Item3" type="HBoxContainer" parent="."]
+[node name="Item3" type="HBoxContainer" parent="." unique_id=2063827961]
 visible = false
 custom_minimum_size = Vector2(946, 546)
 layout_direction = 2
@@ -225,7 +225,7 @@ layout_mode = 0
 offset_right = 946.0
 offset_bottom = 546.0
 
-[node name="VBox_Data" type="VBoxContainer" parent="Item3"]
+[node name="VBox_Data" type="VBoxContainer" parent="Item3" unique_id=864114338]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
@@ -233,7 +233,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="Item3/VBox_Data"]
+[node name="Label_Title" type="Label" parent="Item3/VBox_Data" unique_id=1156881044]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -242,7 +242,7 @@ theme_override_font_sizes/font_size = 40
 text = "Builder"
 autowrap_mode = 2
 
-[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item3/VBox_Data"]
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item3/VBox_Data" unique_id=1197560509]
 custom_minimum_size = Vector2(442, 190)
 layout_mode = 2
 mouse_filter = 2
@@ -252,14 +252,14 @@ For more experienced creators, the SDK provides the tools to fill the world with
 scroll_active = false
 shortcut_keys_enabled = false
 
-[node name="Control_Image" type="Control" parent="Item3"]
+[node name="Control_Image" type="Control" parent="Item3" unique_id=591212106]
 custom_minimum_size = Vector2(500, 500)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
 mouse_filter = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="Item3/Control_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Item3/Control_Image" unique_id=2036817199]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -276,7 +276,7 @@ mouse_filter = 2
 texture = ExtResource("6_v3410")
 stretch_mode = 4
 
-[node name="Item4" type="HBoxContainer" parent="."]
+[node name="Item4" type="HBoxContainer" parent="." unique_id=556608129]
 visible = false
 custom_minimum_size = Vector2(946, 546)
 layout_direction = 2
@@ -284,7 +284,7 @@ layout_mode = 0
 offset_right = 946.0
 offset_bottom = 546.0
 
-[node name="VBox_Data" type="VBoxContainer" parent="Item4"]
+[node name="VBox_Data" type="VBoxContainer" parent="Item4" unique_id=816436008]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
@@ -292,7 +292,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="Item4/VBox_Data"]
+[node name="Label_Title" type="Label" parent="Item4/VBox_Data" unique_id=417359470]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -302,7 +302,7 @@ text = "Decentraland
 Editor"
 autowrap_mode = 2
 
-[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item4/VBox_Data"]
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item4/VBox_Data" unique_id=558146753]
 custom_minimum_size = Vector2(442, 170)
 layout_mode = 2
 mouse_filter = 2
@@ -311,14 +311,14 @@ text = "It’s intended for users of any knowledge level, combining a graphical 
 scroll_active = false
 shortcut_keys_enabled = false
 
-[node name="Control_Image" type="Control" parent="Item4"]
+[node name="Control_Image" type="Control" parent="Item4" unique_id=217808447]
 custom_minimum_size = Vector2(500, 500)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
 mouse_filter = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="Item4/Control_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Item4/Control_Image" unique_id=188392907]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -335,13 +335,11 @@ mouse_filter = 2
 texture = ExtResource("7_chjnp")
 stretch_mode = 4
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Item4/Control_Image"]
-libraries = {
-&"": SubResource("AnimationLibrary_in2xg")
-}
-autoplay = "default"
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Item4/Control_Image" unique_id=441891097]
+libraries/ = SubResource("AnimationLibrary_in2xg")
+autoplay = &"default"
 
-[node name="Item5" type="HBoxContainer" parent="."]
+[node name="Item5" type="HBoxContainer" parent="." unique_id=1588442697]
 visible = false
 custom_minimum_size = Vector2(946, 546)
 layout_direction = 2
@@ -349,7 +347,7 @@ layout_mode = 0
 offset_right = 946.0
 offset_bottom = 546.0
 
-[node name="VBox_Data" type="VBoxContainer" parent="Item5"]
+[node name="VBox_Data" type="VBoxContainer" parent="Item5" unique_id=1941841872]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
@@ -357,7 +355,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="Item5/VBox_Data"]
+[node name="Label_Title" type="Label" parent="Item5/VBox_Data" unique_id=702143873]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -366,7 +364,7 @@ theme_override_font_sizes/font_size = 40
 text = "LAND"
 autowrap_mode = 2
 
-[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item5/VBox_Data"]
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item5/VBox_Data" unique_id=2140049047]
 custom_minimum_size = Vector2(442, 170)
 layout_mode = 2
 mouse_filter = 2
@@ -375,14 +373,14 @@ text = "Decentraland is made up of over 90,000 LANDs: virtual spaces backed by c
 scroll_active = false
 shortcut_keys_enabled = false
 
-[node name="Control_Image" type="Control" parent="Item5"]
+[node name="Control_Image" type="Control" parent="Item5" unique_id=804607677]
 custom_minimum_size = Vector2(500, 500)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
 mouse_filter = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="Item5/Control_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Item5/Control_Image" unique_id=397232017]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -399,7 +397,7 @@ mouse_filter = 2
 texture = ExtResource("8_ken5x")
 stretch_mode = 4
 
-[node name="Item6" type="HBoxContainer" parent="."]
+[node name="Item6" type="HBoxContainer" parent="." unique_id=1272974920]
 visible = false
 custom_minimum_size = Vector2(946, 546)
 layout_direction = 2
@@ -407,7 +405,7 @@ layout_mode = 0
 offset_right = 946.0
 offset_bottom = 546.0
 
-[node name="VBox_Data" type="VBoxContainer" parent="Item6"]
+[node name="VBox_Data" type="VBoxContainer" parent="Item6" unique_id=1354919291]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
@@ -415,7 +413,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="Item6/VBox_Data"]
+[node name="Label_Title" type="Label" parent="Item6/VBox_Data" unique_id=2137502820]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -424,7 +422,7 @@ theme_override_font_sizes/font_size = 40
 text = "Wearables & Emotes"
 autowrap_mode = 2
 
-[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item6/VBox_Data"]
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item6/VBox_Data" unique_id=235780762]
 custom_minimum_size = Vector2(442, 170)
 layout_mode = 2
 mouse_filter = 2
@@ -434,14 +432,14 @@ The rarest ones can get to be super valuable. You can buy and sell them in the M
 scroll_active = false
 shortcut_keys_enabled = false
 
-[node name="Control_Image" type="Control" parent="Item6"]
+[node name="Control_Image" type="Control" parent="Item6" unique_id=1816002985]
 custom_minimum_size = Vector2(500, 500)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
 mouse_filter = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="Item6/Control_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Item6/Control_Image" unique_id=77229438]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -458,13 +456,11 @@ mouse_filter = 2
 texture = ExtResource("9_5y3n0")
 stretch_mode = 4
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Item6/Control_Image"]
-libraries = {
-&"": SubResource("AnimationLibrary_8leup")
-}
-autoplay = "default"
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Item6/Control_Image" unique_id=965010521]
+libraries/ = SubResource("AnimationLibrary_8leup")
+autoplay = &"default"
 
-[node name="Item7" type="HBoxContainer" parent="."]
+[node name="Item7" type="HBoxContainer" parent="." unique_id=1862127412]
 visible = false
 custom_minimum_size = Vector2(946, 546)
 layout_direction = 2
@@ -472,7 +468,7 @@ layout_mode = 0
 offset_right = 946.0
 offset_bottom = 546.0
 
-[node name="VBox_Data" type="VBoxContainer" parent="Item7"]
+[node name="VBox_Data" type="VBoxContainer" parent="Item7" unique_id=1016840462]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
@@ -480,7 +476,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="Item7/VBox_Data"]
+[node name="Label_Title" type="Label" parent="Item7/VBox_Data" unique_id=1830380805]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -489,7 +485,7 @@ theme_override_font_sizes/font_size = 40
 text = "Decentraland DAO"
 autowrap_mode = 2
 
-[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item7/VBox_Data"]
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item7/VBox_Data" unique_id=251134994]
 custom_minimum_size = Vector2(542, 170)
 layout_mode = 2
 mouse_filter = 2
@@ -498,13 +494,13 @@ text = "Decentraland is the first fully decentralized virtual world. By voting t
 scroll_active = false
 shortcut_keys_enabled = false
 
-[node name="Control_Image" type="Control" parent="Item7"]
+[node name="Control_Image" type="Control" parent="Item7" unique_id=1381973004]
 custom_minimum_size = Vector2(400, 400)
 layout_mode = 2
 size_flags_stretch_ratio = 0.5
 mouse_filter = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="Item7/Control_Image"]
+[node name="TextureRect_Image" type="TextureRect" parent="Item7/Control_Image" unique_id=1403458373]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5

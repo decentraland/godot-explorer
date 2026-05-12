@@ -1,4 +1,4 @@
-[gd_resource type="ShaderMaterial" load_steps=6 format=3 uid="uid://b8xv4j8g2m1kq"]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://b8xv4j8g2m1kq"]
 
 [ext_resource type="Texture2D" uid="uid://ywncewk8tpsj" path="res://assets/empty-scenes/Grass005_1K-JPG_Displacement.jpg" id="1_rd7x0"]
 [ext_resource type="Shader" uid="uid://b5oywax5er7sb" path="res://assets/shaders/empty_parcel.gdshader" id="1_shader"]

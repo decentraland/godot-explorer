@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://dsqq58ubnjwen"]
+[gd_scene format=3 uid="uid://dsqq58ubnjwen"]
 
 [ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="1_u1jk8"]
 [ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="2_kml7e"]
@@ -6,14 +6,20 @@
 [ext_resource type="Gradient" path="res://assets/environment/gradients/directional_light_color.tres" id="4_dir"]
 [ext_resource type="Gradient" path="res://assets/environment/gradients/ambient_light_color.tres" id="5_amb"]
 [ext_resource type="Gradient" path="res://assets/environment/gradients/fog_color.tres" id="6_fog"]
+[ext_resource type="Curve" path="res://assets/environment/sun_opacity_curve.tres" id="7_sunop"]
+[ext_resource type="Curve" path="res://assets/environment/sun_size_curve.tres" id="8_sunsz"]
+[ext_resource type="Curve" path="res://assets/environment/moon_mask_size_curve.tres" id="9_moonmsk"]
 
-[node name="SkyLow" type="Node"]
+[node name="SkyLow" type="Node" unique_id=147055651]
 script = ExtResource("1_u1jk8")
 directional_light_gradient = ExtResource("4_dir")
 ambient_light_gradient = ExtResource("5_amb")
 fog_color_gradient = ExtResource("6_fog")
+sun_opacity_curve = ExtResource("7_sunop")
+sun_size_curve = ExtResource("8_sunsz")
+moon_mask_size_curve = ExtResource("9_moonmsk")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=688745950]
 environment = ExtResource("2_kml7e")
 
-[node name="SkyLights" parent="." instance=ExtResource("3_lights")]
+[node name="SkyLights" parent="." unique_id=707384592 instance=ExtResource("3_lights")]
