@@ -22,6 +22,10 @@ func setup(camera: Camera3D):
 	if depth_camera and depth_camera.has_node("DepthQuad"):
 		var depth_quad = depth_camera.get_node("DepthQuad")
 		depth_quad.visible = true
+	if outline_quad:
+		outline_quad.visible = false
+	if sub_viewport:
+		sub_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 
 func _process(_delta):
@@ -63,6 +67,13 @@ func set_outlined_avatar(avatar: Node3D):
 	# Set new outline
 	if avatar:
 		_set_avatar_layers(avatar, true)
+
+	if outline_quad:
+		outline_quad.visible = avatar != null
+	if sub_viewport:
+		sub_viewport.render_target_update_mode = (
+			SubViewport.UPDATE_ALWAYS if avatar != null else SubViewport.UPDATE_DISABLED
+		)
 
 
 func _set_avatar_layers(avatar: Node3D, add_outline: bool):
