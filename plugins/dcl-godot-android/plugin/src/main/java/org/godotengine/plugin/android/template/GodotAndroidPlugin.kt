@@ -34,6 +34,7 @@ import org.decentraland.godotexplorer.NotificationReceiver
 import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
+import org.godotengine.godot.plugin.SignalInfo
 import org.godotengine.godot.plugin.UsedByGodot
 import java.io.File
 import java.io.FileOutputStream
@@ -84,12 +85,180 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         "com.sec.android.app.sbrowser" // Samsung Internet
     )
 
+    override fun getPluginSignals(): MutableSet<SignalInfo> {
+        return mutableSetOf(
+            // Emitted once when Firebase Analytics resolves the app instance id (ga_pseudo_user_id).
+            // The Rust side uses this as the trigger to queue the Segment `Firebase Init` event,
+            // which is the cross-system correlation anchor (Segment <-> Firebase).
+            SignalInfo("firebase_app_instance_id_ready", String::class.java)
+        )
+    }
+
     override fun onGodotSetupCompleted() {
         super.onGodotSetupCompleted()
         // Initialize notification database
         activity?.let {
             notificationDatabase = NotificationDatabase(it.applicationContext)
             Log.d(pluginName, "Notification database initialized")
+        }
+        // Kick off Firebase Analytics initialization early so getAppInstanceId() can be ready
+        // by the time the first Segment batch is sent.
+        ensureFirebaseInitialized()
+    }
+
+    // --- Firebase Analytics (accessed via reflection so this plugin doesn't depend on the SDK) ---
+    @Volatile private var firebaseAnalyticsInstance: Any? = null
+    @Volatile private var firebaseAppInstanceId: String = ""
+    @Volatile private var firebaseInitTried: Boolean = false
+    @Volatile private var firebaseAvailable: Boolean = false
+
+    private fun ensureFirebaseInitialized() {
+        if (firebaseInitTried) return
+        // Don't burn the one-shot flag while the activity context is still null — that's a
+        // transient state during early startup. Once we have ctx, commit to the single attempt.
+        val ctx = activity?.applicationContext ?: run {
+            Log.w(pluginName, "[Firebase] applicationContext null at init, will retry on next call")
+            return
+        }
+        firebaseInitTried = true
+        try {
+            val faClass = Class.forName("com.google.firebase.analytics.FirebaseAnalytics")
+            val getInstance = faClass.getMethod("getInstance", Context::class.java)
+            val instance = getInstance.invoke(null, ctx)
+            firebaseAnalyticsInstance = instance
+            firebaseAvailable = instance != null
+            Log.i(pluginName, "[Firebase] FirebaseAnalytics initialized")
+
+            // Kick off async fetch of the app instance id and cache the result.
+            try {
+                val task = faClass.getMethod("getAppInstanceId").invoke(instance)
+                if (task != null) {
+                    val onCompleteListenerClass =
+                        Class.forName("com.google.android.gms.tasks.OnCompleteListener")
+                    val listener = java.lang.reflect.Proxy.newProxyInstance(
+                        onCompleteListenerClass.classLoader,
+                        arrayOf(onCompleteListenerClass)
+                    ) { _, method, args ->
+                        if (method.name == "onComplete" && args != null && args.isNotEmpty()) {
+                            val tsk = args[0]
+                            try {
+                                val ok = tsk.javaClass.getMethod("isSuccessful").invoke(tsk) as? Boolean ?: false
+                                if (ok) {
+                                    val result = tsk.javaClass.getMethod("getResult").invoke(tsk) as? String
+                                    firebaseAppInstanceId = result ?: ""
+                                    Log.i(pluginName, "[Firebase] app instance id ready (len=${firebaseAppInstanceId.length})")
+                                } else {
+                                    Log.w(pluginName, "[Firebase] getAppInstanceId task not successful")
+                                }
+                            } catch (e: Throwable) {
+                                Log.w(pluginName, "[Firebase] error reading task result: ${e.message}")
+                            }
+                            // Always notify Rust, even on failure (empty string) — the linking event
+                            // ships with whatever we got so the session isn't held indefinitely.
+                            try {
+                                emitSignal("firebase_app_instance_id_ready", firebaseAppInstanceId)
+                            } catch (e: Throwable) {
+                                Log.w(pluginName, "[Firebase] emitSignal failed: ${e.message}")
+                            }
+                        }
+                        null
+                    }
+                    task.javaClass.getMethod("addOnCompleteListener", onCompleteListenerClass)
+                        .invoke(task, listener)
+                }
+            } catch (e: Throwable) {
+                Log.w(pluginName, "[Firebase] getAppInstanceId not available: ${e.message}")
+            }
+        } catch (e: ClassNotFoundException) {
+            Log.w(pluginName, "[Firebase] FirebaseAnalytics class not present in classpath")
+        } catch (e: Throwable) {
+            Log.e(pluginName, "[Firebase] init error: ${e.javaClass.simpleName}: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Returns the cached Firebase Analytics app instance id, or "" if not yet available.
+     * Triggers initialization on the first call.
+     */
+    @UsedByGodot
+    fun getFirebaseAppInstanceId(): String {
+        ensureFirebaseInitialized()
+        return firebaseAppInstanceId
+    }
+
+    /**
+     * Sets the canonical Firebase Analytics user id. Auto-attached to every Firebase event,
+     * including SDK auto-events (screen_view, session_start, etc.). Pass "" to clear.
+     */
+    @UsedByGodot
+    fun setFirebaseUserId(userId: String) {
+        ensureFirebaseInitialized()
+        val instance = firebaseAnalyticsInstance ?: return
+        try {
+            val value: String? = if (userId.isEmpty()) null else userId
+            instance.javaClass
+                .getMethod("setUserId", String::class.java)
+                .invoke(instance, value)
+        } catch (e: Throwable) {
+            Log.w(pluginName, "[Firebase] setUserId error: ${e.message}")
+        }
+    }
+
+    /**
+     * Sets a Firebase Analytics user property. User properties are auto-attached to every event
+     * fired afterward (including SDK auto-events). Pass "" as value to clear the property.
+     */
+    @UsedByGodot
+    fun setFirebaseUserProperty(name: String, value: String) {
+        ensureFirebaseInitialized()
+        val instance = firebaseAnalyticsInstance ?: return
+        try {
+            val v: String? = if (value.isEmpty()) null else value
+            instance.javaClass
+                .getMethod("setUserProperty", String::class.java, String::class.java)
+                .invoke(instance, name, v)
+        } catch (e: Throwable) {
+            Log.w(pluginName, "[Firebase] setUserProperty error: ${e.message}")
+        }
+    }
+
+    /**
+     * Logs a custom Firebase Analytics event. Parameters are passed as a JSON object string
+     * containing primitive values (string/number/boolean). Returns true if the event was dispatched.
+     */
+    @UsedByGodot
+    fun logFirebaseEvent(eventName: String, paramsJson: String): Boolean {
+        ensureFirebaseInitialized()
+        val instance = firebaseAnalyticsInstance ?: return false
+        return try {
+            val bundle = android.os.Bundle()
+            if (paramsJson.isNotEmpty()) {
+                try {
+                    val json = org.json.JSONObject(paramsJson)
+                    val keys = json.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        when (val v = json.get(key)) {
+                            is String -> bundle.putString(key, v)
+                            is Int -> bundle.putLong(key, v.toLong())
+                            is Long -> bundle.putLong(key, v)
+                            is Double -> bundle.putDouble(key, v)
+                            is Float -> bundle.putDouble(key, v.toDouble())
+                            is Boolean -> bundle.putLong(key, if (v) 1L else 0L)
+                            else -> bundle.putString(key, v.toString())
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w(pluginName, "[Firebase] failed to parse paramsJson: ${e.message}")
+                }
+            }
+            instance.javaClass
+                .getMethod("logEvent", String::class.java, android.os.Bundle::class.java)
+                .invoke(instance, eventName, bundle)
+            true
+        } catch (e: Throwable) {
+            Log.e(pluginName, "[Firebase] logEvent('$eventName') error: ${e.message}", e)
+            false
         }
     }
 

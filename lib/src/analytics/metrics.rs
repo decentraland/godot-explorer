@@ -20,7 +20,8 @@ use super::{
         build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventRequestFriend, SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventFirebaseInit, SegmentEventRequestFriend, SegmentEventScreenViewed,
+        SegmentEventUnfriend,
     },
     frame::Frame,
     install_referrer::InstallReferrer,
@@ -60,11 +61,29 @@ pub struct Metrics {
     // Install referrer tracker (Android only, None when not applicable or already sent)
     install_referrer: Option<InstallReferrer>,
 
+    // Consent gate. While the user has not accepted the EULA, events are queued in `self.events`
+    // but never serialized or shipped (neither to Segment nor to Firebase).
+    eula_accepted: bool,
+
+    // Set to true after the first `Firebase Init` Segment event is queued (via the plugin signal).
+    // Guards against duplicate emissions if the plugin ever re-fires the signal.
+    firebase_init_queued: bool,
+
+    // Reference to the periodic flush timer, kept so GDScript can adjust the interval at runtime
+    // (e.g. shorter cadence outside Discover so events ship faster, longer inside Discover where
+    // many events batch nicely).
+    flush_timer: Option<Gd<Timer>>,
+
     base: Base<Node>,
 }
 
 const SEGMENT_EVENT_SIZE_LIMIT_BYTES: usize = 32000;
 const SEGMENT_BATCH_SIZE_LIMIT_BYTES: usize = 500000;
+
+// Default flush cadence used outside the lobby. The lobby overrides this to a snappier 2s via
+// set_flush_interval so onboarding/auth events ship fast; the rest of the app batches at 10s.
+const DEFAULT_FLUSH_INTERVAL_SECONDS: f64 = 10.0;
+const MIN_FLUSH_INTERVAL_SECONDS: f64 = 0.5;
 
 #[godot_api]
 impl INode for Metrics {
@@ -80,20 +99,24 @@ impl INode for Metrics {
             device_info: None,
             debug_level: 0,
             install_referrer: None,
+            eula_accepted: false,
+            firebase_init_queued: false,
+            flush_timer: None,
             base,
         }
     }
 
     fn ready(&mut self) {
         let mut timer = Timer::new_alloc();
-        timer.set_wait_time(10.0);
+        timer.set_wait_time(DEFAULT_FLUSH_INTERVAL_SECONDS);
         timer.set_one_shot(false);
         timer.set_autostart(true);
 
         let callable = self.base().callable("timer_timeout");
         timer.connect("timeout", &callable);
 
-        self.base_mut().add_child(&timer.upcast::<Node>());
+        self.base_mut().add_child(&timer.clone().upcast::<Node>());
+        self.flush_timer = Some(timer);
 
         // Check which mobile plugin is available and fetch static device info (checked once)
         if DclIosPlugin::is_available() {
@@ -104,6 +127,25 @@ impl INode for Metrics {
             self.mobile_platform = Some(MobilePlatform::Android);
             self.device_info = DclAndroidPlugin::get_mobile_device_info_internal();
             tracing::debug!("Android mobile platform detected for metrics collection");
+        }
+
+        // Connect to the plugin's one-shot signal that fires when Firebase resolves the app
+        // instance id, and kick off the async fetch. The signal handler is what queues the
+        // Segment-side `Firebase Init` linking event — we don't gate anything else on it.
+        //
+        // Also seed the Firebase user id and a `session_id` user property so every subsequent
+        // Firebase event (including SDK auto-events like session_start / screen_view) carries
+        // both — that's the Firebase → Segment pivot, no separate anchor event needed.
+        if matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            let callable = self.base().callable("_on_firebase_app_instance_id_ready");
+            DclAndroidPlugin::connect_firebase_app_instance_id_ready(&callable);
+            let _ = DclAndroidPlugin::get_firebase_app_instance_id();
+
+            DclAndroidPlugin::set_firebase_user_id(GString::from(&self.user_id));
+            DclAndroidPlugin::set_firebase_user_property(
+                GString::from("session_id"),
+                GString::from(&self.common.session_id),
+            );
         }
     }
 
@@ -119,8 +161,30 @@ impl INode for Metrics {
 
 #[godot_api]
 impl Metrics {
+    /// Plugin signal handler — fires once when Firebase resolves the app instance id. Queues the
+    /// Segment `Firebase Init` linking event with the resolved id (may be empty if the SDK failed
+    /// to fetch it). Idempotent: subsequent emissions are ignored.
+    #[func]
+    fn _on_firebase_app_instance_id_ready(&mut self, id: GString) {
+        if self.firebase_init_queued {
+            return;
+        }
+        self.firebase_init_queued = true;
+        let id_str = id.to_string();
+        let firebase_user_id = if id_str.is_empty() { None } else { Some(id_str) };
+        let event = SegmentEvent::FirebaseInit(SegmentEventFirebaseInit { firebase_user_id });
+        self.events.push(event.clone());
+        self.debug_print_event("Firebase Init", &event);
+    }
+
     #[func]
     fn timer_timeout(&mut self) {
+        // Consent gate: never ship anything until the user has accepted the EULA. Events keep
+        // accumulating in `self.events` and will flow through once the gate opens.
+        if !self.eula_accepted {
+            return;
+        }
+
         // Poll install referrer (Android only, auto-completes after first success)
         if let Some(ref mut referrer) = self.install_referrer {
             if let Some(event) = referrer.poll() {
@@ -130,6 +194,21 @@ impl Metrics {
         }
 
         self.process_and_send_events(false);
+    }
+
+    /// Adjust the periodic auto-flush interval. Restarts the timer so the new cadence takes effect
+    /// immediately instead of waiting out the current cycle. Values below MIN_FLUSH_INTERVAL_SECONDS
+    /// are clamped to avoid hammering the network from a misconfiguration.
+    #[func]
+    pub fn set_flush_interval(&mut self, seconds: f64) {
+        let clamped = seconds.max(MIN_FLUSH_INTERVAL_SECONDS);
+        if let Some(timer) = self.flush_timer.as_mut() {
+            if (timer.get_wait_time() - clamped).abs() < f64::EPSILON {
+                return;
+            }
+            timer.set_wait_time(clamped);
+            timer.start();
+        }
     }
 
     /// Start fetching the Google Play install referrer.
@@ -157,6 +236,9 @@ impl Metrics {
             device_info: None,
             debug_level: 0,
             install_referrer: None,
+            eula_accepted: false,
+            firebase_init_queued: false,
+            flush_timer: None,
             base,
         })
     }
@@ -292,10 +374,108 @@ impl Metrics {
 
     #[func]
     pub fn flush(&mut self) {
+        // Consent gate: refuse to flush before the user has accepted the EULA. Events stay
+        // queued until consent is granted, then the next flush/tick ships them.
+        if !self.eula_accepted {
+            tracing::debug!("flush() ignored: EULA not yet accepted");
+            return;
+        }
+
         tracing::debug!("Flushing metrics - forcing immediate send of all pending events");
 
         // Process all events with ignore_batch_limit = true
         self.process_and_send_events(true);
+    }
+
+    /// Open the consent gate. Flipping it on auto-flushes any pre-consent events that were queued
+    /// (ACCEPT_EULA screen/click, START, etc.) so callers don't need to remember an explicit flush.
+    #[func]
+    pub fn set_eula_accepted(&mut self, accepted: bool) {
+        if self.eula_accepted == accepted {
+            return;
+        }
+        self.eula_accepted = accepted;
+        tracing::info!("Metrics EULA gate set to {}", accepted);
+        if accepted {
+            self.flush();
+        }
+    }
+
+    #[func]
+    pub fn get_eula_accepted(&self) -> bool {
+        self.eula_accepted
+    }
+
+    /// Fire an `eula_accepted` event through Firebase Analytics (Android only). Intended to be
+    /// called from GDScript right after `set_eula_accepted(true)` so this event itself respects
+    /// the consent gate (we never log it before the user has actually accepted).
+    #[func]
+    pub fn track_eula_accepted(&mut self) {
+        if !self.eula_accepted {
+            return;
+        }
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return;
+        }
+        if self.debug_level > 0 {
+            tracing::debug!("[Metrics] Firebase event 'eula_accepted'");
+        }
+        DclAndroidPlugin::log_firebase_event(GString::from("eula_accepted"), GString::new());
+    }
+
+    /// Fire a `login` event through Firebase Analytics (Android only).
+    /// `dcl_eth_address` and `is_guest` are passed directly from the `wallet_connected` signal
+    /// because `common.dcl_eth_address` is only updated later via `update_identity`.
+    #[func]
+    pub fn track_login(&mut self, dcl_eth_address: String, is_guest: bool) {
+        if !self.eula_accepted {
+            return;
+        }
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return;
+        }
+        let params = serde_json::json!({
+            "is_guest": is_guest,
+            "dcl_eth_address": dcl_eth_address,
+        });
+        let params_str = params.to_string();
+        if self.debug_level > 0 {
+            tracing::debug!("[Metrics] Firebase event 'login_success': {}", params_str);
+        }
+        DclAndroidPlugin::log_firebase_event(
+            GString::from("login_success"),
+            GString::from(&params_str),
+        );
+    }
+
+    /// Fire a one-shot `first_move_in_world` event through Firebase Analytics (Android only).
+    /// Intended to be called from GDScript the first time the player actually moves after a
+    /// `loading_finished`. The caller is responsible for persisting the
+    /// `first_move_in_world_sent` config flag so this fires only once per install.
+    #[func]
+    pub fn track_first_move_in_world(&mut self) {
+        if !self.eula_accepted {
+            return;
+        }
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return;
+        }
+        let params = serde_json::json!({
+            "position": self.common.position,
+            "realm": self.common.realm,
+            "is_guest": self.common.dcl_is_guest,
+        });
+        let params_str = params.to_string();
+        if self.debug_level > 0 {
+            tracing::debug!(
+                "[Metrics] Firebase event 'first_move_in_world': {}",
+                params_str
+            );
+        }
+        DclAndroidPlugin::log_firebase_event(
+            GString::from("first_move_in_world"),
+            GString::from(&params_str),
+        );
     }
 
     #[func]

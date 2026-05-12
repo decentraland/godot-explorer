@@ -45,6 +45,9 @@ var _close_node_to_free: PlaceholderManager = null
 
 
 func _ready():
+	# Out of the lobby — restore the relaxed 10s flush cadence so feed/search events batch.
+	Global.metrics.set_flush_interval(10.0)
+
 	var btn_group = ButtonGroup.new()
 	btn_group.allow_unpress = false
 	static_button_backpack.button_group = btn_group

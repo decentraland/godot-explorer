@@ -161,6 +161,10 @@ var version_gate_snooze_until: int = 0
 
 var install_referrer_sent: bool = false
 
+# One-shot flag for the Firebase `first_move_in_world` event (set once the user's first real
+# horizontal movement has been detected post-loading_finished, persisted across sessions).
+var first_move_in_world_sent: bool = false
+
 var local_assets_cache_version: int = 0
 
 var local_notifications_version: int = 0
@@ -453,6 +457,10 @@ func load_from_settings_file():
 		"user", "install_referrer_sent", data_default.install_referrer_sent
 	)
 
+	self.first_move_in_world_sent = settings_file.get_value(
+		"user", "first_move_in_world_sent", data_default.first_move_in_world_sent
+	)
+
 	self.local_assets_cache_version = settings_file.get_value(
 		"user", "local_assets_cache_version", data_default.local_assets_cache_version
 	)
@@ -534,6 +542,7 @@ func save_to_settings_file():
 	)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
+	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
 	new_settings_file.set_value(
 		"user", "local_assets_cache_version", self.local_assets_cache_version
 	)
