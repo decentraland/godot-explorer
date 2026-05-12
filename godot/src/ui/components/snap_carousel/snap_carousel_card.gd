@@ -18,6 +18,7 @@ const TAP_THRESHOLD := 20.0
 var _data: Dictionary = {}
 var _card_mode: int = CardMode.FTUE
 var _is_selected: bool = false
+var _card_index: int = 0
 
 var _touch_start: Vector2 = Vector2.ZERO
 var _touch_active: bool = false
@@ -52,8 +53,14 @@ func _gui_input(event: InputEvent) -> void:
 func _do_banner_jump_in() -> void:
 	if _data.is_empty():
 		return
-	Global.metrics.track_click_button(
-		"JUMP_IN", "DISCOVER_BANNER_CLICK", JSON.stringify({"place_id": _data.get("id", "")})
+	(
+		Global
+		. metrics
+		. track_click_button(
+			"JUMP_IN",
+			"DISCOVER_BANNER",
+			JSON.stringify({"place_id": _data.get("id", ""), "position": _card_index}),
+		)
 	)
 	jump_in_pressed.emit()
 	if PlacesHelper.is_world(_data):

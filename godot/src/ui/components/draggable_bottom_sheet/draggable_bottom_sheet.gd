@@ -8,8 +8,9 @@ extends VBoxContainer
 ## and closeable to control whether the close button hides or returns to HALF.
 
 signal close_requested
+signal drag_state_changed(new_state: DragState)
 
-enum DragState { PEEK, HALF, FULL }
+enum DragState { PEEK, HALF, FULL, HIDDEN }
 enum DragGesture { IDLE, UP, DOWN }
 
 const _TWEEN_DURATION := 0.2
@@ -31,6 +32,7 @@ var drag_tween: Tween
 var _card_half_position: float
 var _tween_callback: Callable
 var _tween_header_visible: bool
+var _tween_target_hidden: bool
 var _content_instance: Node
 
 @onready var panel_container_header: PanelContainer = %PanelContainer_Header
@@ -91,6 +93,7 @@ func reset_to_half() -> void:
 	_card_half_position = _get_half_position()
 	scroll_content.scroll_vertical = 0
 	tween_to(_card_half_position)
+	drag_state_changed.emit(drag_state)
 
 
 func _input(event: InputEvent) -> void:
@@ -123,9 +126,11 @@ func _input(event: InputEvent) -> void:
 						DragState.PEEK:
 							drag_state = DragState.HALF
 							tween_to(_card_half_position)
+							drag_state_changed.emit(drag_state)
 						DragState.HALF:
 							drag_state = DragState.FULL
 							tween_to(0.0, Callable(), true)
+							drag_state_changed.emit(drag_state)
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:
@@ -134,23 +139,27 @@ func _input(event: InputEvent) -> void:
 							_set_card_corner_radius(24, 24)
 							drag_state = DragState.HALF
 							tween_to(_card_half_position)
+							drag_state_changed.emit(drag_state)
 						DragState.HALF:
 							drag_state = DragState.PEEK
 							tween_to(_get_peek_position())
+							drag_state_changed.emit(drag_state)
 
 
 func _on_button_show_more_pressed() -> void:
 	if drag_state == DragState.PEEK:
 		drag_state = DragState.HALF
 		tween_to(_card_half_position)
+		drag_state_changed.emit(drag_state)
 	elif drag_state == DragState.HALF:
 		drag_state = DragState.FULL
 		tween_to(0.0, Callable(), true)
+		drag_state_changed.emit(drag_state)
 
 
 func _on_button_close_pressed() -> void:
 	if closeable:
-		tween_to(_get_hidden_position(), close_requested.emit)
+		tween_to(_get_hidden_position(), close_requested.emit, false, true)
 	else:
 		if drag_state == DragState.FULL:
 			panel_container_header.hide()
@@ -158,6 +167,7 @@ func _on_button_close_pressed() -> void:
 			_set_card_corner_radius(24, 24)
 		drag_state = DragState.HALF
 		tween_to(_card_half_position)
+		drag_state_changed.emit(drag_state)
 
 
 func _is_scrolling(pos: Vector2, gesture: DragGesture) -> bool:
@@ -182,13 +192,17 @@ func _get_hidden_position() -> float:
 
 
 func tween_to(
-	y_position: float, callback: Callable = Callable(), header_visible: bool = false
+	y_position: float,
+	callback: Callable = Callable(),
+	header_visible: bool = false,
+	target_hidden: bool = false
 ) -> void:
 	if drag_tween and drag_tween.is_running():
 		drag_tween.stop()
 		drag_tween = null
 	_tween_callback = callback if callback.is_valid() else Callable()
 	_tween_header_visible = header_visible
+	_tween_target_hidden = target_hidden
 
 	if header_visible:
 		panel_container_header.show()
@@ -219,6 +233,9 @@ func _on_tween_to_finished() -> void:
 		panel_container_header.hide()
 	if _tween_header_visible:
 		margin_container_show_more.hide()
+	if _tween_target_hidden:
+		drag_state = DragState.HIDDEN
+		drag_state_changed.emit(drag_state)
 	if _tween_callback.is_valid():
 		_tween_callback.call()
 
