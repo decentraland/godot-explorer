@@ -18,7 +18,7 @@ use crate::{
         components::{
             proto_components::sdk::components::{
                 PbPointerEventsResult, PbUiCanvasInformation, PbUiDropdownResult, PbUiInputResult,
-                TextWrap,
+                TextWrap, YgOverflow,
             },
             SceneComponentId, SceneEntityId,
         },
@@ -38,7 +38,9 @@ use crate::{
     },
 };
 
-use super::{ui_dropdown::update_ui_dropdown, ui_input::update_ui_input};
+use super::{
+    ui_dropdown::update_ui_dropdown, ui_input::update_ui_input, ui_scroll::update_ui_scroll,
+};
 
 fn assign_z_index_recursive(
     children: &[(SceneEntityId, i32)],
@@ -150,16 +152,22 @@ fn update_layout(
                 if let Some(new_parent) =
                     godot_dcl_scene.get_node_or_null_ui(&ui_node.ui_transform.parent)
                 {
-                    ui_node
-                        .base_control
-                        .clone()
-                        .reparent(&new_parent.base_control.clone().upcast::<Node>());
+                    let target = new_parent.children_container();
+                    ui_node.base_control.clone().reparent(&target);
                 }
             }
 
-            let child = taffy
-                .new_leaf(ui_node.ui_transform.taffy_style.clone())
-                .expect("failed to create node");
+            // Taffy 0.5.2 doesn't prevent flex_shrink from compressing children of
+            // overflow:scroll containers (unlike Yoga). Apply the CSS spec behavior manually.
+            let parent_overflow = godot_dcl_scene
+                .get_node_or_null_ui(&ui_node.ui_transform.parent)
+                .map(|p| p.ui_transform.overflow)
+                .unwrap_or(YgOverflow::YgoVisible);
+            let mut child_style = ui_node.ui_transform.taffy_style.clone();
+            if parent_overflow == YgOverflow::YgoScroll {
+                child_style.flex_shrink = 0.0;
+            }
+            let child = taffy.new_leaf(child_style).expect("failed to create node");
 
             if let Some(ui_text_control) = ui_node
                 .base_control
@@ -336,6 +344,8 @@ fn update_layout(
 
     // Track which entities are hidden due to having zero size (cascades to children)
     let mut hidden_by_zero_size: HashMap<SceneEntityId, bool> = HashMap::new();
+    // Track max content bounds for scroll containers: entity -> (max_right, max_bottom)
+    let mut scroll_content_bounds: HashMap<SceneEntityId, (f32, f32)> = HashMap::new();
 
     for (entity, key_node) in processed_nodes_sorted.iter() {
         let ui_node = godot_dcl_scene.get_node_or_null_ui(entity).unwrap();
@@ -346,9 +356,10 @@ fn update_layout(
             .expect("parent not found, it was processed before");
 
         if let Some(parent) = godot_dcl_scene.get_node_or_null_ui(&parent_entity) {
-            parent.base_control.clone().move_child(
+            let container = parent.children_container();
+            container.clone().move_child(
                 &ui_node.base_control.clone().upcast::<Node>(),
-                parent_node.1 + parent.control_offset(),
+                parent_node.1 + parent.children_offset(),
             );
             parent_node.1 += 1;
         }
@@ -382,6 +393,32 @@ fn update_layout(
             y: layout.size.height,
         });
 
+        // Explicitly size scroll container to match the entity's Taffy-computed bounds
+        if let Some(scroll) = ui_node.scroll_container.as_mut() {
+            scroll.set_position(godot::prelude::Vector2::ZERO);
+            scroll.set_size(godot::prelude::Vector2::new(
+                layout.size.width,
+                layout.size.height,
+            ));
+        }
+
+        // Track content bounds for scroll container parents
+        let parent_has_scroll = godot_dcl_scene
+            .get_node_or_null_ui(&parent_entity)
+            .map(|p| p.scroll_container.is_some())
+            .unwrap_or(false);
+        if parent_has_scroll {
+            let right = layout.location.x + layout.size.width;
+            let bottom = layout.location.y + layout.size.height;
+            scroll_content_bounds
+                .entry(parent_entity)
+                .and_modify(|(w, h)| {
+                    *w = w.max(right);
+                    *h = h.max(bottom);
+                })
+                .or_insert((right, bottom));
+        }
+
         // Check if parent is hidden by zero size (cascade hidden state down the tree)
         let parent_hidden = hidden_by_zero_size
             .get(&parent_entity)
@@ -402,6 +439,15 @@ fn update_layout(
         let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None
             || is_hidden_by_zero_size;
         control.set_visible(!is_hidden);
+    }
+
+    // Update scroll content minimum sizes so ScrollContainer knows the scrollable area
+    for (entity, (max_right, max_bottom)) in scroll_content_bounds {
+        if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(&entity) {
+            if let Some(scroll) = ui_node.scroll_container.as_mut() {
+                scroll.bind_mut().update_content_size(max_right, max_bottom);
+            }
+        }
     }
 
     // Assign absolute Godot z_index using a z_index-aware DFS traversal.
@@ -532,6 +578,7 @@ pub fn update_scene_ui(
         update_input_result(scene, crdt_state);
     } else {
         update_ui_transform(scene, crdt_state);
+        update_ui_scroll(scene, crdt_state);
         update_ui_background(scene, crdt_state);
         update_ui_text(scene, crdt_state);
         update_ui_input(scene, crdt_state);
