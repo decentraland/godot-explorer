@@ -1,7 +1,15 @@
 class_name GraphicSettings extends RefCounted
 
 ## Profile definitions as data - easier to tune without code changes
-## Keys: aa, shadow, bloom, skybox, texture, fps, scale
+## Keys: aa, shadow, bloom, skybox, texture, fps, scale, mesh_lod_threshold
+##
+## mesh_lod_threshold (pixels of screen-space error before swapping to a
+## lower-detail LOD). Default Godot=1.0 — very conservative. Genesis Plaza
+## scenes ship a full LOD chain via the Rust GLTF import pipeline (sibling
+## PR perf/lod-chain-pregen); raising this threshold makes that chain do
+## real work by swapping farther/smaller MeshInstances to LOD1/2/3 sooner.
+## Tuned per profile so HIGH stays visually crisp while lower profiles
+## trade detail for fragment cost.
 const PROFILE_DEFINITIONS: Array[Dictionary] = [
 	# Very Low (0) - Maximum battery savings
 	{
@@ -11,7 +19,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 0,
 		"texture": 0,
 		"fps": ConfigData.FpsLimitMode.FPS_18,
-		"scale": 0.5
+		"scale": 0.5,
+		"mesh_lod_threshold": 8.0,
 	},
 	# Low (1) - Battery savings with better visuals
 	{
@@ -21,7 +30,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 0,
 		"texture": 0,
 		"fps": ConfigData.FpsLimitMode.FPS_30,
-		"scale": 0.75
+		"scale": 0.75,
+		"mesh_lod_threshold": 6.0,
 	},
 	# Medium (2) - Balanced performance and quality
 	{
@@ -31,7 +41,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 1,
 		"texture": 1,
 		"fps": ConfigData.FpsLimitMode.FPS_30,
-		"scale": 1.0
+		"scale": 1.0,
+		"mesh_lod_threshold": 3.0,
 	},
 	# High (3) - Best quality
 	{
@@ -41,7 +52,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 2,
 		"texture": 2,
 		"fps": ConfigData.FpsLimitMode.FPS_60,
-		"scale": 1.0
+		"scale": 1.0,
+		"mesh_lod_threshold": 2.0,
 	},
 ]
 
@@ -179,18 +191,24 @@ static func apply_full_processor_mode() -> void:
 	Global.get_window().get_viewport().disable_3d = false
 
 
-## Apply a graphic profile by index
-## 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
-## Sets ALL graphics parameters including FPS limit, bloom, and 3D resolution scale
+## Apply a graphic profile by index (0=Very Low, 1=Low, 2=Medium, 3=High, 4=Custom).
+##
+## Mirrors PROFILE_DEFINITIONS[index] into DclConfig, then pushes the
+## viewport-side knobs (scaling_3d_scale, mesh_lod_threshold) and the FPS
+## limit. Index 4 (Custom) and out-of-range values are ignored — the
+## caller keeps whatever is already in DclConfig.
+##
+## HardwareBenchmark writes its picked profile to DclConfig once at
+## first launch; this function reads from PROFILE_DEFINITIONS by index
+## and is agnostic to who set graphic_profile (HW-bench, settings UI,
+## or the force-graphic-profile deeplink override).
 static func apply_graphic_profile(profile_index: int) -> void:
-	# Custom or invalid index - do nothing
 	if profile_index < 0 or profile_index >= PROFILE_DEFINITIONS.size():
 		return
 
 	var config: DclConfig = Global.get_config()
 	var profile: Dictionary = PROFILE_DEFINITIONS[profile_index]
 
-	# Apply all settings from profile definition
 	config.anti_aliasing = profile.aa
 	config.shadow_quality = profile.shadow
 	config.bloom_quality = profile.bloom
@@ -200,10 +218,13 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	config.resolution_3d_scale = profile.scale
 	config.graphic_profile = profile_index
 
-	# Apply FPS limit immediately
 	apply_fps_limit()
 
-	# Apply 3D resolution scale to viewport
 	var viewport := Global.get_tree().root.get_viewport()
 	if viewport:
 		viewport.scaling_3d_scale = config.resolution_3d_scale
+		# Higher value = swap to lower-detail LOD sooner. The LOD chain itself
+		# is baked at GLTF import time; this is the only knob that decides how
+		# aggressively the renderer picks LOD1/2/3 at distance.
+		var lod_thr: float = profile.get("mesh_lod_threshold", 1.0)
+		viewport.mesh_lod_threshold = lod_thr
