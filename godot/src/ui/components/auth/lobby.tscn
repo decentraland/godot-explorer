@@ -607,6 +607,8 @@ mouse_filter = 2
 stretch = true
 hide_name = true
 can_move = false
+preview_margin_top = 10
+preview_margin_bottom = 60
 
 [node name="ChooseNameFooter" type="VBoxContainer" parent="Main/ChooseName/MarginContainer/VBoxContainer" unique_id=786581344]
 unique_name_in_owner = true
@@ -701,6 +703,8 @@ mouse_filter = 2
 stretch = true
 hide_name = true
 can_move = false
+preview_margin_top = 10
+preview_margin_bottom = 60
 
 [node name="RestoreNameFooter" type="VBoxContainer" parent="Main/Comeback/MarginContainer/VBoxContainer" unique_id=862068117]
 custom_minimum_size = Vector2(425, 0)

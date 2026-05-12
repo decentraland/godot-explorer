@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://bxn4n7avatarbenchmark1"]
+[gd_scene format=3 uid="uid://dn4srepmtj7xm"]
 
 [ext_resource type="Script" path="res://src/tools/avatar_impostor_benchmark.gd" id="1_bench"]
 
