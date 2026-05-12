@@ -19,6 +19,14 @@ func setup(camera: Camera3D):
 	if depth_camera and depth_camera.has_node("DepthQuad"):
 		var depth_quad = depth_camera.get_node("DepthQuad")
 		depth_quad.visible = true
+	# Idle by default. set_outlined_avatar() flips this on when an avatar is
+	# picked. SubViewport at 1920x1080 with UPDATE_ALWAYS otherwise eats a
+	# full screen depth pass + outline quad pass every frame even when there's
+	# nobody to outline.
+	if outline_quad:
+		outline_quad.visible = false
+	if sub_viewport:
+		sub_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 
 func _process(_delta):
@@ -49,6 +57,15 @@ func set_outlined_avatar(avatar: Node3D):
 	# Set new outline
 	if avatar:
 		_set_avatar_layers(avatar, true)
+
+	# Activate / deactivate the depth+outline pipeline so the 1920x1080 SubViewport
+	# only renders when an avatar is actually being outlined.
+	if outline_quad:
+		outline_quad.visible = avatar != null
+	if sub_viewport:
+		sub_viewport.render_target_update_mode = (
+			SubViewport.UPDATE_ALWAYS if avatar != null else SubViewport.UPDATE_DISABLED
+		)
 
 
 func _set_avatar_layers(avatar: Node3D, add_outline: bool):
