@@ -355,7 +355,6 @@ func _ready():
 		gp_runner.set_name("GPBenchmarkRunner")
 		add_child(gp_runner)
 
-
 	session_id = DclConfig.generate_uuid_v4()
 	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
 	# telemetry is disabled at build time (CI desktop builds use the

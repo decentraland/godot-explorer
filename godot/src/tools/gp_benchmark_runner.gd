@@ -85,12 +85,7 @@ func _on_loading_complete(session_id: int) -> void:
 	loading_complete_seen = true
 	if _waiting_for_load_started_ms > 0:
 		_load_seconds = (Time.get_ticks_msec() - _waiting_for_load_started_ms) / 1000.0
-	_log(
-		(
-			"scene_runner.loading_complete session=%d load_seconds=%.2f"
-			% [session_id, _load_seconds]
-		)
-	)
+	_log("scene_runner.loading_complete session=%d load_seconds=%.2f" % [session_id, _load_seconds])
 
 
 func _process(_delta: float) -> void:
