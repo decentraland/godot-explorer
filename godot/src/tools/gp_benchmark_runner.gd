@@ -36,12 +36,6 @@ var loading_complete_seen: bool = false
 var pinned_transform: Transform3D
 var pinned_camera_basis: Basis
 var pose_pinned: bool = false
-var _textureless_merge_done: bool = false
-var _visibility_grid: Node = null  # DclVisibilityGrid; untyped to dodge editor-cache parse fail on fresh checkout
-var _visibility_grid_stats: Dictionary = {}
-var _vg_toggled_on_total: int = 0
-var _vg_toggled_off_total: int = 0
-var _vg_last_cells_visible: int = 0
 # Captured at loading_complete; surfaced in JSON as `load_seconds`.
 var _load_seconds: float = 0.0
 var _waiting_for_load_started_ms: int = 0
@@ -173,8 +167,6 @@ func _process(_delta: float) -> void:
 						get_tree().root.get_viewport_rid(), true
 					)
 					_log("viewport measure_render_time enabled")
-					if bool(config.get("visibility_grid", false)):
-						_build_visibility_grid()
 				_set_phase("warmup")
 			elif _phase_elapsed_ms() >= LOAD_TIMEOUT_MS:
 				_log("WARN: loading_complete never fired in %d ms; aborting" % LOAD_TIMEOUT_MS)
@@ -182,19 +174,11 @@ func _process(_delta: float) -> void:
 				_async_force_quit(2)
 		"warmup":
 			_enforce_pinned_pose()
-			if not _textureless_merge_done and bool(config.get("textureless_merge", false)):
-				_apply_textureless_merge()
-				_textureless_merge_done = true
-			_run_visibility_grid_update()
 			if _phase_elapsed_ms() >= int(config.get("warmup_seconds", 30)) * 1000:
 				# Reset per-state CPU timing + CRDT throughput counters so the
 				# sampling-window numbers aren't polluted by load-time spikes.
 				Global.scene_runner.reset_state_timing()
 				Global.scene_runner.reset_crdt_metrics()
-				if Global.cli.get_skip_gltf_load():
-					_purge_existing_gltfs()
-				if Global.cli.get_kill_sky():
-					_purge_existing_skies()
 				_set_phase("sampling")
 		"sampling":
 			_enforce_pinned_pose()
@@ -205,7 +189,6 @@ func _process(_delta: float) -> void:
 			Engine.max_fps = 0
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 			OS.low_processor_usage_mode = false
-			_run_visibility_grid_update()
 			samples.append(_collect_sample())
 			if _phase_elapsed_ms() >= int(config.get("sample_seconds", 30)) * 1000:
 				_finish()
@@ -305,8 +288,6 @@ func _count_node_types() -> Dictionary:
 	# therefore convertible to RenderingServer-direct, vs UI/logic nodes.
 	var counts := {}
 	var mesh_resource_ids := {}
-	var merge_buckets := {}
-	var unique_materials := {}
 	var skipped := {"animated": 0, "skinned": 0, "shadermat": 0, "no_mesh": 0, "no_material": 0}
 	var stack: Array = [get_tree().root]
 	while not stack.is_empty():
@@ -319,7 +300,6 @@ func _count_node_types() -> Dictionary:
 			if mesh != null:
 				var rid := mesh.get_rid()
 				mesh_resource_ids[rid] = mesh_resource_ids.get(rid, 0) + 1
-				_classify_mesh_mergeable(mi, merge_buckets, unique_materials, skipped)
 			else:
 				skipped.no_mesh += 1
 		for c in n.get_children():
@@ -339,8 +319,6 @@ func _count_node_types() -> Dictionary:
 			dup_buckets.dup_21_plus += 1
 	counts["_unique_meshes"] = mesh_resource_ids.size()
 	counts["_mesh_dup_buckets"] = dup_buckets
-	counts["_merge_buckets"] = merge_buckets
-	counts["_unique_materials"] = unique_materials.size()
 	counts["_merge_skipped"] = skipped
 	return counts
 
@@ -359,58 +337,6 @@ func _count_node_types() -> Dictionary:
 ## Bucket key combines pipeline-state features that MUST match between
 ## merge candidates: alpha_mode + double_sided + vertex format. Texture
 ## sets are handled by the atlas at merge time.
-func _classify_mesh_mergeable(
-	mi: MeshInstance3D, buckets: Dictionary, unique_mats: Dictionary, skipped: Dictionary
-) -> void:
-	if mi.skeleton != NodePath(""):
-		skipped.skinned += 1
-		return
-	var p: Node = mi.get_parent()
-	while p != null:
-		if p is AnimationPlayer or p is Skeleton3D:
-			skipped.animated += 1
-			return
-		var c := p.get_class()
-		if c == "DclAvatar":
-			skipped.animated += 1
-			return
-		# DCL components: any gltf-container with a tween or modifier on
-		# this entity will mutate the subtree per-frame; can't bake.
-		if p.has_meta("dcl_has_tween") or p.has_meta("dcl_has_modifier"):
-			skipped.animated += 1
-			return
-		p = p.get_parent()
-	var mesh := mi.mesh
-	if mesh != null and mesh is ArrayMesh:
-		if (mesh as ArrayMesh).get_blend_shape_count() > 0:
-			skipped.animated += 1
-			return
-	var mat: Material = mi.get_active_material(0)
-	if mat == null:
-		skipped.no_material += 1
-		return
-	if mat is ShaderMaterial:
-		skipped.shadermat += 1
-		return
-	unique_mats[mat.get_rid()] = true
-	# Bucket by pipeline state only — texture atlas resolves per-bucket.
-	var key: String = ""
-	if mat is BaseMaterial3D:
-		var bm := mat as BaseMaterial3D
-		var tex_albedo := 1 if bm.albedo_texture != null else 0
-		var tex_normal := 1 if bm.normal_texture != null else 0
-		var tex_emissive := 1 if bm.emission_texture != null else 0
-		var tex_orm := 1 if bm.orm_texture != null else 0
-		var ds := 1 if bm.cull_mode == BaseMaterial3D.CULL_DISABLED else 0
-		key = (
-			"transp=%d cull=%d alb=%d nrm=%d em=%d orm=%d"
-			% [bm.transparency, ds, tex_albedo, tex_normal, tex_emissive, tex_orm]
-		)
-	else:
-		key = "other_basemat"
-	buckets[key] = buckets.get(key, 0) + 1
-
-
 func _finish() -> void:
 	_log("sampling done: %d samples" % samples.size())
 	_set_phase("done")
@@ -426,17 +352,6 @@ func _finish() -> void:
 	# Per-component-id breakdown of dirty entries on the Rust→V8 path.
 	# Identifies which SDK7 components dominate the round-trip pressure.
 	var crdt_component_breakdown: String = Global.scene_runner.drain_crdt_component_breakdown()
-	# Textureless mesh merger classifier stats (issue #1948). Empty when the
-	# flag is OFF — useful as a sanity check for `tm-rust-off` baseline runs.
-	var textureless_merger_stats: String = Global.scene_runner.drain_textureless_merger_stats()
-	var material_atlas_stats: String = Global.scene_runner.drain_material_atlas_stats()
-	var mesh_lod_stats: String = Global.scene_runner.drain_mesh_lod_stats()
-	var auto_distance_cull_stats: String = Global.scene_runner.drain_auto_distance_cull_stats()
-	var occluder_gen_stats: String = Global.scene_runner.drain_occluder_gen_stats()
-	var asset_preproc_stats: String = Global.scene_runner.drain_asset_preproc_stats()
-	var auto_shadow_cull_stats: String = Global.scene_runner.drain_auto_shadow_cull_stats()
-	var cheap_pbr_stats: String = Global.scene_runner.drain_cheap_pbr_stats()
-
 	var result := {
 		"tag": config.get("tag", ""),
 		"genesis_plaza_commit": config.get("genesis_plaza_commit", ""),
@@ -445,21 +360,6 @@ func _finish() -> void:
 		"state_timing_us": state_timing,
 		"crdt_metrics": crdt_metrics,
 		"crdt_component_breakdown": crdt_component_breakdown,
-		"textureless_merger_stats": textureless_merger_stats,
-		"material_atlas_stats": material_atlas_stats,
-		"mesh_lod_stats": mesh_lod_stats,
-		"auto_distance_cull_stats": auto_distance_cull_stats,
-		"occluder_gen_stats": occluder_gen_stats,
-		"asset_preproc_stats": asset_preproc_stats,
-		"auto_shadow_cull_stats": auto_shadow_cull_stats,
-		"cheap_pbr_stats": cheap_pbr_stats,
-		"visibility_grid_stats": _visibility_grid_stats,
-		"visibility_grid_runtime":
-		{
-			"toggled_on_total": _vg_toggled_on_total,
-			"toggled_off_total": _vg_toggled_off_total,
-			"cells_visible_last": _vg_last_cells_visible,
-		},
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -511,27 +411,6 @@ func _finish() -> void:
 			]
 		)
 	)
-	print("[GP Benchmark] unique_materials=%d" % node_types.get("_unique_materials", 0))
-	var skipped: Dictionary = node_types.get("_merge_skipped", {})
-	print(
-		(
-			"[GP Benchmark] merge_skipped animated=%d skinned=%d shadermat=%d no_mat=%d no_mesh=%d"
-			% [
-				skipped.get("animated", 0),
-				skipped.get("skinned", 0),
-				skipped.get("shadermat", 0),
-				skipped.get("no_material", 0),
-				skipped.get("no_mesh", 0),
-			]
-		)
-	)
-	var bk: Dictionary = node_types.get("_merge_buckets", {})
-	var bk_sorted := []
-	for k in bk:
-		bk_sorted.append([k, bk[k]])
-	bk_sorted.sort_custom(func(a, b): return a[1] > b[1])
-	for i in range(min(10, bk_sorted.size())):
-		print("[GP Benchmark] merge_bucket [%s] count=%d" % [bk_sorted[i][0], bk_sorted[i][1]])
 	print("[GP Benchmark] END_RESULT_JSON")
 	# Sanity-check screenshot. Compared against the prior run's image by
 	# scripts/bench/compare_screenshots.py — if it diverges too far the run
@@ -794,9 +673,6 @@ func _apply_deeplink_overrides() -> void:
 	# GDScript cell-based visibility culling (visibility_grid.gd). Stored in
 	# config and consumed at loading_complete to build the grid; the per-frame
 	# update runs in warmup/sampling.
-	var vg: String = params.get("visibility-grid", "")
-	if not vg.is_empty():
-		config["visibility_grid"] = vg.to_lower() in ["true", "1", "yes"]
 
 	var viewport_scale: String = params.get("viewport-scale-3d", "")
 	if not viewport_scale.is_empty() and viewport_scale.is_valid_float():
@@ -804,46 +680,6 @@ func _apply_deeplink_overrides() -> void:
 		if s > 0.1 and s <= 2.0:
 			config["viewport_scale_3d"] = s
 
-	# Rust merger. Sets DclCli.textureless_merge_enabled, which
-	# drives `update_textureless_merger` in lib/. Eligibility (skinned /
-	# animated / tween / modifier exclusion) is mirrored by the Rust
-	# classifier — see lib/src/scene_runner/components/textureless_merger/.
-	# The legacy GDScript prototype (`_apply_textureless_merge`) is kept for
-	# `textureless-merge-gd=true` only, so A/B against the prototype stays
-	# possible.
-	var tm: String = params.get("textureless-merge", "")
-	if not tm.is_empty():
-		Global.cli.textureless_merge_enabled = tm.to_lower() in ["true", "1", "yes"]
-	var tm_gd: String = params.get("textureless-merge-gd", "")
-	if not tm_gd.is_empty():
-		config["textureless_merge"] = tm_gd.to_lower() in ["true", "1", "yes"]
-	var ma: String = params.get("material-atlas", "")
-	if not ma.is_empty():
-		Global.cli.material_atlas_enabled = ma.to_lower() in ["true", "1", "yes"]
-	var mlod: String = params.get("mesh-lod", "")
-	if not mlod.is_empty():
-		Global.cli.mesh_lod_enabled = mlod.to_lower() in ["true", "1", "yes"]
-	var adc: String = params.get("auto-distance-cull", "")
-	if not adc.is_empty():
-		Global.cli.auto_distance_cull_enabled = adc.to_lower() in ["true", "1", "yes"]
-	var ocg: String = params.get("occluder-gen", "")
-	if not ocg.is_empty():
-		Global.cli.occluder_gen_enabled = ocg.to_lower() in ["true", "1", "yes"]
-	var apr: String = params.get("asset-preproc", "")
-	if not apr.is_empty():
-		Global.cli.asset_preproc_enabled = apr.to_lower() in ["true", "1", "yes"]
-	var asc: String = params.get("auto-shadow-cull", "")
-	if not asc.is_empty():
-		Global.cli.auto_shadow_cull_enabled = asc.to_lower() in ["true", "1", "yes"]
-	var cpbr: String = params.get("cheap-pbr", "")
-	if not cpbr.is_empty():
-		Global.cli.cheap_pbr_enabled = cpbr.to_lower() in ["true", "1", "yes"]
-	var smesh: String = params.get("shadow-mesh", "")
-	if not smesh.is_empty():
-		Global.cli.shadow_mesh_enabled = smesh.to_lower() in ["true", "1", "yes"]
-	var skipg: String = params.get("skip-gltf", "")
-	if not skipg.is_empty():
-		Global.cli.set_skip_gltf_load(skipg.to_lower() in ["true", "1", "yes"])
 	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
 	# conservative); raising it picks lower-detail LODs sooner and is the
 	# whole point of the LOD bake on mobile. Stash here, apply at
@@ -977,156 +813,6 @@ func _resolve_debug_draw(name: String) -> int:
 	return table.get(name, -1)
 
 
-## Prototype: merge textureless BaseMaterial3D MeshInstance3Ds.
-##
-## Walks the SceneTree, finds eligible meshes (no textures, classifier-pass),
-## and combines them into one ArrayMesh per (cull_mode, transparency) bucket.
-## Source albedo_color is baked into vertex COLOR; the merged material uses
-## vertex_color_use_as_albedo so each source's color is preserved.
-##
-## World-space bake: the combined MeshInstance3D sits at root identity; source
-## vertices are pre-multiplied by their global transform.
-##
-## Source MeshInstance3Ds are freed (no demote support in this prototype).
-func _apply_textureless_merge() -> void:
-	var t0_us := Time.get_ticks_usec()
-	# Spatial partition: 32 m × 32 m horizontal cells. Without this the merged
-	# mesh AABB covers all of Genesis Plaza and frustum culling is lost; with
-	# it each cell becomes its own merged mesh with a local AABB the culler
-	# can early-out on.
-	var cell_size: float = float(config.get("textureless_merge_cell_m", 32.0))
-	# group key -> SurfaceTool / count. Key = "transp=N cull=N cx=N cz=N".
-	var groups: Dictionary = {}
-	var stack: Array = [get_tree().root]
-	var sources_to_free: Array[MeshInstance3D] = []
-	while not stack.is_empty():
-		var n: Node = stack.pop_back()
-		for c in n.get_children():
-			stack.push_back(c)
-		if not (n is MeshInstance3D):
-			continue
-		var mi := n as MeshInstance3D
-		if not _is_textureless_mergeable(mi):
-			continue
-		var mat := mi.get_active_material(0) as BaseMaterial3D
-		var mesh := mi.mesh
-		if mesh == null:
-			continue
-		var origin: Vector3 = mi.global_transform.origin
-		var cx: int = int(floor(origin.x / cell_size))
-		var cz: int = int(floor(origin.z / cell_size))
-		var key := "transp=%d cull=%d cx=%d cz=%d" % [mat.transparency, int(mat.cull_mode), cx, cz]
-		if not groups.has(key):
-			groups[key] = {"st": SurfaceTool.new(), "count": 0}
-			(groups[key]["st"] as SurfaceTool).begin(Mesh.PRIMITIVE_TRIANGLES)
-		var st: SurfaceTool = groups[key]["st"]
-		var xform: Transform3D = mi.global_transform
-		var color: Color = mat.albedo_color
-		_append_mesh_to_surface(st, mesh, xform, color)
-		groups[key]["count"] += 1
-		sources_to_free.append(mi)
-	# Build merged mesh per group + spawn one MeshInstance3D each.
-	var holder := Node3D.new()
-	holder.name = "_textureless_merged_root"
-	get_tree().root.add_child(holder)
-	var merged_total: int = 0
-	for key in groups:
-		var info: Dictionary = groups[key]
-		var st: SurfaceTool = info["st"]
-		st.generate_normals()
-		var arr_mesh: ArrayMesh = st.commit()
-		var merged_mat := StandardMaterial3D.new()
-		merged_mat.vertex_color_use_as_albedo = true
-		# Match transparency / cull state of the source bucket. Key format:
-		# "transp=N cull=N cx=N cz=N" — first two tokens carry the state.
-		var parts: PackedStringArray = key.split(" ")
-		merged_mat.transparency = int(parts[0].split("=")[1])
-		merged_mat.cull_mode = int(parts[1].split("=")[1])
-		var inst := MeshInstance3D.new()
-		inst.name = "_merged_%s" % key.replace(" ", "_")
-		inst.mesh = arr_mesh
-		inst.set_surface_override_material(0, merged_mat)
-		holder.add_child(inst)
-		merged_total += info["count"]
-		_log("textureless merge bucket [%s] sources=%d -> 1 mesh" % [key, int(info["count"])])
-	# Suppress originals AFTER merged spawn. queue_free races the scene_runner
-	# Rust thread holding references → SIGABRT. visible/layers were tried in
-	# prior runs but draws didn't drop — either DCL re-applies them or the
-	# draw counter measures a stage that doesn't honor cull_mask. Detaching
-	# the mesh resource is the strongest stop: the MeshInstance3D node stays
-	# in the tree (no race), but with no Mesh there's nothing to draw.
-	for mi in sources_to_free:
-		mi.mesh = null
-		mi.visible = false
-		mi.layers = 0
-	var dt_ms := (Time.get_ticks_usec() - t0_us) / 1000.0
-	_log(
-		(
-			"textureless merge: %d sources -> %d merged meshes in %.1f ms"
-			% [merged_total, groups.size(), dt_ms]
-		)
-	)
-
-
-## Eligibility test for textureless merging. Mirror of `_classify_mesh_mergeable`
-## but stricter — only opaque/cutoff `BaseMaterial3D` with zero textures.
-func _is_textureless_mergeable(mi: MeshInstance3D) -> bool:
-	if mi.skeleton != NodePath(""):
-		return false
-	var p: Node = mi.get_parent()
-	while p != null:
-		var bad_parent := (
-			p is AnimationPlayer
-			or p is Skeleton3D
-			or p.get_class() == "DclAvatar"
-			or p.has_meta("dcl_has_tween")
-			or p.has_meta("dcl_has_modifier")
-		)
-		if bad_parent:
-			return false
-		p = p.get_parent()
-	var mesh := mi.mesh
-	if mesh == null:
-		return false
-	if mesh is ArrayMesh and (mesh as ArrayMesh).get_blend_shape_count() > 0:
-		return false
-	var mat := mi.get_active_material(0)
-	if mat == null or not (mat is BaseMaterial3D):
-		return false
-	var bm := mat as BaseMaterial3D
-	var has_any_texture := (
-		bm.albedo_texture != null
-		or bm.normal_texture != null
-		or bm.emission_texture != null
-		or bm.orm_texture != null
-	)
-	return not has_any_texture
-
-
-## Append one source mesh's surface 0 vertices to a SurfaceTool, transformed
-## to world-space and colored by the source material's albedo_color.
-func _append_mesh_to_surface(st: SurfaceTool, mesh: Mesh, xform: Transform3D, color: Color) -> void:
-	var basis_inv_t := xform.basis.inverse().transposed()
-	for s in range(mesh.get_surface_count()):
-		var arrays := mesh.surface_get_arrays(s)
-		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var norms: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
-		var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-		var has_norms := norms != null and norms.size() == verts.size()
-		# Index source vertices into the SurfaceTool. We use add_vertex per
-		# triangle vertex (no shared index reuse across sources — fine for
-		# prototype, costs some bandwidth).
-		var tri_count := idx.size() if idx.size() > 0 else verts.size()
-		var step := 1 if idx.size() > 0 else 1
-		for i in range(0, tri_count, step):
-			var vi: int = idx[i] if idx.size() > 0 else i
-			var v: Vector3 = xform * verts[vi]
-			st.set_color(color)
-			if has_norms:
-				st.set_normal((basis_inv_t * norms[vi]).normalized())
-			st.add_vertex(v)
-
-
 func _set_phase(p: String) -> void:
 	phase = p
 	phase_started_at_ms = Time.get_ticks_msec()
@@ -1152,82 +838,6 @@ func _log(msg: String) -> void:
 	print("[GP Benchmark] %s" % msg)
 
 
-func _purge_existing_gltfs() -> void:
-	var stack: Array = [Global.get_tree().root]
-	var freed: int = 0
-	while not stack.is_empty():
-		var n: Node = stack.pop_back()
-		if n.is_class("DclGltfContainer"):
-			n.queue_free()
-			freed += 1
-			continue
-		for c in n.get_children():
-			stack.append(c)
-	_log("purged %d existing DclGltfContainer nodes" % freed)
-
-
-func _purge_existing_skies() -> void:
-	var stack: Array = [Global.get_tree().root]
-	var stomped: int = 0
-	while not stack.is_empty():
-		var n: Node = stack.pop_back()
-		if n is WorldEnvironment and n.environment != null:
-			n.environment.background_mode = Environment.BG_COLOR
-			n.environment.background_color = Color.BLACK
-			n.environment.background_energy_multiplier = 0.0
-			n.environment.glow_enabled = false
-			stomped += 1
-		for c in n.get_children():
-			stack.append(c)
-	_log("purged %d WorldEnvironments to BG_COLOR" % stomped)
-
-
-## Build the visibility cell grid once after loading_complete. Walks the
-## scene tree (Rust scene_runner root), buckets static MeshInstance3Ds into
-## 16x16m cells, computes per-cell world AABBs. The per-frame update lives
-## in `_run_visibility_grid_update`.
-func _build_visibility_grid() -> void:
-	# Load by path instead of class_name so a stale editor script-class cache
-	# (e.g. editor started before visibility_grid.gd existed) can still parse
-	# this file. Once the cache rescan picks up the new class_name, this is
-	# functionally identical to `DclVisibilityGrid.new()`.
-	_visibility_grid = load("res://src/tools/visibility_grid.gd").new()
-	var t0 := Time.get_ticks_msec()
-	var scene_root: Node = Global.scene_runner if Global.scene_runner != null else get_tree().root
-	_visibility_grid_stats = _visibility_grid.build_from_scene_tree(scene_root)
-	_visibility_grid_stats["build_ms"] = Time.get_ticks_msec() - t0
-	_log(
-		(
-			"visibility_grid built in %dms: cells=%d/%d MIs=%d skipped[avatar=%d hud=%d animated=%d tween=%d modifier=%d oog=%d]"
-			% [
-				int(_visibility_grid_stats.get("build_ms", 0)),
-				int(_visibility_grid_stats.get("cells_with_content", 0)),
-				int(_visibility_grid_stats.get("cells_total", 0)),
-				int(_visibility_grid_stats.get("total_mis", 0)),
-				int(_visibility_grid_stats.get("skipped_avatar", 0)),
-				int(_visibility_grid_stats.get("skipped_hud", 0)),
-				int(_visibility_grid_stats.get("skipped_animated", 0)),
-				int(_visibility_grid_stats.get("skipped_tween", 0)),
-				int(_visibility_grid_stats.get("skipped_modifier", 0)),
-				int(_visibility_grid_stats.get("skipped_out_of_grid", 0)),
-			]
-		)
-	)
-
-
-func _run_visibility_grid_update() -> void:
-	if _visibility_grid == null or Global.player_camera_node == null:
-		return
-	var r: Dictionary = _visibility_grid.update_visibility(Global.player_camera_node)
-	_vg_toggled_on_total += int(r.get("toggled_on", 0))
-	_vg_toggled_off_total += int(r.get("toggled_off", 0))
-	_vg_last_cells_visible = int(r.get("cells_visible", 0))
-
-
-## Real process RSS via /proc/self/status — Android. Godot's MEMORY_STATIC tracks
-## the C++ heap only; on Android we also have JNI/Java/native allocations that
-## live outside it. This reads VmRSS (resident set size, kB) so the bench
-## captures the full process footprint, not just Godot's view.
 func _read_process_rss_mb() -> float:
 	if not OS.has_feature("linux") and not OS.has_feature("android"):
 		return 0.0

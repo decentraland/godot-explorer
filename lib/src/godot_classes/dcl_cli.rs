@@ -109,12 +109,6 @@ pub struct DclCli {
     #[var(get)]
     pub gp_benchmark: bool,
 
-    // RenderingServer-direct migration flag. Default OFF; flipped via
-    // --rs-gltf-direct CLI flag or rs-gltf-direct deeplink param. See plan in
-    // ~/.claude/plans/https-github-com-decentraland-godot-expl-precious-nest.md
-    #[var]
-    pub rs_gltf_direct: bool,
-
     // V8 inspector target. When non-empty AND the build has the
     // `enable_inspector` feature, the SDK7 scene whose title matches
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
@@ -664,7 +658,6 @@ impl INode for DclCli {
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
-        let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -786,7 +779,6 @@ impl INode for DclCli {
             fi_benchmark_size,
             avatar_impostor_benchmark,
             gp_benchmark,
-            rs_gltf_direct,
             inspect_scene_title,
             asset_server_port,
             realm,

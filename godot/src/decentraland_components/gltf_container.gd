@@ -16,10 +16,8 @@ var optimized := false
 var _last_load_error := ""
 # Once entity is known to move, all colliders should spawn as KINEMATIC
 var _kinematic_requested := false
-# RenderingServer-direct migration handle. Non-zero means the gltf_node tree
-# was migrated to RS / MultiMesh by DclGltfRenderManager and the legacy
-# add_child path was skipped. Use to release on _exit_tree.
-var _rs_render_handle: int = 0
+
+@onready var timer = $Timer
 
 # Static variable to track currently loading assets (by hash)
 static var currently_loading_assets := []
@@ -49,11 +47,6 @@ func _exit_tree():
 	if not dcl_gltf_hash.is_empty():
 		currently_loading_assets.erase(dcl_gltf_hash)
 
-	# Release RS-direct render slot if we own one.
-	if _rs_render_handle > 0 and Global._gltf_render_manager != null:
-		Global._gltf_render_manager.unregister_container(_rs_render_handle)
-		_rs_render_handle = 0
-
 
 #region Loading Flow
 # Two loading paths:
@@ -77,7 +70,7 @@ func async_load_gltf():
 		return
 
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
-	Global.get_gltf_load_timeout_coalescer().schedule(self, 120_000)
+	timer.start()
 
 	# Check CLI flags for asset loading mode
 	var has_optimized = Global.content_provider.optimized_asset_exists(file_hash)
@@ -94,7 +87,7 @@ func async_load_gltf():
 		else:
 			# Skip loading - no optimized asset available
 			dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
-			Global.get_gltf_load_timeout_coalescer().cancel(self)
+			timer.stop()
 		return
 
 	# Default: Check for optimized asset first (pre-baked in res://glbs/)
@@ -282,28 +275,7 @@ func _async_add_gltf_to_tree(gltf_node: Node3D):
 		_finish_with_error("scene unloaded during load")
 		return
 
-	# Add to tree first so global_transform of every MeshInstance3D inside
-	# the GLB is valid (the manager bakes per-mesh local poses against the
-	# container's current world). Without this step every mesh would land at
-	# the world origin.
 	add_child(gltf_node)
-
-	# RenderingServer-direct migration. If the flag is on and the manager
-	# accepts the GLB (static, has meshes, scenario available), it takes
-	# ownership of `gltf_node` (frees it after extracting RIDs + reparenting
-	# colliders). Animated GLBs return -1 and we fall through to the legacy
-	# scene-tree-rendered path. See ~/.claude/plans/...-precious-nest.md.
-	if Global.cli.rs_gltf_direct:
-		var manager: DclGltfRenderManager = Global.get_gltf_render_manager()
-		var handle: int = manager.register_static_container(
-			self, gltf_node, dcl_visible_cmask, dcl_invisible_cmask
-		)
-		if handle > 0:
-			_rs_render_handle = handle
-			# `gltf_node` was freed by the manager; nothing to await.
-			_complete_load()
-			return
-
 	await get_tree().process_frame
 
 	_complete_load()
@@ -311,7 +283,7 @@ func _async_add_gltf_to_tree(gltf_node: Node3D):
 
 func _complete_load():
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
-	Global.get_gltf_load_timeout_coalescer().cancel(self)
+	timer.stop()
 	_finish_loading_slot()
 
 	self.check_animations()
@@ -323,7 +295,7 @@ func _finish_with_error(reason: String = "unknown"):
 	if not dcl_gltf_hash.is_empty():
 		Global.content_provider.report_resource_failed(dcl_gltf_hash, reason)
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-	Global.get_gltf_load_timeout_coalescer().cancel(self)
+	timer.stop()
 	_finish_loading_slot()
 
 
@@ -426,7 +398,7 @@ func async_deferred_add_child():
 	# Corner case, when the scene is unloaded before the gltf is loaded
 	if not is_inside_tree():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		Global.get_gltf_load_timeout_coalescer().cancel(self)
+		timer.stop()
 		# Free orphan node that was never added to tree
 		new_gltf_node.queue_free()
 		return
@@ -434,7 +406,7 @@ func async_deferred_add_child():
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		Global.get_gltf_load_timeout_coalescer().cancel(self)
+		timer.stop()
 		# Free orphan node that was never added to tree
 		new_gltf_node.queue_free()
 		return
@@ -445,7 +417,7 @@ func async_deferred_add_child():
 
 	# Colliders and rendering is ensured to be ready at this point
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
-	Global.get_gltf_load_timeout_coalescer().cancel(self)
+	timer.stop()
 
 	self.check_animations()
 
@@ -616,9 +588,7 @@ func change_gltf(
 		update_mask_colliders(gltf_node)
 
 
-## Invoked from GltfLoadTimeoutCoalescer when the load-timeout deadline
-## elapses (replacement for the per-container Timer node's `timeout` signal).
-func _on_load_timeout():
+func _on_timer_timeout():
 	_finish_with_error("timeout")
 
 #endregion
