@@ -448,6 +448,7 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 
 
 func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
+	Global.metrics.track_click_button("HIDE_UI", "SETTINGS", "")
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.set_hide_main_hud_from_settings(toggled_on)
