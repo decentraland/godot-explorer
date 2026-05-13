@@ -119,6 +119,22 @@ var _hardware_benchmark: HardwareBenchmark = null
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
 
+## Lazy-init owner for the RenderingServer-direct GLTF rendering pipeline.
+## Created on first access so the cost is paid only when `--rs-gltf-direct`
+## is on. See gltf_container.gd / dcl_gltf_render_manager.rs for the contract.
+var _gltf_render_manager: DclGltfRenderManager = null
+
+
+## Lazy-init the render manager. Called from gltf_container.gd when
+## `cli.rs_gltf_direct` is on. Lives as a child of Global so its `_process`
+## (transform sync for batched MultiMesh slots) fires every frame.
+func get_gltf_render_manager() -> DclGltfRenderManager:
+	if _gltf_render_manager == null:
+		_gltf_render_manager = DclGltfRenderManager.new()
+		_gltf_render_manager.name = "GltfRenderManager"
+		add_child(_gltf_render_manager)
+	return _gltf_render_manager
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr

@@ -107,6 +107,13 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
 
+    // RenderingServer-direct migration flag. Default OFF; flipped via
+    // --rs-gltf-direct CLI flag or rs-gltf-direct deeplink param. When on,
+    // static GLBs are migrated to RenderingServer / MultiMesh batches at
+    // load time, bypassing the scene tree per-mesh nodes.
+    #[var]
+    pub rs_gltf_direct: bool,
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -626,6 +633,7 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
+        let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -741,6 +749,7 @@ impl INode for DclCli {
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
+            rs_gltf_direct,
             asset_server_port,
             realm,
             location,
