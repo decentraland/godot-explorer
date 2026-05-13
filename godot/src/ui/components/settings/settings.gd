@@ -43,11 +43,11 @@ const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
 @onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
-@onready var check_button_hide_avatar_names: CheckButton = %CheckButton_HideAvatarNames
-@onready var check_button_hide_avatar_interactions: CheckButton = %CheckButton_HideAvatarInteractions
+@onready var check_button_hide_view_profile: CheckButton = %CheckButton_HideViewProfile
+@onready var check_button_hide_world_interactions: CheckButton = %CheckButton_HideWorldInteractions
 @onready var check_button_hide_player_names: CheckButton = %CheckButton_HidePlayerNames
-@onready var hide_avatar_names_row: HBoxContainer = %HideAvatarNames
-@onready var hide_avatar_interactions_row: HBoxContainer = %HideAvatarInteractions
+@onready var hide_view_profile_row: HBoxContainer = %HideViewProfile
+@onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var gamepad_camera_sensitivity: SettingsSlider = %GamepadCameraSensitivity
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
@@ -462,13 +462,13 @@ func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
 	_update_hide_ui_sub_toggles(toggled_on)
 
 
-func _on_check_button_hide_avatar_names_toggled(toggled_on: bool) -> void:
+func _on_check_button_hide_view_profile_toggled(toggled_on: bool) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.set_hide_view_profile(toggled_on)
 
 
-func _on_check_button_hide_avatar_interactions_toggled(toggled_on: bool) -> void:
+func _on_check_button_hide_world_interactions_toggled(toggled_on: bool) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.set_hide_world_interactions(toggled_on)
@@ -488,17 +488,17 @@ func _on_session_hide_ui_toggle_sync(pressed: bool) -> void:
 func _on_session_hide_ui_options_sync(
 	hide_view_profile: bool, hide_interactions: bool, hide_labels: bool
 ) -> void:
-	check_button_hide_avatar_names.set_pressed_no_signal(hide_view_profile)
-	check_button_hide_avatar_interactions.set_pressed_no_signal(hide_interactions)
+	check_button_hide_view_profile.set_pressed_no_signal(hide_view_profile)
+	check_button_hide_world_interactions.set_pressed_no_signal(hide_interactions)
 	check_button_hide_player_names.set_pressed_no_signal(hide_labels)
 
 
 func _update_hide_ui_sub_toggles(hide_ui_on: bool) -> void:
-	check_button_hide_avatar_names.disabled = not hide_ui_on
-	check_button_hide_avatar_interactions.disabled = not hide_ui_on
+	check_button_hide_view_profile.disabled = not hide_ui_on
+	check_button_hide_world_interactions.disabled = not hide_ui_on
 	check_button_hide_player_names.disabled = not hide_ui_on
-	hide_avatar_names_row.modulate.a = 1.0 if hide_ui_on else 0.5
-	hide_avatar_interactions_row.modulate.a = 1.0 if hide_ui_on else 0.5
+	hide_view_profile_row.modulate.a = 1.0 if hide_ui_on else 0.5
+	hide_world_interactions_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_player_names_row.modulate.a = 1.0 if hide_ui_on else 0.5
 
 
@@ -509,10 +509,10 @@ func _refresh_hide_explorer_ui_row() -> void:
 	if in_explorer:
 		var hide_on = explorer.is_session_hide_main_hud()
 		check_button_hide_explorer_ui.set_pressed_no_signal(hide_on)
-		check_button_hide_avatar_names.set_pressed_no_signal(
+		check_button_hide_view_profile.set_pressed_no_signal(
 			explorer.is_session_hide_view_profile()
 		)
-		check_button_hide_avatar_interactions.set_pressed_no_signal(
+		check_button_hide_world_interactions.set_pressed_no_signal(
 			explorer.is_session_hide_world_interactions()
 		)
 		check_button_hide_player_names.set_pressed_no_signal(
@@ -521,8 +521,8 @@ func _refresh_hide_explorer_ui_row() -> void:
 		_update_hide_ui_sub_toggles(hide_on)
 	else:
 		check_button_hide_explorer_ui.set_pressed_no_signal(false)
-		check_button_hide_avatar_names.set_pressed_no_signal(true)
-		check_button_hide_avatar_interactions.set_pressed_no_signal(true)
+		check_button_hide_view_profile.set_pressed_no_signal(true)
+		check_button_hide_world_interactions.set_pressed_no_signal(true)
 		check_button_hide_player_names.set_pressed_no_signal(true)
 		_update_hide_ui_sub_toggles(false)
 

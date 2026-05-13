@@ -296,6 +296,7 @@ size_flags_horizontal = 3
 
 [node name="VBoxContainer_Gameplay" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=911633864]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
@@ -411,12 +412,12 @@ mouse_filter = 2
 theme_override_constants/separation = 44
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="HideAvatarNames" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=1778396545]
+[node name="HideViewProfile" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=1778396545]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 32
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideAvatarNames" unique_id=1105641793]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideViewProfile" unique_id=1105641793]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -425,7 +426,7 @@ theme_override_font_sizes/font_size = 14
 text = "Hide \"View Profile\""
 label_settings = ExtResource("17_67hd5")
 
-[node name="CheckButton_HideAvatarNames" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideAvatarNames" unique_id=1079372807]
+[node name="CheckButton_HideViewProfile" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideViewProfile" unique_id=1079372807]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -438,12 +439,12 @@ mouse_filter = 2
 theme_override_constants/separation = 44
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="HideAvatarInteractions" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=292578022]
+[node name="HideWorldInteractions" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=292578022]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 32
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideAvatarInteractions" unique_id=1186606617]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideWorldInteractions" unique_id=1186606617]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -452,7 +453,7 @@ theme_override_font_sizes/font_size = 14
 text = "Hide Interaction Prompts"
 label_settings = ExtResource("17_67hd5")
 
-[node name="CheckButton_HideAvatarInteractions" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideAvatarInteractions" unique_id=971659080]
+[node name="CheckButton_HideWorldInteractions" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideWorldInteractions" unique_id=971659080]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -641,7 +642,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1829650898]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -878,9 +878,9 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer" unique_id=1504030425]
 handle_input_locally = false
-size = Vector2i(2, 351)
+size = Vector2i(494, 351)
 render_target_clear_mode = 2
-render_target_update_mode = 0
+render_target_update_mode = 4
 
 [node name="PreviewCamera3D" type="Camera3D" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer/SubViewport" unique_id=2101831196]
 unique_name_in_owner = true
@@ -1343,8 +1343,8 @@ font = ExtResource("25_jf4mt")
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Nav/TabsScrollContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/CheckButton_HideExplorerUI" to="." method="_on_check_button_hide_explorer_ui_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideAvatarNames/CheckButton_HideAvatarNames" to="." method="_on_check_button_hide_avatar_names_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideAvatarInteractions/CheckButton_HideAvatarInteractions" to="." method="_on_check_button_hide_avatar_interactions_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideViewProfile/CheckButton_HideViewProfile" to="." method="_on_check_button_hide_view_profile_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideWorldInteractions/CheckButton_HideWorldInteractions" to="." method="_on_check_button_hide_world_interactions_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HidePlayerNames/CheckButton_HidePlayerNames" to="." method="_on_check_button_hide_player_names_toggled"]
 [connection signal="value_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Gamepad/SectionGamepad/VBoxContainer/GamepadCameraSensitivity" to="." method="_on_gamepad_camera_sensitivity_value_changed"]
 [connection signal="visibility_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]

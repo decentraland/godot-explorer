@@ -1716,6 +1716,7 @@ func set_hide_main_hud_from_settings(minimized: bool) -> void:
 		# Turning off: restore UI immediately and reset sub-options
 		_session_hide_view_profile = true
 		_session_hide_world_interactions = true
+		_session_hide_player_names = true
 		set_visible_ui(true, true)
 		_apply_hide_ui_to_avatar_nicks(false)
 		Global.session_hide_ui_options_sync.emit(true, true, true)
