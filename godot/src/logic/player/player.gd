@@ -94,10 +94,12 @@ func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 		camera_mode_change_blocked = true
 
 	set_camera_mode(forced_mode, false)
+	Global.set_camera_mode_blocked(true)
 
 
 func _on_camera_mode_area_detector_unblock_camera_mode():
 	camera_mode_change_blocked = false
+	Global.set_camera_mode_blocked(false)
 	set_camera_mode(stored_camera_mode_before_block, false)
 
 

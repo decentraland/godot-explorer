@@ -157,6 +157,10 @@ var _anim_throttle_active: bool = false
 # so per-avatar tints don't leak.
 static var _toon_material_cache: Dictionary = {}
 
+# Issue #1945: matches a Blender-style `_<digits>$` duplicate-import suffix on a
+# bone name (e.g. `Avatar_Hips_2`). Compiled once and shared across instances.
+static var _bone_suffix_regex: RegEx = RegEx.create_from_string("^(.*)_\\d+$")
+
 
 func _ready():
 	var billboard_mode = (
@@ -259,6 +263,8 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 		if modifier == 0:  # hide avatar
 			hide()
 			_hide_impostor_render()
+			_set_click_area_enabled(false)
+			passport_disabled = true
 		elif modifier == 1:  # disable passport
 			passport_disabled = true
 
@@ -318,6 +324,7 @@ func _set_click_area_enabled(enabled: bool) -> void:
 func _unset_avatar_modifier_area():
 	if not hidden:
 		show()
+		_set_click_area_enabled(true)
 	passport_disabled = false
 
 
@@ -488,13 +495,20 @@ func set_force_hide_name(value: bool) -> void:
 		_apply_nickname_visibility()
 
 
-## Bump the nickname SubViewport to redraw exactly one frame. The viewport
-## otherwise stays in UPDATE_ONCE (see _apply_nickname_visibility) so nicknames
-## don't burn a SubViewport render every frame on idle avatars.
+## Bump the nickname SubViewport to redraw exactly one frame. UPDATE_ONCE
+## auto-resets to UPDATE_DISABLED after rendering, so callers must invoke
+## this every time something nickname-related changes — `_apply_nickname_visibility`
+## bumps once on show, individual setters (chat message, mic, etc.) bump as
+## state changes, and `_process` bumps after the viewport resizes.
+##
+## Gate on `nickname_quad.visible` (the source of truth for "is this nickname
+## actually being shown") rather than `render_target_update_mode == UPDATE_DISABLED`
+## — the latter is also the post-render state after UPDATE_ONCE auto-resets, so
+## it can't distinguish "explicitly hidden" from "just finished rendering one frame".
 func _request_nickname_redraw() -> void:
-	if nickname_viewport == null:
+	if nickname_viewport == null or nickname_quad == null:
 		return
-	if nickname_viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED:
+	if not nickname_quad.visible:
 		return
 	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
@@ -625,6 +639,25 @@ func _recycle_extra_wearable_bones() -> void:
 	_active_extra_bone_indices.clear()
 
 
+# Resolves a wearable bone name to its counterpart in body_shape_skeleton_3d,
+# stripping a Blender-style duplicate-import suffix (`_2`, `_001`, ...) only
+# when the un-suffixed name already exists. Returns the original name otherwise
+# so genuine extra bones (ADR-316 spring bones) still get merged as new bones.
+# Fixes #1945: wearables exported from Blender after re-importing the DCL armature
+# carry `Avatar_Hips_2` etc. — without this collapse they merge as a parallel,
+# un-animated leg/spine chain that stays in rest pose during emotes/jump/glide.
+func _resolve_to_base_bone_name(bone_name: String) -> String:
+	if body_shape_skeleton_3d.find_bone(bone_name) != -1:
+		return bone_name
+	var m := _bone_suffix_regex.search(bone_name)
+	if m == null:
+		return bone_name
+	var stripped := m.get_string(1)
+	if body_shape_skeleton_3d.find_bone(stripped) != -1:
+		return stripped
+	return bone_name
+
+
 # Copies bones that exist in the wearable's Skeleton3D but not in body_shape_skeleton_3d
 # (typically ADR-316 spring bones for hair, earrings, capes, etc.). Parents are added
 # before children so parent-by-name resolution always succeeds. Without this, mesh
@@ -640,6 +673,11 @@ func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
 	var missing: Array = []  # Array of [depth, wearable_idx, name]
 	for i in wearable_bone_count:
 		var bone_name = wearable_skel.get_bone_name(i)
+		# Skip if the bone already exists in the base, including under its
+		# de-suffixed name. The wearable's `Avatar_Hips_2` collapses onto the
+		# animated `Avatar_Hips` instead of being merged as a parallel root.
+		if _resolve_to_base_bone_name(bone_name) != bone_name:
+			continue
 		if body_shape_skeleton_3d.find_bone(bone_name) != -1:
 			continue
 		var depth = 0
@@ -668,12 +706,16 @@ func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
 		body_shape_skeleton_3d.reset_bone_pose(new_idx)
 		_active_extra_bone_indices.push_back(new_idx)
 		# Always reset parent: a recycled slot may have been linked to a stale
-		# parent from its previous use.
+		# parent from its previous use. Resolve through the same de-suffix path
+		# so a spring bone whose parent is `Avatar_Spine_2` reparents onto the
+		# base `Avatar_Spine` instead of leaving as root.
 		var parent_wearable_idx = wearable_skel.get_bone_parent(wearable_idx)
 		var parent_base_idx = -1
 		if parent_wearable_idx != -1:
 			var parent_name = wearable_skel.get_bone_name(parent_wearable_idx)
-			parent_base_idx = body_shape_skeleton_3d.find_bone(parent_name)
+			parent_base_idx = body_shape_skeleton_3d.find_bone(
+				_resolve_to_base_bone_name(parent_name)
+			)
 			if parent_base_idx == -1:
 				push_warning(
 					(
@@ -688,6 +730,10 @@ func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
 # Godot resolves named binds against the attached skeleton at runtime, so once the
 # mesh is reparented to body_shape_skeleton_3d (which may have been extended with
 # extra wearable bones) every joint resolves correctly, including ADR-316 spring bones.
+# Issue #1945: when the wearable was exported with duplicate-suffixed bones
+# (`Avatar_Hips_2`, `Avatar_LeftLeg_2`, ...), the de-suffix lookup retargets the
+# binds onto the animated base bones — without it the mesh tracks merged but
+# inert `_2` clones and stays in rest pose during emotes/jump/glide.
 func _rebind_skin_by_name(mesh: MeshInstance3D, wearable_skel: Skeleton3D) -> void:
 	if mesh.skin == null:
 		return
@@ -696,7 +742,8 @@ func _rebind_skin_by_name(mesh: MeshInstance3D, wearable_skel: Skeleton3D) -> vo
 	for i in skin.get_bind_count():
 		var bone_idx = skin.get_bind_bone(i)
 		if bone_idx >= 0 and bone_idx < wearable_bone_count:
-			skin.set_bind_name(i, wearable_skel.get_bone_name(bone_idx))
+			var bone_name = wearable_skel.get_bone_name(bone_idx)
+			skin.set_bind_name(i, _resolve_to_base_bone_name(bone_name))
 	mesh.skin = skin
 
 
@@ -1265,6 +1312,7 @@ func _process(delta):
 
 	if nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
+		_request_nickname_redraw()
 
 	_maybe_update_lod()
 	_tick_animation_throttle(delta)
@@ -1281,7 +1329,11 @@ func _process(delta):
 	if not animation_tree.active:
 		animation_tree.active = true
 
-	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
+	# #b18: `is_grounded` guard suppresses the all-false condition window at the
+	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.
+	var self_idle = (
+		self.is_grounded && !self.jog && !self.walk && !self.run && !self.rise && !self.fall
+	)
 	emote_controller.process(self_idle)
 
 	var is_emoting = self_idle && emote_controller.is_playing()

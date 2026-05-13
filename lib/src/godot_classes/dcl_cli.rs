@@ -139,6 +139,8 @@ pub struct DclCli {
     #[var(get)]
     pub fake_deeplink: GString,
     #[var(get)]
+    pub dcl_env: GString,
+    #[var(get)]
     pub fi_benchmark_output: GString,
     #[var(get)]
     pub avatar_impostor_benchmark_output: GString,
@@ -482,6 +484,13 @@ impl DclCli {
                 arg_type: ArgType::Value("<filter>".to_string()),
                 category: "Debugging".to_string(),
             },
+            // Environment
+            ArgDefinition {
+                name: "--dclenv".to_string(),
+                description: "Set the Decentraland environment (org, zone, today). Accepts the same grammar as the dclenv deeplink param, e.g. \"zone\" or \"auth::zone,org\". Wins over a deeplink-supplied value when both are present.".to_string(),
+                arg_type: ArgType::Value("<env>".to_string()),
+                category: "Environment".to_string(),
+            },
             ArgDefinition {
                 name: "--no-pipe-logging".to_string(),
                 description: "Disable piping Rust logs to Godot console (use platform default: stdout/logcat/oslog)".to_string(),
@@ -571,14 +580,19 @@ impl INode for DclCli {
 
         let mut args_map = HashMap::new();
 
-        // Parse command line arguments into a map
+        // Parse command line arguments into a map.
+        // Supports both `--key value` and `--key=value` forms.
         let args_vec = combined_args;
         let mut i = 0;
         while i < args_vec.len() {
             let arg = args_vec[i].to_string();
             if arg.starts_with("--") {
-                // Check if next arg is a value (doesn't start with --)
-                if i + 1 < args_vec.len() && !args_vec[i + 1].to_string().starts_with("--") {
+                if let Some(eq_idx) = arg.find('=') {
+                    let key = arg[..eq_idx].to_string();
+                    let value = arg[eq_idx + 1..].to_string();
+                    args_map.insert(key, Some(value));
+                    i += 1;
+                } else if i + 1 < args_vec.len() && !args_vec[i + 1].to_string().starts_with("--") {
                     args_map.insert(arg.clone(), Some(args_vec[i + 1].to_string()));
                     i += 2;
                 } else {
@@ -703,6 +717,11 @@ impl INode for DclCli {
                 }
             })
             .unwrap_or_default();
+        let dcl_env = args_map
+            .get("--dclenv")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
         let fi_benchmark_output = args_map
             .get("--fi-benchmark-output")
             .and_then(|v| v.as_ref())
@@ -776,6 +795,7 @@ impl INode for DclCli {
             avatars_file,
             snapshot_folder,
             fake_deeplink,
+            dcl_env,
             fi_benchmark_output,
             avatar_impostor_benchmark_output,
             saved_profile,

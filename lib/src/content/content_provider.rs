@@ -1436,12 +1436,13 @@ impl ContentProvider {
 
     /// Fetches a texture by URL, bypassing the optimization pipeline.
     /// Uses Source quality to preserve original texture resolution.
+    #[func]
     pub fn fetch_texture_by_url_original(
         &mut self,
         file_hash: GString,
         url: GString,
     ) -> Gd<Promise> {
-        let file_hash = file_hash.to_string();
+        let file_hash = format!("{}_original", file_hash);
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;
         }
