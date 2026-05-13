@@ -245,6 +245,13 @@ func _input(event):
 		var selected = Global.get_selected_avatar()
 		if selected and selected == self and avatar_id and not hidden and not passport_disabled:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				var explorer = Global.get_explorer()
+				if (
+					is_instance_valid(explorer)
+					and explorer.is_session_hide_main_hud()
+					and explorer.is_session_hide_view_profile()
+				):
+					return
 				Global.open_profile_by_avatar.emit(self)
 
 
