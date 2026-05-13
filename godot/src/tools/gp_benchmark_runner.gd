@@ -167,11 +167,33 @@ func _process(_delta: float) -> void:
 						get_tree().root.get_viewport_rid(), true
 					)
 					_log("viewport measure_render_time enabled")
-				_set_phase("warmup")
+				_set_phase("settling")
 			elif _phase_elapsed_ms() >= LOAD_TIMEOUT_MS:
 				_log("WARN: loading_complete never fired in %d ms; aborting" % LOAD_TIMEOUT_MS)
 				_write_error("loading_timeout")
 				_async_force_quit(2)
+		"settling":
+			# `Global.scene_runner.loading_complete` fires when the scene-runner
+			# declares the scene-set loaded, but individual SDK7 `DclGltfContainer`
+			# children may still be streaming their GLBs at that point. Without
+			# this gate the warmup window can race the slowest GLB (e.g. DCL Store
+			# in GP) and the sample-time screenshot captures placeholder cubes.
+			var settling_timeout_ms: int = int(config.get("settling_timeout_seconds", 60)) * 1000
+			var still_loading := _count_loading_gltf_containers()
+			if still_loading == 0:
+				_log("settling: all GltfContainers finished after %d ms" % _phase_elapsed_ms())
+				_set_phase("warmup")
+			elif _phase_elapsed_ms() >= settling_timeout_ms:
+				_log(
+					(
+						(
+							"WARN: settling_timeout (%dms) — %d GltfContainers still loading; "
+							+ "advancing to warmup anyway"
+						)
+						% [settling_timeout_ms, still_loading]
+					)
+				)
+				_set_phase("warmup")
 		"warmup":
 			_enforce_pinned_pose()
 			if _phase_elapsed_ms() >= int(config.get("warmup_seconds", 30)) * 1000:
@@ -836,6 +858,25 @@ func _phase_elapsed_ms() -> int:
 
 func _log(msg: String) -> void:
 	print("[GP Benchmark] %s" % msg)
+
+
+## Count DclGltfContainer nodes whose `dcl_gltf_loading_state` is still
+## UNKNOWN (0) or LOADING (1). FINISHED (4), NOT_FOUND (2) and
+## FINISHED_WITH_ERROR (3) are terminal states. Walks the scene tree
+## starting at root; small constant cost vs the cost of incorrectly
+## sampling during load.
+func _count_loading_gltf_containers() -> int:
+	var pending: int = 0
+	var stack: Array = [Global.get_tree().root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n.is_class("DclGltfContainer"):
+			var s: int = n.get("dcl_gltf_loading_state")
+			if s == 0 or s == 1:
+				pending += 1
+		for c in n.get_children():
+			stack.append(c)
+	return pending
 
 
 func _read_process_rss_mb() -> float:
