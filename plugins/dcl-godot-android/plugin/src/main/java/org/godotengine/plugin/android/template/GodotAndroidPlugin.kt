@@ -107,6 +107,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     // --- Firebase Analytics (accessed via reflection so this plugin doesn't depend on the SDK) ---
+    // TODO: replace reflection with a `compileOnly("com.google.firebase:firebase-analytics")` dep
+    // and a small FirebaseAnalyticsBridge wrapper class. The consumer (godot/android/build) already
+    // resolves Firebase conditionally on google-services.json, so the runtime behavior wouldn't
+    // change — but we'd get type safety, direct dispatch, and ~half the LOC here.
     @Volatile private var firebaseAnalyticsInstance: Any? = null
     @Volatile private var firebaseAppInstanceId: String = ""
     @Volatile private var firebaseInitTried: Boolean = false

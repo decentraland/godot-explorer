@@ -68,13 +68,13 @@ pub enum SegmentEvent {
 /// app instance id — analysts pivot from Segment → Firebase via this event's `session_id` +
 /// `firebase_user_id` pair. The inverse pivot (Firebase → Segment) uses the `user_id` /
 /// `session_id` user properties that the plugin seeds on every Firebase event.
+///
+/// Only queued when `firebase_user_id` is non-empty (see `_on_firebase_app_instance_id_ready` in
+/// metrics.rs); a missing id is logged as a `tracing::error!` and the event is skipped.
 #[derive(Serialize, Clone)]
 pub struct SegmentEventFirebaseInit {
-    // Firebase Analytics app instance id (ga_pseudo_user_id). May be absent if the Firebase SDK
-    // hadn't cached the id yet when this event was fired (rare — only on a very fast cold start
-    // on Android, or on platforms without Firebase).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub firebase_user_id: Option<String>,
+    // Firebase Analytics app instance id (ga_pseudo_user_id). Guaranteed non-empty at queue time.
+    pub firebase_user_id: String,
 }
 
 #[derive(Serialize, Clone)]

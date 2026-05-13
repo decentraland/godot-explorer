@@ -130,8 +130,14 @@ impl INode for Metrics {
         }
 
         // Connect to the plugin's one-shot signal that fires when Firebase resolves the app
-        // instance id, and kick off the async fetch. The signal handler is what queues the
-        // Segment-side `Firebase Init` linking event — we don't gate anything else on it.
+        // instance id. The signal handler is what queues the Segment-side `Firebase Init`
+        // linking event — we don't gate anything else on it.
+        //
+        // Race: the plugin's init runs in `onGodotSetupCompleted`, which happens BEFORE this
+        // `ready()` on the Metrics node. If Firebase's `getAppInstanceId` resolved synchronously
+        // (cache hit) the signal may have already fired before our `connect` above. We close that
+        // by reading the cached value back and delivering it manually — the `firebase_init_queued`
+        // guard inside `_on_firebase_app_instance_id_ready` makes this idempotent.
         //
         // Also seed the Firebase user id and a `session_id` user property so every subsequent
         // Firebase event (including SDK auto-events like session_start / screen_view) carries
@@ -139,7 +145,11 @@ impl INode for Metrics {
         if matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             let callable = self.base().callable("_on_firebase_app_instance_id_ready");
             DclAndroidPlugin::connect_firebase_app_instance_id_ready(&callable);
-            let _ = DclAndroidPlugin::get_firebase_app_instance_id();
+
+            let cached = DclAndroidPlugin::get_firebase_app_instance_id();
+            if !cached.to_string().is_empty() {
+                self._on_firebase_app_instance_id_ready(cached);
+            }
 
             DclAndroidPlugin::set_firebase_user_id(GString::from(&self.user_id));
             DclAndroidPlugin::set_firebase_user_property(
@@ -162,8 +172,12 @@ impl INode for Metrics {
 #[godot_api]
 impl Metrics {
     /// Plugin signal handler — fires once when Firebase resolves the app instance id. Queues the
-    /// Segment `Firebase Init` linking event with the resolved id (may be empty if the SDK failed
-    /// to fetch it). Idempotent: subsequent emissions are ignored.
+    /// Segment `Firebase Init` linking event with the resolved id. Idempotent: subsequent
+    /// emissions are ignored.
+    ///
+    /// If the id arrives empty (SDK failed the async fetch, or Firebase wasn't on the classpath
+    /// but the signal fired anyway) we log loudly and skip queueing — an event with no
+    /// `firebase_user_id` provides no cross-system pivot value and would just pollute Segment.
     #[func]
     fn _on_firebase_app_instance_id_ready(&mut self, id: GString) {
         if self.firebase_init_queued {
@@ -171,8 +185,16 @@ impl Metrics {
         }
         self.firebase_init_queued = true;
         let id_str = id.to_string();
-        let firebase_user_id = if id_str.is_empty() { None } else { Some(id_str) };
-        let event = SegmentEvent::FirebaseInit(SegmentEventFirebaseInit { firebase_user_id });
+        if id_str.is_empty() {
+            tracing::error!(
+                "Firebase app instance id resolved empty — skipping `Firebase Init` Segment event \
+                 (no Segment↔Firebase pivot will be available for this session)"
+            );
+            return;
+        }
+        let event = SegmentEvent::FirebaseInit(SegmentEventFirebaseInit {
+            firebase_user_id: id_str,
+        });
         self.events.push(event.clone());
         self.debug_print_event("Firebase Init", &event);
     }
@@ -450,15 +472,16 @@ impl Metrics {
 
     /// Fire a one-shot `first_move_in_world` event through Firebase Analytics (Android only).
     /// Intended to be called from GDScript the first time the player actually moves after a
-    /// `loading_finished`. The caller is responsible for persisting the
-    /// `first_move_in_world_sent` config flag so this fires only once per install.
+    /// `loading_finished`. Returns true when the event was actually dispatched — callers should
+    /// persist the `first_move_in_world_sent` config flag ONLY on `true` so we don't burn the
+    /// one-shot on platforms where the event was a no-op (non-Android, pre-EULA).
     #[func]
-    pub fn track_first_move_in_world(&mut self) {
+    pub fn track_first_move_in_world(&mut self) -> bool {
         if !self.eula_accepted {
-            return;
+            return false;
         }
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
-            return;
+            return false;
         }
         let params = serde_json::json!({
             "position": self.common.position,
@@ -475,7 +498,7 @@ impl Metrics {
         DclAndroidPlugin::log_firebase_event(
             GString::from("first_move_in_world"),
             GString::from(&params_str),
-        );
+        )
     }
 
     #[func]

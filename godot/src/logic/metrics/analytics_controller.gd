@@ -31,14 +31,8 @@ var _first_move_poll_timer: Timer = null
 ## Called by Global right after `AnalyticsController.new()`. RefCounted has no _ready, so this
 ## stand-in performs the one-time setup (EULA gate for returning users + signal wiring).
 func setup() -> void:
-	# TODO: revertir antes de merge — log forzado para debug de analytics en fresh install.
-	DclGlobal.set_rust_log_filter("dclgodot::analytics=debug,warn")
-
 	if Global.metrics == null:
 		return
-
-	# TODO: revertir a 0 antes de merge — modo verbose para inspeccionar payloads.
-	Global.metrics.set_debug_level(1)
 
 	# Returning user: EULA already accepted on a prior run. Open the consent gate at startup so
 	# queued events ship. Segment ↔ Firebase link is handled automatically by Metrics (user_id /
@@ -47,6 +41,10 @@ func setup() -> void:
 	if Global.get_config().terms_and_conditions_version == Global.TERMS_AND_CONDITIONS_VERSION:
 		Global.metrics.set_eula_accepted.call_deferred(true)
 
+	# Connection order is load-bearing: this handler must run BEFORE lobby.gd's
+	# `_on_wallet_connected` because `track_login` reads the wallet address from the signal arg
+	# (lobby's handler is what calls `metrics.update_identity`, so `common.dcl_eth_address` is
+	# stale at this point). We connect here in Global._ready, before the lobby scene loads.
 	Global.player_identity.wallet_connected.connect(_on_wallet_connected_track_login)
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
@@ -126,9 +124,14 @@ func _on_first_move_poll_tick() -> void:
 		return
 	if player_body.actual_velocity_xz < _MOVE_IN_WORLD_VELOCITY_THRESHOLD:
 		return
+	# Persist the one-shot flag ONLY when the Firebase event was actually logged (Android + EULA
+	# accepted). On other platforms or pre-EULA we still stop polling for this session, but the
+	# flag stays false so a future session retries.
+	var fired := false
 	if Global.metrics != null:
-		Global.metrics.track_first_move_in_world()
-	var config := Global.get_config()
-	config.first_move_in_world_sent = true
-	config.save_to_settings_file()
+		fired = Global.metrics.track_first_move_in_world()
+	if fired:
+		var config := Global.get_config()
+		config.first_move_in_world_sent = true
+		config.save_to_settings_file()
 	_stop_first_move_poller()
