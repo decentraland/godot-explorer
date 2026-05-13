@@ -454,7 +454,6 @@ text = "SIGN IN"
 
 [node name="BackpackContainer" type="Control" parent="Main" unique_id=1314744326]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/BackpackContainer" unique_id=370001754]
@@ -910,7 +909,6 @@ layout_mode = 2
 
 [node name="FTUE" parent="Main/FTUE" unique_id=1400018334 instance=ExtResource("5_3tlbd")]
 layout_mode = 1
-offset_bottom = 0.0
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="." unique_id=357103624]
 layout_mode = 1

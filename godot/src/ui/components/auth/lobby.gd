@@ -276,6 +276,18 @@ func _ready():
 	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_guest.visible = false
 
+	# The backpack ships with top_node_margin pointing at its own navbar (hidden
+	# via hide_navbar=true here), which leaves the preview without a real top
+	# reference. Wire the embedded preview to the lobby's "Create your avatar"
+	# label so the camera-fit overlap math has a properly-positioned anchor,
+	# and snap the avatar to the viewport top so it shows full-height behind
+	# the editor overlay instead of being sized into the uncovered slice.
+	var create_avatar_label: Label = $Main/BackpackContainer/MarginContainer/VBoxContainer/Label_Name
+	backpack.avatar_preview.snap_top_to_viewport = true
+	backpack.avatar_preview.preview_margin_top = 10
+	backpack.avatar_preview.set_top_margin_node(create_avatar_label)
+	
+
 	# Secret guest mode: double-tap logo when not in prod
 	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
 
