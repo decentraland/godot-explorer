@@ -1,12 +1,9 @@
-## Replaces the per-gltf_container Timer (1419 of them in Genesis Plaza).
-## Single Dictionary of deadlines, drained from a dedicated child node's
-## `_process` — NOT on Global itself, since adding `_process` to the
-## DclGlobal autoload reproducibly triggers a VkThread NULL-deref crash
-## inside libgodot_android.so on Android (Samsung A54). Bisected.
+## Coalesces per-GltfContainer load-timeout Timers (1419 on Genesis Plaza).
+## Must NOT live on the DclGlobal autoload directly — adding `_process` to
+## DclGlobal reproducibly crashes libgodot_android.so (Samsung A54).
 class_name GltfLoadTimeoutCoalescer
 extends Node
 
-# container InstanceId (int) -> deadline in Time.get_ticks_msec().
 var _deadlines: Dictionary = {}
 
 

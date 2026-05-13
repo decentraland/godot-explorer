@@ -119,16 +119,9 @@ var _hardware_benchmark: HardwareBenchmark = null
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
 
-## Coalescer for GltfContainer load-timeouts. Lazy-init child node.
-## Adding `_process` directly on DclGlobal triggers a Godot Vulkan crash —
-## the coalescer must live on a separate Node to keep `_process` off the
-## autoload itself.
 var _gltf_load_timeout_coalescer: Node = null
 
 
-## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
-## per-container Timer (~1419 in Genesis Plaza). Called from
-## gltf_container.gd; created on first use, persists for the app's lifetime.
 func get_gltf_load_timeout_coalescer() -> Node:
 	if _gltf_load_timeout_coalescer == null:
 		var coalescer_script = load(
