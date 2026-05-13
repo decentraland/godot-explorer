@@ -343,6 +343,11 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
+	var visibility_culling = (
+		preload("res://src/decentraland_components/visibility_culling.gd").new()
+	)
+	visibility_culling.name = "VisibilityCulling"
+	get_tree().root.add_child.call_deferred(visibility_culling)
 	get_tree().root.add_child.call_deferred(self.realm)
 	get_tree().root.add_child.call_deferred(self.dcl_tokio_rpc)
 	get_tree().root.add_child.call_deferred(self.player_identity)

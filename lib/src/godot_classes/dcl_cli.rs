@@ -107,6 +107,13 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
 
+    // Visibility-grid culling. Default ON; opt out with --no-visibility-grid
+    // or visibility-grid=false deeplink. Builds a cell grid of static meshes
+    // per scene-load and toggles their RenderingServer visibility via PVS
+    // bake + per-frame frustum/distance tests in Rust.
+    #[var]
+    pub visibility_grid_enabled: bool,
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -626,6 +633,7 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
+        let visibility_grid_enabled = !args_map.contains_key("--no-visibility-grid");
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -741,6 +749,7 @@ impl INode for DclCli {
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
+            visibility_grid_enabled,
             asset_server_port,
             realm,
             location,

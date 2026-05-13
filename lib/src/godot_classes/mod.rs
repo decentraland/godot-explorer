@@ -39,6 +39,7 @@ pub mod dcl_ui_text;
 pub mod dcl_urls;
 pub mod dcl_video_player;
 pub mod dcl_virtual_camera;
+pub mod dcl_visibility_grid_rust;
 pub mod floating_islands;
 pub mod font;
 pub mod portables;
