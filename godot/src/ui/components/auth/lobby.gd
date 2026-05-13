@@ -286,7 +286,6 @@ func _ready():
 	backpack.avatar_preview.snap_top_to_viewport = true
 	backpack.avatar_preview.preview_margin_top = 10
 	backpack.avatar_preview.set_top_margin_node(create_avatar_label)
-	
 
 	# Secret guest mode: double-tap logo when not in prod
 	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
