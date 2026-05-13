@@ -32,6 +32,7 @@ pub mod dcl_social_blacklist;
 pub mod dcl_social_service;
 pub mod dcl_tokio_rpc;
 pub mod dcl_ui_background;
+pub mod dcl_ui_border;
 pub mod dcl_ui_control;
 pub mod dcl_ui_dropdown;
 pub mod dcl_ui_input;

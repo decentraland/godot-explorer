@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use godot::{
     classes::{
         Control, INinePatchRect, Material, NinePatchRect, Node, ResourceLoader, Shader,
@@ -16,6 +18,62 @@ use crate::{
 
 use super::dcl_global::DclGlobal;
 
+// SDF-based rounded rectangle mask. `VERTEX` in canvas-item shaders is the
+// local position in pixels, so we use it to evaluate a rounded-rect SDF and
+// modulate alpha. Active only when any corner_radii > 0 (a uniform-encoded
+// flag — when all zero, the material is detached entirely from the host).
+const ROUNDED_CLIP_SHADER_CODE: &str = r#"shader_type canvas_item;
+
+uniform vec4 corner_radii = vec4(0.0);
+uniform vec2 control_size = vec2(1.0, 1.0);
+
+varying vec2 v_local_pos;
+
+void vertex() {
+    v_local_pos = VERTEX;
+}
+
+float rounded_rect_sdf(vec2 p, vec2 b, vec4 r) {
+    float radius;
+    if (p.y < 0.0) {
+        radius = (p.x < 0.0) ? r.x : r.y; // top-left / top-right
+    } else {
+        radius = (p.x < 0.0) ? r.w : r.z; // bottom-left / bottom-right
+    }
+    vec2 q = abs(p) - b + vec2(radius);
+    return min(max(q.x, q.y), 0.0) + length(max(q, vec2(0.0))) - radius;
+}
+
+void fragment() {
+    vec2 half_size = control_size * 0.5;
+    vec2 p = v_local_pos - half_size;
+    float d = rounded_rect_sdf(p, half_size, corner_radii);
+    float alpha = clamp(0.5 - d, 0.0, 1.0);
+    COLOR.a *= alpha;
+}
+"#;
+
+thread_local! {
+    // One compiled Shader resource shared by every DclUiBackground in this thread.
+    // godot-rust Gd<T> is not Send/Sync, so std::sync::OnceLock can't be used —
+    // thread_local is the right primitive for "main-thread-only singleton".
+    static SHARED_ROUNDED_CLIP_SHADER: RefCell<Option<Gd<Shader>>> = const { RefCell::new(None) };
+}
+
+fn shared_rounded_clip_shader() -> Gd<Shader> {
+    SHARED_ROUNDED_CLIP_SHADER.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        if let Some(existing) = slot.as_ref() {
+            existing.clone()
+        } else {
+            let mut shader = Shader::new_gd();
+            shader.set_code(ROUNDED_CLIP_SHADER_CODE);
+            *slot = Some(shader.clone());
+            shader
+        }
+    })
+}
+
 #[derive(GodotClass)]
 #[class(base=NinePatchRect)]
 pub struct DclUiBackground {
@@ -30,6 +88,10 @@ pub struct DclUiBackground {
     // Child TextureRect with custom shader for proper UV interpolation
     uv_child: Option<Gd<TextureRect>>,
     uv_shader_material: Option<Gd<ShaderMaterial>>,
+
+    // SDF rounded-rect clip applied only when any corner radius > 0.
+    rounded_clip_material: Option<Gd<ShaderMaterial>>,
+    current_radii: [f32; 4],
 }
 
 #[godot_api]
@@ -43,6 +105,8 @@ impl INinePatchRect for DclUiBackground {
             first_texture_load_shot: false,
             uv_child: None,
             uv_shader_material: None,
+            rounded_clip_material: None,
+            current_radii: [0.0; 4],
         }
     }
 
@@ -111,6 +175,12 @@ impl DclUiBackground {
             my_pos
         );
 
+        // Keep the rounded-clip shader's size uniform in sync.
+        if let Some(mat) = self.rounded_clip_material.clone() {
+            let mut mat = mat;
+            mat.set_shader_parameter("control_size", &my_size.to_variant());
+        }
+
         if !self.texture_loaded {
             tracing::debug!("[UI_BKG] _on_parent_size: texture_loaded=false, skipping");
             return;
@@ -127,6 +197,37 @@ impl DclUiBackground {
                 self.current_value.texture_mode()
             );
         }
+    }
+
+    pub fn set_corner_radii(&mut self, radii: [f32; 4]) {
+        if self.current_radii == radii {
+            return;
+        }
+        self.current_radii = radii;
+        let any = radii.iter().any(|&r| r > 0.0);
+
+        if !any {
+            if self.rounded_clip_material.is_some() {
+                self.base_mut().set_material(Gd::null_arg());
+                self.rounded_clip_material = None;
+            }
+            return;
+        }
+
+        let mut mat = if let Some(existing) = self.rounded_clip_material.clone() {
+            existing
+        } else {
+            let mut new_mat = ShaderMaterial::new_gd();
+            new_mat.set_shader(&shared_rounded_clip_shader());
+            self.rounded_clip_material = Some(new_mat.clone());
+            new_mat
+        };
+
+        let radii_v4 = Vector4::new(radii[0], radii[1], radii[2], radii[3]);
+        let size = self.base().get_size();
+        mat.set_shader_parameter("corner_radii", &radii_v4.to_variant());
+        mat.set_shader_parameter("control_size", &size.to_variant());
+        self.base_mut().set_material(&mat);
     }
 
     /// Check if UVs are non-trivial (rotated, skewed, or non-rectangular)
