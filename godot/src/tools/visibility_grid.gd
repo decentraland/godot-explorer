@@ -1,3 +1,4 @@
+# gdlint: disable=class-definitions-order
 ## Cell-based visibility culling for the GP benchmark.
 ##
 ## Built once after loading_complete. Each static MeshInstance3D is bucketed
