@@ -24,6 +24,7 @@ var _gesture_consumed: bool = false
 
 func _ready() -> void:
 	layer = 1000
+	print("[SafeMarginDebug] overlay _ready (layer=", layer, ")")
 
 	_unsafe_top = _make_strip()
 	_unsafe_bottom = _make_strip()
@@ -88,12 +89,24 @@ func _refresh() -> void:
 	var safe_area: Rect2i = Global.get_safe_area()
 	var base_resolution: Vector2 = GraphicSettings.get_base_resolution(Vector2(window_size))
 	var content_scale: float = get_window().content_scale_factor
+	print(
+		"[SafeMarginDebug] win=",
+		window_size,
+		" viewport=",
+		viewport_size,
+		" safe=",
+		safe_area,
+		" scale=",
+		content_scale,
+		" base=",
+		base_resolution
+	)
 
 	# Safe-area margins in window pixels (what notch/cutout costs us).
-	var top_px: int = max(0, safe_area.position.y)
-	var left_px: int = max(0, safe_area.position.x)
-	var bottom_px: int = max(0, window_size.y - safe_area.end.y)
-	var right_px: int = max(0, window_size.x - safe_area.end.x)
+	var top_px: int = maxi(0, safe_area.position.y)
+	var left_px: int = maxi(0, safe_area.position.x)
+	var bottom_px: int = maxi(0, window_size.y - safe_area.end.y)
+	var right_px: int = maxi(0, window_size.x - safe_area.end.x)
 
 	# Convert to viewport-space coords for Control positioning (matches the
 	# factor used by SafeMarginContainer.gd).
@@ -119,7 +132,7 @@ func _refresh() -> void:
 	_unsafe_right.size = Vector2(right_vp, viewport_size.y - top_vp - bottom_vp)
 
 	# Scaled (logical) resolution is what UI layouts actually see.
-	var scaled := Vector2(window_size) / max(content_scale, 0.0001)
+	var scaled: Vector2 = Vector2(window_size) / maxf(content_scale, 0.0001)
 
 	_hud_label.text = (
 		"=== SAFE MARGIN DEBUG ===\n"

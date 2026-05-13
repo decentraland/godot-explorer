@@ -210,6 +210,7 @@ func _ready():
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
+		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
 
@@ -561,6 +562,7 @@ func set_safe_margin_debug_enable(enable: bool) -> void:
 	if enable:
 		_safe_margin_debug_overlay = (load("res://src/tool/safe_margin_debug_overlay.gd").new())
 		add_child(_safe_margin_debug_overlay)
+		print("[SafeMarginDebug] overlay instantiated")
 	else:
 		remove_child(_safe_margin_debug_overlay)
 		_safe_margin_debug_overlay.queue_free()
