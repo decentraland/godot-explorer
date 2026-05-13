@@ -107,11 +107,6 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
 
-    /// Paired shadow_mesh import-time pass. Default ON; opt out with
-    /// `--no-shadow-mesh` CLI flag or `shadow-mesh=false` deeplink param.
-    /// When on, scene GLTFs get `apply_shadow_mesh` applied at import,
-    /// wiring sibling collider meshes into each visible MI's
-    /// `ArrayMesh.shadow_mesh` slot.
     #[var]
     pub shadow_mesh_enabled: bool,
 
