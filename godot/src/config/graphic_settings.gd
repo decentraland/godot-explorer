@@ -66,7 +66,7 @@ static func connect_global_signal(root: Window):
 ## Returns the design base resolution from project settings, with axes swapped
 ## when the current window is portrait so that the design space follows the
 ## screen orientation (e.g. 1600x720 landscape -> 720x1600 portrait).
-static func _get_base_resolution(screen_size: Vector2) -> Vector2:
+static func get_base_resolution(screen_size: Vector2) -> Vector2:
 	var base_width: float = ProjectSettings.get_setting("display/window/size/viewport_width", 1600)
 	var base_height: float = ProjectSettings.get_setting("display/window/size/viewport_height", 720)
 	var base_is_portrait: bool = base_height > base_width
@@ -78,7 +78,7 @@ static func _get_base_resolution(screen_size: Vector2) -> Vector2:
 
 static func get_max_ui_zoom(root: Window) -> float:
 	var screen_size: Vector2 = root.size
-	var base_resolution: Vector2 = _get_base_resolution(screen_size)
+	var base_resolution: Vector2 = get_base_resolution(screen_size)
 
 	var x_factor: float = screen_size.x / base_resolution.x
 	var y_factor: float = screen_size.y / base_resolution.y
@@ -105,7 +105,7 @@ static func get_ui_zoom_available(root: Window) -> Dictionary:
 # Simple DPI-based scaling without aggressive resolution clamp
 static func apply_ui_zoom(root: Window):
 	var screen_size: Vector2 = root.size
-	var base_resolution: Vector2 = _get_base_resolution(screen_size)
+	var base_resolution: Vector2 = get_base_resolution(screen_size)
 	var scale_x = screen_size.x / base_resolution.x
 	var scale_y = screen_size.y / base_resolution.y
 
