@@ -531,7 +531,9 @@ func _apply_nickname_visibility() -> void:
 		is_avatar_shape and (current_name.is_empty() or current_name == "NPC")
 	)
 	var far_lod: bool = _lod_state == LODState.FAR
-	var should_hide := avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod or nametag_hidden
+	var should_hide := (
+		avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod or nametag_hidden
+	)
 	if should_hide:
 		nickname_quad.hide()
 		if nickname_viewport != null:
