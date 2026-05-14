@@ -6,6 +6,7 @@ var _avatar_name: String
 
 @onready var profile_picture: ProfilePicture = %ProfilePicture
 @onready var label_nickname: Label = %Nickname
+@onready var label_hash: Label = %Hash
 @onready var texture_rect_checkmark: TextureRect = %TextureRect_Checkmark
 
 
@@ -20,11 +21,15 @@ func setup(avatar: Avatar) -> void:
 	if _avatar_name.is_empty():
 		return
 
-	var display_name := _avatar_name
-	var has_claimed := !_avatar_name.contains("#")
-	var tag_pos := display_name.find("#")
+	var display_name = _avatar_name
+	var has_claimed = !_avatar_name.contains("#")
+	var tag_pos = display_name.find("#")
 	if tag_pos != -1:
+		label_hash.text = display_name.substr(tag_pos)
+		label_hash.visible = true
 		display_name = display_name.left(tag_pos)
+	else:
+		label_hash.visible = false
 	label_nickname.text = display_name
 
 	var color := DclAvatar.get_nickname_color(_avatar_name)
