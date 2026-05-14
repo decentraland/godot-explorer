@@ -1,6 +1,12 @@
 class_name Explorer
 extends Node
 
+# Friendship/connectivity subscribe retry policy: bounded exponential backoff
+# 5s, 10s, 20s, 40s, 60s, 60s — caps at ~3min total before giving up.
+const _SUBSCRIBE_RETRY_MAX_ATTEMPTS: int = 6
+const _SUBSCRIBE_RETRY_BASE_DELAY: float = 5.0
+const _SUBSCRIBE_RETRY_MAX_DELAY: float = 60.0
+
 var is_genesis_city: bool
 var player: Node3D = null
 var scene_title: String
@@ -24,6 +30,11 @@ var _last_outlined_avatar: Avatar = null
 var _is_loading: bool = true  # Start as loading
 var _ban_check_generation: int = 0
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
+var _subscription_reconnecting: bool = false  # Debounce for subscription_dropped
+var _resubscribe_timer: Timer = null
+## True between social-service init and player logout. Gates retry loops so they
+## exit cleanly when the session ends mid-await instead of re-subscribing after sign-out.
+var _session_active: bool = false
 var _gamepad_connected: bool = false
 
 ## Children of %UI hidden while "hide explorer UI" is on; restored when toggled off.
@@ -31,6 +42,9 @@ var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
 
 ## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
 var _session_hide_main_hud: bool = false
+
+## True when the debug panel was enabled from settings toggle.
+var _debug_panel_from_settings: bool = false
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
@@ -40,8 +54,7 @@ var _session_hide_main_hud: bool = false
 @onready var label_crosshair = %Label_Crosshair
 @onready var control_pointer_tooltip = %Control_PointerTooltip
 
-@onready var panel_chat = %Panel_Chat
-@onready var button_load_scenes: Button = %Button_LoadScenes
+@onready var chat_panel = %ChatPanel
 #@onready var url_popup = %UrlPopup
 #@onready var jump_in_popup = %JumpInPopup
 
@@ -63,20 +76,10 @@ var _session_hide_main_hud: bool = false
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
-@onready var h_box_container_top_left_menu: HBoxContainer = %HBoxContainer_TopLeftMenu
-@onready var margin_container_chat_panel: MarginContainer = %MarginContainer_ChatPanel
-@onready var v_box_container_left_side: VBoxContainer = %VBoxContainer_LeftSide
-@onready var notifications: Control = %Notifications
-
-@onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
-@onready var chat_safe_margin: SafeMarginContainer = %SafeMarginContainer_Chat
-
-@onready var chat_container: Control = %ChatContainer
 @onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
-@onready var chatbar: Control = %Chatbar
 @onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
 @onready var button_show_ui: Button = %Button_ShowUI
 @onready var margin_container_show_ui: MarginContainer = %MarginContainer_ShowUI
@@ -117,6 +120,9 @@ func get_params_from_cmd():
 
 
 func _ready():
+	# Out of the lobby — restore the relaxed 10s flush cadence (the lobby drops it to 2s).
+	Global.metrics.set_flush_interval(10.0)
+
 	GraphicSettings.apply_full_processor_mode()
 
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
@@ -128,14 +134,12 @@ func _ready():
 		label_fps.visible = false
 		label_ram.visible = false
 
-	Global.change_virtual_keyboard.connect(self._on_change_virtual_keyboard)
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 
 	# Connect notification bell button
 	Global.open_notifications_panel.connect(_show_notifications_panel)
-	Global.open_chat.connect(_on_global_open_chat)
 	Global.open_discover.connect(_on_discover_open)
 	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
@@ -146,9 +150,13 @@ func _ready():
 	# Connect settings panel button
 	Global.open_settings_panel.connect(_show_settings_panel)
 
+	# Connect debug panel signal from landscape settings panel
+	var settings_node = settings_panel.get_node("MarginContainer/Settings")
+	if settings_node:
+		settings_node.request_debug_panel.connect(_on_control_menu_request_debug_panel)
+
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
-	chatbar.share_place.connect(_share_place)
 	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
@@ -168,6 +176,9 @@ func _ready():
 	# Connect to loading state signals
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
+
+	Global.orientation_changed.connect(_on_orientation_changed)
+	Global.chat_write_mode_changed.connect(_on_chat_write_mode_changed)
 
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
@@ -197,9 +208,12 @@ func _ready():
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
 		add_child(test_spawn_and_move_avatars)
 
-	# --debug-panel (automatically enabled with --preview or preview deeplink)
-	if Global.cli.debug_panel or not Global.deep_link_obj.preview.is_empty():
-		_on_control_menu_request_debug_panel(true)
+	# --debug-panel flag acts like enabling from settings
+	if Global.cli.debug_panel:
+		_debug_panel_from_settings = true
+
+	# Show debug panel and reload button if in preview mode or --debug-panel
+	_update_debug_ui()
 
 	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
 	if Global.deep_link_obj.livekit_debug:
@@ -246,7 +260,6 @@ func _ready():
 	else:
 		mobile_ui.hide()
 
-	chat_container.hide()
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
@@ -269,6 +282,10 @@ func _ready():
 	Global.scene_runner.recreate_base_ui()
 	ui_safe_area.add_child(Global.scene_runner.base_ui)
 	ui_safe_area.move_child(Global.scene_runner.base_ui, 0)
+
+	ui_safe_area.resized.connect(self._push_scene_interactable_area)
+	get_window().size_changed.connect(self._push_scene_interactable_area)
+	_push_scene_interactable_area.call_deferred()
 
 	Global.scene_fetcher.notify_pending_loading_scenes.connect(
 		self._on_notify_pending_loading_scenes
@@ -355,7 +372,46 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 		Global.open_url(url)
 
 
+## Push the safe-area rect (in canvas/logical pixels) to the scene runner so
+## scenes get correct UiCanvasInformation.interactable_area on every resize,
+## including --emulate-ios / --emulate-android virtual margins.
+func _push_scene_interactable_area() -> void:
+	if not is_instance_valid(Global.scene_runner) or not is_instance_valid(ui_safe_area):
+		return
+	var canvas: Vector2 = ui_safe_area.size
+	var canvas_w: int = int(canvas.x)
+	var canvas_h: int = int(canvas.y)
+	if canvas_w <= 0 or canvas_h <= 0:
+		return
+
+	var rect := Rect2i(0, 0, canvas_w, canvas_h)
+
+	if Global.is_mobile() or Global.is_emulating_safe_area():
+		var window_size: Vector2i = DisplayServer.window_get_size()
+		if window_size.x > 0 and window_size.y > 0:
+			var safe: Rect2i = Global.get_safe_area()
+			var x_factor: float = canvas.x / float(window_size.x)
+			var y_factor: float = canvas.y / float(window_size.y)
+
+			var pos_x: int = clampi(roundi(safe.position.x * x_factor), 0, canvas_w)
+			var pos_y: int = clampi(roundi(safe.position.y * y_factor), 0, canvas_h)
+			var end_x: int = clampi(roundi(safe.end.x * x_factor), pos_x, canvas_w)
+			var end_y: int = clampi(roundi(safe.end.y * y_factor), pos_y, canvas_h)
+			rect = Rect2i(pos_x, pos_y, end_x - pos_x, end_y - pos_y)
+
+	Global.scene_runner.set_interactable_area(rect)
+
+
 func _on_player_logout():
+	# Mark session inactive first so any in-flight retry awaits exit on next check
+	_session_active = false
+
+	# Stop re-subscribe timer
+	if _resubscribe_timer != null:
+		_resubscribe_timer.stop()
+		_resubscribe_timer.queue_free()
+		_resubscribe_timer = null
+
 	# Stop notifications polling
 	NotificationsManager.stop_polling()
 
@@ -378,18 +434,40 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 
 func _async_initialize_social_service() -> void:
 	# Initialize the social service with player identity
-	# Note: Friendship subscriptions are handled by FriendsPanel when it opens/closes
 	Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 	# Connect to block update signal for real-time sync
 	if not Global.social_service.block_update_received.is_connected(_on_block_update_received):
 		Global.social_service.block_update_received.connect(_on_block_update_received)
 
+	# Guests have no wallet identity and no friend graph — skip the entire
+	# friendship/connectivity flow (subscriptions, retries, and the proactive timer).
+	if Global.player_identity.is_guest:
+		return
+
+	# Connect subscription_dropped for auto-reconnect
+	if not Global.social_service.subscription_dropped.is_connected(_async_on_subscription_dropped):
+		Global.social_service.subscription_dropped.connect(_async_on_subscription_dropped)
+
+	_session_active = true
+
 	# Fetch blocked users from server and initialize local cache (fire-and-forget)
 	_async_fetch_blocking_status()
 
 	# Subscribe to block updates for real-time sync across devices
 	Global.social_service.subscribe_to_block_updates()
+
+	# Subscribe to friendship and connectivity updates persistently
+	_async_subscribe_to_friendship_updates(true)
+	_async_subscribe_to_connectivity_updates()
+
+	# Start proactive re-subscribe timer (every 30s)
+	if _resubscribe_timer == null:
+		_resubscribe_timer = Timer.new()
+		_resubscribe_timer.wait_time = 30.0
+		_resubscribe_timer.autostart = true
+		_resubscribe_timer.timeout.connect(_async_proactive_resubscribe)
+		add_child(_resubscribe_timer)
 
 
 func _async_fetch_blocking_status() -> void:
@@ -411,6 +489,106 @@ func _on_block_update_received(address: String, is_blocked: bool) -> void:
 		Global.social_blacklist.add_blocked(address)
 	else:
 		Global.social_blacklist.remove_blocked(address)
+
+
+## Subscribe to friendship updates with bounded exponential backoff.
+## `initial_load`: on success, true triggers a full friends fetch; false a diff refresh
+## (used by reconnect-after-drop, which already has data on screen).
+func _async_subscribe_to_friendship_updates(initial_load: bool) -> void:
+	var attempt: int = 0
+	while _session_active:
+		var promise = Global.social_service.subscribe_to_updates()
+		await PromiseUtils.async_awaiter(promise)
+		if not _session_active:
+			return
+
+		if not promise.is_rejected():
+			friends_panel.set_streaming_subscription_failed(false)
+			if initial_load:
+				friends_panel.async_initial_friends_load()
+			else:
+				friends_panel.async_refresh_friends()
+			return
+
+		attempt += 1
+		push_error(
+			(
+				"[FriendsPanel.SubscriptionState] friendship subscribe rejected (attempt %d/%d): %s"
+				% [attempt, _SUBSCRIBE_RETRY_MAX_ATTEMPTS, PromiseUtils.get_error_message(promise)]
+			)
+		)
+		friends_panel.set_streaming_subscription_failed(true)
+
+		if attempt >= _SUBSCRIBE_RETRY_MAX_ATTEMPTS:
+			return
+
+		var delay: float = min(
+			_SUBSCRIBE_RETRY_BASE_DELAY * pow(2.0, attempt - 1), _SUBSCRIBE_RETRY_MAX_DELAY
+		)
+		await get_tree().create_timer(delay).timeout
+
+
+func _async_subscribe_to_connectivity_updates() -> void:
+	var attempt: int = 0
+	while _session_active:
+		var promise = Global.social_service.subscribe_to_connectivity_updates()
+		await PromiseUtils.async_awaiter(promise)
+		if not _session_active:
+			return
+
+		if not promise.is_rejected():
+			return
+
+		attempt += 1
+		push_error(
+			(
+				"[FriendsPanel.SubscriptionState] connectivity subscribe rejected (attempt %d/%d): %s"
+				% [attempt, _SUBSCRIBE_RETRY_MAX_ATTEMPTS, PromiseUtils.get_error_message(promise)]
+			)
+		)
+
+		if attempt >= _SUBSCRIBE_RETRY_MAX_ATTEMPTS:
+			return
+
+		var delay: float = min(
+			_SUBSCRIBE_RETRY_BASE_DELAY * pow(2.0, attempt - 1), _SUBSCRIBE_RETRY_MAX_DELAY
+		)
+		await get_tree().create_timer(delay).timeout
+
+
+func _async_proactive_resubscribe() -> void:
+	if not _session_active:
+		return
+	# Re-subscribe silently (cancels old subscription, creates new one)
+	var promise = Global.social_service.subscribe_to_updates()
+	await PromiseUtils.async_awaiter(promise)
+	if not _session_active:
+		return
+	if promise.is_rejected():
+		return  # Silent failure — subscription_dropped will handle recovery
+	# Diff-based refresh (no full rebuild)
+	friends_panel.async_refresh_friends()
+
+	# Also re-subscribe connectivity
+	Global.social_service.subscribe_to_connectivity_updates()
+	Global.social_service.subscribe_to_block_updates()
+
+
+func _async_on_subscription_dropped() -> void:
+	if not _session_active:
+		return
+	# Debounce: multiple streams may drop at once when connection dies
+	if _subscription_reconnecting:
+		return
+	_subscription_reconnecting = true
+	print("[FriendsPanel.SubscriptionState] subscription dropped — reconnecting in 2s")
+	await get_tree().create_timer(2.0).timeout
+	_subscription_reconnecting = false
+	if not _session_active:
+		return
+	Global.social_service.subscribe_to_block_updates()
+	_async_subscribe_to_friendship_updates(false)
+	_async_subscribe_to_connectivity_updates()
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -861,7 +1039,14 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 
 
 func _on_control_menu_request_debug_panel(enabled):
-	if enabled:
+	_debug_panel_from_settings = enabled
+	_update_debug_ui()
+
+
+func _update_debug_ui():
+	var should_show = _debug_panel_from_settings or _is_in_preview_realm()
+
+	if should_show:
 		if not is_instance_valid(debug_panel):
 			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
 			safe_margin_container_debug.add_child(debug_panel)
@@ -871,7 +1056,10 @@ func _on_control_menu_request_debug_panel(enabled):
 			debug_panel.queue_free()
 			debug_panel = null
 
-	Global.set_scene_log_enabled(enabled)
+	if is_instance_valid(debug_panel):
+		debug_panel.set_reload_scene_visible(should_show)
+
+	Global.set_scene_log_enabled(should_show)
 
 
 func _on_timer_fps_label_timeout():
@@ -945,32 +1133,29 @@ func _on_ui_root_gui_input(event: InputEvent):
 				Input.action_release("ia_pointer")
 
 
-func _on_chat_container_gui_input(event: InputEvent) -> void:
-	if not chat_container.visible:
-		return
-
-	var should_close := false
-	if event is InputEventScreenTouch:
-		should_close = event.pressed
-	elif event is InputEventMouseButton:
-		should_close = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
-
-	if should_close:
-		panel_chat.exit_chat()
-
-
 func _on_panel_profile_open_profile():
 	_open_own_profile()
 
 
 func _on_button_load_scenes_pressed() -> void:
 	Global.scene_fetcher._bypass_loading_check = true
-	button_load_scenes.hide()
+	chat_panel.hide_load_scenes_button()
+
+
+func _is_in_preview_realm() -> bool:
+	var preview_url := Global.deep_link_obj.preview
+	if not preview_url.is_empty():
+		return Global.realm.realm_string == preview_url
+	return Global.cli.preview_mode
+
+
+func _update_preview_ui(_in_preview: bool) -> void:
+	_update_debug_ui()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:
 	if pending:
-		button_load_scenes.show()
+		chat_panel.show_load_scenes_button()
 		if _first_time_refresh_warning:
 			if loading_ui.visible:
 				return
@@ -984,12 +1169,12 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 			)
 			_first_time_refresh_warning = false
 	else:
-		button_load_scenes.hide()
+		chat_panel.hide_load_scenes_button()
 
 
 func _open_profile(dcl_user_profile: DclUserProfile):
-	panel_chat.exit_chat()
-	profile_container.open(dcl_user_profile)
+	chat_panel.chat.exit_chat()
+	profile_container.async_open(dcl_user_profile)
 	release_mouse()
 
 
@@ -1080,60 +1265,6 @@ func _get_viewport_scale_factors() -> Vector2:
 	var x_factor: float = viewport_size.x / window_size.x
 	var y_factor: float = viewport_size.y / window_size.y
 	return Vector2(x_factor, y_factor)
-
-
-func _on_global_open_chat() -> void:
-	# When coming from Global.open_chat, start chat and handle UI
-	safe_margin_container_hud.hide()
-	chat_container.show()
-	panel_chat.async_start_chat()
-	release_mouse()
-
-
-func _on_panel_chat_on_open_chat() -> void:
-	# When coming from on_open_chat from panel_chat, only handle the UI
-	# DO NOT call async_start_chat() because it's already running (avoids recursion)
-	safe_margin_container_hud.hide()
-	chat_container.show()
-	# Hide navbar when chat opens to prevent it from showing when virtual keyboard appears
-	if Global.is_mobile():
-		navbar.set_manually_hidden(true)
-		if chat_safe_margin != null:
-			chat_safe_margin.refresh_margins()
-
-
-func _on_panel_chat_on_exit_chat() -> void:
-	if _session_hide_main_hud:
-		# Keep strict hidden HUD when profile/chat transitions occur while Hide UI is active.
-		chat_container.hide()
-		_set_explorer_hud_elements_visible(false)
-		return
-	safe_margin_container_hud.show()
-	chat_container.hide()
-	if Global.is_mobile():
-		mobile_ui.show()
-		# Restore navbar visibility when chat closes
-		navbar.set_manually_hidden(false)
-
-
-func _on_change_virtual_keyboard(virtual_keyboard_height: int):
-	var window_size: Vector2i = DisplayServer.window_get_size()
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var safe_window_height: float = max(float(window_size.y), 1.0)
-	var y_factor: float = viewport_size.y / safe_window_height
-	var keyboard_height_scaled: float = ceil(max(float(virtual_keyboard_height) * y_factor, 0.0))
-	virtual_keyboard_margin.custom_minimum_size.y = keyboard_height_scaled
-
-	if Global.is_mobile() and chat_safe_margin != null:
-		# Keep margin_left (notch); when keyboard is open, align width with keyboard by removing only right inset.
-		if virtual_keyboard_height > 0:
-			chat_safe_margin.add_theme_constant_override("margin_right", 0)
-		else:
-			chat_safe_margin.remove_theme_constant_override("margin_right")
-			chat_safe_margin.refresh_margins()
-
-	if virtual_keyboard_height == 0:
-		panel_chat.exit_chat()
 
 
 func _show_friends_panel() -> void:
@@ -1298,6 +1429,48 @@ func _async_run_ban_check() -> void:
 	if not allowed and generation == _ban_check_generation:
 		Global.modal_manager.ban_pre_check_active = true
 		Global.modal_manager.async_show_ban_pre_check_modal()
+
+
+func _on_orientation_changed(is_portrait: bool) -> void:
+	if is_portrait:
+		# Portrait: hide all HUD and scene UI, only chat visible
+		mobile_ui.hide()
+		emote_wheel.hide()
+		navbar.hide()
+		_set_scene_ui_visible(false)
+	else:
+		# Landscape: restore all UI
+		if Global.is_mobile():
+			mobile_ui.show()
+			_update_virtual_controls_visibility()
+		emote_wheel.show()
+		navbar._on_size_changed()
+		_set_scene_ui_visible(true)
+
+
+func _on_chat_write_mode_changed(is_writing: bool) -> void:
+	if Global.is_orientation_portrait():
+		return  # Portrait hides everything already
+	if is_writing:
+		# Landscape writing: hide all UI
+		mobile_ui.hide()
+		emote_wheel.hide()
+		navbar.hide()
+		_set_scene_ui_visible(false)
+	else:
+		# Landscape reading: restore all UI
+		if Global.is_mobile():
+			mobile_ui.show()
+			_update_virtual_controls_visibility()
+		emote_wheel.show()
+		navbar._on_size_changed()
+		_set_scene_ui_visible(true)
+
+
+func _set_scene_ui_visible(is_visible: bool) -> void:
+	var base_ui = Global.scene_runner.base_ui
+	if is_instance_valid(base_ui):
+		base_ui.visible = is_visible
 
 
 func _update_version_label() -> void:
@@ -1480,12 +1653,14 @@ func _on_change_scene_id(scene_id: int):
 	is_genesis_city = Realm.is_genesis_city(Global.realm.realm_url)
 	if scene_id == -1:
 		scene_title = ""
+		_update_preview_ui(false)
 		return
 	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)
 	if scene != null:
 		scene_title = scene.scene_entity_definition.get_title()
 	else:
 		scene_title = ""
+	_update_preview_ui(_is_in_preview_realm())
 
 
 func _on_change_parcel(_position: Vector2i):

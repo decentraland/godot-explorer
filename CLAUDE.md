@@ -118,6 +118,7 @@ cargo run -- export --target ios
   - `src/content/`: Asset loading and caching
 - **`godot/`**: Godot project
   - `src/decentraland_components/`: Custom Godot nodes for DCL features
+    - `avatar/impostor/`: Distance-based avatar LOD (billboard sprites for far avatars). Render handled by `MultiMeshInstance3D` + `Texture2DArray` in Rust `AvatarScene`; capture path uses scene-tree off-screen `AvatarPreview`.
   - `src/ui/`: UI components and HUD
   - `src/tool/`: Editor tools
 - **`src/`**: xtask build system

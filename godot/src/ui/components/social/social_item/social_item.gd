@@ -261,7 +261,7 @@ func _notify_other_components_of_change() -> void:
 
 func _sync_blacklist_ui(changed_avatar_id: String) -> void:
 	if social_data and social_data.address == changed_avatar_id:
-		call_deferred("_update_buttons")
+		call_deferred("_update_blocked_visibility_for_type")
 
 
 func _update_elements_visibility() -> void:

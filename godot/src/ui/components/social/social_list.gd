@@ -650,6 +650,34 @@ func async_add_request_by_address(address: String) -> void:
 		add_item_by_social_item_data(social_item_data, should_load)
 
 
+func sync_items(new_items: Array) -> void:
+	# Build dict of existing items by address
+	var existing: Dictionary = {}
+	for child in get_children():
+		if child == _nearby_sync_timer:
+			continue
+		if "social_data" in child and child.social_data != null:
+			existing[child.social_data.address] = child
+
+	# Build dict of incoming items by address
+	var incoming: Dictionary = {}
+	for item in new_items:
+		incoming[item.address] = item
+
+	# Remove items no longer in the list
+	for address in existing:
+		if not incoming.has(address):
+			existing[address].queue_free()
+
+	# Add items that are new
+	var should_load = _is_panel_visible()
+	for address in incoming:
+		if not existing.has(address):
+			add_item_by_social_item_data(incoming[address], should_load)
+
+	call_deferred("_update_list_size")
+
+
 func add_items_by_social_item_data(item_list, should_load: bool = true) -> void:
 	for item in item_list:
 		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()

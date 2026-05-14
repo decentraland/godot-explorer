@@ -138,6 +138,7 @@ func _ready():
 			i += 1
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
+	_setup_impostor_benchmark_button()
 	refresh_graphic_settings()
 
 	var j = 0
@@ -447,6 +448,7 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 
 
 func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
+	Global.metrics.track_click_button("HIDE_UI", "SETTINGS", "")
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.set_hide_main_hud_from_settings(toggled_on)
@@ -498,11 +500,6 @@ func _on_button_account_pressed() -> void:
 
 
 func _on_button_delete_account_pressed() -> void:
-	# The deletion popup lives inside the fullscreen menu, which is hidden while
-	# the side panel is up. Promote to the menu first so it renders in portrait;
-	# closing the right panel + orientation flip happen via the menu's own hooks.
-	if panel_mode:
-		Global.open_settings.emit()
 	Global.delete_account.emit()
 
 
@@ -623,6 +620,22 @@ func _on_button_report_content_pressed() -> void:
 		url += "?" + "&".join(params)
 
 	Global.open_url(url)
+
+
+func _setup_impostor_benchmark_button() -> void:
+	# Benchmark scene fetches 200 catalyst profiles and runs a 30s+ stress
+	# pass — gate it behind the developer tab (which is itself hidden in
+	# production builds) so end users don't trip it from the graphics tab.
+	if Global.is_production():
+		return
+	var bench_button := Button.new()
+	bench_button.name = "Button_RunImpostorBenchmark"
+	bench_button.text = "Run Avatar Impostor Benchmark"
+	bench_button.pressed.connect(
+		func() -> void:
+			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
+	)
+	container_advanced.add_child(bench_button)
 
 
 func _setup_dynamic_graphics() -> void:

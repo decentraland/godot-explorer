@@ -35,14 +35,15 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     // TODO: resolve the current transform
                 }
             } else if let Some(new_value) = new_value {
-                let mut avatar_attach_node = if let Some(avatar_attach_node) = existing {
-                    avatar_attach_node
+                let (mut avatar_attach_node, is_new) = if let Some(avatar_attach_node) = existing {
+                    (avatar_attach_node, false)
                 } else {
-                    godot::tools::load::<PackedScene>(
+                    let node = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar_attach.tscn",
                     )
                     .instantiate()
-                    .unwrap()
+                    .unwrap();
+                    (node, true)
                 };
 
                 avatar_attach_node.set(
@@ -52,10 +53,11 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
                 avatar_attach_node.set("attach_point", &Variant::from(new_value.anchor_point_id));
 
-                avatar_attach_node.set_name("AvatarAttach");
-
-                node_3d.add_child(&avatar_attach_node.clone());
-                avatar_attach_node.call("init", &[]);
+                if is_new {
+                    avatar_attach_node.set_name("AvatarAttach");
+                    node_3d.add_child(&avatar_attach_node.clone());
+                    avatar_attach_node.call("init", &[]);
+                }
             }
         }
     }

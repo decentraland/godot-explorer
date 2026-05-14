@@ -72,6 +72,10 @@ func _show_avatar() -> void:
 	_avatar_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_avatar_preview.stretch = true
 	_avatar_preview.hide_name = true
+	_avatar_preview.can_move = true
+	_avatar_preview.can_drag = false
+	_avatar_preview.preview_margin_top = 64
+	_avatar_preview.preview_margin_bottom = 46
 	avatar_container.add_child(_avatar_preview)
 	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if profile != null:
@@ -91,8 +95,9 @@ func _refresh_content() -> void:
 	if profile == null:
 		return
 	var content = draggable_bottom_sheet.get_content_instance()
-	if content and content.has_method("refresh"):
-		content.refresh(profile)
+	if content and content.has_method("async_refresh"):
+		# Fire-and-forget: no await needed, the refresh runs in the background
+		content.async_refresh(profile)
 
 
 func _refresh_content_from_mutable() -> void:
@@ -100,8 +105,9 @@ func _refresh_content_from_mutable() -> void:
 	if profile == null:
 		return
 	var content = draggable_bottom_sheet.get_content_instance()
-	if content and content.has_method("refresh"):
-		content.refresh(profile)
+	if content and content.has_method("async_refresh"):
+		# Fire-and-forget: no await needed, the refresh runs in the background
+		content.async_refresh(profile)
 
 
 func _on_save_failed() -> void:

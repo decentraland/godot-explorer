@@ -62,6 +62,14 @@ pub fn auth_api_requests() -> String {
     }
 }
 
+// Asset Bundle Registry
+pub fn asset_bundle_registry_profiles() -> String {
+    format!(
+        "https://asset-bundle-registry.decentraland.{}/profiles",
+        suffix(ServiceGroup::Catalyst)
+    )
+}
+
 // Catalyst
 pub fn main_realm() -> String {
     format!(
@@ -175,6 +183,12 @@ pub fn mobile_events_api() -> String {
 pub fn account_deletion() -> String {
     format!(
         "https://mobile-bff.decentraland.{}/deletion",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+pub fn app_versions() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/app-versions",
         suffix(ServiceGroup::MobileBff)
     )
 }

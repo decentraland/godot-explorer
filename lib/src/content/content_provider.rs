@@ -1320,6 +1320,7 @@ impl ContentProvider {
                     original_size,
                     image,
                     texture,
+                    failed: false,
                 });
 
                 then_promise(get_promise, Ok(Some(texture_entry.to_variant())));
@@ -1360,25 +1361,26 @@ impl ContentProvider {
         promise
     }
 
-    /// Fetches a texture by hash, bypassing the optimization pipeline.
-    /// This is useful for UI textures that need the original quality.
-    /// Uses a separate cache key (`{hash}_original`) to avoid conflicts with optimized versions.
-    pub fn fetch_texture_by_hash_original(
+    /// Fetches a texture by hash with an explicit quality, bypassing the optimization
+    /// pipeline. Useful for UI textures that need a specific (usually Source) quality.
+    /// Cache key: `{hash}_q{N}` — shared with `fetch_texture_by_url_with_quality`.
+    pub fn fetch_texture_by_hash_with_quality(
         &mut self,
         file_hash_godot: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
+        quality: TextureQuality,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
 
         // Validate file_hash is not empty to prevent "Is a directory" errors
         if file_hash.is_empty() {
             tracing::warn!(
-                "fetch_texture_by_hash_original: empty file_hash, returning rejected promise"
+                "fetch_texture_by_hash_with_quality: empty file_hash, returning rejected promise"
             );
             return Promise::from_rejected("Empty texture hash".to_string());
         }
 
-        let cache_key = format!("{}_original", file_hash);
+        let cache_key = format!("{}_q{}", file_hash, quality.to_i32());
 
         if let Some(promise) = self.get_cached_promise(&cache_key) {
             return promise;
@@ -1386,18 +1388,20 @@ impl ContentProvider {
 
         // Handle URL-based textures
         if file_hash.starts_with("http") {
-            let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash_u32());
-            let promise =
-                self.fetch_texture_by_url_original(GString::from(&new_file_hash), file_hash_godot);
+            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
+            let promise = self.fetch_texture_by_url_with_quality(
+                GString::from(&new_file_hash),
+                file_hash_godot,
+                quality,
+            );
             self.cache_promise(cache_key, &promise);
             return promise;
         }
 
         let (promise, get_promise) = Promise::make_to_async();
 
-        // Create context with Source quality to bypass resize optimization
         let mut ctx = self.get_context();
-        ctx.texture_quality = TextureQuality::Source;
+        ctx.texture_quality = quality;
 
         let url = format!(
             "{}{}",
@@ -1411,7 +1415,7 @@ impl ContentProvider {
 
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id, "texture_original");
+            report_resource_start(&hash_id, "texture_with_quality");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1434,23 +1438,24 @@ impl ContentProvider {
         promise
     }
 
-    /// Fetches a texture by URL, bypassing the optimization pipeline.
-    /// Uses Source quality to preserve original texture resolution.
-    pub fn fetch_texture_by_url_original(
+    /// Fetches a texture by URL with an explicit quality, bypassing the global texture
+    /// quality setting. From GDScript, use `DclConfig.TEXTURE_QUALITY_LOW/MEDIUM/HIGH/SOURCE`.
+    #[func]
+    pub fn fetch_texture_by_url_with_quality(
         &mut self,
         file_hash: GString,
         url: GString,
+        quality: TextureQuality,
     ) -> Gd<Promise> {
-        let file_hash = file_hash.to_string();
+        let file_hash = format!("{}_q{}", file_hash, quality.to_i32());
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;
         }
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
 
-        // Create context with Source quality to bypass resize optimization
         let mut content_provider_context = self.get_context();
-        content_provider_context.texture_quality = TextureQuality::Source;
+        content_provider_context.texture_quality = quality;
 
         let sent_file_hash = file_hash.clone();
 
@@ -1463,7 +1468,7 @@ impl ContentProvider {
         let url_for_error = url.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id, "texture_url_original");
+            report_resource_start(&hash_id, "texture_url_with_quality");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1486,47 +1491,13 @@ impl ContentProvider {
         promise
     }
 
+    /// Fetches a texture by URL using the global texture-quality setting.
+    /// Thin wrapper over `fetch_texture_by_url_with_quality`, so it shares cache slots
+    /// with explicit-quality fetches at the same quality (cache key: `{hash}_q{N}`).
     #[func]
     pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
-        let file_hash = file_hash.to_string();
-        if let Some(promise) = self.get_cached_promise(&file_hash) {
-            return promise;
-        }
-        let url = url.to_string();
-        let (promise, get_promise) = Promise::make_to_async();
-        let content_provider_context = self.get_context();
-        let sent_file_hash = file_hash.clone();
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
-        #[cfg(feature = "use_resource_tracking")]
-        let url_for_error = url.clone();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id, "texture_url");
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &format!("url={} error={}", url_for_error, error));
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cache_promise(file_hash, &promise);
-
-        promise
+        let quality = DclConfig::static_get_texture_quality();
+        self.fetch_texture_by_url_with_quality(file_hash, url, quality)
     }
 
     #[func]
@@ -2073,6 +2044,99 @@ impl ContentProvider {
                     e
                 );
             }
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            then_promise(get_promise, result);
+        });
+
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
+    /// Fetches an avatar's body snapshot texture by user ID.
+    /// Mirrors `fetch_avatar_texture` but reads `snapshots.body_url` instead of `face256`.
+    /// The result is cached with key `avatar_body_texture_{user_id_hex}`.
+    #[func]
+    pub fn fetch_avatar_body_texture(&mut self, user_id: GString) -> Gd<Promise> {
+        let user_id_str = user_id.to_string();
+
+        let (user_id_h160, cache_key) = match user_id_str.as_str().as_h160() {
+            Some(h160) => (Some(h160), format!("avatar_body_texture_{:x}", h160)),
+            None => (None, format!("avatar_body_texture_invalid_{}", user_id_str)),
+        };
+
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            return promise;
+        }
+
+        let Some(user_id_h160) = user_id_h160 else {
+            let rejected_promise = Promise::from_rejected("Invalid user id".to_string());
+            self.cache_promise(cache_key, &rejected_promise);
+            return rejected_promise;
+        };
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let (lambda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        TokioRuntime::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let profile_result = request_lambda_profile(
+                user_id_h160,
+                lambda_server_base_url.as_str(),
+                profile_base_url.as_str(),
+                http_requester,
+            )
+            .await;
+
+            let profile = match profile_result {
+                Ok(profile) => profile,
+                Err(e) => {
+                    loaded_resources.fetch_add(1, Ordering::Relaxed);
+                    then_promise(
+                        get_promise,
+                        Err(anyhow::anyhow!("Failed to fetch profile: {}", e)),
+                    );
+                    return;
+                }
+            };
+
+            let Some(snapshots) = profile.content.avatar.snapshots.as_ref() else {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no snapshots")),
+                );
+                return;
+            };
+
+            let body_url_raw = snapshots
+                .body_url
+                .clone()
+                .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.body));
+
+            if body_url_raw.is_empty()
+                || body_url_raw.ends_with('/')
+                || body_url_raw == profile.base_url
+            {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no body snapshot")),
+                );
+                return;
+            }
+
+            let texture_hash = format!("avatar_body_{:x}", user_id_h160);
+
+            let result = load_image_texture(body_url_raw, texture_hash, ctx).await;
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
             then_promise(get_promise, result);

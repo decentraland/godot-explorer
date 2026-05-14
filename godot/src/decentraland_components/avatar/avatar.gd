@@ -3,6 +3,9 @@ extends DclAvatar
 
 signal avatar_loaded
 
+# LOD state: FULL (close), MID (15-25m), CROSSFADE (25-30m), FAR (>=30m)
+enum LODState { FULL, MID, CROSSFADE, FAR }
+
 # Debug to store each avatar loaded in user://avatars
 const DEBUG_SAVE_AVATAR_DATA = false
 
@@ -93,6 +96,42 @@ var _active_extra_bone_indices: Array[int] = []
 var _free_bone_pool: Array[int] = []
 var _stale_bone_counter: int = 0
 
+var _lod_state: int = LODState.FULL
+var _impostor_layer: int = -1
+var _lod_phase: int = 0
+var _mesh_lod_visibility_captured: bool = false
+# Written by AvatarLODCoordinator each tick. Caps the natural distance LOD so
+# only the N closest avatars stay FULL, the next M MID/CROSSFADE, rest FAR.
+var _lod_rank_cap: int = LODState.FULL
+# Set by AvatarLODCoordinator: true when this avatar's rank is beyond the real
+# impostor layer cap. Such avatars borrow another slot's texture and render
+# fully tinted (black silhouette). Tracks the active slot's mode so a flip
+# triggers a clean reallocation.
+var _use_overflow_impostor: bool = false
+var _impostor_layer_is_overflow: bool = false
+# Set by AvatarLODCoordinator: true when the avatar's bounding sphere is fully
+# outside the camera frustum. Off-frustum avatars release their impostor slot
+# entirely — no multimesh instance, no real layer, no capture. Disk cache makes
+# re-entry fast (texture rehydrates from PNG without recapture).
+var _off_frustum: bool = false
+# Latched while off-frustum: the AnimationTree was paused regardless of LOD
+# state, so when we come back in-frustum we know we have to restore the
+# state-driven anim setup (active/manual/throttle).
+var _anim_frozen_off_frustum: bool = false
+# Wall-clock ms when the freeze started. Used to advance the AnimationTree by
+# the elapsed time on re-entry so the emote phase matches what it would have
+# been had we not paused — single one-shot recompute, not a frame-by-frame
+# catch-up, so the CPU saving from the freeze is preserved.
+var _anim_freeze_start_ms: int = 0
+
+# Skinning throttle (MID/CROSSFADE only): drive AnimationTree manually and
+# advance every N frames so the skeleton bones update at ~20fps instead of
+# ~60fps. Imperceptible at 15-30m distance and a sizeable CPU saving when
+# many avatars share the screen.
+var _anim_throttle_acc: float = 0.0
+var _anim_throttle_counter: int = 0
+var _anim_throttle_active: bool = false
+
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
 
@@ -111,6 +150,16 @@ var _stale_bone_counter: int = 0
 
 @onready var glider_prop: Node3D = %GliderProp
 @onready var audio_player_double_jump: AudioStreamPlayer3D = %AudioPlayer_DoubleJump
+
+# Cache of toon ShaderMaterials keyed by source BaseMaterial3D's instance_id.
+# Lets avatars wearing the same wearable share a single ShaderMaterial across
+# the whole scene. Skin/hair surfaces clone-on-write in apply_color_and_facial
+# so per-avatar tints don't leak.
+static var _toon_material_cache: Dictionary = {}
+
+# Issue #1945: matches a Blender-style `_<digits>$` duplicate-import suffix on a
+# bone name (e.g. `Avatar_Hips_2`). Compiled once and shared across instances.
+static var _bone_suffix_regex: RegEx = RegEx.create_from_string("^(.*)_\\d+$")
 
 
 func _ready():
@@ -147,9 +196,16 @@ func _ready():
 	Global.on_chat_message.connect(on_chat_message)
 	_apply_nickname_visibility()
 
+	_lod_phase = int(self.unique_id) % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES
+	AvatarLODCoordinator.register(self)
+
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
 	click_area.set_meta("avatar_id", avatar_id)
+
+
+func _exit_tree() -> void:
+	AvatarLODCoordinator.unregister(self)
 
 	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
 	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
@@ -180,6 +236,7 @@ func on_chat_message(address: String, message: String, _timestamp: float):
 	if avatar_id != address:
 		return
 	nickname_ui.async_show_message(message)
+	_request_nickname_redraw()
 
 
 func _input(event):
@@ -205,6 +262,9 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 	for modifier in area.avatar_modifiers:
 		if modifier == 0:  # hide avatar
 			hide()
+			_hide_impostor_render()
+			_set_click_area_enabled(false)
+			passport_disabled = true
 		elif modifier == 1:  # disable passport
 			passport_disabled = true
 
@@ -213,12 +273,45 @@ func set_hidden(value):
 	hidden = value
 	if hidden:
 		hide()
+		_hide_impostor_render()
 		# Disable click detection so blocked/hidden avatars can't be interacted with
 		_set_click_area_enabled(false)
 	else:
 		try_show()
 		# Re-enable click detection
 		_set_click_area_enabled(true)
+
+
+# The impostor MultiMesh lives on AvatarScene (parent), not on the Avatar node,
+# so hide()/visible=false on the avatar doesn't affect it. Force its slot's
+# fade_alpha to 0 so the GPU discards the fragment until LOD recomputes.
+func _hide_impostor_render() -> void:
+	if _impostor_layer >= 0 and Global.avatars != null:
+		Global.avatars.set_impostor_state(get_instance_id(), 0.0, 0.0, 0.0)
+
+
+# Stable identity key for the disk-backed impostor texture cache. The hash
+# combines eth address (for cross-session stability) with the visual identity
+# (body + wearables + colors), so a user that changes outfit gets a fresh
+# capture instead of pulling stale pixels from the previous look's PNG. NPCs
+# fall through the same path with an empty eth segment, so visually-identical
+# NPCs share a cache entry.
+func _get_impostor_cache_key() -> String:
+	if avatar_data == null:
+		return ""
+	var parts := PackedStringArray()
+	parts.append(avatar_id.to_lower() if avatar_id != "" else "")
+	parts.append(avatar_data.get_body_shape())
+	var wearables = avatar_data.get_wearables()
+	if wearables is Array:
+		var sorted_wearables: Array = wearables.duplicate()
+		sorted_wearables.sort()
+		for w in sorted_wearables:
+			parts.append(w)
+	parts.append(str(avatar_data.get_skin_color()))
+	parts.append(str(avatar_data.get_eyes_color()))
+	parts.append(str(avatar_data.get_hair_color()))
+	return "|".join(parts).sha1_text()
 
 
 func _set_click_area_enabled(enabled: bool) -> void:
@@ -231,6 +324,7 @@ func _set_click_area_enabled(enabled: bool) -> void:
 func _unset_avatar_modifier_area():
 	if not hidden:
 		show()
+		_set_click_area_enabled(true)
 	passport_disabled = false
 
 
@@ -261,6 +355,16 @@ func async_update_avatar(
 
 	# Handle AvatarShape-specific config (NPCs from scene SDK)
 	is_avatar_shape = avatar_shape_config.get("is_avatar_shape", false)
+
+	# Adopt the AvatarShape.id when it's an eth address so the impostor capturer
+	# can route through the catalyst body-texture path
+	# (`avatar_id.begins_with("0x")`) instead of an off-screen render.
+	if is_avatar_shape:
+		var shape_id: String = avatar_shape_config.get("id", "")
+		if shape_id.begins_with("0x") and avatar_id != shape_id:
+			avatar_id = shape_id
+			if click_area:
+				click_area.set_meta("avatar_id", avatar_id)
 
 	# Update metadata for raycast detection
 	if click_area:
@@ -309,6 +413,8 @@ func async_update_avatar(
 				nickname_ui.nickname = new_avatar_name
 				nickname_ui.tag = ""
 			nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
+			# Re-trigger UPDATE_ONCE so the SubViewport repaints with the new text
+			_apply_nickname_visibility()
 		return
 
 	set_avatar_data(new_avatar)
@@ -389,15 +495,46 @@ func set_force_hide_name(value: bool) -> void:
 		_apply_nickname_visibility()
 
 
+## Bump the nickname SubViewport to redraw exactly one frame. UPDATE_ONCE
+## auto-resets to UPDATE_DISABLED after rendering, so callers must invoke
+## this every time something nickname-related changes — `_apply_nickname_visibility`
+## bumps once on show, individual setters (chat message, mic, etc.) bump as
+## state changes, and `_process` bumps after the viewport resizes.
+##
+## Gate on `nickname_quad.visible` (the source of truth for "is this nickname
+## actually being shown") rather than `render_target_update_mode == UPDATE_DISABLED`
+## — the latter is also the post-render state after UPDATE_ONCE auto-resets, so
+## it can't distinguish "explicitly hidden" from "just finished rendering one frame".
+func _request_nickname_redraw() -> void:
+	if nickname_viewport == null or nickname_quad == null:
+		return
+	if not nickname_quad.visible:
+		return
+	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
 func _apply_nickname_visibility() -> void:
 	if nickname_quad == null:
 		return
-	# Hide nickname for AvatarShapes (NPCs) - they show only "NPC" by default which is not useful
-	var should_hide := is_avatar_shape or hide_name or _force_hide_name
+	# Hide nickname for AvatarShapes only when the scene didn't set a real name
+	# (the proto default is "NPC", which is noise). Also hide on FAR LOD —
+	# unreadable at impostor distance and each quad is an extra draw call.
+	var current_name: String = get_avatar_name()
+	var avatar_shape_has_no_name: bool = (
+		is_avatar_shape and (current_name.is_empty() or current_name == "NPC")
+	)
+	var far_lod: bool = _lod_state == LODState.FAR
+	var should_hide := avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod
 	if should_hide:
 		nickname_quad.hide()
+		if nickname_viewport != null:
+			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	else:
 		nickname_quad.show()
+		if nickname_viewport != null:
+			# UPDATE_ONCE: redraw one frame here, then the SubViewport idles until
+			# something nickname-related changes (see _request_nickname_redraw).
+			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
@@ -407,6 +544,9 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 
 	if finish_loading:
 		apply_color_and_facial()
+		if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Global.avatars != null:
+			Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
+			ImpostorCapturer.request_capture(self)
 
 
 func async_fetch_wearables_dependencies():
@@ -499,6 +639,25 @@ func _recycle_extra_wearable_bones() -> void:
 	_active_extra_bone_indices.clear()
 
 
+# Resolves a wearable bone name to its counterpart in body_shape_skeleton_3d,
+# stripping a Blender-style duplicate-import suffix (`_2`, `_001`, ...) only
+# when the un-suffixed name already exists. Returns the original name otherwise
+# so genuine extra bones (ADR-316 spring bones) still get merged as new bones.
+# Fixes #1945: wearables exported from Blender after re-importing the DCL armature
+# carry `Avatar_Hips_2` etc. — without this collapse they merge as a parallel,
+# un-animated leg/spine chain that stays in rest pose during emotes/jump/glide.
+func _resolve_to_base_bone_name(bone_name: String) -> String:
+	if body_shape_skeleton_3d.find_bone(bone_name) != -1:
+		return bone_name
+	var m := _bone_suffix_regex.search(bone_name)
+	if m == null:
+		return bone_name
+	var stripped := m.get_string(1)
+	if body_shape_skeleton_3d.find_bone(stripped) != -1:
+		return stripped
+	return bone_name
+
+
 # Copies bones that exist in the wearable's Skeleton3D but not in body_shape_skeleton_3d
 # (typically ADR-316 spring bones for hair, earrings, capes, etc.). Parents are added
 # before children so parent-by-name resolution always succeeds. Without this, mesh
@@ -514,6 +673,11 @@ func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
 	var missing: Array = []  # Array of [depth, wearable_idx, name]
 	for i in wearable_bone_count:
 		var bone_name = wearable_skel.get_bone_name(i)
+		# Skip if the bone already exists in the base, including under its
+		# de-suffixed name. The wearable's `Avatar_Hips_2` collapses onto the
+		# animated `Avatar_Hips` instead of being merged as a parallel root.
+		if _resolve_to_base_bone_name(bone_name) != bone_name:
+			continue
 		if body_shape_skeleton_3d.find_bone(bone_name) != -1:
 			continue
 		var depth = 0
@@ -542,12 +706,16 @@ func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
 		body_shape_skeleton_3d.reset_bone_pose(new_idx)
 		_active_extra_bone_indices.push_back(new_idx)
 		# Always reset parent: a recycled slot may have been linked to a stale
-		# parent from its previous use.
+		# parent from its previous use. Resolve through the same de-suffix path
+		# so a spring bone whose parent is `Avatar_Spine_2` reparents onto the
+		# base `Avatar_Spine` instead of leaving as root.
 		var parent_wearable_idx = wearable_skel.get_bone_parent(wearable_idx)
 		var parent_base_idx = -1
 		if parent_wearable_idx != -1:
 			var parent_name = wearable_skel.get_bone_name(parent_wearable_idx)
-			parent_base_idx = body_shape_skeleton_3d.find_bone(parent_name)
+			parent_base_idx = body_shape_skeleton_3d.find_bone(
+				_resolve_to_base_bone_name(parent_name)
+			)
 			if parent_base_idx == -1:
 				push_warning(
 					(
@@ -562,6 +730,10 @@ func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
 # Godot resolves named binds against the attached skeleton at runtime, so once the
 # mesh is reparented to body_shape_skeleton_3d (which may have been extended with
 # extra wearable bones) every joint resolves correctly, including ADR-316 spring bones.
+# Issue #1945: when the wearable was exported with duplicate-suffixed bones
+# (`Avatar_Hips_2`, `Avatar_LeftLeg_2`, ...), the de-suffix lookup retargets the
+# binds onto the animated base bones — without it the mesh tracks merged but
+# inert `_2` clones and stays in rest pose during emotes/jump/glide.
 func _rebind_skin_by_name(mesh: MeshInstance3D, wearable_skel: Skeleton3D) -> void:
 	if mesh.skin == null:
 		return
@@ -570,7 +742,8 @@ func _rebind_skin_by_name(mesh: MeshInstance3D, wearable_skel: Skeleton3D) -> vo
 	for i in skin.get_bind_count():
 		var bone_idx = skin.get_bind_bone(i)
 		if bone_idx >= 0 and bone_idx < wearable_bone_count:
-			skin.set_bind_name(i, wearable_skel.get_bone_name(bone_idx))
+			var bone_name = wearable_skel.get_bone_name(bone_idx)
+			skin.set_bind_name(i, _resolve_to_base_bone_name(bone_name))
 	mesh.skin = skin
 
 
@@ -608,12 +781,18 @@ func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
 
 
 func apply_toon_material(node_to_apply: Node):
-	if node_to_apply is MeshInstance3D:
-		for surface_idx in range(node_to_apply.mesh.get_surface_count()):
-			var mat = node_to_apply.mesh.surface_get_material(surface_idx)
-			if mat != null and mat is BaseMaterial3D:
-				var toon_mat = _convert_to_toon(mat)
-				node_to_apply.mesh.surface_set_material(surface_idx, toon_mat)
+	if not (node_to_apply is MeshInstance3D) or node_to_apply.mesh == null:
+		return
+	for surface_idx in range(node_to_apply.mesh.get_surface_count()):
+		var mat = node_to_apply.mesh.surface_get_material(surface_idx)
+		if mat == null or not (mat is BaseMaterial3D):
+			continue
+		var key: int = mat.get_instance_id()
+		var cached = _toon_material_cache.get(key)
+		if cached == null or not is_instance_valid(cached):
+			cached = _convert_to_toon(mat)
+			_toon_material_cache[key] = cached
+		node_to_apply.mesh.surface_set_material(surface_idx, cached)
 
 
 func async_load_wearables():
@@ -780,14 +959,11 @@ func async_load_wearables():
 		if should_hide:
 			child.hide()
 
-	var meshes: Array = []
 	for child in body_shape_skeleton_3d.get_children():
 		if child.visible and child is MeshInstance3D:
+			# Shallow-duplicate the Mesh so per-avatar surface_set_material calls
+			# don't leak across avatars; materials referenced inside stay shared.
 			child.mesh = child.mesh.duplicate_deep(Resource.DEEP_DUPLICATE_NONE)
-			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
-
-	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
-	await PromiseUtils.async_awaiter(promise)
 
 	apply_toon_material(body_shape_skeleton_3d)
 	for child in body_shape_skeleton_3d.get_children():
@@ -821,6 +997,12 @@ func async_load_wearables():
 
 	emote_controller.clean_unused_emotes()
 
+	# Refresh LOD-related state since meshes were re-created.
+	_mesh_lod_visibility_captured = false
+	if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Global.avatars != null:
+		Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
+		ImpostorCapturer.request_capture(self)
+
 	avatar_ready = true
 	avatar_loaded.emit()
 
@@ -836,19 +1018,25 @@ func apply_color_and_facial():
 		if child.visible and child is MeshInstance3D:
 			for i in range(child.get_surface_override_material_count()):
 				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
+				var is_skin: bool = mat_name.find("skin") != -1
+				var is_hair: bool = mat_name.find("hair") != -1
 				var material = child.mesh.surface_get_material(i)
 
-				if material is ShaderMaterial:
-					if mat_name.find("skin") != -1:
+				if material is ShaderMaterial and (is_skin or is_hair):
+					# Cached materials are shared between avatars. Clone before
+					# writing the per-avatar tint so it doesn't leak.
+					material = material.duplicate()
+					child.mesh.surface_set_material(i, material)
+					if is_skin:
 						material.set_shader_parameter("albedo_color", avatar_data.get_skin_color())
-					elif mat_name.find("hair") != -1:
+					else:
 						material.set_shader_parameter("albedo_color", avatar_data.get_hair_color())
 				elif material is StandardMaterial3D:
 					material.metallic = 0
 					material.metallic_specular = 0
-					if mat_name.find("skin") != -1:
+					if is_skin:
 						material.albedo_color = avatar_data.get_skin_color()
-					elif mat_name.find("hair") != -1:
+					elif is_hair:
 						material.roughness = 1
 						material.albedo_color = avatar_data.get_hair_color()
 
@@ -903,12 +1091,234 @@ func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color,
 	mesh.mesh.surface_set_material(0, current_material)
 
 
+func _maybe_update_lod() -> void:
+	if not avatar_ready or is_local_player or hidden:
+		return
+	if Engine.get_frames_drawn() % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES != _lod_phase:
+		return
+	_update_lod()
+
+
+func _update_lod() -> void:
+	# Bypass: when the impostor system is globally disabled, force FULL so
+	# the benchmark's OFF phase measures full-mesh rendering with zero
+	# impostor capture/eviction work.
+	var config = Global.get_config()
+	if config != null and not config.avatar_impostors_enabled:
+		if _lod_state != LODState.FULL:
+			_apply_lod_state(LODState.FULL, 1.0, 0.0, 0.0, 0.0)
+		return
+
+	# Defense for any path that hides the avatar without going through the
+	# helpers (set_hidden / modifier area). Don't change LOD state — the
+	# avatar's mesh is already invisible via the parent hide(); we just need
+	# the impostor slot off.
+	if not visible:
+		_hide_impostor_render()
+		return
+
+	var camera = get_viewport().get_camera_3d()
+	if camera == null:
+		return
+
+	var dist: float = camera.global_position.distance_to(global_position)
+
+	var new_state: int = _lod_state
+	var dither_alpha: float = 1.0
+	var fade_alpha: float = 0.0
+	var tint_strength: float = 0.0
+
+	if dist < AvatarImpostorConfig.MID_RANGE_NEAR:
+		new_state = LODState.FULL
+	elif dist < AvatarImpostorConfig.DISTANCE_NEAR:
+		new_state = LODState.MID
+	elif dist < AvatarImpostorConfig.DISTANCE_FAR:
+		new_state = LODState.CROSSFADE
+		var span: float = AvatarImpostorConfig.DISTANCE_FAR - AvatarImpostorConfig.DISTANCE_NEAR
+		var t: float = (dist - AvatarImpostorConfig.DISTANCE_NEAR) / span
+		dither_alpha = 1.0 - t
+		fade_alpha = t
+	else:
+		new_state = LODState.FAR
+		dither_alpha = 0.0
+		fade_alpha = 1.0
+		var tint_span: float = (
+			AvatarImpostorConfig.TINT_FULL_DISTANCE - AvatarImpostorConfig.DISTANCE_FAR
+		)
+		tint_strength = clamp((dist - AvatarImpostorConfig.DISTANCE_FAR) / tint_span, 0.0, 1.0)
+
+	# Concurrency cap: only the closest N stay FULL, the next M stay
+	# MID/CROSSFADE, the rest are demoted to FAR. Applies to emoters too — mass
+	# emote scenarios shouldn't bypass the budget.
+	if _lod_rank_cap > new_state:
+		new_state = _lod_rank_cap
+		if new_state == LODState.FAR:
+			dither_alpha = 0.0
+			fade_alpha = 1.0
+		else:
+			dither_alpha = 1.0
+			fade_alpha = 0.0
+
+	_apply_lod_state(new_state, dither_alpha, fade_alpha, tint_strength, dist)
+	_apply_off_frustum_anim_freeze()
+
+
+func _apply_lod_state(
+	state: int, dither_alpha: float, fade_alpha: float, tint_strength: float, distance: float
+) -> void:
+	var state_changed: bool = state != _lod_state
+	var prev_state: int = _lod_state
+	_lod_state = state
+
+	AvatarLODHelpers.set_dither_alpha(self, dither_alpha)
+
+	if _off_frustum:
+		# Off-frustum: avatar is invisible to the camera. Drop the slot
+		# entirely so its multimesh instance and (if owned) layer return to
+		# the pool for an in-frustum avatar to use. Re-entry rehydrates from
+		# the disk cache — fast and gap-free.
+		if _impostor_layer >= 0 and Global.avatars != null:
+			Global.avatars.clear_impostor(get_instance_id())
+			_impostor_layer = -1
+			_impostor_layer_is_overflow = false
+	elif state == LODState.FAR or state == LODState.CROSSFADE:
+		_ensure_impostor_layer(distance)
+		if _impostor_layer >= 0 and Global.avatars != null:
+			Global.avatars.set_impostor_state(
+				get_instance_id(), fade_alpha, tint_strength, distance
+			)
+	elif _impostor_layer >= 0 and Global.avatars != null:
+		# Don't release the slot on every LOD oscillation — re-allocating would
+		# trigger a new capture every time the camera swings between FAR and
+		# MID/FULL. Keep the slot, just hide the multimesh instance with
+		# fade_alpha=0. The slot is freed when the avatar is removed entirely
+		# (AvatarScene::remove_avatar).
+		Global.avatars.set_impostor_state(get_instance_id(), 0.0, 0.0, distance)
+
+	if state_changed:
+		_on_lod_state_changed(state, prev_state)
+
+
+func _ensure_impostor_layer(distance: float) -> void:
+	if Global.avatars == null:
+		return
+	# Always call through. Rust handles the dispatch:
+	#   * No existing slot -> fresh allocation (real with cached texture if
+	#     available, or pure overflow when allow_overflow is true).
+	#   * Existing slot -> toggle render mode in place, keeping the layer warm.
+	# No clear-then-realloc dance, so a camera that briefly turns off-frustum
+	# doesn't trigger a recapture or flicker the borrowed silhouette.
+	_impostor_layer = Global.avatars.request_impostor_layer(
+		get_instance_id(), self, distance, _use_overflow_impostor, _get_impostor_cache_key()
+	)
+	if _impostor_layer < 0:
+		return
+	_impostor_layer_is_overflow = _use_overflow_impostor
+	# Capture only when the slot owns a real layer that hasn't been filled yet.
+	if Global.avatars.impostor_needs_capture(get_instance_id()):
+		ImpostorCapturer.request_capture(self)
+
+
+func _release_impostor() -> void:
+	if _impostor_layer < 0:
+		return
+	if Global.avatars != null:
+		Global.avatars.clear_impostor(get_instance_id())
+	_impostor_layer = -1
+
+
+func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
+	match new_state:
+		LODState.FULL:
+			AvatarLODHelpers.set_meshes_visible(self, true)
+			AvatarLODHelpers.set_animation_active(self, true)
+			AvatarLODHelpers.set_animation_speed(self, 1.0)
+			AvatarLODHelpers.set_animation_throttle(self, false)
+			AvatarLODHelpers.set_particles_visible(self, true)
+			AvatarLODHelpers.set_click_active(self, true)
+			_apply_nickname_visibility()
+		LODState.MID:
+			AvatarLODHelpers.set_meshes_visible(self, true)
+			AvatarLODHelpers.set_animation_active(self, true)
+			AvatarLODHelpers.set_animation_speed(self, 1.0)
+			AvatarLODHelpers.set_animation_throttle(self, true)
+			AvatarLODHelpers.set_particles_visible(self, false)
+			AvatarLODHelpers.set_click_active(self, false)
+			_apply_nickname_visibility()
+		LODState.CROSSFADE:
+			AvatarLODHelpers.set_meshes_visible(self, true)
+			AvatarLODHelpers.set_animation_active(self, true)
+			AvatarLODHelpers.set_animation_speed(self, 1.0)
+			AvatarLODHelpers.set_animation_throttle(self, true)
+			AvatarLODHelpers.set_particles_visible(self, false)
+			AvatarLODHelpers.set_click_active(self, false)
+			_apply_nickname_visibility()
+		LODState.FAR:
+			AvatarLODHelpers.set_meshes_visible(self, false)
+			AvatarLODHelpers.set_animation_active(self, false)
+			AvatarLODHelpers.set_animation_speed(self, 1.0)
+			AvatarLODHelpers.set_animation_throttle(self, false)
+			AvatarLODHelpers.set_particles_visible(self, false)
+			AvatarLODHelpers.set_click_active(self, false)
+			_apply_nickname_visibility()
+
+
+# Freeze the AnimationTree when off-frustum, regardless of LOD state. The mesh
+# is still visible logically (so re-entry doesn't pop), but Godot's GPU
+# frustum cull skips drawing it and the AnimationTree pauses CPU-side. On
+# re-entry we restore the state-driven anim setup and advance the tree by the
+# wall-clock time we were paused, so emote phase matches what it would have
+# been had we not paused — single recompute, no frame-by-frame catch-up.
+func _apply_off_frustum_anim_freeze() -> void:
+	if animation_tree == null:
+		return
+	if _off_frustum:
+		if not _anim_frozen_off_frustum:
+			animation_tree.active = false
+			_anim_throttle_active = false
+			_anim_freeze_start_ms = Time.get_ticks_msec()
+			_anim_frozen_off_frustum = true
+	elif _anim_frozen_off_frustum:
+		_anim_frozen_off_frustum = false
+		var elapsed_s: float = (Time.get_ticks_msec() - _anim_freeze_start_ms) / 1000.0
+		match _lod_state:
+			LODState.FULL:
+				AvatarLODHelpers.set_animation_active(self, true)
+				AvatarLODHelpers.set_animation_throttle(self, false)
+			LODState.MID, LODState.CROSSFADE:
+				AvatarLODHelpers.set_animation_active(self, true)
+				AvatarLODHelpers.set_animation_throttle(self, true)
+			LODState.FAR:
+				AvatarLODHelpers.set_animation_active(self, false)
+				AvatarLODHelpers.set_animation_throttle(self, false)
+		if animation_tree.active and elapsed_s > 0.0:
+			animation_tree.advance(elapsed_s)
+
+
+func _tick_animation_throttle(delta: float) -> void:
+	if not _anim_throttle_active or animation_tree == null:
+		return
+	_anim_throttle_acc += delta
+	_anim_throttle_counter += 1
+	if _anim_throttle_counter >= AvatarImpostorConfig.MID_ANIM_ADVANCE_EVERY_N_FRAMES:
+		animation_tree.advance(_anim_throttle_acc)
+		_anim_throttle_acc = 0.0
+		_anim_throttle_counter = 0
+
+
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
 
 	if nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
+		_request_nickname_redraw()
+
+	_maybe_update_lod()
+	_tick_animation_throttle(delta)
+
+	if _lod_state == LODState.FAR:
+		return
 
 	# Skip animations for show_only_wearables avatars (no body to animate)
 	if is_avatar_shape and avatar_data != null and avatar_data.get_show_only_wearables():
@@ -919,7 +1329,11 @@ func _process(delta):
 	if not animation_tree.active:
 		animation_tree.active = true
 
-	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
+	# #b18: `is_grounded` guard suppresses the all-false condition window at the
+	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.
+	var self_idle = (
+		self.is_grounded && !self.jog && !self.walk && !self.run && !self.rise && !self.fall
+	)
 	emote_controller.process(self_idle)
 
 	var is_emoting = self_idle && emote_controller.is_playing()
@@ -1103,7 +1517,9 @@ func push_voice_frame(frame):
 		voice_chat_audio_player.play()
 
 	voice_chat_audio_player.get_stream_playback().push_buffer(frame)
-	nickname_ui.mic_enabled = true
+	if not nickname_ui.mic_enabled:
+		nickname_ui.mic_enabled = true
+		_request_nickname_redraw()
 	timer_hide_mic.start()
 
 
@@ -1135,14 +1551,17 @@ func _attach_point_skeleton_updated():
 
 func _on_timer_hide_mic_timeout():
 	nickname_ui.mic_enabled = false
+	_request_nickname_redraw()
 
 
 func set_client_version(version: String):
 	nickname_ui.client_version = version
+	_request_nickname_redraw()
 
 
 func set_room_debug(info: String):
 	nickname_ui.room_debug = info
+	_request_nickname_redraw()
 
 
 func _play_emote_audio(file_hash: String):

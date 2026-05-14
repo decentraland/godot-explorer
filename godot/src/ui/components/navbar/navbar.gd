@@ -54,11 +54,6 @@ func _on_size_changed():
 			# If discover is open, keep hidden
 			hide()
 			return
-		if explorer.chat_container != null and explorer.chat_container.visible:
-			# If chat is open, keep hidden
-			hide()
-			return
-
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	visible = window_size.x > window_size.y
 
@@ -128,10 +123,6 @@ func set_manually_hidden(is_hidden: bool) -> void:
 			):
 				# If discover is open, keep hidden
 				return
-			if explorer.chat_container != null and explorer.chat_container.visible:
-				# If chat is open, keep hidden
-				return
-
-		# Restore visibility based on window size only if discover and chat are closed
+		# Restore visibility based on window size
 		var window_size: Vector2i = DisplayServer.window_get_size()
 		visible = window_size.x > window_size.y

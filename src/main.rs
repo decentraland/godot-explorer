@@ -10,6 +10,7 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir};
 
 mod android_godot_lib;
+mod avatar_impostor_benchmark;
 mod check_gdscript;
 mod consts;
 mod copy_files;
@@ -123,6 +124,24 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("headless")
                         .help("Run in headless mode (faster, no screenshots)")
                         .action(clap::ArgAction::SetTrue),
+                ),
+        )
+        .subcommand(
+            Command::new("avatar-impostor-benchmark")
+                .about(
+                    "Run avatar impostor benchmark (100 avatars, OFF then ON phases) and write results to benchmark-results/. Use --target ios to launch on a connected iPhone (assumes the app has been deployed via `cargo run -- run --target ios`).",
+                )
+                .arg(
+                    Arg::new("headless")
+                        .long("headless")
+                        .help("Run headless (host only). Skinning still uses GPU; FPS may differ from windowed mode.")
+                        .action(clap::ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("target")
+                        .long("target")
+                        .help("Target platform: host (default) or ios.")
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -628,7 +647,15 @@ fn main() -> Result<(), anyhow::Error> {
                     );
 
                     // Just deploy to device
-                    run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
+                    let device_extras: Vec<String> = sm
+                        .values_of("extras")
+                        .map(|v| v.map(|it| it.into()).collect())
+                        .unwrap_or_default();
+                    run::deploy_and_run_on_device(
+                        platform,
+                        sm.is_present("release"),
+                        device_extras,
+                    )?;
 
                     return Ok(());
                 } else {
@@ -662,7 +689,15 @@ fn main() -> Result<(), anyhow::Error> {
 
                     if result.is_ok() {
                         // 4. Install and run on device
-                        run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
+                        let device_extras: Vec<String> = sm
+                            .values_of("extras")
+                            .map(|v| v.map(|it| it.into()).collect())
+                            .unwrap_or_default();
+                        run::deploy_and_run_on_device(
+                            platform,
+                            sm.is_present("release"),
+                            device_extras,
+                        )?;
                     }
 
                     return result;
@@ -836,6 +871,16 @@ fn main() -> Result<(), anyhow::Error> {
             sentry_metrics::push_metrics(from, to)
         }
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
+        ("avatar-impostor-benchmark", sm) => {
+            let target: &str = sm
+                .get_one::<String>("target")
+                .map(|s| s.as_str())
+                .unwrap_or("");
+            avatar_impostor_benchmark::run_avatar_impostor_benchmark(
+                sm.get_flag("headless"),
+                target,
+            )
+        }
         ("full-tests", sm) => full_tests::run_full_tests(
             sm.is_present("continue-on-failure"),
             sm.is_present("skip-visual"),

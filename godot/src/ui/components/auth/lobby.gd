@@ -94,7 +94,7 @@ var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/R
 @onready var label_version = %Label_Version
 
 @onready var control_ftue = %FTUE
-@onready var place_ftue = %FTUE/FTUE
+@onready var ftue_screen = %FTUE/FTUE
 
 @onready var backgrounds = [loading_solid_bg, default_bg, discover_bg]
 @onready var control_with_discover_bg = [
@@ -237,27 +237,12 @@ func show_auth_browser_open_screen(
 
 
 func show_control_ftue():
-	track_lobby_screen("DISCOVER_FTUE")
+	current_screen_name = "DISCOVER_FTUE"
 	button_back.hide()
-	var nickname_label = place_ftue._get_label_nickname_ftue()
-	if nickname_label and current_profile:
-		nickname_label.text = current_profile.get_name()
+	if current_profile:
+		ftue_screen.set_username(current_profile.get_name())
 	show_panel(control_ftue)
-	_async_fetch_ftue_place()
-
-
-func _async_fetch_ftue_place() -> void:
-	var response = await PlacesHelper.async_get_place_by_id(FTUE_PLACE_ID)
-	if response is PromiseError:
-		printerr("[Lobby] Failed to fetch FTUE place data: ", response.get_error())
-		return
-	if not is_instance_valid(place_ftue):
-		return
-	var json: Dictionary = response.get_string_response_as_json()
-	var place_data: Dictionary = json.get("data", json)
-	if place_data.is_empty():
-		return
-	place_ftue.set_data(place_data)
+	ftue_screen.load_places()
 
 
 func show_avatar_create_screen():
@@ -268,13 +253,6 @@ func show_avatar_create_screen():
 
 # ADR-290: Snapshots no longer uploaded
 func async_close_sign_in():
-	Global.metrics.update_identity(
-		Global.player_identity.get_address_str(), Global.player_identity.is_guest
-	)
-
-	# Auth Success metric
-	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
-
 	if _should_go_to_explorer_from_deeplink():
 		go_to_explorer()
 		return
@@ -291,8 +269,23 @@ func _ready():
 	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_guest.visible = false
 
+	# The backpack ships with top_node_margin pointing at its own navbar (hidden
+	# via hide_navbar=true here), which leaves the preview without a real top
+	# reference. Wire the embedded preview to the lobby's "Create your avatar"
+	# label so the camera-fit overlap math has a properly-positioned anchor,
+	# and snap the avatar to the viewport top so it shows full-height behind
+	# the editor overlay instead of being sized into the uncovered slice.
+	var create_avatar_label: Label = $Main/BackpackContainer/MarginContainer/VBoxContainer/Label_Name
+	backpack.avatar_preview.snap_top_to_viewport = true
+	backpack.avatar_preview.preview_margin_top = 10
+	backpack.avatar_preview.set_top_margin_node(create_avatar_label)
+
 	# Secret guest mode: double-tap logo when not in prod
 	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
+
+	# Lobby fires onboarding/auth events one at a time — ship them on a snappy 2s cadence.
+	# Menu/Explorer restore the default 10s when leaving the lobby.
+	Global.metrics.set_flush_interval(2.0)
 
 	Global.music_player.play.call_deferred("music_builder")
 
@@ -307,6 +300,12 @@ func _ready():
 	show_loading_screen()
 	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
 	print("[Startup] lobby.show_loading_screen: %dms" % startup_time_ms)
+
+	if Global.is_mobile():
+		var gate_decision := await _async_run_version_gate()
+		if gate_decision == "hard":
+			# Overlay blocks interaction; loading screen stays behind it.
+			return
 
 	# Track startup metric for analytics
 	var startup_data := {"startup_time_ms": startup_time_ms, "platform": OS.get_name()}
@@ -351,7 +350,13 @@ func _ready():
 		if random_profile != null:
 			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
 
-	if Global.player_identity.try_recover_account(session_account):
+	# Flag the wallet_connected emission produced by try_recover_account so the analytics
+	# controller skips emitting a Firebase `login_success` for it. Safe to call unconditionally:
+	# the clear runs deferred and just unblocks the next legitimate fresh login.
+	if Global.analytics_controller != null:
+		Global.analytics_controller.mark_wallet_connected_as_recovery()
+	var recovered := Global.player_identity.try_recover_account(session_account)
+	if recovered:
 		loading_first_profile = true
 		show_loading_screen()
 	elif _skip_lobby:
@@ -433,7 +438,6 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if loading_first_profile:
 		loading_first_profile = false
 		if profile_has_name():
-			# Session restored with existing profile — go directly to discover
 			Global.metrics.update_identity(
 				Global.player_identity.get_address_str(), Global.player_identity.is_guest
 			)
@@ -474,7 +478,11 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 	Global.open_url(url, use_webview)
 
 
-func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
+func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
+	Global.metrics.update_identity(address, is_guest)
+	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
+	Global.metrics.flush.call_deferred()
+
 	Global.get_config().session_account = {}
 
 	var new_stored_account := {}
@@ -483,8 +491,9 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 	Global.get_config().save_to_settings_file()
 
-	# Note: Social service initialization moved to explorer.gd to ensure it completes
-	# before the Friends panel is used (lobby scene transitions before it finishes)
+	# Initialize social service early so Discover can show friends before entering explorer
+	if not is_guest:
+		Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 
 func _on_check_box_eula_toggled(toggled_on: bool) -> void:
@@ -504,7 +513,10 @@ func _on_eula_meta_clicked(meta: Variant) -> void:
 func _on_button_accept_eula_pressed() -> void:
 	Global.metrics.track_screen_viewed("ACCEPT_EULA", "")
 	Global.metrics.track_click_button("accept", "ACCEPT_EULA", "")
-	Global.metrics.flush()
+	# Opens the consent gate (auto-flushes queued pre-consent events) and fires Firebase
+	# `eula_accepted` Key Event. All Firebase/Segment orchestration lives in the controller.
+	if Global.analytics_controller != null:
+		Global.analytics_controller.on_eula_accepted_locally()
 	Global.get_config().terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
 	Global.get_config().save_to_settings_file()
 	show_account_home_screen()
@@ -533,8 +545,13 @@ func _on_button_different_account_pressed():
 	Global.metrics.track_click_button("use_another_account", current_screen_name, "")
 	Global.get_config().session_account = {}
 
-	# Unsubscribe from block updates before clearing
+	# Unsubscribe from all social service updates before clearing
+	Global.social_service.unsubscribe_from_updates()
+	Global.social_service.unsubscribe_from_connectivity_updates()
 	Global.social_service.unsubscribe_from_block_updates()
+	# Drop the gRPC manager so the previous identity's streams don't leak into
+	# the next account. initialize_from_player_identity rebuilds it on login.
+	Global.social_service.disconnect()
 
 	# Clear the current social blacklist when switching accounts
 	Global.social_blacklist.clear_blocked()
@@ -577,9 +594,11 @@ func _on_button_next_pressed():
 	if promise.is_rejected():
 		var error: PromiseError = promise.get_data()
 		printerr("[Lobby] Profile deploy failed: ", error.get_error())
+	else:
+		Global.metrics.track_screen_viewed("AUTH_DEPLOY_SUCCESS", "")
+		Global.metrics.flush.call_deferred()
 
-	# Skip FTUE, go directly to discover
-	await async_close_sign_in()
+	show_control_ftue()
 
 
 func _on_button_random_name_pressed():
@@ -725,7 +744,8 @@ func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
 
 
 func _on_ftue_ftue_completed() -> void:
-	async_close_sign_in()
+	if is_inside_tree():
+		async_close_sign_in()
 
 
 func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
@@ -734,3 +754,14 @@ func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
 
 func _on_ftue_jump_in_world(realm_str: String) -> void:
 	Global.async_join_world(realm_str)
+
+
+func _async_run_version_gate() -> String:
+	var gate: Node = preload("res://src/version_gate.gd").new()
+	add_child(gate)
+	var result: String = await gate.async_check()
+	if result == "hard":
+		gate.show_overlay(false)
+	elif result == "soft":
+		gate.show_overlay(true)
+	return result
