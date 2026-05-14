@@ -63,6 +63,7 @@ pub struct UiTransform {
     pub right_of: SceneEntityId,
     pub overflow: YgOverflow,
     pub pointer_filter_mode: PointerFilterMode,
+    pub z_index: i32,
     pub taffy_style: taffy::style::Style,
 }
 
@@ -73,6 +74,7 @@ impl From<&PbUiTransform> for UiTransform {
             right_of: SceneEntityId::from_i32(value.right_of),
             overflow: value.overflow(),
             pointer_filter_mode: value.pointer_filter(),
+            z_index: value.z_index.unwrap_or(0),
             taffy_style: taffy::style::Style {
                 overflow: match value.overflow() {
                     YgOverflow::YgoVisible => taffy::geometry::Point::<taffy::style::Overflow> {

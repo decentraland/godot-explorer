@@ -1374,15 +1374,25 @@ impl SceneManager {
 
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
+        // BorderRect carries indents (in canvas pixels) from each canvas edge to the
+        // safe/interactable rectangle. Clamp to [0, canvas] so a stale or oversized
+        // interactable_area never produces negative or out-of-canvas indents.
+        let ia_pos = self.interactable_area.position;
+        let ia_end = self.interactable_area.end();
+        let top = (ia_pos.y as f32).clamp(0.0, canvas_size.y);
+        let left = (ia_pos.x as f32).clamp(0.0, canvas_size.x);
+        let right = (canvas_size.x - ia_end.x as f32).clamp(0.0, canvas_size.x);
+        let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
+
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
             interactable_area: Some(BorderRect {
-                top: self.interactable_area.position.x as f32,
-                left: self.interactable_area.position.y as f32,
-                right: self.interactable_area.end().x as f32,
-                bottom: self.interactable_area.end().y as f32,
+                top,
+                left,
+                right,
+                bottom,
             }),
         }
     }
@@ -2038,15 +2048,42 @@ impl INode for SceneManager {
             self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
-        if let Some(current_camera_node) =
-            self.base().get_viewport().and_then(|x| x.get_camera_3d())
-        {
-            // Only update player/camera transforms for current scene and global scenes
-            let player_transform = self.player_avatar_node.get_global_transform();
-            let camera_transform = current_camera_node.get_global_transform();
+        self.last_raycast_result = current_pointer_raycast_result;
+        GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    }
 
-            // Update current parcel scene
-            if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
+    // Sync scene-tree PLAYER/CAMERA Node3D transforms with the real player +
+    // camera every render frame. Camera-parented scene entities (held items,
+    // first-person viewmodels) inherit their world transform from these
+    // nodes, so they would visibly trail the camera by up to one physics
+    // tick if this only ran in physics_process.
+    fn process(&mut self, _delta: f64) {
+        let Some(current_camera_node) = self.base().get_viewport().and_then(|x| x.get_camera_3d())
+        else {
+            return;
+        };
+
+        let player_transform = self.player_avatar_node.get_global_transform();
+        let camera_transform = current_camera_node.get_global_transform();
+
+        if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
+            if let Some(scene_player_entity_node) = scene
+                .godot_dcl_scene
+                .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
+            {
+                scene_player_entity_node.set_global_transform(player_transform);
+            }
+
+            if let Some(scene_camera_entity_node) = scene
+                .godot_dcl_scene
+                .get_node_or_null_3d_mut(&SceneEntityId::CAMERA)
+            {
+                scene_camera_entity_node.set_global_transform(camera_transform);
+            }
+        }
+
+        for scene_id in self.get_global_scene_ids().clone() {
+            if let Some(scene) = self.scenes.get_mut(&scene_id) {
                 if let Some(scene_player_entity_node) = scene
                     .godot_dcl_scene
                     .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
@@ -2061,28 +2098,6 @@ impl INode for SceneManager {
                     scene_camera_entity_node.set_global_transform(camera_transform);
                 }
             }
-
-            // Update global scenes
-            for scene_id in self.get_global_scene_ids().clone() {
-                if let Some(scene) = self.scenes.get_mut(&scene_id) {
-                    if let Some(scene_player_entity_node) = scene
-                        .godot_dcl_scene
-                        .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
-                    {
-                        scene_player_entity_node.set_global_transform(player_transform);
-                    }
-
-                    if let Some(scene_camera_entity_node) = scene
-                        .godot_dcl_scene
-                        .get_node_or_null_3d_mut(&SceneEntityId::CAMERA)
-                    {
-                        scene_camera_entity_node.set_global_transform(camera_transform);
-                    }
-                }
-            }
         }
-
-        self.last_raycast_result = current_pointer_raycast_result;
-        GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 }
