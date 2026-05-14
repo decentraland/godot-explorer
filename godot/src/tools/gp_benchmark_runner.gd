@@ -204,13 +204,11 @@ func _process(_delta: float) -> void:
 				_set_phase("sampling")
 		"sampling":
 			_enforce_pinned_pose()
-			# Silent per-frame uncap insurance. The cap on A54 is real GPU-time +
-			# vsync alignment at 120Hz (slots: 120/60/40/30/24) — these forces
-			# only ensure no software cap re-pins us; logging per-frame here
-			# tanks fps via Sentry breadcrumb queue.
-			Engine.max_fps = 0
-			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-			OS.low_processor_usage_mode = false
+			# Vsync/max_fps were set once at the waiting_for_load -> settling
+			# transition. DO NOT re-set per-frame — on Mali/Swappy the driver
+			# rejects VSYNC_DISABLED and falls back to ENABLED, so an
+			# unconditional re-set triggers swap_chain_resize every frame
+			# (~10 rebuilds/sec) which wrecks the profile and halves FPS.
 			samples.append(_collect_sample())
 			if _phase_elapsed_ms() >= int(config.get("sample_seconds", 30)) * 1000:
 				_finish()
