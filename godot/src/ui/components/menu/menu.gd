@@ -45,6 +45,9 @@ var _close_node_to_free: PlaceholderManager = null
 
 
 func _ready():
+	# Out of the lobby — restore the relaxed 10s flush cadence so feed/search events batch.
+	Global.metrics.set_flush_interval(10.0)
+
 	var btn_group = ButtonGroup.new()
 	btn_group.allow_unpress = false
 	static_button_backpack.button_group = btn_group
@@ -359,5 +362,15 @@ func _async_on_deep_link_open_place(place_id: String) -> void:
 
 
 func _on_account_delete() -> void:
-	if account_deletion_pop_up:
-		account_deletion_pop_up.async_start_flow()
+	if not account_deletion_pop_up:
+		return
+	if not is_open:
+		# Kill pending close tweens from a previous close
+		if is_instance_valid(_close_modulate_tween) and _close_modulate_tween.is_running():
+			_close_modulate_tween.kill()
+		if is_instance_valid(_close_hide_tween) and _close_hide_tween.is_running():
+			_close_hide_tween.kill()
+		modulate = Color(1, 1, 1, 1)
+		show()
+		is_open = true
+	account_deletion_pop_up.async_start_flow()

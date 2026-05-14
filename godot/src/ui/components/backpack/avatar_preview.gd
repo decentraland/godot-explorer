@@ -26,6 +26,20 @@ const AVATAR_ROTATION_SMOOTH = 15.0
 @export var bottom_node_margin: Control = null
 @export var show_aabb_debug: bool = false
 @export var fit_avatar: bool = true
+## When true, grow this SubViewportContainer upward so its top edge sits at
+## the screen's top (global_position.y = 0) regardless of where the parent
+## layout placed it. The SubViewport (stretch=true) follows, so the avatar
+## renders into the taller area and its head reaches the top of the screen.
+## Use it when sibling UI sits above the preview (e.g., the lobby's "Create
+## your avatar" label) — the avatar shows behind it instead of being
+## stacked below.
+@export var snap_top_to_viewport: bool = false:
+	set(value):
+		if value == snap_top_to_viewport:
+			return
+		snap_top_to_viewport = value
+		if is_inside_tree():
+			_refresh_snap_top_state()
 
 var start_angle
 var start_dragging_position
@@ -49,6 +63,15 @@ var _pinch_start_distance: float = 0.0
 var _pinch_start_camera_size: float = 0.0
 var _pinch_start_midpoint: Vector2 = Vector2.ZERO
 var _pinch_start_center_y: float = 0.0
+
+# State for snap_top_to_viewport. `_snap_top_connected` tracks whether our
+# item_rect_changed handler is wired up so we toggle it on/off cleanly when
+# the flag flips. `_last_snapped_parent_y` is the parent's global_position.y
+# we last computed offset_top against — we use it to break the
+# offset_top → item_rect_changed → recompute cycle.
+var _snap_top_connected: bool = false
+var _last_snapped_parent_y: float = NAN
+var _baseline_offset_top: float = 0.0
 
 var _aabb_debug_nodes: Array[MeshInstance3D] = []
 
@@ -88,6 +111,12 @@ func _ready():
 		top_node_margin.resized.connect(_on_resized)
 	if bottom_node_margin:
 		bottom_node_margin.resized.connect(_on_resized)
+
+	# Remember the export-set offset_top so we can restore it if the flag
+	# later flips back to false at runtime.
+	_baseline_offset_top = offset_top
+	if snap_top_to_viewport:
+		_refresh_snap_top_state()
 
 	if Global.standalone:
 		Global.player_identity.set_default_profile()
@@ -293,6 +322,43 @@ func _get_touch_midpoint() -> Vector2:
 
 func reset_avatar_rotation() -> void:
 	_target_avatar_rotation_y = 0.0
+
+
+func _refresh_snap_top_state() -> void:
+	if snap_top_to_viewport:
+		if not _snap_top_connected:
+			item_rect_changed.connect(_apply_snap_top_to_viewport)
+			_snap_top_connected = true
+		_apply_snap_top_to_viewport()
+	else:
+		if _snap_top_connected:
+			item_rect_changed.disconnect(_apply_snap_top_to_viewport)
+			_snap_top_connected = false
+		_last_snapped_parent_y = NAN
+		# Restore the original offset_top from the scene file.
+		if not is_equal_approx(offset_top, _baseline_offset_top):
+			offset_top = _baseline_offset_top
+
+
+func _apply_snap_top_to_viewport() -> void:
+	if not snap_top_to_viewport or not is_inside_tree():
+		return
+	var parent_ctrl: Control = get_parent_control()
+	if parent_ctrl == null:
+		return
+	var parent_y: float = parent_ctrl.global_position.y
+	# Dedupe against the parent_y we last snapped against. Setting offset_top
+	# re-fires item_rect_changed; without this guard the handler would
+	# recurse (or at least burn frames re-doing identical work).
+	if not is_nan(_last_snapped_parent_y) and is_equal_approx(parent_y, _last_snapped_parent_y):
+		return
+	_last_snapped_parent_y = parent_y
+	# Shift this Control upward by the parent's distance from the screen
+	# top. anchor_top stays at 0 so this just grows the rect (anchor_bottom=1
+	# pins the bottom edge to wherever the parent layout placed it).
+	var desired: float = _baseline_offset_top - parent_y
+	if not is_equal_approx(offset_top, desired):
+		offset_top = desired
 
 
 func _on_resized() -> void:
@@ -583,10 +649,32 @@ func _inner_rect() -> Rect2:
 	var r: Rect2 = get_global_rect()
 	var mt: float = _effective_margin_top()
 	var mb: float = _effective_margin_bottom()
-	return Rect2(
-		r.position + Vector2(float(preview_margin_left), mt),
-		r.size - Vector2(float(preview_margin_left + preview_margin_right), mt + mb)
-	)
+	var size: Vector2 = r.size - Vector2(float(preview_margin_left + preview_margin_right), mt + mb)
+	size.x = maxf(size.x, 0.0)
+	size.y = maxf(size.y, 0.0)
+	return Rect2(r.position + Vector2(float(preview_margin_left), mt), size)
+
+
+## Replace the top_node_margin Control after _ready has connected signals.
+## Hosts use this when their layout puts a different visible control above
+## the preview (e.g., lobby's create-avatar flow uses its "Create your
+## avatar" label instead of the backpack's hidden navbar).
+func set_top_margin_node(node: Control) -> void:
+	if top_node_margin == node:
+		return
+	if top_node_margin and top_node_margin.resized.is_connected(_on_resized):
+		top_node_margin.resized.disconnect(_on_resized)
+	top_node_margin = node
+	if top_node_margin:
+		top_node_margin.resized.connect(_on_resized)
+	# Force a re-fit with the new reference; reset dedupe so it actually applies.
+	_pending_camera_fit = true
+	if size.x > 0.0 and size.y > 0.0 and not _cached_aabbs.is_empty():
+		var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
+		if aabb_key in _cached_aabbs:
+			_last_fit_stable_aabb = AABB()
+			_last_fit_extra_margin = -1
+			_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
 
 
 func _effective_margin_top() -> float:
@@ -674,6 +762,19 @@ func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
 	if size.x <= 0.0 or size.y <= 0.0:
 		_pending_camera_fit = true
 		return
+	var vp_h: float = size.y
+	var vp_w: float = size.x
+	var eff_top: float = _effective_margin_top()
+	var eff_bottom: float = _effective_margin_bottom()
+	var raw_inner_h: float = vp_h - eff_top - eff_bottom - extra_margin * 2
+	var raw_inner_w: float = vp_w - preview_margin_left - preview_margin_right - extra_margin * 2
+	# Defer when margins claim to eat almost the entire viewport — the parent
+	# layout pass hasn't settled sibling positions yet. Without this, the bad
+	# target commits (cam_size in the thousands) and the camera lerps toward
+	# it while later resize events skip the re-fit (_pending_camera_fit=false).
+	if raw_inner_h < 50.0 or raw_inner_w < 50.0:
+		_pending_camera_fit = true
+		return
 	_pending_camera_fit = false
 	_update_fit_limits(aabb, extra_margin)
 	var stable: AABB = _stable_aabb()
@@ -681,14 +782,8 @@ func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
 		return
 	_last_fit_stable_aabb = stable
 	_last_fit_extra_margin = extra_margin
-	var vp_h: float = size.y
-	var vp_w: float = size.x
-	var eff_top: float = _effective_margin_top()
-	var eff_bottom: float = _effective_margin_bottom()
-	var inner_h: float = maxf(1.0, vp_h - eff_top - eff_bottom - extra_margin * 2)
-	var inner_w: float = maxf(
-		1.0, vp_w - preview_margin_left - preview_margin_right - extra_margin * 2
-	)
+	var inner_h: float = maxf(1.0, raw_inner_h)
+	var inner_w: float = maxf(1.0, raw_inner_w)
 	var cam_size: float = maxf(stable.size.y * vp_h / inner_h, stable.size.x * vp_h / inner_w)
 	cam_size = clampf(cam_size, _min_camera_size(), _fitted_camera_size)
 	var center_y: float = stable.get_center().y + (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)

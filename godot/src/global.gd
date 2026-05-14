@@ -109,6 +109,10 @@ var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var camera_mode_blocked: bool = false
 var session_id: String
 
+# Orchestrates the Firebase / Segment glue (EULA gate, login suppression on session recovery,
+# first_move_in_world detection). Instantiated after `metrics` is created.
+var analytics_controller: AnalyticsController = null
+
 var _is_portrait: bool = true
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
@@ -213,6 +217,8 @@ func _ready():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
 		if dcl_ios_singleton:
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
+
+	_dcl_swift_lib_smoke_test()
 
 	# Setup
 	nft_frame_loader = NftFrameStyleLoader.new()
@@ -357,6 +363,11 @@ func _ready():
 			self.metrics.track_install_referrer.call_deferred()
 			self.config.install_referrer_sent = true
 			self.config.save_to_settings_file()
+		# All Firebase/Segment orchestration lives in AnalyticsController — see its docstring.
+		# RefCounted, kept alive by this strong reference. No scene-tree presence by default;
+		# spawns a transient Timer under Global only while polling for first_move_in_world.
+		self.analytics_controller = AnalyticsController.new()
+		self.analytics_controller.setup()
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
@@ -403,6 +414,19 @@ func _ready():
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
+
+
+# Smoke test for the Swift GDExtension. Runs only on iOS where DclSwiftLibPlugin
+# can actually reach the underlying Swift class; no-ops on every other platform.
+func _dcl_swift_lib_smoke_test() -> void:
+	if not DclSwiftLibPlugin.is_available():
+		return
+	print(
+		"[DclSwiftLib] ping() -> ",
+		DclSwiftLibPlugin.ping(),
+		" | version() -> ",
+		DclSwiftLibPlugin.version()
+	)
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
