@@ -73,6 +73,7 @@ fn create_fallback_texture_entry() -> Gd<TextureEntry> {
         image,
         texture,
         original_size,
+        failed: true,
     })
 }
 
@@ -85,6 +86,10 @@ pub struct TextureEntry {
     pub texture: Gd<Texture2D>,
     #[var]
     pub original_size: Vector2i,
+    /// True when this entry holds the fallback texture because decoding failed
+    /// or the format is unsupported. Callers should treat the texture as a placeholder.
+    #[var]
+    pub failed: bool,
 }
 
 /// Decodes a GIF and creates an AnimatedTexture with compressed frames.
@@ -286,6 +291,7 @@ pub async fn load_image_texture(
             image,
             texture,
             original_size,
+            failed: false,
         });
 
         return Ok(Some(texture_entry.to_variant()));
@@ -316,6 +322,7 @@ pub async fn load_image_texture(
             image,
             texture,
             original_size,
+            failed: false,
         });
 
         return Ok(Some(texture_entry.to_variant()));
@@ -390,6 +397,7 @@ pub async fn load_image_texture(
         image,
         texture,
         original_size,
+        failed: false,
     });
 
     Ok(Some(texture_entry.to_variant()))
