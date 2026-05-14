@@ -39,6 +39,13 @@ var pose_pinned: bool = false
 # Captured at loading_complete; surfaced in JSON as `load_seconds`.
 var _load_seconds: float = 0.0
 var _waiting_for_load_started_ms: int = 0
+# Settling state: did we observe ANY DclGltfContainer node in non-terminal
+# state since entering settling? If not, the 0-count is meaningless (the
+# Rust scene_runner emitted loading_complete BEFORE the Godot wrappers for
+# its entities were spawned into the scene tree). We must see a non-zero
+# count before treating "0 loading" as "all done".
+var _settling_saw_loading: bool = false
+var _settling_peak_loading: int = 0
 
 
 func _ready() -> void:
@@ -175,13 +182,35 @@ func _process(_delta: float) -> void:
 		"settling":
 			# `Global.scene_runner.loading_complete` fires when the scene-runner
 			# declares the scene-set loaded, but individual SDK7 `DclGltfContainer`
-			# children may still be streaming their GLBs at that point. Without
-			# this gate the warmup window can race the slowest GLB (e.g. DCL Store
-			# in GP) and the sample-time screenshot captures placeholder cubes.
+			# children may still be streaming their GLBs at that point. Worse:
+			# at the moment loading_complete fires, the Godot wrappers for those
+			# entities are typically NOT YET in the scene tree (Rust emits the
+			# signal before GDScript propagate_ready runs), so a naive
+			# `still_loading == 0` bails immediately on a vacuous "no containers"
+			# state. We require (a) observing a non-zero count first AND (b) a
+			# minimum settling floor before advancing.
 			var settling_timeout_ms: int = int(config.get("settling_timeout_seconds", 60)) * 1000
+			var settling_min_ms: int = int(config.get("settling_min_seconds", 5)) * 1000
 			var still_loading := _count_loading_gltf_containers()
-			if still_loading == 0:
-				_log("settling: all GltfContainers finished after %d ms" % _phase_elapsed_ms())
+			if still_loading > 0:
+				if not _settling_saw_loading:
+					_settling_saw_loading = true
+					_log(
+						(
+							"settling: first observed %d loading containers @ %d ms"
+							% [still_loading, _phase_elapsed_ms()]
+						)
+					)
+				if still_loading > _settling_peak_loading:
+					_settling_peak_loading = still_loading
+			var min_floor_reached := _phase_elapsed_ms() >= settling_min_ms
+			if _settling_saw_loading and still_loading == 0 and min_floor_reached:
+				_log(
+					(
+						"settling: peak=%d, all finished after %d ms"
+						% [_settling_peak_loading, _phase_elapsed_ms()]
+					)
+				)
 				_set_phase("warmup")
 			elif _phase_elapsed_ms() >= settling_timeout_ms:
 				_log(
