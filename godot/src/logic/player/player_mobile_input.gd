@@ -30,6 +30,17 @@ func _is_joystick_finger(index: int) -> bool:
 	return _virtual_joystick and _virtual_joystick.touch_index == index
 
 
+# _gui_input on the joystick runs after _input, so on the frame a new touch lands
+# we cannot yet rely on _is_joystick_finger. Probe the capture area directly.
+func _is_touch_over_joystick(position: Vector2) -> bool:
+	if not _virtual_joystick:
+		return false
+	var active_area := _virtual_joystick.get_node_or_null("ActiveArea") as Control
+	if active_area and active_area.is_visible_in_tree():
+		return active_area.get_global_rect().has_point(position)
+	return false
+
+
 func _is_touch_over_chat(position: Vector2) -> bool:
 	var explorer = Global.get_explorer()
 	if not explorer:
@@ -56,9 +67,13 @@ func _input(event):
 				if _is_touch_over_chat(event.position):
 					_chat_touch_indices[event.index] = true
 					return
+				if _is_touch_over_joystick(event.position):
+					return
 			else:
 				if _chat_touch_indices.erase(event.index):
 					return
+				if event.index < 2:
+					_two_fingers = false
 		elif _chat_touch_indices.has(event.index):
 			return
 
