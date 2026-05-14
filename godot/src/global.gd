@@ -218,6 +218,8 @@ func _ready():
 		if dcl_ios_singleton:
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
+	_dcl_swift_lib_smoke_test()
+
 	# Setup
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
@@ -412,6 +414,19 @@ func _ready():
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
+
+
+# Smoke test for the Swift GDExtension. Runs only on iOS where DclSwiftLibPlugin
+# can actually reach the underlying Swift class; no-ops on every other platform.
+func _dcl_swift_lib_smoke_test() -> void:
+	if not DclSwiftLibPlugin.is_available():
+		return
+	print(
+		"[DclSwiftLib] ping() -> ",
+		DclSwiftLibPlugin.ping(),
+		" | version() -> ",
+		DclSwiftLibPlugin.version()
+	)
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
