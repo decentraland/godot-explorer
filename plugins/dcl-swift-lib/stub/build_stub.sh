@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds the no-op GDExtension stub used on desktop platforms where the real
-# Swift StoreKit framework is not built. Output lands in
+# Swift framework is not built. Output lands in
 # godot/<platform>/dcl-swift-lib/ to mirror the iOS framework layout.
 #
 # Usage:

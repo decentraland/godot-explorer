@@ -416,20 +416,17 @@ func _ready():
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
 
 
-# Smoke test for the Swift GDExtension (iOS-only). Verifies DclSwiftLib loads
-# and Callable methods round-trip. TODO: remove once StoreKit feature lands.
+# Smoke test for the Swift GDExtension. Runs only on iOS where DclSwiftLibPlugin
+# can actually reach the underlying Swift class; no-ops on every other platform.
 func _dcl_swift_lib_smoke_test() -> void:
-	if not ClassDB.class_exists("DclSwiftLib"):
-		print("[DclSwiftLib] class not registered (expected on non-iOS platforms)")
+	if not DclSwiftLibPlugin.is_available():
 		return
-	print("[DclSwiftLib] class registered, instantiating...")
-	var instance = ClassDB.instantiate("DclSwiftLib")
-	if instance == null:
-		printerr("[DclSwiftLib] instantiate returned null")
-		return
-	var ping_result = instance.call("ping")
-	var version_result = instance.call("version")
-	print("[DclSwiftLib] ping() -> ", ping_result, " | version() -> ", version_result)
+	print(
+		"[DclSwiftLib] ping() -> ",
+		DclSwiftLibPlugin.ping(),
+		" | version() -> ",
+		DclSwiftLibPlugin.version()
+	)
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
