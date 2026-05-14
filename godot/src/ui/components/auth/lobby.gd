@@ -253,13 +253,6 @@ func show_avatar_create_screen():
 
 # ADR-290: Snapshots no longer uploaded
 func async_close_sign_in():
-	Global.metrics.update_identity(
-		Global.player_identity.get_address_str(), Global.player_identity.is_guest
-	)
-
-	# Auth Success metric
-	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
-
 	if _should_go_to_explorer_from_deeplink():
 		go_to_explorer()
 		return
@@ -278,6 +271,10 @@ func _ready():
 
 	# Secret guest mode: double-tap logo when not in prod
 	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
+
+	# Lobby fires onboarding/auth events one at a time — ship them on a snappy 2s cadence.
+	# Menu/Explorer restore the default 10s when leaving the lobby.
+	Global.metrics.set_flush_interval(2.0)
 
 	Global.music_player.play.call_deferred("music_builder")
 
@@ -342,7 +339,13 @@ func _ready():
 		if random_profile != null:
 			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
 
-	if Global.player_identity.try_recover_account(session_account):
+	# Flag the wallet_connected emission produced by try_recover_account so the analytics
+	# controller skips emitting a Firebase `login_success` for it. Safe to call unconditionally:
+	# the clear runs deferred and just unblocks the next legitimate fresh login.
+	if Global.analytics_controller != null:
+		Global.analytics_controller.mark_wallet_connected_as_recovery()
+	var recovered := Global.player_identity.try_recover_account(session_account)
+	if recovered:
 		loading_first_profile = true
 		show_loading_screen()
 	elif _skip_lobby:
@@ -464,7 +467,11 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 	Global.open_url(url, use_webview)
 
 
-func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
+func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
+	Global.metrics.update_identity(address, is_guest)
+	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
+	Global.metrics.flush.call_deferred()
+
 	Global.get_config().session_account = {}
 
 	var new_stored_account := {}
@@ -474,7 +481,7 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 	Global.get_config().save_to_settings_file()
 
 	# Initialize social service early so Discover can show friends before entering explorer
-	if not _is_guest:
+	if not is_guest:
 		Global.social_service.initialize_from_player_identity(Global.player_identity)
 
 
@@ -495,7 +502,10 @@ func _on_eula_meta_clicked(meta: Variant) -> void:
 func _on_button_accept_eula_pressed() -> void:
 	Global.metrics.track_screen_viewed("ACCEPT_EULA", "")
 	Global.metrics.track_click_button("accept", "ACCEPT_EULA", "")
-	Global.metrics.flush()
+	# Opens the consent gate (auto-flushes queued pre-consent events) and fires Firebase
+	# `eula_accepted` Key Event. All Firebase/Segment orchestration lives in the controller.
+	if Global.analytics_controller != null:
+		Global.analytics_controller.on_eula_accepted_locally()
 	Global.get_config().terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
 	Global.get_config().save_to_settings_file()
 	show_account_home_screen()
@@ -573,6 +583,9 @@ func _on_button_next_pressed():
 	if promise.is_rejected():
 		var error: PromiseError = promise.get_data()
 		printerr("[Lobby] Profile deploy failed: ", error.get_error())
+	else:
+		Global.metrics.track_screen_viewed("AUTH_DEPLOY_SUCCESS", "")
+		Global.metrics.flush.call_deferred()
 
 	show_control_ftue()
 
