@@ -443,32 +443,46 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
     }
 }
 
+/// Hard cap on any single dimension, regardless of pixel budget.
+/// Keeps us safely under common GPU `MAX_TEXTURE_SIZE` limits on mobile / Quest.
+const MAX_TEXTURE_DIMENSION: i32 = 4096;
+
+/// Downscale `image` (preserving aspect ratio) so that:
+///   - total pixels <= `max_size * max_size`, AND
+///   - neither dimension exceeds `MAX_TEXTURE_DIMENSION`.
+///
+/// Returns true if the image was resized.
 pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
-    let image_width = image.get_width();
-    let image_height = image.get_height();
-    if image_width > image_height {
-        if image_width > max_size {
-            image.resize(max_size, (image_height * max_size) / image_width);
-            tracing::debug!(
-                "Resize! {}x{} to {}x{}",
-                image_width,
-                image_height,
-                image.get_width(),
-                image.get_height()
-            );
-            return true;
-        }
-    } else if image_height > max_size {
-        image.resize((image_width * max_size) / image_height, max_size);
-        tracing::debug!(
-            "Resize! {}x{} to {}x{}",
-            image_width,
-            image_height,
-            image.get_width(),
-            image.get_height()
-        );
-        return true;
+    let w = image.get_width();
+    let h = image.get_height();
+    if w <= 0 || h <= 0 || max_size <= 0 {
+        return false;
     }
 
-    false
+    let max_pixels = (max_size as i64) * (max_size as i64);
+    let cur_pixels = (w as i64) * (h as i64);
+
+    let over_pixel_budget = cur_pixels > max_pixels;
+    let over_dim_cap = w > MAX_TEXTURE_DIMENSION || h > MAX_TEXTURE_DIMENSION;
+    if !over_pixel_budget && !over_dim_cap {
+        return false;
+    }
+
+    let scale_pixels = if over_pixel_budget {
+        (max_pixels as f64 / cur_pixels as f64).sqrt()
+    } else {
+        1.0
+    };
+    let scale_dim = (MAX_TEXTURE_DIMENSION as f64 / w as f64)
+        .min(MAX_TEXTURE_DIMENSION as f64 / h as f64)
+        .min(1.0);
+    let scale = scale_pixels.min(scale_dim);
+
+    // floor to guarantee new_w * new_h <= max_pixels and new dims <= cap
+    let new_w = ((w as f64 * scale).floor() as i32).max(1);
+    let new_h = ((h as f64 * scale).floor() as i32).max(1);
+
+    image.resize(new_w, new_h);
+    tracing::debug!("Resize! {}x{} to {}x{}", w, h, new_w, new_h);
+    true
 }
