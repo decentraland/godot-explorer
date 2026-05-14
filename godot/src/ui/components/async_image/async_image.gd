@@ -6,11 +6,13 @@ extends Control
 
 signal image_loaded
 
-## ORIGINAL fetches at full resolution (bypasses global texture quality).
-## DEFAULT uses the global texture quality setting (typically Medium = 512px max).
-enum Quality { ORIGINAL, DEFAULT }
+## Optional per-instance texture quality override.
+## NONE → uses the global texture quality setting (DclConfig).
+## LOW/MEDIUM/HIGH/SOURCE values mirror DclConfig.TEXTURE_QUALITY_* — keep in sync with
+## TextureQuality in lib/src/godot_classes/dcl_config.rs.
+enum ForcedQuality { NONE = -1, LOW = 0, MEDIUM = 1, HIGH = 2, SOURCE = 3 }
 
-@export var quality: Quality = Quality.ORIGINAL
+@export var forced_quality: ForcedQuality = ForcedQuality.NONE
 @export var border_radius: int = 12
 @export var border_color: Color = Color("E8B9FF")
 @export var background_color: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5)
@@ -123,12 +125,12 @@ static func _get_hash_from_url(url: String) -> String:
 func _async_download(url: String) -> void:
 	var url_hash := _get_hash_from_url(url)
 	var content_mapping
-	if quality == Quality.ORIGINAL:
-		content_mapping = Global.content_provider.fetch_texture_by_url_with_quality(
-			url_hash, url, DclConfig.TEXTURE_QUALITY_HIGH
-		)
-	else:
+	if forced_quality == ForcedQuality.NONE:
 		content_mapping = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	else:
+		content_mapping = Global.content_provider.fetch_texture_by_url_with_quality(
+			url_hash, url, forced_quality
+		)
 	var result = await PromiseUtils.async_awaiter(content_mapping)
 	if result is PromiseError:
 		printerr("AsyncImage: download error: ", result.get_error())
