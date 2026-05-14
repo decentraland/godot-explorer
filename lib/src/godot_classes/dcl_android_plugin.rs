@@ -214,6 +214,69 @@ impl DclAndroidPlugin {
         result.try_to::<bool>().unwrap_or(false)
     }
 
+    /// Returns the cached Firebase Analytics app instance id, or empty string if not yet
+    /// available (the underlying SDK call is async and the result is cached after first fetch).
+    #[func]
+    pub fn get_firebase_app_instance_id() -> GString {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return GString::new();
+        };
+        let result = Self::timed_jni_call(&mut singleton, "getFirebaseAppInstanceId", &[]);
+        result.try_to::<GString>().unwrap_or_default()
+    }
+
+    /// Connect a callable to the plugin's `firebase_app_instance_id_ready` signal. The signal is
+    /// emitted once per launch with the resolved app instance id (empty string on failure). Returns
+    /// false if the plugin singleton is not available.
+    pub fn connect_firebase_app_instance_id_ready(callable: &Callable) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.connect("firebase_app_instance_id_ready", callable);
+        true
+    }
+
+    /// Set the canonical Firebase Analytics user id. Auto-attached to every Firebase event.
+    /// Pass an empty string to clear it.
+    #[func]
+    pub fn set_firebase_user_id(user_id: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        Self::timed_jni_call(&mut singleton, "setFirebaseUserId", &[user_id.to_variant()]);
+        true
+    }
+
+    /// Set a Firebase Analytics user property. Auto-attached to every event fired afterward.
+    /// Pass an empty string as the value to clear the property.
+    #[func]
+    pub fn set_firebase_user_property(name: GString, value: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        Self::timed_jni_call(
+            &mut singleton,
+            "setFirebaseUserProperty",
+            &[name.to_variant(), value.to_variant()],
+        );
+        true
+    }
+
+    /// Log a custom Firebase Analytics event. `params_json` should be a JSON object string with
+    /// primitive values (string/number/boolean); pass "" for no parameters.
+    #[func]
+    pub fn log_firebase_event(event_name: GString, params_json: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = Self::timed_jni_call(
+            &mut singleton,
+            "logFirebaseEvent",
+            &[event_name.to_variant(), params_json.to_variant()],
+        );
+        result.try_to::<bool>().unwrap_or(false)
+    }
+
     /// Fetch install referrer data from Google Play.
     /// Returns a Dictionary with status, referrer (UTM params), timestamps, etc.
     /// The first call triggers the async fetch and returns {status: "pending"}.

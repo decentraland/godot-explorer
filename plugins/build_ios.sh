@@ -154,7 +154,7 @@ else
 fi
 
 echo "================================================"
-echo "✨ iOS plugin build completed!"
+echo "✨ iOS Obj-C plugin build completed!"
 
 # Optional: Display additional information
 echo ""
@@ -162,3 +162,22 @@ echo "ℹ️  Notes:"
 echo "   - XCFramework includes both device and simulator architectures"
 echo "   - Debug and Release builds are available"
 echo "   - Plugin files are ready for Godot iOS export"
+
+# Step 5: Build the Swift GDExtension (DclSwiftLib)
+echo ""
+echo "================================================"
+echo "🔨 Building DclSwiftLib (Swift GDExtension)..."
+echo "================================================"
+
+SWIFT_LIB_BUILD="${SCRIPT_DIR}/build_swift_lib.sh"
+if [ ! -x "${SWIFT_LIB_BUILD}" ]; then
+    echo "❌ Error: ${SWIFT_LIB_BUILD} not found or not executable"
+    exit 1
+fi
+
+"${SWIFT_LIB_BUILD}" release
+
+echo ""
+echo "================================================"
+echo "✨ Full iOS build completed!"
+echo "================================================"

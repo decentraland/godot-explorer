@@ -124,6 +124,9 @@ func get_params_from_cmd():
 
 
 func _ready():
+	# Out of the lobby — restore the relaxed 10s flush cadence (the lobby drops it to 2s).
+	Global.metrics.set_flush_interval(10.0)
+
 	GraphicSettings.apply_full_processor_mode()
 
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
