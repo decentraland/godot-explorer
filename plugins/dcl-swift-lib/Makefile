@@ -14,6 +14,24 @@ GODOT_IOS_DIR ?= $(CURDIR)/../../godot/ios/dcl-swift-lib
 # Xcodebuild flags to skip plugin/macro validation (required for SwiftGodot)
 XCODE_FLAGS := -skipPackagePluginValidation -skipMacroValidation
 
+# Size-focused build settings (Release): optimize for size, strip non-global
+# symbols, and emit debug info to a separate dSYM instead of embedding it.
+SIZE_FLAGS := \
+	SWIFT_OPTIMIZATION_LEVEL=-Osize \
+	GCC_OPTIMIZATION_LEVEL=s \
+	DEPLOYMENT_POSTPROCESSING=YES \
+	STRIP_INSTALLED_PRODUCT=YES \
+	STRIP_STYLE=non-global \
+	COPY_PHASE_STRIP=YES \
+	DEBUG_INFORMATION_FORMAT=dwarf-with-dsym
+
+# Apply size optimizations only in Release builds.
+ifeq ($(CONFIG),Release)
+EXTRA_FLAGS := $(SIZE_FLAGS)
+else
+EXTRA_FLAGS :=
+endif
+
 IOS_DEVICE_FRAMEWORK := $(DERIVED_DATA)/Build/Products/$(CONFIG)-iphoneos/PackageFrameworks/$(FRAMEWORK_NAME).framework
 IOS_SIM_FRAMEWORK := $(DERIVED_DATA)/Build/Products/$(CONFIG)-iphonesimulator/PackageFrameworks/$(FRAMEWORK_NAME).framework
 
@@ -26,6 +44,7 @@ build:
 		-destination 'generic/platform=iOS' \
 		-derivedDataPath '$(DERIVED_DATA)' \
 		$(XCODE_FLAGS) \
+		$(EXTRA_FLAGS) \
 		build
 
 # Build universal xcframework (device + simulator)
@@ -39,6 +58,7 @@ xcframework:
 		-destination 'generic/platform=iOS' \
 		-derivedDataPath '$(DERIVED_DATA)' \
 		$(XCODE_FLAGS) \
+		$(EXTRA_FLAGS) \
 		build; \
 	echo "Building for iOS Simulator..."; \
 	$(XCODEBUILD) \
@@ -47,6 +67,7 @@ xcframework:
 		-destination 'generic/platform=iOS Simulator' \
 		-derivedDataPath '$(DERIVED_DATA)' \
 		$(XCODE_FLAGS) \
+		$(EXTRA_FLAGS) \
 		build; \
 	echo "Copying resource bundles into frameworks..."; \
 	for bundle in $(DERIVED_DATA)/Build/Products/$(CONFIG)-iphoneos/*.bundle; do \

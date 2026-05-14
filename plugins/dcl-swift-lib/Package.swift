@@ -16,7 +16,12 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/migueldeicaza/SwiftGodot", branch: "barebone-split"),
+        // Pinned to a specific commit on the `barebone-split` branch so builds
+        // stay reproducible even if the upstream branch is force-pushed or moved.
+        .package(
+            url: "https://github.com/migueldeicaza/SwiftGodot",
+            revision: "f60a71fd22f932f3eed2626e2282386f9ce7d14a"
+        ),
     ],
     targets: [
         .target(

@@ -1,9 +1,10 @@
 // No-op GDExtension stub for platforms where the real Swift framework is not
 // available (macOS / Linux / Windows desktop builds). Exports the
 // `dcl_swift_lib_init` entry symbol so Godot loads the library cleanly without
-// the "No GDExtension library found" error. Registers no classes, so
-// `ClassDB.class_exists("DclStoreKit")` still returns false on these platforms
-// and `iap_manager.gd` correctly falls back to its disabled path.
+// the "No GDExtension library found" error. Registers no classes, so any
+// `ClassDB.class_exists("Dcl...")` lookup against the Swift module still
+// returns false on these platforms and callers can fall back through
+// `DclSwiftLibPlugin.is_available()`.
 
 #include <stddef.h>
 #include <stdint.h>
