@@ -1,4 +1,4 @@
-[gd_resource type="ShaderMaterial" load_steps=4 format=3 uid="uid://dkqp8yrjhfisl"]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://dkqp8yrjhfisl"]
 
 [ext_resource type="Shader" uid="uid://cm0fkgbtmi0l4" path="res://assets/shaders/grass_blades.gdshader" id="1_shader"]
 [ext_resource type="Texture2D" uid="uid://oxp2kg6rerbg" path="res://assets/empty-scenes/EmptyParcels-TX.png" id="2_atlas"]

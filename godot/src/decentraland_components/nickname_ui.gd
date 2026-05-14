@@ -95,6 +95,9 @@ func async_show_message(message: String):
 		return
 	if message_tween:
 		message_tween.kill()
+	var vp := get_viewport()
+	if vp is SubViewport:
+		(vp as SubViewport).render_target_update_mode = SubViewport.UPDATE_ALWAYS
 
 	var message_container = create_message_container(message)
 	var message_label = message_container.get_child(0)
@@ -125,3 +128,6 @@ func async_show_message(message: String):
 	message_tween.tween_subtween(subtween)
 	await message_tween.finished
 	message_container.queue_free()
+	var vp_after := get_viewport()
+	if vp_after is SubViewport:
+		(vp_after as SubViewport).render_target_update_mode = SubViewport.UPDATE_DISABLED
