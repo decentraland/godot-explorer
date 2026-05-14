@@ -75,6 +75,15 @@ impl IRefCounted for DclConfig {
 
 #[godot_api]
 impl DclConfig {
+    #[constant]
+    const TEXTURE_QUALITY_LOW: i32 = 0;
+    #[constant]
+    const TEXTURE_QUALITY_MEDIUM: i32 = 1;
+    #[constant]
+    const TEXTURE_QUALITY_HIGH: i32 = 2;
+    #[constant]
+    const TEXTURE_QUALITY_SOURCE: i32 = 3;
+
     #[func]
     pub fn get_settings_file_path() -> GString {
         "user://settings.cfg".to_godot()

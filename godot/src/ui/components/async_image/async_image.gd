@@ -124,7 +124,9 @@ func _async_download(url: String) -> void:
 	var url_hash := _get_hash_from_url(url)
 	var content_mapping
 	if quality == Quality.ORIGINAL:
-		content_mapping = Global.content_provider.fetch_texture_by_url_original(url_hash, url)
+		content_mapping = Global.content_provider.fetch_texture_by_url_with_quality(
+			url_hash, url, DclConfig.TEXTURE_QUALITY_HIGH
+		)
 	else:
 		content_mapping = Global.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(content_mapping)
@@ -133,5 +135,8 @@ func _async_download(url: String) -> void:
 		_finish_with_error()
 		return
 	if not is_instance_valid(self):
+		return
+	if result.failed:
+		_finish_with_error()
 		return
 	set_texture(result.texture)
