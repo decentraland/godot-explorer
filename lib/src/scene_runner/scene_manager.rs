@@ -1394,6 +1394,7 @@ impl SceneManager {
                 right,
                 bottom,
             }),
+            screen_inset_area: None,
         }
     }
 
