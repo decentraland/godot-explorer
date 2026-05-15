@@ -841,6 +841,13 @@ impl SceneManager {
             return;
         }
 
+        // SceneManager outlives the Explorer scene (autoload singleton). When the user
+        // signs out via change_scene_to_file, player_avatar_node becomes a dangling
+        // reference until the next Explorer load reassigns it via set_player_node.
+        if !self.player_avatar_node.is_instance_valid() {
+            return;
+        }
+
         let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let end_time_us = start_time_us + MAX_TIME_PER_SCENE_TICK_US;
 
@@ -1803,6 +1810,14 @@ impl INode for SceneManager {
 
         // Check loading session timeouts
         self.check_loading_timeouts();
+
+        // SceneManager is owned by DclGlobal (autoload) and outlives the Explorer scene.
+        // After change_scene_to_file (e.g. Sign Out), `player_avatar_node` becomes a
+        // dangling reference until the next Explorer load reassigns it via set_player_node.
+        // The pointer/raycast/tooltip block below derefs that node, so bail out here.
+        if !self.player_avatar_node.is_instance_valid() {
+            return;
+        }
 
         // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
         // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.
