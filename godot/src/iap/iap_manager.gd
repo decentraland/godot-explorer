@@ -1,10 +1,10 @@
 class_name IapManager
 extends Node
 
-# Wrapper around the iOS-only DclStoreKit GDExtension class.
-#
-# Hides platform plumbing: callers can use this on any platform; on non-iOS
-# `is_available()` returns false and methods become no-ops.
+# Frontend for the IAP purchase flow. Talks to the Swift `DclStoreKit` class
+# through the typed `DclStoreKitPlugin` Rust wrapper — no `ClassDB` plumbing
+# here; on non-iOS the wrapper's `is_available()` returns false and every
+# method is a no-op.
 #
 # Owns the global purchase overlay (full-screen blocking spinner). The overlay
 # is shown the moment a purchase is initiated and stays up until the flow
@@ -42,7 +42,9 @@ const _CREDITS_BY_PRODUCT := {
 
 # Backend that verifies the StoreKit JWS, grants credits server-side, and
 # tracks the per-wallet balance. Source of truth for `_balance`.
-const _BACKEND_URL := "https://iap-sandbox.dclregenesislabs.xyz"
+# LOCAL TUNNEL — revert before committing. Sandbox host:
+# "https://iap-sandbox.dclregenesislabs.xyz"
+const _BACKEND_URL := "https://shirt-vitamin-halo-seattle.trycloudflare.com"
 const _BACKEND_TIMEOUT_SEC := 15.0
 
 # Bound how long the purchase overlay stays up. StoreKit prompt + backend
@@ -62,7 +64,8 @@ const _OUTCOME_OK := 0
 const _OUTCOME_REJECTED := 1
 const _OUTCOME_RETRY := 2
 
-var _store_kit = null
+var _store_kit := DclStoreKitPlugin.new()
+var _store_kit_available: bool = false
 var _products: Array = []
 # Mirrors the server-side balance for the signed-in wallet. Updated from
 # every successful backend call. Empty until first call returns.
@@ -77,13 +80,12 @@ var _purchase_in_flight: bool = false
 
 
 func _ready() -> void:
-	if not ClassDB.class_exists("DclStoreKit"):
+	# is_available() lazily instantiates the Swift class and wires the
+	# Rust-side signal forwarders on the first call.
+	if not _store_kit.is_available():
 		print("[IAP] DclStoreKit not registered (expected on non-iOS platforms)")
 		return
-	_store_kit = ClassDB.instantiate("DclStoreKit")
-	if _store_kit == null:
-		printerr("[IAP] failed to instantiate DclStoreKit")
-		return
+	_store_kit_available = true
 
 	_store_kit.products_loaded.connect(_on_products_loaded)
 	_store_kit.products_load_failed.connect(_on_products_load_failed)
@@ -104,7 +106,7 @@ func _ready() -> void:
 
 
 func is_available() -> bool:
-	return _store_kit != null
+	return _store_kit_available
 
 
 func get_products() -> Array:
@@ -116,7 +118,7 @@ func get_balance() -> int:
 
 
 func purchase(product_id: String) -> void:
-	if _store_kit == null:
+	if not _store_kit_available:
 		print("[IAP] not available; ignoring purchase(", product_id, ")")
 		return
 	if _purchase_in_flight:
