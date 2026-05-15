@@ -2,11 +2,7 @@ extends GLTFDocumentExtension
 
 
 func _import_preflight(state: GLTFState, _extensions: PackedStringArray) -> Error:
-	# Guard with has_additional_data() — bare get_additional_data() emits a
-	# Dictionary engine warning when the key is missing, captured by Sentry.
-	var placeholder_image: Variant = null
-	if state.has_additional_data("placeholder_image"):
-		placeholder_image = state.get_additional_data("placeholder_image")
+	var placeholder_image = state.get_additional_data("placeholder_image")
 	if placeholder_image:
 		var dependencies: Array[String] = []
 		for image in state.json.get("images", []):
