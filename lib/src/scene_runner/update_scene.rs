@@ -21,6 +21,7 @@ use super::{
             update_gltf_node_modifiers, update_modifier_textures, update_modifier_video_textures,
         },
         input_modifier::update_input_modifier,
+        light_source::update_light_source,
         material::{update_material, update_video_material_textures},
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
@@ -262,6 +263,9 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::MeshRenderer => {
                     !update_mesh_renderer(scene, crdt_state, ref_time, effective_end_time_us)
+                }
+                SceneUpdateState::LightSource => {
+                    !update_light_source(scene, crdt_state, ref_time, effective_end_time_us)
                 }
                 SceneUpdateState::ScenePointerEvents => {
                     update_scene_pointer_events(scene, crdt_state);

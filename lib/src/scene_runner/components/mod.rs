@@ -11,6 +11,7 @@ pub mod camera_mode_area;
 pub mod gltf_container;
 pub mod gltf_node_modifiers;
 pub mod input_modifier;
+pub mod light_source;
 pub mod material;
 pub mod mesh_collider;
 pub mod mesh_renderer;
