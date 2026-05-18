@@ -90,7 +90,7 @@ func _start():
 	else:
 		print("Running in regular mode")
 		# EULA check is handled inside lobby.gd — always go to lobby
-		get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+		get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
 
 
 func _start_asset_server():
