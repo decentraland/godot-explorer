@@ -1320,6 +1320,7 @@ impl ContentProvider {
                     original_size,
                     image,
                     texture,
+                    failed: false,
                 });
 
                 then_promise(get_promise, Ok(Some(texture_entry.to_variant())));
@@ -1360,25 +1361,26 @@ impl ContentProvider {
         promise
     }
 
-    /// Fetches a texture by hash, bypassing the optimization pipeline.
-    /// This is useful for UI textures that need the original quality.
-    /// Uses a separate cache key (`{hash}_original`) to avoid conflicts with optimized versions.
-    pub fn fetch_texture_by_hash_original(
+    /// Fetches a texture by hash with an explicit quality, bypassing the optimization
+    /// pipeline. Useful for UI textures that need a specific (usually Source) quality.
+    /// Cache key: `{hash}_q{N}` — shared with `fetch_texture_by_url_with_quality`.
+    pub fn fetch_texture_by_hash_with_quality(
         &mut self,
         file_hash_godot: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
+        quality: TextureQuality,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
 
         // Validate file_hash is not empty to prevent "Is a directory" errors
         if file_hash.is_empty() {
             tracing::warn!(
-                "fetch_texture_by_hash_original: empty file_hash, returning rejected promise"
+                "fetch_texture_by_hash_with_quality: empty file_hash, returning rejected promise"
             );
             return Promise::from_rejected("Empty texture hash".to_string());
         }
 
-        let cache_key = format!("{}_original", file_hash);
+        let cache_key = format!("{}_q{}", file_hash, quality.to_i32());
 
         if let Some(promise) = self.get_cached_promise(&cache_key) {
             return promise;
@@ -1386,18 +1388,20 @@ impl ContentProvider {
 
         // Handle URL-based textures
         if file_hash.starts_with("http") {
-            let new_file_hash = format!("hashed_{:x}_original", file_hash_godot.hash_u32());
-            let promise =
-                self.fetch_texture_by_url_original(GString::from(&new_file_hash), file_hash_godot);
+            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
+            let promise = self.fetch_texture_by_url_with_quality(
+                GString::from(&new_file_hash),
+                file_hash_godot,
+                quality,
+            );
             self.cache_promise(cache_key, &promise);
             return promise;
         }
 
         let (promise, get_promise) = Promise::make_to_async();
 
-        // Create context with Source quality to bypass resize optimization
         let mut ctx = self.get_context();
-        ctx.texture_quality = TextureQuality::Source;
+        ctx.texture_quality = quality;
 
         let url = format!(
             "{}{}",
@@ -1411,7 +1415,7 @@ impl ContentProvider {
 
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id, "texture_original");
+            report_resource_start(&hash_id, "texture_with_quality");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1434,24 +1438,24 @@ impl ContentProvider {
         promise
     }
 
-    /// Fetches a texture by URL, bypassing the optimization pipeline.
-    /// Uses Source quality to preserve original texture resolution.
+    /// Fetches a texture by URL with an explicit quality, bypassing the global texture
+    /// quality setting. From GDScript, use `DclConfig.TEXTURE_QUALITY_LOW/MEDIUM/HIGH/SOURCE`.
     #[func]
-    pub fn fetch_texture_by_url_original(
+    pub fn fetch_texture_by_url_with_quality(
         &mut self,
         file_hash: GString,
         url: GString,
+        quality: TextureQuality,
     ) -> Gd<Promise> {
-        let file_hash = format!("{}_original", file_hash);
+        let file_hash = format!("{}_q{}", file_hash, quality.to_i32());
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;
         }
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
 
-        // Create context with Source quality to bypass resize optimization
         let mut content_provider_context = self.get_context();
-        content_provider_context.texture_quality = TextureQuality::Source;
+        content_provider_context.texture_quality = quality;
 
         let sent_file_hash = file_hash.clone();
 
@@ -1464,7 +1468,7 @@ impl ContentProvider {
         let url_for_error = url.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id, "texture_url_original");
+            report_resource_start(&hash_id, "texture_url_with_quality");
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -1487,47 +1491,13 @@ impl ContentProvider {
         promise
     }
 
+    /// Fetches a texture by URL using the global texture-quality setting.
+    /// Thin wrapper over `fetch_texture_by_url_with_quality`, so it shares cache slots
+    /// with explicit-quality fetches at the same quality (cache key: `{hash}_q{N}`).
     #[func]
     pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
-        let file_hash = file_hash.to_string();
-        if let Some(promise) = self.get_cached_promise(&file_hash) {
-            return promise;
-        }
-        let url = url.to_string();
-        let (promise, get_promise) = Promise::make_to_async();
-        let content_provider_context = self.get_context();
-        let sent_file_hash = file_hash.clone();
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
-        #[cfg(feature = "use_resource_tracking")]
-        let url_for_error = url.clone();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id, "texture_url");
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &format!("url={} error={}", url_for_error, error));
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cache_promise(file_hash, &promise);
-
-        promise
+        let quality = DclConfig::static_get_texture_quality();
+        self.fetch_texture_by_url_with_quality(file_hash, url, quality)
     }
 
     #[func]

@@ -12,6 +12,7 @@ use crate::{
         material::{DclSourceTex, DclTexture},
         proto_components::sdk::components::{BackgroundTextureMode, PbUiBackground},
     },
+    godot_classes::dcl_config::TextureQuality,
 };
 
 use super::dcl_global::DclGlobal;
@@ -548,14 +549,18 @@ impl DclUiBackground {
                     DclSourceTex::Texture(texture_hash) => {
                         let global = DclGlobal::singleton();
                         let mut content_provider = global.bind().get_content_provider();
-                        let mut promise =
-                            content_provider.bind_mut().fetch_texture_by_hash_original(
+                        let quality = TextureQuality::Source;
+                        let mut promise = content_provider
+                            .bind_mut()
+                            .fetch_texture_by_hash_with_quality(
                                 texture_hash.to_godot(),
                                 DclContentMappingAndUrl::from_ref(content_mapping),
+                                quality.clone(),
                             );
 
-                        // Use the _original suffix to match the cache key used by fetch_texture_by_hash_original
-                        self.waiting_hash = format!("{}_original", texture_hash).to_godot();
+                        // Match the cache key used by fetch_texture_by_hash_with_quality.
+                        self.waiting_hash =
+                            format!("{}_q{}", texture_hash, quality.to_i32()).to_godot();
 
                         if !promise.bind().is_resolved() {
                             promise.connect(
