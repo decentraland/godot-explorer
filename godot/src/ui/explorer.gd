@@ -249,7 +249,6 @@ func _ready():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()
-		ui_root.gui_input.connect(self._on_ui_root_gui_input)
 		# Detect physical gamepad to hide virtual controls
 		Input.joy_connection_changed.connect(_on_joy_connection_changed)
 		_gamepad_connected = Input.get_connected_joypads().size() > 0
@@ -1116,18 +1115,6 @@ func reset_cursor_position():
 	var crosshair_position = center_position - (label_crosshair.size / 2) - Vector2(0, 1)
 	label_crosshair.set_global_position(crosshair_position)
 	control_pointer_tooltip.set_global_cursor_position(center_position)
-
-
-func _on_ui_root_gui_input(event: InputEvent):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			set_cursor_position(event.position)
-		# On mobile in PointerUnlocked mode (VirtualCamera active), trigger ia_pointer on touch
-		if Global.is_mobile() and Global.scene_runner.raycast_use_cursor_position:
-			if event.pressed:
-				Input.action_press("ia_pointer")
-			else:
-				Input.action_release("ia_pointer")
 
 
 func _on_panel_profile_open_profile():

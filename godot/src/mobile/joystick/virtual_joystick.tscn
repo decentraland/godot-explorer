@@ -99,6 +99,7 @@ offset_right = -134.0
 offset_bottom = 98.0
 grow_horizontal = 0
 pivot_offset = Vector2(32.5, 32.5)
+focus_mode = 0
 theme = SubResource("Theme_gh23i")
 theme_override_constants/icon_max_width = 40
 icon = ExtResource("3_4x7b8")

@@ -22,15 +22,6 @@ func _update_mouse_filter() -> void:
 		mouse_filter = MOUSE_FILTER_IGNORE
 
 
-func is_point_over_notification(position: Vector2) -> bool:
-	if not is_visible_in_tree():
-		return false
-	for child in notifications_container.get_children():
-		if child is Control and child.visible and child.get_global_rect().has_point(position):
-			return true
-	return false
-
-
 func _async_on_chat_message_arrived(address: String, message: String, timestamp: float):
 	if notifications.size() == MAX_MESSAGES:
 		notifications.pop_front().queue_free()
