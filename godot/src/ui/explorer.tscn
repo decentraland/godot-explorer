@@ -189,7 +189,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_constants/margin_top = 0
 script = ExtResource("5_c8ksg")
+use_top = false
+use_bottom = false
 
 [node name="InteractableHUD" type="Control" parent="UI/SafeMarginContainerHUD" unique_id=1898741314]
 layout_mode = 2
