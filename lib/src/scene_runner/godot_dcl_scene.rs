@@ -5,6 +5,7 @@ use crate::{
     },
     godot_classes::{
         dcl_node_entity_3d::DclNodeEntity3d, dcl_scene_node::DclSceneNode,
+        dcl_ui_background::DclUiBackground, dcl_ui_border::DclUiBorder,
         dcl_ui_control::DclUiControl,
     },
     realm::scene_definition::SceneEntityDefinition,
@@ -105,10 +106,19 @@ pub struct UiNode {
     pub ui_transform: UiTransform,
     pub computed_parent: SceneEntityId,
     pub has_background: bool,
+    pub has_border: bool,
     pub text_size: Option<Vector2>,
+    // Direct Gd references avoid get_node_or_null string lookups on every
+    // UI_TRANSFORM update. Set/cleared by the ui_background / ui_transform
+    // update functions in lockstep with has_background / has_border.
+    pub bkg_node: Option<Gd<DclUiBackground>>,
+    pub border_node: Option<Gd<DclUiBorder>>,
 }
 
 impl UiNode {
+    // Number of fixed visual siblings at the START of base_control's children
+    // (currently bkg at index 0, text at index 1). The border node lives at the
+    // END of the children list so it draws on top — it is NOT counted here.
     pub fn control_offset(&self) -> i32 {
         (if self.has_background { 1 } else { 0 }) + (if self.text_size.is_some() { 1 } else { 0 })
     }
@@ -162,6 +172,9 @@ impl GodotDclScene {
             ui_transform: UiTransform::default(),
             computed_parent: SceneEntityId::ROOT,
             has_background: false,
+            has_border: false,
+            bkg_node: None,
+            border_node: None,
             text_size: None,
         };
 
@@ -283,7 +296,10 @@ impl GodotDclScene {
                 ui_transform: UiTransform::default(),
                 computed_parent: SceneEntityId::ROOT,
                 has_background: false,
+                has_border: false,
                 text_size: None,
+                bkg_node: None,
+                border_node: None,
             });
             self.ui_entities.insert(*entity);
         }
