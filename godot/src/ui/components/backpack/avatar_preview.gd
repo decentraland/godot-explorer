@@ -50,6 +50,14 @@ var _camera_focus: String = "overall"
 var _cached_aabbs: Dictionary = {}
 var _user_has_panned: bool = false
 var _pending_camera_fit: bool = false
+# Tracks a deferred _fit_to_overall (the initial fully-visible fit used when
+# fit_avatar is true). Set when size is briefly 0 or margins eat the viewport
+# during the first call after avatar load; cleared once the fit commits.
+# _on_resized re-runs _fit_to_overall while this is true so the initial fit
+# isn't lost — without it, the camera stays at the scene-file default and the
+# avatar reads as tiny (the profile viewer hides h_box_container_data before
+# awaiting avatar load, so size=0 when _fit_to_overall fires).
+var _pending_fit_overall: bool = false
 var _fitted_camera_size: float = MAX_CAMERA_SIZE
 var _fitted_aabb_center_y: float = 0.0
 var _last_fit_stable_aabb: AABB = AABB()
@@ -362,7 +370,12 @@ func _apply_snap_top_to_viewport() -> void:
 
 
 func _on_resized() -> void:
-	if _pending_camera_fit and size.x > 0.0 and size.y > 0.0:
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+	if _pending_fit_overall and "overall" in _cached_aabbs:
+		_fit_to_overall()
+		return
+	if _pending_camera_fit:
 		var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 		if aabb_key in _cached_aabbs:
 			_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
@@ -732,7 +745,10 @@ func _stable_aabb() -> AABB:
 
 
 func _fit_to_overall() -> void:
-	if not is_inside_tree() or size.x <= 0.0 or size.y <= 0.0:
+	if not is_inside_tree():
+		return
+	if size.x <= 0.0 or size.y <= 0.0:
+		_pending_fit_overall = true
 		return
 	if "overall" not in _cached_aabbs:
 		return
@@ -741,8 +757,17 @@ func _fit_to_overall() -> void:
 	var vp_w: float = size.x
 	var eff_top: float = _effective_margin_top()
 	var eff_bottom: float = _effective_margin_bottom()
-	var inner_h: float = maxf(1.0, vp_h - eff_top - eff_bottom)
-	var inner_w: float = maxf(1.0, vp_w - preview_margin_left - preview_margin_right)
+	var raw_inner_h: float = vp_h - eff_top - eff_bottom
+	var raw_inner_w: float = vp_w - preview_margin_left - preview_margin_right
+	# Parallel guard to _fit_camera_to_aabb: when margins claim almost the full
+	# viewport, the parent layout pass hasn't settled yet — defer rather than
+	# commit a wildly zoomed-out cam_size that makes the avatar appear tiny.
+	if raw_inner_h < 50.0 or raw_inner_w < 50.0:
+		_pending_fit_overall = true
+		return
+	_pending_fit_overall = false
+	var inner_h: float = maxf(1.0, raw_inner_h)
+	var inner_w: float = maxf(1.0, raw_inner_w)
 	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
 	cam_size = maxf(cam_size, MIN_CAMERA_SIZE_OVERALL)
 	var center_y: float = aabb.get_center().y + (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)
