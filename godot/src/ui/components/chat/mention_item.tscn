@@ -9,6 +9,11 @@
 font = ExtResource("4_tpv4r")
 font_size = 22
 
+[sub_resource type="LabelSettings" id="LabelSettings_hash"]
+font = ExtResource("4_tpv4r")
+font_size = 22
+font_color = Color(0.545, 0.545, 0.545, 1)
+
 [node name="MentionItem" type="Control" unique_id=1469431168]
 custom_minimum_size = Vector2(200, 56)
 layout_mode = 3
@@ -46,6 +51,12 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 label_settings = SubResource("LabelSettings_8iu80")
+
+[node name="Hash" type="Label" parent="MarginContainer/HBoxContainer" unique_id=1901030001]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+label_settings = SubResource("LabelSettings_hash")
 
 [node name="TextureRect_Checkmark" type="TextureRect" parent="MarginContainer/HBoxContainer" unique_id=190021123]
 unique_name_in_owner = true
