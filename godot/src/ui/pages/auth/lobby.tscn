@@ -13,7 +13,9 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_ypsmd"]
 [ext_resource type="LabelSettings" uid="uid://cjsuieuof7bhf" path="res://assets/themes/lobby_title_small.tres" id="10_3tlbd"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="11_7iulh"]
+[ext_resource type="Texture2D" uid="uid://cvc54ttopcr3a" path="res://assets/themes/icons/checkbox_2_on.svg" id="12_cuc50"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
+[ext_resource type="Texture2D" uid="uid://cbd42ho332sb2" path="res://assets/themes/icons/checkbox_2_off.svg" id="13_rtode"]
 [ext_resource type="PackedScene" uid="uid://fc5fxcmfp4pq" path="res://src/ui/components/atoms/inputs/dcl_line_edit.tscn" id="13_vcjym"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="15_n5dun"]
 [ext_resource type="LabelSettings" uid="uid://d1jnlk6vnxej7" path="res://assets/themes/lobby_title_60.tres" id="16_vqtgj"]
@@ -247,9 +249,10 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("9_ypsmd")
-theme_override_constants/icon_max_width = 40
-autowrap_mode = 2
-vertical_icon_alignment = 0
+theme_override_constants/icon_max_width = 64
+theme_override_icons/checked = ExtResource("12_cuc50")
+theme_override_icons/unchecked = ExtResource("13_rtode")
+icon_alignment = 1
 expand_icon = true
 
 [node name="RichTextLabel" type="RichTextLabel" parent="Main/Eula/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer/EulaCheckArea/HBoxContainer" unique_id=1922449077]
@@ -607,6 +610,8 @@ mouse_filter = 2
 stretch = true
 hide_name = true
 can_move = false
+preview_margin_top = 10
+preview_margin_bottom = 60
 
 [node name="ChooseNameFooter" type="VBoxContainer" parent="Main/ChooseName/MarginContainer/VBoxContainer" unique_id=786581344]
 unique_name_in_owner = true
@@ -701,6 +706,8 @@ mouse_filter = 2
 stretch = true
 hide_name = true
 can_move = false
+preview_margin_top = 10
+preview_margin_bottom = 60
 
 [node name="RestoreNameFooter" type="VBoxContainer" parent="Main/Comeback/MarginContainer/VBoxContainer" unique_id=862068117]
 custom_minimum_size = Vector2(425, 0)
