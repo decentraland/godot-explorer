@@ -339,6 +339,30 @@ pub fn apply_storekit_patch() -> anyhow::Result<()> {
     let patched = inject_storekit_reference(&original, STOREKIT_DEST_NAME)?;
     fs::write(&scheme_path, patched)?;
 
+    // Also bundle the .storekit as a Resource of the .app so the products are
+    // visible when launching outside Xcode (e.g. `xcrun devicectl process launch`,
+    // which is what `cargo run -- run --target ios` uses). Xcode's Run action
+    // alone would inject the scheme reference, but devicectl does not — without
+    // the bundled resource StoreKit hits the real App Store / Sandbox and the
+    // local-only product IDs come back empty.
+    let pbxproj_path = format!(
+        "{}{}.xcodeproj/project.pbxproj",
+        EXPORTS_FOLDER, IOS_EXPORT_NAME
+    );
+    if Path::new(&pbxproj_path).exists() {
+        let pbxproj = fs::read_to_string(&pbxproj_path)?;
+        let patched_pbxproj = inject_storekit_resource(&pbxproj, STOREKIT_DEST_NAME)?;
+        fs::write(&pbxproj_path, patched_pbxproj)?;
+    } else {
+        print_message(
+            MessageType::Warning,
+            &format!(
+                "project.pbxproj not found at {}; skipping bundle patch",
+                pbxproj_path
+            ),
+        );
+    }
+
     // Best-effort cleanup of the legacy filename Xcode created via the wizard
     // earlier in development. Safe no-op once it's gone.
     let legacy = format!("{}LocalNewStoreKit.storekit", EXPORTS_FOLDER);
@@ -347,11 +371,96 @@ pub fn apply_storekit_patch() -> anyhow::Result<()> {
     print_message(
         MessageType::Success,
         &format!(
-            "StoreKit Configuration applied: exports/{} (scheme patched)",
+            "StoreKit Configuration applied: exports/{} (scheme + pbxproj patched)",
             STOREKIT_DEST_NAME
         ),
     );
     Ok(())
+}
+
+/// Stable PBX object IDs for the bundled `.storekit`. They only need to be
+/// unique within the pbxproj — using a fixed pair makes our patcher idempotent
+/// (re-running rewrites the same lines instead of accumulating new ones).
+const STOREKIT_PBX_FILE_REF: &str = "9CEA09222FBB4E5A00E78B1C";
+const STOREKIT_PBX_BUILD_FILE: &str = "9CEA09232FBB4E5A00E78B1C";
+
+/// Inserts the four PBX entries Xcode adds when a `.storekit` file is dropped
+/// onto the project (`Add Files to "<target>"` with target membership):
+///   1. `PBXBuildFile`            — wraps the file ref for use in a build phase
+///   2. `PBXFileReference`        — declares the file in the project
+///   3. mainGroup child entry     — makes it visible in the navigator
+///   4. `PBXResourcesBuildPhase`  — copies it into the .app at build time
+///
+/// Anchors:
+///   - the section `End ...` comment for (1) and (2)
+///   - the `decentraland-godot-client.pck` line that exists once in the
+///     mainGroup and once in the Resources phase for (3) and (4) — Godot's
+///     iOS exporter always emits these.
+///
+/// Idempotent: strips any prior `LocalStoreKit.storekit` lines first.
+fn inject_storekit_resource(pbxproj: &str, filename: &str) -> anyhow::Result<String> {
+    let stripped: String = pbxproj
+        .lines()
+        .filter(|line| !line.contains(filename))
+        .collect::<Vec<_>>()
+        .join("\n");
+    // Preserve trailing newline if the input had one.
+    let stripped = if pbxproj.ends_with('\n') {
+        format!("{}\n", stripped)
+    } else {
+        stripped
+    };
+
+    let build_file_entry = format!(
+        "\t\t{build} /* {fname} in Resources */ = {{isa = PBXBuildFile; fileRef = {fref} /* {fname} */; }};\n",
+        build = STOREKIT_PBX_BUILD_FILE,
+        fref = STOREKIT_PBX_FILE_REF,
+        fname = filename,
+    );
+    let file_ref_entry = format!(
+        "\t\t{fref} /* {fname} */ = {{isa = PBXFileReference; lastKnownFileType = text; path = {fname}; sourceTree = \"<group>\"; }};\n",
+        fref = STOREKIT_PBX_FILE_REF,
+        fname = filename,
+    );
+    let group_child = format!(
+        "\t\t\t\t{fref} /* {fname} */,\n",
+        fref = STOREKIT_PBX_FILE_REF,
+        fname = filename,
+    );
+    let resource_member = format!(
+        "\t\t\t\t{build} /* {fname} in Resources */,\n",
+        build = STOREKIT_PBX_BUILD_FILE,
+        fname = filename,
+    );
+
+    let out = insert_before_anchor(
+        &stripped,
+        "/* End PBXBuildFile section */",
+        &build_file_entry,
+    )?;
+    let out = insert_before_anchor(&out, "/* End PBXFileReference section */", &file_ref_entry)?;
+    let out = insert_before_anchor(&out, "/* decentraland-godot-client.pck */,", &group_child)?;
+    let out = insert_before_anchor(
+        &out,
+        "/* decentraland-godot-client.pck in Resources */,",
+        &resource_member,
+    )?;
+    Ok(out)
+}
+
+/// Inserts `insertion` (must already end with `\n`) at the start of the line
+/// containing `anchor`, preserving the anchor's indentation on the next line.
+fn insert_before_anchor(s: &str, anchor: &str, insertion: &str) -> anyhow::Result<String> {
+    let pos = s
+        .find(anchor)
+        .ok_or_else(|| anyhow::anyhow!("anchor not found in pbxproj: {}", anchor))?;
+    let line_start = s[..pos].rfind('\n').map(|p| p + 1).unwrap_or(0);
+    Ok(format!(
+        "{}{}{}",
+        &s[..line_start],
+        insertion,
+        &s[line_start..]
+    ))
 }
 
 /// Inserts a `<StoreKitConfigurationFileReference>` inside `<LaunchAction>`,
@@ -443,9 +552,106 @@ mod tests {
         assert!(with_new.contains("../../LocalStoreKit.storekit"));
         assert!(!with_new.contains("Old.storekit"));
         assert_eq!(
-            with_new.matches("StoreKitConfigurationFileReference").count(),
+            with_new
+                .matches("StoreKitConfigurationFileReference")
+                .count(),
             2
         );
+    }
+
+    // Minimal subset of Godot's iOS pbxproj that contains all 4 anchors we
+    // patch, plus the file refs already present alongside ours.
+    const PBXPROJ_BASE: &str = r#"// !$*UTF8*$!
+{
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AAA /* dummy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB /* dummy.cpp */; };
+		CCC /* decentraland-godot-client.pck in Resources */ = {isa = PBXBuildFile; fileRef = DDD /* decentraland-godot-client.pck */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		BBB /* dummy.cpp */ = {isa = PBXFileReference; path = dummy.cpp; sourceTree = "<group>"; };
+		DDD /* decentraland-godot-client.pck */ = {isa = PBXFileReference; path = "decentraland-godot-client.pck"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		EEE = {
+			isa = PBXGroup;
+			children = (
+				DDD /* decentraland-godot-client.pck */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FFF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				CCC /* decentraland-godot-client.pck in Resources */,
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+	};
+}
+"#;
+
+    #[test]
+    fn pbxproj_injects_all_four_entries() {
+        let out = inject_storekit_resource(PBXPROJ_BASE, "LocalStoreKit.storekit").unwrap();
+        // (1) PBXBuildFile entry — wraps the file ref.
+        assert!(out.contains(&format!(
+            "{} /* LocalStoreKit.storekit in Resources */ = {{isa = PBXBuildFile; fileRef = {} /* LocalStoreKit.storekit */; }};",
+            STOREKIT_PBX_BUILD_FILE, STOREKIT_PBX_FILE_REF,
+        )));
+        // (2) PBXFileReference entry.
+        assert!(out.contains(&format!(
+            "{} /* LocalStoreKit.storekit */ = {{isa = PBXFileReference; lastKnownFileType = text; path = LocalStoreKit.storekit; sourceTree = \"<group>\"; }};",
+            STOREKIT_PBX_FILE_REF,
+        )));
+        // (3) Sibling in mainGroup children.
+        assert!(out.contains(&format!(
+            "{} /* LocalStoreKit.storekit */,",
+            STOREKIT_PBX_FILE_REF,
+        )));
+        // (4) Member of PBXResourcesBuildPhase.
+        assert!(out.contains(&format!(
+            "{} /* LocalStoreKit.storekit in Resources */,",
+            STOREKIT_PBX_BUILD_FILE,
+        )));
+        // Make sure each appears exactly once (no duplicates from accidental
+        // anchor overlap).
+        assert_eq!(
+            out.matches(&format!(
+                "{} /* LocalStoreKit.storekit */,",
+                STOREKIT_PBX_FILE_REF
+            ))
+            .count(),
+            1
+        );
+        assert_eq!(
+            out.matches(&format!(
+                "{} /* LocalStoreKit.storekit in Resources */,",
+                STOREKIT_PBX_BUILD_FILE
+            ))
+            .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn pbxproj_patch_is_idempotent() {
+        let once = inject_storekit_resource(PBXPROJ_BASE, "LocalStoreKit.storekit").unwrap();
+        let twice = inject_storekit_resource(&once, "LocalStoreKit.storekit").unwrap();
+        assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn pbxproj_missing_pck_anchor_errors() {
+        let bad = PBXPROJ_BASE.replace("decentraland-godot-client.pck", "different-name.pck");
+        let err = inject_storekit_resource(&bad, "LocalStoreKit.storekit").unwrap_err();
+        assert!(err.to_string().contains("anchor not found"));
     }
 }
 

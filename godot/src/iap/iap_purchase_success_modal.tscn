@@ -1,0 +1,68 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8iapsuccess01"]
+
+[ext_resource type="Script" path="res://src/iap/iap_purchase_success_modal.gd" id="1_modal"]
+
+[node name="IapPurchaseSuccessModal" type="CanvasLayer"]
+layer = 101
+script = ExtResource("1_modal")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="PanelContainer" parent="Backdrop"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -120.0
+offset_right = 160.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="Backdrop/Panel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Column" type="VBoxContainer" parent="Backdrop/Panel/Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Title" type="Label" parent="Backdrop/Panel/Margin/Column"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 24
+text = "Purchase Successful"
+horizontal_alignment = 1
+
+[node name="CreditsLabel" type="Label" parent="Backdrop/Panel/Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 20
+text = "Credits x0"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Backdrop/Panel/Margin/Column"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 14
+text = "Tap to continue"
+horizontal_alignment = 1

@@ -44,7 +44,7 @@ const _CREDITS_BY_PRODUCT := {
 # tracks the per-wallet balance. Source of truth for `_balance`.
 # LOCAL TUNNEL — revert before committing. Sandbox host:
 # "https://iap-sandbox.dclregenesislabs.xyz"
-const _BACKEND_URL := "https://shirt-vitamin-halo-seattle.trycloudflare.com"
+const _BACKEND_URL := "https://engineering-broader-msg-distinguished.trycloudflare.com"
 const _BACKEND_TIMEOUT_SEC := 15.0
 
 # Bound how long the purchase overlay stays up. StoreKit prompt + backend
@@ -53,6 +53,7 @@ const _BACKEND_TIMEOUT_SEC := 15.0
 const _PURCHASE_OVERLAY_TIMEOUT_SEC := 15.0
 
 const _OVERLAY_SCENE_PATH := "res://src/iap/iap_purchase_overlay.tscn"
+const _SUCCESS_MODAL_SCENE_PATH := "res://src/iap/iap_purchase_success_modal.tscn"
 
 # Validation outcomes for `_async_validate_with_backend`:
 # OK — credits granted (or already granted, idempotent), finish the tx.
@@ -234,6 +235,7 @@ func _async_handle_verified_transaction(tx: Dictionary) -> void:
 			var credits: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
 			_store_kit.finish_transaction(tx_id)
 			_finish_purchase_flow()
+			_show_success_modal(credits)
 			purchase_completed.emit(product_id, credits)
 		_OUTCOME_REJECTED:
 			# Backend rejected (forged/unknown product/etc). Finishing breaks
@@ -360,3 +362,16 @@ func _on_overlay_timeout(token: int) -> void:
 func _finish_purchase_flow() -> void:
 	_purchase_in_flight = false
 	_hide_overlay()
+
+
+func _show_success_modal(credits: int) -> void:
+	var scene := load(_SUCCESS_MODAL_SCENE_PATH) as PackedScene
+	if scene == null:
+		printerr("[IAP] success modal scene missing at ", _SUCCESS_MODAL_SCENE_PATH)
+		return
+	var modal: CanvasLayer = scene.instantiate()
+	# setup() before add_child so the credits value is in place by the time
+	# the modal's _ready runs.
+	if modal.has_method("setup"):
+		modal.call("setup", credits)
+	get_tree().root.add_child(modal)
