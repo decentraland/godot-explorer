@@ -245,6 +245,13 @@ func _input(event):
 		var selected = Global.get_selected_avatar()
 		if selected and selected == self and avatar_id and not hidden and not passport_disabled:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				var explorer = Global.get_explorer()
+				if (
+					is_instance_valid(explorer)
+					and explorer.is_session_hide_main_hud()
+					and explorer.is_session_hide_view_profile()
+				):
+					return
 				Global.open_profile_by_avatar.emit(self)
 
 
@@ -264,7 +271,6 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 			hide()
 			_hide_impostor_render()
 			_set_click_area_enabled(false)
-			passport_disabled = true
 		elif modifier == 1:  # disable passport
 			passport_disabled = true
 
