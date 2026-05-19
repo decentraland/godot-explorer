@@ -6,16 +6,17 @@ extends Node
 # here; on non-iOS the wrapper's `is_available()` returns false and every
 # method is a no-op.
 #
+# The backend is currently SIMULATED locally — `_async_validate_with_backend`
+# returns OK after a short delay and credits live only in memory (no disk
+# persistence, balance resets on relaunch). The async/tri-state-outcome
+# shape mirrors the real flow so swapping in a real HTTP call later is a
+# localized change.
+#
 # Owns the global purchase overlay (full-screen blocking spinner). The overlay
 # is shown the moment a purchase is initiated and stays up until the flow
-# resolves (StoreKit cancel/fail OR backend grant) — including the time the
-# app is backgrounded for the StoreKit sheet. A 15s timeout guarantees we
-# never lock the UI if a signal goes missing.
-#
-# IMPORTANT: credits are consumable products. We MUST NOT call
-# finish_transaction until backend validation succeeds. Without finish(),
-# StoreKit re-delivers the transaction at every app launch — that's the
-# safety net while the backend isn't wired yet.
+# resolves — including the time the app is backgrounded for the StoreKit
+# sheet. A 15s timeout guarantees we never lock the UI if a signal goes
+# missing.
 
 signal products_ready(products: Array)
 signal products_load_failed(error: String)
@@ -40,16 +41,13 @@ const _CREDITS_BY_PRODUCT := {
 	"local_credits_100": 100,
 }
 
-# Backend that verifies the StoreKit JWS, grants credits server-side, and
-# tracks the per-wallet balance. Source of truth for `_balance`.
-# LOCAL TUNNEL — revert before committing. Sandbox host:
-# "https://iap-sandbox.dclregenesislabs.xyz"
-const _BACKEND_URL := "https://engineering-broader-msg-distinguished.trycloudflare.com"
-const _BACKEND_TIMEOUT_SEC := 15.0
+# Synthetic latency for the simulated backend round-trip — long enough that
+# the purchase overlay actually flashes during testing.
+const _SIMULATED_VALIDATION_DELAY_SEC := 0.5
 
-# Bound how long the purchase overlay stays up. StoreKit prompt + backend
-# round-trip should land well inside this; past it we assume something stuck
-# (network drop, redelivery loop, missing signal) and let the user retry.
+# Bound how long the purchase overlay stays up. StoreKit prompt + validation
+# should land well inside this; past it we assume something stuck (network
+# drop, redelivery loop, missing signal) and let the user retry.
 const _PURCHASE_OVERLAY_TIMEOUT_SEC := 15.0
 
 const _OVERLAY_SCENE_PATH := "res://src/iap/iap_purchase_overlay.tscn"
@@ -68,9 +66,13 @@ const _OUTCOME_RETRY := 2
 var _store_kit := DclStoreKitPlugin.new()
 var _store_kit_available: bool = false
 var _products: Array = []
-# Mirrors the server-side balance for the signed-in wallet. Updated from
-# every successful backend call. Empty until first call returns.
+# In-memory only; resets on relaunch.
 var _balance: int = 0
+# Tx-id dedup. Apple delivers the same transaction twice on a fresh purchase
+# (once via `purchaseCompleted`, once via the `Transaction.updates` listener
+# that picks up any unfinished tx). The real backend dedupes by tx id server
+# side; we mirror that here. Cleared on relaunch like `_balance`.
+var _seen_tx_ids: Dictionary = {}
 var _dev_panel: Control = null
 
 # Bumped on each purchase start AND each overlay hide so stale SceneTreeTimer
@@ -148,21 +150,6 @@ func toggle_dev_panel() -> void:
 	get_tree().root.add_child(_dev_panel)
 
 
-func _connect_wallet_signals() -> void:
-	if Global.player_identity == null:
-		return
-	if not Global.player_identity.wallet_connected.is_connected(_on_wallet_connected):
-		Global.player_identity.wallet_connected.connect(_on_wallet_connected)
-	# If the session was restored synchronously the wallet is already there
-	# and the signal won't fire — fetch now to cover that case.
-	if not _wallet_address().is_empty():
-		_async_fetch_balance()
-
-
-func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
-	_async_fetch_balance()
-
-
 func _on_products_loaded(json: String) -> void:
 	var parsed = JSON.parse_string(json)
 	if parsed is Array:
@@ -228,6 +215,13 @@ func _async_handle_verified_transaction(tx: Dictionary) -> void:
 		printerr("[IAP] verified tx missing productId/id: ", tx)
 		_finish_purchase_flow()
 		return
+	if _seen_tx_ids.has(tx_id):
+		# Duplicate emission (purchaseCompleted + Transaction.updates for the
+		# same fresh tx). Original invocation owns the overlay lifecycle — bail
+		# without touching it.
+		print("[IAP] tx ", tx_id, " already in-flight/processed; skipping duplicate")
+		return
+	_seen_tx_ids[tx_id] = true
 
 	var outcome: int = await _async_validate_with_backend(tx)
 	match outcome:
@@ -238,14 +232,16 @@ func _async_handle_verified_transaction(tx: Dictionary) -> void:
 			_show_success_modal(credits)
 			purchase_completed.emit(product_id, credits)
 		_OUTCOME_REJECTED:
-			# Backend rejected (forged/unknown product/etc). Finishing breaks
-			# the redelivery loop — retrying won't help.
-			printerr("[IAP] tx ", tx_id, " rejected by backend; finishing")
+			# Sim rejected (unknown product). Finishing breaks the redelivery
+			# loop — retrying won't help.
+			printerr("[IAP] tx ", tx_id, " rejected; finishing")
 			_store_kit.finish_transaction(tx_id)
 			_finish_purchase_flow()
 			purchase_failed.emit(product_id, "rejected by backend")
 		_OUTCOME_RETRY:
-			# Network / 5xx / no wallet. Don't finish: StoreKit will re-deliver.
+			# Transient (no wallet, etc). Don't finish: StoreKit will re-deliver.
+			# Unmark so the next delivery gets another chance.
+			_seen_tx_ids.erase(tx_id)
 			printerr("[IAP] tx ", tx_id, " transient; will retry on next launch")
 			_finish_purchase_flow()
 			purchase_failed.emit(product_id, "network error, retry on next launch")
@@ -253,6 +249,10 @@ func _async_handle_verified_transaction(tx: Dictionary) -> void:
 
 # gdlint:ignore = async-function-name
 func _async_validate_with_backend(tx: Dictionary) -> int:
+	# SIMULATED backend. Shape mirrors the real flow (async, tri-state
+	# outcome) so the real HTTP call is a localized swap later. The JWS /
+	# wallet checks here are sanity-only — nothing on this side is actually
+	# verifying signatures or persisting state.
 	var jws := str(tx.get("jwsRepresentation", ""))
 	if jws.is_empty():
 		printerr("[IAP] missing JWS")
@@ -262,64 +262,48 @@ func _async_validate_with_backend(tx: Dictionary) -> int:
 		printerr("[IAP] no wallet address yet; deferring grant")
 		return _OUTCOME_RETRY
 
-	var headers: Dictionary = {"Content-Type": "application/json"}
-	var body := JSON.stringify({"jws": jws, "walletAddress": wallet})
-	var promise: Promise = Global.http_requester.request_json(
-		_BACKEND_URL + "/iap/grant", HTTPClient.METHOD_POST, body, headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		printerr("[IAP] backend network error: ", result.get_error())
-		return _OUTCOME_RETRY
-	if not (result is RequestResponse):
-		printerr("[IAP] unexpected result type from http_requester")
-		return _OUTCOME_RETRY
-
-	var response: RequestResponse = result
-	var code: int = response.status_code()
-	if code == 0 or code >= 500:
-		printerr("[IAP] backend transient: code=", code)
-		return _OUTCOME_RETRY
-	if code >= 400:
-		printerr("[IAP] backend rejected: code=", code, " body=", response.get_response_as_string())
+	var product_id := str(tx.get("productId", ""))
+	var credits: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
+	if credits <= 0:
+		printerr("[IAP] sim rejected: unknown product ", product_id)
 		return _OUTCOME_REJECTED
 
-	var parsed = response.get_string_response_as_json()
-	if parsed is Dictionary:
-		var status := str(parsed.get("status", ""))
-		var server_balance := int(parsed.get("balance", _balance))
-		if server_balance != _balance:
-			_balance = server_balance
-			balance_changed.emit(_balance)
-		print("[IAP] backend ", status, " balance=", server_balance)
+	await get_tree().create_timer(_SIMULATED_VALIDATION_DELAY_SEC).timeout
+
+	_balance += credits
+	balance_changed.emit(_balance)
+	print("[IAP] sim granted ", credits, " for ", product_id, " balance=", _balance)
 	return _OUTCOME_OK
+
+
+func _connect_wallet_signals() -> void:
+	if Global.player_identity == null:
+		return
+	if not Global.player_identity.wallet_connected.is_connected(_on_wallet_connected):
+		Global.player_identity.wallet_connected.connect(_on_wallet_connected)
+	# If the session was restored synchronously the wallet is already there
+	# and the signal won't fire — fetch now to cover that case.
+	if not _wallet_address().is_empty():
+		_async_fetch_balance()
+
+
+func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
+	_async_fetch_balance()
 
 
 # gdlint:ignore = async-function-name
 func _async_fetch_balance() -> void:
+	# SIMULATED. In prod this would GET /balance/<wallet> and reconcile the
+	# server-side balance into `_balance`. With no backend or persistence
+	# there's nothing to reconcile against — just re-emit the current value
+	# after a synthetic delay so listeners refresh.
 	var wallet := _wallet_address()
 	if wallet.is_empty():
 		return
-	var promise: Promise = Global.http_requester.request_json(
-		"%s/balance/%s" % [_BACKEND_URL, wallet], HTTPClient.METHOD_GET, "", {}
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
-	# Wallet may have changed (logout/relogin) while the fetch was in flight.
-	# Drop the response — a newer fetch is or will be running for the new wallet.
+	await get_tree().create_timer(_SIMULATED_VALIDATION_DELAY_SEC).timeout
 	if _wallet_address() != wallet:
 		return
-	if result is PromiseError or not (result is RequestResponse):
-		return
-	var response: RequestResponse = result
-	if response.status_code() != 200:
-		return
-	var parsed = response.get_string_response_as_json()
-	if not (parsed is Dictionary):
-		return
-	var server_balance := int(parsed.get("credits", 0))
-	if server_balance != _balance:
-		_balance = server_balance
-		balance_changed.emit(_balance)
+	balance_changed.emit(_balance)
 
 
 func _wallet_address() -> String:
