@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cx54ow4agq42v"]
 
 [ext_resource type="Script" uid="uid://bnkqlvfm2ewx5" path="res://src/test/emote/emote_tester_standalone.gd" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="2_avatar_preview"]
+[ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="2_avatar_preview"]
 
 [node name="EmoteTesterStandalone" type="Control" unique_id=854166659]
 layout_mode = 3
