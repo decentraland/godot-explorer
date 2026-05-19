@@ -29,6 +29,10 @@ signal close_combo
 signal delete_account
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
+## Sync settings "Hide View Profile" / "Hide World Interactions" checkboxes.
+signal session_hide_ui_options_sync(
+	hide_view_profile: bool, hide_world_interactions: bool, hide_player_names: bool
+)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
@@ -93,7 +97,6 @@ var modal_manager: ModalManager
 var standalone = false
 
 var network_inspector_window: Window = null
-var selected_avatar: Avatar = null
 
 var last_emitted_height: int = 0
 var current_height: int = -1
