@@ -38,6 +38,12 @@ pub fn update_physics_combined_force(
     if !is_current_parcel_scene {
         // Discard any stale state so we don't leak forces from a scene the
         // player just left. Mirrors Unity's `ResetExternalForce` on scene exit.
+        if scene.active_external_force != Vector3::ZERO {
+            tracing::debug!(
+                "physics_combined: force cleared on scene {:?} (no longer current)",
+                scene.scene_id
+            );
+        }
         scene.active_external_force = Vector3::ZERO;
         return;
     }
@@ -50,6 +56,14 @@ pub fn update_physics_combined_force(
         .map(scene_vec_to_godot)
         .unwrap_or(Vector3::ZERO);
 
+    if new_force != scene.active_external_force {
+        tracing::debug!(
+            "physics_combined: force changed on scene {:?}: {:?} → {:?}",
+            scene.scene_id,
+            scene.active_external_force,
+            new_force
+        );
+    }
     scene.active_external_force = new_force;
 }
 
@@ -83,21 +97,48 @@ pub fn update_physics_combined_impulse(
         return;
     }
 
+    tracing::debug!(
+        "physics_combined: impulse dirty on scene {:?} (last_event_id={:?})",
+        scene.scene_id,
+        scene.last_impulse_event_id,
+    );
+
     let impulse_component = SceneCrdtStateProtoComponents::get_physics_combined_impulse(crdt_state);
     let Some(entry) = impulse_component.get(&SceneEntityId::PLAYER) else {
+        tracing::debug!("physics_combined: dirty but no LWW entry for PLAYER — skipping");
         return;
     };
     let Some(pb) = entry.value.as_ref() else {
+        tracing::debug!("physics_combined: dirty but entry.value is None — skipping");
         return;
     };
     let Some(vector) = pb.vector.as_ref() else {
+        tracing::debug!(
+            "physics_combined: dirty but pb.vector is None (event_id={}) — skipping",
+            pb.event_id
+        );
         return;
     };
 
     if scene.last_impulse_event_id == Some(pb.event_id) {
+        tracing::debug!(
+            "physics_combined: dedup hit — event_id={} already applied",
+            pb.event_id
+        );
         return;
     }
 
+    let godot_vec = scene_vec_to_godot(vector);
+    tracing::debug!(
+        "physics_combined: queue impulse event_id={} dcl=({:.3},{:.3},{:.3}) godot=({:.3},{:.3},{:.3})",
+        pb.event_id,
+        vector.x,
+        vector.y,
+        vector.z,
+        godot_vec.x,
+        godot_vec.y,
+        godot_vec.z,
+    );
     scene.last_impulse_event_id = Some(pb.event_id);
-    scene.pending_impulses.push(scene_vec_to_godot(vector));
+    scene.pending_impulses.push(godot_vec);
 }
