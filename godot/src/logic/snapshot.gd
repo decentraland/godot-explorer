@@ -3,7 +3,7 @@ extends RefCounted
 
 signal snapshot_generated(face_image: Image)
 
-const AVATAR_PREVIEW_SCENE = preload("res://src/ui/components/backpack/avatar_preview.tscn")
+const AVATAR_PREVIEW_SCENE = preload("res://src/ui/pages/backpack/avatar_preview.tscn")
 
 
 # ADR-290: Generate snapshots locally for immediate display in the UI.
