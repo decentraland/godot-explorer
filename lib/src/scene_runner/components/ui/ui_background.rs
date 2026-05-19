@@ -32,10 +32,11 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 .unwrap();
 
             if value.is_none() {
-                if let Some(mut node) = existing_ui_background.base_control.get_node_or_null("bkg")
-                {
-                    node.queue_free();
-                    existing_ui_background.base_control.remove_child(&node);
+                if let Some(mut existing) = existing_ui_background.bkg_node.take() {
+                    existing.queue_free();
+                    existing_ui_background
+                        .base_control
+                        .remove_child(&existing.upcast::<Node>());
                 }
                 existing_ui_background.has_background = false;
                 continue;
@@ -54,12 +55,12 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             );
 
             let mut existing_ui_background_control =
-                if let Some(node) = existing_ui_background.base_control.get_node_or_null("bkg") {
+                if let Some(existing) = existing_ui_background.bkg_node.clone() {
                     tracing::debug!(
                         "[UI_BKG] Entity {:?} - reusing existing background node",
                         entity
                     );
-                    node.cast::<DclUiBackground>()
+                    existing
                 } else {
                     tracing::debug!(
                         "[UI_BKG] Entity {:?} - creating NEW background node",
@@ -75,6 +76,7 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     existing_ui_background
                         .base_control
                         .move_child(&node.clone().upcast::<Node>(), 0);
+                    existing_ui_background.bkg_node = Some(node.clone());
                     node
                 };
 
@@ -90,6 +92,12 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             existing_ui_background_control
                 .bind_mut()
                 .change_value(value.clone(), scene.content_mapping.clone());
+
+            // Apply the (possibly already-set) corner radii so the background is
+            // clipped to the rounded shape from the moment it is first created.
+            existing_ui_background_control
+                .bind_mut()
+                .set_corner_radii(existing_ui_background.ui_transform.border_radii);
 
             let bkg_size_after = existing_ui_background_control.get_size();
             let bkg_pos_after = existing_ui_background_control.get_position();

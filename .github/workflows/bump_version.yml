@@ -26,16 +26,25 @@ jobs:
         id: get_version
         run: |
           CURRENT_VERSION=$(grep -oP 'version/code=\K[0-9]+' godot/export_presets.cfg | head -1)
+          CURRENT_SHORT_VERSION=$(grep -oP 'application/short_version="\K[0-9]+\.[0-9]+' godot/export_presets.cfg | head -1)
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "current_short_version=$CURRENT_SHORT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
+          echo "Current iOS short_version: $CURRENT_SHORT_VERSION"
 
       - name: Calculate new version
         id: new_version
         run: |
           CURRENT=${{ steps.get_version.outputs.current_version }}
           NEW_VERSION=$((CURRENT + 1))
+          CURRENT_SHORT=${{ steps.get_version.outputs.current_short_version }}
+          SHORT_MAJOR=$(echo "$CURRENT_SHORT" | cut -d. -f1)
+          SHORT_MINOR=$(echo "$CURRENT_SHORT" | cut -d. -f2)
+          NEW_SHORT_VERSION="${SHORT_MAJOR}.$((SHORT_MINOR + 1))"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_short_version=$NEW_SHORT_VERSION" >> $GITHUB_OUTPUT
           echo "New version: $NEW_VERSION"
+          echo "New iOS short_version: $NEW_SHORT_VERSION"
 
       - name: Update export_presets.cfg (Android version code)
         run: |
@@ -48,6 +57,12 @@ jobs:
           CURRENT=${{ steps.get_version.outputs.current_version }}
           NEW=${{ steps.new_version.outputs.new_version }}
           sed -i "s/application\/version=\"${CURRENT}\"/application\/version=\"${NEW}\"/g" godot/export_presets.cfg
+
+      - name: Update export_presets.cfg (iOS short_version)
+        run: |
+          CURRENT_SHORT=${{ steps.get_version.outputs.current_short_version }}
+          NEW_SHORT=${{ steps.new_version.outputs.new_short_version }}
+          sed -i "s/application\/short_version=\"${CURRENT_SHORT}\"/application\/short_version=\"${NEW_SHORT}\"/g" godot/export_presets.cfg
 
       - name: Update lib/Cargo.toml
         run: |
@@ -74,12 +89,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW=${{ steps.new_version.outputs.new_version }}
+          NEW_SHORT=${{ steps.new_version.outputs.new_short_version }}
+          CURRENT_SHORT=${{ steps.get_version.outputs.current_short_version }}
           BRANCH="bump-version-v${NEW}"
           git checkout -b "$BRANCH"
           git add godot/export_presets.cfg lib/Cargo.toml lib/Cargo.lock
-          git commit -m "bump version v${NEW}"
+          git commit -m "bump version v${NEW} and iOS short_version to ${NEW_SHORT}"
           git push origin "$BRANCH"
           gh pr create \
-            --title "bump version v${NEW}" \
-            --body "Automated version bump from v${{ steps.get_version.outputs.current_version }} to v${NEW}." \
+            --title "bump version v${NEW} and iOS short_version to ${NEW_SHORT}" \
+            --body "Automated version bump from v${{ steps.get_version.outputs.current_version }} to v${NEW} (iOS short_version ${CURRENT_SHORT} -> ${NEW_SHORT})." \
             --base "${{ github.ref_name }}"

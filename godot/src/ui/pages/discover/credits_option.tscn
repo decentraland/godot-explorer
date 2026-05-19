@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://dv5qtn5it8js0"]
+
+[ext_resource type="Texture2D" uid="uid://1ikv8durm04q" path="res://assets/ui/credits_3.png" id="1_4gvv1"]
+[ext_resource type="PackedScene" uid="uid://cxyvv774su2j2" path="res://src/ui/pages/discover/credit_option_item.tscn" id="1_qs1i0"]
+[ext_resource type="Texture2D" uid="uid://1jx0fllepsg3" path="res://assets/ui/credits_2.png" id="3_4cjag"]
+[ext_resource type="Texture2D" uid="uid://cmcrxxx2i86qs" path="res://assets/ui/credits_1.png" id="4_7ctuo"]
+
+[node name="CreditsOption" type="MarginContainer" unique_id=257827310]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 48
+theme_override_constants/margin_right = 48
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1695278166]
+layout_mode = 2
+theme_override_constants/separation = 48
+
+[node name="Panel" parent="VBoxContainer" unique_id=1421119342 instance=ExtResource("1_qs1i0")]
+layout_mode = 2
+texture = ExtResource("1_4gvv1")
+credits = 100
+product_id = "local_credits_100"
+
+[node name="Panel2" parent="VBoxContainer" unique_id=572394239 instance=ExtResource("1_qs1i0")]
+layout_mode = 2
+texture = ExtResource("3_4cjag")
+credits = 50
+product_id = "local_credits_50"
+
+[node name="Panel3" parent="VBoxContainer" unique_id=1135887016 instance=ExtResource("1_qs1i0")]
+layout_mode = 2
+texture = ExtResource("4_7ctuo")
+credits = 10
+product_id = "local_credits_10"

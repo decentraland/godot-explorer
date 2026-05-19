@@ -1,0 +1,49 @@
+[gd_scene format=3 uid="uid://cxyvv774su2j2"]
+
+[ext_resource type="Texture2D" uid="uid://1ikv8durm04q" path="res://assets/ui/credits_3.png" id="1_usno4"]
+[ext_resource type="Script" uid="uid://d1svh7aeoa8qn" path="res://src/ui/pages/discover/credit_option_item.gd" id="1_xgw18"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_xgw18"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_73ifx"]
+bg_color = Color(0.9254902, 0.92156863, 0.92941177, 0.39215687)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[node name="Panel" type="PanelContainer" unique_id=1421119342]
+custom_minimum_size = Vector2(0, 212)
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_73ifx")
+script = ExtResource("1_xgw18")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=679787996]
+layout_mode = 2
+theme_override_constants/margin_left = 26
+theme_override_constants/margin_right = 26
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=749257498]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer" unique_id=62650532]
+custom_minimum_size = Vector2(179, 0)
+layout_mode = 2
+texture = ExtResource("1_usno4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Credits" type="Label" parent="MarginContainer/HBoxContainer" unique_id=1823082458]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_xgw18")
+theme_override_font_sizes/font_size = 56
+text = "100"
+
+[node name="Button_Price" type="Button" parent="MarginContainer/HBoxContainer" unique_id=422830307]
+custom_minimum_size = Vector2(132, 54)
+layout_mode = 2
+size_flags_horizontal = 10
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 22
+text = "$59.99"
