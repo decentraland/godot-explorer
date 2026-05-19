@@ -76,7 +76,6 @@ var _debug_panel_from_settings: bool = false
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
-@onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
