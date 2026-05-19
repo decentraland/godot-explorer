@@ -66,6 +66,30 @@ fn assign_z_index_recursive(
                 godot_dcl_scene,
             );
         }
+
+        // For scrollable entities, place the ScrollContainer's internal
+        // scrollbars above all descendants we just assigned. Without this,
+        // the scrollbars inherit their parent's z via z_as_relative=true
+        // and render BELOW any child UI placed inside the scroll (which
+        // got higher absolute z values from this same counter).
+        if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(entity) {
+            if let Some(mut scroll) = ui_node.scroll_container.clone() {
+                *z_counter += 1;
+                let bar_z = (*z_counter).clamp(
+                    RenderingServer::CANVAS_ITEM_Z_MIN,
+                    RenderingServer::CANVAS_ITEM_Z_MAX,
+                );
+                if let Some(mut v_bar) = scroll.get_v_scroll_bar() {
+                    v_bar.set_z_index(bar_z);
+                    v_bar.set_z_as_relative(false);
+                }
+                if let Some(mut h_bar) = scroll.get_h_scroll_bar() {
+                    h_bar.set_z_index(bar_z);
+                    h_bar.set_z_as_relative(false);
+                }
+            }
+        }
+
         if i < last_idx {
             *z_counter += 1;
         }
