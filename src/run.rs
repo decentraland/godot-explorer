@@ -929,12 +929,14 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
 
     // Launch the app. Positional args after `--` are propagated to the app as
     // process argv and picked up by Godot's `Os.get_cmdline_user_args()`.
-    let spinner = create_spinner("Launching application...");
+    // `--console` streams stdout/stderr from the device process to this terminal
+    // and blocks until the app exits (Ctrl-C to detach).
     let mut launch_args: Vec<String> = vec![
         "devicectl".into(),
         "device".into(),
         "process".into(),
         "launch".into(),
+        "--console".into(),
         "--device".into(),
         device_id.clone(),
         IOS_BUNDLE_ID.into(),
@@ -943,20 +945,23 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
         launch_args.push("--".into());
         launch_args.extend(extras.iter().cloned());
     }
-    let launch_output = std::process::Command::new("xcrun")
-        .args(&launch_args)
-        .output()?;
-    spinner.finish();
 
-    if !launch_output.status.success() {
-        let stderr = String::from_utf8_lossy(&launch_output.stderr);
+    print_message(
+        MessageType::Info,
+        "Launching application (streaming stdout/stderr — Ctrl-C to detach)...",
+    );
+    let status = std::process::Command::new("xcrun")
+        .args(&launch_args)
+        .status()?;
+
+    if !status.success() {
         return Err(anyhow::anyhow!(
-            "Failed to launch app on device:\n{}",
-            stderr
+            "Failed to launch app on device (exit status: {})",
+            status
         ));
     }
 
-    print_message(MessageType::Success, "Application launched on iOS device");
+    print_message(MessageType::Success, "Application exited on iOS device");
     Ok(())
 }
 
