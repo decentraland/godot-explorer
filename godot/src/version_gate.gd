@@ -2,7 +2,9 @@ extends Node
 
 const TIMEOUT_SECONDS := 3.0
 const SNOOZE_SECONDS := 86400  # 24h
-const OVERLAY_SCENE := preload("res://src/ui/components/update_available/update_available.tscn")
+const OVERLAY_SCENE := preload(
+	"res://src/ui/components/organisms/update_available/update_available.tscn"
+)
 const OVERLAY_CANVAS_LAYER := 99  # modal_manager uses 100, so this sits just below
 
 const RESULT_PROCEED := "proceed"

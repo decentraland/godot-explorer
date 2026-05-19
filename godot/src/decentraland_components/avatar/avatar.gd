@@ -271,7 +271,6 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 			hide()
 			_hide_impostor_render()
 			_set_click_area_enabled(false)
-			passport_disabled = true
 		elif modifier == 1:  # disable passport
 			passport_disabled = true
 

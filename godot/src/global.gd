@@ -341,7 +341,7 @@ func _ready():
 	self.locations = load("res://src/helpers_components/locations.gd").new()
 	self.locations.set_name("locations")
 
-	self.modal_manager = load("res://src/ui/components/modal/modal_manager.gd").new()
+	self.modal_manager = load("res://src/ui/components/organisms/modal/modal_manager.gd").new()
 	self.modal_manager.set_name("modal_manager")
 
 	get_tree().root.add_child.call_deferred(self.cli)
@@ -610,7 +610,7 @@ func sign_out() -> void:
 	# Lobby/login is portrait-only; reset orientation so logging out from a
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
-	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+	get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
 
 
 func explorer_has_focus() -> bool:
@@ -717,7 +717,7 @@ func open_network_inspector_ui():
 	)
 
 	const NETWORK_INSPECTOR_UI = preload(
-		"res://src/ui/components/debug_panel/network_inspector/network_inspector_ui.tscn"
+		"res://src/ui/components/organisms/debug_panel/network_inspector/network_inspector_ui.tscn"
 	)
 	network_inspector_window.add_child(NETWORK_INSPECTOR_UI.instantiate())
 
