@@ -992,14 +992,16 @@ func avatar_look_at_independent(look_at_position: Vector3):
 
 
 func capture_mouse():
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if label_crosshair and ui_root:
 		label_crosshair.show()
 		ui_root.grab_focus.call_deferred()
 
 
 func release_mouse():
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	if not Global.is_mobile():
 		if label_crosshair:
 			label_crosshair.hide()

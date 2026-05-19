@@ -304,6 +304,11 @@ where
 
         new_gltf_state.set_additional_data("base_path", &"some".to_variant());
         new_gltf_state.set_additional_data("mappings", &mappings.to_variant());
+        // Seed `placeholder_image` so the custom_gltf_importer.gd preflight read
+        // hits an existing key (nil) instead of the missing-key Dictionary
+        // warning. External avatar-image-generation overwrites this with a
+        // truthy value when it wants the placeholder branch.
+        new_gltf_state.set_additional_data("placeholder_image", &Variant::nil());
 
         let file_path_gstr = GString::from(absolute_file_path.as_str());
         let base_path_gstr = GString::from(ctx.content_folder.as_str());

@@ -181,7 +181,9 @@ func _physics_process(_delta):
 
 func mobile_on_panel_container_gui_input(event):
 	if event is InputEventScreenTouch:
-		if action_to_trigger.is_empty():
+		# ia_any is a virtual action with no InputMap entry — pressing it
+		# would emit "InputMap action 'ia_any' doesn't exist" engine errors.
+		if action_to_trigger.is_empty() or action_to_trigger == "ia_any":
 			return
 		if event.pressed:
 			Input.action_press(action_to_trigger)

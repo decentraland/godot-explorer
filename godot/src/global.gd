@@ -641,7 +641,7 @@ func capture_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		explorer.capture_mouse()
-	else:
+	elif DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -649,7 +649,7 @@ func release_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		explorer.release_mouse()
-	else:
+	elif DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
