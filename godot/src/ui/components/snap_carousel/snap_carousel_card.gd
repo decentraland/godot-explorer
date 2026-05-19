@@ -22,6 +22,7 @@ var _card_index: int = 0
 
 var _touch_start: Vector2 = Vector2.ZERO
 var _touch_active: bool = false
+var _scroll_detected: bool = false
 
 @onready var async_image: AsyncImage = %AsyncImage
 @onready var button_jump_in: Button = %Button_JumpIn_Banner
@@ -31,6 +32,15 @@ func _ready() -> void:
 	button_jump_in.pressed.connect(_do_banner_jump_in)
 	async_image.image_loaded.connect(func(): image_loaded.emit())
 	_update_jump_in_visibility()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and event.pressed:
+		_scroll_detected = false
+		_touch_start = event.position
+	elif event is InputEventScreenDrag:
+		if not _scroll_detected and event.position.distance_to(_touch_start) >= TAP_THRESHOLD:
+			_scroll_detected = true
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -51,7 +61,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _do_banner_jump_in() -> void:
-	if _data.is_empty():
+	if _data.is_empty() or _scroll_detected:
 		return
 	(
 		Global

@@ -3,6 +3,7 @@ class_name SnapCarousel
 extends VBoxContainer
 
 signal card_changed(index: int)
+signal card_tapped(index: int)
 signal all_cards_loaded
 signal items_loaded(places: Array[Dictionary])
 
@@ -252,6 +253,7 @@ func _gui_input(event: InputEvent) -> void:
 				_on_touch_released()
 				accept_event()
 			else:
+				card_tapped.emit(selected_index)
 				_restart_auto_scroll()
 			_is_touching = false
 			_is_dragging = false
