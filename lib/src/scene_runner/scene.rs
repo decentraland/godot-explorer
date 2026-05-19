@@ -4,7 +4,11 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
+use godot::{
+    builtin::Vector3,
+    obj::NewAlloc,
+    prelude::{Gd, ToGodot},
+};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -117,6 +121,8 @@ pub enum SceneUpdateState {
     AudioStream,
     AvatarModifierArea,
     AvatarLocomotionSettings,
+    PhysicsCombinedForce,
+    PhysicsCombinedImpulse,
     CameraModeArea,
     InputModifier,
     SkyboxTime,
@@ -155,7 +161,9 @@ impl SceneUpdateState {
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::AvatarLocomotionSettings,
-            Self::AvatarLocomotionSettings => Self::CameraModeArea,
+            Self::AvatarLocomotionSettings => Self::PhysicsCombinedForce,
+            Self::PhysicsCombinedForce => Self::PhysicsCombinedImpulse,
+            Self::PhysicsCombinedImpulse => Self::CameraModeArea,
             Self::CameraModeArea => Self::InputModifier,
             Self::InputModifier => Self::SkyboxTime,
             Self::SkyboxTime => Self::TriggerArea,
@@ -272,6 +280,19 @@ pub struct Scene {
     pub virtual_camera: Gd<DclVirtualCamera>,
 
     pub locomotion_settings: Gd<DclLocomotionSettings>,
+
+    /// Continuous external force published by this scene's `PBPhysicsCombinedForce`
+    /// on the player entity, already converted to Godot world axes. Zero when the
+    /// component is absent. Only the current parcel scene's value is consumed by
+    /// the player controller.
+    pub active_external_force: Vector3,
+    /// One-shot impulses queued by this scene's `PBPhysicsCombinedImpulse` on the
+    /// player entity. Drained by the player controller each physics tick.
+    pub pending_impulses: Vec<Vector3>,
+    /// Last `event_id` we applied from `PBPhysicsCombinedImpulse`; used for
+    /// CRDT-driven deduplication (incrementing event_id ⇒ new impulse, identical
+    /// event_id ⇒ ignored).
+    pub last_impulse_event_id: Option<u32>,
 
     pub paused: bool,
 
@@ -392,6 +413,9 @@ impl Scene {
             paused: false,
             virtual_camera: Default::default(),
             locomotion_settings: Default::default(),
+            active_external_force: Vector3::ZERO,
+            pending_impulses: Vec::new(),
+            last_impulse_event_id: None,
             deno_memory_stats: None,
             stuck_frames: 0,
         }
@@ -469,6 +493,9 @@ impl Scene {
             paused: false,
             virtual_camera: Default::default(),
             locomotion_settings: Default::default(),
+            active_external_force: Vector3::ZERO,
+            pending_impulses: Vec::new(),
+            last_impulse_event_id: None,
             deno_memory_stats: None,
             stuck_frames: 0,
         }

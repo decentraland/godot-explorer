@@ -20,6 +20,12 @@ const GLIDE_COOLDOWN := 0.6
 const GLIDE_OPENING_TIME := 0.5
 const GLIDE_CLOSING_TIME := 0.15
 
+# Effective character mass for PBPhysicsCombinedImpulse/Force from scenes.
+# Mirrors Unity CharacterControllerSettings.CharacterMass so scenes tuned in
+# the Unity client feel the same here: Δv = vector / CHARACTER_MASS for an
+# impulse, a = vector / CHARACTER_MASS for a continuous force.
+const CHARACTER_MASS := 0.8
+
 # Glide FSM values — mirror DclAvatar.glide_state and rfc4.Movement.GlideState.
 const GLIDE_CLOSED := 0
 const GLIDE_OPENING := 1
@@ -487,10 +493,30 @@ func _physics_process(dt: float) -> void:
 	avatar.glide_state = glide_state
 	avatar.is_grounded = on_floor
 
+	_apply_scene_physics(dt)
+
 	last_position = global_position
 	move_and_slide()
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
+
+
+# Apply scene-driven physics from PBPhysicsCombinedImpulse (one-shot) and
+# PBPhysicsCombinedForce (continuous). The scene_runner only emits these for
+# the current parcel scene, so scene-boundary gating happens on the Rust side.
+func _apply_scene_physics(dt: float) -> void:
+	var impulses: PackedVector3Array = Global.scene_runner.consume_pending_impulses()
+	for impulse in impulses:
+		var delta_v: Vector3 = impulse / CHARACTER_MASS
+		# Mirror Unity: an upward impulse on a falling player clears the
+		# downward gravity component so jump pads launch reliably.
+		if delta_v.y > 0.0 and velocity.y < 0.0:
+			velocity.y = 0.0
+		velocity += delta_v
+
+	var force: Vector3 = Global.scene_runner.get_active_external_force()
+	if force != Vector3.ZERO:
+		velocity += (force / CHARACTER_MASS) * dt
 
 
 func avatar_look_at(target_position: Vector3):

@@ -25,6 +25,7 @@ use super::{
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
+        physics_combined::{update_physics_combined_force, update_physics_combined_impulse},
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         realm_info::sync_realm_info,
@@ -365,6 +366,14 @@ pub fn _process_scene(
                                 ],
                             );
                     }
+                    false
+                }
+                SceneUpdateState::PhysicsCombinedForce => {
+                    update_physics_combined_force(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::PhysicsCombinedImpulse => {
+                    update_physics_combined_impulse(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
                 SceneUpdateState::CameraModeArea => {
