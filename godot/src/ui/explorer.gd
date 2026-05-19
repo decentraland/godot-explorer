@@ -1058,6 +1058,7 @@ func _update_debug_ui():
 
 	if is_instance_valid(debug_panel):
 		debug_panel.set_reload_scene_visible(should_show)
+		debug_panel.set_in_preview(_is_in_preview_realm())
 
 	Global.set_scene_log_enabled(should_show)
 

@@ -63,6 +63,17 @@ theme = ExtResource("7_nlnrl")
 theme_type_variation = &"SecondaryLittle"
 text = "Reload Scene"
 
+[node name="Button_SceneStats" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer_TopButtons" unique_id=978841143]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("7_nlnrl")
+theme_type_variation = &"SecondaryLittle"
+toggle_mode = true
+button_pressed = true
+text = "Scene Stats"
+
 [node name="Control_Panel" type="Control" parent="MarginContainer/VBoxContainer" unique_id=1510580662]
 custom_minimum_size = Vector2(500, 280)
 layout_mode = 2
@@ -180,6 +191,7 @@ text = "Open chromium browser with url chrome://inspect and pick the scene debug
 [connection signal="index_pressed" from="PopupMenu" to="." method="_on_popup_menu_index_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer_TopButtons/Button_ShowHide" to="." method="_on_button_show_hide_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer_TopButtons/Button_ReloadScene" to="." method="_on_button_reload_scene_pressed"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/HBoxContainer_TopButtons/Button_SceneStats" to="." method="_on_button_scene_stats_toggled"]
 [connection signal="visibility_changed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" to="." method="_on_tab_container_debug_panel_visibility_changed"]
 [connection signal="text_changed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer/LineEdit_Filter" to="." method="_on_line_edit_filter_text_changed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer/Button_Clear" to="." method="_on_button_clear_pressed"]

@@ -769,6 +769,31 @@ impl SceneManager {
     }
 
     #[func]
+    pub fn get_scene_total_entities(&self, scene_id: i32) -> i32 {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
+            return scene.godot_dcl_scene.entities.len() as i32;
+        }
+        0
+    }
+
+    #[func]
+    pub fn get_all_scenes_total_entities(&self) -> i32 {
+        self.scenes
+            .values()
+            .map(|s| s.godot_dcl_scene.entities.len() as i32)
+            .sum()
+    }
+
+    #[func]
+    pub fn get_scene_root_nodes(&self) -> Array<Gd<Node3D>> {
+        let mut out = Array::new();
+        for scene in self.scenes.values() {
+            out.push(&scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node3D>());
+        }
+        out
+    }
+
+    #[func]
     fn get_scene_is_paused(&self, scene_id: i32) -> bool {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             scene.paused

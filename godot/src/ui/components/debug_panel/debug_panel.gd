@@ -7,6 +7,15 @@ enum SceneLogLevel {
 }
 
 const ICON_COLUMN_WIDTH = 20
+const SCENE_STATS_PANEL_SCENE := preload(
+	"res://src/ui/components/debug_panel/scene_stats_panel.tscn"
+)
+
+# Persisted across debug_panel re-creates (e.g. leaving/returning to preview).
+# Default ON — first time user enters preview mode the overlay shows.
+static var _scene_stats_enabled: bool = true
+
+var _scene_stats_panel: CanvasLayer = null
 
 var icon_log: Texture2D = preload("res://src/ui/components/debug_panel/icons/Log.svg")
 var icon_error: Texture2D = preload("res://src/ui/components/debug_panel/icons/Error.svg")
@@ -29,6 +38,7 @@ var icon_visible: Texture2D = preload(
 @onready var tab_container_debug_panel: TabContainer = %TabContainer_DebugPanel
 @onready var button_show_hide: Button = %Button_ShowHide
 @onready var button_reload_scene: Button = %Button_ReloadScene
+@onready var button_scene_stats: Button = %Button_SceneStats
 @onready var popup_menu: PopupMenu = %PopupMenu
 @onready var button_debug_js = %Button_DebugJS
 @onready var button_open_source = %Button_OpenSource
@@ -43,6 +53,13 @@ func _ready():
 	clear_console()
 	if tab_container_debug_panel.visible:
 		_on_button_show_hide_pressed()
+
+	button_scene_stats.set_pressed_no_signal(_scene_stats_enabled)
+	_apply_scene_stats_state()
+
+
+func _exit_tree() -> void:
+	_free_scene_stats_panel()
 
 
 func clear_console():
@@ -147,6 +164,31 @@ func _on_line_edit_filter_text_changed(new_text):
 
 func set_reload_scene_visible(visible: bool) -> void:
 	button_reload_scene.visible = visible
+
+
+func set_in_preview(in_preview: bool) -> void:
+	button_scene_stats.visible = in_preview
+	_apply_scene_stats_state()
+
+
+func _on_button_scene_stats_toggled(pressed: bool) -> void:
+	_scene_stats_enabled = pressed
+	_apply_scene_stats_state()
+
+
+func _apply_scene_stats_state() -> void:
+	if _scene_stats_enabled and button_scene_stats.visible:
+		if not is_instance_valid(_scene_stats_panel):
+			_scene_stats_panel = SCENE_STATS_PANEL_SCENE.instantiate()
+			add_child(_scene_stats_panel)
+	else:
+		_free_scene_stats_panel()
+
+
+func _free_scene_stats_panel() -> void:
+	if is_instance_valid(_scene_stats_panel):
+		_scene_stats_panel.queue_free()
+	_scene_stats_panel = null
 
 
 func _on_button_reload_scene_pressed():
