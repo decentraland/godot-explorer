@@ -23,7 +23,7 @@ func _ready():
 		Global.scene_runner.set_pause(true)
 
 	# Create avatar preview directly
-	var AvatarPreviewScene = preload("res://src/ui/components/backpack/avatar_preview.tscn")
+	var AvatarPreviewScene = preload("res://src/ui/pages/backpack/avatar_preview.tscn")
 	avatar_preview_instance = AvatarPreviewScene.instantiate()
 	avatar_preview_instance.hide_name = true
 	avatar_preview_instance.can_move = false

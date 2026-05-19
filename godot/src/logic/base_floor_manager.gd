@@ -20,9 +20,6 @@ func _initialize_base_floor_multimesh():
 	base_floor_multimesh.name = "BaseFloorMultimesh"
 	add_child(base_floor_multimesh)
 
-	var quad_mesh = QuadMesh.new()
-	quad_mesh.size = Vector2(FLOOR_SIZE, FLOOR_SIZE)
-	quad_mesh.material = BASE_FLOOR_MATERIAL
 	var array_mesh = ArrayMesh.new()
 	var arrays = []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -36,9 +33,7 @@ func _initialize_base_floor_multimesh():
 	)
 
 	var uvs = PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)])
-
 	var normals = PackedVector3Array([Vector3.UP, Vector3.UP, Vector3.UP, Vector3.UP])
-
 	var indices = PackedInt32Array([0, 1, 2, 0, 2, 3])
 
 	arrays[Mesh.ARRAY_VERTEX] = vertices
@@ -62,25 +57,8 @@ func add_scene_floors(scene_id: String, parcels: Array):
 	if scene_id in loaded_parcels_floors:
 		return
 
-	var multimesh = base_floor_multimesh.multimesh
-	var current_count = multimesh.instance_count
-	var new_floors = []
-	multimesh.instance_count = current_count + parcels.size()
-	for i in range(parcels.size()):
-		var parcel = parcels[i]
-		var instance_idx = current_count + i
-
-		var parcel_x = parcel.x * FLOOR_SIZE + FLOOR_SIZE / 2
-		var parcel_z = -parcel.y * FLOOR_SIZE - FLOOR_SIZE / 2
-
-		var transform = Transform3D()
-		transform.origin = Vector3(parcel_x, -0.05, parcel_z)
-		multimesh.set_instance_transform(instance_idx, transform)
-
-		new_floors.append(instance_idx)
-
-	loaded_parcels_floors[scene_id] = new_floors
-	_update_base_floor_visibility()
+	loaded_parcels_floors[scene_id] = parcels.duplicate()
+	_rebuild_multimesh()
 
 
 func remove_scene_floors(scene_id: String):
@@ -90,27 +68,27 @@ func remove_scene_floors(scene_id: String):
 	if not scene_id in loaded_parcels_floors:
 		return
 
+	loaded_parcels_floors.erase(scene_id)
+	_rebuild_multimesh()
+
+
+func _rebuild_multimesh():
 	var multimesh = base_floor_multimesh.multimesh
+	var total := 0
+	for parcels in loaded_parcels_floors.values():
+		total += parcels.size()
 
-	var remaining_transforms = []
-	var remaining_scene_ids = {}
+	multimesh.instance_count = total
 
-	for sid in loaded_parcels_floors:
-		if sid != scene_id:
-			for idx in loaded_parcels_floors[sid]:
-				remaining_transforms.append(multimesh.get_instance_transform(idx))
-	multimesh.instance_count = remaining_transforms.size()
-	var new_idx = 0
-	for sid in loaded_parcels_floors:
-		if sid != scene_id:
-			var new_indices = []
-			for old_idx in loaded_parcels_floors[sid]:
-				multimesh.set_instance_transform(new_idx, remaining_transforms[new_idx])
-				new_indices.append(new_idx)
-				new_idx += 1
-			remaining_scene_ids[sid] = new_indices
+	var idx := 0
+	for parcels in loaded_parcels_floors.values():
+		for parcel in parcels:
+			var parcel_x: float = parcel.x * FLOOR_SIZE + FLOOR_SIZE / 2.0
+			var parcel_z: float = -parcel.y * FLOOR_SIZE - FLOOR_SIZE / 2.0
+			var transform := Transform3D(Basis.IDENTITY, Vector3(parcel_x, -0.05, parcel_z))
+			multimesh.set_instance_transform(idx, transform)
+			idx += 1
 
-	loaded_parcels_floors = remaining_scene_ids
 	_update_base_floor_visibility()
 
 
@@ -124,6 +102,6 @@ func _on_player_parcel_changed(_new_parcel: Vector2i):
 
 
 func clear_all_floors():
+	loaded_parcels_floors.clear()
 	if base_floor_multimesh and base_floor_multimesh.multimesh:
 		base_floor_multimesh.multimesh.instance_count = 0
-		loaded_parcels_floors.clear()
