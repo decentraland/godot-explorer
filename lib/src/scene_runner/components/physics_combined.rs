@@ -68,18 +68,17 @@ pub fn update_physics_combined_force(
 }
 
 /// Reads `PBPhysicsCombinedImpulse` on the player entity and queues a one-shot
-/// impulse the first time we observe each `event_id`.
+/// impulse for every CRDT write the scene makes to it.
 ///
-/// The protocol contract (see `physics_combined_impulse.proto`):
-///   "Renderer processes impulse with the unique ID only once.
-///    Increase eventID of the component to apply another impulse."
-///
-/// `event_id` carries both roles: it bypasses CRDT identity-dedup so the
-/// write propagates even when the vector is unchanged, **and** it's the
-/// renderer's dedup key. So we trust it: track the last applied id per
-/// scene, and ignore any tick that doesn't carry a new value. A scene/SDK
-/// that fails to bump `event_id` will (correctly per the protocol) only
-/// get the first impulse — that's an SDK bug to fix, not a renderer one.
+/// We deliberately mirror unity-explorer's `SDKExternalPhysicsSystems`, which
+/// gates on its per-write `IsDirty` flag and **does not read `event_id`**.
+/// The proto comment makes `event_id` sound load-bearing for renderer-side
+/// dedup, but the shipped Unity client ignores it — and production scenes
+/// like Genesis Plaza's `bouncePad.ts` rely on that, calling
+/// `PhysicsCombinedImpulse.createOrReplace(player, { eventId: 0, vector })`
+/// every trigger enter. To match the Unity behavior bar, we fire once per
+/// CRDT-dirty signal: `createOrReplace` (even with a stale `event_id`)
+/// produces one CRDT message → one renderer fire.
 pub fn update_physics_combined_impulse(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
@@ -111,14 +110,6 @@ pub fn update_physics_combined_impulse(
         return;
     };
 
-    if scene.last_impulse_event_id == Some(pb.event_id) {
-        tracing::debug!(
-            "physics_combined: dedup hit — event_id={} already applied (scene expected to increment per protocol)",
-            pb.event_id
-        );
-        return;
-    }
-
     let godot_vec = scene_vec_to_godot(vector);
     tracing::debug!(
         "physics_combined: queue impulse event_id={} godot=({:.3},{:.3},{:.3})",
@@ -127,6 +118,5 @@ pub fn update_physics_combined_impulse(
         godot_vec.y,
         godot_vec.z,
     );
-    scene.last_impulse_event_id = Some(pb.event_id);
     scene.pending_impulses.push(godot_vec);
 }
