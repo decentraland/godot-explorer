@@ -1384,16 +1384,19 @@ impl SceneManager {
         let right = (canvas_size.x - ia_end.x as f32).clamp(0.0, canvas_size.x);
         let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
 
+        let border_rect = BorderRect {
+            top,
+            left,
+            right,
+            bottom,
+        };
+
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
-            interactable_area: Some(BorderRect {
-                top,
-                left,
-                right,
-                bottom,
-            }),
+            interactable_area: Some(border_rect.clone()),
+            screen_inset_area: Some(border_rect),
         }
     }
 
