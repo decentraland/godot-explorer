@@ -16,7 +16,6 @@ var _is_macos: bool = false
 func _init(player: Player):
 	_player = player
 	_is_macos = OS.get_name() == "macOS"
-	Global.camera_mode_set.connect(_on_camera_mode_set)
 
 
 func _input(event):
@@ -42,8 +41,3 @@ func _input(event):
 		_player.rotate_y(deg_to_rad(-_mouse_position.x) * h_sens)
 		_player.mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * v_sens)
 		_player.clamp_camera_rotation()
-
-
-func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
-	if camera_mode != Global.CameraMode.CINEMATIC:
-		_player.set_camera_mode(camera_mode)
