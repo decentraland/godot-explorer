@@ -12,22 +12,13 @@ use crate::{
     scene_runner::scene::Scene,
 };
 
-/// Convert a Decentraland scene `Vector3` to a Godot world `Vector3`.
-///
-/// Godot's Z axis is the negation of Decentraland's Z (see
-/// `DclTransformAndParent::to_godot_transform_3d`), so directions/vectors that
-/// originate in scene coordinates must have their Z component flipped before
-/// being applied to Godot nodes.
+/// Convert a DCL scene-space vector to Godot world-space (Z is negated).
 fn scene_vec_to_godot(v: &proto_components::common::Vector3) -> Vector3 {
     Vector3::new(v.x, v.y, -v.z)
 }
 
-/// Reads `PBPhysicsCombinedForce` on the player entity and stores the resulting
-/// continuous force on the scene so the player controller can sample it.
-///
-/// Force is only applied while the scene is the current parcel scene; for any
-/// other scene the stored value is reset to zero. The force vector is the
-/// summary of all per-frame forces accumulated by the scene's SDK code.
+/// Update the per-scene cached force from the player's `PBPhysicsCombinedForce`.
+/// Non-current scenes are cleared so wind zones stop the moment the player leaves.
 pub fn update_physics_combined_force(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
@@ -36,8 +27,6 @@ pub fn update_physics_combined_force(
     let is_current_parcel_scene = scene.scene_id == *current_parcel_scene_id;
 
     if !is_current_parcel_scene {
-        // Discard any stale state so we don't leak forces from a scene the
-        // player just left. Mirrors Unity's `ResetExternalForce` on scene exit.
         if scene.active_external_force != Vector3::ZERO {
             tracing::debug!(
                 "physics_combined: force cleared on scene {:?} (no longer current)",
@@ -67,18 +56,12 @@ pub fn update_physics_combined_force(
     scene.active_external_force = new_force;
 }
 
-/// Reads `PBPhysicsCombinedImpulse` on the player entity and queues a one-shot
-/// impulse for every CRDT write the scene makes to it.
+/// Queue one impulse per CRDT write of the player's `PBPhysicsCombinedImpulse`.
 ///
-/// We deliberately mirror unity-explorer's `SDKExternalPhysicsSystems`, which
-/// gates on its per-write `IsDirty` flag and **does not read `event_id`**.
-/// The proto comment makes `event_id` sound load-bearing for renderer-side
-/// dedup, but the shipped Unity client ignores it — and production scenes
-/// like Genesis Plaza's `bouncePad.ts` rely on that, calling
-/// `PhysicsCombinedImpulse.createOrReplace(player, { eventId: 0, vector })`
-/// every trigger enter. To match the Unity behavior bar, we fire once per
-/// CRDT-dirty signal: `createOrReplace` (even with a stale `event_id`)
-/// produces one CRDT message → one renderer fire.
+/// The proto says `event_id` is the renderer's dedup key, but production scenes
+/// (Genesis Plaza, etc.) ship with `eventId: 0` hardcoded and expect each
+/// `createOrReplace` call to fire the impulse. So we gate on the CRDT dirty
+/// signal alone — one write, one fire — and ignore `event_id`.
 pub fn update_physics_combined_impulse(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,

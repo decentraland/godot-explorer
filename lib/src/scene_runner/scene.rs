@@ -281,13 +281,11 @@ pub struct Scene {
 
     pub locomotion_settings: Gd<DclLocomotionSettings>,
 
-    /// Continuous external force published by this scene's `PBPhysicsCombinedForce`
-    /// on the player entity, already converted to Godot world axes. Zero when the
-    /// component is absent. Only the current parcel scene's value is consumed by
-    /// the player controller.
+    /// Continuous force from this scene's `PBPhysicsCombinedForce` on the player,
+    /// in Godot world axes. Only sampled when this is the current parcel scene.
     pub active_external_force: Vector3,
-    /// One-shot impulses queued by this scene's `PBPhysicsCombinedImpulse` on the
-    /// player entity. Drained by the player controller each physics tick.
+    /// One-shot impulses from this scene's `PBPhysicsCombinedImpulse`, drained
+    /// each physics tick by the player controller.
     pub pending_impulses: Vec<Vector3>,
 
     pub paused: bool,

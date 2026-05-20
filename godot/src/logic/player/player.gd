@@ -20,18 +20,16 @@ const GLIDE_COOLDOWN := 0.6
 const GLIDE_OPENING_TIME := 0.5
 const GLIDE_CLOSING_TIME := 0.15
 
-# Effective character mass for PBPhysicsCombinedImpulse/Force from scenes.
-# Mirrors Unity CharacterControllerSettings.CharacterMass so scenes tuned in
-# the Unity client feel the same here: Δv = vector / CHARACTER_MASS for an
-# impulse, a = vector / CHARACTER_MASS for a continuous force.
+# Character mass for scene-driven impulses/forces (matches Unity for tuning parity).
+# Δv = impulse / CHARACTER_MASS, a = force / CHARACTER_MASS.
 const CHARACTER_MASS := 1.0
-# Linear viscous drag applied to external_velocity every frame. Mirrors Unity
-# ExternalEnvDrag (always active) + ExternalGroundFriction (added when grounded).
+# Viscous drag on external_velocity each tick.
+# Total damping = ENV (always) + GROUND_FRICTION (when grounded).
 const EXT_ENV_DRAG := 1.5
 const EXT_GROUND_FRICTION := 4.0
-# Hard ceiling on |external_velocity| — mirrors Unity MaxExternalVelocity.
+# Hard ceiling on |external_velocity|.
 const MAX_EXTERNAL_VELOCITY := 50.0
-# Below this squared magnitude we snap external_velocity to zero (Unity uses 0.01²).
+# Snap external_velocity to zero below this squared magnitude.
 const EXT_VELOCITY_EPSILON_SQR := 0.0001
 
 # Glide FSM values — mirror DclAvatar.glide_state and rfc4.Movement.GlideState.
@@ -75,9 +73,8 @@ var current_direction: Vector3 = Vector3()
 var time_falling := 0.0
 var current_profile_version: int = -1
 
-# Persistent velocity vector accumulating PBPhysicsCombinedImpulse (instant Δv)
-# and PBPhysicsCombinedForce (acceleration · dt, XZ only — Y feeds gravity).
-# Decays via viscous drag every tick; mirrors Unity CharacterRigidTransform.ExternalVelocity.
+# Persistent velocity accumulating scene-driven impulses (full XYZ) and forces
+# (XZ only — force.y feeds gravity). Decays via drag each tick.
 var external_velocity: Vector3 = Vector3.ZERO
 
 # Private variables (prefixed with _)
@@ -266,9 +263,7 @@ func clamp_camera_rotation():
 
 
 func _physics_process(dt: float) -> void:
-	# Pull scene-driven physics once per tick. The vertical component of the
-	# external force has to feed the gravity step below (effective_gravity =
-	# gravity − accel.y) so it must be sampled BEFORE that block runs.
+	# Sample scene-driven physics before gravity — force.y feeds effective_gravity below.
 	var scene_external_force: Vector3 = Global.scene_runner.get_active_external_force()
 	var scene_pending_impulses: PackedVector3Array = Global.scene_runner.consume_pending_impulses()
 	var external_acceleration: Vector3 = scene_external_force / CHARACTER_MASS
@@ -376,9 +371,8 @@ func _physics_process(dt: float) -> void:
 		var free_flight: bool = glide_state == GLIDE_CLOSED or glide_state == GLIDE_CLOSING
 		avatar.rise = velocity.y > .3 and free_flight
 		avatar.fall = velocity.y < -.3 && !in_grace_time and free_flight
-		# Effective gravity folds in scene-driven vertical force (Unity ApplyGravity:
-		# effectiveGravity = gravity − ExternalAcceleration.y), so a wind-tunnel
-		# pushing up can cancel gravity instead of stacking on the body's velocity.
+		# Scene force.y reduces effective gravity, so an upward wind cancels
+		# fall instead of stacking on velocity.y.
 		velocity.y -= (gravity - external_acceleration.y) * dt
 
 		# Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step).
@@ -518,12 +512,9 @@ func _physics_process(dt: float) -> void:
 
 	_apply_scene_physics(dt, external_acceleration, scene_pending_impulses, on_floor)
 
-	# Scene-driven physics (trampolines, knockback, wind lift) writes to
-	# external_velocity AFTER the rise/fall flags were chosen above. Without
-	# this override the avatar snaps to idle mid-bounce because velocity.y
-	# alone is reset each tick and only external_velocity.y carries the lift.
-	# Re-derive the animation state from the combined vertical velocity that's
-	# about to be passed to move_and_slide.
+	# Re-derive rise/fall from the combined vertical velocity: the lift from
+	# external_velocity isn't visible in velocity.y alone (we undo the Y mix
+	# below, so velocity.y reads near-zero mid-bounce).
 	if external_velocity.length_squared() > 0.01:
 		var combined_vy: float = velocity.y + external_velocity.y
 		var free_flight: bool = glide_state == GLIDE_CLOSED or glide_state == GLIDE_CLOSING
@@ -537,10 +528,8 @@ func _physics_process(dt: float) -> void:
 				avatar.fall = true
 				avatar.rise = false
 
-	# Mix external_velocity into CharacterBody3D.velocity for THIS frame's move.
-	# X/Z are recomputed each frame from movement input above so they need no
-	# undo; velocity.y persists between frames, so we restore it after the move
-	# to avoid double-counting the external Y contribution on the next gravity tick.
+	# Add external_velocity to velocity for the move. X/Z get overwritten by
+	# locomotion next tick (no undo needed); Y persists, so we undo it below.
 	var external_y_for_move: float = external_velocity.y
 	velocity.x += external_velocity.x
 	velocity.y += external_y_for_move
@@ -551,55 +540,45 @@ func _physics_process(dt: float) -> void:
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
-	# Restore velocity.y to its gravity-only state unless a vertical collision
-	# already flattened it (floor/ceiling). x/z are reset by locomotion next tick.
+	# Restore velocity.y unless a floor/ceiling collision already zeroed it.
 	if not is_on_floor() and not is_on_ceiling():
 		velocity.y -= external_y_for_move
 
 
-# Update persistent external_velocity from scene-driven PBPhysicsCombinedForce
-# (continuous acceleration on XZ only — Y is consumed by the gravity step) and
-# PBPhysicsCombinedImpulse (instant Δv on all three axes). Applies Unity-style
-# viscous drag and clamps to MAX_EXTERNAL_VELOCITY. The scene_runner only emits
-# these for the current parcel scene, so the boundary check lives on the Rust side.
+# Fold scene-driven force/impulses into external_velocity, then drag and clamp.
+# scene_runner only emits these for the current parcel scene.
 func _apply_scene_physics(
 	dt: float, external_acceleration: Vector3, impulses: PackedVector3Array, on_floor: bool
 ) -> void:
-	# Force XZ accumulates into external_velocity. Force Y is NOT added here —
-	# it's already been folded into effective_gravity above (Unity ApplyGravity).
+	# Force XZ accumulates; force Y was already folded into effective_gravity.
 	external_velocity.x += external_acceleration.x * dt
 	external_velocity.z += external_acceleration.z * dt
 
-	# Impulses: instant velocity delta on all three axes.
 	var got_upward_impulse: bool = false
 	for impulse in impulses:
 		var delta_v: Vector3 = impulse / CHARACTER_MASS
 		if delta_v.y > 0.0:
 			got_upward_impulse = true
-			# Mirror Unity: an upward impulse on a falling player clears the
-			# downward gravity component so jump pads launch reliably.
+			# Upward impulse on a falling player clears gravity so jump pads launch.
 			if velocity.y < 0.0:
 				velocity.y = 0.0
 		external_velocity += delta_v
 
-	# Unity treats an upward impulse as ungrounding for the rest of this frame's
-	# physics step — otherwise the grounded-drag + zero-Y rules below would
-	# instantly cancel a jump-pad impulse applied while the player was on the
-	# floor. Mirror that effect via an effective_on_floor that fresh upward
-	# impulses can flip to false for one frame.
+	# Treat an upward impulse as ungrounding for the rest of this tick, or the
+	# grounded drag + Y-zero below would cancel a jump-pad launch.
 	var effective_on_floor: bool = on_floor and not got_upward_impulse
 
-	# Viscous drag — Unity ApplyExternalVelocityDragAndClamp: v *= (1 − damping·dt).
+	# Viscous drag: v *= (1 - damping * dt).
 	var damping := EXT_ENV_DRAG
 	if effective_on_floor:
 		damping += EXT_GROUND_FRICTION
 	external_velocity *= maxf(0.0, 1.0 - damping * dt)
 
-	# No vertical residue when grounded so a landed-from-impulse player doesn't bounce.
+	# Zero Y when grounded so landings don't micro-bounce.
 	if effective_on_floor:
 		external_velocity.y = 0.0
 
-	# Snap small magnitudes to zero / clamp large ones to MAX_EXTERNAL_VELOCITY.
+	# Snap tiny magnitudes to zero, clamp large ones to MAX_EXTERNAL_VELOCITY.
 	var sqr_mag: float = external_velocity.length_squared()
 	if sqr_mag < EXT_VELOCITY_EPSILON_SQR:
 		external_velocity = Vector3.ZERO

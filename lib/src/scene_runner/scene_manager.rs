@@ -1470,9 +1470,7 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(true);
             }
 
-            // Drop any combined-physics state on the scene the player just left
-            // so wind-zone forces stop immediately and queued impulses can't fire
-            // after the boundary crossing.
+            // Stop any wind/impulse the player just walked out of.
             scene.active_external_force = Vector3::ZERO;
             scene.pending_impulses.clear();
 
@@ -1582,9 +1580,8 @@ impl SceneManager {
             .unwrap_or_default()
     }
 
-    /// Returns the active continuous external force from the current parcel
-    /// scene's `PBPhysicsCombinedForce` component on the player entity, in
-    /// Godot world coordinates. Zero when no scene is driving a force.
+    /// Current parcel scene's external force on the player (Godot axes), or
+    /// zero if no scene is driving one.
     #[func]
     pub fn get_active_external_force(&self) -> Vector3 {
         self.scenes
@@ -1593,11 +1590,8 @@ impl SceneManager {
             .unwrap_or(Vector3::ZERO)
     }
 
-    /// Drains and returns the queue of pending one-shot impulses from the
-    /// current parcel scene's `PBPhysicsCombinedImpulse` component. Each
-    /// element is the impulse vector (already in Godot world axes) that
-    /// triggered on a new `event_id`. The player controller should call this
-    /// once per physics tick.
+    /// Drain pending impulse vectors (Godot axes) from the current parcel
+    /// scene. The player controller calls this once per physics tick.
     #[func]
     pub fn consume_pending_impulses(&mut self) -> PackedVector3Array {
         let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) else {
