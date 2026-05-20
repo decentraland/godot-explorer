@@ -87,7 +87,8 @@ func set_button_pressed(button_to_press: BUTTON) -> void:
 
 
 func capture_mouse():
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 func collapse():

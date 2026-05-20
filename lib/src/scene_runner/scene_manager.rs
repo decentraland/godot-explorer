@@ -51,6 +51,7 @@ use super::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
         SceneUpdateState,
     },
+    ui_blocker_registry,
     update_scene::_process_scene,
 };
 
@@ -1268,6 +1269,18 @@ impl SceneManager {
             self.viewport_center
         };
 
+        // Scene-side pointer blocking. The 3D physics raycast below cannot see
+        // Godot's UI tree, so without this check a `pointerFilter: 'block'`
+        // Scene UI element fails to stop clicks from reaching world entities
+        // behind it -- the entity still receives PetDown when `ia_pointer`
+        // fires from a path that bypasses gui_input (mobile joypad interact
+        // button, desktop key, gamepad). The registry is maintained by
+        // `DclUiControl::update_mouse_filter`, so this is O(blockers) per
+        // frame, not O(all Scene-UI controls).
+        if ui_blocker_registry::blocks_point(screen_point) {
+            return None;
+        }
+
         // Use cached viewport center for raycasting
         let raycast_from = camera_node.project_ray_origin(screen_point);
         let raycast_to = raycast_from + camera_node.project_ray_normal(screen_point) * RAY_LENGTH;
@@ -1384,16 +1397,19 @@ impl SceneManager {
         let right = (canvas_size.x - ia_end.x as f32).clamp(0.0, canvas_size.x);
         let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
 
+        let border_rect = BorderRect {
+            top,
+            left,
+            right,
+            bottom,
+        };
+
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
-            interactable_area: Some(BorderRect {
-                top,
-                left,
-                right,
-                bottom,
-            }),
+            interactable_area: Some(border_rect.clone()),
+            screen_inset_area: Some(border_rect),
         }
     }
 
