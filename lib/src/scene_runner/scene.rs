@@ -289,10 +289,6 @@ pub struct Scene {
     /// One-shot impulses queued by this scene's `PBPhysicsCombinedImpulse` on the
     /// player entity. Drained by the player controller each physics tick.
     pub pending_impulses: Vec<Vector3>,
-    /// Last `event_id` we applied from `PBPhysicsCombinedImpulse`; used for
-    /// CRDT-driven deduplication (incrementing event_id ⇒ new impulse, identical
-    /// event_id ⇒ ignored).
-    pub last_impulse_event_id: Option<u32>,
 
     pub paused: bool,
 
@@ -415,7 +411,6 @@ impl Scene {
             locomotion_settings: Default::default(),
             active_external_force: Vector3::ZERO,
             pending_impulses: Vec::new(),
-            last_impulse_event_id: None,
             deno_memory_stats: None,
             stuck_frames: 0,
         }
@@ -495,7 +490,6 @@ impl Scene {
             locomotion_settings: Default::default(),
             active_external_force: Vector3::ZERO,
             pending_impulses: Vec::new(),
-            last_impulse_event_id: None,
             deno_memory_stats: None,
             stuck_frames: 0,
         }

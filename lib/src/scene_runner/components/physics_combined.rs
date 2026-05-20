@@ -67,14 +67,15 @@ pub fn update_physics_combined_force(
     scene.active_external_force = new_force;
 }
 
-/// Reads `PBPhysicsCombinedImpulse` on the player entity and queues a new
-/// one-shot impulse when `event_id` advances.
+/// Reads `PBPhysicsCombinedImpulse` on the player entity and queues a one-shot
+/// impulse whenever the CRDT dirty set says the component changed this tick.
 ///
-/// Mirrors the Unity dirty-flag dedup: each `event_id` value is applied at most
-/// once. The first sighting of any `event_id` is always applied; subsequent
-/// values are only applied when `event_id` differs from `last_impulse_event_id`.
-/// Non-current scenes are ignored entirely so a scene can't push impulses to
-/// the player from outside its parcel boundary.
+/// Mirrors unity-explorer's `SDKExternalPhysicsSystems.ApplyPhysicsImpulse`,
+/// which gates on the per-write `IsDirty` flag and does **not** compare
+/// `event_id`. The `event_id` exists only to force CRDT to propagate a fresh
+/// write when the vector is identical — once CRDT delivers a write, it's a
+/// new impulse, full stop. Non-current scenes are ignored entirely so a scene
+/// can't push impulses to the player from outside its parcel boundary.
 pub fn update_physics_combined_impulse(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
@@ -98,9 +99,8 @@ pub fn update_physics_combined_impulse(
     }
 
     tracing::debug!(
-        "physics_combined: impulse dirty on scene {:?} (last_event_id={:?})",
-        scene.scene_id,
-        scene.last_impulse_event_id,
+        "physics_combined: impulse dirty on scene {:?}",
+        scene.scene_id
     );
 
     let impulse_component = SceneCrdtStateProtoComponents::get_physics_combined_impulse(crdt_state);
@@ -120,14 +120,6 @@ pub fn update_physics_combined_impulse(
         return;
     };
 
-    if scene.last_impulse_event_id == Some(pb.event_id) {
-        tracing::debug!(
-            "physics_combined: dedup hit — event_id={} already applied",
-            pb.event_id
-        );
-        return;
-    }
-
     let godot_vec = scene_vec_to_godot(vector);
     tracing::debug!(
         "physics_combined: queue impulse event_id={} dcl=({:.3},{:.3},{:.3}) godot=({:.3},{:.3},{:.3})",
@@ -139,6 +131,5 @@ pub fn update_physics_combined_impulse(
         godot_vec.y,
         godot_vec.z,
     );
-    scene.last_impulse_event_id = Some(pb.event_id);
     scene.pending_impulses.push(godot_vec);
 }
