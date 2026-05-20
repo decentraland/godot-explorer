@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://7u7y8c3bnf1i"]
+
+[ext_resource type="Script" uid="uid://mj0h3hjqnd8r" path="res://src/ui/components/organisms/social/mutual_friends.gd" id="1_dnuyt"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_dnuyt"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_dnuyt"]
+font = ExtResource("2_dnuyt")
+font_size = 18
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="MutualFriends" type="MarginContainer" unique_id=1229501731]
+offset_right = 111.0
+offset_bottom = 72.0
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 12
+script = ExtResource("1_dnuyt")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1415326721]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="HBoxContainer_Pictures" type="HBoxContainer" parent="HBoxContainer" unique_id=1190728091]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = -18
+
+[node name="Label" type="Label" parent="HBoxContainer" unique_id=1558687874]
+unique_name_in_owner = true
+layout_mode = 2
+text = "# Mutual"
+label_settings = SubResource("LabelSettings_dnuyt")

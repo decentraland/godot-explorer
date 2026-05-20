@@ -29,6 +29,10 @@ signal close_combo
 signal delete_account
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
+## Sync settings "Hide View Profile" / "Hide World Interactions" checkboxes.
+signal session_hide_ui_options_sync(
+	hide_view_profile: bool, hide_world_interactions: bool, hide_player_names: bool
+)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
@@ -93,7 +97,6 @@ var modal_manager: ModalManager
 var standalone = false
 
 var network_inspector_window: Window = null
-var selected_avatar: Avatar = null
 
 var last_emitted_height: int = 0
 var current_height: int = -1
@@ -108,6 +111,10 @@ var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var camera_mode_blocked: bool = false
 var session_id: String
+
+# Orchestrates the Firebase / Segment glue (EULA gate, login suppression on session recovery,
+# first_move_in_world detection). Instantiated after `metrics` is created.
+var analytics_controller: AnalyticsController = null
 
 var _is_portrait: bool = true
 
@@ -213,6 +220,8 @@ func _ready():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
 		if dcl_ios_singleton:
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
+
+	_dcl_swift_lib_smoke_test()
 
 	# Setup
 	nft_frame_loader = NftFrameStyleLoader.new()
@@ -332,7 +341,7 @@ func _ready():
 	self.locations = load("res://src/helpers_components/locations.gd").new()
 	self.locations.set_name("locations")
 
-	self.modal_manager = load("res://src/ui/components/modal/modal_manager.gd").new()
+	self.modal_manager = load("res://src/ui/components/organisms/modal/modal_manager.gd").new()
 	self.modal_manager.set_name("modal_manager")
 
 	get_tree().root.add_child.call_deferred(self.cli)
@@ -357,6 +366,11 @@ func _ready():
 			self.metrics.track_install_referrer.call_deferred()
 			self.config.install_referrer_sent = true
 			self.config.save_to_settings_file()
+		# All Firebase/Segment orchestration lives in AnalyticsController — see its docstring.
+		# RefCounted, kept alive by this strong reference. No scene-tree presence by default;
+		# spawns a transient Timer under Global only while polling for first_move_in_world.
+		self.analytics_controller = AnalyticsController.new()
+		self.analytics_controller.setup()
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
@@ -403,6 +417,19 @@ func _ready():
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
+
+
+# Smoke test for the Swift GDExtension. Runs only on iOS where DclSwiftLibPlugin
+# can actually reach the underlying Swift class; no-ops on every other platform.
+func _dcl_swift_lib_smoke_test() -> void:
+	if not DclSwiftLibPlugin.is_available():
+		return
+	print(
+		"[DclSwiftLib] ping() -> ",
+		DclSwiftLibPlugin.ping(),
+		" | version() -> ",
+		DclSwiftLibPlugin.version()
+	)
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
@@ -583,7 +610,7 @@ func sign_out() -> void:
 	# Lobby/login is portrait-only; reset orientation so logging out from a
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
-	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+	get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
 
 
 func explorer_has_focus() -> bool:
@@ -614,7 +641,7 @@ func capture_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		explorer.capture_mouse()
-	else:
+	elif DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -622,7 +649,7 @@ func release_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		explorer.release_mouse()
-	else:
+	elif DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -690,7 +717,7 @@ func open_network_inspector_ui():
 	)
 
 	const NETWORK_INSPECTOR_UI = preload(
-		"res://src/ui/components/debug_panel/network_inspector/network_inspector_ui.tscn"
+		"res://src/ui/components/organisms/debug_panel/network_inspector/network_inspector_ui.tscn"
 	)
 	network_inspector_window.add_child(NETWORK_INSPECTOR_UI.instantiate())
 
