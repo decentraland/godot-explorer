@@ -38,6 +38,7 @@ var is_local_player: bool = false
 var avatar_id: String = ""
 var hidden: bool = false
 var passport_disabled: bool = false
+var nametag_hidden: bool = false
 var avatar_ready: bool = false
 var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
@@ -245,6 +246,13 @@ func _input(event):
 		var selected = Global.get_selected_avatar()
 		if selected and selected == self and avatar_id and not hidden and not passport_disabled:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				var explorer = Global.get_explorer()
+				if (
+					is_instance_valid(explorer)
+					and explorer.is_session_hide_main_hud()
+					and explorer.is_session_hide_view_profile()
+				):
+					return
 				Global.open_profile_by_avatar.emit(self)
 
 
@@ -266,6 +274,10 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 			_set_click_area_enabled(false)
 		elif modifier == 1:  # disable passport
 			passport_disabled = true
+		elif modifier == 2:  # hide nametag
+			nametag_hidden = true
+
+	_apply_nickname_visibility()
 
 
 func set_hidden(value):
@@ -325,6 +337,8 @@ func _unset_avatar_modifier_area():
 		show()
 		_set_click_area_enabled(true)
 	passport_disabled = false
+	nametag_hidden = false
+	_apply_nickname_visibility()
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
@@ -523,7 +537,9 @@ func _apply_nickname_visibility() -> void:
 		is_avatar_shape and (current_name.is_empty() or current_name == "NPC")
 	)
 	var far_lod: bool = _lod_state == LODState.FAR
-	var should_hide := avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod
+	var should_hide := (
+		avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod or nametag_hidden
+	)
 	if should_hide:
 		nickname_quad.hide()
 		if nickname_viewport != null:
