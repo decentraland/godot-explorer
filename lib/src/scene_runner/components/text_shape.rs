@@ -78,19 +78,11 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             .unwrap_or(Color::from_rgba(1.0, 1.0, 1.0, opacity))
                     });
 
-                let outline_color = new_value
-                    .outline_color
-                    .map(|color| Color::from_rgba(color.r, color.g, color.b, opacity))
-                    .unwrap_or(Color::from_rgba(1.0, 1.0, 1.0, opacity));
-
                 label_3d.set_text(&display_text);
                 label_3d.set_modulate(text_color);
 
                 let font_size = (22.0 * new_value.font_size.unwrap_or(3.0)).max(1.0);
-                let outline_size = font_size * new_value.outline_width.unwrap_or(0.0);
                 label_3d.set_font_size(font_size as i32);
-                label_3d.set_outline_size(outline_size as i32);
-                label_3d.set_outline_modulate(outline_color);
                 label_3d.set_alpha_cut_mode(AlphaCutMode::DISCARD);
 
                 let text_wrapping = new_value.text_wrapping.unwrap_or_default();

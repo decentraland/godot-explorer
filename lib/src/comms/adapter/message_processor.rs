@@ -1622,6 +1622,9 @@ impl MessageProcessor {
             rfc4::packet::Message::SceneEmote(_) => {
                 tracing::warn!("Not implemented: SceneEmote handling in message_processor");
             }
+            rfc4::packet::Message::LookAtPosition(_)
+            | rfc4::packet::Message::Reaction(_)
+            | rfc4::packet::Message::ChatReaction(_) => {}
         }
     }
 
