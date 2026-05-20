@@ -518,6 +518,25 @@ func _physics_process(dt: float) -> void:
 
 	_apply_scene_physics(dt, external_acceleration, scene_pending_impulses, on_floor)
 
+	# Scene-driven physics (trampolines, knockback, wind lift) writes to
+	# external_velocity AFTER the rise/fall flags were chosen above. Without
+	# this override the avatar snaps to idle mid-bounce because velocity.y
+	# alone is reset each tick and only external_velocity.y carries the lift.
+	# Re-derive the animation state from the combined vertical velocity that's
+	# about to be passed to move_and_slide.
+	if external_velocity.length_squared() > 0.01:
+		var combined_vy: float = velocity.y + external_velocity.y
+		var free_flight: bool = glide_state == GLIDE_CLOSED or glide_state == GLIDE_CLOSING
+		if free_flight:
+			if combined_vy > 0.3:
+				avatar.rise = true
+				avatar.fall = false
+				avatar.land = false
+				avatar.is_grounded = false
+			elif combined_vy < -0.3:
+				avatar.fall = true
+				avatar.rise = false
+
 	# Mix external_velocity into CharacterBody3D.velocity for THIS frame's move.
 	# X/Z are recomputed each frame from movement input above so they need no
 	# undo; velocity.y persists between frames, so we restore it after the move
