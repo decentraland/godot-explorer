@@ -178,6 +178,7 @@ vertical_alignment = 1
 [node name="Control_PointerTooltip" parent="UI" unique_id=944970499 instance=ExtResource("11_qjs00")]
 unique_name_in_owner = true
 layout_mode = 1
+z_index = -4096
 metadata/_edit_lock_ = true
 
 [node name="LeftRightSafeContainer" type="MarginContainer" parent="UI" unique_id=1210894567]
