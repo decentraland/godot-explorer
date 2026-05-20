@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://bt0tvcuj6fu4q"]
+[gd_scene format=3 uid="uid://bscwnwrhyt341"]
 
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="1_spinr"]
 [ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="1_t50im"]

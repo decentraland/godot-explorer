@@ -1,0 +1,84 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "DCL00001",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "DCLPRD01",
+      "localizations" : [
+        {
+          "description" : "Get 10 credits to spend in Decentraland.",
+          "displayName" : "10 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "local_credits_10",
+      "referenceName" : "Local Credits 10",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "24.99",
+      "familyShareable" : false,
+      "internalID" : "DCLPRD03",
+      "localizations" : [
+        {
+          "description" : "Get 50 credits to spend in Decentraland.",
+          "displayName" : "50 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "local_credits_50",
+      "referenceName" : "Local Credits 50",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "DCLPRD02",
+      "localizations" : [
+        {
+          "description" : "Get 100 credits to spend in Decentraland.",
+          "displayName" : "100 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "local_credits_100",
+      "referenceName" : "Local Credits 100",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

@@ -50,8 +50,8 @@ const _SIMULATED_VALIDATION_DELAY_SEC := 0.5
 # drop, redelivery loop, missing signal) and let the user retry.
 const _PURCHASE_OVERLAY_TIMEOUT_SEC := 15.0
 
-const _OVERLAY_SCENE_PATH := "res://src/iap/iap_purchase_overlay.tscn"
-const _SUCCESS_MODAL_SCENE_PATH := "res://src/iap/iap_purchase_success_modal.tscn"
+const _OVERLAY_SCENE_PATH := "res://src/ui/components/organisms/iap_purchase_overlay/iap_purchase_overlay.tscn"
+const _SUCCESS_MODAL_SCENE_PATH := "res://src/ui/components/organisms/iap_purchase_success_modal/iap_purchase_success_modal.tscn"
 
 # Validation outcomes for `_async_validate_with_backend`:
 # OK — credits granted (or already granted, idempotent), finish the tx.

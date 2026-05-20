@@ -1,0 +1,93 @@
+[gd_scene format=3 uid="uid://dy6b2qqq4pve0"]
+
+[ext_resource type="Script" uid="uid://d1p3y6nmhy6s4" path="res://src/ui/components/molecules/faq_collapsable/faq_collapsable.gd" id="1_ao4u4"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="1_u5uw6"]
+[ext_resource type="Texture2D" uid="uid://cjtlaexth4ts0" path="res://src/ui/components/molecules/dropdown_list/icons/arrow-down.svg" id="3_ocdca"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_ocdca"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ritxv"]
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8117647, 0.8039216, 0.83137256, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="LabelSettings" id="LabelSettings_ksqvs"]
+font = ExtResource("1_u5uw6")
+font_size = 32
+
+[sub_resource type="LabelSettings" id="LabelSettings_eftf1"]
+font = ExtResource("4_ocdca")
+font_size = 24
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="FaqCollapsable" type="PanelContainer" unique_id=1032732015]
+offset_right = 465.0
+offset_bottom = 80.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ritxv")
+script = ExtResource("1_ao4u4")
+title = "ASD"
+description = "asdasdasdasdasd"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1906637453]
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Button" type="Button" parent="VBoxContainer" unique_id=2116154405]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+toggle_mode = true
+flat = true
+
+[node name="HBoxContainer_Title" type="HBoxContainer" parent="VBoxContainer/Button" unique_id=1801097264]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 40
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/Button/HBoxContainer_Title" unique_id=1870808464]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ASD"
+label_settings = SubResource("LabelSettings_ksqvs")
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/Button/HBoxContainer_Title" unique_id=1752692290]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("3_ocdca")
+expand_mode = 1
+
+[node name="Label_Description" type="Label" parent="VBoxContainer" unique_id=212719589]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(1, 1)
+layout_mode = 2
+text = "asdasdasdasdasd"
+label_settings = SubResource("LabelSettings_eftf1")
+autowrap_mode = 2
+
+[connection signal="toggled" from="VBoxContainer/Button" to="." method="_on_button_toggled"]
