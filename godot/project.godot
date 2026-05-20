@@ -33,6 +33,10 @@ boot_splash/image="uid://de6dww6t0a7v"
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
 
+[audio]
+
+general/ios/session_category=3
+
 [autoload]
 
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
@@ -230,7 +234,7 @@ rendering_device/driver.ios="vulkan"
 rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
-lights_and_shadows/directional_shadow/size=256
+lights_and_shadows/directional_shadow/size=512
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
 lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
 reflections/sky_reflections/ggx_samples=16

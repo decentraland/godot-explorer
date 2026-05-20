@@ -1,0 +1,202 @@
+class_name PlacesHelper
+
+enum LIKE { UNKNOWN, YES, NO }
+enum FetchResultStatus { OK, ERROR }
+
+
+class FetchResult:
+	var status: FetchResultStatus
+	var promise: Promise
+	var promise_error: PromiseError
+	var result: Array[Dictionary]
+
+	var result_single: Dictionary:
+		set(value):
+			pass
+		get:
+			if result.is_empty():
+				return {}
+			return result[0]
+
+	func _init(status_param: FetchResultStatus, result_param: Array[Dictionary] = []) -> void:
+		status = status_param
+		result = result_param
+
+
+static func get_api_url() -> String:
+	return DclUrls.destinations_api() + "/"
+
+
+static func get_sign_api_url() -> String:
+	return DclUrls.places_api() + "/destinations/"
+
+
+static func get_status_url(place_id: String, is_world_place: bool) -> String:
+	if is_world_place:
+		return DclUrls.places_api() + "/worlds?names=" + place_id.uri_encode()
+	return DclUrls.places_api() + "/places/" + place_id
+
+
+static func async_patch_like(place_id: String, like: LIKE, is_world_place: bool = false) -> Variant:
+	var endpoint := "/worlds/" if is_world_place else "/places/"
+	var url := DclUrls.places_api() + endpoint + place_id + "/likes"
+	var body: String
+	match like:
+		LIKE.UNKNOWN:
+			body = JSON.stringify({like = null})
+		LIKE.YES:
+			body = JSON.stringify({like = true})
+		LIKE.NO:
+			body = JSON.stringify({like = false})
+
+	return await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+
+
+static func async_patch_favorite(
+	place_id: String, toggled_on: bool, is_world_place: bool = false
+) -> Variant:
+	var endpoint := "/worlds/" if is_world_place else "/places/"
+	var url := DclUrls.places_api() + endpoint + place_id + "/favorites"
+
+	var body: String
+	if toggled_on:
+		body = JSON.stringify({favorites = true})
+	else:
+		body = JSON.stringify({favorites = false})
+
+	var respnse = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+
+	Global.favorite_destination_set.emit()
+
+	return respnse
+
+
+## Returns true when the place dictionary describes a world (not genesis city).
+static func is_world(item_data: Dictionary) -> bool:
+	if item_data.is_empty():
+		return false
+	if item_data.get("world", false):
+		return true
+	var server = item_data.get("server", null)
+	if server == null:
+		return false
+	var s := str(server).strip_edges()
+	return s != "" and s != "main"
+
+
+## Extracts a Vector2i position from a place/event dictionary, trying several key formats.
+static func parse_position(item_data: Dictionary) -> Vector2i:
+	var coords = item_data.get("coordinates", null)
+	var pos_arr = item_data.get("position", null)
+	var base_pos = item_data.get("base_position", null)
+	if coords is Array and coords.size() >= 2:
+		return Vector2i(int(coords[0]), int(coords[1]))
+	if pos_arr is Array and pos_arr.size() >= 2:
+		return Vector2i(int(pos_arr[0]), int(pos_arr[1]))
+	if item_data.get("x") != null and item_data.get("y") != null:
+		return Vector2i(int(item_data.x), int(item_data.y))
+	if base_pos:
+		var parts = str(base_pos).split(",")
+		if parts.size() >= 2:
+			return Vector2i(int(parts[0]), int(parts[1]))
+	return Vector2i.ZERO
+
+
+## Returns [Vector2i position, String realm] from a place dictionary.
+static func get_position_and_realm(item_data: Dictionary) -> Array:
+	var server = item_data.get("server", null)
+	var world_name = item_data.get("world_name", null)
+	var r: String
+	if server and str(server) != "main":
+		r = str(server)
+		if not r.ends_with(".dcl.eth"):
+			r = r + ".dcl.eth"
+	elif item_data.get("world", false) and world_name:
+		r = str(world_name)
+		if not r.ends_with(".dcl.eth"):
+			r = r + ".dcl.eth"
+	else:
+		r = DclUrls.main_realm()
+	return [parse_position(item_data), r]
+
+
+static func async_get_by_position(pos: Vector2i) -> Variant:
+	var url: String = get_api_url()
+	url += "?only_places=true&pointer=%d,%d" % [pos.x, pos.y]
+
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_GET, "", headers
+	)
+	return await PromiseUtils.async_awaiter(promise)
+
+
+static func async_get_by_names(name: String) -> Variant:
+	var url: String = get_api_url() + "?names=%s&only_worlds=true&limit=1" % name.uri_encode()
+
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_GET, "", headers
+	)
+	return await PromiseUtils.async_awaiter(promise)
+
+
+static func async_get_by_id(place_id: String) -> Variant:
+	var url: String = get_api_url() + place_id
+
+	return await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+
+
+## Fetches a single place by ID from the places API (same as fav_button, engagement_bar).
+## Use this when destinations API get_by_id fails or returns different structure.
+static func async_get_place_by_id(place_id: String) -> Variant:
+	var url: String = DclUrls.places_api() + "/places/" + place_id
+	return await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+
+
+static func async_fetch_places(url: String) -> FetchResult:
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+
+	if response is PromiseError:
+		var fetch_result := FetchResult.new(FetchResultStatus.ERROR)
+		fetch_result.promise_error = response
+		return fetch_result
+
+	var json: Dictionary = response.get_string_response_as_json()
+
+	return FetchResult.new(FetchResultStatus.OK, Array(json.data, int(TYPE_DICTIONARY), "", null))
+
+
+## Given some coordinates finds the name of the place
+## at genesis city. Returns an empty String if can't find one
+static func async_get_name_from_coordinates(coordinates: Vector2i) -> String:
+	var response = await PlacesHelper.async_get_by_position(coordinates)
+	if response:
+		if response is PromiseError:
+			printerr("Error request places ", coordinates, " ", response.get_error())
+		else:
+			var json: Dictionary = response.get_string_response_as_json()
+			if !json.data.is_empty():
+				return json.data[0].title
+	return ""
+
+
+# TODO move somewere else
+# Using Dictionary for result_vector because
+# Dictionaries pass as reference
+static func parse_coordinates(text: String, result_vector: Dictionary) -> bool:
+	var coord_regex = RegEx.new()
+	coord_regex.compile(r"(?<x>-?\d+),(?<y>-?\d+)")
+	var is_coordinate := coord_regex.search(text) != null
+	if not is_coordinate:
+		return false
+
+	var regex_match := coord_regex.search_all(text)
+	for m in regex_match:
+		for n in m.names:
+			match n:
+				"x":
+					result_vector.x = m.strings[m.names["x"]].to_int()
+				"y":
+					result_vector.y = m.strings[m.names["y"]].to_int()
+	return true

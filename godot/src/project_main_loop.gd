@@ -25,6 +25,7 @@ const NOISE_PATTERNS := [
 	"Mouse is not supported",
 	"utf16 surrogate",
 	"ClientMessagesHandler",
+	"StreamProtocol",
 	'Condition "active"',
 ]
 # Keep this fraction of noise events as a canary — if the shape or volume of
@@ -40,6 +41,11 @@ var attach_log_sampled := false
 
 
 func _initialize() -> void:
+	# Skip Sentry init when telemetry is disabled at build time
+	# (e.g. CI desktop builds compiled with the `disable_telemetry` cargo feature).
+	if DclGlobal.is_telemetry_disabled():
+		return
+
 	var release_string = "org.decentraland.godotexplorer@" + DclGlobal.get_version()
 
 	# Detect environment from version string

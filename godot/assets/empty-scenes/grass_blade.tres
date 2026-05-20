@@ -1,4 +1,4 @@
-[gd_resource type="ArrayMesh" load_steps=2 format=3 uid="uid://c0qx5jwcnr1l4"]
+[gd_resource type="ArrayMesh" format=3 uid="uid://c0qx5jwcnr1l4"]
 
 [ext_resource type="Material" uid="uid://dkqp8yrjhfisl" path="res://assets/empty-scenes/grass_blades_material.tres" id="1_material"]
 

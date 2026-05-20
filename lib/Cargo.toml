@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "0.66.0"
+version = "0.67.0"
 edition = "2021"
 publish = false
 
@@ -104,6 +104,9 @@ use_resource_tracking = []
 use_voice_chat = []
 use_memory_debugger = []
 asset_server = ["dep:hyper-util"]
+# When enabled, Sentry and Segment metrics initialization are skipped at runtime.
+# Used by CI desktop builds to ship telemetry-free artifacts.
+disable_telemetry = []
 
 # TODO: Fix enable_inspector failure when cross-compiling to Android from Windows.
 #       The FastWebSockets build incorrectly includes `unmask`.

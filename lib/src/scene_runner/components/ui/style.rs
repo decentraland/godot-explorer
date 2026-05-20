@@ -1,10 +1,24 @@
+use godot::prelude::Color;
+
 use crate::dcl::components::{
-    proto_components::sdk::components::{
-        PbUiTransform, PointerFilterMode, YgAlign, YgDisplay, YgFlexDirection, YgJustify,
-        YgOverflow, YgPositionType, YgUnit, YgWrap,
+    proto_components::{
+        sdk::components::{
+            PbUiTransform, PointerFilterMode, YgAlign, YgDisplay, YgFlexDirection, YgJustify,
+            YgOverflow, YgPositionType, YgUnit, YgWrap,
+        },
+        WrapToGodot,
     },
     SceneEntityId,
 };
+
+// v1 only resolves YGU_POINT to pixels. YGU_PERCENT and YGU_AUTO are not yet
+// supported for borders (would need post-layout resolution against parent size).
+fn border_px(unit: YgUnit, value: Option<f32>) -> f32 {
+    match unit {
+        YgUnit::YguPoint => value.unwrap_or(0.0).max(0.0),
+        _ => 0.0,
+    }
+}
 
 // macro helpers to convert proto format to bevy format for val, size, rect
 macro_rules! val {
@@ -63,16 +77,62 @@ pub struct UiTransform {
     pub right_of: SceneEntityId,
     pub overflow: YgOverflow,
     pub pointer_filter_mode: PointerFilterMode,
+    pub z_index: i32,
     pub taffy_style: taffy::style::Style,
+    // Border, in pixels. Widths order: [left, right, top, bottom].
+    // Radii order: [top_left, top_right, bottom_right, bottom_left] (Godot StyleBoxFlat order).
+    // Colors order: [top, right, bottom, left] (CSS order).
+    pub border_widths: [f32; 4],
+    pub border_radii: [f32; 4],
+    pub border_colors: [Color; 4],
+    pub has_border: bool,
 }
 
 impl From<&PbUiTransform> for UiTransform {
     fn from(value: &PbUiTransform) -> Self {
+        let bw_l = border_px(value.border_left_width_unit(), value.border_left_width);
+        let bw_r = border_px(value.border_right_width_unit(), value.border_right_width);
+        let bw_t = border_px(value.border_top_width_unit(), value.border_top_width);
+        let bw_b = border_px(value.border_bottom_width_unit(), value.border_bottom_width);
+
+        let br_tl = border_px(
+            value.border_top_left_radius_unit(),
+            value.border_top_left_radius,
+        );
+        let br_tr = border_px(
+            value.border_top_right_radius_unit(),
+            value.border_top_right_radius,
+        );
+        let br_br = border_px(
+            value.border_bottom_right_radius_unit(),
+            value.border_bottom_right_radius,
+        );
+        let br_bl = border_px(
+            value.border_bottom_left_radius_unit(),
+            value.border_bottom_left_radius,
+        );
+
+        let transparent = Color::from_rgba(0.0, 0.0, 0.0, 0.0);
+        let c_t = value.border_top_color.to_godot_or_else(transparent);
+        let c_r = value.border_right_color.to_godot_or_else(transparent);
+        let c_b = value.border_bottom_color.to_godot_or_else(transparent);
+        let c_l = value.border_left_color.to_godot_or_else(transparent);
+
+        let has_border = (bw_l > 0.0 && c_l.a > 0.0)
+            || (bw_r > 0.0 && c_r.a > 0.0)
+            || (bw_t > 0.0 && c_t.a > 0.0)
+            || (bw_b > 0.0 && c_b.a > 0.0);
+
         Self {
             parent: SceneEntityId::from_i32(value.parent),
             right_of: SceneEntityId::from_i32(value.right_of),
             overflow: value.overflow(),
             pointer_filter_mode: value.pointer_filter(),
+            z_index: value.z_index.unwrap_or(0),
+            border_widths: [bw_l, bw_r, bw_t, bw_b],
+            border_radii: [br_tl, br_tr, br_br, br_bl],
+            border_colors: [c_t, c_r, c_b, c_l],
+            has_border,
             taffy_style: taffy::style::Style {
                 overflow: match value.overflow() {
                     YgOverflow::YgoVisible => taffy::geometry::Point::<taffy::style::Overflow> {
@@ -221,6 +281,13 @@ impl From<&PbUiTransform> for UiTransform {
                     taffy::style::LengthPercentage::Length(0.0),
                     LengthPercentage
                 ),
+                // Yoga semantics: border width shrinks the content area, like padding.
+                border: taffy::geometry::Rect {
+                    left: taffy::style::LengthPercentage::Length(bw_l),
+                    right: taffy::style::LengthPercentage::Length(bw_r),
+                    top: taffy::style::LengthPercentage::Length(bw_t),
+                    bottom: taffy::style::LengthPercentage::Length(bw_b),
+                },
                 ..Default::default()
             },
         }

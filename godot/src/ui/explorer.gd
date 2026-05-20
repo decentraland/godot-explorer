@@ -42,6 +42,10 @@ var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
 
 ## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
 var _session_hide_main_hud: bool = false
+## Session-only sub-options for hide UI.
+var _session_hide_view_profile: bool = true
+var _session_hide_world_interactions: bool = true
+var _session_hide_player_names: bool = true
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -76,7 +80,6 @@ var _debug_panel_from_settings: bool = false
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
-@onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
@@ -120,6 +123,9 @@ func get_params_from_cmd():
 
 
 func _ready():
+	# Out of the lobby — restore the relaxed 10s flush cadence (the lobby drops it to 2s).
+	Global.metrics.set_flush_interval(10.0)
+
 	GraphicSettings.apply_full_processor_mode()
 
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
@@ -280,13 +286,18 @@ func _ready():
 	ui_safe_area.add_child(Global.scene_runner.base_ui)
 	ui_safe_area.move_child(Global.scene_runner.base_ui, 0)
 
+	ui_safe_area.resized.connect(self._push_scene_interactable_area)
+	get_window().size_changed.connect(self._push_scene_interactable_area)
+	_push_scene_interactable_area.call_deferred()
+
 	Global.scene_fetcher.notify_pending_loading_scenes.connect(
 		self._on_notify_pending_loading_scenes
 	)
 
 	# Add disconnect handler for reconnection logic
 	var disconnect_handler = (
-		load("res://src/ui/components/disconnect_handler/disconnect_handler.tscn").instantiate()
+		load("res://src/ui/components/organisms/disconnect_handler/disconnect_handler.tscn")
+		. instantiate()
 	)
 	add_child(disconnect_handler)
 
@@ -363,6 +374,36 @@ func _ready():
 func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:
 	if not Global.player_identity.get_address_str().is_empty():
 		Global.open_url(url)
+
+
+## Push the safe-area rect (in canvas/logical pixels) to the scene runner so
+## scenes get correct UiCanvasInformation.interactable_area on every resize,
+## including --emulate-ios / --emulate-android virtual margins.
+func _push_scene_interactable_area() -> void:
+	if not is_instance_valid(Global.scene_runner) or not is_instance_valid(ui_safe_area):
+		return
+	var canvas: Vector2 = ui_safe_area.size
+	var canvas_w: int = int(canvas.x)
+	var canvas_h: int = int(canvas.y)
+	if canvas_w <= 0 or canvas_h <= 0:
+		return
+
+	var rect := Rect2i(0, 0, canvas_w, canvas_h)
+
+	if Global.is_mobile() or Global.is_emulating_safe_area():
+		var window_size: Vector2i = DisplayServer.window_get_size()
+		if window_size.x > 0 and window_size.y > 0:
+			var safe: Rect2i = Global.get_safe_area()
+			var x_factor: float = canvas.x / float(window_size.x)
+			var y_factor: float = canvas.y / float(window_size.y)
+
+			var pos_x: int = clampi(roundi(safe.position.x * x_factor), 0, canvas_w)
+			var pos_y: int = clampi(roundi(safe.position.y * y_factor), 0, canvas_h)
+			var end_x: int = clampi(roundi(safe.end.x * x_factor), pos_x, canvas_w)
+			var end_y: int = clampi(roundi(safe.end.y * y_factor), pos_y, canvas_h)
+			rect = Rect2i(pos_x, pos_y, end_x - pos_x, end_y - pos_y)
+
+	Global.scene_runner.set_interactable_area(rect)
 
 
 func _on_player_logout():
@@ -573,13 +614,30 @@ func change_tooltips():
 	var tooltip_data = Global.scene_runner.pointer_tooltips.duplicate()
 
 	# Check if there's an avatar behind the crosshair
-	_avatar_under_crosshair = player.get_avatar_under_crosshair()
-	Global.selected_avatar = _avatar_under_crosshair
+	if _session_hide_main_hud and _session_hide_view_profile:
+		_avatar_under_crosshair = null
+	else:
+		_avatar_under_crosshair = player.get_avatar_under_crosshair()
 
 	# Handle outline changes through the outline system
 	if _avatar_under_crosshair != _last_outlined_avatar:
 		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
 		_last_outlined_avatar = _avatar_under_crosshair
+
+	# Filter tooltips based on hide UI sub-toggles
+	if _session_hide_main_hud and (_session_hide_view_profile or _session_hide_world_interactions):
+		var filtered = []
+		for i in tooltip_data.size():
+			var entry = tooltip_data[i]
+			var is_view_profile = (
+				entry is Dictionary and entry.get("text_pet_down", "") == "View profile"
+			)
+			if is_view_profile and _session_hide_view_profile:
+				continue
+			if not is_view_profile and _session_hide_world_interactions:
+				continue
+			filtered.append(entry)
+		tooltip_data = filtered
 
 	# Tooltips now include avatar detection from scene_runner
 	if not tooltip_data.is_empty():
@@ -836,7 +894,8 @@ func _on_control_menu_request_livekit_debug(enabled):
 	if enabled:
 		if not is_instance_valid(livekit_debug_panel):
 			livekit_debug_panel = (
-				load("res://src/ui/components/livekit_debug/livekit_debug_panel.tscn").instantiate()
+				load("res://src/ui/components/organisms/livekit_debug/livekit_debug_panel.tscn")
+				. instantiate()
 			)
 			ui_root.add_child(livekit_debug_panel)
 	else:
@@ -933,14 +992,16 @@ func avatar_look_at_independent(look_at_position: Vector3):
 
 
 func capture_mouse():
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if label_crosshair and ui_root:
 		label_crosshair.show()
 		ui_root.grab_focus.call_deferred()
 
 
 func release_mouse():
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	if not Global.is_mobile():
 		if label_crosshair:
 			label_crosshair.hide()
@@ -1011,7 +1072,9 @@ func _update_debug_ui():
 
 	if should_show:
 		if not is_instance_valid(debug_panel):
-			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
+			debug_panel = (
+				load("res://src/ui/components/organisms/debug_panel/debug_panel.tscn").instantiate()
+			)
 			safe_margin_container_debug.add_child(debug_panel)
 	else:
 		if is_instance_valid(debug_panel):
@@ -1168,6 +1231,8 @@ func _async_open_profile_by_address(user_address: String):
 
 
 func _async_open_profile_by_avatar(avatar: DclAvatar):
+	if _session_hide_main_hud and _session_hide_view_profile:
+		return
 	# Check if it's an Avatar (GDScript class) to access avatar_id
 	if avatar is Avatar:
 		var avatar_instance = avatar as Avatar
@@ -1268,6 +1333,7 @@ func _show_settings_panel() -> void:
 
 func _on_settings_panel_closed() -> void:
 	settings_panel.hide()
+	apply_deferred_hide_ui()
 	Global.explorer_grab_focus()
 	capture_mouse()
 
@@ -1321,9 +1387,9 @@ func _show_notification_toast(notification_d: Dictionary) -> void:
 
 	# Create and show toast notification
 	var style = notification_d.get("toast_style", "default")
-	var scene_path := "res://src/ui/components/notifications/notification_toast.tscn"
+	var scene_path := "res://src/ui/components/organisms/notifications/notification_toast.tscn"
 	if style == "alert":
-		scene_path = "res://src/ui/components/notifications/alert_toast.tscn"
+		scene_path = "res://src/ui/components/organisms/notifications/alert_toast.tscn"
 	var toast_scene = load(scene_path)
 	var toast = toast_scene.instantiate()
 	ui_root.add_child(toast)
@@ -1354,8 +1420,12 @@ func _on_loading_started() -> void:
 	Global.modal_manager.ban_pre_check_active = false
 	_pending_notification_toast = {}  # Clear any pending notification
 	_session_hide_main_hud = false
+	_session_hide_view_profile = true
+	_session_hide_world_interactions = true
+	_session_hide_player_names = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
+	Global.session_hide_ui_options_sync.emit(true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 
 
@@ -1639,24 +1709,65 @@ func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
 
 func _on_button_show_ui_pressed() -> void:
 	_session_hide_main_hud = false
+	_session_hide_view_profile = true
+	_session_hide_world_interactions = true
+	_session_hide_player_names = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
+	Global.session_hide_ui_options_sync.emit(true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 
 
 func set_hide_main_hud_from_settings(minimized: bool) -> void:
 	_session_hide_main_hud = minimized
-	set_visible_ui(not minimized, true)
-	_apply_hide_ui_to_avatar_nicks(minimized)
+	if not minimized:
+		# Turning off: restore UI immediately and reset sub-options
+		_session_hide_view_profile = true
+		_session_hide_world_interactions = true
+		_session_hide_player_names = true
+		set_visible_ui(true, true)
+		_apply_hide_ui_to_avatar_nicks(false)
+		Global.session_hide_ui_options_sync.emit(true, true, true)
+
+
+func set_hide_view_profile(value: bool) -> void:
+	_session_hide_view_profile = value
+
+
+func set_hide_world_interactions(value: bool) -> void:
+	_session_hide_world_interactions = value
+
+
+func set_hide_player_names(value: bool) -> void:
+	_session_hide_player_names = value
 
 
 func is_session_hide_main_hud() -> bool:
 	return _session_hide_main_hud
 
 
+func is_session_hide_view_profile() -> bool:
+	return _session_hide_view_profile
+
+
+func is_session_hide_world_interactions() -> bool:
+	return _session_hide_world_interactions
+
+
+func is_session_hide_player_names() -> bool:
+	return _session_hide_player_names
+
+
+func apply_deferred_hide_ui() -> void:
+	if not _session_hide_main_hud:
+		return
+	set_visible_ui(false, true)
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
+
+
 func _on_avatar_added_apply_hide_ui(avatar = null) -> void:
 	# Called when a new avatar is spawned; ensure its nickname obeys current Hide UI state.
-	if not _session_hide_main_hud:
+	if not _session_hide_main_hud or not _session_hide_player_names:
 		return
 	if avatar != null and avatar is Avatar:
 		(avatar as Avatar).set_force_hide_name(true)

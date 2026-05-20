@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://byp4n7u2145fx"]
+
+[ext_resource type="Script" uid="uid://cml07tp7nuhck" path="res://src/ui/components/molecules/snap_carousel/snap_carousel.gd" id="1_snap"]
+[ext_resource type="PackedScene" uid="uid://532ab3qicjp6" path="res://src/ui/components/molecules/snap_carousel/snap_carousel_card.tscn" id="3_2oyge"]
+
+[node name="SnapCarousel" type="VBoxContainer" unique_id=1417653535]
+clip_contents = true
+anchors_preset = 10
+anchor_right = 1.0
+offset_right = 833.0
+offset_bottom = 378.0
+grow_horizontal = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_override_constants/separation = 16
+script = ExtResource("1_snap")
+mode = 1
+
+[node name="CardArea" type="Control" parent="." unique_id=1951379499]
+clip_contents = true
+custom_minimum_size = Vector2(0, 350)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="CardContainer" type="Control" parent="CardArea" unique_id=1139719504]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="SnapCarouselCard" parent="CardArea/CardContainer" unique_id=353149603 instance=ExtResource("3_2oyge")]
+custom_minimum_size = Vector2(530, 300)
+
+[node name="SnapCarouselCard2" parent="CardArea/CardContainer" unique_id=1324026161 instance=ExtResource("3_2oyge")]
+custom_minimum_size = Vector2(624, 350)
+
+[node name="SnapCarouselCard3" parent="CardArea/CardContainer" unique_id=1837558481 instance=ExtResource("3_2oyge")]
+custom_minimum_size = Vector2(530, 300)
+
+[node name="DotsContainer" type="HBoxContainer" parent="." unique_id=1645889567]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1

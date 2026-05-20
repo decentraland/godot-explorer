@@ -61,6 +61,20 @@ pub enum SegmentEvent {
     BlockUser(SegmentEventBlockUser),
     Unfriend(SegmentEventUnfriend),
     InstallAttribution(SegmentEventInstallAttribution),
+    FirebaseInit(SegmentEventFirebaseInit),
+}
+
+/// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
+/// app instance id — analysts pivot from Segment → Firebase via this event's `session_id` +
+/// `firebase_user_id` pair. The inverse pivot (Firebase → Segment) uses the `user_id` /
+/// `session_id` user properties that the plugin seeds on every Firebase event.
+///
+/// Only queued when `firebase_user_id` is non-empty (see `_on_firebase_app_instance_id_ready` in
+/// metrics.rs); a missing id is logged as a `tracing::error!` and the event is skipped.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventFirebaseInit {
+    // Firebase Analytics app instance id (ga_pseudo_user_id). Guaranteed non-empty at queue time.
+    pub firebase_user_id: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -394,6 +408,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::InstallAttribution(event) => (
             "Install Attribution".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::FirebaseInit(event) => (
+            "Firebase Init".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),
