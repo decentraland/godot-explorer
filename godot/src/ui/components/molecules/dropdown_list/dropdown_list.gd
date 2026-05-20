@@ -12,6 +12,7 @@ const DROPDOWN_ITEM_SCENE = preload(
 )
 const COLOR_ARROW_NORMAL := Color(236, 235, 237, 1)
 const COLOR_ARROW_DISABLED := Color(255, 255, 255, 0.2)
+const TOUCH_DRAG_THRESHOLD: float = 20.0
 
 ## Maximum number of items visible at once before the popup scrolls.
 @export var max_visible_items: int = 5
@@ -46,6 +47,10 @@ var _is_open: bool = false
 var _style_normal: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
 var _style_pressed: StyleBoxFlat = load("res://assets/themes/dropdown_selected.tres")
 var _style_disabled: StyleBoxFlat = load("res://assets/themes/dropdown_disabled.tres")
+
+## Touch handling: distinguish tap from scroll gesture.
+var _touch_press_pos: Vector2 = Vector2.ZERO
+var _touch_is_dragging: bool = false
 
 @onready var _vbox: VBoxContainer = $VBoxContainer
 @onready var _title_label: Label = %Label_Title
@@ -321,9 +326,19 @@ func _apply_disabled_state():
 func _on_button_gui_input(event: InputEvent):
 	if disabled:
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_toggle_popup()
-		get_viewport().set_input_as_handled()
+
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_touch_press_pos = event.global_position
+			_touch_is_dragging = false
+		elif not _touch_is_dragging:
+			_toggle_popup()
+			get_viewport().set_input_as_handled()
+		return
+
+	if event is InputEventMouseMotion:
+		if event.global_position.distance_to(_touch_press_pos) > TOUCH_DRAG_THRESHOLD:
+			_touch_is_dragging = true
 
 
 func _on_button_mouse_entered():
@@ -340,6 +355,9 @@ func _on_button_mouse_exited():
 
 func _on_popup_layer_gui_input(event: InputEvent):
 	if event is InputEventMouseButton and event.pressed:
+		_close_popup()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventScreenTouch and event.pressed:
 		_close_popup()
 		get_viewport().set_input_as_handled()
 
