@@ -528,8 +528,11 @@ func _physics_process(dt: float) -> void:
 				avatar.fall = true
 				avatar.rise = false
 
-	# Add external_velocity to velocity for the move. X/Z get overwritten by
-	# locomotion next tick (no undo needed); Y persists, so we undo it below.
+	# Snapshot locomotion XZ so we can restore them after the move. Otherwise
+	# `move_toward` on the next no-input tick would decel from velocity-with-
+	# external stacked, and the external add would compound indefinitely.
+	var locomotion_x: float = velocity.x
+	var locomotion_z: float = velocity.z
 	var external_y_for_move: float = external_velocity.y
 	velocity.x += external_velocity.x
 	velocity.y += external_y_for_move
@@ -539,6 +542,11 @@ func _physics_process(dt: float) -> void:
 	move_and_slide()
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
+
+	# Restore locomotion-only XZ; external_velocity carries its own state and is
+	# re-added next frame.
+	velocity.x = locomotion_x
+	velocity.z = locomotion_z
 
 	# Restore velocity.y unless a floor/ceiling collision already zeroed it.
 	if not is_on_floor() and not is_on_ceiling():
