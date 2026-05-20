@@ -68,17 +68,18 @@ pub fn update_physics_combined_force(
 }
 
 /// Reads `PBPhysicsCombinedImpulse` on the player entity and queues a one-shot
-/// impulse whenever the observed `(event_id, vector)` differs from the last
-/// applied one.
+/// impulse the first time we observe each `event_id`.
 ///
-/// Background: the SDK publishes the impulse summary component every tick
-/// (CRDT dirty fires constantly), often with `event_id=0` and a static vector.
-/// Naively trusting "dirty" means stacking the same push every frame; naively
-/// trusting `event_id` means missing every press when the SDK never increments
-/// it. We follow the godot-explorer change-detection pattern used in
-/// `tween.rs` and `video_player.rs`: cache the full last-seen state and fire
-/// only when it changes. Zero vectors are treated as "no impulse" and never
-/// queued, but the cache still updates so the next non-zero write registers.
+/// The protocol contract (see `physics_combined_impulse.proto`):
+///   "Renderer processes impulse with the unique ID only once.
+///    Increase eventID of the component to apply another impulse."
+///
+/// `event_id` carries both roles: it bypasses CRDT identity-dedup so the
+/// write propagates even when the vector is unchanged, **and** it's the
+/// renderer's dedup key. So we trust it: track the last applied id per
+/// scene, and ignore any tick that doesn't carry a new value. A scene/SDK
+/// that fails to bump `event_id` will (correctly per the protocol) only
+/// get the first impulse — that's an SDK bug to fix, not a renderer one.
 pub fn update_physics_combined_impulse(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
@@ -106,43 +107,26 @@ pub fn update_physics_combined_impulse(
     let Some(pb) = entry.value.as_ref() else {
         return;
     };
-
-    let godot_vec = pb
-        .vector
-        .as_ref()
-        .map(scene_vec_to_godot)
-        .unwrap_or(Vector3::ZERO);
-    let event_id = pb.event_id;
-    let current_state = (event_id, godot_vec);
-
-    let state_changed = scene
-        .last_impulse_state
-        .as_ref()
-        .is_none_or(|cached| *cached != current_state);
-    let is_zero_vector = godot_vec.length_squared() < f32::EPSILON;
-
-    scene.last_impulse_state = Some(current_state);
-
-    if !state_changed {
-        tracing::debug!(
-            "physics_combined: dedup hit — same (event_id={}, vec=({:.3},{:.3},{:.3})) as last applied",
-            event_id, godot_vec.x, godot_vec.y, godot_vec.z,
-        );
+    let Some(vector) = pb.vector.as_ref() else {
         return;
-    }
-    if is_zero_vector {
+    };
+
+    if scene.last_impulse_event_id == Some(pb.event_id) {
         tracing::debug!(
-            "physics_combined: state changed to zero — clearing cache, no impulse to queue"
+            "physics_combined: dedup hit — event_id={} already applied (scene expected to increment per protocol)",
+            pb.event_id
         );
         return;
     }
 
+    let godot_vec = scene_vec_to_godot(vector);
     tracing::debug!(
         "physics_combined: queue impulse event_id={} godot=({:.3},{:.3},{:.3})",
-        event_id,
+        pb.event_id,
         godot_vec.x,
         godot_vec.y,
         godot_vec.z,
     );
+    scene.last_impulse_event_id = Some(pb.event_id);
     scene.pending_impulses.push(godot_vec);
 }
