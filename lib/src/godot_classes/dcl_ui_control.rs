@@ -20,6 +20,7 @@ use crate::{
     scene_runner::{
         components::ui::scene_ui::UiResults,
         scene_manager::{GLOBAL_TICK_NUMBER, GLOBAL_TIMESTAMP},
+        ui_blocker_registry,
     },
 };
 
@@ -38,6 +39,12 @@ pub struct DclUiControl {
 
     listening_mouse_down: bool,
     listening_mouse_up: bool,
+
+    /// Mirrors whether this Control is currently registered in the
+    /// `ui_blocker_registry`. Toggled by `update_mouse_filter` whenever the
+    /// STOP/IGNORE state actually changes; used so we don't re-insert the
+    /// same Gd<Control> on every call.
+    registered_as_blocker: bool,
 }
 
 #[godot_api]
@@ -51,6 +58,7 @@ impl IControl for DclUiControl {
             listening_mouse_up: false,
             ui_result: None,
             dcl_entity_id: SceneEntityId::ROOT,
+            registered_as_blocker: false,
         }
     }
 
@@ -105,17 +113,28 @@ impl DclUiControl {
     }
 
     pub fn update_mouse_filter(&mut self) {
-        match self.force_pointer_filter_mode {
+        let new_filter = match self.force_pointer_filter_mode {
             PointerFilterMode::PfmNone => {
                 if self.is_gui_input_signal_connected {
-                    self.base_mut().set_mouse_filter(MouseFilter::STOP);
+                    MouseFilter::STOP
                 } else {
-                    self.base_mut().set_mouse_filter(MouseFilter::IGNORE);
+                    MouseFilter::IGNORE
                 }
             }
-            PointerFilterMode::PfmBlock => {
-                self.base_mut().set_mouse_filter(MouseFilter::STOP);
+            PointerFilterMode::PfmBlock => MouseFilter::STOP,
+        };
+        self.base_mut().set_mouse_filter(new_filter);
+
+        let should_be_blocker = new_filter == MouseFilter::STOP;
+        if should_be_blocker != self.registered_as_blocker {
+            let ctrl: Gd<Control> = self.to_gd().upcast();
+            let id = ctrl.instance_id();
+            if should_be_blocker {
+                ui_blocker_registry::register_blocker(id, ctrl);
+            } else {
+                ui_blocker_registry::unregister_blocker(id);
             }
+            self.registered_as_blocker = should_be_blocker;
         }
     }
 
