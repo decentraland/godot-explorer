@@ -289,6 +289,12 @@ pub struct Scene {
     /// One-shot impulses queued by this scene's `PBPhysicsCombinedImpulse` on the
     /// player entity. Drained by the player controller each physics tick.
     pub pending_impulses: Vec<Vector3>,
+    /// `(event_id, vector)` of the most recent impulse value we observed on this
+    /// scene's player-entity component, in Godot coordinates. Used to detect
+    /// fresh-vs-repeat writes: the test scenes leave `event_id=0` and the SDK
+    /// republishes the same vector every tick, so we dedup by full-state equality
+    /// the same way `tween.rs` and `video_player.rs` detect change.
+    pub last_impulse_state: Option<(u32, Vector3)>,
 
     pub paused: bool,
 
@@ -411,6 +417,7 @@ impl Scene {
             locomotion_settings: Default::default(),
             active_external_force: Vector3::ZERO,
             pending_impulses: Vec::new(),
+            last_impulse_state: None,
             deno_memory_stats: None,
             stuck_frames: 0,
         }
@@ -490,6 +497,7 @@ impl Scene {
             locomotion_settings: Default::default(),
             active_external_force: Vector3::ZERO,
             pending_impulses: Vec::new(),
+            last_impulse_state: None,
             deno_memory_stats: None,
             stuck_frames: 0,
         }

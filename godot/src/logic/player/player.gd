@@ -552,22 +552,32 @@ func _apply_scene_physics(
 	external_velocity.z += external_acceleration.z * dt
 
 	# Impulses: instant velocity delta on all three axes.
+	var got_upward_impulse: bool = false
 	for impulse in impulses:
 		var delta_v: Vector3 = impulse / CHARACTER_MASS
-		# Mirror Unity: an upward impulse on a falling player clears the
-		# downward gravity component so jump pads launch reliably.
-		if delta_v.y > 0.0 and velocity.y < 0.0:
-			velocity.y = 0.0
+		if delta_v.y > 0.0:
+			got_upward_impulse = true
+			# Mirror Unity: an upward impulse on a falling player clears the
+			# downward gravity component so jump pads launch reliably.
+			if velocity.y < 0.0:
+				velocity.y = 0.0
 		external_velocity += delta_v
+
+	# Unity treats an upward impulse as ungrounding for the rest of this frame's
+	# physics step — otherwise the grounded-drag + zero-Y rules below would
+	# instantly cancel a jump-pad impulse applied while the player was on the
+	# floor. Mirror that effect via an effective_on_floor that fresh upward
+	# impulses can flip to false for one frame.
+	var effective_on_floor: bool = on_floor and not got_upward_impulse
 
 	# Viscous drag — Unity ApplyExternalVelocityDragAndClamp: v *= (1 − damping·dt).
 	var damping := EXT_ENV_DRAG
-	if on_floor:
+	if effective_on_floor:
 		damping += EXT_GROUND_FRICTION
 	external_velocity *= maxf(0.0, 1.0 - damping * dt)
 
 	# No vertical residue when grounded so a landed-from-impulse player doesn't bounce.
-	if on_floor:
+	if effective_on_floor:
 		external_velocity.y = 0.0
 
 	# Snap small magnitudes to zero / clamp large ones to MAX_EXTERNAL_VELOCITY.

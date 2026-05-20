@@ -68,14 +68,17 @@ pub fn update_physics_combined_force(
 }
 
 /// Reads `PBPhysicsCombinedImpulse` on the player entity and queues a one-shot
-/// impulse whenever the CRDT dirty set says the component changed this tick.
+/// impulse whenever the observed `(event_id, vector)` differs from the last
+/// applied one.
 ///
-/// Mirrors unity-explorer's `SDKExternalPhysicsSystems.ApplyPhysicsImpulse`,
-/// which gates on the per-write `IsDirty` flag and does **not** compare
-/// `event_id`. The `event_id` exists only to force CRDT to propagate a fresh
-/// write when the vector is identical — once CRDT delivers a write, it's a
-/// new impulse, full stop. Non-current scenes are ignored entirely so a scene
-/// can't push impulses to the player from outside its parcel boundary.
+/// Background: the SDK publishes the impulse summary component every tick
+/// (CRDT dirty fires constantly), often with `event_id=0` and a static vector.
+/// Naively trusting "dirty" means stacking the same push every frame; naively
+/// trusting `event_id` means missing every press when the SDK never increments
+/// it. We follow the godot-explorer change-detection pattern used in
+/// `tween.rs` and `video_player.rs`: cache the full last-seen state and fire
+/// only when it changes. Zero vectors are treated as "no impulse" and never
+/// queued, but the cache still updates so the next non-zero write registers.
 pub fn update_physics_combined_impulse(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
@@ -88,8 +91,6 @@ pub fn update_physics_combined_impulse(
         return;
     }
 
-    // Only react when the CRDT dirty set says this scene's impulse component
-    // changed this tick (avoids re-reading the same event every tick).
     let is_dirty = dirty_lww_components
         .get(&SceneComponentId::PHYSICS_COMBINED_IMPULSE)
         .is_some_and(|entities| entities.contains(&SceneEntityId::PLAYER));
@@ -98,35 +99,47 @@ pub fn update_physics_combined_impulse(
         return;
     }
 
-    tracing::debug!(
-        "physics_combined: impulse dirty on scene {:?}",
-        scene.scene_id
-    );
-
     let impulse_component = SceneCrdtStateProtoComponents::get_physics_combined_impulse(crdt_state);
     let Some(entry) = impulse_component.get(&SceneEntityId::PLAYER) else {
-        tracing::debug!("physics_combined: dirty but no LWW entry for PLAYER — skipping");
         return;
     };
     let Some(pb) = entry.value.as_ref() else {
-        tracing::debug!("physics_combined: dirty but entry.value is None — skipping");
-        return;
-    };
-    let Some(vector) = pb.vector.as_ref() else {
-        tracing::debug!(
-            "physics_combined: dirty but pb.vector is None (event_id={}) — skipping",
-            pb.event_id
-        );
         return;
     };
 
-    let godot_vec = scene_vec_to_godot(vector);
+    let godot_vec = pb
+        .vector
+        .as_ref()
+        .map(scene_vec_to_godot)
+        .unwrap_or(Vector3::ZERO);
+    let event_id = pb.event_id;
+    let current_state = (event_id, godot_vec);
+
+    let state_changed = scene
+        .last_impulse_state
+        .as_ref()
+        .is_none_or(|cached| *cached != current_state);
+    let is_zero_vector = godot_vec.length_squared() < f32::EPSILON;
+
+    scene.last_impulse_state = Some(current_state);
+
+    if !state_changed {
+        tracing::debug!(
+            "physics_combined: dedup hit — same (event_id={}, vec=({:.3},{:.3},{:.3})) as last applied",
+            event_id, godot_vec.x, godot_vec.y, godot_vec.z,
+        );
+        return;
+    }
+    if is_zero_vector {
+        tracing::debug!(
+            "physics_combined: state changed to zero — clearing cache, no impulse to queue"
+        );
+        return;
+    }
+
     tracing::debug!(
-        "physics_combined: queue impulse event_id={} dcl=({:.3},{:.3},{:.3}) godot=({:.3},{:.3},{:.3})",
-        pb.event_id,
-        vector.x,
-        vector.y,
-        vector.z,
+        "physics_combined: queue impulse event_id={} godot=({:.3},{:.3},{:.3})",
+        event_id,
         godot_vec.x,
         godot_vec.y,
         godot_vec.z,
