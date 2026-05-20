@@ -10,5 +10,4 @@ mod rpc_calls;
 pub mod scene;
 pub mod scene_manager;
 pub mod tokio_runtime;
-pub mod ui_blocker_registry;
 mod update_scene;

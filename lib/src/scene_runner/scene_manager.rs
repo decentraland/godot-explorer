@@ -51,7 +51,6 @@ use super::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
         SceneUpdateState,
     },
-    ui_blocker_registry,
     update_scene::_process_scene,
 };
 
@@ -1268,18 +1267,6 @@ impl SceneManager {
         } else {
             self.viewport_center
         };
-
-        // Scene-side pointer blocking. The 3D physics raycast below cannot see
-        // Godot's UI tree, so without this check a `pointerFilter: 'block'`
-        // Scene UI element fails to stop clicks from reaching world entities
-        // behind it -- the entity still receives PetDown when `ia_pointer`
-        // fires from a path that bypasses gui_input (mobile joypad interact
-        // button, desktop key, gamepad). The registry is maintained by
-        // `DclUiControl::update_mouse_filter`, so this is O(blockers) per
-        // frame, not O(all Scene-UI controls).
-        if ui_blocker_registry::blocks_point(screen_point) {
-            return None;
-        }
 
         // Use cached viewport center for raycasting
         let raycast_from = camera_node.project_ray_origin(screen_point);
