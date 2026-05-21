@@ -330,6 +330,7 @@ fn apply_post_material_overrides(root: &Gd<Node>) -> (u32, u32) {
 ///   overhead exceeds the savings.
 /// * surfaces where the decimator kept ≥ 90% of source indices — common
 ///   on terrain/fences; not worth a draw-state switch.
+#[allow(dead_code)]
 pub(super) fn apply_pre_generate_mesh_simplification(
     state: &mut Gd<GltfState>,
     _target_ratio: f32,
@@ -1037,16 +1038,6 @@ where
 
         if err != Error::OK {
             return Err(anyhow::Error::msg(format!("Error loading gltf: {:?}", err)));
-        }
-
-        // Pre-generate meshopt LOD chain baked into the GltfState's ImporterMesh
-        // array. Preserves LOD0 (full quality); adds LOD1/2/3 with Permissive +
-        // Sparse flags so foliage / alpha-tested topology survives the simplify.
-        // The post-generate Godot LOD bake then runs ONLY on opaque MIs (it
-        // skips transparent ones because generate_lods with normal-merge=60°
-        // collapses billboards into degenerate triangles).
-        if ctx.apply_optimizations {
-            apply_pre_generate_mesh_simplification(&mut new_gltf_state, 1.0);
         }
 
         let node = new_gltf
