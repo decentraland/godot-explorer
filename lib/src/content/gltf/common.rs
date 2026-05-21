@@ -84,6 +84,7 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compr
 /// Hand-rolled meshopt::simplify output crashed Godot's renderer with SIGSEGV
 /// when LODs engaged. The native generate_lods produces a LOD chain in the
 /// exact format the renderer expects.
+#[allow(dead_code)]
 fn apply_post_generate_godot_lods(root: Gd<Node>) {
     use godot::classes::{ArrayMesh, ImporterMesh, MeshInstance3D};
     // Surfaces with fewer indices than this are too small for a useful LOD
@@ -724,6 +725,7 @@ fn build_lods_for_surface(
 /// have LOD chains attached. Verifies that the post-split + post-LOD bake
 /// survived the conversion to the MeshInstance3D + ArrayMesh that ends up
 /// in the saved .scn.
+#[allow(dead_code)]
 fn verify_lods_in_generated_scene(root: Gd<Node>) {
     let mut stack: Vec<Gd<Node>> = vec![root];
     let mut total = 0u32;
@@ -1045,8 +1047,8 @@ where
             // material_override + an empty mesh.surface_get_material).
             // Re-enable once the material fan-out is correct.
             // apply_post_generate_mesh_split(node.clone(), node.clone());
-            apply_post_generate_godot_lods(node.clone());
-            verify_lods_in_generated_scene(node.clone());
+            // apply_post_generate_godot_lods(node.clone()); // DIAG: bushes missing
+            // verify_lods_in_generated_scene(node.clone());
         }
 
         let max_size = ctx.texture_quality.to_max_size();
