@@ -21,8 +21,12 @@ extends Node
 # Persistence:
 #   - iOS key_id: `user://attest_ios_key_id.txt`. Plaintext is fine — the key_id
 #     is not a secret; the private half is sealed in the Secure Enclave.
-#   - Validated marker: `user://attest_validated.txt`. Presence means "this
-#     install passed /v1/attest/check at least once".
+#   - Validated marker: `user://attest_validated.txt`. Contains the
+#     `DclGlobal.get_version()` string that passed /v1/attest/check. On launch
+#     we re-attest if the stored version differs from the current one — this
+#     covers new releases (versionCode bumps may invalidate Play Integrity's
+#     PLAY_RECOGNIZED verdict) and signing changes (App Attest keys can be
+#     invalidated when the app is resigned).
 
 const KEY_ID_PATH := "user://attest_ios_key_id.txt"
 const VALIDATED_PATH := "user://attest_validated.txt"
@@ -53,18 +57,37 @@ func _ready() -> void:
 	elif platform == "Android":
 		if Engine.has_singleton("dcl-godot-android"):
 			_android_plugin = Engine.get_singleton("dcl-godot-android")
-	if _is_validated():
+	var plugin_loaded: bool = _ios_plugin != null or _android_plugin != null
+	var current_version: String = _current_app_version()
+	var validated: bool = _is_validated()
+	var supported: bool = is_supported()
+	print(
+		(
+			"[Attestation] init platform=%s version=%s plugin_loaded=%s is_validated=%s is_supported=%s"
+			% [platform, current_version, plugin_loaded, validated, supported]
+		)
+	)
+	if validated:
+		print("[Attestation] already validated for version %s, nothing to do" % current_version)
 		return
-	if not is_supported():
+	if not supported:
+		print("[Attestation] platform not supported, skipping validation")
 		return
 	async_validate_when_eula_accepted()
 
 
-# Returns true if this install already passed /v1/attest/check at least once,
-# so no further attestation work is needed for the remaining lifetime of this
-# install (until user data is wiped).
+# Returns true iff this install already passed /v1/attest/check for the CURRENT
+# app version. A version mismatch (new release installed over an old one) forces
+# a fresh attest — see the file header for the rationale.
 func _is_validated() -> bool:
-	return FileAccess.file_exists(VALIDATED_PATH)
+	if not FileAccess.file_exists(VALIDATED_PATH):
+		return false
+	var f := FileAccess.open(VALIDATED_PATH, FileAccess.READ)
+	if f == null:
+		return false
+	var stored := f.get_as_text().strip_edges()
+	f.close()
+	return stored == _current_app_version()
 
 
 func _mark_validated() -> void:
@@ -72,8 +95,12 @@ func _mark_validated() -> void:
 	if f == null:
 		push_warning("[Attestation] could not persist validated marker to %s" % VALIDATED_PATH)
 		return
-	f.store_string("ok")
+	f.store_string(_current_app_version())
 	f.close()
+
+
+func _current_app_version() -> String:
+	return str(DclGlobal.get_version())
 
 
 # Mirrors `analytics_controller.gd::setup()` — the canonical "EULA accepted on a
@@ -95,17 +122,28 @@ func async_validate_when_eula_accepted() -> void:
 	if _validating:
 		return
 	_validating = true
-	while not _is_eula_accepted():
-		await get_tree().create_timer(EULA_POLL_INTERVAL_SEC).timeout
+	if not _is_eula_accepted():
+		print(
+			"[Attestation] waiting for EULA acceptance (poll every %.1fs)" % EULA_POLL_INTERVAL_SEC
+		)
+		while not _is_eula_accepted():
+			await get_tree().create_timer(EULA_POLL_INTERVAL_SEC).timeout
+		print("[Attestation] EULA accepted, starting validation")
+	else:
+		print("[Attestation] EULA already accepted, starting validation immediately")
 	var attempt: int = 0
 	while true:
 		var ok: bool = await _async_try_validate()
 		if ok:
 			_mark_validated()
+			print("[Attestation] persisted validated marker at %s" % VALIDATED_PATH)
 			_validating = false
 			return
 		var idx: int = min(attempt, RETRY_BACKOFF_SEC.size() - 1)
 		var delay: float = RETRY_BACKOFF_SEC[idx]
+		print(
+			"[Attestation] retrying validation in %.1fs (attempt %d failed)" % [delay, attempt + 1]
+		)
 		await get_tree().create_timer(delay).timeout
 		attempt += 1
 
