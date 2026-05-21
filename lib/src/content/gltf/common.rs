@@ -6,10 +6,8 @@ use godot::{
     builtin::GString,
     classes::{
         base_material_3d::{ShadingMode, TextureParam},
-        geometry_instance_3d::ShadowCastingSetting,
         mesh::{ArrayType, PrimitiveType},
-        ArrayMesh, BaseMaterial3D, GltfDocument, GltfState, ImageTexture, Mesh, MeshInstance3D,
-        Node, Node3D,
+        BaseMaterial3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D,
     },
     global::Error,
     meta::ToGodot,
@@ -205,7 +203,10 @@ fn apply_post_generate_godot_lods(root: Gd<Node>) {
     }
     godot::global::godot_print!(
         "[godot-lods] non-chunks: baked={} skipped={}  chunks: baked={} skipped_small={}",
-        meshes_with_lods, meshes_skipped, chunks_baked, chunks_skipped_small
+        meshes_with_lods,
+        meshes_skipped,
+        chunks_baked,
+        chunks_skipped_small
     );
 }
 
@@ -263,7 +264,10 @@ fn apply_post_material_overrides(root: &Gd<Node>) -> (u32, u32) {
             let override_mat: Option<Gd<Material>> = mi.get_surface_override_material(s);
             let mesh_mat: Option<Gd<Material>> = mesh.surface_get_material(s);
             // Flip both layers if they're BaseMaterial3D
-            for slot in [override_mat.clone(), mesh_mat.clone()].into_iter().flatten() {
+            for slot in [override_mat.clone(), mesh_mat.clone()]
+                .into_iter()
+                .flatten()
+            {
                 if let Ok(mut base) = slot.try_cast::<BaseMaterial3D>() {
                     if base.get_shading_mode() != ShadingMode::PER_VERTEX {
                         base.set_shading_mode(ShadingMode::PER_VERTEX);
@@ -519,11 +523,7 @@ fn apply_post_generate_lod_chain(root: Gd<Node>) {
     // (5/20/80m) caused engaged LODs to render with corrupted geometry that
     // SIGSEGV'd Godot's renderer; reverted until the simplify-output → Godot
     // ArrayMesh interaction is debugged separately.
-    const LOD_LEVELS: &[(f32, f32)] = &[
-        (0.5, 0.1),
-        (0.25, 0.5),
-        (0.1, 1.5),
-    ];
+    const LOD_LEVELS: &[(f32, f32)] = &[(0.5, 0.1), (0.25, 0.5), (0.1, 1.5)];
     const MIN_INDICES_FOR_LOD: usize = 30;
 
     let mut stack: Vec<Gd<Node>> = vec![root];
@@ -583,9 +583,7 @@ fn apply_post_generate_lod_chain(root: Gd<Node>) {
                     .unwrap_or(false);
 
             let mut lods = VarDictionary::new();
-            let lods_built = if !bones_present
-                && primitive == PrimitiveType::TRIANGLES
-            {
+            let lods_built = if !bones_present && primitive == PrimitiveType::TRIANGLES {
                 build_lods_for_surface(&arrays, LOD_LEVELS, MIN_INDICES_FOR_LOD, &mut lods)
             } else {
                 None
@@ -595,11 +593,15 @@ fn apply_post_generate_lod_chain(root: Gd<Node>) {
                 src_idx_total = src_idx_total.saturating_add(src_n as u64);
                 lod_idx_total = lod_idx_total.saturating_add(lod_n as u64);
                 surfaces_with_lods += 1;
-                if is_chunk { chunk_surfaces_with_lods += 1; }
+                if is_chunk {
+                    chunk_surfaces_with_lods += 1;
+                }
                 any_lod_built = true;
             } else {
                 surfaces_no_lods += 1;
-                if is_chunk { chunk_surfaces_no_lods += 1; }
+                if is_chunk {
+                    chunk_surfaces_no_lods += 1;
+                }
             }
 
             let surf_before = new_am.get_surface_count();
@@ -764,439 +766,6 @@ fn verify_lods_in_generated_scene(root: Gd<Node>) {
             total,
             with_lods,
             without_lods,
-        );
-    }
-}
-
-/// Post-generate mesh splitter. Each oversized MeshInstance3D becomes
-/// `GRID_X * GRID_Z` siblings, one per XZ-grid cell, holding the triangles
-/// whose centroid lands in that cell.
-///
-/// CLOSED 2026-05-17: bench result on GP was a regression (fps 18.1 vs 19.8
-/// baseline, prim 840k vs 773k, gpu 52ms vs 45ms). Two structural issues
-/// found in production data made the win theoretical only:
-/// Why: Godot's LOD selector uses the MI's AABB-to-camera distance. A huge
-/// plaza-spanning MI whose AABB encloses the camera always picks LOD0 — the
-/// LOD chain we baked never engages. Splitting shrinks each chunk's AABB so
-/// distant chunks get a real `lod_distance > 0`.
-///
-/// Implementation: pure-Rust hot loop. Godot arrays are extracted into Vecs
-/// once per source surface; bucketing + per-cell vertex remap runs over
-/// plain slices with a Vec<i32> translation table (no HashMap, no PackedArray
-/// COW churn inside the loop). Output PackedArrays are sized exactly and
-/// filled via copy_from_slice. Per-MI material override is preferred over the
-/// mesh-level material so chunks don't render white when the GLTF importer
-/// put the real material on the override slot.
-fn apply_post_generate_mesh_split(root: Gd<Node>, owner: Gd<Node>) {
-    use godot::classes::{ArrayMesh, MeshInstance3D};
-
-    const SPLIT_THRESHOLD_M: f32 = 16.0;
-    const GRID_X: i32 = 4;
-    const GRID_Z: i32 = 4;
-    const N_CELLS: usize = (GRID_X * GRID_Z) as usize;
-
-    // Pass 1: walk the scene tree, group MIs by their source ArrayMesh
-    // instance id. When several MIs reference the same mesh (a common
-    // pattern for repeated geometry like fences, road tiles, trees), we
-    // split that mesh ONCE and reuse the resulting chunk ArrayMeshes
-    // across every MI in the group — each MI gets its own set of chunk
-    // MeshInstance3Ds at its own transform, but they all share the
-    // chunk meshes (vertex/index data lives in one place). Skipping
-    // duplicates here was the prior approach but caused the shared
-    // mesh to keep rendering at non-split MIs' poses → primitives
-    // double-counted in the scene.
-    let mut stack: Vec<Gd<Node>> = vec![root];
-    let mut candidates_by_mesh: std::collections::HashMap<
-        godot::obj::InstanceId,
-        (Gd<ArrayMesh>, Vec<Gd<MeshInstance3D>>),
-    > = std::collections::HashMap::new();
-    while let Some(n) = stack.pop() {
-        let kids = n.get_children();
-        for i in 0..kids.len() {
-            stack.push(kids.at(i));
-        }
-        let Ok(mi) = n.try_cast::<MeshInstance3D>() else {
-            continue;
-        };
-        let Some(mesh) = mi.get_mesh() else {
-            continue;
-        };
-        let Ok(am) = mesh.try_cast::<ArrayMesh>() else {
-            continue;
-        };
-        if am.get_blend_shape_count() > 0 {
-            continue;
-        }
-        let aabb = am.get_aabb();
-        if aabb.size.x.max(aabb.size.z) < SPLIT_THRESHOLD_M {
-            continue;
-        }
-        let mesh_id = am.instance_id();
-        candidates_by_mesh
-            .entry(mesh_id)
-            .or_insert_with(|| (am.clone(), Vec::new()))
-            .1
-            .push(mi);
-    }
-
-    struct SrcSurface {
-        positions: Vec<Vector3>,
-        normals: Vec<Vector3>,
-        tangents: Vec<f32>,
-        colors: Vec<Color>,
-        uv: Vec<Vector2>,
-        uv2: Vec<Vector2>,
-        indices: Vec<i32>,
-        material: Option<Gd<godot::classes::Material>>,
-    }
-    struct ChunkSurface {
-        old_to_new: Vec<i32>,
-        new_indices: Vec<i32>,
-        new_positions: Vec<Vector3>,
-    }
-
-    let mut splits = 0u32;
-    let mut chunks_total = 0u32;
-    let mut skipped_skinned = 0u32;
-    let mut shared_groups = 0u32;
-    let mut shared_instances = 0u32;
-
-    let n_unique_meshes = candidates_by_mesh.len();
-    godot::global::godot_print!(
-        "[split] unique_meshes={} ({} MIs total)",
-        n_unique_meshes,
-        candidates_by_mesh.values().map(|(_, mis)| mis.len()).sum::<usize>()
-    );
-    let mut mesh_i = 0usize;
-    for (_mesh_id, (am, mis)) in candidates_by_mesh.iter() {
-        mesh_i += 1;
-        if mis.is_empty() {
-            continue;
-        }
-        let aabb = am.get_aabb();
-        let cell_w = aabb.size.x / GRID_X as f32;
-        let cell_d = aabb.size.z / GRID_Z as f32;
-        let surface_count = am.get_surface_count();
-        godot::global::godot_print!(
-            "[split] mesh={}/{} aabb=({:.1}x{:.1}x{:.1}) surfaces={} shared_by={}",
-            mesh_i, n_unique_meshes, aabb.size.x, aabb.size.y, aabb.size.z, surface_count, mis.len()
-        );
-        if mis.len() > 1 {
-            shared_groups += 1;
-            shared_instances += (mis.len() - 1) as u32;
-        }
-
-        // Read source surfaces ONCE from the canonical ArrayMesh — every MI
-        // in this group shares the same vertex/index data, so the bucketing
-        // is identical across them. Per-MI material overrides are applied
-        // later when we build each MI's chunk MeshInstance3Ds.
-        let mut sources: Vec<SrcSurface> = Vec::with_capacity(surface_count as usize);
-        let mut skinned = false;
-        for s in 0..surface_count {
-            let arrays = am.surface_get_arrays(s);
-            let bones_present = arrays
-                .at(ArrayType::BONES.ord() as usize)
-                .try_to::<PackedInt32Array>()
-                .map(|a| !a.is_empty())
-                .unwrap_or(false)
-                || arrays
-                    .at(ArrayType::BONES.ord() as usize)
-                    .try_to::<PackedFloat32Array>()
-                    .map(|a| !a.is_empty())
-                    .unwrap_or(false);
-            if bones_present {
-                skinned = true;
-                break;
-            }
-            let Ok(pos) = arrays
-                .at(ArrayType::VERTEX.ord() as usize)
-                .try_to::<PackedVector3Array>()
-            else {
-                continue;
-            };
-            if pos.is_empty() {
-                continue;
-            }
-            let Ok(idx) = arrays
-                .at(ArrayType::INDEX.ord() as usize)
-                .try_to::<PackedInt32Array>()
-            else {
-                continue;
-            };
-            // Only the mesh-level surface material is shared across all MIs.
-            // Per-MI surface_override_material is applied to the chunk MI per
-            // instance (kept off the shared chunk ArrayMesh so different MIs
-            // can carry different overrides without leaking).
-            let material = am.surface_get_material(s);
-            sources.push(SrcSurface {
-                positions: pos.as_slice().to_vec(),
-                normals: arrays
-                    .at(ArrayType::NORMAL.ord() as usize)
-                    .try_to::<PackedVector3Array>()
-                    .map(|a| a.as_slice().to_vec())
-                    .unwrap_or_default(),
-                tangents: arrays
-                    .at(ArrayType::TANGENT.ord() as usize)
-                    .try_to::<PackedFloat32Array>()
-                    .map(|a| a.as_slice().to_vec())
-                    .unwrap_or_default(),
-                colors: arrays
-                    .at(ArrayType::COLOR.ord() as usize)
-                    .try_to::<PackedColorArray>()
-                    .map(|a| a.as_slice().to_vec())
-                    .unwrap_or_default(),
-                uv: arrays
-                    .at(ArrayType::TEX_UV.ord() as usize)
-                    .try_to::<PackedVector2Array>()
-                    .map(|a| a.as_slice().to_vec())
-                    .unwrap_or_default(),
-                uv2: arrays
-                    .at(ArrayType::TEX_UV2.ord() as usize)
-                    .try_to::<PackedVector2Array>()
-                    .map(|a| a.as_slice().to_vec())
-                    .unwrap_or_default(),
-                indices: idx.as_slice().to_vec(),
-                material,
-            });
-        }
-        if skinned {
-            skipped_skinned += 1;
-            continue;
-        }
-        if sources.is_empty() {
-            continue;
-        }
-
-        let mut chunks: Vec<Vec<Option<ChunkSurface>>> = (0..N_CELLS)
-            .map(|_| (0..sources.len()).map(|_| None).collect())
-            .collect();
-
-        for (s, src) in sources.iter().enumerate() {
-            let idx = &src.indices;
-            let pos = &src.positions;
-            let mut tri = 0usize;
-            while tri + 2 < idx.len() {
-                let i0 = idx[tri] as usize;
-                let i1 = idx[tri + 1] as usize;
-                let i2 = idx[tri + 2] as usize;
-                let cx_pos = (pos[i0].x + pos[i1].x + pos[i2].x) / 3.0;
-                let cz_pos = (pos[i0].z + pos[i1].z + pos[i2].z) / 3.0;
-                let cx = (((cx_pos - aabb.position.x) / cell_w).floor() as i32)
-                    .clamp(0, GRID_X - 1);
-                let cz = (((cz_pos - aabb.position.z) / cell_d).floor() as i32)
-                    .clamp(0, GRID_Z - 1);
-                let cell_idx = (cz * GRID_X + cx) as usize;
-                let chunk = chunks[cell_idx][s].get_or_insert_with(|| ChunkSurface {
-                    old_to_new: vec![-1; pos.len()],
-                    new_indices: Vec::new(),
-                    new_positions: Vec::new(),
-                });
-                for &old in [i0, i1, i2].iter() {
-                    let mut n_idx = chunk.old_to_new[old];
-                    if n_idx < 0 {
-                        n_idx = chunk.new_positions.len() as i32;
-                        chunk.new_positions.push(pos[old]);
-                        chunk.old_to_new[old] = n_idx;
-                    }
-                    chunk.new_indices.push(n_idx);
-                }
-                tri += 3;
-            }
-        }
-
-        let nonempty_cells = chunks
-            .iter()
-            .filter(|cell| cell.iter().any(|c| c.is_some()))
-            .count();
-        if nonempty_cells <= 1 {
-            continue;
-        }
-
-        // Build the per-cell shared chunk ArrayMeshes ONCE per source mesh.
-        // Every MI in this group references these same Gd<ArrayMesh> handles
-        // — Godot shares the underlying RID for vertex/index data, so the
-        // GPU only stores one copy regardless of how many MIs use it.
-        // `chunk_meshes_for_cell[cell_idx]` = (mesh, surface_to_orig_map).
-        let mut chunk_meshes_for_cell: Vec<Option<(Gd<ArrayMesh>, Vec<i32>)>> =
-            (0..N_CELLS).map(|_| None).collect();
-        for (cell_idx, cell) in chunks.iter().enumerate() {
-            if !cell.iter().any(|c| c.is_some()) {
-                continue;
-            }
-            let mut new_mesh = ArrayMesh::new_gd();
-            let mut chunk_surface_to_orig: Vec<i32> = Vec::new();
-            for (s, chunk_opt) in cell.iter().enumerate() {
-                let Some(chunk) = chunk_opt else { continue };
-                let src = &sources[s];
-                let n_new = chunk.new_positions.len();
-
-                let mut new_arrays = VarArray::new();
-                new_arrays.resize(ArrayType::MAX.ord() as usize, &Variant::nil());
-
-                let mut packed_pos = PackedVector3Array::new();
-                packed_pos.resize(n_new);
-                packed_pos
-                    .as_mut_slice()
-                    .copy_from_slice(&chunk.new_positions);
-                new_arrays.set(ArrayType::VERTEX.ord() as usize, &packed_pos.to_variant());
-
-                if !src.normals.is_empty() {
-                    let mut out = PackedVector3Array::new();
-                    out.resize(n_new);
-                    let dst = out.as_mut_slice();
-                    for (old, &n_idx) in chunk.old_to_new.iter().enumerate() {
-                        if n_idx >= 0 {
-                            dst[n_idx as usize] = src.normals[old];
-                        }
-                    }
-                    new_arrays.set(ArrayType::NORMAL.ord() as usize, &out.to_variant());
-                }
-                if !src.tangents.is_empty() && src.tangents.len() == src.positions.len() * 4 {
-                    let mut out = PackedFloat32Array::new();
-                    out.resize(n_new * 4);
-                    let dst = out.as_mut_slice();
-                    for (old, &n_idx) in chunk.old_to_new.iter().enumerate() {
-                        if n_idx >= 0 {
-                            let no = n_idx as usize * 4;
-                            let oo = old * 4;
-                            dst[no] = src.tangents[oo];
-                            dst[no + 1] = src.tangents[oo + 1];
-                            dst[no + 2] = src.tangents[oo + 2];
-                            dst[no + 3] = src.tangents[oo + 3];
-                        }
-                    }
-                    new_arrays.set(ArrayType::TANGENT.ord() as usize, &out.to_variant());
-                }
-                if !src.colors.is_empty() {
-                    let mut out = PackedColorArray::new();
-                    out.resize(n_new);
-                    let dst = out.as_mut_slice();
-                    for (old, &n_idx) in chunk.old_to_new.iter().enumerate() {
-                        if n_idx >= 0 {
-                            dst[n_idx as usize] = src.colors[old];
-                        }
-                    }
-                    new_arrays.set(ArrayType::COLOR.ord() as usize, &out.to_variant());
-                }
-                if !src.uv.is_empty() {
-                    let mut out = PackedVector2Array::new();
-                    out.resize(n_new);
-                    let dst = out.as_mut_slice();
-                    for (old, &n_idx) in chunk.old_to_new.iter().enumerate() {
-                        if n_idx >= 0 {
-                            dst[n_idx as usize] = src.uv[old];
-                        }
-                    }
-                    new_arrays.set(ArrayType::TEX_UV.ord() as usize, &out.to_variant());
-                }
-                if !src.uv2.is_empty() {
-                    let mut out = PackedVector2Array::new();
-                    out.resize(n_new);
-                    let dst = out.as_mut_slice();
-                    for (old, &n_idx) in chunk.old_to_new.iter().enumerate() {
-                        if n_idx >= 0 {
-                            dst[n_idx as usize] = src.uv2[old];
-                        }
-                    }
-                    new_arrays.set(ArrayType::TEX_UV2.ord() as usize, &out.to_variant());
-                }
-
-                let mut idx_packed = PackedInt32Array::new();
-                idx_packed.resize(chunk.new_indices.len());
-                idx_packed
-                    .as_mut_slice()
-                    .copy_from_slice(&chunk.new_indices);
-                new_arrays.set(ArrayType::INDEX.ord() as usize, &idx_packed.to_variant());
-
-                let surf_before = new_mesh.get_surface_count();
-                new_mesh.add_surface_from_arrays(PrimitiveType::TRIANGLES, &new_arrays);
-                if let Some(mat) = &src.material {
-                    new_mesh.surface_set_material(surf_before, mat);
-                }
-                chunk_surface_to_orig.push(s as i32);
-            }
-            if new_mesh.get_surface_count() == 0 {
-                continue;
-            }
-            chunk_meshes_for_cell[cell_idx] = Some((new_mesh, chunk_surface_to_orig));
-        }
-
-        // For each MI in the group, replace it with placeholder + N chunk MIs.
-        // Each chunk MI references the SHARED chunk ArrayMesh — same vertex
-        // and index buffers on the GPU regardless of how many instances exist.
-        // Per-instance material_override and surface_override_material are
-        // copied from the source MI onto the chunk MI (not the shared mesh).
-        for mi in mis.iter() {
-            if !mi.is_instance_valid() {
-                continue;
-            }
-            let Some(mut parent) = mi.get_parent() else {
-                continue;
-            };
-            let mi_transform = mi.get_transform();
-            let mi_name = mi.get_name().to_string();
-            let mi_index = mi.get_index();
-
-            let mut placeholder = Node3D::new_alloc();
-            placeholder.set_name(&mi_name);
-            placeholder.set_transform(mi_transform);
-            parent.add_child(&placeholder);
-            parent.move_child(&placeholder, mi_index);
-            placeholder.set_owner(&owner);
-
-            let mut splitted = Node3D::new_alloc();
-            splitted.set_name("_splitted");
-            placeholder.add_child(&splitted);
-            splitted.set_owner(&owner);
-
-            // Move mi's children to the placeholder BEFORE freeing mi.
-            let mut mi_mut = mi.clone();
-            for mut child in mi.get_children().iter_shared() {
-                mi_mut.remove_child(&child);
-                placeholder.add_child(&child);
-                set_owner_recursive(&mut child, &owner);
-            }
-
-            let mi_material_override = mi.get_material_override();
-            for (cell_idx, slot) in chunk_meshes_for_cell.iter().enumerate() {
-                let Some((shared_mesh, chunk_surface_to_orig)) = slot else {
-                    continue;
-                };
-                let cx = cell_idx as i32 % GRID_X;
-                let cz = cell_idx as i32 / GRID_X;
-                let mut chunk_mi = MeshInstance3D::new_alloc();
-                chunk_mi.set_mesh(shared_mesh);
-                chunk_mi.set_name(&format!("cell_{}_{}", cx, cz));
-                if let Some(m) = &mi_material_override {
-                    chunk_mi.set_material_override(m);
-                }
-                for (chunk_s, orig_s) in chunk_surface_to_orig.iter().enumerate() {
-                    if let Some(m) = mi.get_surface_override_material(*orig_s) {
-                        chunk_mi.set_surface_override_material(chunk_s as i32, &m);
-                    }
-                }
-                splitted.add_child(&chunk_mi);
-                chunk_mi.set_owner(&owner);
-                chunks_total += 1;
-            }
-
-            // Free the now-empty original MI synchronously.
-            let orig = mi.clone();
-            if let Some(mut p) = orig.get_parent() {
-                p.remove_child(&orig);
-            }
-            orig.free();
-            splits += 1;
-        }
-    }
-    if splits > 0 || skipped_skinned > 0 || shared_groups > 0 {
-        godot::global::godot_print!(
-            "[mesh-split] meshes_split={} chunks_emitted={} skipped_skinned={} shared_groups={} extra_instances_via_sharing={}",
-            splits,
-            chunks_total,
-            skipped_skinned,
-            shared_groups,
-            shared_instances,
         );
     }
 }

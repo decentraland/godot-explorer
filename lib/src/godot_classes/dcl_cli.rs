@@ -108,6 +108,22 @@ pub struct DclCli {
     pub avatar_impostor_benchmark: bool,
     #[var(get)]
     pub gp_benchmark: bool,
+    // Bench substrate flag. When true, skip first-launch HardwareBenchmark
+    // and skip DynamicGraphicsManager init. Auto-set by deeplink param
+    // `gp-benchmark=true` (see deep_link_router.gd) so callers don't have to
+    // pass both. Avoids contaminating profile/measurement state with the
+    // startup overhead and viewport_set_measure_render_time toggles those
+    // subsystems do.
+    #[var]
+    pub bench_mode: bool,
+
+    // V8 inspector target. When non-empty AND the build has the
+    // `enable_inspector` feature, the SDK7 scene whose title matches
+    // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
+    // Title-match (instead of hash id) so it works from deeplinks without
+    // having to discover the scene id beforehand.
+    #[var]
+    pub inspect_scene_title: GString,
 
     // RenderingServer-direct migration flag. Default OFF; flipped via
     // --rs-gltf-direct CLI flag or rs-gltf-direct deeplink param. See plan in
@@ -143,14 +159,6 @@ pub struct DclCli {
     // floor without sky fragment cost.
     #[var]
     pub kill_sky: bool,
-
-    // V8 inspector target. When non-empty AND the build has the
-    // `enable_inspector` feature, the SDK7 scene whose title matches
-    // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
-    // Title-match (instead of hash id) so it works from deeplinks without
-    // having to discover the scene id beforehand.
-    #[var]
-    pub inspect_scene_title: GString,
 
     // Arguments with values
     #[var(get)]
@@ -476,6 +484,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--bench-mode".to_string(),
+                description: "Skip first-launch HardwareBenchmark and DynamicGraphicsManager init. Auto-enabled when --gp-benchmark / gp-benchmark=true deeplink is set. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--rs-gltf-direct".to_string(),
                 description: "Migrate SDK7 GltfContainer rendering to direct RenderingServer instances (drops per-entity MeshInstance3D wrappers). Default OFF".to_string(),
                 arg_type: ArgType::Flag,
@@ -733,6 +747,10 @@ impl INode for DclCli {
         let cheap_pbr_enabled = !args_map.contains_key("--no-cheap-pbr");
         let skip_gltf_load = args_map.contains_key("--skip-gltf");
         let kill_sky = args_map.contains_key("--kill-sky");
+        // bench_mode auto-enabled when gp_benchmark is set, so the desktop
+        // CLI doesn't have to pass both. Mobile flips this from
+        // deep_link_router.gd when it sees gp-benchmark=true.
+        let bench_mode = gp_benchmark || args_map.contains_key("--bench-mode");
         let inspect_scene_title = args_map
             .get("--inspect-scene-title")
             .and_then(|v| v.as_ref())
@@ -860,6 +878,7 @@ impl INode for DclCli {
             cheap_pbr_enabled,
             skip_gltf_load,
             kill_sky,
+            bench_mode,
             inspect_scene_title,
             asset_server_port,
             realm,

@@ -2307,10 +2307,7 @@ impl ContentProvider {
 
         let optimized_base = resolved_optimized_base_url();
         for hash_dependency in &dependencies {
-            let asset_url: String = format!(
-                "{}/{}-mobile.zip",
-                optimized_base, hash_dependency
-            );
+            let asset_url: String = format!("{}/{}-mobile.zip", optimized_base, hash_dependency);
             let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
 
