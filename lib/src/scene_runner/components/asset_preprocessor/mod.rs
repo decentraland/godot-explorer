@@ -2,7 +2,6 @@
 //! the bake pass. Each stage trims something the device would otherwise
 //! pay for at runtime (vertex count, vertex stream bytes, draw cost
 //! behind occluders).
-pub mod decimator;
 pub mod mesh_occluder;
 pub mod vertex_strip;
 

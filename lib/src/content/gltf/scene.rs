@@ -34,28 +34,23 @@ use super::super::{
 };
 use super::common::{count_nodes, load_gltf_pipeline};
 
-use crate::scene_runner::components::asset_preprocessor::{
-    decimator, mesh_occluder, metrics, vertex_strip,
-};
+use crate::scene_runner::components::asset_preprocessor::{mesh_occluder, metrics, vertex_strip};
 
 struct AssetServerPreprocCounts {
-    decimated: u32,
     stripped: u32,
     occluders: u32,
 }
 
 fn apply_asset_server_optimizations(root: &Gd<Node3D>, hash: &str) {
     let mut counts = AssetServerPreprocCounts {
-        decimated: 0,
         stripped: 0,
         occluders: 0,
     };
     walk_and_preprocess(&root.clone().upcast(), &mut counts);
-    if counts.decimated > 0 || counts.stripped > 0 || counts.occluders > 0 {
+    if counts.stripped > 0 || counts.occluders > 0 {
         godot::global::godot_print!(
-            "[asset-server-preproc] {}: decimated={} stripped={} occluders={}",
+            "[asset-server-preproc] {}: stripped={} occluders={}",
             hash,
-            counts.decimated,
             counts.stripped,
             counts.occluders
         );
@@ -68,13 +63,6 @@ fn walk_and_preprocess(node: &Gd<Node>, counts: &mut AssetServerPreprocCounts) {
             if let Some(mesh) = mi.get_mesh() {
                 if let Ok(array_mesh) = mesh.try_cast::<ArrayMesh>() {
                     let mut current = array_mesh;
-
-                    if let Some(decimated) = decimator::aggressive_decimate(&current) {
-                        metrics::record_decimated(decimated.source_idx, decimated.target_idx);
-                        mi.set_mesh(&decimated.mesh.clone().upcast::<godot::classes::Mesh>());
-                        current = decimated.mesh;
-                        counts.decimated = counts.decimated.saturating_add(1);
-                    }
 
                     if let Some((stripped, bytes)) = vertex_strip::strip_unused(&current) {
                         metrics::record_stripped(bytes);
