@@ -31,11 +31,13 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 1265.0
 grow_horizontal = 2
+theme_override_constants/separation = 78
 script = ExtResource("1_script")
 
 [node name="CreditsOptions_Skeleton" type="VBoxContainer" parent="." unique_id=1682929723]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 48
 
 [node name="Skeleton1" type="PanelContainer" parent="CreditsOptions_Skeleton" unique_id=36094732]
@@ -118,6 +120,7 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 
 [node name="CreditsFaq" type="VBoxContainer" parent="." unique_id=884681734]
 unique_name_in_owner = true
@@ -133,6 +136,7 @@ label_settings = SubResource("LabelSettings_a02fn")
 
 [node name="HSeparator" type="HSeparator" parent="CreditsFaq" unique_id=1486703698]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 
@@ -144,6 +148,7 @@ description = "Lorem Ipsum is simply dummy text of the printing and typesetting
 
 [node name="HSeparator2" type="HSeparator" parent="CreditsFaq" unique_id=895173665]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 32
 theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 
@@ -155,6 +160,7 @@ description = "Lorem Ipsum is simply dummy text of the printing and typesetting
 
 [node name="HSeparator3" type="HSeparator" parent="CreditsFaq" unique_id=1758333132]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 38
 theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 
