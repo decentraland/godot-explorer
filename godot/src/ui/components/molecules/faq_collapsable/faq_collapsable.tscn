@@ -51,6 +51,7 @@ theme_override_constants/separation = 8
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
+mouse_filter = 1
 toggle_mode = true
 flat = true
 

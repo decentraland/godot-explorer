@@ -19,7 +19,7 @@ font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 custom_minimum_size = Vector2(0, 212)
 offset_right = 607.0
 offset_bottom = 212.0
-mouse_filter = 1
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_c5avl")
 script = ExtResource("1_xgw18")
 
@@ -54,5 +54,6 @@ custom_minimum_size = Vector2(132, 54)
 layout_mode = 2
 size_flags_horizontal = 10
 size_flags_vertical = 4
+mouse_filter = 1
 theme_override_font_sizes/font_size = 22
 text = "$59.99"
