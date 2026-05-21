@@ -11,8 +11,8 @@ var loaded_parcels_floors: Dictionary = {}
 func _ready():
 	_initialize_base_floor_multimesh()
 
-	if Global.scene_fetcher != null:
-		Global.scene_fetcher.player_parcel_changed.connect(_on_player_parcel_changed)
+	if Services.scene_fetcher != null:
+		Services.scene_fetcher.player_parcel_changed.connect(_on_player_parcel_changed)
 
 
 func _initialize_base_floor_multimesh():

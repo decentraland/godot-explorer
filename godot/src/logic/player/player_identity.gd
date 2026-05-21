@@ -9,7 +9,7 @@ var _current_lambda_server_base_url: String = ""
 
 func _ready():
 	wallet_connected.connect(self._on_wallet_connected)
-	Global.realm.realm_changed.connect(self._on_realm_changed)
+	Services.realm.realm_changed.connect(self._on_realm_changed)
 
 	_mutable_profile = DclUserProfile.new()
 	_current_profile = DclUserProfile.new()
@@ -19,7 +19,7 @@ func _ready():
 
 
 func _on_realm_changed():
-	var new_url = Global.realm.get_lambda_server_base_url()
+	var new_url = Services.realm.get_lambda_server_base_url()
 	if new_url == _current_lambda_server_base_url:
 		return
 	_current_lambda_server_base_url = new_url
@@ -38,8 +38,8 @@ func async_fetch_profile(address: String, lambda_server_url: String) -> void:
 
 	if response is PromiseError:
 		# Profile not found or error - clear saved guest profile and start fresh
-		Global.get_config().guest_profile = {}
-		Global.get_config().save_to_settings_file()
+		Services.config.guest_profile = {}
+		Services.config.save_to_settings_file()
 		self.set_default_profile()
 
 		if response.get_error().find("404") != -1:
@@ -55,10 +55,10 @@ func async_fetch_profile(address: String, lambda_server_url: String) -> void:
 
 
 func set_default_profile_or_guest_profile():
-	if Global.get_config().guest_profile.is_empty():
+	if Services.config.guest_profile.is_empty():
 		self.set_default_profile()
 	else:
-		var guest_profile := DclUserProfile.from_godot_dictionary(Global.get_config().guest_profile)
+		var guest_profile := DclUserProfile.from_godot_dictionary(Services.config.guest_profile)
 		# Update the address to match the current wallet (guest profile may have old guest address)
 		var current_address = get_address_str()
 		if not current_address.is_empty():
@@ -72,7 +72,7 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 		return
 
 	# Get the current lambda URL from realm
-	_current_lambda_server_base_url = Global.realm.get_lambda_server_base_url()
+	_current_lambda_server_base_url = Services.realm.get_lambda_server_base_url()
 	async_fetch_profile(address, _current_lambda_server_base_url)
 
 
@@ -84,16 +84,16 @@ func async_save_profile_metadata() -> void:
 ## ADR-290: Snapshots are no longer uploaded to the server.
 ## Profile images are served on-demand by the profile-images service.
 func async_save_profile() -> void:
-	_mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
+	_mutable_profile.set_has_connected_web3(!Services.player_identity.is_guest)
 
 	# Generate local snapshots for immediate UI display (not uploaded)
-	await Global.snapshot.async_generate_for_avatar(_mutable_avatar, _mutable_profile)
+	await Services.snapshot.async_generate_for_avatar(_mutable_avatar, _mutable_profile)
 
 	_mutable_profile.set_avatar(_mutable_avatar)
 
 	# Update blocked and muted lists from social_blacklist
-	_mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
-	_mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
+	_mutable_profile.set_blocked(Services.social_blacklist.get_blocked_list())
+	_mutable_profile.set_muted(Services.social_blacklist.get_muted_list())
 
 	# Deploy profile to server (ADR-290: no snapshots in deployment)
 	await ProfileService.async_deploy_profile(_mutable_profile)
@@ -120,7 +120,7 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	# Only load muted users from profile (no Social Service RPC for muted).
 	var muted_list = new_profile.get_muted()
 	if muted_list.size() > 0:
-		Global.social_blacklist.append_muted(muted_list)
+		Services.social_blacklist.append_muted(muted_list)
 
 
 func get_mutable_avatar() -> DclAvatarWireFormat:

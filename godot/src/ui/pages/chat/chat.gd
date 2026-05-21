@@ -92,10 +92,10 @@ func _on_submit_message(message: String):
 	if !message.is_empty():
 		var is_command: bool = message.begins_with("/")
 		var is_mention: bool = message.contains("@")
-		Global.metrics.track_chat_message_sent(
+		Services.metrics.track_chat_message_sent(
 			message.length(), "nearby", false, is_mention, is_command, "", "CHAT"
 		)
-		UiSounds.play_sound("widget_chat_message_private_send")
+		Services.ui_sounds.play_sound("widget_chat_message_private_send")
 
 
 func scroll_to_bottom_deferred() -> void:
@@ -146,7 +146,7 @@ func _on_button_send_pressed():
 	_scroll_to_bottom()
 	if message.begins_with("/"):
 		exit_chat()
-	elif Global.get_config().submit_message_closes_chat:
+	elif Services.config.submit_message_closes_chat:
 		_close_write_mode()
 	else:
 		line_edit_command.grab_focus()
@@ -174,7 +174,7 @@ func _on_line_edit_command_text_submitted(new_text):
 	_scroll_to_bottom()
 	if new_text.begins_with("/"):
 		exit_chat()
-	elif Global.get_config().submit_message_closes_chat:
+	elif Services.config.submit_message_closes_chat:
 		_close_write_mode()
 	else:
 		line_edit_command.grab_focus()
@@ -228,7 +228,7 @@ func _async_deferred_relayout_all_messages() -> void:
 
 
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
-	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
+	var new_chat = Services.preload_assets.CHAT_MESSAGE.instantiate()
 	v_box_container_chat.add_child(new_chat)
 	new_chat.reduce_text = false
 	new_chat.set_portrait(Global.is_orientation_portrait())
@@ -451,10 +451,10 @@ func _get_mention_query():
 
 func _get_matching_avatars(query: String) -> Array:
 	var results: Array = []
-	if not Global.avatars:
+	if not Services.avatars:
 		return results
 
-	var avatars = Global.avatars.get_avatars()
+	var avatars = Services.avatars.get_avatars()
 
 	for avatar in avatars:
 		if not avatar is Avatar:

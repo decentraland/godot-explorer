@@ -19,8 +19,8 @@ func _ready():
 	if Global.has_method("set_scene_log_enabled"):
 		Global.set_scene_log_enabled(false)
 
-	if Global.has_method("scene_runner") and Global.scene_runner:
-		Global.scene_runner.set_pause(true)
+	if Global.has_method("scene_runner") and Services.scene_runner:
+		Services.scene_runner.set_pause(true)
 
 	# Create avatar preview directly
 	var AvatarPreviewScene = preload("res://src/ui/pages/backpack/avatar_preview.tscn")
@@ -48,8 +48,8 @@ func async_start_tests():
 
 func _setup_snapshot_folders():
 	# Use CLI snapshot folder if provided, otherwise use defaults
-	if not Global.cli.snapshot_folder.is_empty():
-		snapshot_folder = Global.cli.snapshot_folder
+	if not Services.cli.snapshot_folder.is_empty():
+		snapshot_folder = Services.cli.snapshot_folder
 		if not snapshot_folder.ends_with("/"):
 			snapshot_folder += "/"
 	elif OS.has_feature("editor"):
@@ -130,9 +130,9 @@ func async_load_test_avatar():
 	# Report results and exit gracefully like scene tests
 	flush_logs()
 	if dump_test_result_and_get_ok():
-		Global.testing_tools.exit_gracefully(0)
+		Services.testing_tools.exit_gracefully(0)
 	else:
-		Global.testing_tools.exit_gracefully(1)
+		Services.testing_tools.exit_gracefully(1)
 
 
 func async_capture_and_compare_avatar(test_name: String) -> Dictionary:

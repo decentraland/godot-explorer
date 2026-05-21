@@ -90,7 +90,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 
 
 func _ready():
-	UiSounds.install_audio_recusirve(self)
+	Services.ui_sounds.install_audio_recusirve(self)
 	button_developer.visible = !Global.is_production()
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
@@ -108,7 +108,7 @@ func _ready():
 
 	# general
 	check_button_submit_message_closes_chat.button_pressed = (
-		Global.get_config().submit_message_closes_chat
+		Services.config.submit_message_closes_chat
 	)
 
 	if not Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
@@ -123,7 +123,7 @@ func _ready():
 	dropdown_list_max_cache_size.add_item("1 GB", 0)
 	dropdown_list_max_cache_size.add_item("2 GB", 1)
 	dropdown_list_max_cache_size.add_item("4 GB", 2)
-	var cache_index := clampi(Global.get_config().max_cache_size, 0, CACHE_SIZE_MB.size() - 1)
+	var cache_index := clampi(Services.config.max_cache_size, 0, CACHE_SIZE_MB.size() - 1)
 	dropdown_list_max_cache_size.select(cache_index)
 	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[cache_index]
 	dropdown_list_max_cache_size.item_selected.connect(
@@ -146,25 +146,25 @@ func _ready():
 		dropdown_list_custom_skybox.add_item(profile.name, j)
 		j += 1
 
-	if Global.get_config().dynamic_skybox:
+	if Services.config.dynamic_skybox:
 		check_button_dynamic_skybox.button_pressed = true
 		dropdown_list_custom_skybox.select(-1)
 	else:
 		check_button_dynamic_skybox.button_pressed = false
-		var current_skybox_time: int = Global.get_config().skybox_time
+		var current_skybox_time: int = Services.config.skybox_time
 		for k in range(GraphicSettings.SKYBOX_TIME_NAMES.size()):
 			if GraphicSettings.SKYBOX_TIME_NAMES[k].secs == current_skybox_time:
 				dropdown_list_custom_skybox.select(k)
 				break
 
 	# volume
-	general_volume.value = Global.get_config().audio_general_volume
-	scene_volume.value = Global.get_config().audio_scene_volume
-	voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
-	ui_volume.value = Global.get_config().audio_ui_volume
-	music_volume.value = Global.get_config().audio_music_volume
-	avatar_and_emotes_volume.value = Global.get_config().audio_avatar_and_emotes_volume
-	mic_amplification.value = Global.get_config().audio_mic_amplification
+	general_volume.value = Services.config.audio_general_volume
+	scene_volume.value = Services.config.audio_scene_volume
+	voice_chat_volume.value = Services.config.audio_voice_chat_volume
+	ui_volume.value = Services.config.audio_ui_volume
+	music_volume.value = Services.config.audio_music_volume
+	avatar_and_emotes_volume.value = Services.config.audio_avatar_and_emotes_volume
+	mic_amplification.value = Services.config.audio_mic_amplification
 
 	refresh_values()
 
@@ -247,7 +247,7 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 
 
 func refresh_graphic_settings():
-	var graphic_profile = Global.get_config().graphic_profile
+	var graphic_profile = Services.config.graphic_profile
 	dropdown_list_graphic_profiles.select(graphic_profile)
 
 
@@ -335,73 +335,73 @@ func _on_line_edit_preview_url_focus_entered() -> void:
 # gdlint:ignore = async-function-name
 func _on_button_clear_cache_pressed():
 	# Clean the content cache folder
-	Global.content_provider.clear_cache_folder()
+	Services.content_provider.clear_cache_folder()
 	await get_tree().process_frame
 	_update_current_cache_size()
 
 
 func _on_checkbox_fps_toggled(button_pressed):
-	Global.get_config().show_fps = button_pressed
+	Services.config.show_fps = button_pressed
 
 
 func refresh_values():
-	process_tick_quota.value = Global.get_config().process_tick_quota_ms
-	if is_instance_valid(Global.raycast_debugger):
+	process_tick_quota.value = Services.config.process_tick_quota_ms
+	if is_instance_valid(Services.raycast_debugger):
 		check_button_raycast_debugger.set_pressed_no_signal(true)
 
 
 func _on_button_connect_preview_pressed():
 	var url = line_edit_custom_preview_url.get_text()
-	Global.scene_fetcher.set_preview_url(url)
+	Services.scene_fetcher.set_preview_url(url)
 
 
 func _on_h_slider_mic_amplification_value_changed(value):
-	Global.get_config().audio_mic_amplification = value
+	Services.config.audio_mic_amplification = value
 	AudioSettings.apply_mic_amplification_settings()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 
 func _on_h_slider_ui_volume_value_changed(value):
-	Global.get_config().audio_ui_volume = value
+	Services.config.audio_ui_volume = value
 	AudioSettings.apply_ui_volume_settings()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 
 func _on_h_slider_voice_chat_volume_value_changed(value):
-	Global.get_config().audio_voice_chat_volume = value
+	Services.config.audio_voice_chat_volume = value
 	AudioSettings.apply_voice_chat_volume_settings()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 
 func _on_h_slider_scene_volume_value_changed(value):
-	Global.get_config().audio_scene_volume = value
+	Services.config.audio_scene_volume = value
 	AudioSettings.apply_scene_volume_settings()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 
 func _on_h_slider_general_volume_value_changed(value):
-	Global.get_config().audio_general_volume = value
+	Services.config.audio_general_volume = value
 	AudioSettings.apply_general_volume_settings()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 
 func _on_h_slider_music_volume_value_changed(value):
-	Global.get_config().audio_music_volume = value
+	Services.config.audio_music_volume = value
 	AudioSettings.apply_music_volume_settings()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 
 func _on_dropdown_list_max_cache_size_item_selected(index: int) -> void:
-	Global.get_config().max_cache_size = index
+	Services.config.max_cache_size = index
 	GeneralSettings.apply_max_cache_size()
 	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[index]
 	_update_current_cache_size()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 
 func _update_current_cache_size():
 	var current_size_mb = roundf(
-		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
+		float(Services.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
 	if current_size_mb >= 1024.0:
 		label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
@@ -436,19 +436,19 @@ func _on_check_button_dynamic_skybox_toggled(toggled_on: bool) -> void:
 	else:
 		dropdown_list_custom_skybox.select(3)
 		_on_dropdown_list_custom_skybox_item_selected(3)
-	if Global.get_config().dynamic_skybox != toggled_on:
-		Global.get_config().dynamic_skybox = toggled_on
-		Global.get_config().save_to_settings_file()
+	if Services.config.dynamic_skybox != toggled_on:
+		Services.config.dynamic_skybox = toggled_on
+		Services.config.save_to_settings_file()
 
 
 func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> void:
-	if Global.get_config().submit_message_closes_chat != toggled_on:
-		Global.get_config().submit_message_closes_chat = toggled_on
-		Global.get_config().save_to_settings_file()
+	if Services.config.submit_message_closes_chat != toggled_on:
+		Services.config.submit_message_closes_chat = toggled_on
+		Services.config.save_to_settings_file()
 
 
 func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
-	Global.metrics.track_click_button("HIDE_UI", "SETTINGS", "")
+	Services.metrics.track_click_button("HIDE_UI", "SETTINGS", "")
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.set_hide_main_hud_from_settings(toggled_on)
@@ -511,7 +511,7 @@ func _on_button_test_notification_pressed() -> void:
 	var notification_id = "test_notification_" + str(Time.get_unix_time_from_system())
 	var delay_seconds = 5  # Show notification in 5 seconds
 
-	if NotificationsManager.schedule_local_notification(
+	if Services.notifications_manager.schedule_local_notification(
 		notification_id, test_title, test_body, delay_seconds
 	):
 		print(
@@ -558,7 +558,7 @@ func _on_button_report_bug_pressed() -> void:
 	params.append("entry.908487542=" + os_version.uri_encode())
 	params.append("entry.1825988508=" + app_version.uri_encode())
 	params.append("entry.902053507=" + platform.uri_encode())
-	params.append("entry.983493489=" + Global.player_identity.get_address_str().uri_encode())
+	params.append("entry.983493489=" + Services.player_identity.get_address_str().uri_encode())
 	params.append("entry.519686692=" + RenderingServer.get_video_adapter_name().uri_encode())
 	params.append("entry.69678037=" + Global.session_id.uri_encode())
 
@@ -602,15 +602,15 @@ func _on_button_report_content_pressed() -> void:
 	var params = []
 
 	var scene_name = ""
-	if Global.scene_runner != null:
-		var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
+	if Services.scene_runner != null:
+		var current_scene_id = Services.scene_runner.get_current_parcel_scene_id()
 		if current_scene_id >= 0:
-			scene_name = Global.scene_runner.get_scene_title(current_scene_id)
+			scene_name = Services.scene_runner.get_scene_title(current_scene_id)
 
-	var current_position = Global.get_config().last_parcel_position
+	var current_position = Services.config.last_parcel_position
 	var scene_info = "%s (%d, %d)" % [scene_name, current_position.x, current_position.y]
 
-	var wallet_id = Global.player_identity.get_address_str()
+	var wallet_id = Services.player_identity.get_address_str()
 
 	params.append("entry.60289947=" + scene_info.uri_encode())
 	params.append("entry.927432836=" + wallet_id.uri_encode())
@@ -646,14 +646,14 @@ func _setup_dynamic_graphics() -> void:
 		return
 
 	# Initialize checkbox state
-	var is_enabled: bool = Global.get_config().dynamic_graphics_enabled
+	var is_enabled: bool = Services.config.dynamic_graphics_enabled
 	check_button_dynamic_graphics.set_pressed_no_signal(is_enabled)
 	dropdown_list_graphic_profiles.disabled = is_enabled
 	# Update UI state
 	_update_dynamic_graphics_status()
 
 	# Connect to manager signal to update UI when profile changes dynamically
-	Global.dynamic_graphics_manager.profile_change_requested.connect(
+	Services.dynamic_graphics_manager.profile_change_requested.connect(
 		func(_profile: int):
 			refresh_graphic_settings()
 			_update_dynamic_graphics_status()
@@ -662,11 +662,11 @@ func _setup_dynamic_graphics() -> void:
 
 func _on_check_button_dynamic_graphics_toggled(toggled_on: bool) -> void:
 	dropdown_list_graphic_profiles.disabled = toggled_on
-	Global.get_config().dynamic_graphics_enabled = toggled_on
-	Global.get_config().save_to_settings_file()
+	Services.config.dynamic_graphics_enabled = toggled_on
+	Services.config.save_to_settings_file()
 
 	# Enable/disable the dynamic graphics manager
-	Global.dynamic_graphics_manager.set_enabled(toggled_on)
+	Services.dynamic_graphics_manager.set_enabled(toggled_on)
 
 	# Update UI state
 	_update_dynamic_graphics_status()
@@ -676,7 +676,7 @@ func _update_dynamic_graphics_status() -> void:
 	if not Global.is_mobile():
 		return
 
-	var manager = Global.dynamic_graphics_manager
+	var manager = Services.dynamic_graphics_manager
 	if manager == null or not manager.is_enabled():
 		#label_dynamic_graphics_status.text = ""
 		return
@@ -705,19 +705,19 @@ func _on_dropdown_list_graphic_profiles_item_selected(index: int) -> void:
 	if index < ConfigData.PROFILE_CUSTOM:
 		GraphicSettings.apply_graphic_profile(index)
 	else:
-		Global.get_config().graphic_profile = index  # Custom - keep current settings
+		Services.config.graphic_profile = index  # Custom - keep current settings
 
 	refresh_graphic_settings()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 	# Notify dynamic graphics manager of manual profile change
-	Global.dynamic_graphics_manager.on_manual_profile_change(index)
+	Services.dynamic_graphics_manager.on_manual_profile_change(index)
 
 
 func _on_dropdown_list_custom_skybox_item_selected(index: int) -> void:
 	var time: int = GraphicSettings.SKYBOX_TIME_NAMES[index].secs
-	if Global.get_config().skybox_time != time:
-		Global.get_config().skybox_time = time
+	if Services.config.skybox_time != time:
+		Services.config.skybox_time = time
 
 
 func _on_button_privacy_policy_pressed() -> void:
@@ -790,37 +790,37 @@ func _on_dropdown_list_realm_item_selected(index: int) -> void:
 	var realm_text := dropdown_list_realm.get_item_text(index)
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
-		Global.realm.async_set_realm(realm_text)
+		Services.realm.async_set_realm(realm_text)
 		explorer.hide_menu()
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
 	else:
 		Global.close_menu.emit()
-		Global.get_config().last_realm_joined = realm_text
-		Global.get_config().last_parcel_position = Vector2i.ZERO
+		Services.config.last_realm_joined = realm_text
+		Services.config.last_parcel_position = Vector2i.ZERO
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
 func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
-	Global.get_config().audio_avatar_and_emotes_volume = value
+	Services.config.audio_avatar_and_emotes_volume = value
 	AudioSettings.apply_avatar_and_emotes_volume_settings()
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 
 func _init_gamepad_sensitivity() -> void:
 	gamepad_camera_sensitivity.min_value = MIN_GAMEPAD_CAMERA_SENSITIVITY
 	var clamped_sensitivity := maxf(
-		Global.get_config().gamepad_camera_sensitivity, MIN_GAMEPAD_CAMERA_SENSITIVITY
+		Services.config.gamepad_camera_sensitivity, MIN_GAMEPAD_CAMERA_SENSITIVITY
 	)
 	gamepad_camera_sensitivity.value = clamped_sensitivity
-	if clamped_sensitivity != Global.get_config().gamepad_camera_sensitivity:
-		Global.get_config().gamepad_camera_sensitivity = clamped_sensitivity
-		Global.get_config().save_to_settings_file()
+	if clamped_sensitivity != Services.config.gamepad_camera_sensitivity:
+		Services.config.gamepad_camera_sensitivity = clamped_sensitivity
+		Services.config.save_to_settings_file()
 
 
 func _on_gamepad_camera_sensitivity_value_changed(value: float) -> void:
-	Global.get_config().gamepad_camera_sensitivity = maxf(value, MIN_GAMEPAD_CAMERA_SENSITIVITY)
-	Global.get_config().save_to_settings_file()
+	Services.config.gamepad_camera_sensitivity = maxf(value, MIN_GAMEPAD_CAMERA_SENSITIVITY)
+	Services.config.save_to_settings_file()
 
 
 func _on_joy_connection_changed(_device: int, _connected: bool) -> void:

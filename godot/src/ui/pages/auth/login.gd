@@ -55,11 +55,11 @@ func async_login(provider: String = ""):
 	# Desktop uses polling-based flow even when --force-mobile is used for UI testing
 	var is_real_mobile = Global.is_android() or Global.is_ios()
 	if is_real_mobile:
-		Global.player_identity.start_mobile_connect_account(
-			provider, Global.config.analytics_user_id, Global.session_id
+		Services.player_identity.start_mobile_connect_account(
+			provider, Services.config.analytics_user_id, Global.session_id
 		)
 	else:
-		Global.player_identity.try_connect_account()
+		Services.player_identity.try_connect_account()
 
 	lobby.waiting_for_new_wallet = true
 	lobby.show_auth_browser_open_screen("Opening browser...", provider)
@@ -119,7 +119,7 @@ func _try_native_walletconnect() -> bool:
 			return false
 
 	# Generate ephemeral keypair and message for signing
-	_wc_ephemeral_data = Global.player_identity.generate_ephemeral_for_signing()
+	_wc_ephemeral_data = Services.player_identity.generate_ephemeral_for_signing()
 	if _wc_ephemeral_data.is_empty():
 		push_error("Failed to generate ephemeral data")
 		return false
@@ -287,7 +287,7 @@ func _complete_wc_auth(signature: String) -> void:
 	var expiration_timestamp = _wc_ephemeral_data.get("expiration_timestamp", 0)
 	var original_message = _wc_ephemeral_data.get("message", "")
 
-	var success = Global.player_identity.try_set_walletconnect_auth(
+	var success = Services.player_identity.try_set_walletconnect_auth(
 		signer_address, signature, ephemeral_private_key, expiration_timestamp, original_message
 	)
 
@@ -341,7 +341,7 @@ func _on_button_wallet_connect_pressed() -> void:
 			var method_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
 			lobby.show_auth_browser_open_screen("Opening " + wallet_name + "...", method_name)
 			var metric_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
-			Global.metrics.track_click_button(metric_name, lobby.current_screen_name, "")
+			Services.metrics.track_click_button(metric_name, lobby.current_screen_name, "")
 			return
 
 	# On Android, don't fall back to web - it doesn't work properly
@@ -350,37 +350,39 @@ func _on_button_wallet_connect_pressed() -> void:
 		lobby._show_auth_error(
 			"WalletConnect failed to initialize. Please try again or use another sign-in method."
 		)
-		Global.metrics.track_click_button("wallet_connect_ios_error", lobby.current_screen_name, "")
+		Services.metrics.track_click_button(
+			"wallet_connect_ios_error", lobby.current_screen_name, ""
+		)
 		return
 
 	# On other platforms (desktop), fall back to web-based flow
 	async_login("wallet_connect")
-	Global.metrics.track_click_button("wallet_connect", lobby.current_screen_name, "")
+	Services.metrics.track_click_button("wallet_connect", lobby.current_screen_name, "")
 
 
 func _on_button_google_pressed() -> void:
 	async_login("google")
-	Global.metrics.track_click_button("google", lobby.current_screen_name, "")
+	Services.metrics.track_click_button("google", lobby.current_screen_name, "")
 
 
 func _on_button_email_pressed() -> void:
 	async_login("")
-	Global.metrics.track_click_button("email", lobby.current_screen_name, "")
+	Services.metrics.track_click_button("email", lobby.current_screen_name, "")
 
 
 func _on_button_discord_pressed() -> void:
 	async_login("discord")
-	Global.metrics.track_click_button("discord", lobby.current_screen_name, "")
+	Services.metrics.track_click_button("discord", lobby.current_screen_name, "")
 
 
 func _on_button_x_pressed() -> void:
 	async_login("x")
-	Global.metrics.track_click_button("x", lobby.current_screen_name, "")
+	Services.metrics.track_click_button("x", lobby.current_screen_name, "")
 
 
 func _on_button_apple_pressed() -> void:
 	async_login("apple")
-	Global.metrics.track_click_button("apple", lobby.current_screen_name, "")
+	Services.metrics.track_click_button("apple", lobby.current_screen_name, "")
 
 
 func _on_button_meta_mask_pressed() -> void:

@@ -51,7 +51,7 @@ func _ready():
 
 func start():
 	var scene_test_index := -1
-	if Global.cli.scene_test_mode:
+	if Services.cli.scene_test_mode:
 		scene_test_index = 0
 
 	if Global.FORCE_TEST:
@@ -62,8 +62,8 @@ func start():
 		self.process_mode = PROCESS_MODE_DISABLED
 		return
 
-	if not Global.cli.snapshot_folder.is_empty():
-		snapshot_folder = Global.cli.snapshot_folder
+	if not Services.cli.snapshot_folder.is_empty():
+		snapshot_folder = Services.cli.snapshot_folder
 	else:
 		if OS.has_feature("editor"):
 			snapshot_folder = ProjectSettings.globalize_path("res://../tests/snapshots")
@@ -87,7 +87,7 @@ func start():
 	var parcels_str: String = Global.FORCE_TEST_ARG
 	if not Global.FORCE_TEST:
 		# Get the scene test argument value
-		var scene_test_arg = Global.cli.get_arg("--scene-test")
+		var scene_test_arg = Services.cli.get_arg("--scene-test")
 		if not scene_test_arg.is_empty():
 			parcels_str = scene_test_arg.replace("'", '"')
 		else:
@@ -119,7 +119,7 @@ func start():
 
 	print("Testing scenes: " + str(scene_tests.size()))
 
-	Global.realm.realm_changed.connect(self.on_realm_changed)
+	Services.realm.realm_changed.connect(self.on_realm_changed)
 	get_tree().create_timer(DEFAULT_TIMEOUT_REALM_SECONDS).timeout.connect(
 		self.on_realm_change_timeout
 	)
@@ -131,13 +131,13 @@ func on_realm_changed():
 	realm_change_emited = true
 	self.process_mode = Node.PROCESS_MODE_ALWAYS
 
-	test_player_body_node = Global.scene_runner.player_body_node
-	var test_player_avatar_node = Global.scene_runner.player_avatar_node
+	test_player_body_node = Services.scene_runner.player_body_node
+	var test_player_avatar_node = Services.scene_runner.player_avatar_node
 
-	Global.scene_runner.set_player_node(
+	Services.scene_runner.set_player_node(
 		test_player_avatar_node, test_player_body_node, self._on_scene_console_message
 	)
-	Global.scene_fetcher.set_scene_radius(0)
+	Services.scene_fetcher.set_scene_radius(0)
 
 	reset_all_timeout()
 
@@ -179,8 +179,8 @@ func async_take_and_compare_snapshot(
 	var max_wait_iterations := 100  # Max ~10 seconds (100 * 100ms)
 	var stable_frames := 0
 	for i in range(max_wait_iterations):
-		var pending_promises := Global.content_provider.get_pending_promises()
-		var loading_count := Global.content_provider.count_loading_resources()
+		var pending_promises := Services.content_provider.get_pending_promises()
+		var loading_count := Services.content_provider.count_loading_resources()
 
 		if pending_promises.is_empty() and loading_count == 0:
 			stable_frames += 1
@@ -215,13 +215,13 @@ func async_take_and_compare_snapshot(
 	explorer.set_visible_ui(false)
 
 	# Freeze avatars animation and hide them
-	for avatar in Global.avatars.get_children():
+	for avatar in Services.avatars.get_children():
 		if avatar is Avatar:
 			avatar.hide()
 			avatar.emote_controller.freeze_on_idle()
 
-	Global.scene_runner.player_avatar_node.emote_controller.freeze_on_idle()
-	Global.scene_runner.player_avatar_node.hide()
+	Services.scene_runner.player_avatar_node.emote_controller.freeze_on_idle()
+	Services.scene_runner.player_avatar_node.hide()
 
 	# Wait for rendering to settle - more frames for complex scenes
 	await get_tree().process_frame
@@ -311,7 +311,7 @@ func _process(_delta):
 	for scene in scene_tests:
 		if not scene.test_finished:
 			if scene.parcel_position != SceneTestItem.INVALID_PARCEL_POSITION:
-				var scene_id: int = Global.scene_fetcher.get_parcel_scene_id(
+				var scene_id: int = Services.scene_fetcher.get_parcel_scene_id(
 					scene.parcel_position.x, scene.parcel_position.y
 				)
 				if scene_id == -1:
@@ -334,9 +334,9 @@ func _process(_delta):
 						)
 						scene.test_finished = true
 
-				elif Global.scene_runner.is_scene_tests_finished(scene_id):
+				elif Services.scene_runner.is_scene_tests_finished(scene_id):
 					scene.test_finished = true
-					scene.test_result = Global.scene_runner.get_scene_tests_result(scene_id)
+					scene.test_result = Services.scene_runner.get_scene_tests_result(scene_id)
 			return
 
 	if dump_test_result_and_get_ok():

@@ -11,8 +11,8 @@ var world_to_urn: Dictionary = {}
 
 
 func _ready():
-	Global.scene_runner.scene_killed.connect(self._on_scene_killed)
-	Global.scene_runner.scene_spawned.connect(self._on_scene_spawned)
+	Services.scene_runner.scene_killed.connect(self._on_scene_killed)
+	Services.scene_runner.scene_spawned.connect(self._on_scene_spawned)
 
 
 func _process(_delta):
@@ -71,7 +71,7 @@ func async_spawn_portable_experience(pid: String) -> void:
 
 
 func update_portable_experiences():
-	Global.scene_fetcher.set_portable_experiences_urns(desired_portable_experiences)
+	Services.scene_fetcher.set_portable_experiences_urns(desired_portable_experiences)
 
 
 func kill_portable_experience(pid: String) -> void:

@@ -15,10 +15,10 @@ func _status_color(connected: bool) -> String:
 
 
 func _on_timer_timeout():
-	if not is_instance_valid(Global.comms):
+	if not is_instance_valid(Services.comms):
 		return
 
-	var info: Dictionary = Global.comms.get_debug_room_info()
+	var info: Dictionary = Services.comms.get_debug_room_info()
 	var adapter: String = info.get("adapter", "")
 	var main_connected: bool = info.get("main_connected", false)
 	var scene_room: String = info.get("scene_room", "")

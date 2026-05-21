@@ -87,6 +87,15 @@ var _android_plugin = null:
 
 
 func _ready() -> void:
+	pass
+
+
+# Setup moved out of _ready so Global.async_boot can sequence it deterministically
+# under the splash. See BootInstrumentation.
+# gdlint:ignore = async-function-name
+func initialize_async() -> void:
+	BootInstrumentation.mark("notifications_manager.initialize_async_start")
+
 	# Enable debug logging in debug builds
 	# _debug_notifications_enabled = OS.is_debug_build()
 
@@ -125,6 +134,8 @@ func _ready() -> void:
 
 	# Schedule day 1 notification (24h after first launch)
 	async_schedule_day1_notification.call_deferred()
+
+	BootInstrumentation.mark("notifications_manager.initialize_async_end")
 
 
 ## Start polling for new notifications
@@ -178,7 +189,7 @@ func _filter_notifications(notifications: Array) -> Array:
 					# Skip this notification if sender is blocked
 					if (
 						not sender_address.is_empty()
-						and Global.social_blacklist.is_blocked(sender_address)
+						and Services.social_blacklist.is_blocked(sender_address)
 					):
 						continue
 
@@ -436,11 +447,11 @@ func mark_as_read(notification_ids: PackedStringArray) -> Promise:
 		promise.reject("No notification IDs provided")
 		return promise
 
-	if not Global.player_identity:
+	if not Services.player_identity:
 		promise.reject("Player identity not available")
 		return promise
 
-	var address = Global.player_identity.get_address_str()
+	var address = Services.player_identity.get_address_str()
 	if address.is_empty():
 		promise.reject("User not authenticated")
 		return promise
@@ -492,12 +503,12 @@ func _on_poll_timeout() -> void:
 ## OS wrapper signal handlers
 func _on_permission_changed(granted: bool) -> void:
 	if granted:
-		Global.metrics.track_click_button("accept", "NOTIF_PROMPT", "")
+		Services.metrics.track_click_button("accept", "NOTIF_PROMPT", "")
 		# Permission just granted — try scheduling Day 1 notification now
 		async_schedule_day1_notification.call_deferred()
 	else:
-		Global.metrics.track_click_button("reject", "NOTIF_PROMPT", "")
-	Global.metrics.flush.call_deferred()
+		Services.metrics.track_click_button("reject", "NOTIF_PROMPT", "")
+	Services.metrics.flush.call_deferred()
 	local_notification_permission_changed.emit(granted)
 
 
@@ -557,9 +568,9 @@ func resume_queue(emit_next: bool = false) -> void:
 
 ## Check if user is authenticated (not a guest)
 func _is_user_authenticated() -> bool:
-	if not Global.player_identity:
+	if not Services.player_identity:
 		return false
-	var address = Global.player_identity.get_address_str()
+	var address = Services.player_identity.get_address_str()
 	return not address.is_empty()
 
 
@@ -630,8 +641,8 @@ func show_system_toast(
 ## Request permission to show local notifications
 func request_local_notification_permission(from_screen: String = "") -> void:
 	if _os_wrapper:
-		Global.metrics.track_screen_viewed("NOTIF_PROMPT", from_screen)
-		Global.metrics.flush.call_deferred()
+		Services.metrics.track_screen_viewed("NOTIF_PROMPT", from_screen)
+		Services.metrics.flush.call_deferred()
 		_os_wrapper.request_permission()
 
 
@@ -832,7 +843,7 @@ func force_queue_sync() -> void:
 ## Check if local notifications version has changed and clear all if needed
 ## Returns true if notifications were cleared due to version mismatch
 func _check_and_handle_version_change() -> bool:
-	var stored_version: int = Global.get_config().local_notifications_version
+	var stored_version: int = Services.config.local_notifications_version
 
 	if stored_version == LOCAL_NOTIFICATIONS_VERSION:
 		_debug_log("Local notifications version OK (v%d)" % LOCAL_NOTIFICATIONS_VERSION)
@@ -857,13 +868,13 @@ func _check_and_handle_version_change() -> bool:
 			plugin.db_clear_all()
 
 	# Update stored version
-	Global.get_config().local_notifications_version = LOCAL_NOTIFICATIONS_VERSION
-	Global.get_config().save_to_settings_file()
+	Services.config.local_notifications_version = LOCAL_NOTIFICATIONS_VERSION
+	Services.config.save_to_settings_file()
 
 	# Day 1 retention notif is local-only — server sync won't restore it after the wipe.
-	if Global.get_config().day1_notification_scheduled:
-		Global.get_config().day1_notification_scheduled = false
-		Global.get_config().save_to_settings_file()
+	if Services.config.day1_notification_scheduled:
+		Services.config.day1_notification_scheduled = false
+		Services.config.save_to_settings_file()
 		async_schedule_day1_notification.call_deferred()
 
 	_debug_log("All notifications cleared, version updated to v%d" % LOCAL_NOTIFICATIONS_VERSION)
@@ -1212,7 +1223,7 @@ func async_schedule_day1_notification() -> void:
 	if not Global.is_android() and not Global.is_ios():
 		return
 
-	var config = Global.get_config()
+	var config = Services.config
 	if config.day1_notification_scheduled:
 		return
 
@@ -1423,9 +1434,9 @@ func _async_download_image_as_base64(image_url: String) -> String:
 	if image_url.is_empty():
 		return ""
 
-	# Use Global.content_provider to download the image
+	# Use Services.content_provider to download the image
 	var url_hash = NotificationUtils.get_hash_from_url(image_url)
-	var promise = Global.content_provider.fetch_texture_by_url(url_hash, image_url)
+	var promise = Services.content_provider.fetch_texture_by_url(url_hash, image_url)
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	if result is PromiseError:

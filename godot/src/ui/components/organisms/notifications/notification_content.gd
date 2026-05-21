@@ -84,9 +84,9 @@ func _load_notification_image() -> void:
 
 
 func _async_load_image_from_url(url: String) -> void:
-	# Use Global.content_provider to fetch texture
+	# Use Services.content_provider to fetch texture
 	var hash = _get_hash_from_url(url)
-	var promise = Global.content_provider.fetch_texture_by_url(hash, url)
+	var promise = Services.content_provider.fetch_texture_by_url(hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	if result is PromiseError:

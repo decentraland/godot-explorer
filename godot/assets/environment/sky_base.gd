@@ -11,7 +11,7 @@ extends Node
 @export var sun_size_curve: Curve
 @export var moon_mask_size_curve: Curve
 
-# Debug: when > 0, override Global.skybox_time with a fast cycle of N seconds for the
+# Debug: when > 0, override Services.skybox_time with a fast cycle of N seconds for the
 # whole day. Useful for verifying day/night transitions without waiting 24 in-game hours.
 # Set to 0 in production.
 @export var debug_cycle_seconds: float = 0.0
@@ -71,7 +71,7 @@ func _process(_delta: float) -> void:
 	if debug_cycle_seconds > 0.0:
 		skybox_time = fmod(Time.get_ticks_msec() / (debug_cycle_seconds * 1000.0), 1.0)
 	else:
-		skybox_time = Global.skybox_time.get_normalized_time()
+		skybox_time = Services.skybox_time.get_normalized_time()
 
 	# Sample the imported 144-keyframe sun rotation animation at current time
 	anim_player.seek(skybox_time, true)

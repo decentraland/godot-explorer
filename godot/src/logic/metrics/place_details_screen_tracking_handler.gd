@@ -11,4 +11,4 @@ func track_screen_viewed(item_data: Dictionary):
 		{"place_id": place_id, "place_title": place_title, "orientation": orientation}
 	)
 
-	Global.metrics.track_screen_viewed("PLACE_DETAILS", extra_properties)
+	Services.metrics.track_screen_viewed("PLACE_DETAILS", extra_properties)

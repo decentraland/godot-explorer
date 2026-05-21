@@ -45,7 +45,7 @@ class EmoteSceneUrn:
 		glb_hash = rest.substr(second_last_dash + 1)
 		scene_id = rest.substr(0, second_last_dash)
 
-		base_url = Global.realm.content_base_url
+		base_url = Services.realm.content_base_url
 		is_valid = true
 
 
@@ -238,7 +238,7 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 	if emote_item_data.from_scene:
 		playing_loop = emote_item_data.looping
 	else:
-		var emote_data = Global.content_provider.get_wearable(emote_item_data.urn)
+		var emote_data = Services.content_provider.get_wearable(emote_item_data.urn)
 		if emote_data == null:
 			return false
 		playing_loop = emote_data.get_emote_loop()
@@ -439,7 +439,7 @@ func _async_load_emote(emote_urn: String):
 	# Standard wearable emote loading
 	await WearableRequest.async_fetch_emote(emote_urn)
 
-	var emote = Global.content_provider.get_wearable(emote_urn)
+	var emote = Services.content_provider.get_wearable(emote_urn)
 	if emote == null:
 		printerr("Error: emote is null for URN: " + emote_urn)
 		return
@@ -496,7 +496,7 @@ func _async_load_scene_emote_as_wearable(scene_emote_urn: String):
 	# Load using the SAME loader function pattern as wearables
 	# Check if we should skip optimized assets for scene emotes
 	var force_runtime_only = (
-		Global.cli.only_no_optimized_scene_emotes or Global.cli.only_no_optimized
+		Services.cli.only_no_optimized_scene_emotes or Services.cli.only_no_optimized
 	)
 	var scene_path = await emote_loader.async_load_emote_from_mapping(
 		parsed.glb_hash, "emote.glb", content_mapping, force_runtime_only
@@ -734,7 +734,7 @@ func play_emote_audio(file_hash: String):
 	if values.is_empty():
 		return
 
-	var emote = Global.content_provider.get_wearable(values[0].urn)
+	var emote = Services.content_provider.get_wearable(values[0].urn)
 	if emote == null:
 		return
 
@@ -743,7 +743,7 @@ func play_emote_audio(file_hash: String):
 		return
 
 	var audio_file_hash = emote.get_content_mapping().get_hash(audio_file_name)
-	var audio_stream = Global.content_provider.get_audio_from_hash(audio_file_hash)
+	var audio_stream = Services.content_provider.get_audio_from_hash(audio_file_hash)
 	if audio_stream != null:
 		avatar.audio_player_emote.stream = audio_stream
 		avatar.audio_player_emote.play(0)
@@ -765,7 +765,7 @@ func freeze_on_idle():
 ## Returns an array of promises for audio files (emotes still need audio via promises).
 func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
 	var ret = []
-	var emote = Global.content_provider.get_wearable(emote_urn)
+	var emote = Services.content_provider.get_wearable(emote_urn)
 	if emote != null:
 		var file_name: String = emote.get_representation_main_file(body_shape_id)
 		if file_name.is_empty():
@@ -773,12 +773,12 @@ func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
 		var content_mapping: DclContentMappingAndUrl = emote.get_content_mapping()
 
 		# Start loading emote in background (fire-and-forget, we'll await via EmoteLoader later)
-		Global.content_provider.load_emote_gltf(file_name, content_mapping)
+		Services.content_provider.load_emote_gltf(file_name, content_mapping)
 
 		# Audio still uses promise-based loading
 		for audio_file in content_mapping.get_files():
 			if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
-				var audio_promise: Promise = Global.content_provider.fetch_audio(
+				var audio_promise: Promise = Services.content_provider.fetch_audio(
 					audio_file, content_mapping
 				)
 				ret.push_back(audio_promise)
@@ -836,4 +836,4 @@ func _track_emote(id: String) -> void:
 	var source := "scene" if id.contains("scene-emote") else "user"
 	var screen_name := "SCENE" if source == "scene" else "EMOTE_WHEEL"
 	var payload = JSON.stringify({"emote_urn": id, "is_base": is_base, "source": source})
-	Global.metrics.track_click_button("USED EMOTE", screen_name, payload)
+	Services.metrics.track_click_button("USED EMOTE", screen_name, payload)

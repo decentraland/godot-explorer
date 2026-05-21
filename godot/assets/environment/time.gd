@@ -19,7 +19,7 @@ var transition_forward := true  # Direction of transition
 
 
 func _ready():
-	config = Global.get_config()
+	config = Services.config
 
 
 func get_normalized_time():

@@ -7,10 +7,10 @@ signal open_profile
 
 func _ready():
 	gui_input.connect(self._on_gui_input)
-	var profile := Global.player_identity.get_profile_or_null()
+	var profile := Services.player_identity.get_profile_or_null()
 	_async_on_profile_changed(profile)
-	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
-	Global.snapshot.snapshot_generated.connect(self._on_snapshot_generated)
+	Services.player_identity.profile_changed.connect(self._async_on_profile_changed)
+	Services.snapshot.snapshot_generated.connect(self._on_snapshot_generated)
 
 
 func _on_snapshot_generated(face_image: Image) -> void:
@@ -31,7 +31,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if face256_url.is_empty():
 		return
 
-	var promise = Global.content_provider.fetch_texture_by_url(face256_hash, face256_url)
+	var promise = Services.content_provider.fetch_texture_by_url(face256_hash, face256_url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("profile_icon_button::_async_download_image promise error: ", result.get_error())

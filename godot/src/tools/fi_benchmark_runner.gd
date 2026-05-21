@@ -1,6 +1,6 @@
 ## Floating Islands Benchmark Runner
 ##
-## Uses the REAL Global.scene_fetcher to generate floating islands.
+## Uses the REAL Services.scene_fetcher to generate floating islands.
 ## Activated when --fi-benchmark-size is set.
 
 extends Node
@@ -12,8 +12,8 @@ var screenshot_viewport: SubViewport = null
 
 # gdlint: ignore=async-function-name
 func _ready():
-	parcel_count = Global.cli.fi_benchmark_size
-	output_path = Global.cli.fi_benchmark_output
+	parcel_count = Services.cli.fi_benchmark_size
+	output_path = Services.cli.fi_benchmark_output
 
 	if parcel_count < 0:
 		queue_free()
@@ -37,10 +37,10 @@ func run_benchmark():
 	# parcels around the expected centre — otherwise `current_position`
 	# is INVALID_PARCEL and nothing is ever considered in-view.
 	log_msg("FI Benchmark: Setting fake player position at center...")
-	Global.scene_fetcher.current_position = Vector2i(0, 0)
-	Global.scene_fetcher.player_parcel_changed.emit(Vector2i(0, 0))
-	if Global.scene_fetcher.islands_manager != null:
-		Global.scene_fetcher.islands_manager.set_player_parcel(Vector2i(0, 0))
+	Services.scene_fetcher.current_position = Vector2i(0, 0)
+	Services.scene_fetcher.player_parcel_changed.emit(Vector2i(0, 0))
+	if Services.scene_fetcher.islands_manager != null:
+		Services.scene_fetcher.islands_manager.set_player_parcel(Vector2i(0, 0))
 
 	# Measure baseline
 	log_msg("FI Benchmark: Collecting baseline metrics...")
@@ -121,7 +121,7 @@ func count_total_nodes() -> int:
 	# With the Rust-side Floating Islands manager there are no per-parcel
 	# Node3D trees, so "total nodes" collapses to the count of active parcels
 	# — still a useful stability signal for `wait_for_generation_complete`.
-	var mgr = Global.scene_fetcher.islands_manager
+	var mgr = Services.scene_fetcher.islands_manager
 	if mgr == null:
 		return 0
 	return mgr.get_active_parcel_count()
@@ -129,8 +129,8 @@ func count_total_nodes() -> int:
 
 # gdlint:ignore = async-function-name
 func generate_floating_islands():
-	# Use the REAL Global.scene_fetcher to generate floating islands
-	var sf = Global.scene_fetcher
+	# Use the REAL Services.scene_fetcher to generate floating islands
+	var sf = Services.scene_fetcher
 
 	# parcel_count is used as the ARM LENGTH (distance from center to each parcel)
 	# Special case: 99 = Genesis Plaza layout
@@ -342,7 +342,7 @@ func count_nodes_by_type() -> Dictionary:
 	# the active-parcel count. Keep the keys from the legacy schema for diff
 	# compatibility; they'll all read zero on the new path.
 	var counts = {"terrain": 0, "cliff": 0, "grass": 0, "tree": 0, "rock": 0, "prop": 0, "other": 0}
-	var mgr = Global.scene_fetcher.islands_manager
+	var mgr = Services.scene_fetcher.islands_manager
 	if mgr != null:
 		counts["active_parcels"] = mgr.get_active_parcel_count()
 	return counts

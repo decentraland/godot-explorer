@@ -6,7 +6,7 @@ const ACK: String = "␆"
 
 
 func _ready():
-	Global.comms.chat_message.connect(self._on_chats_arrived)
+	Services.comms.chat_message.connect(self._on_chats_arrived)
 
 
 func _on_chats_arrived(chats: Array):
@@ -16,10 +16,10 @@ func _on_chats_arrived(chats: Array):
 		var timestamp: float = chat[1]
 
 		var avatar: DclAvatar
-		if address == Global.player_identity.get_address_str():
-			avatar = Global.scene_runner.player_avatar_node
+		if address == Services.player_identity.get_address_str():
+			avatar = Services.scene_runner.player_avatar_node
 		elif address != "system":
-			avatar = Global.avatars.get_avatar_by_address(address)
+			avatar = Services.avatars.get_avatar_by_address(address)
 
 		var message: String = chat[2]
 		if message.begins_with(EMOTE):

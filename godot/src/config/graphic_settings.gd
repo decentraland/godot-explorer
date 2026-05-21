@@ -102,7 +102,7 @@ static func apply_window_config() -> void:
 	if Global.is_mobile():
 		return
 
-	match Global.get_config().window_mode:
+	match Services.config.window_mode:
 		0:  # Windowed
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		1:  # Borderless
@@ -129,7 +129,7 @@ static func fps_limit_mode_to_fps(mode: int) -> int:
 
 
 static func apply_fps_limit():
-	apply_fps_limit_with_thermal_cap(Global.get_config().limit_fps, 0)
+	apply_fps_limit_with_thermal_cap(Services.config.limit_fps, 0)
 
 
 ## Apply FPS limit considering both user setting and thermal cap
@@ -187,7 +187,7 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	if profile_index < 0 or profile_index >= PROFILE_DEFINITIONS.size():
 		return
 
-	var config: DclConfig = Global.get_config()
+	var config: DclConfig = Services.config
 	var profile: Dictionary = PROFILE_DEFINITIONS[profile_index]
 
 	# Apply all settings from profile definition

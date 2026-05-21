@@ -17,13 +17,13 @@ func _ready():
 		var key = Wearables.get_base_avatar_urn(wearable_id)
 		wearable_data[key] = null
 
-	var promise = Global.content_provider.fetch_wearables(
-		wearable_data.keys(), Global.realm.get_profile_content_url()
+	var promise = Services.content_provider.fetch_wearables(
+		wearable_data.keys(), Services.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 
 	for wearable_id in wearable_data:
-		wearable_data[wearable_id] = Global.content_provider.get_wearable(wearable_id)
+		wearable_data[wearable_id] = Services.content_provider.get_wearable(wearable_id)
 		if wearable_data[wearable_id] == null:
 			printerr("Error loading wearable_id ", wearable_id)
 
@@ -97,9 +97,9 @@ func _process(dt):
 		var transform = Transform3D(Basis.IDENTITY, initial_position)
 		var alias = 10000 + spawning_i
 		var address := generate_random_address()
-		Global.avatars.add_avatar(alias, address)
-		Global.avatars.update_dcl_avatar_by_alias(alias, profile_data)
-		Global.avatars.update_avatar_transform_with_godot_transform(alias, transform)
+		Services.avatars.add_avatar(alias, address)
+		Services.avatars.update_dcl_avatar_by_alias(alias, profile_data)
+		Services.avatars.update_avatar_transform_with_godot_transform(alias, transform)
 
 		spawning_position.append(initial_position)
 
@@ -125,4 +125,4 @@ func _process(dt):
 
 				spawning_position[i] = target_position
 				var alias = 10000 + i
-				Global.avatars.update_avatar_transform_with_godot_transform(alias, transform)
+				Services.avatars.update_avatar_transform_with_godot_transform(alias, transform)

@@ -31,11 +31,11 @@ func _ready():
 	profile_panel_stylebox.border_color = NORMAL_COLOR
 	profile_stylebox.bg_color = NORMAL_COLOR
 
-	var profile := Global.player_identity.get_profile_or_null()
+	var profile := Services.player_identity.get_profile_or_null()
 	if profile != null:
 		await _async_on_profile_changed(profile)
-	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
-	Global.snapshot.snapshot_generated.connect(self._on_snapshot_generated)
+	Services.player_identity.profile_changed.connect(self._async_on_profile_changed)
+	Services.snapshot.snapshot_generated.connect(self._on_snapshot_generated)
 
 
 func _on_snapshot_generated(face_image: Image) -> void:
@@ -51,7 +51,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if face256_url.is_empty():
 		return
 
-	var promise = Global.content_provider.fetch_texture_by_url(face256_hash, face256_url)
+	var promise = Services.content_provider.fetch_texture_by_url(face256_hash, face256_url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("menu_profile_button::_async_download_image promise error: ", result.get_error())

@@ -236,7 +236,7 @@ func _get_dropdown_value(options: Array, index: int) -> String:
 
 
 func _async_save_profile() -> void:
-	var mutable_profile: DclUserProfile = Global.player_identity.get_mutable_profile()
+	var mutable_profile: DclUserProfile = Services.player_identity.get_mutable_profile()
 	if mutable_profile == null:
 		return
 

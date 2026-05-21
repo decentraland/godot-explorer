@@ -19,7 +19,7 @@ var marketplace_link: String = ""
 
 
 func _ready():
-	UiSounds.install_audio_recusirve(self)
+	Services.ui_sounds.install_audio_recusirve(self)
 	_update_view()
 
 

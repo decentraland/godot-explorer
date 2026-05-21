@@ -23,11 +23,11 @@ static func async_debug_social_service() -> void:
 static func _connect_signals() -> void:
 	print("[SocialDebug] Connecting to social service signals...")
 
-	Global.social_service.friendship_request_received.connect(_on_friend_request_received)
-	Global.social_service.friendship_request_accepted.connect(_on_friend_request_accepted)
-	Global.social_service.friendship_request_rejected.connect(_on_friend_request_rejected)
-	Global.social_service.friendship_deleted.connect(_on_friendship_deleted)
-	Global.social_service.friendship_request_cancelled.connect(_on_friend_request_cancelled)
+	Services.social_service.friendship_request_received.connect(_on_friend_request_received)
+	Services.social_service.friendship_request_accepted.connect(_on_friend_request_accepted)
+	Services.social_service.friendship_request_rejected.connect(_on_friend_request_rejected)
+	Services.social_service.friendship_deleted.connect(_on_friendship_deleted)
+	Services.social_service.friendship_request_cancelled.connect(_on_friend_request_cancelled)
 
 	print("[SocialDebug] ✅ Signals connected")
 
@@ -42,7 +42,7 @@ static func _async_run_tests() -> void:
 static func _async_test_fetch_friends() -> void:
 	print("[SocialDebug] Fetching friends list...")
 
-	var promise = Global.social_service.get_friends(50, 0, 3)
+	var promise = Services.social_service.get_friends(50, 0, 3)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -59,7 +59,7 @@ static func _async_test_fetch_friends() -> void:
 static func _async_test_fetch_pending_requests() -> void:
 	print("[SocialDebug] Fetching pending friend requests...")
 
-	var promise = Global.social_service.get_pending_requests(50, 0)
+	var promise = Services.social_service.get_pending_requests(50, 0)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():

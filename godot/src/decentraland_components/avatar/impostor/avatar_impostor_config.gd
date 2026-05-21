@@ -10,7 +10,7 @@ const TINT_FULL_DISTANCE: float = 60.0
 const DISTANCE_CHECK_PERIOD_FRAMES: int = 6
 const CAPTURE_BUDGET_PER_FRAME: int = 1
 
-# Hard caps applied by AvatarLODCoordinator. The N closest avatars get FULL,
+# Hard caps applied by Services.avatar_lod_coordinator. The N closest avatars get FULL,
 # the next M closest get MID/CROSSFADE, the rest are forced to FAR. Static
 # distance thresholds still cap the upper tier (an avatar at 50m is FAR even
 # if it's the only one in the scene), so caps only kick in under high

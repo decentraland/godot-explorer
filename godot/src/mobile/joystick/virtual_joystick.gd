@@ -149,7 +149,7 @@ func _on_input(event: InputEvent) -> void:
 						touch_index = event.index
 						_update_joystick(event.position)
 						if (
-							not Global.scene_runner.raycast_use_cursor_position
+							not Services.scene_runner.raycast_use_cursor_position
 							and not _is_scene_ui_at_position(event.position)
 						):
 							get_viewport().set_input_as_handled()
@@ -159,7 +159,7 @@ func _on_input(event: InputEvent) -> void:
 					_dynamic_material.set_shader_parameter("state", 2)
 					_joystick_visible = false
 				emit_signal("stick_position", Vector2.ZERO)
-				if not Global.scene_runner.raycast_use_cursor_position:
+				if not Services.scene_runner.raycast_use_cursor_position:
 					get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
 			if event.index == touch_index:
@@ -315,7 +315,7 @@ func _on_resized() -> void:
 
 
 func _is_scene_ui_at_position(touch_position: Vector2) -> bool:
-	var base_ui = Global.scene_runner.base_ui
+	var base_ui = Services.scene_runner.base_ui
 	if not is_instance_valid(base_ui) or not base_ui.visible:
 		return false
 	return _check_children_for_pointer_control(base_ui, touch_position)

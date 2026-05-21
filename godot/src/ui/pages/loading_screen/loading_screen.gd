@@ -74,7 +74,7 @@ func async_hide_loading_screen_effect():
 	background.use_parent_material = false  # enable material
 	self.position.y = 0
 
-	if Global.cli.measure_perf:
+	if Services.cli.measure_perf:
 		var counter = (
 			load("res://addons/dcl_dev_tools/dev_tools/resource_counter/resource_counter.gd").new()
 		)
@@ -150,17 +150,17 @@ func _on_timer_auto_move_carousel_timeout():
 
 
 func _on_timer_check_progress_timeout_timeout():
-	if Global.scene_runner.is_paused():
+	if Services.scene_runner.is_paused():
 		last_activity_time = Time.get_ticks_msec()
 		return
 
 	var loading_resources = (
-		Global.content_provider.count_loading_resources() - loaded_resources_offset
+		Services.content_provider.count_loading_resources() - loaded_resources_offset
 	)
 	var loaded_resources = (
-		Global.content_provider.count_loaded_resources() - loaded_resources_offset
+		Services.content_provider.count_loaded_resources() - loaded_resources_offset
 	)
-	var download_speed_mbs: float = Global.content_provider.get_download_speed_mbs()
+	var download_speed_mbs: float = Services.content_provider.get_download_speed_mbs()
 
 	# Update activity time only if there is actual network throughput.
 	# Previously `loading_resources > loaded_resources` kept the timer alive
@@ -170,7 +170,7 @@ func _on_timer_check_progress_timeout_timeout():
 		last_activity_time = Time.get_ticks_msec()
 
 	var opt_suffix = ""
-	if not DclGlobal.is_production() and Global.content_provider.get_optimized_scene_count() > 0:
+	if not DclGlobal.is_production() and Services.content_provider.get_optimized_scene_count() > 0:
 		opt_suffix = " - Opt"
 	label_loading_state.text = (
 		"(%d/%d resources at %.2fmb/s)%s"
@@ -184,9 +184,9 @@ func _on_timer_check_progress_timeout_timeout():
 
 	if should_timeout:
 		# Skip showing modal during tests to avoid affecting screenshots
-		if Global.testing_scene_mode or Global.cli.scene_test_mode:
+		if Global.testing_scene_mode or Services.cli.scene_test_mode:
 			return
-		Global.modal_manager.async_show_scene_timeout_modal()
+		Services.modal_manager.async_show_scene_timeout_modal()
 		# LOADING_TIMEOUT metric
 		var timeout_reason = (
 			"max_time" if total_elapsed_seconds > MAX_LOADING_TIME_SECONDS else "inactivity"
@@ -195,12 +195,12 @@ func _on_timer_check_progress_timeout_timeout():
 			"loaded_resources": loaded_resources,
 			"loading_resources": loading_resources,
 			"download_speed_mbs": download_speed_mbs,
-			"scene_id": str(Global.scene_fetcher.current_scene_entity_id),
+			"scene_id": str(Services.scene_fetcher.current_scene_entity_id),
 			"inactive_seconds": inactive_seconds,
 			"total_elapsed_seconds": int(total_elapsed_seconds),
 			"timeout_reason": timeout_reason
 		}
-		Global.metrics.track_screen_viewed("LOADING_TIMEOUT", JSON.stringify(timeout_data))
+		Services.metrics.track_screen_viewed("LOADING_TIMEOUT", JSON.stringify(timeout_data))
 
 		timer_check_progress_timeout.stop()
 
@@ -210,7 +210,7 @@ func _on_loading_screen_progress_logic_loading_show_requested():
 	last_activity_time = now
 	loading_start_time = now
 	timer_check_progress_timeout.start()
-	loaded_resources_offset = Global.content_provider.count_loaded_resources()
+	loaded_resources_offset = Services.content_provider.count_loaded_resources()
 	_show_low_spec_toast_if_needed()
 
 
@@ -219,7 +219,7 @@ func _show_low_spec_toast_if_needed():
 		return
 	var deeplink_warning = Global.deep_link_obj and Global.deep_link_obj.low_spec_warning
 	var is_low_spec = (
-		Global.cli.low_spec_warning
+		Services.cli.low_spec_warning
 		or deeplink_warning
 		or (DclIosPlugin.is_available() and DclIosPlugin.is_low_spec_iphone())
 	)

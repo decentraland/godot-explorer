@@ -37,6 +37,14 @@ var _showing_our_modal: bool = false
 
 
 func _ready() -> void:
+	pass
+
+
+# Setup moved out of _ready so Global.async_boot can sequence it deterministically
+# under the splash. See BootInstrumentation.
+# gdlint:ignore = async-function-name
+func initialize_async() -> void:
+	BootInstrumentation.mark("connection_quality_monitor.initialize_async_start")
 	_poll_timer = Timer.new()
 	_poll_timer.wait_time = FAST_POLL_SECONDS
 	_poll_timer.timeout.connect(_on_poll_timeout)
@@ -44,21 +52,22 @@ func _ready() -> void:
 	# Timer is started in _connect_signals after Global is fully initialized.
 
 	_connect_signals.call_deferred()
+	BootInstrumentation.mark("connection_quality_monitor.initialize_async_end")
 
 
 func _connect_signals() -> void:
-	if Global.modal_manager == null:
+	if Services.modal_manager == null:
 		# modal_manager not ready yet; retry next frame
 		_connect_signals.call_deferred()
 		return
-	Global.modal_manager.connection_lost_retry.connect(_on_retry)
-	Global.modal_manager.connection_lost_exit.connect(_on_exit)
+	Services.modal_manager.connection_lost_retry.connect(_on_retry)
+	Services.modal_manager.connection_lost_exit.connect(_on_exit)
 
 	# Pause polling while a realm change is in flight so 404s / slow /about calls
 	# on the new realm don't get counted as connection failures.
-	Global.realm.realm_changing.connect(_on_realm_changing)
-	Global.realm.realm_changed.connect(_on_realm_changed)
-	Global.realm.realm_change_failed.connect(_on_realm_change_failed)
+	Services.realm.realm_changing.connect(_on_realm_changing)
+	Services.realm.realm_changed.connect(_on_realm_changed)
+	Services.realm.realm_change_failed.connect(_on_realm_change_failed)
 
 	# Before a realm is set (lobby / backpack / discover), _get_health_url() falls
 	# back to peer_base() so we still detect real connection loss on those screens.
@@ -82,7 +91,7 @@ func _async_check_connection() -> void:
 
 	# HEAD instead of GET: we only care about reachability + status code, not the
 	# /about payload (which is several KB of realm metadata per poll).
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_HEAD, "", {})
+	var promise: Promise = Services.http_requester.request_json(url, HTTPClient.METHOD_HEAD, "", {})
 	var timeout_promise := _create_timeout_promise(REQUEST_TIMEOUT_SECONDS)
 
 	var start_ms := Time.get_ticks_msec()
@@ -178,7 +187,7 @@ func _set_poll_interval(interval: float) -> void:
 
 
 func _get_health_url() -> String:
-	var realm_url: String = Global.realm.realm_url
+	var realm_url: String = Services.realm.realm_url
 	if realm_url.is_empty():
 		return DclUrls.peer_base() + "/about"
 	if not realm_url.ends_with("/"):
@@ -189,7 +198,7 @@ func _get_health_url() -> String:
 func _on_poor_connection() -> void:
 	if not Global.get_explorer():
 		return
-	NotificationsManager.show_system_toast(
+	Services.notifications_manager.show_system_toast(
 		"Poor connection",
 		"Your connection is unstable. Some features may not work properly.",
 		"poor_connection",
@@ -201,8 +210,8 @@ func _async_on_connection_lost() -> void:
 	# On iOS: first time show retry, second time show modal without buttons
 	var hide_buttons := OS.get_name() == "iOS" and _ios_retry_used
 	_showing_our_modal = true
-	await Global.modal_manager.async_show_connection_lost_modal(hide_buttons)
-	# Exit handling is wired via Global.modal_manager.connection_lost_exit → _on_exit
+	await Services.modal_manager.async_show_connection_lost_modal(hide_buttons)
+	# Exit handling is wired via Services.modal_manager.connection_lost_exit → _on_exit
 	# in _ready(). modal_manager._on_connection_lost_secondary intentionally does not
 	# close the modal so it stays visible while get_tree().quit() runs.
 
@@ -212,7 +221,7 @@ func _on_connection_restored() -> void:
 	_ios_retry_used = false
 	if _showing_our_modal:
 		_showing_our_modal = false
-		Global.modal_manager.close_current_modal()
+		Services.modal_manager.close_current_modal()
 
 
 func _on_exit() -> void:

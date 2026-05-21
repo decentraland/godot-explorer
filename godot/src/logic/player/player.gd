@@ -121,7 +121,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		avatar.set_hidden(false)
 		avatar.set_rotation(Vector3(0, rotation.y, 0))
 		if play_sound:
-			UiSounds.play_sound("ui_fade_out")
+			Services.ui_sounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		var tween_in = create_tween()
 		tween_in.set_parallel(true)
@@ -133,7 +133,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		if camera.current:
 			avatar.set_hidden(true)
 		if play_sound:
-			UiSounds.play_sound("ui_fade_in")
+			Services.ui_sounds.play_sound("ui_fade_in")
 
 
 func update_avatar_movement_state(vel: float):
@@ -181,7 +181,7 @@ func _ready():
 
 	floor_snap_length = 0.2
 
-	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
+	Services.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
 	# Remove own avatar's click area as to avoid self-targeting
 	var own_click_area = avatar.get_node("%ClickArea")
@@ -193,9 +193,9 @@ func _ready():
 	avatar.setup_trigger_detection(1)
 
 	# Locomotion settings - subscribe to scene changes and settings updates
-	Global.scene_runner.on_change_scene_id.connect(_on_scene_changed)
-	Global.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
-	_on_scene_changed(Global.scene_runner.get_current_parcel_scene_id())
+	Services.scene_runner.on_change_scene_id.connect(_on_scene_changed)
+	Services.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
+	_on_scene_changed(Services.scene_runner.get_current_parcel_scene_id())
 
 	# Cache RIDs to exclude from ground-distance raycasts (player body itself +
 	# avatar subtree colliders, including the TriggerDetector which would
@@ -216,7 +216,7 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 
 
 func _on_scene_changed(_scene_id: int) -> void:
-	_locomotion_settings = Global.scene_runner.get_current_scene_locomotion_settings()
+	_locomotion_settings = Services.scene_runner.get_current_scene_locomotion_settings()
 	_apply_locomotion_settings()
 
 

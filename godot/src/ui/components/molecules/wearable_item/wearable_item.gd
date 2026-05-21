@@ -29,7 +29,7 @@ var was_pressed = false
 
 
 func _ready():
-	UiSounds.install_audio_recusirve(self)
+	Services.ui_sounds.install_audio_recusirve(self)
 	panel_container_external_orig_rect = panel_container_external.get_rect()
 	panel_container_external.hide()
 	texture_rect_background.hide()
@@ -65,7 +65,7 @@ func async_set_wearable(wearable: DclItemEntityDefinition):
 			texture_rect_background.texture = base_thumbnail
 
 	if not thumbnail_hash.is_empty():
-		var promise: Promise = Global.content_provider.fetch_texture(
+		var promise: Promise = Services.content_provider.fetch_texture(
 			wearable_thumbnail, dcl_content_mapping
 		)
 		var res = await PromiseUtils.async_awaiter(promise)

@@ -31,22 +31,22 @@ func _ready():
 		_nearby_sync_timer.start()
 
 		# Also sync on avatar signals for immediate response
-		Global.avatars.avatar_added.connect(_on_avatar_changed)
-		Global.avatars.avatar_removed.connect(_on_avatar_changed)
+		Services.avatars.avatar_added.connect(_on_avatar_changed)
+		Services.avatars.avatar_removed.connect(_on_avatar_changed)
 
 		# Update when blacklist changes to remove blocked users from nearby list
-		Global.social_blacklist.blacklist_changed.connect(_async_on_blacklist_changed)
+		Services.social_blacklist.blacklist_changed.connect(_async_on_blacklist_changed)
 		# Update nearby items when friendship requests change
-		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
-		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_changed)
-		Global.social_service.friendship_request_rejected.connect(_on_friendship_request_changed)
-		Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_changed)
-		Global.social_service.friendship_deleted.connect(_on_friendship_request_changed)
+		Services.social_service.friendship_request_received.connect(_on_friendship_request_received)
+		Services.social_service.friendship_request_accepted.connect(_on_friendship_request_changed)
+		Services.social_service.friendship_request_rejected.connect(_on_friendship_request_changed)
+		Services.social_service.friendship_request_cancelled.connect(_on_friendship_request_changed)
+		Services.social_service.friendship_deleted.connect(_on_friendship_request_changed)
 	if player_list_type == SOCIAL_TYPE.BLOCKED:
-		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
+		Services.social_blacklist.blacklist_changed.connect(self.async_update_list)
 	if player_list_type == SOCIAL_TYPE.REQUEST:
 		# Reload request list when blacklist changes to pick up previously hidden requests
-		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
+		Services.social_blacklist.blacklist_changed.connect(self.async_update_list)
 
 	# Periodic reconciliation for ONLINE/OFFLINE lists.
 	# This corrects missed connectivity events by reconciling desired online/offline sets.
@@ -82,7 +82,7 @@ func _sync_nearby_list() -> void:
 
 	# Get current avatar addresses (only those with valid data)
 	var current_avatar_addresses: Dictionary = {}  # address -> Avatar
-	var all_avatars = Global.avatars.get_avatars()
+	var all_avatars = Services.avatars.get_avatars()
 
 	for avatar in all_avatars:
 		if avatar == null or not avatar is Avatar:
@@ -91,7 +91,7 @@ func _sync_nearby_list() -> void:
 		if avatar.avatar_id.is_empty():
 			continue
 		# Skip blocked users (don't show skeletons/items for them)
-		if Global.social_blacklist and Global.social_blacklist.is_blocked(avatar.avatar_id):
+		if Services.social_blacklist and Services.social_blacklist.is_blocked(avatar.avatar_id):
 			continue
 		current_avatar_addresses[avatar.avatar_id] = avatar
 
@@ -147,7 +147,7 @@ func _sync_nearby_list() -> void:
 
 
 func _add_item_for_avatar(avatar: Avatar) -> void:
-	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
+	var social_item = Services.preload_assets.SOCIAL_ITEM.instantiate()
 	add_child(social_item)
 	social_item.visible = true
 	social_item.set_type(player_list_type)
@@ -282,12 +282,12 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 
 
 func _async_reload_blocked_list(request_id: int) -> void:
-	var blocked_addresses = Global.social_blacklist.get_blocked_list()
+	var blocked_addresses = Services.social_blacklist.get_blocked_list()
 
 	# Fetch all profiles in parallel
 	var promises: Array = []
 	for address in blocked_addresses:
-		promises.append(Global.content_provider.fetch_profile(address))
+		promises.append(Services.content_provider.fetch_profile(address))
 
 	# Wait for all profile fetches to complete
 	var blocked_social_items: Array = []
@@ -489,7 +489,7 @@ func _get_friends_panel():
 
 
 func _async_reload_request_list(request_id: int) -> void:
-	var promise = Global.social_service.get_pending_requests(100, 0)
+	var promise = Services.social_service.get_pending_requests(100, 0)
 	await PromiseUtils.async_awaiter(promise)
 
 	# Check if this request is still valid (no newer request started)
@@ -527,7 +527,7 @@ func _async_reload_request_list(request_id: int) -> void:
 func _async_fetch_all_friends():
 	# Fetch all friends (status=-1 for all)
 	# Returns null on error, empty array if no friends, array of items otherwise
-	var promise = Global.social_service.get_friends(100, 0, -1)
+	var promise = Services.social_service.get_friends(100, 0, -1)
 
 	# Use timeout to prevent hanging forever (10 seconds)
 	var timed_out = await _async_await_with_timeout(promise, 10.0)
@@ -629,7 +629,7 @@ func get_item_data_by_address(address: String) -> SocialItemData:
 
 func add_item_by_social_item_data(item: SocialItemData, should_load: bool = true) -> void:
 	# Add a single item to the list without clearing existing items
-	var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
+	var social_item = Services.preload_assets.SOCIAL_ITEM.instantiate()
 	self.add_child(social_item)
 	social_item.visible = true
 	social_item.set_type(player_list_type)
@@ -680,7 +680,7 @@ func sync_items(new_items: Array) -> void:
 
 func add_items_by_social_item_data(item_list, should_load: bool = true) -> void:
 	for item in item_list:
-		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
+		var social_item = Services.preload_assets.SOCIAL_ITEM.instantiate()
 		self.add_child(social_item)
 		social_item.visible = true
 		social_item.set_type(player_list_type)
@@ -703,7 +703,7 @@ func _async_fetch_profile_for_address(address: String) -> SocialItemData:
 	var social_item_data = SocialItemData.new()
 	social_item_data.address = address
 
-	var promise = Global.content_provider.fetch_profile(address)
+	var promise = Services.content_provider.fetch_profile(address)
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	if result is PromiseError:

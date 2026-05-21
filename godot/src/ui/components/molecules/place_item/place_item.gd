@@ -51,7 +51,7 @@ var _card_half_position: float  ## Stores value, since it can change unexpectedl
 # gdlint:ignore = async-function-name
 func _ready():
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	UiSounds.install_audio_recusirve(self)
+	Services.ui_sounds.install_audio_recusirve(self)
 	_connect_signals()
 
 	if metadata.is_empty():
@@ -559,7 +559,7 @@ func set_data(item_data):
 
 func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)
-	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	var promise = Services.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		show_image_container(false)
@@ -918,7 +918,7 @@ func _on_button_calendar_pressed() -> void:
 
 
 func _on_button_jump_to_event_pressed() -> void:
-	Global.metrics.track_click_button(
+	Services.metrics.track_click_button(
 		"jump_to", "EVENT_DETAILS", JSON.stringify({"event_id": event_id, "event_tag": event_tags})
 	)
 	_do_jump_in()

@@ -1,4 +1,3 @@
-class_name UISounds
 extends Node
 
 # Should have the same name without the .wav from res://assets/sfx/ui/{name}.wav
@@ -32,9 +31,15 @@ const _SOUNDS_TO_LOAD = [
 var _sounds: Dictionary = {}
 
 
-# Called when the node enters the scene tree for the first time.
+# Heavy work (24 .wav loads) moved out of _ready into initialize_async, which
+# Global.async_boot awaits under the visible splash. See BootInstrumentation.
 func _ready():
-	# set up audio streams
+	pass
+
+
+# gdlint:ignore = async-function-name
+func initialize_async() -> void:
+	BootInstrumentation.mark("ui_sounds.initialize_async_start")
 	for sound_to_load: String in _SOUNDS_TO_LOAD:
 		var path: String = "res://assets/sfx/ui/%s.wav" % sound_to_load
 
@@ -44,6 +49,7 @@ func _ready():
 		_sounds[sound_to_load] = audio_stream
 
 		add_child(audio_stream)
+	BootInstrumentation.mark("ui_sounds.initialize_async_end")
 
 
 func install_audio(node: Node):

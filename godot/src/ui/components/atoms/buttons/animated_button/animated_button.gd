@@ -28,7 +28,7 @@ func _on_pressed() -> void:
 	# Track metric: notification menu opened
 	var metric_name = _get_button_metric_name()
 	if metric_name != "":
-		Global.metrics.track_click_button(metric_name, "HUD", "")
+		Services.metrics.track_click_button(metric_name, "HUD", "")
 
 	_on_button_clicked()
 

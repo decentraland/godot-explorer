@@ -172,7 +172,7 @@ func async_show_world_modal(world_name: String) -> void:
 
 	if result is PromiseError:
 		printerr("World not found or error: ", world_name, " ", result.get_error())
-		NotificationsManager.show_system_toast(
+		Services.notifications_manager.show_system_toast(
 			"World not found", world_name + " could not be reached.", "error", "alert"
 		)
 		return
@@ -180,7 +180,7 @@ func async_show_world_modal(world_name: String) -> void:
 	var json: Dictionary = result.get_string_response_as_json()
 	if not json.has("data") or json.data.is_empty():
 		printerr("World does not exist: ", world_name)
-		NotificationsManager.show_system_toast(
+		Services.notifications_manager.show_system_toast(
 			"World not found", world_name + " does not exist.", "error", "alert"
 		)
 		return
@@ -503,7 +503,7 @@ func _async_load_change_realm_data(realm_name: String) -> void:
 
 func _async_load_travel_modal_image(url: String) -> void:
 	var url_hash = url.md5_text()
-	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	var promise = Services.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	if result is PromiseError:
@@ -521,15 +521,15 @@ func _on_external_link_primary(url: String) -> void:
 
 
 func _on_scene_timeout_primary() -> void:
-	Global.metrics.track_click_button("reload", "LOADING", "")
-	Global.realm.async_set_realm(Global.realm.get_realm_string())
+	Services.metrics.track_click_button("reload", "LOADING", "")
+	Services.realm.async_set_realm(Services.realm.get_realm_string())
 	close_current_modal()
 
 
 func _on_scene_timeout_secondary() -> void:
-	Global.metrics.track_click_button("run_anyway", "LOADING", "")
+	Services.metrics.track_click_button("run_anyway", "LOADING", "")
 	# Emit loading_timeout so loading_screen_progress_logic hides the loading screen and shows the scene
-	Global.scene_runner.loading_timeout.emit(-1)
+	Services.scene_runner.loading_timeout.emit(-1)
 	close_current_modal()
 
 
@@ -551,12 +551,12 @@ func _on_teleport_primary(location: Vector2i, realm: String) -> void:
 
 
 func _on_change_realm_primary(realm_name: String) -> void:
-	Global.realm.async_set_realm(realm_name)
+	Services.realm.async_set_realm(realm_name)
 	close_travel_modal()
 
 
 func _on_scene_crash_reload(_entity_id: String) -> void:
-	Global.realm.async_set_realm(Global.realm.get_realm_string())
+	Services.realm.async_set_realm(Services.realm.get_realm_string())
 	close_current_modal()
 
 
@@ -570,7 +570,7 @@ func _on_ban_pre_check_go_to_discover() -> void:
 	_suppress_ban_kicked = true
 
 	if (
-		Global.realm.get_realm_string().is_empty()
+		Services.realm.get_realm_string().is_empty()
 		and is_instance_valid(Global.get_explorer())
 		and not Global.is_orientation_portrait()
 	):

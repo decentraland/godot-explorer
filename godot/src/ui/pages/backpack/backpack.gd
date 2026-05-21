@@ -84,7 +84,7 @@ var _is_currently_narrow: bool = false
 # gdlint:ignore = async-function-name
 func _ready():
 	main_category_selected = default_main_category
-	UiSounds.install_audio_recusirve(self)
+	Services.ui_sounds.install_audio_recusirve(self)
 	color_rect_background.visible = !hide_background
 	texture_rect_background.visible = !hide_background
 	for category in Wearables.Categories.ALL_CATEGORIES:
@@ -126,7 +126,7 @@ func _ready():
 	add_child(blacklist_deploy_timer)
 
 	# Connect to blacklist changes
-	Global.social_blacklist.blacklist_changed.connect(self._on_blacklist_changed)
+	Services.social_blacklist.blacklist_changed.connect(self._on_blacklist_changed)
 
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
@@ -156,13 +156,13 @@ func _ready():
 		if not wearable_data.has(key):
 			wearable_data[key] = null
 
-	var promise = Global.content_provider.fetch_wearables(
-		wearable_data.keys(), Global.realm.get_profile_content_url()
+	var promise = Services.content_provider.fetch_wearables(
+		wearable_data.keys(), Services.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 
 	for wearable_id in wearable_data:
-		var wearable = Global.content_provider.get_wearable(wearable_id)
+		var wearable = Services.content_provider.get_wearable(wearable_id)
 		wearable_data[wearable_id] = wearable
 		if wearable == null:
 			printerr("Error loading wearable_id ", wearable_id)
@@ -176,7 +176,7 @@ func _ready():
 	request_show_wearables = true
 
 	# Listen for notifications that may indicate new wearables (e.g. rewards)
-	NotificationsManager.new_notifications.connect(self._on_new_notifications)
+	Services.notifications_manager.new_notifications.connect(self._on_new_notifications)
 
 	# responsive
 	if get_window() != null:
@@ -274,7 +274,7 @@ func _update_visible_categories():
 
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
-	Global.player_identity.get_mutable_avatar().set_emotes(emotes_urns)
+	Services.player_identity.get_mutable_avatar().set_emotes(emotes_urns)
 	# Don't trigger request_update_avatar - emotes are loaded separately by the emote controller
 	# and don't require reloading the avatar mesh/wearables
 
@@ -304,8 +304,8 @@ func _unset_avatar_loading(current: int):
 
 
 func _async_update_avatar():
-	var mutable_profile = Global.player_identity.get_mutable_profile()
-	var mutable_avatar = Global.player_identity.get_mutable_avatar()
+	var mutable_profile = Services.player_identity.get_mutable_profile()
+	var mutable_avatar = Services.player_identity.get_mutable_avatar()
 	if mutable_profile == null or mutable_avatar == null:
 		# Profile not ready - keep retrying, connection_quality_monitor handles modal
 		_avatar_update_retries += 1
@@ -318,13 +318,13 @@ func _async_update_avatar():
 
 	var loading_id := _set_avatar_loading()
 	await avatar_preview.avatar.async_update_avatar_from_profile(
-		Global.player_identity.get_mutable_profile()
+		Services.player_identity.get_mutable_profile()
 	)
 	_unset_avatar_loading(loading_id)
 
 
 func _load_filtered_data(filter: String):
-	if Global.player_identity.get_mutable_avatar() == null:
+	if Services.player_identity.get_mutable_avatar() == null:
 		return
 
 	filtered_data = []
@@ -348,7 +348,7 @@ func _load_filtered_data(filter: String):
 			):
 				var is_body_shape = wearable.get_category() == "body_shape"
 				var is_equipable = Wearables.can_equip(
-					wearable, Global.player_identity.get_mutable_avatar().get_body_shape()
+					wearable, Services.player_identity.get_mutable_avatar().get_body_shape()
 				)
 				var is_base_wearable = Wearables.is_base_wearable(wearable_id)
 				var can_use = (
@@ -390,8 +390,8 @@ func _show_wearables():
 
 		# Check if the item is equipped
 		var is_wearable_pressed = (
-			Global.player_identity.get_mutable_avatar().get_wearables().has(wearable_id)
-			or Global.player_identity.get_mutable_avatar().get_body_shape() == wearable_id
+			Services.player_identity.get_mutable_avatar().get_wearables().has(wearable_id)
+			or Services.player_identity.get_mutable_avatar().get_body_shape() == wearable_id
 		)
 		wearable_item.set_pressed_no_signal(is_wearable_pressed)
 		wearable_item.set_equiped(is_wearable_pressed)
@@ -408,7 +408,7 @@ func _on_wearable_filter_button_filter_type(type):
 	var color_name := "%s Color" % type.to_pascal_case()
 	color_carrousel.set_title(color_name)
 
-	var mutable_avatar = Global.player_identity.get_mutable_avatar()
+	var mutable_avatar = Services.player_identity.get_mutable_avatar()
 	if mutable_avatar == null:
 		return
 
@@ -443,15 +443,15 @@ func _on_wearable_equip(wearable_id: String):
 
 	if category == Wearables.Categories.BODY_SHAPE:
 		var current_body_shape_id: String = (
-			Global.player_identity.get_mutable_avatar().get_body_shape()
+			Services.player_identity.get_mutable_avatar().get_body_shape()
 		)
 		var new_body_shape_id := wearable_id
 		if current_body_shape_id != new_body_shape_id:
 			avatar_wearables_body_shape_cache[current_body_shape_id] = (
-				Global.player_identity.get_mutable_avatar().get_wearables().duplicate()
+				Services.player_identity.get_mutable_avatar().get_wearables().duplicate()
 			)
 
-			Global.player_identity.get_mutable_avatar().set_body_shape(new_body_shape_id)
+			Services.player_identity.get_mutable_avatar().set_body_shape(new_body_shape_id)
 			var default_wearables: Dictionary = Wearables.DefaultWearables.BY_BODY_SHAPES.get(
 				new_body_shape_id
 			)
@@ -459,12 +459,12 @@ func _on_wearable_equip(wearable_id: String):
 			if new_avatar_wearables.is_empty():
 				new_avatar_wearables = default_wearables.values()
 
-			Global.player_identity.get_mutable_avatar().set_wearables(
+			Services.player_identity.get_mutable_avatar().set_wearables(
 				PackedStringArray(new_avatar_wearables)
 			)
 	else:
 		var new_avatar_wearables: PackedStringArray = (
-			Global.player_identity.get_mutable_avatar().get_wearables()
+			Services.player_identity.get_mutable_avatar().get_wearables()
 		)
 		var to_remove = []
 		# Unequip current wearable with category
@@ -479,7 +479,7 @@ func _on_wearable_equip(wearable_id: String):
 			new_avatar_wearables.remove_at(index)
 
 		new_avatar_wearables.append(wearable_id)
-		Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
+		Services.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 
 	request_update_avatar = true
 
@@ -493,33 +493,33 @@ func _on_wearable_unequip(wearable_id: String):
 		return
 
 	var new_avatar_wearables: PackedStringArray = (
-		Global.player_identity.get_mutable_avatar().get_wearables()
+		Services.player_identity.get_mutable_avatar().get_wearables()
 	)
 	var index = new_avatar_wearables.find(wearable_id)
 	if index != -1:
 		new_avatar_wearables.remove_at(index)
 
-	Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
+	Services.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 	request_update_avatar = true
 
 
 func _on_button_logout_pressed():
-	Global.comms.disconnect(true)
+	Services.comms.disconnect(true)
 
 
 func _on_color_picker_panel_pick_color(color: Color):
 	match color_carrousel.color_type:
 		color_carrousel.ColorTargetType.EYES:
-			Global.player_identity.get_mutable_avatar().set_eyes_color(color)
+			Services.player_identity.get_mutable_avatar().set_eyes_color(color)
 		color_carrousel.ColorTargetType.SKIN:
-			Global.player_identity.get_mutable_avatar().set_skin_color(color)
+			Services.player_identity.get_mutable_avatar().set_skin_color(color)
 		color_carrousel.ColorTargetType.HAIR:
-			Global.player_identity.get_mutable_avatar().set_hair_color(color)
+			Services.player_identity.get_mutable_avatar().set_hair_color(color)
 
 	avatar_preview.avatar.update_colors(
-		Global.player_identity.get_mutable_avatar().get_eyes_color(),
-		Global.player_identity.get_mutable_avatar().get_skin_color(),
-		Global.player_identity.get_mutable_avatar().get_hair_color()
+		Services.player_identity.get_mutable_avatar().get_eyes_color(),
+		Services.player_identity.get_mutable_avatar().get_skin_color(),
+		Services.player_identity.get_mutable_avatar().get_hair_color()
 	)
 	# NOTE Don't use request_update_avatar here
 	# that would make the avatar flash during color picking
@@ -597,13 +597,13 @@ func _async_refresh_owned_wearables() -> void:
 	if new_keys.is_empty():
 		return
 
-	var promise = Global.content_provider.fetch_wearables(
-		new_keys, Global.realm.get_profile_content_url()
+	var promise = Services.content_provider.fetch_wearables(
+		new_keys, Services.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 
 	for wearable_id in new_keys:
-		var wearable = Global.content_provider.get_wearable(wearable_id)
+		var wearable = Services.content_provider.get_wearable(wearable_id)
 		wearable_data[wearable_id] = wearable
 		if wearable == null:
 			printerr("Error loading new wearable_id ", wearable_id)
@@ -619,11 +619,11 @@ func _exit_tree():
 		blacklist_deploy_timer.stop()
 		blacklist_deploy_timer.queue_free()
 
-	if NotificationsManager.new_notifications.is_connected(self._on_new_notifications):
-		NotificationsManager.new_notifications.disconnect(self._on_new_notifications)
+	if Services.notifications_manager.new_notifications.is_connected(self._on_new_notifications):
+		Services.notifications_manager.new_notifications.disconnect(self._on_new_notifications)
 
-	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
-		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
+	if Services.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
+		Services.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
 
 
 func _on_blacklist_changed():
@@ -637,13 +637,15 @@ func _on_blacklist_changed():
 
 func _on_blacklist_deploy_timer_timeout():
 	# Update the mutable profile with current blacklist before deploying
-	Global.player_identity.get_mutable_profile().set_blocked(
-		Global.social_blacklist.get_blocked_list()
+	Services.player_identity.get_mutable_profile().set_blocked(
+		Services.social_blacklist.get_blocked_list()
 	)
-	Global.player_identity.get_mutable_profile().set_muted(Global.social_blacklist.get_muted_list())
+	Services.player_identity.get_mutable_profile().set_muted(
+		Services.social_blacklist.get_muted_list()
+	)
 	# Deploy without incrementing version for blacklist changes (ADR-290: no snapshots)
 	ProfileService.async_deploy_profile_with_version_control(
-		Global.player_identity.get_mutable_profile(), false
+		Services.player_identity.get_mutable_profile(), false
 	)
 
 

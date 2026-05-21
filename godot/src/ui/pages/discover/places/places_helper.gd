@@ -125,7 +125,7 @@ static func async_get_by_position(pos: Vector2i) -> Variant:
 	url += "?only_places=true&pointer=%d,%d" % [pos.x, pos.y]
 
 	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
+	var promise: Promise = Services.http_requester.request_json(
 		url, HTTPClient.METHOD_GET, "", headers
 	)
 	return await PromiseUtils.async_awaiter(promise)
@@ -135,7 +135,7 @@ static func async_get_by_names(name: String) -> Variant:
 	var url: String = get_api_url() + "?names=%s&only_worlds=true&limit=1" % name.uri_encode()
 
 	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
+	var promise: Promise = Services.http_requester.request_json(
 		url, HTTPClient.METHOD_GET, "", headers
 	)
 	return await PromiseUtils.async_awaiter(promise)

@@ -59,7 +59,7 @@ func async_load_from_urn(_emote_urn: String, _index: int = -1):
 			return
 
 	await WearableRequest.async_fetch_emote(fetch_urn)
-	var emote_data := Global.content_provider.get_wearable(fetch_urn)
+	var emote_data := Services.content_provider.get_wearable(fetch_urn)
 	if emote_data == null:
 		printerr("Failed to get emote data: ", fetch_urn)
 		return
@@ -76,7 +76,7 @@ func async_load_from_entity(emote_data: DclItemEntityDefinition) -> void:
 
 
 func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
-	var promise: Promise = Global.content_provider.fetch_texture(
+	var promise: Promise = Services.content_provider.fetch_texture(
 		emote_data.get_thumbnail(), emote_data.get_content_mapping()
 	)
 	var res = await PromiseUtils.async_awaiter(promise)
@@ -104,7 +104,7 @@ func _ready():
 	_update_equip_ui()
 	if not Engine.is_editor_hint():
 		set_meta("attenuated_sound", true)
-		UiSounds.install_audio_recusirve(self)
+		Services.ui_sounds.install_audio_recusirve(self)
 
 		mouse_entered.connect(self._on_mouse_entered)
 		mouse_exited.connect(self._on_mouse_exited)

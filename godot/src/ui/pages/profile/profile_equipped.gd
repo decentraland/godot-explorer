@@ -26,14 +26,14 @@ func async_refresh(profile: DclUserProfile) -> void:
 	var wearables_urns = avatar_data.get("wearables", [])
 
 	if not wearables_urns.is_empty():
-		var equipped_wearables_promises = Global.content_provider.fetch_wearables(
-			wearables_urns, Global.realm.get_profile_content_url()
+		var equipped_wearables_promises = Services.content_provider.fetch_wearables(
+			wearables_urns, Services.realm.get_profile_content_url()
 		)
 		await PromiseUtils.async_all(equipped_wearables_promises)
 
 		for wearable_urn in wearables_urns:
-			var wearable_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(
-				wearable_urn
+			var wearable_definition: DclItemEntityDefinition = (
+				Services.content_provider.get_wearable(wearable_urn)
 			)
 			if wearable_definition != null:
 				var wearable_item = PROFILE_EQUIPPED_ITEM.instantiate()
@@ -53,7 +53,7 @@ func async_refresh(profile: DclUserProfile) -> void:
 			if not emote_urn.begins_with("urn") and Emotes.is_emote_default(emote_urn):
 				emote_urn = Emotes.get_base_emote_urn(emote_urn)
 
-			var emote_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(
+			var emote_definition: DclItemEntityDefinition = Services.content_provider.get_wearable(
 				emote_urn
 			)
 			if emote_definition != null:

@@ -129,8 +129,8 @@ func show_panel(child_node: Control, subpanel: Control = null):
 
 func track_lobby_screen(screen_name: String):
 	current_screen_name = screen_name
-	Global.metrics.track_screen_viewed(screen_name, "")
-	Global.metrics.flush.call_deferred()
+	Services.metrics.track_screen_viewed(screen_name, "")
+	Services.metrics.flush.call_deferred()
 
 
 func show_comeback_screen():
@@ -177,24 +177,24 @@ func show_account_home_screen():
 func _request_notification_permission_if_needed():
 	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
-	if NotificationsManager.has_local_notification_permission():
+	if Services.notifications_manager.has_local_notification_permission():
 		return
-	NotificationsManager.request_local_notification_permission(current_screen_name)
+	Services.notifications_manager.request_local_notification_permission(current_screen_name)
 	# Listen for the result (especially for iOS async flow)
-	if not NotificationsManager.local_notification_permission_changed.is_connected(
+	if not Services.notifications_manager.local_notification_permission_changed.is_connected(
 		_on_notification_permission_result
 	):
-		NotificationsManager.local_notification_permission_changed.connect(
+		Services.notifications_manager.local_notification_permission_changed.connect(
 			_on_notification_permission_result
 		)
 
 
 func _on_notification_permission_result(_granted: bool):
 	# Disconnect after first result
-	if NotificationsManager.local_notification_permission_changed.is_connected(
+	if Services.notifications_manager.local_notification_permission_changed.is_connected(
 		_on_notification_permission_result
 	):
-		NotificationsManager.local_notification_permission_changed.disconnect(
+		Services.notifications_manager.local_notification_permission_changed.disconnect(
 			_on_notification_permission_result
 		)
 
@@ -221,8 +221,8 @@ func show_auth_browser_open_screen(
 ):
 	current_screen_name = "AUTH_BROWSER_OPEN"
 	var extra := JSON.stringify({"method": auth_method}) if not auth_method.is_empty() else ""
-	Global.metrics.track_screen_viewed("AUTH_BROWSER_OPEN", extra)
-	Global.metrics.flush.call_deferred()
+	Services.metrics.track_screen_viewed("AUTH_BROWSER_OPEN", extra)
+	Services.metrics.flush.call_deferred()
 	container_sign_in_step1.hide()
 	container_sign_in_step2.show()
 	button_back.hide()
@@ -265,7 +265,7 @@ func async_close_sign_in():
 
 # gdlint:ignore = async-function-name
 func _ready():
-	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
+	BootInstrumentation.mark("lobby._ready_start")
 	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_guest.visible = false
 
@@ -285,77 +285,78 @@ func _ready():
 
 	# Lobby fires onboarding/auth events one at a time — ship them on a snappy 2s cadence.
 	# Menu/Explorer restore the default 10s when leaving the lobby.
-	Global.metrics.set_flush_interval(2.0)
+	Services.metrics.set_flush_interval(2.0)
 
-	Global.music_player.play.call_deferred("music_builder")
+	Services.music_player.play.call_deferred("music_builder")
 
 	var login = %Login
 
 	ready_for_redirect_by_deep_link = false
-	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
+	Services.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 
 	login.set_lobby(self)
 	login.show()
 
 	show_loading_screen()
-	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
-	print("[Startup] lobby.show_loading_screen: %dms" % startup_time_ms)
+	BootInstrumentation.mark("lobby.loading_screen_visible")
 
 	if Global.is_mobile():
+		BootInstrumentation.mark("lobby.version_gate_start")
 		var gate_decision := await _async_run_version_gate()
+		BootInstrumentation.mark("lobby.version_gate_done")
 		if gate_decision == "hard":
 			# Overlay blocks interaction; loading screen stays behind it.
 			return
 
 	# Track startup metric for analytics
-	var startup_data := {"startup_time_ms": startup_time_ms, "platform": OS.get_name()}
-	Global.metrics.track_screen_viewed("START", JSON.stringify(startup_data))
+	var startup_data := {"platform": OS.get_name()}
+	Services.metrics.track_screen_viewed("START", JSON.stringify(startup_data))
 
 	# Run hardware benchmark AFTER loading screen is visible to avoid black screen
 	# on iOS fresh install (Metal shader compilation can take 10-20s)
 	if Global.should_run_first_launch_benchmark():
-		print("[Startup] lobby: triggering first launch benchmark")
+		BootInstrumentation.mark("lobby.first_launch_benchmark_start")
 		Global.run_first_launch_benchmark()
 
-	UiSounds.install_audio_recusirve(self)
-	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
-	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
-	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)
-	Global.player_identity.auth_error.connect(self._on_auth_error)
+	Services.ui_sounds.install_audio_recusirve(self)
+	Services.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
+	Services.player_identity.profile_changed.connect(self._async_on_profile_changed)
+	Services.player_identity.wallet_connected.connect(self._on_wallet_connected)
+	Services.player_identity.auth_error.connect(self._on_auth_error)
 
-	Global.scene_runner.set_pause(true)
+	Services.scene_runner.set_pause(true)
 
-	if Global.cli.skip_lobby:
+	if Services.cli.skip_lobby:
 		_skip_lobby = true
-	if Global.cli.skip_lobby_to_menu:
+	if Services.cli.skip_lobby_to_menu:
 		_skip_lobby_to_menu = true
 
 	# Preview deeplink: create guest and skip lobby for hot reload development
 	if not Global.deep_link_obj.preview.is_empty():
 		_skip_lobby = true
 
-	var session_account: Dictionary = Global.get_config().session_account
+	var session_account: Dictionary = Services.config.session_account
 
-	if Global.cli.guest_profile or not Global.deep_link_obj.preview.is_empty():
+	if Services.cli.guest_profile or not Global.deep_link_obj.preview.is_empty():
 		# Mark session as ephemeral so guest data is never persisted to disk,
 		# preserving any previously saved wallet session.
-		Global.get_config().session_is_ephemeral = true
+		Services.config.session_is_ephemeral = true
 		# Use assignment instead of clear() to avoid mutating the dictionary in-place.
 		# clear() would also corrupt the reference inside settings_file, causing the
 		# copy loop in save_to_settings_file() to lose the saved wallet session.
 		session_account = {}
-		Global.player_identity.create_guest_account()
-		Global.player_identity.set_random_profile()
-		var random_profile = Global.player_identity.get_profile_or_null()
+		Services.player_identity.create_guest_account()
+		Services.player_identity.set_random_profile()
+		var random_profile = Services.player_identity.get_profile_or_null()
 		if random_profile != null:
-			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
+			Services.config.guest_profile = random_profile.to_godot_dictionary()
 
 	# Flag the wallet_connected emission produced by try_recover_account so the analytics
 	# controller skips emitting a Firebase `login_success` for it. Safe to call unconditionally:
 	# the clear runs deferred and just unblocks the next legitimate fresh login.
-	if Global.analytics_controller != null:
-		Global.analytics_controller.mark_wallet_connected_as_recovery()
-	var recovered := Global.player_identity.try_recover_account(session_account)
+	if Services.analytics_controller != null:
+		Services.analytics_controller.mark_wallet_connected_as_recovery()
+	var recovered := Services.player_identity.try_recover_account(session_account)
 	if recovered:
 		loading_first_profile = true
 		show_loading_screen()
@@ -368,13 +369,13 @@ func _ready():
 			"res://src/ui/components/organisms/menu/menu.tscn"
 		)
 	else:
-		var current_eula_version: int = Global.get_config().terms_and_conditions_version
+		var current_eula_version: int = Services.config.terms_and_conditions_version
 		# Force show EULA when benchmarking (even if already accepted)
 		if (
-			Global.cli.benchmark_report
+			Services.cli.benchmark_report
 			or current_eula_version != Global.TERMS_AND_CONDITIONS_VERSION
 		):
-			if Global.cli.benchmark_report:
+			if Services.cli.benchmark_report:
 				print("✓ Forcing EULA for benchmark flow")
 			show_eula_screen()
 		else:
@@ -434,14 +435,14 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
 
 	if !new_profile.has_connected_web3():
-		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
-		Global.get_config().save_to_settings_file()
+		Services.config.guest_profile = new_profile.to_godot_dictionary()
+		Services.config.save_to_settings_file()
 
 	if loading_first_profile:
 		loading_first_profile = false
 		if profile_has_name():
-			Global.metrics.update_identity(
-				Global.player_identity.get_address_str(), Global.player_identity.is_guest
+			Services.metrics.update_identity(
+				Services.player_identity.get_address_str(), Services.player_identity.is_guest
 			)
 			await async_close_sign_in()
 			return
@@ -461,8 +462,8 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			label_signed_as_name.set_text("You're signed in as\n%s." % [new_profile.get_name()])
 			show_comeback_screen()
 			_show_avatar_preview()
-			Global.metrics.update_identity(
-				Global.player_identity.get_address_str(), Global.player_identity.is_guest
+			Services.metrics.update_identity(
+				Services.player_identity.get_address_str(), Services.player_identity.is_guest
 			)
 		else:
 			# No profile yet: go to avatar customization + naming
@@ -481,21 +482,21 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 
 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
-	Global.metrics.update_identity(address, is_guest)
-	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
-	Global.metrics.flush.call_deferred()
+	Services.metrics.update_identity(address, is_guest)
+	Services.metrics.track_screen_viewed("AUTH_SUCCESS", "")
+	Services.metrics.flush.call_deferred()
 
-	Global.get_config().session_account = {}
+	Services.config.session_account = {}
 
 	var new_stored_account := {}
-	if Global.player_identity.get_recover_account_to(new_stored_account):
-		Global.get_config().session_account = new_stored_account
+	if Services.player_identity.get_recover_account_to(new_stored_account):
+		Services.config.session_account = new_stored_account
 
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 
 	# Initialize social service early so Discover can show friends before entering explorer
 	if not is_guest:
-		Global.social_service.initialize_from_player_identity(Global.player_identity)
+		Services.social_service.initialize_from_player_identity(Services.player_identity)
 
 
 func _on_check_box_eula_toggled(toggled_on: bool) -> void:
@@ -513,19 +514,19 @@ func _on_eula_meta_clicked(meta: Variant) -> void:
 
 
 func _on_button_accept_eula_pressed() -> void:
-	Global.metrics.track_screen_viewed("ACCEPT_EULA", "")
-	Global.metrics.track_click_button("accept", "ACCEPT_EULA", "")
+	Services.metrics.track_screen_viewed("ACCEPT_EULA", "")
+	Services.metrics.track_click_button("accept", "ACCEPT_EULA", "")
 	# Opens the consent gate (auto-flushes queued pre-consent events) and fires Firebase
 	# `eula_accepted` Key Event. All Firebase/Segment orchestration lives in the controller.
-	if Global.analytics_controller != null:
-		Global.analytics_controller.on_eula_accepted_locally()
-	Global.get_config().terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
-	Global.get_config().save_to_settings_file()
+	if Services.analytics_controller != null:
+		Services.analytics_controller.on_eula_accepted_locally()
+	Services.config.terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
+	Services.config.save_to_settings_file()
 	show_account_home_screen()
 
 
 func _on_button_update_pressed() -> void:
-	Global.metrics.track_click_button("update", current_screen_name, "")
+	Services.metrics.track_click_button("update", current_screen_name, "")
 	# TODO: Open the appropriate app store URL based on platform
 	if Global.is_ios():
 		Global.open_webview_url("https://apps.apple.com/app/decentraland")
@@ -538,39 +539,39 @@ func _on_button_update_pressed() -> void:
 
 
 func _on_button_not_now_pressed() -> void:
-	Global.metrics.track_click_button("not_now", current_screen_name, "")
+	Services.metrics.track_click_button("not_now", current_screen_name, "")
 	show_account_home_screen()
 
 
 func _on_button_different_account_pressed():
-	Global.metrics.update_identity("unauthenticated", false)
-	Global.metrics.track_click_button("use_another_account", current_screen_name, "")
-	Global.get_config().session_account = {}
+	Services.metrics.update_identity("unauthenticated", false)
+	Services.metrics.track_click_button("use_another_account", current_screen_name, "")
+	Services.config.session_account = {}
 
 	# Unsubscribe from all social service updates before clearing
-	Global.social_service.unsubscribe_from_updates()
-	Global.social_service.unsubscribe_from_connectivity_updates()
-	Global.social_service.unsubscribe_from_block_updates()
+	Services.social_service.unsubscribe_from_updates()
+	Services.social_service.unsubscribe_from_connectivity_updates()
+	Services.social_service.unsubscribe_from_block_updates()
 	# Drop the gRPC manager so the previous identity's streams don't leak into
 	# the next account. initialize_from_player_identity rebuilds it on login.
-	Global.social_service.disconnect()
+	Services.social_service.disconnect()
 
 	# Clear the current social blacklist when switching accounts
-	Global.social_blacklist.clear_blocked()
-	Global.social_blacklist.clear_muted()
+	Services.social_blacklist.clear_blocked()
+	Services.social_blacklist.clear_muted()
 
-	Global.get_config().save_to_settings_file()
+	Services.config.save_to_settings_file()
 	show_account_home_screen()
 
 
 func _on_button_continue_pressed():
-	Global.metrics.track_click_button("next", current_screen_name, "")
-	_async_on_profile_changed(Global.player_identity.get_mutable_profile())
+	Services.metrics.track_click_button("next", current_screen_name, "")
+	_async_on_profile_changed(Services.player_identity.get_mutable_profile())
 	show_avatar_naming_screen()
 
 
 func _on_button_start_pressed():
-	Global.metrics.track_click_button("create_account", current_screen_name, "")
+	Services.metrics.track_click_button("create_account", current_screen_name, "")
 	sign_in_title.text = "Create your account"
 	is_creating_account = true
 	show_auth_home_screen()
@@ -578,14 +579,14 @@ func _on_button_start_pressed():
 
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
-	Global.metrics.track_click_button("next", current_screen_name, "")
+	Services.metrics.track_click_button("next", current_screen_name, "")
 	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
 	avatar_preview.hide()
 	show_loading_screen()
 	current_profile.set_name(dcl_line_edit.line_edit.text)
-	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
+	current_profile.set_has_connected_web3(!Services.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
 
 	# ADR-290: Snapshots are no longer generated/uploaded by clients
@@ -597,8 +598,8 @@ func _on_button_next_pressed():
 		var error: PromiseError = promise.get_data()
 		printerr("[Lobby] Profile deploy failed: ", error.get_error())
 	else:
-		Global.metrics.track_screen_viewed("AUTH_DEPLOY_SUCCESS", "")
-		Global.metrics.flush.call_deferred()
+		Services.metrics.track_screen_viewed("AUTH_DEPLOY_SUCCESS", "")
+		Services.metrics.flush.call_deferred()
 
 	show_control_ftue()
 
@@ -608,14 +609,14 @@ func _on_button_random_name_pressed():
 
 
 func _on_button_go_to_sign_in_pressed():
-	Global.metrics.track_click_button("sign_in", current_screen_name, "")
+	Services.metrics.track_click_button("sign_in", current_screen_name, "")
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
 	show_auth_home_screen()
 
 
 func _on_button_back_pressed():
-	Global.metrics.track_click_button("back", current_screen_name, "")
+	Services.metrics.track_click_button("back", current_screen_name, "")
 	match current_screen_name:
 		"ACCOUNT_HOME":
 			show_eula_screen()
@@ -638,14 +639,14 @@ func _handle_back_action():
 
 
 func _on_button_cancel_pressed():
-	Global.metrics.track_click_button("cancel", current_screen_name, "")
+	Services.metrics.track_click_button("cancel", current_screen_name, "")
 
-	Global.player_identity.abort_try_connect_account()
+	Services.player_identity.abort_try_connect_account()
 	show_auth_home_screen()
 
 
 func _on_button_try_again_pressed():
-	Global.metrics.track_click_button("try_again", current_screen_name, "")
+	Services.metrics.track_click_button("try_again", current_screen_name, "")
 
 	show_auth_home_screen()
 
@@ -671,34 +672,34 @@ func create_guest_account_if_needed():
 		# (e.g., MetaMask via WalletConnect). Creating a guest account would overwrite
 		# the web3 wallet with a random local wallet.
 		if (
-			not Global.player_identity.is_guest
-			and not Global.player_identity.get_address_str().is_empty()
+			not Services.player_identity.is_guest
+			and not Services.player_identity.get_address_str().is_empty()
 		):
 			guest_account_created = true
 			return
 
-		Global.get_config().guest_profile = {}
-		Global.get_config().save_to_settings_file()
-		Global.player_identity.create_guest_account()
+		Services.config.guest_profile = {}
+		Services.config.save_to_settings_file()
+		Services.player_identity.create_guest_account()
 		if is_creating_account:
-			Global.player_identity.set_profile(current_profile)
+			Services.player_identity.set_profile(current_profile)
 		else:
-			Global.player_identity.set_default_profile()
+			Services.player_identity.set_default_profile()
 		guest_account_created = true
 
 
 func profile_has_name():
-	var profile = Global.player_identity.get_profile_or_null()
+	var profile = Services.player_identity.get_profile_or_null()
 	return profile != null and not profile.get_name().is_empty()
 
 
 func _on_button_enter_as_guest_pressed():
-	Global.metrics.track_click_button("enter_as_guest", current_screen_name, "")
-	Global.get_config().guest_profile = {}
-	Global.get_config().save_to_settings_file()
+	Services.metrics.track_click_button("enter_as_guest", current_screen_name, "")
+	Services.config.guest_profile = {}
+	Services.config.save_to_settings_file()
 	guest_account_created = false
-	Global.player_identity.create_guest_account()
-	Global.player_identity.set_default_profile()
+	Services.player_identity.create_guest_account()
+	Services.player_identity.set_default_profile()
 	guest_account_created = true
 	_show_avatar_preview()
 	show_avatar_create_screen()
@@ -711,7 +712,7 @@ func _show_avatar_preview():
 
 # gdlint:ignore = async-function-name
 func _on_button_jump_in_pressed():
-	Global.metrics.track_click_button("lets_go", current_screen_name, "")
+	Services.metrics.track_click_button("lets_go", current_screen_name, "")
 	await async_close_sign_in()
 
 

@@ -120,14 +120,14 @@ func _async_patch_reminder(toggled_on: bool) -> void:
 
 	if toggled_on:
 		method = HTTPClient.METHOD_POST
-		Global.metrics.track_click_button(
+		Services.metrics.track_click_button(
 			"reminder_set",
 			"EVENT_DETAILS",
 			JSON.stringify({"event_id": event_id_value, "event_tag": event_tags})
 		)
 	else:
 		method = HTTPClient.METHOD_DELETE
-		Global.metrics.track_click_button(
+		Services.metrics.track_click_button(
 			"reminder_remove",
 			"EVENT_DETAILS",
 			JSON.stringify({"event_id": event_id_value, "event_tag": event_tags})
@@ -157,7 +157,7 @@ func _set_loading(status: bool) -> void:
 
 
 func update_styles(toggled_on):
-	var guest_profile := Global.player_identity.is_guest
+	var guest_profile := Services.player_identity.is_guest
 	if guest_profile:
 		disabled = true
 		label.text = "SIGN IN TO USE REMINDERS"
@@ -186,13 +186,13 @@ func _async_schedule_local_notification() -> void:
 		return
 
 	# Check and request notification permission
-	if not NotificationsManager.has_local_notification_permission():
-		NotificationsManager.request_local_notification_permission("EVENT_REMINDER")
+	if not Services.notifications_manager.has_local_notification_permission():
+		Services.notifications_manager.request_local_notification_permission("EVENT_REMINDER")
 
 		# Check permission after request
 		# Note: On iOS this is async, but we'll try to schedule anyway
 		# If permission is denied, the OS will handle it gracefully
-		if not NotificationsManager.has_local_notification_permission():
+		if not Services.notifications_manager.has_local_notification_permission():
 			printerr("Notification permission not granted yet, scheduling anyway (OS will handle)")
 
 	# Calculate trigger time
@@ -229,7 +229,9 @@ func _async_schedule_local_notification() -> void:
 	var notification_id = "event_" + event_id_value
 
 	# Generate random title and description
-	var notification_text = NotificationsManager.generate_event_notification_text(event_name)
+	var notification_text = Services.notifications_manager.generate_event_notification_text(
+		event_name
+	)
 	var notification_title = notification_text["title"]
 	var notification_body = notification_text["body"]
 
@@ -239,7 +241,7 @@ func _async_schedule_local_notification() -> void:
 	)
 
 	# Queue the notification with image and deep link
-	var success = await NotificationsManager.async_queue_local_notification(
+	var success = await Services.notifications_manager.async_queue_local_notification(
 		notification_id,
 		notification_title,
 		notification_body,
@@ -259,4 +261,4 @@ func _cancel_local_notification() -> void:
 	var notification_id = "event_" + event_id_value
 
 	# Cancel returns false if notification doesn't exist, which is fine
-	NotificationsManager.cancel_queued_local_notification(notification_id)
+	Services.notifications_manager.cancel_queued_local_notification(notification_id)

@@ -44,7 +44,7 @@ func run_benchmark() -> void:
 		return
 
 	_benchmark_start_time = Time.get_ticks_msec()
-	print("[Startup] hardware_benchmark.run_benchmark start: %dms" % _benchmark_start_time)
+	BootInstrumentation.mark("hardware_benchmark.run_start")
 
 	_is_running = true
 	_frame_times.clear()
@@ -54,12 +54,7 @@ func run_benchmark() -> void:
 	_setup_benchmark_viewport()
 	await _async_create_benchmark_scene()
 
-	print(
-		(
-			"[Startup] hardware_benchmark scene created: %dms"
-			% (Time.get_ticks_msec() - _benchmark_start_time)
-		)
-	)
+	BootInstrumentation.mark("hardware_benchmark.scene_created")
 
 	# Enable render time measurement
 	if _benchmark_viewport:
@@ -97,12 +92,7 @@ func _finish_benchmark() -> void:
 	_is_running = false
 
 	var benchmark_duration: int = Time.get_ticks_msec() - _benchmark_start_time
-	print(
-		(
-			"[Startup] hardware_benchmark._finish_benchmark: %dms (duration: %dms)"
-			% [Time.get_ticks_msec(), benchmark_duration]
-		)
-	)
+	BootInstrumentation.mark("hardware_benchmark.finished (duration: %dms)" % benchmark_duration)
 
 	# Calculate average GPU score (render time in ms)
 	var gpu_score: float = _calculate_average_frame_time()

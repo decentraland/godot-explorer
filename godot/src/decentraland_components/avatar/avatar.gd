@@ -197,7 +197,7 @@ func _ready():
 	_apply_nickname_visibility()
 
 	_lod_phase = int(self.unique_id) % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES
-	AvatarLODCoordinator.register(self)
+	Services.avatar_lod_coordinator.register(self)
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
@@ -205,7 +205,7 @@ func _ready():
 
 
 func _exit_tree() -> void:
-	AvatarLODCoordinator.unregister(self)
+	Services.avatar_lod_coordinator.unregister(self)
 
 	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
 	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
@@ -285,8 +285,8 @@ func set_hidden(value):
 # so hide()/visible=false on the avatar doesn't affect it. Force its slot's
 # fade_alpha to 0 so the GPU discards the fragment until LOD recomputes.
 func _hide_impostor_render() -> void:
-	if _impostor_layer >= 0 and Global.avatars != null:
-		Global.avatars.set_impostor_state(get_instance_id(), 0.0, 0.0, 0.0)
+	if _impostor_layer >= 0 and Services.avatars != null:
+		Services.avatars.set_impostor_state(get_instance_id(), 0.0, 0.0, 0.0)
 
 
 # Stable identity key for the disk-backed impostor texture cache. The hash
@@ -479,8 +479,8 @@ func async_update_avatar(
 
 	finish_loading = false
 
-	var promise = Global.content_provider.fetch_wearables(
-		wearable_to_request, Global.realm.get_profile_content_url()
+	var promise = Services.content_provider.fetch_wearables(
+		wearable_to_request, Services.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 	await async_fetch_wearables_dependencies()
@@ -543,9 +543,11 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 
 	if finish_loading:
 		apply_color_and_facial()
-		if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Global.avatars != null:
-			Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
-			ImpostorCapturer.request_capture(self)
+		if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Services.avatars != null:
+			Services.avatars.invalidate_impostor_texture(
+				get_instance_id(), _get_impostor_cache_key()
+			)
+			Services.impostor_capturer.request_capture(self)
 
 
 func async_fetch_wearables_dependencies():
@@ -553,9 +555,9 @@ func async_fetch_wearables_dependencies():
 
 	# Fill data
 	var body_shape_id := avatar_data.get_body_shape()
-	wearables_dict[body_shape_id] = Global.content_provider.get_wearable(body_shape_id)
+	wearables_dict[body_shape_id] = Services.content_provider.get_wearable(body_shape_id)
 	for item in avatar_data.get_wearables():
-		wearables_dict[item] = Global.content_provider.get_wearable(item)
+		wearables_dict[item] = Services.content_provider.get_wearable(item)
 
 	var async_calls_info: Array = []
 	var async_calls: Array = []
@@ -822,8 +824,8 @@ func async_load_wearables():
 
 	# If some wearables are needed but they weren't included in the first request (fallback wearables)
 	if not curated_wearables.need_to_fetch.is_empty():
-		var need_to_fetch_promise = Global.content_provider.fetch_wearables(
-			Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
+		var need_to_fetch_promise = Services.content_provider.fetch_wearables(
+			Array(curated_wearables.need_to_fetch), Services.realm.get_profile_content_url()
 		)
 		await PromiseUtils.async_all(need_to_fetch_promise)
 		# Safety check: avatar may have been freed during async operations
@@ -835,7 +837,7 @@ func async_load_wearables():
 		)
 
 		for wearable_id in curated_wearables.need_to_fetch:
-			var wearable = Global.content_provider.get_wearable(wearable_id)
+			var wearable = Services.content_provider.get_wearable(wearable_id)
 			if wearable != null:
 				wearables_by_category[wearable.get_category()] = wearable
 
@@ -983,7 +985,7 @@ func async_load_wearables():
 			# Default (utility emotes)
 			continue
 
-		var emote = Global.content_provider.get_wearable(emote_urn)
+		var emote = Services.content_provider.get_wearable(emote_urn)
 		if emote == null:
 			continue
 		var file_hash = Wearables.get_item_main_file_hash(emote, avatar_data.get_body_shape())
@@ -998,9 +1000,9 @@ func async_load_wearables():
 
 	# Refresh LOD-related state since meshes were re-created.
 	_mesh_lod_visibility_captured = false
-	if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Global.avatars != null:
-		Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
-		ImpostorCapturer.request_capture(self)
+	if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Services.avatars != null:
+		Services.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
+		Services.impostor_capturer.request_capture(self)
 
 	avatar_ready = true
 	avatar_loaded.emit()
@@ -1075,14 +1077,14 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color, mask_color: Color):
 	var current_material = mask_material.duplicate()
 	current_material.set_shader_parameter(
-		"base_texture", Global.content_provider.get_texture_from_hash(textures[0])
+		"base_texture", Services.content_provider.get_texture_from_hash(textures[0])
 	)
 	current_material.set_shader_parameter("material_color", color)
 	current_material.set_shader_parameter("mask_color", mask_color)
 
 	if textures.size() > 1:
 		current_material.set_shader_parameter(
-			"mask_texture", Global.content_provider.get_texture_from_hash(textures[1])
+			"mask_texture", Services.content_provider.get_texture_from_hash(textures[1])
 		)
 	else:
 		current_material.set_shader_parameter("mask_texture", null)
@@ -1102,7 +1104,7 @@ func _update_lod() -> void:
 	# Bypass: when the impostor system is globally disabled, force FULL so
 	# the benchmark's OFF phase measures full-mesh rendering with zero
 	# impostor capture/eviction work.
-	var config = Global.get_config()
+	var config = Services.config
 	if config != null and not config.avatar_impostors_enabled:
 		if _lod_state != LODState.FULL:
 			_apply_lod_state(LODState.FULL, 1.0, 0.0, 0.0, 0.0)
@@ -1176,30 +1178,30 @@ func _apply_lod_state(
 		# entirely so its multimesh instance and (if owned) layer return to
 		# the pool for an in-frustum avatar to use. Re-entry rehydrates from
 		# the disk cache — fast and gap-free.
-		if _impostor_layer >= 0 and Global.avatars != null:
-			Global.avatars.clear_impostor(get_instance_id())
+		if _impostor_layer >= 0 and Services.avatars != null:
+			Services.avatars.clear_impostor(get_instance_id())
 			_impostor_layer = -1
 			_impostor_layer_is_overflow = false
 	elif state == LODState.FAR or state == LODState.CROSSFADE:
 		_ensure_impostor_layer(distance)
-		if _impostor_layer >= 0 and Global.avatars != null:
-			Global.avatars.set_impostor_state(
+		if _impostor_layer >= 0 and Services.avatars != null:
+			Services.avatars.set_impostor_state(
 				get_instance_id(), fade_alpha, tint_strength, distance
 			)
-	elif _impostor_layer >= 0 and Global.avatars != null:
+	elif _impostor_layer >= 0 and Services.avatars != null:
 		# Don't release the slot on every LOD oscillation — re-allocating would
 		# trigger a new capture every time the camera swings between FAR and
 		# MID/FULL. Keep the slot, just hide the multimesh instance with
 		# fade_alpha=0. The slot is freed when the avatar is removed entirely
 		# (AvatarScene::remove_avatar).
-		Global.avatars.set_impostor_state(get_instance_id(), 0.0, 0.0, distance)
+		Services.avatars.set_impostor_state(get_instance_id(), 0.0, 0.0, distance)
 
 	if state_changed:
 		_on_lod_state_changed(state, prev_state)
 
 
 func _ensure_impostor_layer(distance: float) -> void:
-	if Global.avatars == null:
+	if Services.avatars == null:
 		return
 	# Always call through. Rust handles the dispatch:
 	#   * No existing slot -> fresh allocation (real with cached texture if
@@ -1207,22 +1209,22 @@ func _ensure_impostor_layer(distance: float) -> void:
 	#   * Existing slot -> toggle render mode in place, keeping the layer warm.
 	# No clear-then-realloc dance, so a camera that briefly turns off-frustum
 	# doesn't trigger a recapture or flicker the borrowed silhouette.
-	_impostor_layer = Global.avatars.request_impostor_layer(
+	_impostor_layer = Services.avatars.request_impostor_layer(
 		get_instance_id(), self, distance, _use_overflow_impostor, _get_impostor_cache_key()
 	)
 	if _impostor_layer < 0:
 		return
 	_impostor_layer_is_overflow = _use_overflow_impostor
 	# Capture only when the slot owns a real layer that hasn't been filled yet.
-	if Global.avatars.impostor_needs_capture(get_instance_id()):
-		ImpostorCapturer.request_capture(self)
+	if Services.avatars.impostor_needs_capture(get_instance_id()):
+		Services.impostor_capturer.request_capture(self)
 
 
 func _release_impostor() -> void:
 	if _impostor_layer < 0:
 		return
-	if Global.avatars != null:
-		Global.avatars.clear_impostor(get_instance_id())
+	if Services.avatars != null:
+		Services.avatars.clear_impostor(get_instance_id())
 	_impostor_layer = -1
 
 
@@ -1337,7 +1339,7 @@ func _process(delta):
 
 	var is_emoting = self_idle && emote_controller.is_playing()
 	if is_local_player:
-		Global.comms.set_emoting(is_emoting)
+		Services.comms.set_emoting(is_emoting)
 
 	animation_tree.set("parameters/conditions/idle", self_idle)
 	animation_tree.set("parameters/conditions/emote", emote_controller.playing_single)
@@ -1591,7 +1593,7 @@ func get_scene_emote_info(scene_id: String, glb_hash: String) -> Dictionary:
 				"base_url": scene_data["base_url"], "audio_hash": scene_data["emotes"][glb_hash]
 			}
 	# Fallback for remote players - use realm URL (audio won't be available)
-	return {"base_url": Global.realm.content_base_url, "audio_hash": ""}
+	return {"base_url": Services.realm.content_base_url, "audio_hash": ""}
 
 
 ## Play emote triggered by AvatarShape's expression_trigger_id field.

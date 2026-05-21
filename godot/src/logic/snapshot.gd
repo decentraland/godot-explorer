@@ -32,7 +32,7 @@ func async_generate_for_avatar(
 	# Store face snapshot
 	var face_data: PackedByteArray = face.save_png_to_buffer()
 	var face_hash: String = DclHashing.hash_v1(face_data)
-	await PromiseUtils.async_awaiter(Global.content_provider.store_file(face_hash, face_data))
+	await PromiseUtils.async_awaiter(Services.content_provider.store_file(face_hash, face_data))
 
 	# Store local snapshot hash for UI display (not uploaded to server)
 	avatar_wire_format.set_snapshots(face_hash, "")

@@ -36,11 +36,11 @@ func _async_process_next() -> void:
 	_enqueued.erase(iid)
 
 	var image: Image = await _async_get_image_for(avatar)
-	if image != null and is_instance_valid(avatar) and Global.avatars != null:
+	if image != null and is_instance_valid(avatar) and Services.avatars != null:
 		var key: String = (
 			avatar._get_impostor_cache_key() if avatar.has_method("_get_impostor_cache_key") else ""
 		)
-		Global.avatars.set_impostor_texture(iid, image, key)
+		Services.avatars.set_impostor_texture(iid, image, key)
 
 	_in_progress = false
 
@@ -56,9 +56,9 @@ func _async_get_image_for(avatar) -> Image:
 
 # gdlint:ignore = async-function-name
 func _async_fetch_catalyst_body(user_id: String) -> Image:
-	if Global.content_provider == null:
+	if Services.content_provider == null:
 		return null
-	var promise: Promise = Global.content_provider.fetch_avatar_body_texture(user_id)
+	var promise: Promise = Services.content_provider.fetch_avatar_body_texture(user_id)
 	if promise == null:
 		return null
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -96,7 +96,7 @@ func _async_capture_local(avatar) -> Image:
 	# Texture size is owned by Rust (avatar_scene.rs) and queried at capture
 	# time so GDScript can't drift from the actual Texture2DArray dimensions.
 	var size: Vector2i = (
-		Global.avatars.impostor_texture_size() if Global.avatars != null else Vector2i(256, 512)
+		Services.avatars.impostor_texture_size() if Services.avatars != null else Vector2i(256, 512)
 	)
 	var image: Image = await preview.async_get_viewport_image(false, size, 2.5)
 	preview.queue_free()

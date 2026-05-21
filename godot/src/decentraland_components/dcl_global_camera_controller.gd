@@ -36,8 +36,8 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(last_virtual_camera_entity_node):
 		last_virtual_camera_entity_node = null
 
-	var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
-	var scene_virtual_camera = Global.scene_runner.get_scene_virtual_camera(current_scene_id)
+	var current_scene_id = Services.scene_runner.get_current_parcel_scene_id()
+	var scene_virtual_camera = Services.scene_runner.get_scene_virtual_camera(current_scene_id)
 
 	var desired_target = null
 	var look_at_entity_node: Node3D = null
@@ -45,7 +45,7 @@ func _process(delta: float) -> void:
 	var transition_time: float = 0.0
 
 	if is_instance_valid(scene_virtual_camera) and scene_virtual_camera.entity_id > 0:
-		desired_target = Global.scene_runner.get_scene_entity_node_or_null_3d(
+		desired_target = Services.scene_runner.get_scene_entity_node_or_null_3d(
 			current_scene_id, scene_virtual_camera.entity_id
 		)
 
@@ -53,13 +53,13 @@ func _process(delta: float) -> void:
 			if scene_virtual_camera.look_at_entity_id == 1:
 				look_at_entity_node = Global.player_camera_node.get_parent_node_3d().get_parent()  # todo: it should be the feet
 			else:
-				look_at_entity_node = Global.scene_runner.get_scene_entity_node_or_null_3d(
+				look_at_entity_node = Services.scene_runner.get_scene_entity_node_or_null_3d(
 					current_scene_id, scene_virtual_camera.look_at_entity_id
 				)
 
 		transition_speed = scene_virtual_camera.transition_speed
 		transition_time = scene_virtual_camera.transition_time
-		Global.scene_runner.raycast_use_cursor_position = true
+		Services.scene_runner.raycast_use_cursor_position = true
 	else:
 		transition_time = DEFAULT_TRANSITION_TIME
 
@@ -150,7 +150,7 @@ func _process(delta: float) -> void:
 			Global.player_camera_node.make_current()
 			global_virtual_camera.clear_current()
 			last_camera_reached = true
-			Global.scene_runner.raycast_use_cursor_position = false
+			Services.scene_runner.raycast_use_cursor_position = false
 
 			# When coming back from virtual camera, we always show outline system and set the first/third person camera behaviour
 			var explorer = Global.get_explorer()

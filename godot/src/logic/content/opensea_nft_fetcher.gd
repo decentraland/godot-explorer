@@ -62,7 +62,7 @@ class Asset:
 
 	func async_download_image():
 		var texture_hash = get_hash()
-		var promise = Global.content_provider.fetch_texture_by_url(texture_hash, image_url)
+		var promise = Services.content_provider.fetch_texture_by_url(texture_hash, image_url)
 		var result = await PromiseUtils.async_awaiter(promise)
 		if result is PromiseError:
 			printerr(
@@ -100,7 +100,7 @@ func _async_request_nft(completed_promise: Promise, urn: DclUrn):
 		"Content-Type": "application/json",
 		"X-API-KEY": API_KEY,
 	}
-	var asset_promise: Promise = Global.http_requester.request_json(
+	var asset_promise: Promise = Services.http_requester.request_json(
 		url, HTTPClient.METHOD_GET, "", headers
 	)
 	var asset_result = await PromiseUtils.async_awaiter(asset_promise)

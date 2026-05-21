@@ -18,9 +18,9 @@ func _on_rich_text_label_meta_clicked(meta: Variant) -> void:
 
 
 func _on_button_accept_pressed() -> void:
-	Global.metrics.track_screen_viewed("ACCEPT_EULA", "")
-	Global.metrics.track_click_button("accept", "ACCEPT_EULA", "")
-	Global.metrics.flush()
+	Services.metrics.track_screen_viewed("ACCEPT_EULA", "")
+	Services.metrics.track_click_button("accept", "ACCEPT_EULA", "")
+	Services.metrics.flush()
 	spinner.show()
 	control_separator.hide()
 	button_accept.hide()
@@ -39,8 +39,8 @@ func _on_control_gui_input(event: InputEvent) -> void:
 
 
 func _on_timer_timeout() -> void:
-	Global.get_config().terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
-	Global.get_config().save_to_settings_file()
+	Services.config.terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
+	Services.config.save_to_settings_file()
 	accepted.emit()
 	if !Global.is_xr():
 		get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")

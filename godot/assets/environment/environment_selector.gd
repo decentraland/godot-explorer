@@ -5,21 +5,21 @@ var sky: SkyBase = null
 
 
 func _ready():
-	set_skybox_and_shadow(Global.get_config().skybox)
-	set_anti_aliasing(Global.get_config().anti_aliasing)
-	set_bloom(Global.get_config().bloom_quality)
-	Global.get_config().param_changed.connect(self._on_config_changed)
+	set_skybox_and_shadow(Services.config.skybox)
+	set_anti_aliasing(Services.config.anti_aliasing)
+	set_bloom(Services.config.bloom_quality)
+	Services.config.param_changed.connect(self._on_config_changed)
 
 
 func _on_config_changed(param: ConfigData.ConfigParams):
 	if param == ConfigData.ConfigParams.SKY_BOX:
-		set_skybox_and_shadow(Global.get_config().skybox)
+		set_skybox_and_shadow(Services.config.skybox)
 	elif param == ConfigData.ConfigParams.SHADOW_QUALITY:
-		set_shadow(Global.get_config().shadow_quality)
+		set_shadow(Services.config.shadow_quality)
 	elif param == ConfigData.ConfigParams.BLOOM_QUALITY:
-		set_bloom(Global.get_config().bloom_quality)
+		set_bloom(Services.config.bloom_quality)
 	elif param == ConfigData.ConfigParams.ANTI_ALIASING:
-		set_anti_aliasing(Global.get_config().anti_aliasing)
+		set_anti_aliasing(Services.config.anti_aliasing)
 
 
 func set_skybox_and_shadow(skybox_index: int):
@@ -39,7 +39,7 @@ func set_skybox_and_shadow(skybox_index: int):
 				sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
 
 	add_child(sky)
-	set_shadow(Global.get_config().shadow_quality)
+	set_shadow(Services.config.shadow_quality)
 
 
 func set_shadow(shadow_quality: int):
@@ -95,7 +95,7 @@ func set_bloom(bloom_quality: int):
 # so it is the same than the environment that we want
 func set_anti_aliasing(anti_aliasing: int):
 	var value: RenderingServer.ViewportMSAA = RenderingServer.VIEWPORT_MSAA_DISABLED
-	match Global.get_config().anti_aliasing:
+	match Services.config.anti_aliasing:
 		0:  # OFF
 			value = RenderingServer.VIEWPORT_MSAA_DISABLED
 		1:  # x2

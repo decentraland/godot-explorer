@@ -46,7 +46,7 @@ var _close_node_to_free: PlaceholderManager = null
 
 func _ready():
 	# Out of the lobby — restore the relaxed 10s flush cadence so feed/search events batch.
-	Global.metrics.set_flush_interval(10.0)
+	Services.metrics.set_flush_interval(10.0)
 
 	var btn_group = ButtonGroup.new()
 	btn_group.allow_unpress = false
@@ -66,8 +66,8 @@ func _ready():
 	self.modulate = Color(1, 1, 1, 1)
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	if !is_in_game:
-		Global.metrics.track_screen_viewed(current_screen_name, '{"function": "ready"}')
-		Global.metrics.flush()
+		Services.metrics.track_screen_viewed(current_screen_name, '{"function": "ready"}')
+		Services.metrics.flush()
 
 	control_settings.placeholder.visible = false
 	control_discover.placeholder.visible = false
@@ -78,10 +78,10 @@ func _ready():
 	# Connect to notification clicked signal for reward notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
-	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
-	Global.deep_link_router.deep_link_jump.connect(_async_on_deep_link_jump)
-	Global.deep_link_router.deep_link_open_event.connect(_async_on_deep_link_open_event)
-	Global.deep_link_router.deep_link_open_place.connect(_async_on_deep_link_open_place)
+	Services.deep_link_router.deep_link_received.connect(_on_deep_link_received)
+	Services.deep_link_router.deep_link_jump.connect(_async_on_deep_link_jump)
+	Services.deep_link_router.deep_link_open_event.connect(_async_on_deep_link_open_event)
+	Services.deep_link_router.deep_link_open_place.connect(_async_on_deep_link_open_place)
 	Global.open_settings.connect(async_show_settings)
 	Global.open_backpack.connect(async_show_backpack)
 	Global.open_discover.connect(async_show_discover)
@@ -97,7 +97,7 @@ func _ready():
 	# was already emitted before menu connected its signals. Route the pending
 	# deep link now that we are ready.
 	if not Global.deep_link_url.is_empty():
-		Global.deep_link_router.route.call_deferred()
+		Services.deep_link_router.route.call_deferred()
 
 
 func open():
@@ -112,10 +112,10 @@ func async_close():
 	if (
 		selected_node
 		and _needs_save_on_leave(selected_node)
-		and Global.player_identity.has_changes()
+		and Services.player_identity.has_changes()
 	):
 		control_deploying_profile.show()
-		await Global.player_identity.async_save_profile()
+		await Services.player_identity.async_save_profile()
 		control_deploying_profile.hide()
 	_close_modulate_tween = create_tween()
 	_close_modulate_tween.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(
@@ -226,25 +226,25 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 
 func select_settings_screen(play_sfx: bool = true):
 	current_screen_name = ("SETTINGS" if Global.is_orientation_portrait() else "SETTINGS_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name, "")
+	Services.metrics.track_screen_viewed(current_screen_name, "")
 	async_select_node(control_settings, play_sfx)
 
 
 func select_discover_screen(play_sfx: bool = true):
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name, "")
+	Services.metrics.track_screen_viewed(current_screen_name, "")
 	async_select_node(control_discover, play_sfx)
 
 
 func select_backpack_screen(play_sfx: bool = true):
 	current_screen_name = ("BACKPACK" if Global.is_orientation_portrait() else "BACKPACK_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name, "")
+	Services.metrics.track_screen_viewed(current_screen_name, "")
 	async_select_node(control_backpack, play_sfx)
 
 
 func select_profile_screen(play_sfx: bool = true, portrait: bool = false):
 	current_screen_name = ("PROFILE" if portrait else "PROFILE_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name, "")
+	Services.metrics.track_screen_viewed(current_screen_name, "")
 	var node = control_profile_portrait if portrait else control_profile_settings
 	async_select_node(node, play_sfx)
 
@@ -265,9 +265,9 @@ func async_select_node(node: PlaceholderManager, play_sfx: bool = true):
 		# Set selected_node early so rapid re-selection is detected
 		selected_node = node
 		if previous_node and previous_node.instance:
-			if _needs_save_on_leave(previous_node) and Global.player_identity.has_changes():
+			if _needs_save_on_leave(previous_node) and Services.player_identity.has_changes():
 				control_deploying_profile.show()
-				await Global.player_identity.async_save_profile()
+				await Services.player_identity.async_save_profile()
 				control_deploying_profile.hide()
 				# User may have navigated elsewhere during the await
 				if selected_node != node:
@@ -276,7 +276,7 @@ func async_select_node(node: PlaceholderManager, play_sfx: bool = true):
 		fade_in(node)
 
 		if play_sfx:
-			UiSounds.play_sound("generic_button_press")
+			Services.ui_sounds.play_sound("generic_button_press")
 	if selected_node == node:
 		if selected_node.instance:
 			selected_node.instance.show()
@@ -315,16 +315,16 @@ func fade_out(node: PlaceholderManager):
 func _on_visibility_changed():
 	if is_visible_in_tree():
 		Global.on_menu_open.emit()
-		UiSounds.play_sound("mainmenu_widget_open")
+		Services.ui_sounds.play_sound("mainmenu_widget_open")
 		grab_focus()
 		Global.explorer_release_focus()
 	else:
-		UiSounds.play_sound("mainmenu_widget_close")
+		Services.ui_sounds.play_sound("mainmenu_widget_close")
 		Global.on_menu_close.emit()
 
 
 func _async_request_hide_menu():
-	await Global.player_identity.async_save_profile()
+	await Services.player_identity.async_save_profile()
 	hide_menu.emit()
 
 
@@ -340,7 +340,7 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 
 
 func _on_deep_link_received() -> void:
-	Global.deep_link_router.route()
+	Services.deep_link_router.route()
 
 
 func _async_on_deep_link_jump() -> void:

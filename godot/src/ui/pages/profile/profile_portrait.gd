@@ -12,7 +12,7 @@ var _opened_from_landscape: bool = false
 
 
 func _ready() -> void:
-	UiSounds.install_audio_recusirve(self)
+	Services.ui_sounds.install_audio_recusirve(self)
 	var content = draggable_bottom_sheet.get_content_instance()
 	if content:
 		content.emote_pressed.connect(_on_emote_pressed)
@@ -38,7 +38,7 @@ func _on_visibility_changed() -> void:
 
 func show_editor(from_landscape: bool = false) -> void:
 	_opened_from_landscape = from_landscape
-	var profile := Global.player_identity.get_profile_or_null()
+	var profile := Services.player_identity.get_profile_or_null()
 	if profile != null:
 		profile_editor.populate(profile)
 	canvas_layer.visible = true
@@ -52,7 +52,7 @@ func hide_editor() -> void:
 func _on_close_editor(saved: bool = false) -> void:
 	hide_editor()
 	if saved:
-		Global.player_identity.set_profile(Global.player_identity.get_mutable_profile())
+		Services.player_identity.set_profile(Services.player_identity.get_mutable_profile())
 		_refresh_content_from_mutable()
 	draggable_bottom_sheet.reset_to_half()
 	if _opened_from_landscape:
@@ -75,7 +75,7 @@ func _show_avatar() -> void:
 	_avatar_preview.preview_margin_top = 64
 	_avatar_preview.preview_margin_bottom = 46
 	avatar_container.add_child(_avatar_preview)
-	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+	var profile: DclUserProfile = Services.player_identity.get_profile_or_null()
 	if profile != null:
 		_avatar_preview.avatar.async_update_avatar_from_profile(profile)
 
@@ -89,7 +89,7 @@ func _free_avatar() -> void:
 
 
 func _refresh_content() -> void:
-	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+	var profile: DclUserProfile = Services.player_identity.get_profile_or_null()
 	if profile == null:
 		return
 	var content = draggable_bottom_sheet.get_content_instance()
@@ -99,7 +99,7 @@ func _refresh_content() -> void:
 
 
 func _refresh_content_from_mutable() -> void:
-	var profile: DclUserProfile = Global.player_identity.get_mutable_profile()
+	var profile: DclUserProfile = Services.player_identity.get_mutable_profile()
 	if profile == null:
 		return
 	var content = draggable_bottom_sheet.get_content_instance()

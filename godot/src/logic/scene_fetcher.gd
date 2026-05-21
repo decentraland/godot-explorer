@@ -95,7 +95,7 @@ func get_preview_ws() -> PreviewWebSocket:
 
 
 func _ready():
-	Global.realm.realm_changed.connect(self._on_realm_changed)
+	Services.realm.realm_changed.connect(self._on_realm_changed)
 
 	add_child(_preview_ws)
 	_preview_ws.scene_update.connect(_on_preview_scene_update)
@@ -121,8 +121,8 @@ func _ready():
 	var scene_radius = 5 if _use_dynamic_loading else 0
 	scene_entity_coordinator.set_scene_radius(scene_radius)
 
-	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
-	Global.scene_runner.scene_crashed.connect(self._on_scene_crashed)
+	Services.scene_runner.scene_killed.connect(self.on_scene_killed)
+	Services.scene_runner.scene_crashed.connect(self._on_scene_crashed)
 	Global.loading_finished.connect(self.on_loading_finished)
 
 
@@ -158,11 +158,11 @@ func on_scene_killed(killed_scene_id, _entity_id):
 
 
 func _on_scene_crashed(crashed_scene_id: int, entity_id: String) -> void:
-	var current_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
+	var current_scene_id: int = Services.scene_runner.get_current_parcel_scene_id()
 	if crashed_scene_id != current_scene_id:
 		return
-	if Global.modal_manager != null:
-		Global.modal_manager.async_show_scene_crash_modal(entity_id)
+	if Services.modal_manager != null:
+		Services.modal_manager.async_show_scene_crash_modal(entity_id)
 
 
 func get_current_scene_data() -> SceneItem:
@@ -338,12 +338,12 @@ func _async_on_desired_scene_changed():
 			else:
 				printerr("should load scene_id ", scene_id, " but data is empty")
 				# Report as fetched (with null definition) so loading session can progress
-				Global.scene_runner.report_scene_fetched(scene_id)
+				Services.scene_runner.report_scene_fetched(scene_id)
 
 	# Start a loading session for the new scenes (cancels any existing session)
 	var loading_session_started := false
 	if scenes_to_load.size() > 0 and new_loading:
-		Global.scene_runner.start_loading_session(scenes_to_load)
+		Services.scene_runner.start_loading_session(scenes_to_load)
 		loading_session_started = true
 
 	# Keep the old signal for backwards compatibility
@@ -371,7 +371,7 @@ func _async_on_desired_scene_changed():
 			# Don't kill or remove scenes that are still loading (scene_number_id == -1)
 			# Don't kill or remove global scenes
 			if not scene.is_global and scene.scene_number_id != -1:
-				Global.scene_runner.kill_scene(scene.scene_number_id)
+				Services.scene_runner.kill_scene(scene.scene_number_id)
 				if base_floor_manager:
 					base_floor_manager.remove_scene_floors(scene.id)
 				scenes_to_remove.append(scene_id)
@@ -443,7 +443,7 @@ func _async_on_desired_scene_changed():
 
 		# Start a loading session for newly discovered scenes
 		if new_scenes_to_load.size() > 0:
-			Global.scene_runner.start_loading_session(new_scenes_to_load)
+			Services.scene_runner.start_loading_session(new_scenes_to_load)
 			loading_session_started = true
 
 		if new_loading_promises.size() > 0:
@@ -461,10 +461,10 @@ func _async_on_desired_scene_changed():
 		# - We're not in a reloading state (normal update, not teleport/realm change)
 		if (
 			not loading_session_started
-			and not Global.scene_runner.has_active_loading_session()
+			and not Services.scene_runner.has_active_loading_session()
 			and (coordinator_was_busy or not is_reloading_now)
 		):
-			Global.scene_runner.loading_complete.emit(-1)
+			Services.scene_runner.loading_complete.emit(-1)
 
 	var empty_parcels_coords = []
 	if use_floating_islands and !last_scene_group_hash.is_empty():
@@ -482,15 +482,15 @@ func _async_on_desired_scene_changed():
 
 
 func _on_realm_changed():
-	var content_base_url = Global.realm.content_base_url
+	var content_base_url = Services.realm.content_base_url
 
-	Global.get_config().last_realm_joined = Global.realm.realm_url
-	Global.get_config().save_to_settings_file()
+	Services.config.last_realm_joined = Services.realm.realm_url
+	Services.config.save_to_settings_file()
 
 	# In preview mode, purge cache on first scene load to avoid using stale cached content
 	# This prevents the race condition where cached content is used before
 	# the WebSocket SCENE_UPDATE can trigger a reload
-	var is_preview_mode = Global.cli.preview_mode or not Global.deep_link_obj.preview.is_empty()
+	var is_preview_mode = Services.cli.preview_mode or not Global.deep_link_obj.preview.is_empty()
 	if is_preview_mode:
 		_purge_cache_on_first_load = true
 
@@ -503,13 +503,15 @@ func _on_realm_changed():
 	var should_use_dynamic = deep_link_dynamic and is_using_floating_islands()
 	set_dynamic_loading_mode(should_use_dynamic)
 
-	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
+	var scenes_urns: Array = Services.realm.realm_about.get("configurations", {}).get(
+		"scenesUrn", []
+	)
 
 	# Force floating island recreation on realm change
 	last_scene_group_hash = ""
 
-	if not Global.realm.realm_city_loader_content_base_url.is_empty():
-		content_base_url = Global.realm.realm_city_loader_content_base_url
+	if not Services.realm.realm_city_loader_content_base_url.is_empty():
+		content_base_url = Services.realm.realm_city_loader_content_base_url
 
 	# Use floating islands mode (single scene) by default
 	# Only use dynamic city mode (radius-based) in test/renderer modes
@@ -526,7 +528,7 @@ func _on_realm_changed():
 
 	for scene: SceneItem in loaded_scenes.values():
 		if not scene.is_global and scene.scene_number_id != -1:
-			Global.scene_runner.kill_scene(scene.scene_number_id)
+			Services.scene_runner.kill_scene(scene.scene_number_id)
 
 	_clear_floating_islands_state()
 
@@ -535,7 +537,7 @@ func _on_realm_changed():
 
 func set_portable_experiences_urns(urns: Array[String]) -> void:
 	var global_scenes_urns: Array = (
-		Global.realm.realm_about.get("configurations", {}).get("globalScenesUrn", []).duplicate()
+		Services.realm.realm_about.get("configurations", {}).get("globalScenesUrn", []).duplicate()
 	)
 
 	desired_portable_experiences_urns = urns
@@ -553,7 +555,9 @@ func get_scene_by_req_id(request_id: int):
 
 func is_using_floating_islands() -> bool:
 	return not (
-		Global.cli.scene_test_mode or Global.cli.scene_renderer_mode or Global.cli.preview_mode
+		Services.cli.scene_test_mode
+		or Services.cli.scene_renderer_mode
+		or Services.cli.preview_mode
 	)
 
 
@@ -564,7 +568,7 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 		var scene: SceneItem = loaded_scenes[scene_id]
 		if scene.scene_number_id != current_scene_id and scene.scene_number_id != -1:
 			# Kill the scene
-			Global.scene_runner.kill_scene(scene.scene_number_id)
+			Services.scene_runner.kill_scene(scene.scene_number_id)
 			# Remove base floors
 			if base_floor_manager:
 				base_floor_manager.remove_scene_floors(scene.id)
@@ -689,7 +693,7 @@ func _regenerate_floating_islands() -> void:
 
 	_pending_empty_parcel_spawn = empty_parcel_center if is_empty_parcel_mode else INVALID_PARCEL
 
-	Global.scene_runner.start_floating_islands(total)
+	Services.scene_runner.start_floating_islands(total)
 	islands_manager.set_player_parcel(current_position)
 	islands_manager.set_candidate_parcels(candidates, corner_bytes)
 
@@ -706,11 +710,11 @@ func _append_corner_config_bytes(buffer: PackedByteArray, config: CornerConfigur
 
 
 func _on_islands_generation_progress(created: int, total: int) -> void:
-	Global.scene_runner.report_floating_islands_progress(created, total)
+	Services.scene_runner.report_floating_islands_progress(created, total)
 
 
 func _on_islands_generation_complete() -> void:
-	Global.scene_runner.finish_floating_islands()
+	Services.scene_runner.finish_floating_islands()
 	if _pending_empty_parcel_spawn != INVALID_PARCEL:
 		var target := _pending_empty_parcel_spawn
 		_pending_empty_parcel_spawn = INVALID_PARCEL
@@ -794,7 +798,7 @@ func update_position(new_position: Vector2i, is_teleport: bool) -> void:
 		for scene_id in loaded_scenes.keys():
 			var scene: SceneItem = loaded_scenes[scene_id]
 			if not scene.is_global and scene.scene_number_id != -1:
-				Global.scene_runner.kill_scene(scene.scene_number_id)
+				Services.scene_runner.kill_scene(scene.scene_number_id)
 				if base_floor_manager:
 					base_floor_manager.remove_scene_floors(scene.id)
 
@@ -864,7 +868,7 @@ func async_load_scene(
 		var purge_promises: Array = []
 		for file_path in files:
 			var file_hash = content_mapping.get_hash(file_path)
-			purge_promises.push_back(Global.content_provider.purge_file(file_hash))
+			purge_promises.push_back(Services.content_provider.purge_file(file_hash))
 		# Await all purge operations to complete before fetching
 		await PromiseUtils.async_all(purge_promises)
 
@@ -872,7 +876,7 @@ func async_load_scene(
 	var script_promise: Promise = null
 	if scene_entity_definition.is_sdk7():
 		var script_path := scene_entity_definition.get_main_js_path()
-		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)
+		script_promise = Services.content_provider.fetch_file(script_path, content_mapping)
 		local_main_js_path = "user://content/" + scene_entity_definition.get_main_js_hash()
 	else:
 		if (
@@ -882,7 +886,7 @@ func async_load_scene(
 			local_main_js_path = String(FIXED_LOCAL_ADAPTATION_LAYER)
 		else:
 			var script_hash = "sdk-adaptation-layer.js"
-			script_promise = Global.content_provider.fetch_file_by_url(
+			script_promise = Services.content_provider.fetch_file_by_url(
 				script_hash, ADAPTATION_LAYER_URL
 			)
 			local_main_js_path = "user://content/" + script_hash
@@ -897,7 +901,7 @@ func async_load_scene(
 				script_res.get_error()
 			)
 			# Still report as fetched (with error) so loading session can progress
-			Global.scene_runner.report_scene_fetched(scene_entity_id)
+			Services.scene_runner.report_scene_fetched(scene_entity_id)
 
 			send_scene_failed_metrics(
 				scene_entity_id, "script_fetch_failed", script_res.get_error()
@@ -909,7 +913,7 @@ func async_load_scene(
 	var local_main_crdt_path: String = String()
 	if not main_crdt_file_hash.is_empty():
 		local_main_crdt_path = "user://content/" + main_crdt_file_hash
-		var promise: Promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
+		var promise: Promise = Services.content_provider.fetch_file("main.crdt", content_mapping)
 
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:
@@ -920,7 +924,7 @@ func async_load_scene(
 				res.get_error()
 			)
 			# Still report as fetched (with error) so loading session can progress
-			Global.scene_runner.report_scene_fetched(scene_entity_id)
+			Services.scene_runner.report_scene_fetched(scene_entity_id)
 
 			send_scene_failed_metrics(scene_entity_id, "crdt_fetch_failed", res.get_error())
 
@@ -928,7 +932,7 @@ func async_load_scene(
 
 	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
 	var asset_url: String = (
-		"%s/%s-mobile.zip" % [Global.content_provider.get_optimized_base_url(), scene_entity_id]
+		"%s/%s-mobile.zip" % [Services.content_provider.get_optimized_base_url(), scene_entity_id]
 	)
 
 	# Skip optimized zip download when:
@@ -936,7 +940,7 @@ func async_load_scene(
 	# - Testing scene mode (handled separately)
 	# - --only-no-optimized flag (explicitly loading non-optimized scenes)
 	var skip_optimized = (
-		Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
+		Global.is_xr() or Global.get_testing_scene_mode() or Services.cli.only_no_optimized
 	)
 
 	var download_success := false
@@ -950,7 +954,7 @@ func async_load_scene(
 		else:
 			# First check if the file exists remotely (HEAD request)
 			# This avoids treating 404s as errors - scenes without optimized versions are expected
-			var exists_promise = Global.content_provider.check_remote_file_exists(asset_url)
+			var exists_promise = Services.content_provider.check_remote_file_exists(asset_url)
 			var exists_res = await PromiseUtils.async_awaiter(exists_promise)
 
 			if exists_res is PromiseError or exists_res == false:
@@ -958,7 +962,7 @@ func async_load_scene(
 				file_not_found_remotely = true
 			else:
 				# File exists remotely, proceed with download
-				var download_promise: Promise = Global.content_provider.fetch_file_by_url(
+				var download_promise: Promise = Services.content_provider.fetch_file_by_url(
 					scene_hash_zip, asset_url
 				)
 				var download_res = await PromiseUtils.async_awaiter(download_promise)
@@ -972,10 +976,10 @@ func async_load_scene(
 	elif file_not_found_remotely:
 		# Optimized version not available - expected for non-optimized scenes
 		# --only-optimized: Skip scene if it's not optimized
-		if Global.cli.only_optimized:
+		if Services.cli.only_optimized:
 			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
 			# Still report as fetched so loading session can progress
-			Global.scene_runner.report_scene_fetched(scene_entity_id)
+			Services.scene_runner.report_scene_fetched(scene_entity_id)
 			loaded_scenes.erase(scene_entity_id)
 			return PromiseUtils.resolved(false)
 	elif download_error != null or not download_success:
@@ -986,10 +990,10 @@ func async_load_scene(
 		send_scene_failed_metrics(scene_entity_id, "zip_download_failed")
 
 		# --only-optimized: Skip scene if download failed
-		if Global.cli.only_optimized:
+		if Services.cli.only_optimized:
 			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
 			# Still report as fetched so loading session can progress
-			Global.scene_runner.report_scene_fetched(scene_entity_id)
+			Services.scene_runner.report_scene_fetched(scene_entity_id)
 			loaded_scenes.erase(scene_entity_id)
 			return PromiseUtils.resolved(false)
 	else:
@@ -1004,7 +1008,7 @@ func async_load_scene(
 			if file:
 				# Read the file's content as a string
 				var json_string = file.get_as_text()
-				var add_promise = Global.content_provider.load_optimized_assets_metadata(
+				var add_promise = Services.content_provider.load_optimized_assets_metadata(
 					json_string
 				)
 				file.close()
@@ -1022,12 +1026,12 @@ func async_load_scene(
 	if not loaded_scenes.has(scene_entity_id):
 		printerr("Scene was removed while loading:", scene_entity_id)
 		# Still report as fetched so loading session can progress
-		Global.scene_runner.report_scene_fetched(scene_entity_id)
+		Services.scene_runner.report_scene_fetched(scene_entity_id)
 		send_scene_failed_metrics(scene_entity_id, "scene_removed_while_loading")
 		return PromiseUtils.resolved(false)
 
 	# Report that this scene's metadata/content has been fetched
-	Global.scene_runner.report_scene_fetched(scene_entity_id)
+	Services.scene_runner.report_scene_fetched(scene_entity_id)
 
 	var scene_in_dict = loaded_scenes[scene_entity_id]
 	_on_try_spawn_scene(scene_in_dict, local_main_js_path, local_main_crdt_path)
@@ -1047,7 +1051,7 @@ func send_scene_failed_metrics(
 	}
 	if error_message != "":
 		error_data["error_message"] = error_message
-	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(error_data))
+	Services.metrics.track_screen_viewed("LOADING_END", JSON.stringify(error_data))
 
 
 func _on_try_spawn_scene(
@@ -1069,7 +1073,7 @@ func _on_try_spawn_scene(
 	if Global.has_javascript_debugger and _debugging_js_scene_id == scene_item.id:
 		enable_js_inspector = true
 
-	var scene_number_id: int = Global.scene_runner.start_scene(
+	var scene_number_id: int = Services.scene_runner.start_scene(
 		local_main_js_path,
 		local_main_crdt_path,
 		scene_item.scene_entity_definition,
@@ -1094,7 +1098,7 @@ func reload_scene(scene_id: String) -> void:
 	if scene != null:
 		var scene_number_id: int = scene.scene_number_id
 		if scene_number_id != -1:
-			Global.scene_runner.kill_scene(scene_number_id)
+			Services.scene_runner.kill_scene(scene_number_id)
 			if base_floor_manager:
 				base_floor_manager.remove_scene_floors(scene_id)
 
@@ -1105,7 +1109,7 @@ func reload_scene(scene_id: String) -> void:
 		if files.size() > 0:
 			for file_path in files:
 				var file_hash = content_mapping.get_hash(file_path)
-				Global.content_provider.purge_file(file_hash)
+				Services.content_provider.purge_file(file_hash)
 
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)

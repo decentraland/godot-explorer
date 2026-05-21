@@ -22,8 +22,8 @@ var _is_loading: bool = false
 
 
 func _ready() -> void:
-	Global.comms.disconnected.connect(_on_disconnected)
-	Global.comms.on_adapter_changed.connect(_on_adapter_changed)
+	Services.comms.disconnected.connect(_on_disconnected)
+	Services.comms.on_adapter_changed.connect(_on_adapter_changed)
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
 	Global.on_menu_close.connect(_async_on_menu_close_ban_recheck)
@@ -48,7 +48,7 @@ func _on_adapter_changed(_voice_chat_enabled: bool, _adapter_str: String) -> voi
 func _on_disconnected(reason: int) -> void:
 	# Store the adapter string FIRST before any cleanup (might be cleared by clean())
 	if _last_adapter_str.is_empty():
-		_last_adapter_str = Global.comms.get_current_adapter_conn_str()
+		_last_adapter_str = Services.comms.get_current_adapter_conn_str()
 
 	# DuplicateIdentity means someone else logged in - don't retry, show error immediately
 	if reason == REASON_DUPLICATE_IDENTITY:
@@ -64,7 +64,7 @@ func _on_disconnected(reason: int) -> void:
 		_should_stop_reconnecting = true
 		_scene_banned = true
 		if not _is_loading:
-			Global.modal_manager.async_show_ban_kicked_modal()
+			Services.modal_manager.async_show_ban_kicked_modal()
 		return
 
 	_last_disconnect_reason = reason
@@ -102,7 +102,7 @@ func _async_attempt_reconnect() -> void:
 		print("[DisconnectHandler] No adapter to reconnect to")
 		return
 
-	Global.comms.change_adapter(_last_adapter_str)
+	Services.comms.change_adapter(_last_adapter_str)
 
 
 func _show_disconnect_error(reason: int) -> void:
@@ -201,7 +201,7 @@ func _on_reconnect_pressed() -> void:
 	var adapter_to_reconnect = (
 		_last_adapter_str
 		if not _last_adapter_str.is_empty()
-		else Global.comms.get_current_adapter_conn_str()
+		else Services.comms.get_current_adapter_conn_str()
 	)
 
 	# Remove overlay
@@ -215,14 +215,14 @@ func _on_reconnect_pressed() -> void:
 
 	# Reconnect
 	if not adapter_to_reconnect.is_empty():
-		Global.comms.change_adapter(adapter_to_reconnect)
+		Services.comms.change_adapter(adapter_to_reconnect)
 
 
 func _on_loading_started() -> void:
 	_is_loading = true
 	# Close any visible ban modal during loading, but keep _scene_banned
 	# so _on_loading_finished can re-show the deferred modal.
-	Global.modal_manager.close_current_modal()
+	Services.modal_manager.close_current_modal()
 
 
 func _on_loading_finished() -> void:
@@ -230,7 +230,7 @@ func _on_loading_finished() -> void:
 
 	# If kicked during loading (scene room 403 or room metadata ban), show the deferred modal now
 	if _scene_banned:
-		Global.modal_manager.async_show_ban_kicked_modal()
+		Services.modal_manager.async_show_ban_kicked_modal()
 
 
 ## Re-check ban when the user closes the menu (back from discover).
@@ -242,5 +242,5 @@ func _async_on_menu_close_ban_recheck() -> void:
 	if not _scene_banned or _is_loading:
 		return
 	# Clear suppress — this is an intentional re-show, not a stale signal.
-	Global.modal_manager.clear_suppress_ban_kicked()
-	Global.modal_manager.async_show_ban_kicked_modal()
+	Services.modal_manager.clear_suppress_ban_kicked()
+	Services.modal_manager.async_show_ban_kicked_modal()

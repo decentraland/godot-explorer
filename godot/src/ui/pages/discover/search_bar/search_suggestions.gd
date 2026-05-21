@@ -64,7 +64,7 @@ func set_keyword_search_text(_search_text: String) -> void:
 		# when no API results are currently displayed.
 		if not _has_api_results:
 			var count_history := 0
-			for k in Global.get_config().search_history:
+			for k in Services.config.search_history:
 				if count_history >= 4:
 					break
 				var hist_keyword := Keyword.new(k, KeywordType.HISTORY)
@@ -257,8 +257,8 @@ func _on_keyword_selected(keyword: Keyword) -> void:
 
 func _on_button_clear_history_pressed() -> void:
 	var empty_history: Array[String] = []
-	Global.get_config().search_history = empty_history
-	Global.get_config().save_to_settings_file()
+	Services.config.search_history = empty_history
+	Services.config.save_to_settings_file()
 	set_keyword_search_text("")
 
 

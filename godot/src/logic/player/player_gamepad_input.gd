@@ -11,7 +11,7 @@ var _camera_sensitivity_multiplier: float = 0.0
 func _init(player: Player):
 	_player = player
 	_refresh_camera_sensitivity_multiplier()
-	Global.get_config().param_changed.connect(_on_config_param_changed)
+	Services.config.param_changed.connect(_on_config_param_changed)
 
 	# Erase gamepad button events so face buttons are handled manually with LB as modifier
 	for action in ["ia_jump", "ia_primary", "ia_secondary", "ia_action_3", "ia_action_4"]:
@@ -94,4 +94,4 @@ func _on_config_param_changed(param: int) -> void:
 
 
 func _refresh_camera_sensitivity_multiplier() -> void:
-	_camera_sensitivity_multiplier = Global.get_config().gamepad_camera_sensitivity * 0.06
+	_camera_sensitivity_multiplier = Services.config.gamepad_camera_sensitivity * 0.06

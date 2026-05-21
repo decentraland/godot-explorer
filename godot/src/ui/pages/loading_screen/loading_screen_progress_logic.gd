@@ -9,22 +9,22 @@ signal loading_show_requested
 
 func _ready():
 	# Connect to SceneManager loading signals
-	Global.scene_runner.loading_started.connect(_on_loading_started)
-	Global.scene_runner.loading_phase_changed.connect(_on_phase_changed)
-	Global.scene_runner.loading_progress.connect(_on_loading_progress)
-	Global.scene_runner.loading_complete.connect(_on_loading_complete)
-	Global.scene_runner.loading_timeout.connect(_on_loading_timeout)
-	Global.scene_runner.loading_cancelled.connect(_on_loading_cancelled)
+	Services.scene_runner.loading_started.connect(_on_loading_started)
+	Services.scene_runner.loading_phase_changed.connect(_on_phase_changed)
+	Services.scene_runner.loading_progress.connect(_on_loading_progress)
+	Services.scene_runner.loading_complete.connect(_on_loading_complete)
+	Services.scene_runner.loading_timeout.connect(_on_loading_timeout)
+	Services.scene_runner.loading_cancelled.connect(_on_loading_cancelled)
 
 
 ## Called by loading_screen.gd when it wants to enable loading
 func enable_loading_screen():
 	# Show loading screen immediately - the LoadingSession will update progress later
-	Global.content_provider.set_max_concurrent_downloads(12)
-	Global.content_provider.set_max_low_priority_downloads(2)
+	Services.content_provider.set_max_concurrent_downloads(12)
+	Services.content_provider.set_max_low_priority_downloads(2)
 
 	# Defer scene room connection until loading finishes
-	Global.comms.hold_comms()
+	Services.comms.hold_comms()
 
 	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
@@ -42,11 +42,11 @@ func hide_loading_screen():
 
 
 func _on_loading_started(_session_id: int, _expected_count: int):
-	Global.content_provider.set_max_concurrent_downloads(12)
-	Global.content_provider.set_max_low_priority_downloads(2)
+	Services.content_provider.set_max_concurrent_downloads(12)
+	Services.content_provider.set_max_low_priority_downloads(2)
 
 	# Defer scene room connection until loading finishes
-	Global.comms.hold_comms()
+	Services.comms.hold_comms()
 
 	# Mute voice chat and scene volume during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
@@ -84,11 +84,11 @@ func _on_loading_cancelled(_session_id: int):
 
 
 func _hide_loading_screen():
-	Global.content_provider.set_max_concurrent_downloads(12)
-	Global.content_provider.set_max_low_priority_downloads(12)
+	Services.content_provider.set_max_concurrent_downloads(12)
+	Services.content_provider.set_max_low_priority_downloads(12)
 
 	# Connect the scene room now that loading is done
-	Global.comms.release_comms()
+	Services.comms.release_comms()
 
 	# Restore voice chat and scene volume
 	AudioSettings.apply_scene_volume_settings()
@@ -97,10 +97,10 @@ func _hide_loading_screen():
 	loading_screen.async_hide_loading_screen_effect()
 
 	# LOADING_END (Success) metric
-	var pos = Global.scene_fetcher.current_position
+	var pos = Services.scene_fetcher.current_position
 	var end_data = {
-		"scene_id": Global.scene_fetcher.current_scene_entity_id,
+		"scene_id": Services.scene_fetcher.current_scene_entity_id,
 		"position": "%d,%d" % [pos.x, pos.y],
 		"status": "Success"
 	}
-	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(end_data))
+	Services.metrics.track_screen_viewed("LOADING_END", JSON.stringify(end_data))

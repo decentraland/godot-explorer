@@ -586,14 +586,14 @@ static func get_curated_wearable_list(
 ) -> CuratedWearableList:
 	var ret = CuratedWearableList.new()
 
-	var body_shape = Global.content_provider.get_wearable(body_shape_id)
+	var body_shape = Services.content_provider.get_wearable(body_shape_id)
 	if not DclItemEntityDefinition.is_valid_wearable(body_shape, body_shape_id, false):
 		return ret
 
 	ret.wearables_by_category[Categories.BODY_SHAPE] = body_shape
 
 	for wearable_id in wearables:
-		var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_id)
+		var wearable: DclItemEntityDefinition = Services.content_provider.get_wearable(wearable_id)
 		if DclItemEntityDefinition.is_valid_wearable(wearable, body_shape_id, false):
 			var category = wearable.get_category()
 			if not ret.wearables_by_category.has(category):
@@ -633,7 +633,7 @@ static func get_curated_wearable_list(
 		# Store which categories have explicit wearables (not fallbacks)
 		var explicit_wearable_categories: Array = []
 		for wearable_id in wearables:
-			var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(
+			var wearable: DclItemEntityDefinition = Services.content_provider.get_wearable(
 				wearable_id
 			)
 			if wearable != null:
@@ -670,9 +670,9 @@ static func set_fallback_for_missing_needed_categories(
 			needed_catagory
 		)
 		if fallback_wearable_id != null:
-			var fallback_wearable = Global.content_provider.get_wearable(fallback_wearable_id)
+			var fallback_wearable = Services.content_provider.get_wearable(fallback_wearable_id)
 			if DclItemEntityDefinition.is_valid_wearable(fallback_wearable, body_shape_id, false):
-				wearables_by_category[needed_catagory] = Global.content_provider.get_wearable(
+				wearables_by_category[needed_catagory] = Services.content_provider.get_wearable(
 					fallback_wearable_id
 				)
 			else:

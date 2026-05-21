@@ -78,15 +78,15 @@ func set_chat(address: String, message: String, _timestamp: float) -> void:
 	if reduce_text and new_text.length() > MAX_CHARS_REDUCED:
 		new_text = new_text.substr(0, MAX_CHARS_REDUCED) + "..."
 
-	var own_address: String = Global.player_identity.get_address_str()
+	var own_address: String = Services.player_identity.get_address_str()
 	is_own_message = own_address == address
 
 	if address == "system":
 		_set_system_sender()
 	elif address == own_address:
-		set_avatar(Global.scene_runner.player_avatar_node)
+		set_avatar(Services.scene_runner.player_avatar_node)
 	else:
-		set_avatar(Global.avatars.get_avatar_by_address(address))
+		set_avatar(Services.avatars.get_avatar_by_address(address))
 
 	_apply_message_background()
 
@@ -326,7 +326,7 @@ func _sanitize_for_display(t: String) -> String:
 
 
 func _is_valid_mention(mention: String) -> bool:
-	if not Global.avatars:
+	if not Services.avatars:
 		return false
 
 	if not mention.begins_with("@"):
@@ -334,7 +334,7 @@ func _is_valid_mention(mention: String) -> bool:
 
 	var mention_without_at = mention.substr(1)
 
-	var avatars = Global.avatars.get_avatars()
+	var avatars = Services.avatars.get_avatars()
 	for avatar in avatars:
 		if avatar and avatar.has_method("get_avatar_name"):
 			var avatar_name = avatar.get_avatar_name()
@@ -349,7 +349,7 @@ func _is_mentioning_me(mention: String) -> bool:
 
 	var mention_without_at = mention.substr(1)
 
-	var me = Global.player_identity.get_profile_or_null()
+	var me = Services.player_identity.get_profile_or_null()
 	if not me:
 		return false
 
@@ -392,12 +392,12 @@ func _on_url_clicked(meta) -> void:
 		_handle_coordinate_click(coord_str)
 	elif meta_str.begins_with("world:"):
 		var world_name = meta_str.substr(6)
-		Global.modal_manager.async_show_world_modal(world_name)
+		Services.modal_manager.async_show_world_modal(world_name)
 	elif meta_str.begins_with("mention:"):
 		var mention_str = meta_str.substr(8)
 		_handle_mention_click(mention_str)
 	else:
-		Global.modal_manager.async_show_external_link_modal(meta_str)
+		Services.modal_manager.async_show_external_link_modal(meta_str)
 	if Global.is_mobile():
 		DisplayServer.virtual_keyboard_hide()
 
@@ -407,7 +407,7 @@ func _handle_coordinate_click(coord_str: String) -> void:
 	if coords.size() == 2:
 		var x = int(coords[0])
 		var y = int(coords[1])
-		Global.modal_manager.async_show_teleport_modal(Vector2i(x, y))
+		Services.modal_manager.async_show_teleport_modal(Vector2i(x, y))
 
 
 func _handle_mention_click(mention_str: String) -> void:
@@ -416,8 +416,8 @@ func _handle_mention_click(mention_str: String) -> void:
 
 	var mention_without_at = mention_str.substr(1)
 
-	if Global.avatars:
-		var avatars = Global.avatars.get_avatars()
+	if Services.avatars:
+		var avatars = Services.avatars.get_avatars()
 		for avatar in avatars:
 			if avatar and avatar.has_method("get_avatar_name"):
 				var avatar_name = avatar.get_avatar_name()

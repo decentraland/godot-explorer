@@ -97,7 +97,7 @@ func _ready() -> void:
 
 
 func _connect_social_service_signals() -> void:
-	var social = Global.social_service
+	var social = Services.social_service
 	_safe_connect(social.friendship_request_received, _on_friendship_request_received)
 	_safe_connect(social.friendship_request_accepted, _async_on_friendship_request_accepted)
 	_safe_connect(social.friendship_request_rejected, _on_friendship_request_rejected)
@@ -139,7 +139,7 @@ func show_panel_on_friends_tab() -> void:
 	show()
 	_load_unloaded_items()
 	_hide_all_drowpdown_highlights()
-	if not Global.player_identity.is_guest:
+	if not Services.player_identity.is_guest:
 		v_box_container_friends_tab.show()
 		button_friends.button_pressed = true
 	else:
@@ -174,7 +174,7 @@ func async_initial_friends_load() -> void:
 ## Used by the proactive re-subscribe timer to avoid UI disruption.
 func async_refresh_friends() -> void:
 	# Fetch all friends (reusing the same RPC as initial load)
-	var promise = Global.social_service.get_friends(100, 0, -1)
+	var promise = Services.social_service.get_friends(100, 0, -1)
 	await PromiseUtils.async_awaiter(promise)
 	if promise.is_rejected():
 		return  # Silent failure — keep showing current data
@@ -198,7 +198,7 @@ func async_refresh_friends() -> void:
 	offline_list.sync_items(offline_items)
 
 	# Also refresh pending requests
-	var req_promise = Global.social_service.get_pending_requests(100, 0)
+	var req_promise = Services.social_service.get_pending_requests(100, 0)
 	await PromiseUtils.async_awaiter(req_promise)
 	if not req_promise.is_rejected():
 		var requests = req_promise.get_data()
@@ -236,7 +236,7 @@ func _on_button_friends_toggled(toggled_on: bool) -> void:
 func _on_button_nearby_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		# nearby_menu_opened metric
-		Global.metrics.track_click_button("nearby_menu_opened", "SOCIAL_PANEL", "")
+		Services.metrics.track_click_button("nearby_menu_opened", "SOCIAL_PANEL", "")
 		toggle_nearby()
 
 
@@ -250,7 +250,7 @@ func toggle_nearby() -> void:
 func _on_button_blocked_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		# blocked_menu_opened metric
-		Global.metrics.track_click_button("blocked_menu_opened", "SOCIAL_PANEL", "")
+		Services.metrics.track_click_button("blocked_menu_opened", "SOCIAL_PANEL", "")
 
 		_hide_all()
 		color_rect_blocked.self_modulate = Color.WHITE
@@ -269,7 +269,7 @@ func _on_offline_button_toggled(toggled_on: bool) -> void:
 
 func _update_dropdown_visibility() -> void:
 	# Check if user is a guest - guests don't have access to friends service
-	var is_guest = Global.player_identity.is_guest
+	var is_guest = Services.player_identity.is_guest
 
 	# Show loading state if currently loading
 	if _is_loading:
@@ -348,7 +348,7 @@ func _on_friendship_request_received(address: String, _message: String) -> void:
 	# Update dropdown visibility to show new request count
 	_update_dropdown_visibility()
 	# Trigger fetch_notifications to get the server-side notification sooner
-	NotificationsManager.fetch_notifications()
+	Services.notifications_manager.fetch_notifications()
 
 
 func _async_on_friendship_request_accepted(address: String) -> void:
@@ -372,7 +372,7 @@ func _async_on_friendship_request_accepted(address: String) -> void:
 
 		# Only fetch notifications if they accepted OUR request (not us accepting theirs)
 		if not was_incoming_request:
-			NotificationsManager.fetch_notifications()
+			Services.notifications_manager.fetch_notifications()
 
 
 func _on_friendship_request_rejected(address: String) -> void:
@@ -399,7 +399,7 @@ func _on_friendship_request_cancelled(address: String) -> void:
 
 func _async_fetch_friend_profile(address: String) -> SocialItemData:
 	# Fetch profile for a friend to create SocialItemData
-	var promise = Global.content_provider.fetch_profile(address)
+	var promise = Services.content_provider.fetch_profile(address)
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	var item = SocialItemData.new()
@@ -474,7 +474,7 @@ func is_friend_online(address: String) -> bool:
 func _async_check_friend_connectivity(address: String) -> void:
 	# Check if a friend is currently online by checking if they're in the nearby avatars
 	# This is a fallback for when connectivity updates haven't arrived yet
-	var avatars = Global.avatars.get_avatars()
+	var avatars = Services.avatars.get_avatars()
 	for avatar in avatars:
 		if avatar != null and avatar is Avatar:
 			if avatar.avatar_id == address:
@@ -614,13 +614,13 @@ func _on_nearby_list_size_changed() -> void:
 
 func _on_timer_timeout() -> void:
 	if visible:
-		Global.locations.fetch_peers()
+		Services.locations.fetch_peers()
 	else:
 		timer.stop()
 
 
 func _on_visibility_changed() -> void:
-	Global.locations.fetch_peers()
+	Services.locations.fetch_peers()
 	if timer:
 		if visible:
 			timer.start(0)

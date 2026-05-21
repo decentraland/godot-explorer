@@ -126,7 +126,7 @@ func _track_notification_opened() -> void:
 	var extra_properties = JSON.stringify(
 		{"notification_id": notification_data.get("id", ""), "ui_source": "notif_menu"}
 	)
-	Global.metrics.track_click_button(
+	Services.metrics.track_click_button(
 		"notification_opened", "NOTIFICATIONS_PANEL", extra_properties
 	)
 

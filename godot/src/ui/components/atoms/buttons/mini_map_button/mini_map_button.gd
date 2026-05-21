@@ -8,7 +8,7 @@ extends Button
 func _ready():
 	texture_rect_sdk6.hide()
 	Global.change_parcel.connect(self._on_change_parcel)
-	Global.scene_runner.on_change_scene_id.connect(self._on_change_scene_id)
+	Services.scene_runner.on_change_scene_id.connect(self._on_change_scene_id)
 
 
 func _on_change_parcel(_position: Vector2i):
@@ -22,7 +22,7 @@ func _on_change_scene_id(scene_id: int):
 		label_scene_title.hide()
 		return
 
-	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)
+	var scene = Services.scene_fetcher.get_scene_data_by_scene_id(scene_id)
 	if scene != null:
 		texture_rect_sdk6.set_visible(not scene.scene_entity_definition.is_sdk7())
 		label_scene_title.text = scene.scene_entity_definition.get_title()

@@ -71,7 +71,7 @@ func _on_play_emote(emote_urn: String):
 		var emote_controller = avatar_node.emote_controller
 		# Use async_play_emote to ensure base emotes are loaded from remote
 		emote_controller.async_play_emote(emote_urn)
-		Global.comms.send_emote(emote_urn)
+		Services.comms.send_emote(emote_urn)
 	else:
 		printerr("No avatar node in EmoteWheel!")
 
@@ -87,7 +87,7 @@ func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 
 	last_selected_emote_urn = emote_urn
 	label_emote_name.text = child.emote_name
-	UiSounds.play_sound("backpack_item_highlight", child.has_meta("attenuated_sound"))
+	Services.ui_sounds.play_sound("backpack_item_highlight", child.has_meta("attenuated_sound"))
 
 
 func close() -> void:

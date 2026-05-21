@@ -12,7 +12,7 @@ var _completed_loads: Dictionary = {}
 ## Load a single emote using promise-based loading.
 ## Returns the scene_path if successful, empty string on failure.
 func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
-	var emote = Global.content_provider.get_wearable(emote_urn)
+	var emote = Services.content_provider.get_wearable(emote_urn)
 	if emote == null:
 		printerr("EmoteLoader: emote ", emote_urn, " is null")
 		return ""
@@ -38,12 +38,12 @@ func async_load_emote(emote_urn: String, body_shape_id: String) -> String:
 	var audio_promises: Array = []
 	for audio_file in content_mapping.get_files():
 		if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
-			var audio_promise = Global.content_provider.fetch_audio(audio_file, content_mapping)
+			var audio_promise = Services.content_provider.fetch_audio(audio_file, content_mapping)
 			audio_promises.push_back(audio_promise)
 			break
 
 	# Start loading GLTF - ContentProvider handles caching and deduplication
-	var gltf_promise = Global.content_provider.load_emote_gltf(file_name, content_mapping)
+	var gltf_promise = Services.content_provider.load_emote_gltf(file_name, content_mapping)
 	if gltf_promise == null:
 		printerr("EmoteLoader: failed to start loading emote ", emote_urn)
 		return ""
@@ -84,18 +84,18 @@ func async_load_emote_from_mapping(
 	var audio_promise = null
 	for audio_file in content_mapping.get_files():
 		if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
-			audio_promise = Global.content_provider.fetch_audio(audio_file, content_mapping)
+			audio_promise = Services.content_provider.fetch_audio(audio_file, content_mapping)
 			break
 
 	# Start loading GLTF - ContentProvider handles caching and deduplication
 	var gltf_promise = null
 	if force_runtime_only:
 		# Use runtime-only loader to skip optimized assets
-		gltf_promise = Global.content_provider.load_emote_gltf_runtime_only(
+		gltf_promise = Services.content_provider.load_emote_gltf_runtime_only(
 			file_name, content_mapping
 		)
 	else:
-		gltf_promise = Global.content_provider.load_emote_gltf(file_name, content_mapping)
+		gltf_promise = Services.content_provider.load_emote_gltf(file_name, content_mapping)
 	if gltf_promise == null:
 		printerr("EmoteLoader: failed to start loading emote ", emote_key)
 		return ""
@@ -126,7 +126,7 @@ func async_get_emote_gltf(file_hash: String) -> DclEmoteGltf:
 	var scene_path = _completed_loads.get(file_hash, "")
 	if scene_path.is_empty():
 		# Fall back to ContentProvider's cache path (runtime-processed user:// paths)
-		scene_path = Global.content_provider.get_emote_cache_path(file_hash)
+		scene_path = Services.content_provider.get_emote_cache_path(file_hash)
 
 	if scene_path.is_empty():
 		printerr("EmoteLoader: no scene_path for hash ", file_hash)
@@ -178,4 +178,4 @@ func async_get_emote_gltf(file_hash: String) -> DclEmoteGltf:
 		return null
 
 	# Use ContentProvider's extract_emote_from_scene to extract animations from loaded scene
-	return Global.content_provider.extract_emote_from_scene(packed_scene, file_hash)
+	return Services.content_provider.extract_emote_from_scene(packed_scene, file_hash)

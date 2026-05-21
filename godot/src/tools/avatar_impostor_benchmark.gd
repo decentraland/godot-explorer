@@ -41,10 +41,10 @@ func _ready() -> void:
 	GraphicSettings.apply_full_processor_mode()
 
 	# Start with impostors ON; the bench flips to OFF later for the comparison.
-	Global.get_config().avatar_impostors_enabled = true
+	Services.config.avatar_impostors_enabled = true
 
 	_auto_quit = (
-		Global.cli.avatar_impostor_benchmark
+		Services.cli.avatar_impostor_benchmark
 		or Global.has_meta("avatar_impostor_benchmark_auto_quit")
 	)
 
@@ -56,8 +56,8 @@ func _ready() -> void:
 
 # gdlint:ignore = async-function-name
 func _async_run() -> void:
-	if Global.player_identity.get_profile_or_null() == null:
-		Global.player_identity.set_default_profile()
+	if Services.player_identity.get_profile_or_null() == null:
+		Services.player_identity.set_default_profile()
 
 	var addresses: Array = await _async_fetch_addresses()
 	if addresses.is_empty():
@@ -115,14 +115,14 @@ func _async_run() -> void:
 	# don't sample frames where half the impostors are still texture_loaded=false.
 	var pre_fetch_deadline_ms: int = Time.get_ticks_msec() + 60_000
 	while Time.get_ticks_msec() < pre_fetch_deadline_ms:
-		var diag: Dictionary = Global.avatars.impostor_diagnostics()
+		var diag: Dictionary = Services.avatars.impostor_diagnostics()
 		var loaded: int = diag.get("texture_loaded", 0)
 		var total: int = diag.get("total_slots", 0)
 		_label_status.text = "Pre-fetching impostors: %d/%d loaded" % [loaded, total]
 		if total > 0 and loaded >= total:
 			break
 		await get_tree().create_timer(0.5).timeout
-	var final_diag: Dictionary = Global.avatars.impostor_diagnostics()
+	var final_diag: Dictionary = Services.avatars.impostor_diagnostics()
 	_log(
 		(
 			"benchmark: impostor pre-fetch done — %d/%d loaded, %d visible"
@@ -156,7 +156,7 @@ func _async_run() -> void:
 
 # gdlint:ignore = async-function-name
 func _async_load_one(avatar: Node, address: String) -> void:
-	var promise: Promise = Global.content_provider.fetch_profile(address)
+	var promise: Promise = Services.content_provider.fetch_profile(address)
 	var profile_result = await PromiseUtils.async_awaiter(promise)
 	if profile_result is PromiseError or not (profile_result is DclUserProfile):
 		_log("benchmark: skipped %s — fetch failed" % address)
@@ -182,7 +182,7 @@ func _async_load_one(avatar: Node, address: String) -> void:
 
 
 func _start_phase(phase: int, impostors_enabled: bool) -> void:
-	Global.get_config().avatar_impostors_enabled = impostors_enabled
+	Services.config.avatar_impostors_enabled = impostors_enabled
 	_phase = phase
 	_phase_dts.clear()
 	_phase_start_ms = Time.get_ticks_msec()
@@ -274,7 +274,7 @@ func _async_fetch_addresses() -> Array:
 			break
 		var from_ms: int = to_ms - 30 * 24 * 60 * 60 * 1000
 		var url: String = DEPLOYMENTS_URL_FMT % [from_ms, to_ms]
-		var promise: Promise = Global.http_requester.request_json(
+		var promise: Promise = Services.http_requester.request_json(
 			url, HTTPClient.METHOD_GET, "", {}
 		)
 		var result = await PromiseUtils.async_awaiter(promise)
@@ -356,7 +356,7 @@ func _process(delta: float) -> void:
 			avg_dt += dt
 		avg_dt /= float(_frame_dts.size())
 		var fps: float = 1.0 / avg_dt if avg_dt > 0.0 else 0.0
-		var imp_state: String = "ON" if Global.get_config().avatar_impostors_enabled else "OFF"
+		var imp_state: String = "ON" if Services.config.avatar_impostors_enabled else "OFF"
 		_label_fps.text = (
 			"FPS: %5.1f   |   %5.2f ms   |   N=%d   |   IMPOSTORS %s"
 			% [fps, avg_dt * 1000.0, _avatars.size(), imp_state]
