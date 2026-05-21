@@ -148,6 +148,7 @@ func purchase(product_id: String) -> void:
 		return
 	if _purchase_in_flight:
 		print("[IAP] purchase already in flight; ignoring re-entry for ", product_id)
+		Global.modal_manager.async_show_purchase_in_flight_modal()
 		return
 	var wallet := _wallet_address()
 	if wallet.is_empty():
@@ -391,7 +392,7 @@ func _on_overlay_timeout(token: int) -> void:
 	if token != _overlay_token:
 		return
 	printerr("[IAP] purchase overlay timed out after ", _PURCHASE_OVERLAY_TIMEOUT_SEC, "s")
-	_finish_purchase_flow()
+	_hide_overlay()
 
 
 func _finish_purchase_flow() -> void:

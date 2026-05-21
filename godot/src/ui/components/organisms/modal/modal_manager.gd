@@ -52,6 +52,10 @@ const CREDIT_LIMIT_TITLE = "Limit reached"
 const CREDIT_LIMIT_BODY = "You've reached the maximum amount of credits you can buy this month."
 const CREDIT_LIMIT_PRIMARY = "OK"
 
+const PURCHASE_IN_FLIGHT_TITLE = "Purchase in progress"
+const PURCHASE_IN_FLIGHT_BODY = "A purchase is already being processed. Please wait for it to complete before starting a new one."
+const PURCHASE_IN_FLIGHT_PRIMARY = "OK"
+
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
 var modal_scene: PackedScene = null
@@ -346,6 +350,24 @@ func async_show_credit_limit_modal() -> void:
 	current_modal.set_title(CREDIT_LIMIT_TITLE)
 	current_modal.set_body(CREDIT_LIMIT_BODY)
 	current_modal.set_primary_button_text(CREDIT_LIMIT_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a purchase-in-flight modal when the user tries to buy while another purchase is pending
+func async_show_purchase_in_flight_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(PURCHASE_IN_FLIGHT_TITLE)
+	current_modal.set_body(PURCHASE_IN_FLIGHT_BODY)
+	current_modal.set_primary_button_text(PURCHASE_IN_FLIGHT_PRIMARY)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
