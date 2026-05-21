@@ -141,7 +141,7 @@ func get_transaction_history() -> Array:
 func purchase(product_id: String) -> void:
 	# TODO: remove — simulates purchase flow in the editor for testing
 	if not _store_kit_available and OS.has_feature("editor"):
-		_simulate_editor_purchase(product_id)
+		_async_simulate_editor_purchase(product_id)
 		return
 	if not _store_kit_available:
 		print("[IAP] not available; ignoring purchase(", product_id, ")")
@@ -168,7 +168,7 @@ func purchase(product_id: String) -> void:
 
 
 # TODO: remove — editor-only simulated purchase for desktop testing
-func _simulate_editor_purchase(product_id: String) -> void:
+func _async_simulate_editor_purchase(product_id: String) -> void:
 	var credits: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
 	if _balance + credits > _MAX_CREDITS:
 		Global.modal_manager.async_show_credit_limit_modal()
