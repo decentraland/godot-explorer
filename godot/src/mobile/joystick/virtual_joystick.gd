@@ -84,7 +84,7 @@ func _ready() -> void:
 	):
 		hide()
 
-	_active_area.connect("input_received", _on_input)
+	_active_area.gui_input.connect(_on_gui_input)
 
 	Global.loading_started.connect(_on_loading_scene)
 	Global.camera_mode_set.connect(_on_camera_mode_set)
@@ -127,44 +127,39 @@ func _refresh_camera_button_visibility() -> void:
 	_button_camera.visible = should_show
 
 
-func _on_input(event: InputEvent) -> void:
-	if Global.is_mobile():
-		if event is InputEventScreenTouch:
-			if event.pressed:
-				if (
-					_is_point_inside_joystick_area(event.position)
-					and touch_index == -1
-					and not _is_hud_ui_at_position(event.position)
-				):
-					if (
-						joystick_mode == JoystickMode.DYNAMIC
-						or (
-							joystick_mode == JoystickMode.FIXED
-							and _is_point_inside_base(event.position)
-						)
-					):
-						if joystick_mode == JoystickMode.DYNAMIC:
-							_move_base(event.position)
-							get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
-						touch_index = event.index
-						_update_joystick(event.position)
-						if (
-							not Global.scene_runner.raycast_use_cursor_position
-							and not _is_scene_ui_at_position(event.position)
-						):
-							get_viewport().set_input_as_handled()
-			elif event.index == touch_index:
-				_reset()
-				if _joystick_visible:
-					_dynamic_material.set_shader_parameter("state", 2)
-					_joystick_visible = false
-				emit_signal("stick_position", Vector2.ZERO)
-				if not Global.scene_runner.raycast_use_cursor_position:
-					get_viewport().set_input_as_handled()
-		elif event is InputEventScreenDrag:
-			if event.index == touch_index:
-				_update_joystick(event.position)
-				get_viewport().set_input_as_handled()
+func _on_gui_input(event: InputEvent) -> void:
+	if not Global.is_mobile():
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if touch_index != -1:
+				return
+			if joystick_mode == JoystickMode.FIXED and not _is_point_inside_base(event.position):
+				return
+			if joystick_mode == JoystickMode.DYNAMIC:
+				_move_base(event.position)
+				get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
+			touch_index = event.index
+			_update_joystick(event.position)
+			_consume_if_not_cinematic()
+		elif event.index == touch_index:
+			_reset()
+			if _joystick_visible:
+				_dynamic_material.set_shader_parameter("state", 2)
+				_joystick_visible = false
+			emit_signal("stick_position", Vector2.ZERO)
+			_consume_if_not_cinematic()
+	elif event is InputEventScreenDrag:
+		if event.index == touch_index:
+			_update_joystick(event.position)
+			_consume_if_not_cinematic()
+
+
+func _consume_if_not_cinematic() -> void:
+	# Cinematic camera mode lets the event bubble to ui_root.gui_input so
+	# explorer.gd can fire ia_pointer for scene click handlers.
+	if not Global.scene_runner.raycast_use_cursor_position:
+		_active_area.accept_event()
 
 
 func _on_show_joystick_timer() -> void:
@@ -180,36 +175,6 @@ func _move_base(new_position: Vector2) -> void:
 
 func _move_tip(vector: Vector2) -> void:
 	_dynamic_material.set_shader_parameter("tip_position", vector)
-
-
-func _is_point_inside_joystick_area(point: Vector2) -> bool:
-	var x: bool = (
-		point.x >= _active_area.global_position.x
-		and (
-			point.x
-			<= (
-				_active_area.global_position.x
-				+ (
-					_active_area.size.x
-					* _active_area.get_global_transform_with_canvas().get_scale().x
-				)
-			)
-		)
-	)
-	var y: bool = (
-		point.y >= _active_area.global_position.y
-		and (
-			point.y
-			<= (
-				_active_area.global_position.y
-				+ (
-					_active_area.size.y
-					* _active_area.get_global_transform_with_canvas().get_scale().y
-				)
-			)
-		)
-	)
-	return x and y
 
 
 func _is_point_inside_base(point: Vector2) -> bool:
@@ -312,34 +277,6 @@ func _on_resized() -> void:
 	if not is_node_ready():
 		return
 	_reset()
-
-
-func _is_scene_ui_at_position(touch_position: Vector2) -> bool:
-	var base_ui = Global.scene_runner.base_ui
-	if not is_instance_valid(base_ui) or not base_ui.visible:
-		return false
-	return _check_children_for_pointer_control(base_ui, touch_position)
-
-
-func _is_hud_ui_at_position(touch_position: Vector2) -> bool:
-	var explorer = Global.get_explorer()
-	if not is_instance_valid(explorer):
-		return false
-	var chat_panel = explorer.chat_panel
-	if is_instance_valid(chat_panel):
-		return chat_panel.is_interactive_area_at(touch_position)
-	return false
-
-
-func _check_children_for_pointer_control(node: Node, touch_position: Vector2) -> bool:
-	for child in node.get_children():
-		if child is Control and child.visible and child.mouse_filter == Control.MOUSE_FILTER_STOP:
-			if child.get_global_rect().has_point(touch_position):
-				return true
-		if child.get_child_count() > 0:
-			if _check_children_for_pointer_control(child, touch_position):
-				return true
-	return false
 
 
 func _on_button_camera_pressed() -> void:

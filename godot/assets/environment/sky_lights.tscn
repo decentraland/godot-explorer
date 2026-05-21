@@ -20,4 +20,6 @@ directional_shadow_split_1 = 0.3
 directional_shadow_max_distance = 30.0
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1628949876]
-libraries/ = SubResource("AnimationLibrary_local")
+libraries = {
+"": SubResource("AnimationLibrary_local")
+}

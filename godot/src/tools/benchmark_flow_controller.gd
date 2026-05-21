@@ -169,7 +169,9 @@ func handle_lobby_scene(scene):
 	# Proceed to menu (don't set deep_link_obj yet - that will skip the menu)
 	log_message("✓ Auto-proceeding to Menu...")
 	await get_tree().create_timer(1.0).timeout
-	get_tree().call_deferred("change_scene_to_file", "res://src/ui/components/menu/menu.tscn")
+	get_tree().call_deferred(
+		"change_scene_to_file", "res://src/ui/components/organisms/menu/menu.tscn"
+	)
 
 
 ## Menu Scene
