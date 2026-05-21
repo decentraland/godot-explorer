@@ -425,13 +425,6 @@ impl SceneManager {
         GString::from(s.as_str())
     }
 
-    /// Drain asset-preprocessor stats (decimation, strip, mesh-occluder).
-    #[func]
-    pub fn drain_asset_preproc_stats(&mut self) -> GString {
-        let s = super::components::asset_preprocessor::drain_global_stats();
-        GString::from(s.as_str())
-    }
-
     /// Reset CRDT cross-boundary metrics (send/recv bytes, op counts, dirty
     /// entries). Call right before sampling.
     #[func]

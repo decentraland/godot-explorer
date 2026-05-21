@@ -462,7 +462,6 @@ func _finish() -> void:
 	# Per-component-id breakdown of dirty entries on the Rust→V8 path.
 	# Identifies which SDK7 components dominate the round-trip pressure.
 	var crdt_component_breakdown: String = Global.scene_runner.drain_crdt_component_breakdown()
-	var asset_preproc_stats: String = Global.scene_runner.drain_asset_preproc_stats()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -472,7 +471,6 @@ func _finish() -> void:
 		"state_timing_us": state_timing,
 		"crdt_metrics": crdt_metrics,
 		"crdt_component_breakdown": crdt_component_breakdown,
-		"asset_preproc_stats": asset_preproc_stats,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -810,9 +808,6 @@ func _apply_deeplink_overrides() -> void:
 		if s > 0.1 and s <= 2.0:
 			config["viewport_scale_3d"] = s
 
-	var apr: String = params.get("asset-preproc", "")
-	if not apr.is_empty():
-		Global.cli.asset_preproc_enabled = apr.to_lower() in ["true", "1", "yes"]
 	var cpbr: String = params.get("cheap-pbr", "")
 	if not cpbr.is_empty():
 		Global.cli.cheap_pbr_enabled = cpbr.to_lower() in ["true", "1", "yes"]

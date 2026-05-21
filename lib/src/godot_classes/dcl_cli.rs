@@ -138,11 +138,6 @@ pub struct DclCli {
     #[var]
     pub optimized_content_base_url: GString,
 
-    // Asset preprocessor: aggressive offline-style transforms at GLTF
-    // load (decimation, vertex strip, mesh-shaped occluder).
-    #[var]
-    pub asset_preproc_enabled: bool,
-
     // cheap_pbr_materials: tweak BaseMaterial3D mode flags (Lambert
     // diffuse, no specular for matte) to reduce per-fragment ALU.
     #[var]
@@ -502,12 +497,6 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
-                name: "--asset-preproc".to_string(),
-                description: "Run aggressive offline-style asset preprocessing at GLTF load (decimation, vertex strip, mesh occluder). Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
                 name: "--cheap-pbr".to_string(),
                 description: "Tweak BaseMaterial3D mode flags (Lambert diffuse, no specular for matte) to reduce per-fragment ALU. Default OFF".to_string(),
                 arg_type: ArgType::Flag,
@@ -743,7 +732,6 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
-        let asset_preproc_enabled = args_map.contains_key("--asset-preproc");
         let cheap_pbr_enabled = !args_map.contains_key("--no-cheap-pbr");
         let skip_gltf_load = args_map.contains_key("--skip-gltf");
         let kill_sky = args_map.contains_key("--kill-sky");
@@ -874,7 +862,6 @@ impl INode for DclCli {
             gp_benchmark,
             rs_gltf_direct,
             optimized_content_base_url,
-            asset_preproc_enabled,
             cheap_pbr_enabled,
             skip_gltf_load,
             kill_sky,

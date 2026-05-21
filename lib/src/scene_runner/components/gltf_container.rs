@@ -218,14 +218,6 @@ pub fn sync_gltf_loading_state(
                     tracing::debug!("sync_gltf_loading_state: Adding entity {:?} to gltf_node_modifiers_pending (will be removed from gltf_loading)", entity);
                     scene.gltf_node_modifiers_pending.insert(*entity);
                 }
-
-                // Asset preprocessor — aggressive decimation + vertex
-                // strip + mesh-shaped occluder. The runtime LOD /
-                // atlas / occluder / shadow-cull / cheap-PBR passes
-                // moved to the offline `content/gltf/common.rs`
-                // pre-generate path; this is the only runtime
-                // post-load classifier still in use.
-                scene.pending_asset_preprocessor.insert(*entity);
             }
         }
 

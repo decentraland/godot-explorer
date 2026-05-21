@@ -34,8 +34,7 @@ use crate::{
 
 use super::{
     components::{
-        asset_preprocessor::AssetPreprocessorState, gltf_node_modifiers::GltfNodeModifierState,
-        trigger_area::TriggerAreaState, tween::Tween,
+        gltf_node_modifiers::GltfNodeModifierState, trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -107,7 +106,6 @@ pub enum SceneUpdateState {
     GltfContainer,
     SyncGltfContainer,
     GltfNodeModifiers,
-    AssetPreprocessor,
     NftShape,
     Animator,
     AvatarShape,
@@ -148,8 +146,7 @@ impl SceneUpdateState {
             Self::MeshCollider => Self::GltfContainer,
             Self::GltfContainer => Self::SyncGltfContainer,
             Self::SyncGltfContainer => Self::GltfNodeModifiers,
-            Self::GltfNodeModifiers => Self::AssetPreprocessor,
-            Self::AssetPreprocessor => Self::NftShape,
+            Self::GltfNodeModifiers => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -268,11 +265,6 @@ pub struct Scene {
     pub gltf_node_modifier_states: HashMap<SceneEntityId, GltfNodeModifierState>,
     // Entities pending GltfNodeModifiers re-application after GLTF loads
     pub gltf_node_modifiers_pending: HashSet<SceneEntityId>,
-
-    // Asset preprocessor: aggressive offline-style transforms
-    // (decimation, vertex strip, mesh occluder) at GLTF post-load.
-    pub pending_asset_preprocessor: HashSet<SceneEntityId>,
-    pub asset_preprocessor: AssetPreprocessorState,
 
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
@@ -397,8 +389,6 @@ impl Scene {
             trigger_areas: TriggerAreaState::default(),
             gltf_node_modifier_states: HashMap::new(),
             gltf_node_modifiers_pending: HashSet::new(),
-            pending_asset_preprocessor: HashSet::new(),
-            asset_preprocessor: AssetPreprocessorState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -476,8 +466,6 @@ impl Scene {
             trigger_areas: TriggerAreaState::default(),
             gltf_node_modifier_states: HashMap::new(),
             gltf_node_modifiers_pending: HashSet::new(),
-            pending_asset_preprocessor: HashSet::new(),
-            asset_preprocessor: AssetPreprocessorState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

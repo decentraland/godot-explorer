@@ -34,24 +34,65 @@ use super::super::{
 };
 use super::common::{count_nodes, load_gltf_pipeline};
 
-use crate::scene_runner::components::asset_preprocessor::mesh_occluder;
+use crate::scene_runner::components::asset_preprocessor::{
+    decimator, mesh_occluder, metrics, vertex_strip,
+};
 
-/// Recursively walk the scene tree spawning mesh-shaped `OccluderInstance3D`
-/// siblings on every visible MeshInstance3D that passes the size + opacity
-/// filters in `mesh_occluder::try_spawn_for`. Counts how many were attached
-/// so we can log the per-asset total.
-fn spawn_mesh_occluders(node: &Gd<Node>, occluder_count: &mut u32) {
+struct AssetServerPreprocCounts {
+    decimated: u32,
+    stripped: u32,
+    occluders: u32,
+}
+
+fn apply_asset_server_optimizations(root: &Gd<Node3D>, hash: &str) {
+    let mut counts = AssetServerPreprocCounts {
+        decimated: 0,
+        stripped: 0,
+        occluders: 0,
+    };
+    walk_and_preprocess(&root.clone().upcast(), &mut counts);
+    if counts.decimated > 0 || counts.stripped > 0 || counts.occluders > 0 {
+        godot::global::godot_print!(
+            "[asset-server-preproc] {}: decimated={} stripped={} occluders={}",
+            hash,
+            counts.decimated,
+            counts.stripped,
+            counts.occluders
+        );
+    }
+}
+
+fn walk_and_preprocess(node: &Gd<Node>, counts: &mut AssetServerPreprocCounts) {
     if let Ok(mut mi) = node.clone().try_cast::<MeshInstance3D>() {
-        if let Some(mesh) = mi.get_mesh() {
-            if let Ok(am) = mesh.try_cast::<ArrayMesh>() {
-                if mesh_occluder::try_spawn_for(&mut mi, &am) {
-                    *occluder_count += 1;
+        if mi.is_visible_in_tree() && mi.get_layer_mask() == 1 {
+            if let Some(mesh) = mi.get_mesh() {
+                if let Ok(array_mesh) = mesh.try_cast::<ArrayMesh>() {
+                    let mut current = array_mesh;
+
+                    if let Some(decimated) = decimator::aggressive_decimate(&current) {
+                        metrics::record_decimated(decimated.source_idx, decimated.target_idx);
+                        mi.set_mesh(&decimated.mesh.clone().upcast::<godot::classes::Mesh>());
+                        current = decimated.mesh;
+                        counts.decimated = counts.decimated.saturating_add(1);
+                    }
+
+                    if let Some((stripped, bytes)) = vertex_strip::strip_unused(&current) {
+                        metrics::record_stripped(bytes);
+                        mi.set_mesh(&stripped.clone().upcast::<godot::classes::Mesh>());
+                        current = stripped;
+                        counts.stripped = counts.stripped.saturating_add(1);
+                    }
+
+                    if mesh_occluder::try_spawn_for(&mut mi, &current) {
+                        metrics::record_occluder();
+                        counts.occluders = counts.occluders.saturating_add(1);
+                    }
                 }
             }
         }
     }
     for child in node.get_children().iter_shared() {
-        spawn_mesh_occluders(&child, occluder_count);
+        walk_and_preprocess(&child, counts);
     }
 }
 
@@ -98,15 +139,7 @@ pub async fn load_and_save_scene_gltf(
                 .map(|g| g.bind().cli.bind().asset_server)
                 .unwrap_or(false);
             if in_asset_server_mode {
-                let mut occluders_added = 0u32;
-                spawn_mesh_occluders(&root_node.clone().upcast(), &mut occluders_added);
-                if occluders_added > 0 {
-                    godot::global::godot_print!(
-                        "[occluder-gen] {}: occluders_added={}",
-                        hash,
-                        occluders_added
-                    );
-                }
+                apply_asset_server_optimizations(&root_node, hash);
             }
 
             // Save the processed scene to disk (in the same cache folder as other content)

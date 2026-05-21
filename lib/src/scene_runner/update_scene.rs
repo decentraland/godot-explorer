@@ -84,7 +84,6 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::GltfContainer => "GltfContainer",
         S::SyncGltfContainer => "SyncGltfContainer",
         S::GltfNodeModifiers => "GltfNodeModifiers",
-        S::AssetPreprocessor => "AssetPreprocessor",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
         S::AvatarShape => "AvatarShape",
@@ -112,7 +111,6 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
 use super::{
     components::{
         animator::update_animator,
-        asset_preprocessor::update_asset_preprocessor,
         audio_source::update_audio_source,
         avatar_attach::update_avatar_attach,
         avatar_data::update_avatar_scene_updates,
@@ -436,9 +434,6 @@ pub fn _process_scene(
                         update_modifier_video_textures(scene);
                     }
                     still_processing
-                }
-                SceneUpdateState::AssetPreprocessor => {
-                    !update_asset_preprocessor(scene, crdt_state, ref_time, effective_end_time_us)
                 }
                 SceneUpdateState::NftShape => {
                     update_nft_shape(scene, crdt_state);
