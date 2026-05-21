@@ -329,11 +329,22 @@ func _ready():
 	if telemetry_enabled:
 		var sentry_user = SentryUser.new()
 		sentry_user.id = self.config.analytics_user_id
+		SentrySDK.set_user(sentry_user)
 		SentrySDK.set_tag("dcl_session_id", session_id)
+		# Refreshed by _sentry_on_wallet_connected once auth fires.
+		SentrySDK.set_tag("is_guest", "true")
 
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
+
+	if telemetry_enabled:
+		self.realm.realm_changed.connect(_sentry_on_realm_changed)
+		self.scene_fetcher.player_parcel_changed.connect(_sentry_on_parcel_changed)
+		self.comms.on_adapter_changed.connect(_sentry_on_adapter_changed)
+		self.player_identity.wallet_connected.connect(_sentry_on_wallet_connected)
+		self.player_identity.profile_changed.connect(_sentry_on_profile_changed)
+		self.player_identity.logout.connect(_sentry_on_logout)
 
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
@@ -1057,3 +1068,55 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 		return
 	camera_mode_blocked = blocked
 	camera_mode_block_changed.emit(blocked)
+
+
+func _sentry_on_realm_changed() -> void:
+	var realm_ctx := {
+		"name": realm.realm_name,
+		"url": realm.realm_url,
+		"network_id": realm.network_id,
+		"content_base_url": realm.content_base_url,
+	}
+	SentrySDK.set_context("realm", realm_ctx)
+	SentrySDK.set_tag("realm", realm.realm_name)
+
+
+func _sentry_on_parcel_changed(new_position: Vector2i) -> void:
+	var location_ctx := {
+		"parcel": "%d,%d" % [new_position.x, new_position.y],
+		"scene_entity_id": scene_fetcher.current_scene_entity_id,
+	}
+	SentrySDK.set_context("location", location_ctx)
+
+
+func _sentry_on_adapter_changed(_voice_chat_enabled: bool, new_adapter: String) -> void:
+	SentrySDK.set_tag("comms_adapter", new_adapter)
+
+
+# Keep user.id pinned to analytics_user_id across auth changes so
+# "Users affected" stays attributed to a single install. Only username
+# tracks the wallet/profile state.
+func _sentry_on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool) -> void:
+	var sentry_user := SentryUser.new()
+	sentry_user.id = self.config.analytics_user_id
+	if not is_guest_value:
+		sentry_user.username = address
+	SentrySDK.set_user(sentry_user)
+	SentrySDK.set_tag("is_guest", "true" if is_guest_value else "false")
+
+
+func _sentry_on_profile_changed(new_profile: DclUserProfile) -> void:
+	var sentry_user := SentryUser.new()
+	sentry_user.id = self.config.analytics_user_id
+	if new_profile != null:
+		var display := new_profile.get_name()
+		if not display.is_empty():
+			sentry_user.username = display
+	SentrySDK.set_user(sentry_user)
+
+
+func _sentry_on_logout() -> void:
+	var sentry_user := SentryUser.new()
+	sentry_user.id = self.config.analytics_user_id
+	SentrySDK.set_user(sentry_user)
+	SentrySDK.set_tag("is_guest", "true")
