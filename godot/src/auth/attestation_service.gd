@@ -1,24 +1,38 @@
 class_name AttestationServiceImpl
 extends Node
 
-# Platform attestation autoload — produces the headers consumed by the
-# mobile-bff /v1/attest/check endpoint (and any sign-message proxy that
-# wants to gate on attestation). Two flows, picked by OS.get_name():
+# Platform attestation service — produces the headers consumed by the mobile-bff
+# /v1/attest/check endpoint (and any sign-message proxy that wants to gate on
+# attestation). Two flows, picked by OS.get_name():
 #
 #   iOS:     one-time enrollment (App Attest key + register with backend),
 #            then per-request CBOR assertion signed over SHA256(body || nonce).
 #   Android: stateless. Per-request Play Integrity token bound to
 #            base64url(SHA256(body)) as the nonce field.
 #
-# Persistence: iOS key_id lives in `user://attest_ios_key_id.txt` (plaintext
-# is fine — the key_id alone is not a secret; the private half is sealed in
-# the Secure Enclave and only Apple can ask it to sign).
+# Lifecycle:
+#   - Instantiated by Global._ready as a child Node.
+#   - On boot: if `_is_validated()` (persisted marker present) → no-op.
+#   - Otherwise: poll Global.get_config().terms_and_conditions_version every 1s
+#     until EULA is accepted, then run validation against the backend. On
+#     success → persist the marker so future launches skip. On failure → retry
+#     with exponential backoff [1,2,5,10,30]s, capped at 30s indefinitely.
+#
+# Persistence:
+#   - iOS key_id: `user://attest_ios_key_id.txt`. Plaintext is fine — the key_id
+#     is not a secret; the private half is sealed in the Secure Enclave.
+#   - Validated marker: `user://attest_validated.txt`. Presence means "this
+#     install passed /v1/attest/check at least once".
 
 const KEY_ID_PATH := "user://attest_ios_key_id.txt"
+const VALIDATED_PATH := "user://attest_validated.txt"
 const NONCE_LEN := 16
 const ENROLL_TIMEOUT_SEC := 30
-# Backend URL for the startup attestation report (POST /v1/attest/check).
-const STARTUP_CHECK_URL := "https://test-auth.dclregenesislabs.xyz"
+const ATTEST_CHECK_URL := "https://test-auth.dclregenesislabs.xyz"
+const EULA_POLL_INTERVAL_SEC := 1.0
+# Exponential backoff (seconds) for validation retries once EULA is accepted.
+# Indexes past the last entry stay at 30s.
+const RETRY_BACKOFF_SEC := [1.0, 2.0, 5.0, 10.0, 30.0]
 
 # Set to true to skip reading/writing the persisted key_id so every session
 # re-runs the full iOS enrollment ceremony. Useful while iterating on the
@@ -26,6 +40,7 @@ const STARTUP_CHECK_URL := "https://test-auth.dclregenesislabs.xyz"
 const _DEBUG_DISABLE_PERSIST := false
 
 var _enrollment_lock: bool = false
+var _validating: bool = false
 var _ios_plugin: Object = null
 var _android_plugin: Object = null
 
@@ -38,46 +53,89 @@ func _ready() -> void:
 	elif platform == "Android":
 		if Engine.has_singleton("dcl-godot-android"):
 			_android_plugin = Engine.get_singleton("dcl-godot-android")
-	# Fire-and-forget startup attestation report — exercises /v1/attest/check
-	# so the backend (and downstream analytics) can compute pass rates. Does
-	# not block startup or surface errors to the user.
-	async_kick_startup_check()
-
-
-func async_kick_startup_check() -> void:
-	# Defer 2s so Global.http_requester and the iOS App Attest service have
-	# time to come up. The autoload _ready order guarantees Global runs first,
-	# but the native plugin's session may need a frame or two.
-	await get_tree().create_timer(2.0).timeout
+	if _is_validated():
+		return
 	if not is_supported():
 		return
-	async_run_startup_check(STARTUP_CHECK_URL)
+	async_validate_when_eula_accepted()
 
 
-# Reports the current device's attestation verdict to the backend. The body
-# we attest over is an empty bytes — only matters that the server hashes the
-# same bytes, which it does (it reads the raw body). Result is logged; not
-# returned because callers fire-and-forget.
-func async_run_startup_check(backend_url: String) -> void:
-	var body := PackedByteArray()
-	var headers := await async_get_attestation_headers(body, backend_url)
-	if headers.is_empty():
+# Returns true if this install already passed /v1/attest/check at least once,
+# so no further attestation work is needed for the remaining lifetime of this
+# install (until user data is wiped).
+func _is_validated() -> bool:
+	return FileAccess.file_exists(VALIDATED_PATH)
+
+
+func _mark_validated() -> void:
+	var f := FileAccess.open(VALIDATED_PATH, FileAccess.WRITE)
+	if f == null:
+		push_warning("[Attestation] could not persist validated marker to %s" % VALIDATED_PATH)
 		return
-	var resp: Dictionary = await _async_post_json(backend_url + "/v1/attest/check", "", headers)
+	f.store_string("ok")
+	f.close()
+
+
+# Mirrors `analytics_controller.gd::setup()` — the canonical "EULA accepted on a
+# prior run OR just-accepted in this session" check used across the app.
+func _is_eula_accepted() -> bool:
+	if Global == null:
+		return false
+	var cfg = Global.get_config()
+	if cfg == null:
+		return false
+	return cfg.terms_and_conditions_version == Global.TERMS_AND_CONDITIONS_VERSION
+
+
+# Polls EULA acceptance every EULA_POLL_INTERVAL_SEC. Once accepted, runs the
+# validation flow with exponential backoff on failure. Persists the validated
+# marker on first success and exits the loop. Safe to call multiple times — a
+# second concurrent invocation is a no-op.
+func async_validate_when_eula_accepted() -> void:
+	if _validating:
+		return
+	_validating = true
+	while not _is_eula_accepted():
+		await get_tree().create_timer(EULA_POLL_INTERVAL_SEC).timeout
+	var attempt: int = 0
+	while true:
+		var ok: bool = await _async_try_validate()
+		if ok:
+			_mark_validated()
+			_validating = false
+			return
+		var idx: int = min(attempt, RETRY_BACKOFF_SEC.size() - 1)
+		var delay: float = RETRY_BACKOFF_SEC[idx]
+		await get_tree().create_timer(delay).timeout
+		attempt += 1
+
+
+# Runs one validation round: produces attestation headers + POSTs to
+# /v1/attest/check. Returns true iff the backend responds with `ok: true`.
+func _async_try_validate() -> bool:
+	var body := PackedByteArray()
+	var headers := await async_get_attestation_headers(body, ATTEST_CHECK_URL)
+	if headers.is_empty():
+		push_warning("[Attestation] no headers produced; cannot validate")
+		return false
+	var resp: Dictionary = await _async_post_json(
+		ATTEST_CHECK_URL + "/v1/attest/check", "", headers
+	)
 	var ok: bool = bool(resp.get("ok", false))
-	var code: String = str(resp.get("code", "?"))
 	var platform: String = str(resp.get("platform", "?"))
 	var elapsed: String = str(resp.get("elapsed_ms", "?"))
 	if ok:
-		print("[Attestation] startup check OK platform=%s elapsed_ms=%s" % [platform, elapsed])
+		print("[Attestation] validated platform=%s elapsed_ms=%s" % [platform, elapsed])
 	else:
+		var code: String = str(resp.get("code", "?"))
 		var err: String = str(resp.get("error", ""))
 		push_warning(
 			(
-				"[Attestation] startup check FAILED platform=%s code=%s elapsed_ms=%s error=%s"
+				"[Attestation] validation failed platform=%s code=%s elapsed_ms=%s error=%s"
 				% [platform, code, elapsed, err]
 			)
 		)
+	return ok
 
 
 # True if this device's OS/plugin combination can produce attestation
