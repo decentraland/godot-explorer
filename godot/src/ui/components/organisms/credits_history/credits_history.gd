@@ -1,6 +1,8 @@
 extends VBoxContainer
 
-const HISTORY_ITEM_SCENE = preload("res://src/ui/components/molecules/credits_history_item/credits_history_item.tscn")
+const HISTORY_ITEM_SCENE = preload(
+	"res://src/ui/components/molecules/credits_history_item/credits_history_item.tscn"
+)
 
 @onready var item_container: VBoxContainer = $VBoxContainer
 

@@ -158,7 +158,9 @@ func purchase(product_id: String) -> void:
 		return
 	var credits_to_add: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
 	if _balance + credits_to_add > _MAX_CREDITS:
-		printerr("[IAP] credit limit reached: ", _balance, " + ", credits_to_add, " > ", _MAX_CREDITS)
+		printerr(
+			"[IAP] credit limit reached: ", _balance, " + ", credits_to_add, " > ", _MAX_CREDITS
+		)
 		Global.modal_manager.async_show_credit_limit_modal()
 		return
 	_purchase_in_flight = true
@@ -185,11 +187,16 @@ func _simulate_editor_purchase(product_id: String) -> void:
 
 func _record_transaction(credits: int, is_refund: bool) -> void:
 	var now = Time.get_datetime_dict_from_system()
-	_transaction_history.append({
-		"credits": credits,
-		"is_refund": is_refund,
-		"timestamp": "%04d.%02d.%02d" % [now.year, now.month, now.day],
-	})
+	(
+		_transaction_history
+		. append(
+			{
+				"credits": credits,
+				"is_refund": is_refund,
+				"timestamp": "%04d.%02d.%02d" % [now.year, now.month, now.day],
+			}
+		)
+	)
 	transaction_history_updated.emit()
 
 

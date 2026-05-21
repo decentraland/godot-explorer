@@ -28,6 +28,5 @@ func _apply_credits() -> void:
 		_credits_label.text = "Credits x%d" % _pending_credits
 
 
-
 func _on_backdrop_gui_input(event: InputEvent) -> void:
 	queue_free()

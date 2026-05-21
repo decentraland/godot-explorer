@@ -551,6 +551,7 @@ func _on_button_credits_pressed() -> void:
 	search_bar.hide()
 	button_history.visible = Iap.get_transaction_history().size() > 0
 
+
 func _on_button_history_pressed() -> void:
 	credits_option.hide()
 	credits_history.show()

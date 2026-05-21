@@ -28,11 +28,13 @@ func _ready() -> void:
 	label_description.hide()
 	_update_arrow_icon(false)
 
+
 func _on_button_toggled(toggled_on: bool) -> void:
 	if Engine.is_editor_hint():
 		return
 	label_description.visible = toggled_on
 	texture_rect.texture = ARROW_UP if toggled_on else ARROW_DOWN
-	
+
+
 func _update_arrow_icon(is_open: bool) -> void:
 	texture_rect.texture = ARROW_UP if is_open else ARROW_DOWN
