@@ -103,6 +103,11 @@ func _on_camera_mode_area_detector_unblock_camera_mode():
 	set_camera_mode(stored_camera_mode_before_block, false)
 
 
+func _on_global_camera_mode_set(mode: Global.CameraMode) -> void:
+	if mode != Global.CameraMode.CINEMATIC:
+		set_camera_mode(mode)
+
+
 func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 	camera.set_camera_mode(mode)
 
@@ -163,11 +168,11 @@ func update_avatar_movement_state(vel: float):
 
 
 func _ready():
-	if Global.is_mobile():
-		add_child(PlayerMobileInput.new(self))
-	else:
+	if not Global.is_mobile():
 		add_child(PlayerDesktopInput.new(self))
 	add_child(PlayerGamepadInput.new(self))
+
+	Global.camera_mode_set.connect(_on_global_camera_mode_set)
 
 	# Setup the outline system with the main camera
 	if outline_system:

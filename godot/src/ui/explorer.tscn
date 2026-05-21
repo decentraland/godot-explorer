@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
+[ext_resource type="Script" path="res://src/logic/player/mobile_camera_input.gd" id="1_mcinput"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
@@ -101,6 +102,15 @@ focus_mode = 1
 mouse_filter = 1
 theme = ExtResource("4_2vs87")
 
+[node name="MobileCameraInput" type="Control" parent="UI" unique_id=435960516]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mcinput")
+
 [node name="MarginContainer_ShowUI" type="MarginContainer" parent="UI" unique_id=1783716233]
 unique_name_in_owner = true
 visible = false
@@ -168,17 +178,8 @@ vertical_alignment = 1
 [node name="Control_PointerTooltip" parent="UI" unique_id=944970499 instance=ExtResource("11_qjs00")]
 unique_name_in_owner = true
 layout_mode = 1
+z_index = -4096
 metadata/_edit_lock_ = true
-
-[node name="SceneUIContainer" type="Control" parent="UI" unique_id=1950684600]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
 
 [node name="LeftRightSafeContainer" type="MarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
@@ -350,6 +351,16 @@ vertical_alignment = 1
 [node name="EmoteWheel" parent="UI/LeftRightSafeContainer/InteractableHUD" unique_id=228992295 instance=ExtResource("21_pows0")]
 unique_name_in_owner = true
 layout_mode = 1
+
+[node name="SceneUIContainer" type="Control" parent="UI" unique_id=1950684600]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI" unique_id=926156601]
 autostart = true
