@@ -23,6 +23,36 @@ const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
 	"res://assets/avatar/dcl_toon_alpha_blend_double.gdshader"
 )
 
+# Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
+# bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
+# directly in get_anchor_point_global_transform.
+const _ANCHOR_BONE_NAMES := {
+	2: "Avatar_LeftHand",
+	3: "Avatar_RightHand",
+	4: "Avatar_Head",
+	5: "Avatar_Neck",
+	6: "Avatar_Spine",
+	7: "Avatar_Spine1",
+	8: "Avatar_Spine2",
+	9: "Avatar_Hips",
+	10: "Avatar_LeftShoulder",
+	11: "Avatar_LeftArm",
+	12: "Avatar_LeftForeArm",
+	13: "Avatar_LeftHandIndex1",
+	14: "Avatar_RightShoulder",
+	15: "Avatar_RightArm",
+	16: "Avatar_RightForeArm",
+	17: "Avatar_RightHandIndex1",
+	18: "Avatar_LeftUpLeg",
+	19: "Avatar_LeftLeg",
+	20: "Avatar_LeftFoot",
+	21: "Avatar_LeftToeBase",
+	22: "Avatar_RightUpLeg",
+	23: "Avatar_RightLeg",
+	24: "Avatar_RightFoot",
+	25: "Avatar_RightToeBase",
+}
+
 @export var skip_process: bool = false
 @export var hide_name: bool = false:
 	set(value):
@@ -53,10 +83,12 @@ var wearables_by_category: Dictionary = {}
 var emote_controller: AvatarEmoteController  # Rust binded. Don't change this variable name
 
 var generate_attach_points: bool = false
-var right_hand_idx: int = -1
-var right_hand_position: Transform3D
-var left_hand_idx: int = -1
-var left_hand_position: Transform3D
+# anchor_point_id -> bone index in body_shape_skeleton_3d. Only entries whose
+# bone resolved at activation time are stored.
+var anchor_bone_idx: Dictionary = {}
+# anchor_point_id -> cached bone global pose, with basis pre-scaled by 100 to
+# cancel the Skeleton3D's 0.01 unit-conversion scale (see avatar.tscn).
+var anchor_transform: Dictionary = {}
 
 var voice_chat_audio_player: AudioStreamPlayer = null
 var voice_chat_audio_player_gen: AudioStreamGenerator = null
@@ -1550,18 +1582,34 @@ func _add_attach_points():
 	if body_shape_skeleton_3d == null:
 		return
 
-	right_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_RightHand")
-	left_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_LeftHand")
+	anchor_bone_idx.clear()
+	for anchor_id in _ANCHOR_BONE_NAMES:
+		var idx := body_shape_skeleton_3d.find_bone(_ANCHOR_BONE_NAMES[anchor_id])
+		if idx != -1:
+			anchor_bone_idx[anchor_id] = idx
+	# Prime the cache so the first frame after activation doesn't read default
+	# Transform3D() zeros.
+	_attach_point_skeleton_updated()
 
 
 func _attach_point_skeleton_updated():
-	if left_hand_idx != -1:
-		left_hand_position = body_shape_skeleton_3d.get_bone_global_pose(left_hand_idx)
-		left_hand_position.basis = left_hand_position.basis.scaled(100.0 * Vector3.ONE)
+	for anchor_id in anchor_bone_idx:
+		var t := body_shape_skeleton_3d.get_bone_global_pose(anchor_bone_idx[anchor_id])
+		t.basis = t.basis.scaled(100.0 * Vector3.ONE)
+		anchor_transform[anchor_id] = t
 
-	if right_hand_idx != -1:
-		right_hand_position = body_shape_skeleton_3d.get_bone_global_pose(right_hand_idx)
-		right_hand_position.basis = right_hand_position.basis.scaled(100.0 * Vector3.ONE)
+
+# Returns the world-space transform of an avatar anchor point for an
+# AvatarAttach component. anchor_point_id matches the SDK proto enum
+# AvatarAnchorPointType (see avatar_attach.proto). Unknown / unresolved ids
+# fall back to the avatar root so attached entities stay glued to the avatar
+# instead of teleporting to world origin.
+func get_anchor_point_global_transform(anchor_point_id: int) -> Transform3D:
+	if anchor_point_id == 1:  # AAPT_NAME_TAG
+		return nickname_quad.global_transform
+	if body_shape_skeleton_3d != null and anchor_transform.has(anchor_point_id):
+		return body_shape_skeleton_3d.global_transform * anchor_transform[anchor_point_id]
+	return global_transform
 
 
 func _on_timer_hide_mic_timeout():

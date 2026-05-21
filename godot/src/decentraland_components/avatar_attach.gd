@@ -6,10 +6,7 @@ extends PlayerColliderFilter
 			_player_avatar_node = null
 			user_id = value
 
-#  AAPT_POSITION = 0;
-#  AAPT_NAME_TAG = 1;
-#  AAPT_LEFT_HAND = 2;
-#  AAPT_RIGHT_HAND = 3;
+# See AvatarAnchorPointType in avatar_attach.proto.
 var attach_point: int = -1
 
 var _player_avatar_node: Avatar
@@ -33,23 +30,7 @@ func _process(_delta):
 		if _player_avatar_node == null:
 			return
 
-	match attach_point:
-		0:
-			p.global_transform = _player_avatar_node.global_transform
-		1:
-			p.global_transform = _player_avatar_node.nickname_quad.global_transform
-		2:
-			p.global_transform = (
-				_player_avatar_node.body_shape_skeleton_3d.global_transform
-				* _player_avatar_node.left_hand_position
-			)
-		3:
-			p.global_transform = (
-				_player_avatar_node.body_shape_skeleton_3d.global_transform
-				* _player_avatar_node.right_hand_position
-			)
-		_:
-			p.transform = Transform3D.IDENTITY
+	p.global_transform = _player_avatar_node.get_anchor_point_global_transform(attach_point)
 
 
 func look_up_player():
