@@ -21,14 +21,10 @@ var _generator_statuses: Dictionary = {}
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 @onready var friend_jump_in: SidePanelWrapper = %FriendJumpIn
-#@onready var discover_content: VBoxContainer = %DiscoverContent
 @onready var button_credits: Button = %Button_Credits
 @onready var button_history: Button = %Button_History
 @onready var credits_option = %CreditsOption
-@onready var credits_options_skeleton: VBoxContainer = %CreditsOptions_Skeleton
-@onready var credits_faq_skeleton: VBoxContainer = %CreditsFaq_Skeleton
-@onready var credits_option_inner = %CreditsOptionInner
-@onready var credits_faq: VBoxContainer = %CreditsFaq
+@onready var credits_shop = %CreditsShop
 @onready var credits_history: Container = %CreditsHistory
 
 static var _low_spec_warning_shown: bool = false
@@ -526,7 +522,7 @@ func _on_button_back_to_explorer_pressed() -> void:
 		search_bar.show()
 		credits_option.hide()
 		button_history.hide()
-		_reset_credits_skeletons()
+		credits_shop.reset()
 		_show_credits_button()
 		container_content.show()
 		label_title.show()
@@ -555,14 +551,6 @@ func _on_button_credits_pressed() -> void:
 	search_bar.hide()
 	button_history.visible = Iap.get_transaction_history().size() > 0
 
-	if Iap.get_products().size() > 0:
-		# Force skeleton visibility for 0.5s so testers can verify the skeleton UI
-		await get_tree().create_timer(0.5).timeout
-		_show_credits_content()
-	elif not Iap.products_ready.is_connected(_on_products_ready):
-		Iap.products_ready.connect(_on_products_ready)
-
-
 func _on_button_history_pressed() -> void:
 	credits_option.hide()
 	credits_history.show()
@@ -574,24 +562,6 @@ func _on_button_history_pressed() -> void:
 func _on_transaction_history_updated() -> void:
 	if credits_option.visible:
 		button_history.show()
-
-
-func _on_products_ready(_products: Array) -> void:
-	_show_credits_content()
-
-
-func _show_credits_content() -> void:
-	credits_options_skeleton.hide()
-	credits_faq_skeleton.hide()
-	credits_option_inner.show()
-	credits_faq.show()
-
-
-func _reset_credits_skeletons() -> void:
-	credits_options_skeleton.show()
-	credits_faq_skeleton.show()
-	credits_option_inner.hide()
-	credits_faq.hide()
 
 
 # Credits / IAP entry. The button doubles as a balance display, so we show it

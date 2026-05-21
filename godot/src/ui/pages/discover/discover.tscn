@@ -23,12 +23,10 @@
 [ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/pages/events/event_details.tscn" id="17_lvgj0"]
 [ext_resource type="PackedScene" uid="uid://3uibe7yuvd3j" path="res://src/ui/components/molecules/search_bar/search_bar.tscn" id="18_sbar"]
 [ext_resource type="PackedScene" uid="uid://b8k2m5nf3qr7x" path="res://src/ui/pages/discover/friends/friends_generator.tscn" id="19_fgen"]
-[ext_resource type="PackedScene" uid="uid://dv5qtn5it8js0" path="res://src/ui/components/organisms/credits_option/credits_option.tscn" id="20_dn5gj"]
 [ext_resource type="PackedScene" uid="uid://c7n3k8p2xq4rf" path="res://src/ui/pages/discover/friends/friend_jump_in.tscn" id="20_fjump"]
 [ext_resource type="PackedScene" uid="uid://bk7m3n5xp2qrf" path="res://src/ui/pages/discover/friends/friend_discover_skeleton.tscn" id="21_fskel"]
 [ext_resource type="PackedScene" uid="uid://byp4n7u2145fx" path="res://src/ui/components/molecules/snap_carousel/snap_carousel.tscn" id="22_snap"]
-[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/pages/discover/carrousel/discover_carrousel_skeleton_material.tres" id="23_qr6ir"]
-[ext_resource type="PackedScene" uid="uid://dy6b2qqq4pve0" path="res://src/ui/components/molecules/faq_collapsable/faq_collapsable.tscn" id="24_75egf"]
+[ext_resource type="PackedScene" uid="uid://bk0bh2bgdycxx" path="res://src/ui/components/organisms/credits_shop/credits_shop.tscn" id="24_qr6ir"]
 [ext_resource type="PackedScene" uid="uid://c7m54lyhw5fwp" path="res://src/ui/components/organisms/credits_history/credits_history.tscn" id="27_ritxv"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cwrnu"]
@@ -100,25 +98,6 @@ font = ExtResource("14_dn5gj")
 font_size = 34
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w46h5"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o7fsu"]
-bg_color = Color(1, 1, 1, 0.078431375)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_75egf"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_bwjou"]
-font = ExtResource("13_73ifx")
-font_size = 38
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-
-[sub_resource type="LabelSettings" id="LabelSettings_cwrnu"]
-font = ExtResource("14_dn5gj")
-font_size = 24
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [node name="Discover" type="Control" unique_id=666812766]
 layout_mode = 3
@@ -456,7 +435,6 @@ layout_mode = 2
 
 [node name="CreditsOption" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1831528012]
 unique_name_in_owner = true
-visible = false
 clip_contents = true
 layout_mode = 2
 script = ExtResource("10_q2sj0")
@@ -472,145 +450,13 @@ size_flags_horizontal = 3
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_right = 48
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer" unique_id=633577406]
-layout_mode = 2
-theme_override_constants/separation = 78
-
-[node name="CreditsOptions_Skeleton" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer" unique_id=888097635]
+[node name="CreditsShop" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer" unique_id=2110848340 instance=ExtResource("24_qr6ir")]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 48
-
-[node name="Skeleton1" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsOptions_Skeleton" unique_id=1421119342]
-material = ExtResource("23_qr6ir")
-custom_minimum_size = Vector2(0, 212)
-layout_mode = 2
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_o7fsu")
-
-[node name="Skeleton2" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsOptions_Skeleton" unique_id=455881026]
-material = ExtResource("23_qr6ir")
-custom_minimum_size = Vector2(0, 212)
-layout_mode = 2
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_o7fsu")
-
-[node name="Skeleton3" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsOptions_Skeleton" unique_id=165156838]
-material = ExtResource("23_qr6ir")
-custom_minimum_size = Vector2(0, 212)
-layout_mode = 2
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_o7fsu")
-
-[node name="CreditsFaq_Skeleton" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer" unique_id=40411477]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="Skeleton_Title" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq_Skeleton" unique_id=427218919]
-material = ExtResource("23_qr6ir")
-custom_minimum_size = Vector2(75, 47)
-layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 0
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_o7fsu")
-
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq_Skeleton" unique_id=1138091576]
-layout_mode = 2
-theme_override_constants/separation = 24
-theme_override_styles/separator = SubResource("StyleBoxEmpty_75egf")
-
-[node name="Faq1" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq_Skeleton" unique_id=1929224232]
-material = ExtResource("23_qr6ir")
-custom_minimum_size = Vector2(75, 80)
-layout_mode = 2
-size_flags_vertical = 0
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_o7fsu")
-
-[node name="HSeparator2" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq_Skeleton" unique_id=456021850]
-layout_mode = 2
-theme_override_constants/separation = 32
-theme_override_styles/separator = SubResource("StyleBoxEmpty_75egf")
-
-[node name="Faq2" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq_Skeleton" unique_id=1701560516]
-material = ExtResource("23_qr6ir")
-custom_minimum_size = Vector2(75, 80)
-layout_mode = 2
-size_flags_vertical = 0
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_o7fsu")
-
-[node name="HSeparator3" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq_Skeleton" unique_id=657619997]
-layout_mode = 2
-theme_override_constants/separation = 38
-theme_override_styles/separator = SubResource("StyleBoxEmpty_75egf")
-
-[node name="Faq3" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq_Skeleton" unique_id=840902796]
-material = ExtResource("23_qr6ir")
-custom_minimum_size = Vector2(75, 228)
-layout_mode = 2
-size_flags_vertical = 0
-mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_o7fsu")
-
-[node name="CreditsOptionInner" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer" unique_id=257827310 instance=ExtResource("20_dn5gj")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="CreditsFaq" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer" unique_id=161329086]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq" unique_id=1146466670]
-layout_mode = 2
-text = "FAQ"
-label_settings = SubResource("LabelSettings_bwjou")
-
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq" unique_id=1277162207]
-layout_mode = 2
-theme_override_constants/separation = 20
-theme_override_styles/separator = SubResource("StyleBoxEmpty_75egf")
-
-[node name="FaqCollapsable1" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq" unique_id=1044230277 instance=ExtResource("24_75egf")]
-layout_mode = 2
-size_flags_horizontal = 1
-title = "What are Credits?"
-description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since."
-
-[node name="HSeparator2" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq" unique_id=1429406963]
-layout_mode = 2
-theme_override_constants/separation = 32
-theme_override_styles/separator = SubResource("StyleBoxEmpty_75egf")
-
-[node name="FaqCollapsable2" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq" unique_id=497899299 instance=ExtResource("24_75egf")]
-layout_mode = 2
-size_flags_horizontal = 1
-title = "Do Credits expire?"
-description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since."
-
-[node name="HSeparator3" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq" unique_id=2015851288]
-layout_mode = 2
-theme_override_constants/separation = 38
-theme_override_styles/separator = SubResource("StyleBoxEmpty_75egf")
-
-[node name="Label_Description" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer/VBoxContainer/CreditsFaq" unique_id=2075352195]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(1, 1)
-layout_mode = 2
-text = "I agree I am purchasing a limited license to use Credits governed by the Terms of the License. By purchasing Credits, you agree to our Terms of Use and Privacy Policy, including the arbitration clause and revocation policy. You consent to the immediate performance of the contract and acknowledge that you thereby lose your right of withdrawal."
-label_settings = SubResource("LabelSettings_cwrnu")
-autowrap_mode = 2
 
 [node name="CreditsHistory" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=580961379]
 unique_name_in_owner = true
+visible = false
 clip_contents = true
 layout_mode = 2
 script = ExtResource("10_q2sj0")
