@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://1ikv8durm04q"
-path.s3tc="res://.godot/imported/credits_3.png-2a3a82130167b8bb0e13a3cd185f8db5.s3tc.ctex"
-path.etc2="res://.godot/imported/credits_3.png-2a3a82130167b8bb0e13a3cd185f8db5.etc2.ctex"
+path.s3tc="res://.godot/imported/credits_3.png-608fd6dbfb4b7efb8105342de06ac37f.s3tc.ctex"
+path.etc2="res://.godot/imported/credits_3.png-608fd6dbfb4b7efb8105342de06ac37f.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/ui/credits_3.png"
-dest_files=["res://.godot/imported/credits_3.png-2a3a82130167b8bb0e13a3cd185f8db5.s3tc.ctex", "res://.godot/imported/credits_3.png-2a3a82130167b8bb0e13a3cd185f8db5.etc2.ctex"]
+source_file="res://assets/ui/iap/credits_3.png"
+dest_files=["res://.godot/imported/credits_3.png-608fd6dbfb4b7efb8105342de06ac37f.s3tc.ctex", "res://.godot/imported/credits_3.png-608fd6dbfb4b7efb8105342de06ac37f.etc2.ctex"]
 
 [params]
 

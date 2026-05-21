@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://cd35wyk0yynlp"]
+
+[ext_resource type="Script" uid="uid://blg21iqka3ahy" path="res://src/ui/components/molecules/credits_history_item/credits_history_item.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_whpm5"]
+[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="3_e0556"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8rb0h"]
+draw_center = false
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.4)
+
+[sub_resource type="LabelSettings" id="LabelSettings_g7rjq"]
+font_size = 20
+font_color = Color(1, 1, 1, 0.69803923)
+
+[sub_resource type="LabelSettings" id="LabelSettings_wfl54"]
+font = ExtResource("2_whpm5")
+font_size = 20
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_wxo8y"]
+font = ExtResource("2_whpm5")
+font_size = 28
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="CreditsHistoryItem" type="PanelContainer" unique_id=293608994]
+custom_minimum_size = Vector2(600, 100)
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_8rb0h")
+script = ExtResource("1_script")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=212413300]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 38
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 38
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1340163239]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Label_Date" type="Label" parent="MarginContainer/VBoxContainer" unique_id=139674568]
+unique_name_in_owner = true
+layout_mode = 2
+text = "2026.04.25"
+label_settings = SubResource("LabelSettings_g7rjq")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=978267799]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Label_Detail" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1599885672]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Purchased 10 CREDITS"
+label_settings = SubResource("LabelSettings_wfl54")
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=733754281]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("3_e0556")
+
+[node name="Label_Amount" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1076454542]
+unique_name_in_owner = true
+layout_mode = 2
+text = "10"
+label_settings = SubResource("LabelSettings_wxo8y")

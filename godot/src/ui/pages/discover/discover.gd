@@ -23,11 +23,13 @@ var _generator_statuses: Dictionary = {}
 @onready var friend_jump_in: SidePanelWrapper = %FriendJumpIn
 #@onready var discover_content: VBoxContainer = %DiscoverContent
 @onready var button_credits: Button = %Button_Credits
+@onready var button_history: Button = %Button_History
 @onready var credits_option = %CreditsOption
 @onready var credits_options_skeleton: VBoxContainer = %CreditsOptions_Skeleton
 @onready var credits_faq_skeleton: VBoxContainer = %CreditsFaq_Skeleton
 @onready var credits_option_inner = %CreditsOptionInner
 @onready var credits_faq: VBoxContainer = %CreditsFaq
+@onready var credits_history: Container = %CreditsHistory
 
 static var _low_spec_warning_shown: bool = false
 
@@ -40,6 +42,7 @@ func _ready():
 	search_bar.close_searchbar()
 
 	_setup_credits_button()
+	Iap.transaction_history_updated.connect(_on_transaction_history_updated)
 
 	jump_in.jump_in.connect(_on_jump_in_jump_in)
 	jump_in.jump_in_world.connect(_on_jump_in_world)
@@ -53,6 +56,8 @@ func _ready():
 
 	search_container.hide()
 	credits_option.hide()
+	credits_history.hide()
+	button_history.hide()
 	search_container.keyword_selected.connect(_async_on_keyword_selected)
 	search_container.should_show_container.connect(_on_should_show_suggestions_container)
 	search_bar.cleared.connect(_on_search_bar_cleared)
@@ -509,9 +514,18 @@ func _on_button_back_to_explorer_pressed() -> void:
 		_show_credits_button()
 		return
 
+	if credits_history.visible:
+		credits_history.hide()
+		credits_option.show()
+		button_history.show()
+		_show_credits_button()
+		label_title.text = "Credits"
+		return
+
 	if credits_option.visible:
 		search_bar.show()
 		credits_option.hide()
+		button_history.hide()
 		_reset_credits_skeletons()
 		_show_credits_button()
 		container_content.show()
@@ -537,7 +551,9 @@ func _on_button_credits_pressed() -> void:
 	Global.metrics.track_click_button("BUTTON_CREDITS", "DISCOVER", "")
 	_show_credits_button()
 	credits_option.show()
+	credits_history.hide()
 	search_bar.hide()
+	button_history.visible = Iap.get_transaction_history().size() > 0
 
 	if Iap.get_products().size() > 0:
 		# Force skeleton visibility for 0.5s so testers can verify the skeleton UI
@@ -545,6 +561,19 @@ func _on_button_credits_pressed() -> void:
 		_show_credits_content()
 	elif not Iap.products_ready.is_connected(_on_products_ready):
 		Iap.products_ready.connect(_on_products_ready)
+
+
+func _on_button_history_pressed() -> void:
+	credits_option.hide()
+	credits_history.show()
+	button_history.hide()
+	button_credits.hide()
+	label_title.text = "Purchases"
+
+
+func _on_transaction_history_updated() -> void:
+	if credits_option.visible:
+		button_history.show()
 
 
 func _on_products_ready(_products: Array) -> void:

@@ -25,6 +25,7 @@ signal purchase_failed(product_id: String, reason: String)
 signal purchase_cancelled(product_id: String)
 signal purchase_pending(product_id: String)
 signal balance_changed(new_balance: int)
+signal transaction_history_updated
 
 # Credit packs. Today we only ship the local/dev catalog (served by
 # `godot/ios/LocalStoreKit.storekit` via the Xcode scheme). Real ASC product
@@ -76,6 +77,8 @@ var _balance: int = 0
 # that picks up any unfinished tx). The real backend dedupes by tx id server
 # side; we mirror that here. Cleared on relaunch like `_balance`.
 var _seen_tx_ids: Dictionary = {}
+# TODO: replace with backend endpoint query to get persistent transaction history
+var _transaction_history: Array = []
 var _dev_panel: Control = null
 
 # Bumped on each purchase start AND each overlay hide so stale SceneTreeTimer
@@ -112,10 +115,20 @@ func _ready() -> void:
 
 
 func is_available() -> bool:
+	# TODO: remove editor override — forces IAP UI visible for desktop testing
+	if OS.has_feature("editor"):
+		return true
 	return _store_kit_available
 
 
 func get_products() -> Array:
+	# TODO: remove editor override — returns mock products for desktop testing
+	if OS.has_feature("editor") and _products.is_empty():
+		return [
+			{"id": "local_credits_10", "displayName": "10 Credits", "displayPrice": "$0.99"},
+			{"id": "local_credits_50", "displayName": "50 Credits", "displayPrice": "$3.99"},
+			{"id": "local_credits_100", "displayName": "100 Credits", "displayPrice": "$6.99"},
+		]
 	return _products
 
 
@@ -123,7 +136,15 @@ func get_balance() -> int:
 	return _balance
 
 
+func get_transaction_history() -> Array:
+	return _transaction_history
+
+
 func purchase(product_id: String) -> void:
+	# TODO: remove — simulates purchase flow in the editor for testing
+	if not _store_kit_available and OS.has_feature("editor"):
+		_simulate_editor_purchase(product_id)
+		return
 	if not _store_kit_available:
 		print("[IAP] not available; ignoring purchase(", product_id, ")")
 		return
@@ -143,6 +164,33 @@ func purchase(product_id: String) -> void:
 	_purchase_in_flight = true
 	_show_overlay()
 	_store_kit.purchase(product_id, wallet)
+
+
+# TODO: remove — editor-only simulated purchase for desktop testing
+func _simulate_editor_purchase(product_id: String) -> void:
+	var credits: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
+	if _balance + credits > _MAX_CREDITS:
+		Global.modal_manager.async_show_credit_limit_modal()
+		return
+	_purchase_in_flight = true
+	_show_overlay()
+	await get_tree().create_timer(1.0).timeout
+	_finish_purchase_flow()
+	_balance += credits
+	balance_changed.emit(_balance)
+	_show_success_modal(credits)
+	_record_transaction(credits, false)
+	purchase_completed.emit(product_id, credits)
+
+
+func _record_transaction(credits: int, is_refund: bool) -> void:
+	var now = Time.get_datetime_dict_from_system()
+	_transaction_history.append({
+		"credits": credits,
+		"is_refund": is_refund,
+		"timestamp": "%04d.%02d.%02d" % [now.year, now.month, now.day],
+	})
+	transaction_history_updated.emit()
 
 
 func toggle_dev_panel() -> void:
@@ -240,6 +288,7 @@ func _async_handle_verified_transaction(tx: Dictionary) -> void:
 			_store_kit.finish_transaction(tx_id)
 			_finish_purchase_flow()
 			_show_success_modal(credits)
+			_record_transaction(credits, false)
 			purchase_completed.emit(product_id, credits)
 		_OUTCOME_REJECTED:
 			# Sim rejected (unknown product). Finishing breaks the redelivery
