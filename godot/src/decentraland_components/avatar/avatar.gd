@@ -87,7 +87,9 @@ var generate_attach_points: bool = false
 # bone resolved at activation time are stored.
 var anchor_bone_idx: Dictionary = {}
 # anchor_point_id -> cached bone global pose, with basis pre-scaled by 100 to
-# cancel the Skeleton3D's 0.01 unit-conversion scale (see avatar.tscn).
+# cancel the Skeleton3D's 0.01 unit-conversion scale. After composing with
+# body_shape_skeleton_3d.global_transform the basis has world scale 1; the
+# entity's own scale is then preserved by avatar_attach.gd.
 var anchor_transform: Dictionary = {}
 
 var voice_chat_audio_player: AudioStreamPlayer = null
@@ -1605,10 +1607,18 @@ func _attach_point_skeleton_updated():
 # fall back to the avatar root so attached entities stay glued to the avatar
 # instead of teleporting to world origin.
 func get_anchor_point_global_transform(anchor_point_id: int) -> Transform3D:
+	# Post-rotate 180° around local Y to align with the Unity reference client.
+	# Godot's GLTF import flips the skeleton coordinate basis vs Unity, leaving
+	# bone-derived +X / +Z inverted relative to the Decentraland SDK / Unity
+	# convention; +Y stays correct. Applies to NAME_TAG too because nickname_quad
+	# is parented under a BoneAttachment3D on Avatar_Head, so it inherits the
+	# same discrepancy.
 	if anchor_point_id == 1:  # AAPT_NAME_TAG
-		return nickname_quad.global_transform
+		return nickname_quad.global_transform.rotated_local(Vector3.UP, PI)
 	if body_shape_skeleton_3d != null and anchor_transform.has(anchor_point_id):
-		return body_shape_skeleton_3d.global_transform * anchor_transform[anchor_point_id]
+		var cached: Transform3D = anchor_transform[anchor_point_id]
+		var t := body_shape_skeleton_3d.global_transform * cached
+		return t.rotated_local(Vector3.UP, PI)
 	return global_transform
 
 
