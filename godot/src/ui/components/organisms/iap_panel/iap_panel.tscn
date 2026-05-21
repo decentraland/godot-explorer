@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://b8iappanel00001"]
 
-[ext_resource type="Script" path="res://src/ui/iap/iap_panel.gd" id="1_iappanel"]
+[ext_resource type="Script" path="res://src/ui/components/organisms/iap_panel/iap_panel.gd" id="1_iappanel"]
 
 [node name="IapPanel" type="Control"]
 anchors_preset = 15

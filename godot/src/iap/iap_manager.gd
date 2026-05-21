@@ -150,7 +150,7 @@ func toggle_dev_panel() -> void:
 		_dev_panel.queue_free()
 		_dev_panel = null
 		return
-	var scene := load("res://src/ui/iap/iap_panel.tscn") as PackedScene
+	var scene := load("res://src/ui/components/organisms/iap_panel/iap_panel.tscn") as PackedScene
 	if scene == null:
 		printerr("[IAP] dev panel scene missing")
 		return

@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b3slm28f861jp"]
 
-[ext_resource type="Texture2D" uid="uid://cmcrxxx2i86qs" path="res://assets/ui/credits_1.png" id="1_nc4ft"]
+[ext_resource type="Texture2D" uid="uid://cmcrxxx2i86qs" path="res://assets/ui/iap/credits_1.png" id="1_nc4ft"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_pd26s"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_73ifx"]

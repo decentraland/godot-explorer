@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cxyvv774su2j2"]
 
-[ext_resource type="Script" uid="uid://d1svh7aeoa8qn" path="res://src/ui/pages/discover/credit_option_item.gd" id="1_xgw18"]
+[ext_resource type="Script" uid="uid://d1svh7aeoa8qn" path="res://src/ui/components/molecules/credit_option_item/credit_option_item.gd" id="1_xgw18"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_xgw18"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c5avl"]
