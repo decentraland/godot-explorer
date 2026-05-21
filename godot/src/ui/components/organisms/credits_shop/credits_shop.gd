@@ -13,6 +13,11 @@ func _ready() -> void:
 		Iap.products_ready.connect(_on_products_ready)
 
 
+func _exit_tree() -> void:
+	if Iap.products_ready.is_connected(_on_products_ready):
+		Iap.products_ready.disconnect(_on_products_ready)
+
+
 func _on_products_ready(_products: Array) -> void:
 	_show_content()
 

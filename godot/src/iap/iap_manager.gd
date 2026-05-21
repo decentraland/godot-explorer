@@ -79,8 +79,6 @@ var _balance: int = 0
 var _seen_tx_ids: Dictionary = {}
 # TODO: replace with backend endpoint query to get persistent transaction history
 var _transaction_history: Array = []
-var _dev_panel: Control = null
-
 # Bumped on each purchase start AND each overlay hide so stale SceneTreeTimer
 # timeouts (which can't be cancelled) become no-ops.
 var _overlay_token: int = 0
@@ -198,19 +196,6 @@ func _record_transaction(credits: int, is_refund: bool) -> void:
 		)
 	)
 	transaction_history_updated.emit()
-
-
-func toggle_dev_panel() -> void:
-	if _dev_panel != null and is_instance_valid(_dev_panel):
-		_dev_panel.queue_free()
-		_dev_panel = null
-		return
-	var scene := load("res://src/ui/components/organisms/iap_panel/iap_panel.tscn") as PackedScene
-	if scene == null:
-		printerr("[IAP] dev panel scene missing")
-		return
-	_dev_panel = scene.instantiate()
-	get_tree().root.add_child(_dev_panel)
 
 
 func _on_products_loaded(json: String) -> void:
