@@ -15,6 +15,7 @@
 #import <EventKitUI/EventKitUI.h>
 #import <LinkPresentation/LinkPresentation.h>
 #import <UserNotifications/UserNotifications.h>
+#import <DeviceCheck/DeviceCheck.h>
 
 const char* DCLGODOTIOS_VERSION = "1.0";
 
@@ -215,8 +216,25 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("avPlayerAcquireIOSurfacePtr", "player_id"), &DclGodotiOS::avPlayerAcquireIOSurfacePtr);
     ClassDB::bind_method(D_METHOD("avPlayerGetInfo", "player_id"), &DclGodotiOS::avPlayerGetInfo);
 
+    // App Attest
+    ClassDB::bind_method(D_METHOD("attestation_is_supported"), &DclGodotiOS::attestation_is_supported);
+    ClassDB::bind_method(D_METHOD("attestation_generate_key"), &DclGodotiOS::attestation_generate_key);
+    ClassDB::bind_method(D_METHOD("attestation_attest_key", "key_id", "client_data_hash"), &DclGodotiOS::attestation_attest_key);
+    ClassDB::bind_method(D_METHOD("attestation_generate_assertion", "key_id", "client_data_hash"), &DclGodotiOS::attestation_generate_assertion);
+
     // Signal emitted when a deeplink URL is received
     ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
+
+    // App Attest completion signals — `error` is empty on success.
+    ADD_SIGNAL(MethodInfo("attestation_key_generated",
+        PropertyInfo(Variant::STRING, "key_id"),
+        PropertyInfo(Variant::STRING, "error")));
+    ADD_SIGNAL(MethodInfo("attestation_attest_completed",
+        PropertyInfo(Variant::STRING, "attestation_object_b64u"),
+        PropertyInfo(Variant::STRING, "error")));
+    ADD_SIGNAL(MethodInfo("attestation_assertion_completed",
+        PropertyInfo(Variant::STRING, "assertion_b64u"),
+        PropertyInfo(Variant::STRING, "error")));
 }
 
 void DclGodotiOS::print_version() {
@@ -1436,6 +1454,160 @@ DclGodotiOS::DclGodotiOS() {
     #else
     notificationDatabase = nullptr;
     #endif
+}
+
+// ---------------- App Attest ----------------
+//
+// DCAppAttestService is a system singleton. Completion handlers fire on an
+// undocumented queue, so every code path that emits a signal first hops to
+// the main thread — Godot listeners assume main-thread delivery.
+//
+// Encoding: we always hand base64url back to GDScript (the server uses
+// Buffer.from(s, "base64url") in Node). Apple's APIs hand us either NSData
+// (attestation_object, assertion) or NSString in standard base64 (key_id),
+// so we normalize before emitting.
+
+#if TARGET_OS_IOS
+static NSString *_dcl_b64url_from_data(NSData *data) {
+    if (!data) return @"";
+    NSString *b64 = [data base64EncodedStringWithOptions:0];
+    return [[[b64 stringByReplacingOccurrencesOfString:@"+" withString:@"-"]
+              stringByReplacingOccurrencesOfString:@"/" withString:@"_"]
+              stringByReplacingOccurrencesOfString:@"=" withString:@""];
+}
+
+static NSString *_dcl_b64url_from_b64(NSString *b64) {
+    if (!b64) return @"";
+    return [[[b64 stringByReplacingOccurrencesOfString:@"+" withString:@"-"]
+              stringByReplacingOccurrencesOfString:@"/" withString:@"_"]
+              stringByReplacingOccurrencesOfString:@"=" withString:@""];
+}
+
+static NSData *_dcl_data_from_packed(const PackedByteArray &bytes) {
+    return [NSData dataWithBytes:bytes.ptr() length:bytes.size()];
+}
+
+static String _dcl_string_from_ns(NSString *s) {
+    if (!s) return String();
+    return String::utf8([s UTF8String]);
+}
+#endif
+
+bool DclGodotiOS::attestation_is_supported() {
+    #if TARGET_OS_IOS
+    if (@available(iOS 14.0, *)) {
+        return [[DCAppAttestService sharedService] isSupported];
+    }
+    return false;
+    #else
+    return false;
+    #endif
+}
+
+void DclGodotiOS::attestation_generate_key() {
+    #if TARGET_OS_IOS
+    if (@available(iOS 14.0, *)) {
+        if (![[DCAppAttestService sharedService] isSupported]) {
+            DclGodotiOS::emit_attestation_key_generated(String(), String("App Attest is not supported on this device"));
+            return;
+        }
+        [[DCAppAttestService sharedService] generateKeyWithCompletionHandler:^(NSString * _Nullable keyId, NSError * _Nullable error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (error || !keyId) {
+                    DclGodotiOS::emit_attestation_key_generated(String(), _dcl_string_from_ns(error ? error.localizedDescription : @"generateKey returned nil keyId"));
+                    return;
+                }
+                DclGodotiOS::emit_attestation_key_generated(_dcl_string_from_ns(_dcl_b64url_from_b64(keyId)), String());
+            });
+        }];
+    } else {
+        DclGodotiOS::emit_attestation_key_generated(String(), String("iOS 14+ required for App Attest"));
+    }
+    #else
+    DclGodotiOS::emit_attestation_key_generated(String(), String("App Attest only available on iOS"));
+    #endif
+}
+
+void DclGodotiOS::attestation_attest_key(String key_id, PackedByteArray client_data_hash) {
+    #if TARGET_OS_IOS
+    if (@available(iOS 14.0, *)) {
+        // Apple's API takes the raw base64 form of the keyId. Convert from
+        // the base64url GDScript holds.
+        NSString *keyIdB64u = [NSString stringWithUTF8String:key_id.utf8().get_data()];
+        NSString *keyIdB64 = [[keyIdB64u stringByReplacingOccurrencesOfString:@"-" withString:@"+"]
+                                          stringByReplacingOccurrencesOfString:@"_" withString:@"/"];
+        // Pad back to a multiple of 4
+        NSUInteger paddedLength = keyIdB64.length + ((4 - keyIdB64.length % 4) % 4);
+        keyIdB64 = [keyIdB64 stringByPaddingToLength:paddedLength withString:@"=" startingAtIndex:0];
+
+        NSData *cdh = _dcl_data_from_packed(client_data_hash);
+        [[DCAppAttestService sharedService] attestKey:keyIdB64
+                                       clientDataHash:cdh
+                                    completionHandler:^(NSData * _Nullable attestationObject, NSError * _Nullable error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (error || !attestationObject) {
+                    DclGodotiOS::emit_attestation_attest_completed(String(), _dcl_string_from_ns(error ? error.localizedDescription : @"attestKey returned nil"));
+                    return;
+                }
+                DclGodotiOS::emit_attestation_attest_completed(_dcl_string_from_ns(_dcl_b64url_from_data(attestationObject)), String());
+            });
+        }];
+    } else {
+        DclGodotiOS::emit_attestation_attest_completed(String(), String("iOS 14+ required for App Attest"));
+    }
+    #else
+    DclGodotiOS::emit_attestation_attest_completed(String(), String("App Attest only available on iOS"));
+    #endif
+}
+
+void DclGodotiOS::attestation_generate_assertion(String key_id, PackedByteArray client_data_hash) {
+    #if TARGET_OS_IOS
+    if (@available(iOS 14.0, *)) {
+        NSString *keyIdB64u = [NSString stringWithUTF8String:key_id.utf8().get_data()];
+        NSString *keyIdB64 = [[keyIdB64u stringByReplacingOccurrencesOfString:@"-" withString:@"+"]
+                                          stringByReplacingOccurrencesOfString:@"_" withString:@"/"];
+        NSUInteger paddedLength = keyIdB64.length + ((4 - keyIdB64.length % 4) % 4);
+        keyIdB64 = [keyIdB64 stringByPaddingToLength:paddedLength withString:@"=" startingAtIndex:0];
+
+        NSData *cdh = _dcl_data_from_packed(client_data_hash);
+        [[DCAppAttestService sharedService] generateAssertion:keyIdB64
+                                               clientDataHash:cdh
+                                            completionHandler:^(NSData * _Nullable assertionObject, NSError * _Nullable error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (error || !assertionObject) {
+                    DclGodotiOS::emit_attestation_assertion_completed(String(), _dcl_string_from_ns(error ? error.localizedDescription : @"generateAssertion returned nil"));
+                    return;
+                }
+                DclGodotiOS::emit_attestation_assertion_completed(_dcl_string_from_ns(_dcl_b64url_from_data(assertionObject)), String());
+            });
+        }];
+    } else {
+        DclGodotiOS::emit_attestation_assertion_completed(String(), String("iOS 14+ required for App Attest"));
+    }
+    #else
+    DclGodotiOS::emit_attestation_assertion_completed(String(), String("App Attest only available on iOS"));
+    #endif
+}
+
+void DclGodotiOS::emit_attestation_key_generated(String key_id, String error) {
+    DclGodotiOS *singleton = DclGodotiOS::get_singleton();
+    if (singleton) {
+        singleton->emit_signal("attestation_key_generated", key_id, error);
+    }
+}
+
+void DclGodotiOS::emit_attestation_attest_completed(String attestation_object_b64u, String error) {
+    DclGodotiOS *singleton = DclGodotiOS::get_singleton();
+    if (singleton) {
+        singleton->emit_signal("attestation_attest_completed", attestation_object_b64u, error);
+    }
+}
+
+void DclGodotiOS::emit_attestation_assertion_completed(String assertion_b64u, String error) {
+    DclGodotiOS *singleton = DclGodotiOS::get_singleton();
+    if (singleton) {
+        singleton->emit_signal("attestation_assertion_completed", assertion_b64u, error);
+    }
 }
 
 DclGodotiOS::~DclGodotiOS() {
