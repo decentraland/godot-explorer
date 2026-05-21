@@ -34,24 +34,19 @@ use super::super::{
 };
 use super::common::{count_nodes, load_gltf_pipeline};
 
-use crate::scene_runner::components::asset_preprocessor::{mesh_occluder, metrics, vertex_strip};
+use crate::scene_runner::components::asset_preprocessor::{mesh_occluder, metrics};
 
 struct AssetServerPreprocCounts {
-    stripped: u32,
     occluders: u32,
 }
 
 fn apply_asset_server_optimizations(root: &Gd<Node3D>, hash: &str) {
-    let mut counts = AssetServerPreprocCounts {
-        stripped: 0,
-        occluders: 0,
-    };
+    let mut counts = AssetServerPreprocCounts { occluders: 0 };
     walk_and_preprocess(&root.clone().upcast(), &mut counts);
-    if counts.stripped > 0 || counts.occluders > 0 {
+    if counts.occluders > 0 {
         godot::global::godot_print!(
-            "[asset-server-preproc] {}: stripped={} occluders={}",
+            "[asset-server-preproc] {}: occluders={}",
             hash,
-            counts.stripped,
             counts.occluders
         );
     }
@@ -62,16 +57,7 @@ fn walk_and_preprocess(node: &Gd<Node>, counts: &mut AssetServerPreprocCounts) {
         if mi.is_visible_in_tree() && mi.get_layer_mask() == 1 {
             if let Some(mesh) = mi.get_mesh() {
                 if let Ok(array_mesh) = mesh.try_cast::<ArrayMesh>() {
-                    let mut current = array_mesh;
-
-                    if let Some((stripped, bytes)) = vertex_strip::strip_unused(&current) {
-                        metrics::record_stripped(bytes);
-                        mi.set_mesh(&stripped.clone().upcast::<godot::classes::Mesh>());
-                        current = stripped;
-                        counts.stripped = counts.stripped.saturating_add(1);
-                    }
-
-                    if mesh_occluder::try_spawn_for(&mut mi, &current) {
+                    if mesh_occluder::try_spawn_for(&mut mi, &array_mesh) {
                         metrics::record_occluder();
                         counts.occluders = counts.occluders.saturating_add(1);
                     }
