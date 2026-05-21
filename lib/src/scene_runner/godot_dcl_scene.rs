@@ -5,7 +5,8 @@ use crate::{
     },
     godot_classes::{
         dcl_node_entity_3d::DclNodeEntity3d, dcl_scene_node::DclSceneNode,
-        dcl_ui_control::DclUiControl,
+        dcl_ui_background::DclUiBackground, dcl_ui_border::DclUiBorder,
+        dcl_ui_control::DclUiControl, dcl_ui_scroll::DclUiScroll,
     },
     realm::scene_definition::SceneEntityDefinition,
 };
@@ -105,12 +106,40 @@ pub struct UiNode {
     pub ui_transform: UiTransform,
     pub computed_parent: SceneEntityId,
     pub has_background: bool,
+    pub has_border: bool,
     pub text_size: Option<Vector2>,
+    // Direct Gd references avoid get_node_or_null string lookups on every
+    // UI_TRANSFORM update. Set/cleared by the ui_background / ui_transform
+    // update functions in lockstep with has_background / has_border.
+    pub bkg_node: Option<Gd<DclUiBackground>>,
+    pub border_node: Option<Gd<DclUiBorder>>,
+    pub scroll_container: Option<Gd<DclUiScroll>>,
 }
 
 impl UiNode {
-    pub fn control_offset(&self) -> i32 {
-        (if self.has_background { 1 } else { 0 }) + (if self.text_size.is_some() { 1 } else { 0 })
+    // Returns the Godot node where child entities of this entity should be placed.
+    // When a scroll container is present, children live under the scroll's content
+    // node rather than directly under base_control.
+    pub fn children_container(&self) -> Gd<Node> {
+        if let Some(sc) = &self.scroll_container {
+            sc.bind().content_node().upcast::<Node>()
+        } else {
+            self.base_control.clone().upcast::<Node>()
+        }
+    }
+
+    // Index offset within children_container for new child entities. When no
+    // scroll is present, base_control reserves slots at the START for bkg
+    // (index 0) and text (index 1); the border node lives at the END so it
+    // draws on top and is not counted here. When scrolling, children live
+    // under a dedicated content node with no fixed siblings.
+    pub fn children_offset(&self) -> i32 {
+        if self.scroll_container.is_some() {
+            0
+        } else {
+            (if self.has_background { 1 } else { 0 })
+                + (if self.text_size.is_some() { 1 } else { 0 })
+        }
     }
 }
 
@@ -162,7 +191,11 @@ impl GodotDclScene {
             ui_transform: UiTransform::default(),
             computed_parent: SceneEntityId::ROOT,
             has_background: false,
+            has_border: false,
+            bkg_node: None,
+            border_node: None,
             text_size: None,
+            scroll_container: None,
         };
 
         let entities = HashMap::from([(
@@ -283,7 +316,11 @@ impl GodotDclScene {
                 ui_transform: UiTransform::default(),
                 computed_parent: SceneEntityId::ROOT,
                 has_background: false,
+                has_border: false,
                 text_size: None,
+                bkg_node: None,
+                border_node: None,
+                scroll_container: None,
             });
             self.ui_entities.insert(*entity);
         }

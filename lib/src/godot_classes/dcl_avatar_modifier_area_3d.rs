@@ -6,12 +6,13 @@ use godot::prelude::*;
 pub enum AvatarModifierType {
     HideAvatar = 0,
     DisablePassports = 1,
+    HideNameTags = 2,
 }
 
 #[derive(GodotClass)]
 #[class(init, base=Area3D)]
 pub struct DclAvatarModifierArea3D {
-    #[export(enum = (HideAvatar, DisablePassports))]
+    #[export(enum = (HideAvatar, DisablePassports, HideNameTags))]
     avatar_modifiers: Array<i32>,
 
     #[export]

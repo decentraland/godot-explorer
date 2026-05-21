@@ -1,6 +1,6 @@
 extends Node
 
-const AVATAR_PREVIEW_SCENE = preload("res://src/ui/components/backpack/avatar_preview.tscn")
+const AVATAR_PREVIEW_SCENE = preload("res://src/ui/pages/backpack/avatar_preview.tscn")
 
 var _queue: Array = []
 var _enqueued: Dictionary = {}
