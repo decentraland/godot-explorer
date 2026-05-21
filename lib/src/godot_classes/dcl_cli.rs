@@ -121,6 +121,13 @@ pub struct DclCli {
     #[var]
     pub textureless_merge_enabled: bool,
 
+    // Override the default optimized-content base URL. When set, runtime
+    // fetches `<base_url>/<hash>-mobile.zip` instead of the hardcoded
+    // production endpoint. Empty = use default
+    // (https://optimized-assets.dclexplorer.com/v3).
+    #[var]
+    pub optimized_content_base_url: GString,
+
     // Material atlas: collapse N PBR-with-albedo-only materials onto a
     // shared `ShaderMaterial` whose albedo is a `Texture2DArray`. Default
     // OFF; flipped via --material-atlas CLI flag or material-atlas deeplink.
@@ -148,6 +155,14 @@ pub struct DclCli {
     // load (decimation, vertex strip, mesh-shaped occluder).
     #[var]
     pub asset_preproc_enabled: bool,
+
+    // Octahedral-impostor swap: at GLTF load, attach a billboard quad
+    // sibling + matched VisibilityRange so the Godot culler swaps the
+    // real mesh for a flat quad past `IMPOSTOR_SWITCH_DISTANCE_M`. The
+    // first version uses a placeholder atlas (material albedo as flat
+    // color); the SubViewport-based bake replaces it later.
+    #[var]
+    pub impostor_bake_enabled: bool,
 
     // Auto shadow cull: at GLTF load, set cast_shadow=OFF on small MIs
     // (AABB diagonal < 2 m). Pure perf, fidelity-neutral; small props
@@ -526,6 +541,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--optimized-content-base-url".to_string(),
+                description: "Override the default optimized-content base URL (default: https://optimized-assets.dclexplorer.com/v3). Also accepted as deeplink param.".to_string(),
+                arg_type: ArgType::Value("<url>".to_string()),
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--material-atlas".to_string(),
                 description: "Pack textured PBR materials into a Texture2DArray atlas + shared shader for batching. Default OFF".to_string(),
                 arg_type: ArgType::Flag,
@@ -552,6 +573,12 @@ impl DclCli {
             ArgDefinition {
                 name: "--asset-preproc".to_string(),
                 description: "Run aggressive offline-style asset preprocessing at GLTF load (decimation, vertex strip, mesh occluder). Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--impostor-bake".to_string(),
+                description: "Attach billboard-quad impostor + VisibilityRange swap on props-sized meshes during GLTF load (placeholder atlas). Default OFF".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Performance".to_string(),
             },
@@ -799,13 +826,19 @@ impl INode for DclCli {
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
         let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
         let textureless_merge_enabled = args_map.contains_key("--textureless-merge");
+        let optimized_content_base_url = args_map
+            .get("--optimized-content-base-url")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
         let material_atlas_enabled = args_map.contains_key("--material-atlas");
         let mesh_lod_enabled = args_map.contains_key("--mesh-lod");
         let auto_distance_cull_enabled = args_map.contains_key("--auto-distance-cull");
         let occluder_gen_enabled = args_map.contains_key("--occluder-gen");
         let asset_preproc_enabled = args_map.contains_key("--asset-preproc");
+        let impostor_bake_enabled = args_map.contains_key("--impostor-bake");
         let auto_shadow_cull_enabled = args_map.contains_key("--auto-shadow-cull");
-        let cheap_pbr_enabled = args_map.contains_key("--cheap-pbr");
+        let cheap_pbr_enabled = !args_map.contains_key("--no-cheap-pbr");
         // shadow_mesh is enabled by default — proven safe on A54 and
         // fixes the GP zeppelin animation regression caused by the old
         // SHADOWS_ONLY+cull_front shadow-proxy path. `--no-shadow-mesh`
@@ -936,11 +969,13 @@ impl INode for DclCli {
             gp_benchmark,
             rs_gltf_direct,
             textureless_merge_enabled,
+            optimized_content_base_url,
             material_atlas_enabled,
             mesh_lod_enabled,
             auto_distance_cull_enabled,
             occluder_gen_enabled,
             asset_preproc_enabled,
+            impostor_bake_enabled,
             auto_shadow_cull_enabled,
             cheap_pbr_enabled,
             shadow_mesh_enabled,

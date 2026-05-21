@@ -75,6 +75,11 @@ var skipped_animated: int = 0
 var skipped_tween: int = 0
 var skipped_modifier: int = 0
 
+# ---- Rust hot-path delegate ----
+## Set during build. When non-null, `update_visibility(camera)` delegates to
+## the Rust per-frame loop (avoids GDScript overhead of ~5-7ms/frame on GP).
+var _rust_grid: DclVisibilityGridRust = null
+
 
 func build_from_scene_tree(scene_root: Node) -> Dictionary:
 	var mis: Array[MeshInstance3D] = []
@@ -204,13 +209,45 @@ func build_from_scene_tree(scene_root: Node) -> Dictionary:
 	_collect_blockers(scene_root)
 	_build_pvs()
 
+	_build_rust_delegate()
+
 	built = true
 	return _stats_dict()
+
+
+func _build_rust_delegate() -> void:
+	# Push our built state into the Rust hot-path delegate. After this runs,
+	# update_visibility(camera) routes through native code, avoiding the
+	# GDScript per-frame overhead (~5-7ms/frame on GP at HIGH).
+	_rust_grid = DclVisibilityGridRust.new()
+	_rust_grid.set_grid_topology(
+		cell_origin_xz.x, cell_origin_xz.y, CELL_SIZE_M, cols, rows
+	)
+	_rust_grid.set_thresholds(MAX_DISTANCE_M, MIN_SIZE_DISTANCE_RATIO, HIDE_DELAY_FRAMES)
+	var n := cols * rows
+	for i in n:
+		_rust_grid.set_cell_aabb(
+			i, _cell_aabb[i].position, _cell_aabb[i].size, _cell_has_content[i] != 0
+		)
+		_rust_grid.set_cell_mi_indices(i, _cell_mi_indices[i])
+	for mi_idx in _all_mis.size():
+		var mi := _all_mis[mi_idx]
+		if is_instance_valid(mi):
+			_rust_grid.add_mi(mi.get_instance(), _mi_visible_count[mi_idx])
+		else:
+			# Fill slot so MI index lines up with cell_mi_indices. Use the same
+			# count so the toggle math stays consistent; the RID is invalid so
+			# RenderingServer calls are no-ops.
+			_rust_grid.add_mi(RID(), _mi_visible_count[mi_idx])
+	_rust_grid.set_pvs_bits(_pvs_bits)
+	_rust_grid.mark_built()
 
 
 func update_visibility(camera: Camera3D) -> Dictionary:
 	if not built or camera == null:
 		return {"toggled_on": 0, "toggled_off": 0, "cells_visible": 0}
+	if _rust_grid != null:
+		return _rust_grid.update_visibility(camera.global_position, camera.get_frustum())
 	var planes := camera.get_frustum()
 	var cam_pos := camera.global_position
 	var cam_xz := Vector2(cam_pos.x, cam_pos.z)

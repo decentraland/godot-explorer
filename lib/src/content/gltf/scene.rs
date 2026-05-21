@@ -37,8 +37,80 @@ use super::super::{
     content_provider::SceneGltfContext,
     scene_saver::{get_scene_path_for_hash, save_node_as_scene},
 };
-use super::common::{count_nodes, load_gltf_pipeline};
-use crate::scene_runner::components::mesh_lod::lod_baker::bake_shadow_mesh;
+use super::common::{apply_shadow_mesh, count_nodes, load_gltf_pipeline};
+
+use crate::scene_runner::components::asset_preprocessor::mesh_occluder;
+
+/// Recursively walk the scene tree spawning mesh-shaped `OccluderInstance3D`
+/// siblings on every visible MeshInstance3D that passes the size + opacity
+/// filters in `mesh_occluder::try_spawn_for`. Counts how many were attached
+/// so we can log the per-asset total. The second counter tracks how many
+/// MIs would qualify as octahedral-impostor candidates (props-sized) —
+/// purely diagnostic until the SubViewport bake lands.
+fn spawn_mesh_occluders(node: &Gd<Node>, occluder_count: &mut u32, impostor_count: &mut u32) {
+    let impostors_on = DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().impostor_bake_enabled)
+        .unwrap_or(false);
+
+    // Phase 1: walk the tree once. Per-MI: spawn the occluder (cheap,
+    // pure CPU) inline, and if impostors are on, register a candidate
+    // — which attaches the billboard quad with a placeholder material
+    // immediately, returning a job that the batch bake below uses to
+    // upgrade the placeholder to a baked texture in a single render
+    // pass.
+    let mut impostor_jobs: Vec<super::octahedral_impostor::ImpostorJob> = Vec::new();
+    collect_jobs(
+        node,
+        occluder_count,
+        impostor_count,
+        impostors_on,
+        &mut impostor_jobs,
+    );
+
+    // Phase 2: ferry the jobs to the main thread (the only place
+    // where `RenderingServer::force_draw()` actually flushes
+    // SubViewport rasterization), block until the response lands.
+    // Worker thread parks for ~1 frame; main-thread drain rasterizes
+    // every SubViewport in one render. Without this dispatch the
+    // bake silently returns empty textures (tokio worker thread can't
+    // flush the renderer).
+    if !impostor_jobs.is_empty() {
+        let baked = super::octahedral_impostor::enqueue_and_wait(impostor_jobs);
+        godot::global::godot_print!(
+            "[impostor-bake] baked={} placeholders={}",
+            baked,
+            (*impostor_count).saturating_sub(baked)
+        );
+    }
+}
+
+fn collect_jobs(
+    node: &Gd<Node>,
+    occluder_count: &mut u32,
+    impostor_count: &mut u32,
+    impostors_on: bool,
+    jobs: &mut Vec<super::octahedral_impostor::ImpostorJob>,
+) {
+    if let Ok(mut mi) = node.clone().try_cast::<MeshInstance3D>() {
+        if let Some(mesh) = mi.get_mesh() {
+            if let Ok(am) = mesh.try_cast::<ArrayMesh>() {
+                if mesh_occluder::try_spawn_for(&mut mi, &am) {
+                    *occluder_count += 1;
+                }
+                if impostors_on {
+                    if let Some(job) = super::octahedral_impostor::register_candidate(&mut mi, &am)
+                    {
+                        *impostor_count += 1;
+                        jobs.push(job);
+                    }
+                }
+            }
+        }
+    }
+    for child in node.get_children().iter_shared() {
+        collect_jobs(&child, occluder_count, impostor_count, impostors_on, jobs);
+    }
+}
 
 /// Load and save a scene GLTF to disk.
 ///
@@ -89,6 +161,37 @@ pub async fn load_and_save_scene_gltf(
             }
 
             create_scene_colliders(node.clone().upcast(), root_node.clone());
+
+            // Auto-attach `OccluderInstance3D` siblings on big opaque
+            // meshes so Godot's culler can early-out everything behind
+            // them at runtime. Baked into the saved `.scn` so the
+            // device pays zero generation cost.
+            //
+            // Gated on `--asset-server`: this code path also runs when
+            // the cliente loads a fresh GLTF (no cache yet), and
+            // re-applying it on device duplicates the occluders that
+            // are already baked in the optimized `.scn`. Limiting to
+            // asset-server mode keeps the device-side path lean.
+            let in_asset_server_mode = DclGlobal::try_singleton()
+                .map(|g| g.bind().cli.bind().asset_server)
+                .unwrap_or(false);
+            if in_asset_server_mode {
+                let mut occluders_added = 0u32;
+                let mut impostor_candidates = 0u32;
+                spawn_mesh_occluders(
+                    &root_node.clone().upcast(),
+                    &mut occluders_added,
+                    &mut impostor_candidates,
+                );
+                if occluders_added > 0 || impostor_candidates > 0 {
+                    godot::global::godot_print!(
+                        "[occluder-gen] {}: occluders_added={} impostor_candidates={}",
+                        hash,
+                        occluders_added,
+                        impostor_candidates
+                    );
+                }
+            }
 
             // Attach a stride-decimated `shadow_mesh` to each ArrayMesh:
             // the renderer substitutes it during the shadow pass, so far
@@ -184,19 +287,14 @@ fn tree_has_named_collider(node: &Gd<Node>) -> bool {
 /// Note: Colliders are created with mask=0 (disabled) and no scene_id/entity_id.
 /// The masks and metadata should be set by the caller after instantiating the scene.
 fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
-    let (cheap_pbr, shadow_mesh) = DclGlobal::try_singleton()
-        .map(|g| {
-            let global = g.bind();
-            let cli = global.cli.bind();
-            (cli.cheap_pbr_enabled, cli.shadow_mesh_enabled)
-        })
-        .unwrap_or((false, false));
-    // Shadow_mesh and shadow_proxy are mutually exclusive: when
-    // shadow_mesh is enabled, the visible mesh casts shadow through its
-    // `shadow_mesh` slot (set later by `apply_shadow_mesh`). The old
-    // shadow_proxy dance (visible cast_shadow=OFF + collider SHADOWS_ONLY)
-    // would defeat that — disable it.
-    let shadow_proxy = cheap_pbr && !shadow_mesh && tree_has_named_collider(&node_to_inspect);
+    // Shadow_proxy permanently disabled. The old approach (collider
+    // SHADOWS_ONLY + visible cast_shadow=OFF) saved shadow-pass cost
+    // but disrupted the GP zeppelin animation (cast_shadow=OFF on
+    // the visible MI breaks its AnimationPlayer drive). The
+    // visible mesh now casts shadow normally; Godot's LOD selector
+    // picks LOD3 at distance for the shadow pass, which keeps the
+    // cost low without the dual-MI trick.
+    let shadow_proxy = false;
     create_scene_colliders_inner(node_to_inspect, root_node, shadow_proxy, &mut None);
 }
 
@@ -312,71 +410,9 @@ const PLANAR_THICKNESS_THRESHOLD: f32 = 0.01;
 ///
 /// Skipped:
 /// - blend-shape meshes (morph-target shadows need the full mesh)
-fn apply_shadow_mesh(root_node: &Gd<Node3D>) -> (u32, u32) {
-    let mut paired = 0u32;
-    let mut fallback = 0u32;
-    apply_shadow_mesh_recursive(&root_node.clone().upcast(), &mut paired, &mut fallback);
-    (paired, fallback)
-}
-
-fn apply_shadow_mesh_recursive(node: &Gd<Node>, paired: &mut u32, fallback: &mut u32) {
-    // First pass: classify direct children as visible-MI vs collider-MI
-    let mut visible_mis: Vec<Gd<MeshInstance3D>> = Vec::new();
-    let mut collider_mesh: Option<Gd<Mesh>> = None;
-    for child in node.get_children().iter_shared() {
-        if let Ok(mi) = child.clone().try_cast::<MeshInstance3D>() {
-            let is_collider = mi
-                .get_name()
-                .to_string()
-                .to_lowercase()
-                .contains("collider");
-            if is_collider {
-                if collider_mesh.is_none() {
-                    collider_mesh = mi.get_mesh();
-                }
-            } else {
-                visible_mis.push(mi);
-            }
-        }
-    }
-
-    // Assign shadow_mesh to each visible MI in this parent
-    for mut mi in visible_mis {
-        let Some(mesh) = mi.get_mesh() else { continue };
-        let Ok(am) = mesh.clone().try_cast::<ArrayMesh>() else {
-            continue;
-        };
-        if am.get_blend_shape_count() > 0 {
-            continue;
-        }
-        let mut am_mut = am.clone();
-
-        if let Some(coll_mesh) = collider_mesh.clone() {
-            // Pair found: use the collider's mesh directly as shadow_mesh.
-            // The Gd is shared — multiple visible MIs in this parent can
-            // all point at the same collider mesh resource.
-            if let Ok(coll_am) = coll_mesh.try_cast::<ArrayMesh>() {
-                am_mut.set_shadow_mesh(&coll_am);
-                // Ensure visible MI casts shadow (default is ON, but be
-                // explicit since shadow_proxy may have flipped it).
-                mi.set_cast_shadows_setting(ShadowCastingSetting::ON);
-                *paired += 1;
-                continue;
-            }
-        }
-        // Fallback: stride-decimated bake
-        if let Some(result) = bake_shadow_mesh(&am) {
-            am_mut.set_shadow_mesh(&result.mesh);
-            mi.set_cast_shadows_setting(ShadowCastingSetting::ON);
-            *fallback += 1;
-        }
-    }
-
-    // Recurse into children
-    for child in node.get_children().iter_shared() {
-        apply_shadow_mesh_recursive(&child, paired, fallback);
-    }
-}
+// apply_shadow_mesh + apply_shadow_mesh_recursive live in common.rs now —
+// the per-GLB pipeline runs them at GLTF import time. This scene-level wrapper
+// keeps the existing call site working by importing the new entry point.
 
 /// Check if a mesh is essentially planar (very thin in at least one axis).
 /// Planar meshes are used as one-way colliders and should NOT have backface collision.

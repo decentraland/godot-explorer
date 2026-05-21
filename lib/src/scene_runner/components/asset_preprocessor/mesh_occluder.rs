@@ -6,16 +6,36 @@
 use godot::classes::base_material_3d::Transparency;
 use godot::classes::mesh::ArrayType;
 use godot::classes::{
-    ArrayMesh, ArrayOccluder3D, BaseMaterial3D, ImporterMesh, MeshInstance3D, OccluderInstance3D,
+    ArrayMesh, ArrayOccluder3D, BaseMaterial3D, BoxOccluder3D, ImporterMesh, MeshInstance3D,
+    OccluderInstance3D,
 };
 use godot::obj::NewAlloc;
 use godot::prelude::*;
 
-const MIN_AABB_DIAG_M: f32 = 5.0;
-const THIN_RATIO: f32 = 0.15;
-const OCCLUDER_TARGET_LOD: i32 = 3; // very simplified
+// Lowered from 5.0 → 2.0 because DCL buildings are split into many MIs
+// each smaller than 5m. THIN_RATIO=0.05 lets thin walls and floor
+// planes through (they make great occluders for everything behind
+// them); the per-axis inset below stops their BoxOccluder from
+// overshooting on the thin axis.
+const MIN_AABB_DIAG_M: f32 = 2.0;
+const THIN_RATIO: f32 = 0.05;
+const OCCLUDER_TARGET_LOD: i32 = 3; // very simplified (ArrayOccluder path)
 const NORMAL_MERGE_ANGLE_DEG: f32 = 90.0;
 const NORMAL_SPLIT_ANGLE_DEG: f32 = 25.0;
+/// BoxOccluder inset on the *fat* axes — shrink 15 % so a player
+/// walking past doesn't false-cull the visible mesh's edge.
+const BOX_INSET_FAT: f32 = 0.85;
+/// BoxOccluder inset on the *thin* axis — shrink 50 %. The bug was
+/// a wall 4×3×0.2 with uniform 15 % inset producing a 3.4×2.55×0.17
+/// occluder whose half-thickness (0.085 m) still extends past
+/// decals/letters/posters placed 0.05 m in front of the wall and
+/// false-culls them. With 50 % inset on the thin axis the same wall
+/// gives 3.4×2.55×0.10 → half-thickness 0.05 m, just at the
+/// decal-clearance edge.
+const BOX_INSET_THIN: f32 = 0.50;
+/// Axis lengths under this are treated as "thin" and get the
+/// aggressive inset above.
+const THIN_AXIS_M: f32 = 0.5;
 
 pub fn try_spawn_for(mi: &mut Gd<MeshInstance3D>, mesh: &Gd<ArrayMesh>) -> bool {
     if mi.has_meta("dcl_preproc_occluder") {
@@ -38,18 +58,25 @@ pub fn try_spawn_for(mi: &mut Gd<MeshInstance3D>, mesh: &Gd<ArrayMesh>) -> bool 
         return false;
     }
 
-    // Run a separate decimation pass at a much higher target LOD just for
-    // the occluder geometry. This is independent of the runtime mesh
-    // (which is what's drawn) — the occluder is invisible.
-    let Some((vertices, indices)) = build_occluder_geometry(mesh) else {
-        return false;
-    };
+    // Per-axis BoxOccluder inset. Fat axes shrink 15 %; thin axes
+    // (under THIN_AXIS_M) shrink 50 % so a wall's BoxOccluder
+    // doesn't overshoot decals/posters at ~5 cm clearance in front
+    // of it. Without this, the previous uniform 15 % inset caused
+    // sign letters and bushes against walls to be false-culled.
+    let axis_inset = |a: f32| if a < THIN_AXIS_M { BOX_INSET_THIN } else { BOX_INSET_FAT };
+    let inset_size = Vector3::new(
+        size.x * axis_inset(size.x),
+        size.y * axis_inset(size.y),
+        size.z * axis_inset(size.z),
+    );
+    let center_local = aabb.position + size * 0.5;
 
-    let mut array_occluder = ArrayOccluder3D::new_gd();
-    array_occluder.set_arrays(&vertices, &indices);
+    let mut box_occluder = BoxOccluder3D::new_gd();
+    box_occluder.set_size(inset_size);
 
     let mut occluder_instance = OccluderInstance3D::new_alloc();
-    occluder_instance.set_occluder(&array_occluder.upcast::<godot::classes::Occluder3D>());
+    occluder_instance.set_occluder(&box_occluder.upcast::<godot::classes::Occluder3D>());
+    occluder_instance.set_position(center_local);
 
     mi.add_child(&occluder_instance.upcast::<godot::classes::Node>());
     mi.set_meta("dcl_preproc_occluder", &true.to_variant());

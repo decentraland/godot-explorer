@@ -5,7 +5,10 @@
 
 mod common;
 mod emote;
+pub(crate) mod octahedral_impostor;
+pub(super) mod pvs_bake;
 mod scene;
+mod tri_bvh;
 mod wearable;
 
 // Re-export public API (maintains compatibility with content_provider.rs)

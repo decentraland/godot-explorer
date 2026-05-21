@@ -27,6 +27,17 @@ impl INode for DclAssetServer {
             is_running: false,
         }
     }
+
+    /// Per-frame main-thread tick that drains the impostor bake queue.
+    /// Workers parked under `BAKE_QUEUE` get resolved here, where
+    /// `RenderingServer::force_draw()` actually flushes SubViewport
+    /// rasterization. One drain per frame, so a scene that registers
+    /// 50 candidates resolves in a single render and unblocks its
+    /// worker immediately.
+    fn process(&mut self, _delta: f64) {
+        let mut parent: Gd<Node> = self.base().clone().upcast();
+        crate::content::gltf::octahedral_impostor::drain_bake_queue_on_main(&mut parent);
+    }
 }
 
 #[godot_api]

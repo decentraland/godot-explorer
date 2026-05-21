@@ -10,7 +10,7 @@
 //! The whole module is gated by `--asset-preproc` (default OFF).
 
 mod decimator;
-mod mesh_occluder;
+pub mod mesh_occluder;
 mod metrics;
 mod state;
 mod vertex_strip;

@@ -133,11 +133,32 @@ pub struct SceneGltfContext {
     pub texture_quality: TextureQuality,
     /// Force ETC2 compression even on non-mobile platforms (for asset server)
     pub force_compress: bool,
+    /// Run the post-generate optimization pipeline (split → LODs → shadows →
+    /// materials). Set true ONLY when running as the asset processor — the
+    /// pipeline is expensive and is meant to be baked once into the saved
+    /// .scn, not re-run on every phone load.
+    pub apply_optimizations: bool,
 }
 
 unsafe impl Send for SceneGltfContext {}
 
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v3";
+const DEFAULT_ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v3";
+
+/// Resolved optimized-content base URL, with no trailing slash.
+///
+/// Reads `--optimized-content-base-url` from `DclCli` at call time. Returns the
+/// hardcoded default when the override is empty or DclGlobal isn't available.
+fn resolved_optimized_base_url() -> String {
+    let override_url = DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().optimized_content_base_url.to_string())
+        .unwrap_or_default();
+    let url = if override_url.is_empty() {
+        DEFAULT_ASSET_OPTIMIZED_BASE_URL.to_string()
+    } else {
+        override_url
+    };
+    url.trim_end_matches('/').to_string()
+}
 
 #[godot_api]
 impl INode for ContentProvider {
@@ -186,7 +207,7 @@ impl INode for ContentProvider {
             optimized_assets: HashSet::default(),
             optimized_original_size: HashMap::default(),
             // Default to the same URL used for scene optimized assets
-            optimized_wearable_base_url: Some(format!("{}/", ASSET_OPTIMIZED_BASE_URL)),
+            optimized_wearable_base_url: Some(format!("{}/", resolved_optimized_base_url())),
         }
     }
     fn ready(&mut self) {}
@@ -318,6 +339,7 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
+            apply_optimizations: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -456,6 +478,7 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
+            apply_optimizations: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -602,6 +625,7 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
+            apply_optimizations: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -676,6 +700,7 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
+            apply_optimizations: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -1807,7 +1832,7 @@ impl ContentProvider {
 
     #[func]
     pub fn get_optimized_base_url(&self) -> GString {
-        ASSET_OPTIMIZED_BASE_URL.to_godot()
+        resolved_optimized_base_url().to_godot()
     }
 
     /// Set the base URL for optimized wearable/emote assets.
@@ -2280,10 +2305,11 @@ impl ContentProvider {
 
         let loaded_dependencies = optimized_data.loaded_assets.read().await;
 
+        let optimized_base = resolved_optimized_base_url();
         for hash_dependency in &dependencies {
             let asset_url: String = format!(
                 "{}/{}-mobile.zip",
-                ASSET_OPTIMIZED_BASE_URL, hash_dependency
+                optimized_base, hash_dependency
             );
             let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);

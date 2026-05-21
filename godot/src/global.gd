@@ -264,6 +264,13 @@ func _ready():
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
+		# Forward optimized-content-base-url from deeplink into DclCli so the
+		# scene fetcher and content provider pick it up for optimized loading.
+		var opt_url = deep_link_obj.params.get("optimized-content-base-url", "")
+		if not opt_url.is_empty():
+			print("[DEEPLINK] optimized-content-base-url=", opt_url)
+			Global.cli.optimized_content_base_url = opt_url
+
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")

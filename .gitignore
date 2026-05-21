@@ -45,3 +45,8 @@ scripts/bench/.env
 # Local snapshot tool outputs (scripts/local_*_snapshot.sh)
 avatars-output/
 avatars-output-*/
+
+# Local binary cache for incremental builds (4.5GB; never commit)
+binary_cache/
+# Local benchmark env backup
+scripts/bench/.env.bak
