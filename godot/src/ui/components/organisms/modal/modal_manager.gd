@@ -44,6 +44,14 @@ const LOW_SPEC_IPHONE_TITLE = "Limited performance"
 const LOW_SPEC_IPHONE_BODY = "Your device is below our recommended specs (iPhone 13/SE 2023). You may notice slowdowns, crashes or heating issues while playing."
 const LOW_SPEC_IPHONE_PRIMARY = "OK"
 
+const PURCHASE_FAILED_TITLE = "Something\nwent wrong"
+const PURCHASE_FAILED_BODY = "Your purchase could not be completed"
+const PURCHASE_FAILED_PRIMARY = "OK"
+
+const CREDIT_LIMIT_TITLE = "Limit reached"
+const CREDIT_LIMIT_BODY = "You've reached the maximum amount of credits you can buy this month."
+const CREDIT_LIMIT_PRIMARY = "OK"
+
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
 var modal_scene: PackedScene = null
@@ -305,6 +313,42 @@ func async_show_low_spec_iphone_modal() -> void:
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
 	current_modal.blocker = true
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a purchase failed modal
+func async_show_purchase_failed_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(PURCHASE_FAILED_TITLE)
+	current_modal.set_body(PURCHASE_FAILED_BODY)
+	current_modal.set_primary_button_text(PURCHASE_FAILED_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a credit limit reached modal
+func async_show_credit_limit_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(CREDIT_LIMIT_TITLE)
+	current_modal.set_body(CREDIT_LIMIT_BODY)
+	current_modal.set_primary_button_text(CREDIT_LIMIT_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
 	current_modal.show()
 
 	_disconnect_button_signals()

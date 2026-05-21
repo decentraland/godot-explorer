@@ -63,6 +63,9 @@ const _OUTCOME_OK := 0
 const _OUTCOME_REJECTED := 1
 const _OUTCOME_RETRY := 2
 
+# TODO: replace with backend/endpoint query
+const _MAX_CREDITS := 115
+
 var _store_kit := DclStoreKitPlugin.new()
 var _store_kit_available: bool = false
 var _products: Array = []
@@ -132,6 +135,11 @@ func purchase(product_id: String) -> void:
 		printerr("[IAP] cannot purchase without wallet (sign in first)")
 		purchase_failed.emit(product_id, "not signed in")
 		return
+	var credits_to_add: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
+	if _balance + credits_to_add > _MAX_CREDITS:
+		printerr("[IAP] credit limit reached: ", _balance, " + ", credits_to_add, " > ", _MAX_CREDITS)
+		Global.modal_manager.async_show_credit_limit_modal()
+		return
 	_purchase_in_flight = true
 	_show_overlay()
 	_store_kit.purchase(product_id, wallet)
@@ -178,12 +186,14 @@ func _on_purchase_completed(json: String) -> void:
 func _on_purchase_failed(product_id: String, reason: String) -> void:
 	printerr("[IAP] purchase_failed: ", product_id, " - ", reason)
 	_finish_purchase_flow()
+	Global.modal_manager.async_show_purchase_failed_modal()
 	purchase_failed.emit(product_id, reason)
 
 
 func _on_purchase_cancelled(product_id: String) -> void:
 	print("[IAP] purchase_cancelled: ", product_id)
 	_finish_purchase_flow()
+	Global.modal_manager.async_show_purchase_failed_modal()
 	purchase_cancelled.emit(product_id)
 
 

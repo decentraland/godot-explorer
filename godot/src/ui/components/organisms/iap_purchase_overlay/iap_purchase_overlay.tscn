@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://bscwnwrhyt341"]
+[gd_scene format=3 uid="uid://bt0tvcuj6fu4q"]
 
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="1_spinr"]
 [ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="1_t50im"]
@@ -10,6 +10,7 @@ font_size = 44
 
 [node name="IapPurchaseOverlay" type="CanvasLayer" unique_id=442578853]
 layer = 100
+metadata/mobile_preview_orientation = "portrait"
 
 [node name="Backdrop" type="ColorRect" parent="." unique_id=1394160856]
 anchors_preset = 15

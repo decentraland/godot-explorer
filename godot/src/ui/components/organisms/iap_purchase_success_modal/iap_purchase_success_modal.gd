@@ -21,7 +21,6 @@ func setup(credits: int) -> void:
 
 func _ready() -> void:
 	_apply_credits()
-	_backdrop.gui_input.connect(_on_backdrop_input)
 
 
 func _apply_credits() -> void:
@@ -29,8 +28,6 @@ func _apply_credits() -> void:
 		_credits_label.text = "Credits x%d" % _pending_credits
 
 
-func _on_backdrop_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		queue_free()
-	elif event is InputEventScreenTouch and event.pressed:
-		queue_free()
+
+func _on_backdrop_gui_input(event: InputEvent) -> void:
+	queue_free()

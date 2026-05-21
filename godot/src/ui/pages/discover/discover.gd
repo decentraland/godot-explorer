@@ -540,6 +540,8 @@ func _on_button_credits_pressed() -> void:
 	search_bar.hide()
 
 	if Iap.get_products().size() > 0:
+		# Force skeleton visibility for 0.5s so testers can verify the skeleton UI
+		await get_tree().create_timer(0.5).timeout
 		_show_credits_content()
 	elif not Iap.products_ready.is_connected(_on_products_ready):
 		Iap.products_ready.connect(_on_products_ready)
