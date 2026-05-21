@@ -84,14 +84,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::GltfContainer => "GltfContainer",
         S::SyncGltfContainer => "SyncGltfContainer",
         S::GltfNodeModifiers => "GltfNodeModifiers",
-        S::TexturelessMerger => "TexturelessMerger",
-        S::MaterialAtlas => "MaterialAtlas",
-        S::MeshLod => "MeshLod",
-        S::AutoDistanceCull => "AutoDistanceCull",
-        S::OccluderGen => "OccluderGen",
         S::AssetPreprocessor => "AssetPreprocessor",
-        S::AutoShadowCull => "AutoShadowCull",
-        S::CheapPbr => "CheapPbr",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
         S::AvatarShape => "AvatarShape",
@@ -121,8 +114,6 @@ use super::{
         animator::update_animator,
         asset_preprocessor::update_asset_preprocessor,
         audio_source::update_audio_source,
-        auto_distance_cull::update_auto_distance_cull,
-        auto_shadow_cull::update_auto_shadow_cull,
         avatar_attach::update_avatar_attach,
         avatar_data::update_avatar_scene_updates,
         avatar_locomotion_settings::update_avatar_locomotion_settings,
@@ -130,25 +121,20 @@ use super::{
         avatar_shape::update_avatar_shape,
         billboard::update_billboard,
         camera_mode_area::update_camera_mode_area,
-        cheap_pbr_materials::update_cheap_pbr_materials,
         gltf_container::{sync_gltf_loading_state, update_gltf_container},
         gltf_node_modifiers::{
             update_gltf_node_modifiers, update_modifier_textures, update_modifier_video_textures,
         },
         input_modifier::update_input_modifier,
         material::{update_material, update_video_material_textures},
-        material_atlas::update_material_atlas,
         mesh_collider::update_mesh_collider,
-        mesh_lod::update_mesh_lod,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
-        occluder_gen::update_occluder_gen,
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         realm_info::sync_realm_info,
         skybox_time::update_skybox_time,
         text_shape::update_text_shape,
-        textureless_merger::update_textureless_merger,
         transform_and_parent::update_transform_and_parent,
         trigger_area::update_trigger_area,
         tween::update_tween,
@@ -451,29 +437,8 @@ pub fn _process_scene(
                     }
                     still_processing
                 }
-                SceneUpdateState::TexturelessMerger => {
-                    !update_textureless_merger(scene, crdt_state, ref_time, effective_end_time_us)
-                }
-                SceneUpdateState::MaterialAtlas => {
-                    !update_material_atlas(scene, crdt_state, ref_time, effective_end_time_us)
-                }
-                SceneUpdateState::MeshLod => {
-                    !update_mesh_lod(scene, crdt_state, ref_time, effective_end_time_us)
-                }
-                SceneUpdateState::AutoDistanceCull => {
-                    !update_auto_distance_cull(scene, crdt_state, ref_time, effective_end_time_us)
-                }
-                SceneUpdateState::OccluderGen => {
-                    !update_occluder_gen(scene, crdt_state, ref_time, effective_end_time_us)
-                }
                 SceneUpdateState::AssetPreprocessor => {
                     !update_asset_preprocessor(scene, crdt_state, ref_time, effective_end_time_us)
-                }
-                SceneUpdateState::AutoShadowCull => {
-                    !update_auto_shadow_cull(scene, crdt_state, ref_time, effective_end_time_us)
-                }
-                SceneUpdateState::CheapPbr => {
-                    !update_cheap_pbr_materials(scene, crdt_state, ref_time, effective_end_time_us)
                 }
                 SceneUpdateState::NftShape => {
                     update_nft_shape(scene, crdt_state);

@@ -115,12 +115,6 @@ pub struct DclCli {
     #[var]
     pub rs_gltf_direct: bool,
 
-    // Textureless mesh-merge experiment (issue #1948). Default OFF; flipped
-    // via --textureless-merge CLI flag or textureless-merge deeplink param.
-    // See docs/bench/material-atlas-mesh-merge-design.md.
-    #[var]
-    pub textureless_merge_enabled: bool,
-
     // Override the default optimized-content base URL. When set, runtime
     // fetches `<base_url>/<hash>-mobile.zip` instead of the hardcoded
     // production endpoint. Empty = use default
@@ -128,62 +122,15 @@ pub struct DclCli {
     #[var]
     pub optimized_content_base_url: GString,
 
-    // Material atlas: collapse N PBR-with-albedo-only materials onto a
-    // shared `ShaderMaterial` whose albedo is a `Texture2DArray`. Default
-    // OFF; flipped via --material-atlas CLI flag or material-atlas deeplink.
-    #[var]
-    pub material_atlas_enabled: bool,
-
-    // Runtime mesh-LOD pass: replays each mergeable MeshInstance3D's
-    // ArrayMesh through `ImporterMesh::generate_lods` so the viewport can
-    // swap to lower-poly chains at distance. Default OFF; flipped via
-    // --mesh-lod CLI flag or mesh-lod deeplink param.
-    #[var]
-    pub mesh_lod_enabled: bool,
-
-    // Auto-distance-cull: at GLTF load, set visibility_range_end on each
-    // MeshInstance3D from its AABB diagonal. Pure perf, no fidelity loss.
-    #[var]
-    pub auto_distance_cull_enabled: bool,
-
-    // OccluderInstance3D auto-gen: spawn box occluders for big opaque
-    // GLTF meshes so the Godot culler can early-out objects behind them.
-    #[var]
-    pub occluder_gen_enabled: bool,
-
     // Asset preprocessor: aggressive offline-style transforms at GLTF
     // load (decimation, vertex strip, mesh-shaped occluder).
     #[var]
     pub asset_preproc_enabled: bool,
 
-    // Octahedral-impostor swap: at GLTF load, attach a billboard quad
-    // sibling + matched VisibilityRange so the Godot culler swaps the
-    // real mesh for a flat quad past `IMPOSTOR_SWITCH_DISTANCE_M`. The
-    // first version uses a placeholder atlas (material albedo as flat
-    // color); the SubViewport-based bake replaces it later.
-    #[var]
-    pub impostor_bake_enabled: bool,
-
-    // Auto shadow cull: at GLTF load, set cast_shadow=OFF on small MIs
-    // (AABB diagonal < 2 m). Pure perf, fidelity-neutral; small props
-    // don't project meaningful shadows at typical view distance.
-    #[var]
-    pub auto_shadow_cull_enabled: bool,
-
     // cheap_pbr_materials: tweak BaseMaterial3D mode flags (Lambert
     // diffuse, no specular for matte) to reduce per-fragment ALU.
     #[var]
     pub cheap_pbr_enabled: bool,
-
-    // shadow_mesh: assign a per-GLTF collider's mesh (or a
-    // stride-decimated bake when no collider is paired) as the visible
-    // mesh's `ArrayMesh.shadow_mesh`. The renderer rasterizes the
-    // simpler geometry into the shadow map; visible pass unchanged.
-    // Default ON — also restores the GP zeppelin animation that the
-    // old SHADOWS_ONLY+cull_front shadow-proxy path was breaking.
-    // Opt out with `--no-shadow-mesh`.
-    #[var]
-    pub shadow_mesh_enabled: bool,
 
     // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
     // set in `update_gltf_container` so the bench can measure the rendering
@@ -535,39 +482,9 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
-                name: "--textureless-merge".to_string(),
-                description: "Merge textureless static meshes per scene to reduce draw calls (issue #1948). Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
                 name: "--optimized-content-base-url".to_string(),
                 description: "Override the default optimized-content base URL (default: https://optimized-assets.dclexplorer.com/v3). Also accepted as deeplink param.".to_string(),
                 arg_type: ArgType::Value("<url>".to_string()),
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--material-atlas".to_string(),
-                description: "Pack textured PBR materials into a Texture2DArray atlas + shared shader for batching. Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--mesh-lod".to_string(),
-                description: "Bake an LOD chain into each loaded MeshInstance3D's ArrayMesh via ImporterMesh::generate_lods. Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--auto-distance-cull".to_string(),
-                description: "Auto-set visibility_range_end on each MeshInstance3D from its AABB diagonal so distant small props get frustum-culled. Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--occluder-gen".to_string(),
-                description: "Auto-spawn BoxOccluder3D children on big opaque GLTF meshes so the Godot culler can early-out objects behind them. Default OFF".to_string(),
-                arg_type: ArgType::Flag,
                 category: "Performance".to_string(),
             },
             ArgDefinition {
@@ -577,26 +494,8 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
-                name: "--impostor-bake".to_string(),
-                description: "Attach billboard-quad impostor + VisibilityRange swap on props-sized meshes during GLTF load (placeholder atlas). Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--auto-shadow-cull".to_string(),
-                description: "Disable cast_shadow on MeshInstance3Ds with AABB diagonal < 2 m. Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
                 name: "--cheap-pbr".to_string(),
                 description: "Tweak BaseMaterial3D mode flags (Lambert diffuse, no specular for matte) to reduce per-fragment ALU. Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--no-shadow-mesh".to_string(),
-                description: "Disable shadow_mesh assignment (collider-paired or stride-decimated). Default OFF (shadow_mesh is enabled by default).".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Performance".to_string(),
             },
@@ -825,25 +724,13 @@ impl INode for DclCli {
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
         let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
-        let textureless_merge_enabled = args_map.contains_key("--textureless-merge");
         let optimized_content_base_url = args_map
             .get("--optimized-content-base-url")
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
-        let material_atlas_enabled = args_map.contains_key("--material-atlas");
-        let mesh_lod_enabled = args_map.contains_key("--mesh-lod");
-        let auto_distance_cull_enabled = args_map.contains_key("--auto-distance-cull");
-        let occluder_gen_enabled = args_map.contains_key("--occluder-gen");
         let asset_preproc_enabled = args_map.contains_key("--asset-preproc");
-        let impostor_bake_enabled = args_map.contains_key("--impostor-bake");
-        let auto_shadow_cull_enabled = args_map.contains_key("--auto-shadow-cull");
         let cheap_pbr_enabled = !args_map.contains_key("--no-cheap-pbr");
-        // shadow_mesh is enabled by default — proven safe on A54 and
-        // fixes the GP zeppelin animation regression caused by the old
-        // SHADOWS_ONLY+cull_front shadow-proxy path. `--no-shadow-mesh`
-        // is kept as an explicit opt-out for diagnosis.
-        let shadow_mesh_enabled = !args_map.contains_key("--no-shadow-mesh");
         let skip_gltf_load = args_map.contains_key("--skip-gltf");
         let kill_sky = args_map.contains_key("--kill-sky");
         let inspect_scene_title = args_map
@@ -968,17 +855,9 @@ impl INode for DclCli {
             avatar_impostor_benchmark,
             gp_benchmark,
             rs_gltf_direct,
-            textureless_merge_enabled,
             optimized_content_base_url,
-            material_atlas_enabled,
-            mesh_lod_enabled,
-            auto_distance_cull_enabled,
-            occluder_gen_enabled,
             asset_preproc_enabled,
-            impostor_bake_enabled,
-            auto_shadow_cull_enabled,
             cheap_pbr_enabled,
-            shadow_mesh_enabled,
             skip_gltf_load,
             kill_sky,
             inspect_scene_title,

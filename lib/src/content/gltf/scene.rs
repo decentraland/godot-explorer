@@ -37,78 +37,26 @@ use super::super::{
     content_provider::SceneGltfContext,
     scene_saver::{get_scene_path_for_hash, save_node_as_scene},
 };
-use super::common::{apply_shadow_mesh, count_nodes, load_gltf_pipeline};
+use super::common::{count_nodes, load_gltf_pipeline};
 
 use crate::scene_runner::components::asset_preprocessor::mesh_occluder;
 
 /// Recursively walk the scene tree spawning mesh-shaped `OccluderInstance3D`
 /// siblings on every visible MeshInstance3D that passes the size + opacity
 /// filters in `mesh_occluder::try_spawn_for`. Counts how many were attached
-/// so we can log the per-asset total. The second counter tracks how many
-/// MIs would qualify as octahedral-impostor candidates (props-sized) —
-/// purely diagnostic until the SubViewport bake lands.
-fn spawn_mesh_occluders(node: &Gd<Node>, occluder_count: &mut u32, impostor_count: &mut u32) {
-    let impostors_on = DclGlobal::try_singleton()
-        .map(|g| g.bind().cli.bind().impostor_bake_enabled)
-        .unwrap_or(false);
-
-    // Phase 1: walk the tree once. Per-MI: spawn the occluder (cheap,
-    // pure CPU) inline, and if impostors are on, register a candidate
-    // — which attaches the billboard quad with a placeholder material
-    // immediately, returning a job that the batch bake below uses to
-    // upgrade the placeholder to a baked texture in a single render
-    // pass.
-    let mut impostor_jobs: Vec<super::octahedral_impostor::ImpostorJob> = Vec::new();
-    collect_jobs(
-        node,
-        occluder_count,
-        impostor_count,
-        impostors_on,
-        &mut impostor_jobs,
-    );
-
-    // Phase 2: ferry the jobs to the main thread (the only place
-    // where `RenderingServer::force_draw()` actually flushes
-    // SubViewport rasterization), block until the response lands.
-    // Worker thread parks for ~1 frame; main-thread drain rasterizes
-    // every SubViewport in one render. Without this dispatch the
-    // bake silently returns empty textures (tokio worker thread can't
-    // flush the renderer).
-    if !impostor_jobs.is_empty() {
-        let baked = super::octahedral_impostor::enqueue_and_wait(impostor_jobs);
-        godot::global::godot_print!(
-            "[impostor-bake] baked={} placeholders={}",
-            baked,
-            (*impostor_count).saturating_sub(baked)
-        );
-    }
-}
-
-fn collect_jobs(
-    node: &Gd<Node>,
-    occluder_count: &mut u32,
-    impostor_count: &mut u32,
-    impostors_on: bool,
-    jobs: &mut Vec<super::octahedral_impostor::ImpostorJob>,
-) {
+/// so we can log the per-asset total.
+fn spawn_mesh_occluders(node: &Gd<Node>, occluder_count: &mut u32) {
     if let Ok(mut mi) = node.clone().try_cast::<MeshInstance3D>() {
         if let Some(mesh) = mi.get_mesh() {
             if let Ok(am) = mesh.try_cast::<ArrayMesh>() {
                 if mesh_occluder::try_spawn_for(&mut mi, &am) {
                     *occluder_count += 1;
                 }
-                if impostors_on {
-                    if let Some(job) = super::octahedral_impostor::register_candidate(&mut mi, &am)
-                    {
-                        *impostor_count += 1;
-                        jobs.push(job);
-                    }
-                }
             }
         }
     }
     for child in node.get_children().iter_shared() {
-        collect_jobs(&child, occluder_count, impostor_count, impostors_on, jobs);
+        spawn_mesh_occluders(&child, occluder_count);
     }
 }
 
@@ -177,39 +125,14 @@ pub async fn load_and_save_scene_gltf(
                 .unwrap_or(false);
             if in_asset_server_mode {
                 let mut occluders_added = 0u32;
-                let mut impostor_candidates = 0u32;
-                spawn_mesh_occluders(
-                    &root_node.clone().upcast(),
-                    &mut occluders_added,
-                    &mut impostor_candidates,
-                );
-                if occluders_added > 0 || impostor_candidates > 0 {
+                spawn_mesh_occluders(&root_node.clone().upcast(), &mut occluders_added);
+                if occluders_added > 0 {
                     godot::global::godot_print!(
-                        "[occluder-gen] {}: occluders_added={} impostor_candidates={}",
+                        "[occluder-gen] {}: occluders_added={}",
                         hash,
-                        occluders_added,
-                        impostor_candidates
+                        occluders_added
                     );
                 }
-            }
-
-            // Attach a stride-decimated `shadow_mesh` to each ArrayMesh:
-            // the renderer substitutes it during the shadow pass, so far
-            // fewer primitives rasterize into the directional shadow map.
-            // Composes with the existing LOD chain (LOD picks for visible
-            // pass still apply; shadow_mesh is per-mesh-resource).
-            // Independent flag so we can A/B it cleanly.
-            if DclGlobal::try_singleton()
-                .map(|g| g.bind().cli.bind().shadow_mesh_enabled)
-                .unwrap_or(false)
-            {
-                let (paired, fallback) = apply_shadow_mesh(&root_node);
-                tracing::info!(
-                    "[shadow-mesh] {}: paired={} fallback={}",
-                    hash,
-                    paired,
-                    fallback
-                );
             }
 
             // Save the processed scene to disk (in the same cache folder as other content)

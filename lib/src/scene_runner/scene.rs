@@ -34,10 +34,7 @@ use crate::{
 
 use super::{
     components::{
-        asset_preprocessor::AssetPreprocessorState, auto_distance_cull::AutoDistanceCullState,
-        auto_shadow_cull::AutoShadowCullState, cheap_pbr_materials::CheapPbrState,
-        gltf_node_modifiers::GltfNodeModifierState, mesh_lod::MeshLodState,
-        occluder_gen::OccluderGenState, textureless_merger::TexturelessMergerState,
+        asset_preprocessor::AssetPreprocessorState, gltf_node_modifiers::GltfNodeModifierState,
         trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
@@ -110,14 +107,7 @@ pub enum SceneUpdateState {
     GltfContainer,
     SyncGltfContainer,
     GltfNodeModifiers,
-    TexturelessMerger,
-    MaterialAtlas,
-    MeshLod,
-    AutoDistanceCull,
-    OccluderGen,
     AssetPreprocessor,
-    AutoShadowCull,
-    CheapPbr,
     NftShape,
     Animator,
     AvatarShape,
@@ -158,15 +148,8 @@ impl SceneUpdateState {
             Self::MeshCollider => Self::GltfContainer,
             Self::GltfContainer => Self::SyncGltfContainer,
             Self::SyncGltfContainer => Self::GltfNodeModifiers,
-            Self::GltfNodeModifiers => Self::TexturelessMerger,
-            Self::TexturelessMerger => Self::MaterialAtlas,
-            Self::MaterialAtlas => Self::MeshLod,
-            Self::MeshLod => Self::AutoDistanceCull,
-            Self::AutoDistanceCull => Self::OccluderGen,
-            Self::OccluderGen => Self::AssetPreprocessor,
-            Self::AssetPreprocessor => Self::AutoShadowCull,
-            Self::AutoShadowCull => Self::CheapPbr,
-            Self::CheapPbr => Self::NftShape,
+            Self::GltfNodeModifiers => Self::AssetPreprocessor,
+            Self::AssetPreprocessor => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
@@ -286,52 +269,11 @@ pub struct Scene {
     // Entities pending GltfNodeModifiers re-application after GLTF loads
     pub gltf_node_modifiers_pending: HashSet<SceneEntityId>,
 
-    // Textureless mesh merger (issue #1948). Phase 2.0a only classifies;
-    // bucket flush + suppression land in 2.0b/2.0c. `pending_textureless_promotion`
-    // is the work queue drained by `update_textureless_merger`. `merged_entities`
-    // is reserved for 2.0c (entity → suppressed-original blueprint).
-    pub pending_textureless_promotion: HashSet<SceneEntityId>,
-    pub merged_entities: HashSet<SceneEntityId>,
-    pub textureless_merger: TexturelessMergerState,
-
-    // Material atlas — collapses N PBR-with-albedo-only materials onto a
-    // single shared `ShaderMaterial` whose albedo is a `Texture2DArray`.
-    // Same lifecycle pattern: `pending_material_atlas` enqueued at GLTF
-    // load complete; processed by `update_material_atlas`.
-    pub pending_material_atlas: HashSet<SceneEntityId>,
-    pub material_atlas: super::components::material_atlas::MaterialAtlasState,
-
-    // Runtime mesh-LOD pass — replays each mergeable MeshInstance3D's
-    // ArrayMesh through ImporterMesh::generate_lods so the viewport can
-    // swap to lower-poly chains at distance. Same lifecycle as material
-    // atlas: enqueued at GLTF load complete, processed by `update_mesh_lod`.
-    pub pending_mesh_lod: HashSet<SceneEntityId>,
-    pub mesh_lod: MeshLodState,
-
-    // Auto distance cull: sets visibility_range_end on every loaded
-    // MeshInstance3D from its AABB diagonal. Pure perf, fidelity-neutral.
-    pub pending_auto_distance_cull: HashSet<SceneEntityId>,
-    pub auto_distance_cull: AutoDistanceCullState,
-
-    // OccluderInstance3D auto-gen: spawns box occluders for big opaque
-    // meshes so Godot's culler can early-out objects behind them.
-    pub pending_occluder_gen: HashSet<SceneEntityId>,
-    pub occluder_gen: OccluderGenState,
-
     // Asset preprocessor: aggressive offline-style transforms
     // (decimation, vertex strip, mesh occluder) at GLTF post-load.
     pub pending_asset_preprocessor: HashSet<SceneEntityId>,
     pub asset_preprocessor: AssetPreprocessorState,
 
-    // Auto shadow cull: cast_shadow=OFF on small meshes to drop shadow
-    // pass primitive count (~50% in GP per the per-pass instrumentation).
-    pub pending_auto_shadow_cull: HashSet<SceneEntityId>,
-    pub auto_shadow_cull: AutoShadowCullState,
-
-    // Cheap PBR materials: tweak BaseMaterial3D mode flags (Lambert
-    // diffuse, no specular for matte) to reduce per-fragment ALU.
-    pub pending_cheap_pbr: HashSet<SceneEntityId>,
-    pub cheap_pbr: CheapPbrState,
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -455,23 +397,8 @@ impl Scene {
             trigger_areas: TriggerAreaState::default(),
             gltf_node_modifier_states: HashMap::new(),
             gltf_node_modifiers_pending: HashSet::new(),
-            pending_textureless_promotion: HashSet::new(),
-            merged_entities: HashSet::new(),
-            textureless_merger: TexturelessMergerState::default(),
-            pending_material_atlas: HashSet::new(),
-            material_atlas: super::components::material_atlas::MaterialAtlasState::default(),
-            pending_mesh_lod: HashSet::new(),
-            mesh_lod: MeshLodState::default(),
-            pending_auto_distance_cull: HashSet::new(),
-            auto_distance_cull: AutoDistanceCullState::default(),
-            pending_occluder_gen: HashSet::new(),
-            occluder_gen: OccluderGenState::default(),
             pending_asset_preprocessor: HashSet::new(),
             asset_preprocessor: AssetPreprocessorState::default(),
-            pending_auto_shadow_cull: HashSet::new(),
-            auto_shadow_cull: AutoShadowCullState::default(),
-            pending_cheap_pbr: HashSet::new(),
-            cheap_pbr: CheapPbrState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -549,23 +476,8 @@ impl Scene {
             trigger_areas: TriggerAreaState::default(),
             gltf_node_modifier_states: HashMap::new(),
             gltf_node_modifiers_pending: HashSet::new(),
-            pending_textureless_promotion: HashSet::new(),
-            merged_entities: HashSet::new(),
-            textureless_merger: TexturelessMergerState::default(),
-            pending_material_atlas: HashSet::new(),
-            material_atlas: super::components::material_atlas::MaterialAtlasState::default(),
-            pending_mesh_lod: HashSet::new(),
-            mesh_lod: MeshLodState::default(),
-            pending_auto_distance_cull: HashSet::new(),
-            auto_distance_cull: AutoDistanceCullState::default(),
-            pending_occluder_gen: HashSet::new(),
-            occluder_gen: OccluderGenState::default(),
             pending_asset_preprocessor: HashSet::new(),
             asset_preprocessor: AssetPreprocessorState::default(),
-            pending_auto_shadow_cull: HashSet::new(),
-            auto_shadow_cull: AutoShadowCullState::default(),
-            pending_cheap_pbr: HashSet::new(),
-            cheap_pbr: CheapPbrState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

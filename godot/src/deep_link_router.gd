@@ -41,13 +41,6 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] optimized-content-base-url=", opt_url)
 		Global.cli.optimized_content_base_url = opt_url
 
-	# Enable the runtime OccluderInstance3D auto-gen via deeplink.
-	# Without --occluder-gen the per-scene module no-ops on every entity.
-	var occ_v = Global.deep_link_obj.params.get("occluder-gen", "")
-	if not occ_v.is_empty():
-		Global.cli.occluder_gen_enabled = occ_v.to_lower() in ["true", "1", "yes"]
-		print("[DEEPLINK] occluder-gen=", Global.cli.occluder_gen_enabled)
-
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
 	# bench runner's `_apply_deeplink_overrides` runs too late — by then

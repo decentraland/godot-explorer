@@ -220,9 +220,7 @@ func _build_rust_delegate() -> void:
 	# update_visibility(camera) routes through native code, avoiding the
 	# GDScript per-frame overhead (~5-7ms/frame on GP at HIGH).
 	_rust_grid = DclVisibilityGridRust.new()
-	_rust_grid.set_grid_topology(
-		cell_origin_xz.x, cell_origin_xz.y, CELL_SIZE_M, cols, rows
-	)
+	_rust_grid.set_grid_topology(cell_origin_xz.x, cell_origin_xz.y, CELL_SIZE_M, cols, rows)
 	_rust_grid.set_thresholds(MAX_DISTANCE_M, MIN_SIZE_DISTANCE_RATIO, HIDE_DELAY_FRAMES)
 	var n := cols * rows
 	for i in n:

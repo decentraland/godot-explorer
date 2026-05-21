@@ -219,37 +219,13 @@ pub fn sync_gltf_loading_state(
                     scene.gltf_node_modifiers_pending.insert(*entity);
                 }
 
-                // Promote into the textureless-merger queue. The classifier
-                // re-runs the modifier check itself; we don't need to wait
-                // for modifier application here (`update_gltf_node_modifiers`
-                // runs in the same tick before `update_textureless_merger`).
-                scene.pending_textureless_promotion.insert(*entity);
-                // Same trigger for the material atlas. Both run after
-                // GltfNodeModifiers in the same dispatch loop.
-                scene.pending_material_atlas.insert(*entity);
-                // Mesh LOD pass — replays each MI's ArrayMesh through
-                // ImporterMesh::generate_lods so the viewport can swap
-                // to lower-poly chains at distance. Runs after the atlas
-                // so it sees only meshes that weren't merged away.
-                scene.pending_mesh_lod.insert(*entity);
-                // Auto distance cull — sets visibility_range_end on each
-                // MI from its AABB. Runs after mesh_lod so the lod-baked
-                // mesh's AABB is what we read.
-                scene.pending_auto_distance_cull.insert(*entity);
-                // Occluder auto-gen — spawn BoxOccluder3D for big opaque
-                // meshes so Godot's culler can skip everything behind.
-                scene.pending_occluder_gen.insert(*entity);
                 // Asset preprocessor — aggressive decimation + vertex
-                // strip + mesh-shaped occluder. Runs last in the chain
-                // so it sees the lod-baked + atlas-merged tree.
+                // strip + mesh-shaped occluder. The runtime LOD /
+                // atlas / occluder / shadow-cull / cheap-PBR passes
+                // moved to the offline `content/gltf/common.rs`
+                // pre-generate path; this is the only runtime
+                // post-load classifier still in use.
                 scene.pending_asset_preprocessor.insert(*entity);
-                // Auto shadow cull — cast_shadow=OFF on small props.
-                // Cuts the shadow pass primitive count substantially in
-                // dense scenes like Genesis Plaza.
-                scene.pending_auto_shadow_cull.insert(*entity);
-                // Cheap PBR — switch BaseMaterial3D modes to Lambert
-                // diffuse + specular off for matte surfaces.
-                scene.pending_cheap_pbr.insert(*entity);
             }
         }
 

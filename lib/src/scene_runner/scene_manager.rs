@@ -425,65 +425,10 @@ impl SceneManager {
         GString::from(s.as_str())
     }
 
-    /// Drain global textureless-merger classifier stats as a single key=value
-    /// line. Embed in benchmark JSON; lets the matrix verify the classifier
-    /// saw the entities it expected (issue #1948).
-    #[func]
-    pub fn drain_textureless_merger_stats(&mut self) -> GString {
-        let s = super::components::textureless_merger::drain_global_stats();
-        GString::from(s.as_str())
-    }
-
-    /// Drain the material atlas global stats (skip-reason histogram, layer
-    /// allocation count, MIs replaced). Mirrors the textureless merger
-    /// drain so the bench JSON has parallel fields for both.
-    #[func]
-    pub fn drain_material_atlas_stats(&mut self) -> GString {
-        let s = super::components::material_atlas::drain_global_stats();
-        GString::from(s.as_str())
-    }
-
-    /// Drain global mesh-LOD stats (skip-reason histogram, baked count,
-    /// cache hits, source/lod0 index totals). Embed in benchmark JSON to
-    /// quantify how much geometry the LOD pass touched.
-    #[func]
-    pub fn drain_mesh_lod_stats(&mut self) -> GString {
-        let s = super::components::mesh_lod::drain_global_stats();
-        GString::from(s.as_str())
-    }
-
-    /// Drain auto-distance-cull stats (MIs touched + avg end-distance).
-    #[func]
-    pub fn drain_auto_distance_cull_stats(&mut self) -> GString {
-        let s = super::components::auto_distance_cull::drain_global_stats();
-        GString::from(s.as_str())
-    }
-
-    /// Drain occluder-gen stats (occluders added + avg AABB diagonal).
-    #[func]
-    pub fn drain_occluder_gen_stats(&mut self) -> GString {
-        let s = super::components::occluder_gen::drain_global_stats();
-        GString::from(s.as_str())
-    }
-
     /// Drain asset-preprocessor stats (decimation, strip, mesh-occluder).
     #[func]
     pub fn drain_asset_preproc_stats(&mut self) -> GString {
         let s = super::components::asset_preprocessor::drain_global_stats();
-        GString::from(s.as_str())
-    }
-
-    /// Drain auto-shadow-cull stats (small MIs with cast_shadow disabled).
-    #[func]
-    pub fn drain_auto_shadow_cull_stats(&mut self) -> GString {
-        let s = super::components::auto_shadow_cull::drain_global_stats();
-        GString::from(s.as_str())
-    }
-
-    /// Drain cheap-PBR stats (materials switched to Lambert / specular-off).
-    #[func]
-    pub fn drain_cheap_pbr_stats(&mut self) -> GString {
-        let s = super::components::cheap_pbr_materials::drain_global_stats();
         GString::from(s.as_str())
     }
 
