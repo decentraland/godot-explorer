@@ -83,14 +83,6 @@ var wearables_by_category: Dictionary = {}
 var emote_controller: AvatarEmoteController  # Rust binded. Don't change this variable name
 
 var generate_attach_points: bool = false
-# anchor_point_id -> bone index in body_shape_skeleton_3d. Only entries whose
-# bone resolved at activation time are stored.
-var anchor_bone_idx: Dictionary = {}
-# anchor_point_id -> cached bone global pose, with basis pre-scaled by 100 to
-# cancel the Skeleton3D's 0.01 unit-conversion scale. After composing with
-# body_shape_skeleton_3d.global_transform the basis has world scale 1; the
-# entity's own scale is then preserved by avatar_attach.gd.
-var anchor_transform: Dictionary = {}
 
 var voice_chat_audio_player: AudioStreamPlayer = null
 var voice_chat_audio_player_gen: AudioStreamGenerator = null
@@ -99,6 +91,15 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
+
+# anchor_point_id -> bone index in body_shape_skeleton_3d. Only entries whose
+# bone resolved at activation time are stored.
+var _anchor_bone_idx: Dictionary = {}
+# anchor_point_id -> cached bone global pose, with basis pre-scaled by 100 to
+# cancel the Skeleton3D's 0.01 unit-conversion scale. After composing with
+# body_shape_skeleton_3d.global_transform the basis has world scale 1; the
+# entity's own scale is then preserved by avatar_attach.gd.
+var _anchor_transform: Dictionary = {}
 
 # Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
 var _force_hide_name: bool = false
@@ -1584,21 +1585,21 @@ func _add_attach_points():
 	if body_shape_skeleton_3d == null:
 		return
 
-	anchor_bone_idx.clear()
+	_anchor_bone_idx.clear()
 	for anchor_id in _ANCHOR_BONE_NAMES:
 		var idx := body_shape_skeleton_3d.find_bone(_ANCHOR_BONE_NAMES[anchor_id])
 		if idx != -1:
-			anchor_bone_idx[anchor_id] = idx
+			_anchor_bone_idx[anchor_id] = idx
 	# Prime the cache so the first frame after activation doesn't read default
 	# Transform3D() zeros.
 	_attach_point_skeleton_updated()
 
 
 func _attach_point_skeleton_updated():
-	for anchor_id in anchor_bone_idx:
-		var t := body_shape_skeleton_3d.get_bone_global_pose(anchor_bone_idx[anchor_id])
+	for anchor_id in _anchor_bone_idx:
+		var t := body_shape_skeleton_3d.get_bone_global_pose(_anchor_bone_idx[anchor_id])
 		t.basis = t.basis.scaled(100.0 * Vector3.ONE)
-		anchor_transform[anchor_id] = t
+		_anchor_transform[anchor_id] = t
 
 
 # Returns the world-space transform of an avatar anchor point for an
@@ -1615,8 +1616,8 @@ func get_anchor_point_global_transform(anchor_point_id: int) -> Transform3D:
 	# same discrepancy.
 	if anchor_point_id == 1:  # AAPT_NAME_TAG
 		return nickname_quad.global_transform.rotated_local(Vector3.UP, PI)
-	if body_shape_skeleton_3d != null and anchor_transform.has(anchor_point_id):
-		var cached: Transform3D = anchor_transform[anchor_point_id]
+	if body_shape_skeleton_3d != null and _anchor_transform.has(anchor_point_id):
+		var cached: Transform3D = _anchor_transform[anchor_point_id]
 		var t := body_shape_skeleton_3d.global_transform * cached
 		return t.rotated_local(Vector3.UP, PI)
 	return global_transform

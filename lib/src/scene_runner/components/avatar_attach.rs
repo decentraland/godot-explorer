@@ -6,9 +6,10 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{
+        components::transform_and_parent::apply_dcl_transform_to_node_3d, scene::Scene,
+    },
 };
-use godot::builtin::math::FloatExt;
 use godot::prelude::*;
 
 pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -39,32 +40,12 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     // scene only set AvatarAttach without an explicit Transform).
                     // Without this the node stays frozen at the last bone-aligned
                     // pose that avatar_attach.gd wrote.
-                    let transform_component = crdt_state.get_transform();
-                    let mut transform = transform_component
+                    let mut transform = crdt_state
+                        .get_transform()
                         .get(entity)
                         .and_then(|entry| entry.value.clone())
                         .unwrap_or_default();
-                    if !transform.rotation.is_normalized() {
-                        if transform.rotation.length_squared() == 0.0 {
-                            transform.rotation = godot::prelude::Quaternion::default();
-                        } else {
-                            transform.rotation = transform.rotation.normalized();
-                        }
-                    }
-                    if !transform.rotation.is_finite() {
-                        transform.rotation = godot::prelude::Quaternion::default();
-                    }
-                    node_3d.set_transform(transform.to_godot_transform_3d_without_scaled());
-                    if transform.scale.x.is_zero_approx() {
-                        transform.scale.x = 0.00001;
-                    }
-                    if transform.scale.y.is_zero_approx() {
-                        transform.scale.y = 0.00001;
-                    }
-                    if transform.scale.z.is_zero_approx() {
-                        transform.scale.z = 0.00001;
-                    }
-                    node_3d.set_scale(transform.scale);
+                    apply_dcl_transform_to_node_3d(&mut transform, &mut node_3d);
                 }
             } else if let Some(new_value) = new_value {
                 let (mut avatar_attach_node, is_new) = if let Some(avatar_attach_node) = existing {
