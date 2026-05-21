@@ -38,6 +38,7 @@ pub mod dcl_ui_border;
 pub mod dcl_ui_control;
 pub mod dcl_ui_dropdown;
 pub mod dcl_ui_input;
+pub mod dcl_ui_scroll;
 pub mod dcl_ui_text;
 pub mod dcl_urls;
 pub mod dcl_video_player;
