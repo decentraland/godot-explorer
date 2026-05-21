@@ -438,7 +438,9 @@ func _on_wearable_filter_button_filter_type(type):
 
 
 func _on_wearable_equip(wearable_id: String):
-	var desired_wearable = wearable_data[wearable_id]
+	var desired_wearable = wearable_data.get(wearable_id)
+	if desired_wearable == null:
+		return
 	var category = desired_wearable.get_category()
 
 	if category == Wearables.Categories.BODY_SHAPE:
@@ -470,8 +472,8 @@ func _on_wearable_equip(wearable_id: String):
 		# Unequip current wearable with category
 		for current_wearable_id in new_avatar_wearables:
 			# TODO: put the fetch wearable function
-			var wearable = wearable_data[current_wearable_id]
-			if wearable.get_category() == category:
+			var wearable = wearable_data.get(current_wearable_id)
+			if wearable != null and wearable.get_category() == category:
 				to_remove.push_back(current_wearable_id)
 
 		for to_remove_id in to_remove:
@@ -485,7 +487,9 @@ func _on_wearable_equip(wearable_id: String):
 
 
 func _on_wearable_unequip(wearable_id: String):
-	var desired_wearable = wearable_data[wearable_id]
+	var desired_wearable = wearable_data.get(wearable_id)
+	if desired_wearable == null:
+		return
 	var category = desired_wearable.get_category()
 
 	if category == Wearables.Categories.BODY_SHAPE:

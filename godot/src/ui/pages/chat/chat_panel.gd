@@ -122,11 +122,13 @@ func _on_panel_chat_on_exit_chat() -> void:
 func _on_chat_enter_write_mode() -> void:
 	_apply_writing_state()
 	Global.chat_write_mode_changed.emit(true)
+	chat.scroll_to_bottom_deferred()
 
 
 func _on_chat_exit_write_mode() -> void:
 	_apply_open_state()
 	Global.chat_write_mode_changed.emit(false)
+	chat.scroll_to_bottom_deferred()
 
 
 func _on_panel_chat_submit_message(message: String) -> void:
@@ -166,17 +168,6 @@ func hide_load_scenes_button() -> void:
 
 func is_chat_visible() -> bool:
 	return chat.visible
-
-
-func is_interactive_area_at(position: Vector2) -> bool:
-	# In portrait with chat open, block all touch input for camera/joystick
-	if Global.is_orientation_portrait() and _current_state != ChatState.CLOSED:
-		return true
-	if chatbar.visible and chatbar.is_point_inside(position):
-		return true
-	if chat.visible and chat.is_interactive_area_at(position):
-		return true
-	return false
 
 
 func _on_orientation_changed(is_portrait: bool) -> void:
