@@ -15,7 +15,7 @@ use godot::prelude::*;
 // planes through (they make great occluders for everything behind
 // them); the per-axis inset below stops their BoxOccluder from
 // overshooting on the thin axis.
-const MIN_AABB_DIAG_M: f32 = 2.0;
+const MIN_AABB_DIAG_M: f32 = 999.0;
 const THIN_RATIO: f32 = 0.05;
 /// BoxOccluder inset on the *fat* axes — shrink 15 % so a player
 /// walking past doesn't false-cull the visible mesh's edge.
