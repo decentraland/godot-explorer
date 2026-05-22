@@ -116,10 +116,12 @@ var session_id: String
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
 
-# Platform attestation service (App Attest / Play Integrity). Owns its own EULA-gated
-# validation loop — see attestation_service.gd. Instantiated in _ready as a Node child of
-# Global so it can use timers and own a persistent state across the session.
-var attestation: AttestationServiceImpl = null
+# Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
+# token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
+# see attestation_service.gd. Other code obtains a token via
+# `await Global.attestation.async_get_valid_jwt()`. Instantiated in _ready as a Node
+# child of Global so it can use timers and signals across the session lifetime.
+var attestation: AttestationService = null
 
 var _is_portrait: bool = true
 
@@ -376,9 +378,9 @@ func _ready():
 		# spawns a transient Timer under Global only while polling for first_move_in_world.
 		self.analytics_controller = AnalyticsController.new()
 		self.analytics_controller.setup()
-	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The service
-	# self-gates on EULA acceptance and persists a "validated this install" marker on success.
-	self.attestation = AttestationServiceImpl.new()
+	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The
+	# service self-gates on EULA acceptance and caches the issued session token on disk.
+	self.attestation = AttestationService.new()
 	add_child(self.attestation)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
