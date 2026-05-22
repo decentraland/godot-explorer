@@ -453,12 +453,17 @@ impl Metrics {
         result: String,
         remaining_s: i64,
     ) {
-        let event =
-            SegmentEvent::AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded {
+        let event = SegmentEvent::AttestationSessionCacheLoaded(
+            SegmentEventAttestationSessionCacheLoaded {
                 platform,
                 result,
-                remaining_s: if remaining_s < 0 { None } else { Some(remaining_s) },
-            });
+                remaining_s: if remaining_s < 0 {
+                    None
+                } else {
+                    Some(remaining_s)
+                },
+            },
+        );
         self.events.push(event.clone());
         self.debug_print_event("Attestation Session Cache Loaded", &event);
     }
