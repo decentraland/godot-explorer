@@ -410,35 +410,55 @@ impl Metrics {
         cycle_id: String,
         attempt_number: u32,
         trigger: String,
+        bff_url: String,
         outcome: String,
         failure_step: String,
         failure_code: String,
         attempt_duration_ms: u32,
-        challenge_ms: i64,
-        generate_key_ms: i64,
-        attest_key_ms: i64,
-        play_integrity_ms: i64,
-        post_session_ms: i64,
-        session_ttl_s: i64,
+        // Packed timings + session ttl to stay under gdext's ParamTuple
+        // arity limit. Layout (index → field, -1 = None):
+        //   [0] challenge_ms       (iOS step 1)
+        //   [1] generate_key_ms    (iOS step 2)
+        //   [2] attest_key_ms      (iOS step 3)
+        //   [3] play_integrity_ms  (Android step 1)
+        //   [4] post_session_ms    (both, step final)
+        //   [5] session_ttl_s      (success only)
+        extras: godot::builtin::PackedInt32Array,
     ) {
         let opt_str = |s: String| if s.is_empty() { None } else { Some(s) };
-        let opt_u32 = |n: i64| if n < 0 { None } else { Some(n as u32) };
-        let opt_i64 = |n: i64| if n < 0 { None } else { Some(n) };
+        let at = |i: usize| -> i32 { extras.get(i).unwrap_or(-1) };
+        let opt_u32 = |i: usize| -> Option<u32> {
+            let n = at(i);
+            if n < 0 {
+                None
+            } else {
+                Some(n as u32)
+            }
+        };
+        let opt_i64 = |i: usize| -> Option<i64> {
+            let n = at(i);
+            if n < 0 {
+                None
+            } else {
+                Some(n as i64)
+            }
+        };
         let event = SegmentEvent::AttestationAttempt(SegmentEventAttestationAttempt {
             platform,
             cycle_id,
             attempt_number,
             trigger,
+            bff_url,
             outcome,
             failure_step: opt_str(failure_step),
             failure_code: opt_str(failure_code),
             attempt_duration_ms,
-            challenge_ms: opt_u32(challenge_ms),
-            generate_key_ms: opt_u32(generate_key_ms),
-            attest_key_ms: opt_u32(attest_key_ms),
-            play_integrity_ms: opt_u32(play_integrity_ms),
-            post_session_ms: opt_u32(post_session_ms),
-            session_ttl_s: opt_i64(session_ttl_s),
+            challenge_ms: opt_u32(0),
+            generate_key_ms: opt_u32(1),
+            attest_key_ms: opt_u32(2),
+            play_integrity_ms: opt_u32(3),
+            post_session_ms: opt_u32(4),
+            session_ttl_s: opt_i64(5),
         });
         self.events.push(event.clone());
         self.debug_print_event("Attestation Attempt", &event);

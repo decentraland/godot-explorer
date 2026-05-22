@@ -363,6 +363,11 @@ pub struct SegmentEventAttestationAttempt {
     pub attempt_number: u32,
     // What caused the cycle to start: "boot", "force_reattest", "on_demand".
     pub trigger: String,
+    // The mobile-bff base URL this attempt actually hit (e.g.
+    // "https://mobile-bff.decentraland.org"). Lets analysts segment by
+    // backend — useful while staging deploys precede prod (.zone before .org)
+    // and to spot leaks of non-prod URLs into release builds.
+    pub bff_url: String,
     // "success" | "failure"
     pub outcome: String,
     // Which step failed: "challenge", "generate_key", "attest_key",

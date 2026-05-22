@@ -67,11 +67,10 @@ const EXPIRY_MARGIN_SEC := 60
 # Bearer-secret prefix length in logs: enough to distinguish session tokens
 # (which share the `<b64url>.<b64url>` layout) without leaking the secret.
 const _LOG_PREFIX_LEN := 12
-# DEBUG override for the mobile-bff base URL while PR #54 endpoints
-# (/attest/ios/challenge, /attest/session) aren't deployed to prod
-# (mobile-bff.decentraland.org). Pilot deployment lives at test-auth.
-# Set to "" to fall back to DclUrls.mobile_bff().
-const _DEBUG_BFF_OVERRIDE := "https://test-auth.dclregenesislabs.xyz"
+# Hardcoded attestation URL for -prod builds. Pinned regardless of dclenv to
+# prevent malicious deeplinks from redirecting attestation traffic on prod
+# clients (the attestation gate is the anti-phishing control).
+const _PROD_ATTESTATION_BFF := "https://mobile-bff.decentraland.org"
 
 # ---------------- state ----------------
 
@@ -544,13 +543,35 @@ func _async_attest_android() -> Dictionary:
 # ---------------- helpers ----------------
 
 
-# Resolves the mobile-bff base URL. Honors _DEBUG_BFF_OVERRIDE for piloting
-# against test-auth (PR #54 not in prod yet); otherwise routes through the
-# normal DclUrls.mobile_bff() that respects dclenv.
+# Resolves the mobile-bff base URL for attestation traffic.
+#
+# Production builds (`-prod` version suffix) are pinned to the prod URL
+# unconditionally — neither `dclenv=...` nor any per-service-group override
+# can redirect attestation traffic. This is a stricter rule than the rest of
+# the app uses for other services on purpose: the attestation gate is the
+# anti-phishing control, so a malicious deeplink must not be able to point
+# prod users at an attacker-controlled verifier.
+#
+# Any other build (staging, dev, untagged local builds) resolves through
+# `DclUrls.attestation_bff()`, which respects both the global `dclenv` and
+# the `attestation::<env>` per-group override.
+#
+# Examples (FORCE_DEEPLINK, --dclenv flag, or actual mobile deeplink):
+#   decentraland://open?dclenv=attestation::zone,org   (non-prod: attest→zone)
+#   decentraland://open?dclenv=zone                    (non-prod: attest→zone)
+#   any deeplink                                       (-prod build: attest→org)
 func _bff_url() -> String:
-	if not _DEBUG_BFF_OVERRIDE.is_empty():
-		return _DEBUG_BFF_OVERRIDE
-	return str(DclUrls.mobile_bff())
+	if DclGlobal.is_production():
+		var resolved: String = str(DclUrls.attestation_bff())
+		if resolved != _PROD_ATTESTATION_BFF:
+			push_warning(
+				(
+					"[Attestation] -prod build pins attestation to %s; ignoring dclenv-derived %s"
+					% [_PROD_ATTESTATION_BFF, resolved]
+				)
+			)
+		return _PROD_ATTESTATION_BFF
+	return str(DclUrls.attestation_bff())
 
 
 # Normalize a /attest/session response into the result shape used by the
@@ -614,16 +635,24 @@ func _track_attempt(
 			cycle_id,
 			attempt_number,
 			trigger,
+			_bff_url(),
 			"success" if ok else "failure",
 			str(result.get("step", "")),
 			str(result.get("code", "")),
 			attempt_duration_ms,
-			int(timings.get("challenge_ms", -1)),
-			int(timings.get("generate_key_ms", -1)),
-			int(timings.get("attest_key_ms", -1)),
-			int(timings.get("play_integrity_ms", -1)),
-			int(timings.get("post_session_ms", -1)),
-			session_ttl_s,
+			# extras: [challenge_ms, generate_key_ms, attest_key_ms,
+			#         play_integrity_ms, post_session_ms, session_ttl_s].
+			# -1 in each slot means "field absent / not applicable".
+			PackedInt32Array(
+				[
+					int(timings.get("challenge_ms", -1)),
+					int(timings.get("generate_key_ms", -1)),
+					int(timings.get("attest_key_ms", -1)),
+					int(timings.get("play_integrity_ms", -1)),
+					int(timings.get("post_session_ms", -1)),
+					session_ttl_s,
+				]
+			),
 		)
 	)
 
