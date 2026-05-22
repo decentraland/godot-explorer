@@ -94,13 +94,16 @@ func _ready() -> void:
 		return
 	_store_kit_available = true
 
-	_store_kit.products_loaded.connect(_on_products_loaded)
-	_store_kit.products_load_failed.connect(_on_products_load_failed)
-	_store_kit.purchase_completed.connect(_on_purchase_completed)
-	_store_kit.purchase_failed.connect(_on_purchase_failed)
-	_store_kit.purchase_cancelled.connect(_on_purchase_cancelled)
-	_store_kit.purchase_pending.connect(_on_purchase_pending)
-	_store_kit.transaction_updated.connect(_on_transaction_updated)
+	# StoreKit signals arrive from a Swift Task (background thread). Using
+	# CONNECT_DEFERRED ensures callbacks run on the main thread, which is
+	# required for scene-tree operations (add_child, emit_signal, etc.).
+	_store_kit.products_loaded.connect(_on_products_loaded, CONNECT_DEFERRED)
+	_store_kit.products_load_failed.connect(_on_products_load_failed, CONNECT_DEFERRED)
+	_store_kit.purchase_completed.connect(_on_purchase_completed, CONNECT_DEFERRED)
+	_store_kit.purchase_failed.connect(_on_purchase_failed, CONNECT_DEFERRED)
+	_store_kit.purchase_cancelled.connect(_on_purchase_cancelled, CONNECT_DEFERRED)
+	_store_kit.purchase_pending.connect(_on_purchase_pending, CONNECT_DEFERRED)
+	_store_kit.transaction_updated.connect(_on_transaction_updated, CONNECT_DEFERRED)
 
 	print("[IAP] starting StoreKit listener; can_make_payments=", _store_kit.can_make_payments())
 	_store_kit.start_listening()
