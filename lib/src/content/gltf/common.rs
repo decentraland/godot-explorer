@@ -86,6 +86,7 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compr
 /// exact format the renderer expects.
 fn apply_post_generate_godot_lods(root: Gd<Node>) {
     use godot::classes::{ArrayMesh, ImporterMesh, MeshInstance3D};
+    use std::collections::HashMap;
     // Surfaces with fewer indices than this are too small for a useful LOD
     // chain — meshopt/generate_lods on tiny surfaces produces degenerate LOD
     // levels that have triggered renderer SIGSEGVs in the past. Lowered from
@@ -96,6 +97,12 @@ fn apply_post_generate_godot_lods(root: Gd<Node>) {
     let mut meshes_skipped = 0u32;
     let mut chunks_baked = 0u32;
     let mut chunks_skipped_small = 0u32;
+    // Memoize baked output by source mesh instance_id so MIs that originally
+    // shared the same ArrayMesh keep sharing one (now-with-LODs) ArrayMesh.
+    // Without this, importer.get_mesh() returns a fresh ArrayMesh per call,
+    // duplicating VBOs N× across N MIs that shared one source mesh.
+    let mut baked_cache: HashMap<i64, Gd<ArrayMesh>> = HashMap::new();
+    let mut shared_reuse_hits = 0u32;
     while let Some(n) = stack.pop() {
         let kids = n.get_children();
         for i in 0..kids.len() {
@@ -112,6 +119,14 @@ fn apply_post_generate_godot_lods(root: Gd<Node>) {
         let Ok(am) = mesh.try_cast::<ArrayMesh>() else {
             continue;
         };
+        // Cache hit: this source mesh was already baked for an earlier MI.
+        // Reuse the same Gd<ArrayMesh> so VBOs / LODs stay deduplicated.
+        let source_id = am.instance_id().to_i64();
+        if let Some(cached) = baked_cache.get(&source_id).cloned() {
+            mi.set_mesh(&cached);
+            shared_reuse_hits += 1;
+            continue;
+        }
         if am.get_blend_shape_count() > 0 {
             meshes_skipped += 1;
             continue;
@@ -217,6 +232,7 @@ fn apply_post_generate_godot_lods(root: Gd<Node>) {
             continue;
         };
         mi.set_mesh(&baked);
+        baked_cache.insert(source_id, baked);
         if is_chunk {
             chunks_baked += 1;
         } else {
@@ -224,11 +240,12 @@ fn apply_post_generate_godot_lods(root: Gd<Node>) {
         }
     }
     godot::global::godot_print!(
-        "[godot-lods] non-chunks: baked={} skipped={}  chunks: baked={} skipped_small={}",
+        "[godot-lods] non-chunks: baked={} skipped={}  chunks: baked={} skipped_small={}  shared_reuse_hits={}",
         meshes_with_lods,
         meshes_skipped,
         chunks_baked,
-        chunks_skipped_small
+        chunks_skipped_small,
+        shared_reuse_hits
     );
 }
 
