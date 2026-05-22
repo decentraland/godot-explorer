@@ -80,6 +80,10 @@ var _cached_token: String = ""
 var _cached_expires_at: int = 0
 var _ios_plugin: Object = null
 var _android_plugin: Object = null
+# Carries the dispatch source ("boot" / "on_demand" / "force_reattest") set by
+# the most recent _kick caller into the cycle for telemetry. Only read once at
+# cycle start since a kick during a live cycle is a no-op.
+var _pending_trigger: String = "boot"
 
 # ---------------- public API ----------------
 
@@ -102,7 +106,7 @@ func async_get_valid_jwt() -> String:
 		_log("async_get_valid_jwt: unsupported platform → returning empty string")
 		return ""
 	_log("async_get_valid_jwt: cache MISS, dispatching kick (state=%s)" % _state_name(_state))
-	_kick()
+	_kick("on_demand")
 	_log("async_get_valid_jwt: awaiting jwt_refreshed signal...")
 	var result: Array = await jwt_refreshed
 	_log("async_get_valid_jwt: signal received → token=%s" % _secret_prefix(str(result[0])))
@@ -126,7 +130,7 @@ func async_force_reattest() -> String:
 	if not is_supported():
 		_log("async_force_reattest: unsupported platform → returning empty")
 		return ""
-	_kick()
+	_kick("force_reattest")
 	_log("async_force_reattest: awaiting jwt_refreshed signal...")
 	var result: Array = await jwt_refreshed
 	_log("async_force_reattest: signal received → token=%s" % _secret_prefix(str(result[0])))
@@ -167,20 +171,35 @@ func _ready() -> void:
 	_log("_ready: mobile_bff=%s" % bff_url)
 	_log("_ready: session_path=%s" % session_abs)
 
-	_load_session()
+	var cache_result := _load_session()
+	_track_cache_loaded(cache_result)
 
 	var plugin_loaded: bool = _ios_plugin != null or _android_plugin != null
 	var supported: bool = is_supported()
 	_log(
 		(
-			"_ready: plugin_loaded=%s supported=%s has_session=%s"
-			% [plugin_loaded, supported, has_valid_session()]
+			"_ready: plugin_loaded=%s supported=%s has_session=%s cache=%s"
+			% [plugin_loaded, supported, has_valid_session(), cache_result]
 		)
 	)
 	if not supported:
 		_log("_ready: platform not supported → skipping boot dispatch")
 		return
 	_async_boot_dispatch()
+
+
+# Emit the boot-time cache probe event. `remaining_s` is only populated on
+# "hit" (cache miss has no remaining time to report). No-op when telemetry
+# is disabled.
+func _track_cache_loaded(cache_result: String) -> void:
+	if Global.metrics == null:
+		return
+	var remaining_s: int = -1
+	if cache_result == "hit":
+		remaining_s = _cached_expires_at - int(Time.get_unix_time_from_system())
+	Global.metrics.track_attestation_session_cache_loaded(
+		OS.get_name().to_lower(), cache_result, remaining_s
+	)
 
 
 # Proactive boot warmup: waits for EULA, then kicks the FSM if we don't
@@ -201,7 +220,7 @@ func _async_boot_dispatch() -> void:
 		_log("boot_dispatch: EULA accepted after %dms → kicking" % (Time.get_ticks_msec() - t0))
 	else:
 		_log("boot_dispatch: EULA already accepted → kicking immediately")
-	_kick()
+	_kick("boot")
 
 
 # Mirrors analytics_controller.gd::setup() — the canonical "EULA accepted
@@ -221,14 +240,25 @@ func _is_eula_accepted() -> bool:
 # Idempotent kick. Starts a cycle iff IDLE. Skipped during WAITING_EULA
 # (boot dispatch owns the kick), ATTESTING (cycle in progress), and BACKOFF
 # (cycle is between attempts but still alive — its loop will retry).
-func _kick() -> void:
+#
+# `trigger` ("boot" | "on_demand" | "force_reattest") is stored on the
+# instance so the cycle reads it after the no-op check; concurrent callers
+# may overwrite this between kicks but only the one that actually starts
+# the cycle gets recorded in telemetry.
+func _kick(trigger: String) -> void:
+	_pending_trigger = trigger
 	if _state != State.IDLE:
-		_log("_kick: SKIPPED (state=%s — cycle already in flight)" % _state_name(_state))
+		_log(
+			(
+				"_kick(%s): SKIPPED (state=%s — cycle already in flight)"
+				% [trigger, _state_name(_state)]
+			)
+		)
 		return
 	if not is_supported():
-		_log("_kick: SKIPPED (platform not supported)")
+		_log("_kick(%s): SKIPPED (platform not supported)" % trigger)
 		return
-	_log("_kick: starting cycle")
+	_log("_kick(%s): starting cycle" % trigger)
 	_async_run_cycle()
 
 
@@ -238,17 +268,22 @@ func _kick() -> void:
 func _async_run_cycle() -> void:
 	_state = State.ATTESTING
 	var cycle_t0 := Time.get_ticks_msec()
+	# cycle_id stays constant across attempts. Analysts group by it to
+	# compute success rate, retry distribution, and abandonment.
+	var cycle_id := DclConfig.generate_uuid_v4()
+	var trigger := _pending_trigger
 	var attempt: int = 0
 	while true:
 		var attempt_t0 := Time.get_ticks_msec()
 		_log(
 			(
-				"cycle: attempt #%d starting (cycle_elapsed=%dms)"
-				% [attempt + 1, attempt_t0 - cycle_t0]
+				"cycle[%s]: attempt #%d starting (cycle_elapsed=%dms)"
+				% [cycle_id.substr(0, 8), attempt + 1, attempt_t0 - cycle_t0]
 			)
 		)
 		var result: Dictionary = await _async_try_once()
 		var attempt_ms: int = Time.get_ticks_msec() - attempt_t0
+		_track_attempt(cycle_id, attempt + 1, trigger, attempt_ms, result)
 		if result.get("ok", false):
 			var token: String = str(result["token"])
 			var exp: int = int(result["expires_at"])
@@ -259,8 +294,9 @@ func _async_run_cycle() -> void:
 			var seconds_left: int = exp - int(Time.get_unix_time_from_system())
 			_log(
 				(
-					"cycle: SUCCESS attempt #%d in %dms (cycle_total=%dms) → token=%s remaining=%ds"
+					"cycle[%s]: SUCCESS attempt #%d in %dms (cycle_total=%dms) → token=%s remaining=%ds"
 					% [
+						cycle_id.substr(0, 8),
 						attempt + 1,
 						attempt_ms,
 						Time.get_ticks_msec() - cycle_t0,
@@ -275,9 +311,10 @@ func _async_run_cycle() -> void:
 		var delay: float = RETRY_BACKOFF_SEC[idx]
 		push_warning(
 			(
-				"[Attestation:%s] cycle: FAIL attempt #%d in %dms (%s) → retry in %.1fs"
+				"[Attestation:%s] cycle[%s]: FAIL attempt #%d in %dms (%s) → retry in %.1fs"
 				% [
 					_state_name(_state),
+					cycle_id.substr(0, 8),
 					attempt + 1,
 					attempt_ms,
 					str(result.get("error", "unknown")),
@@ -307,9 +344,15 @@ func _async_try_once() -> Dictionary:
 
 # Fresh App Attest key per session (PR #54 design). Sequence:
 #   challenge → generateKey → attestKey(SHA256(challenge)) → POST /attest/session.
+#
+# Returns a result dict that always carries `timings` (per-step ms keyed by
+# challenge_ms / generate_key_ms / attest_key_ms / post_session_ms — only
+# the steps that actually executed are present). On failure also carries
+# `step` (which step) and `code` (server's code or "client_error").
 func _async_attest_ios() -> Dictionary:
+	var timings := {}
 	if _ios_plugin == null or not _ios_plugin.attestation_is_supported():
-		return {"ok": false, "error": "iOS App Attest unsupported"}
+		return _fail("plugin_missing", "client_error", "iOS App Attest unsupported", timings)
 
 	var bff := _bff_url()
 
@@ -317,18 +360,20 @@ func _async_attest_ios() -> Dictionary:
 	var t0: int = Time.get_ticks_msec()
 	_log("iOS 1/4: POST %s/attest/ios/challenge" % bff)
 	var ch_resp := await _async_post_json(bff + "/attest/ios/challenge", "", {})
+	timings["challenge_ms"] = Time.get_ticks_msec() - t0
 	if ch_resp.get("__error", false):
 		_log("iOS 1/4: FAIL → %s" % JSON.stringify(ch_resp))
-		return {"ok": false, "error": "challenge: " + JSON.stringify(ch_resp)}
+		var code: String = str(ch_resp.get("code", "client_error"))
+		return _fail("challenge", code, JSON.stringify(ch_resp), timings)
 	var challenge_b64u := str(ch_resp.get("challenge", ""))
 	if challenge_b64u.is_empty():
 		_log("iOS 1/4: FAIL → challenge field empty")
-		return {"ok": false, "error": "challenge: empty"}
+		return _fail("challenge", "client_error", "challenge field empty", timings)
 	_log(
 		(
 			"iOS 1/4: OK in %dms (challenge_len=%d expires_at=%s)"
 			% [
-				Time.get_ticks_msec() - t0,
+				timings["challenge_ms"],
 				challenge_b64u.length(),
 				str(ch_resp.get("expires_at", "?")),
 			]
@@ -340,15 +385,16 @@ func _async_attest_ios() -> Dictionary:
 	_log("iOS 2/4: DCAppAttestService.generateKey() (Secure Enclave)")
 	_ios_plugin.attestation_generate_key()
 	var key_result: Array = await _ios_plugin.attestation_key_generated
+	timings["generate_key_ms"] = Time.get_ticks_msec() - t0
 	var key_id := str(key_result[0])
 	var key_err := str(key_result[1])
 	if not key_err.is_empty() or key_id.is_empty():
-		_log("iOS 2/4: FAIL in %dms (%s)" % [Time.get_ticks_msec() - t0, key_err])
-		return {"ok": false, "error": "generateKey: " + key_err}
+		_log("iOS 2/4: FAIL in %dms (%s)" % [timings["generate_key_ms"], key_err])
+		return _fail("generate_key", "client_error", "generateKey: " + key_err, timings)
 	_log(
 		(
 			"iOS 2/4: OK in %dms (key_id=%s len=%d)"
-			% [Time.get_ticks_msec() - t0, _secret_prefix(key_id), key_id.length()]
+			% [timings["generate_key_ms"], _secret_prefix(key_id), key_id.length()]
 		)
 	)
 
@@ -357,7 +403,7 @@ func _async_attest_ios() -> Dictionary:
 	var challenge_bytes := _b64url_decode(challenge_b64u)
 	if challenge_bytes.is_empty():
 		_log("iOS 3/4: FAIL → challenge decode produced empty bytes")
-		return {"ok": false, "error": "challenge: decode empty"}
+		return _fail("attest_key", "client_error", "challenge decode empty", timings)
 	var hasher := HashingContext.new()
 	hasher.start(HashingContext.HASH_SHA256)
 	hasher.update(challenge_bytes)
@@ -370,15 +416,16 @@ func _async_attest_ios() -> Dictionary:
 	)
 	_ios_plugin.attestation_attest_key(key_id, cdh)
 	var attest_result: Array = await _ios_plugin.attestation_attest_completed
+	timings["attest_key_ms"] = Time.get_ticks_msec() - t0
 	var attestation_object_b64u := str(attest_result[0])
 	var attest_err := str(attest_result[1])
 	if not attest_err.is_empty() or attestation_object_b64u.is_empty():
-		_log("iOS 3/4: FAIL in %dms (%s)" % [Time.get_ticks_msec() - t0, attest_err])
-		return {"ok": false, "error": "attestKey: " + attest_err}
+		_log("iOS 3/4: FAIL in %dms (%s)" % [timings["attest_key_ms"], attest_err])
+		return _fail("attest_key", "client_error", "attestKey: " + attest_err, timings)
 	_log(
 		(
 			"iOS 3/4: OK in %dms (attestation_object_len=%d)"
-			% [Time.get_ticks_msec() - t0, attestation_object_b64u.length()]
+			% [timings["attest_key_ms"], attestation_object_b64u.length()]
 		)
 	)
 
@@ -398,21 +445,26 @@ func _async_attest_ios() -> Dictionary:
 	var session_resp := await _async_post_json(
 		bff + "/attest/session", body, {"x-attest-platform": "ios"}
 	)
-	var elapsed: int = Time.get_ticks_msec() - t0
-	var result := _session_response_to_result(session_resp)
+	timings["post_session_ms"] = Time.get_ticks_msec() - t0
+	var result := _session_response_to_result(session_resp, timings)
 	if result.get("ok", false):
 		_log(
 			(
 				"iOS 4/4: OK in %dms (token=%s expires_at=%s)"
 				% [
-					elapsed,
+					timings["post_session_ms"],
 					_secret_prefix(str(result["token"])),
 					str(session_resp.get("expires_at", "?")),
 				]
 			)
 		)
 	else:
-		_log("iOS 4/4: FAIL in %dms (%s)" % [elapsed, str(result.get("error", "?"))])
+		_log(
+			(
+				"iOS 4/4: FAIL in %dms (%s)"
+				% [timings["post_session_ms"], str(result.get("error", "?"))]
+			)
+		)
 	return result
 
 
@@ -427,8 +479,9 @@ func _async_attest_ios() -> Dictionary:
 # (returns IntegrityErrorCode -13 NONCE_IS_NOT_BASE64) — must be base64url
 # without padding.
 func _async_attest_android() -> Dictionary:
+	var timings := {}
 	if _android_plugin == null:
-		return {"ok": false, "error": "Android plugin missing"}
+		return _fail("plugin_missing", "client_error", "Android plugin missing", timings)
 
 	var hasher := HashingContext.new()
 	hasher.start(HashingContext.HASH_SHA256)
@@ -444,15 +497,16 @@ func _async_attest_android() -> Dictionary:
 	var t0: int = Time.get_ticks_msec()
 	_android_plugin.requestPlayIntegrityToken(request_hash_b64)
 	var result: Array = await _android_plugin.play_integrity_token_ready
+	timings["play_integrity_ms"] = Time.get_ticks_msec() - t0
 	var pi_token := str(result[0])
 	var pi_err := str(result[1])
 	if not pi_err.is_empty() or pi_token.is_empty():
-		_log("Android 1/2: FAIL in %dms (%s)" % [Time.get_ticks_msec() - t0, pi_err])
-		return {"ok": false, "error": "playIntegrity: " + pi_err}
+		_log("Android 1/2: FAIL in %dms (%s)" % [timings["play_integrity_ms"], pi_err])
+		return _fail("play_integrity", "client_error", "playIntegrity: " + pi_err, timings)
 	_log(
 		(
 			"Android 1/2: OK in %dms (token=%s len=%d)"
-			% [Time.get_ticks_msec() - t0, _secret_prefix(pi_token), pi_token.length()]
+			% [timings["play_integrity_ms"], _secret_prefix(pi_token), pi_token.length()]
 		)
 	)
 
@@ -464,21 +518,26 @@ func _async_attest_android() -> Dictionary:
 	t0 = Time.get_ticks_msec()
 	_log("Android 2/2: POST %s/attest/session (empty body)" % bff)
 	var session_resp := await _async_post_json(bff + "/attest/session", "", headers)
-	var elapsed: int = Time.get_ticks_msec() - t0
-	var session_result := _session_response_to_result(session_resp)
+	timings["post_session_ms"] = Time.get_ticks_msec() - t0
+	var session_result := _session_response_to_result(session_resp, timings)
 	if session_result.get("ok", false):
 		_log(
 			(
 				"Android 2/2: OK in %dms (token=%s expires_at=%s)"
 				% [
-					elapsed,
+					timings["post_session_ms"],
 					_secret_prefix(str(session_result["token"])),
 					str(session_resp.get("expires_at", "?")),
 				]
 			)
 		)
 	else:
-		_log("Android 2/2: FAIL in %dms (%s)" % [elapsed, str(session_result.get("error", "?"))])
+		_log(
+			(
+				"Android 2/2: FAIL in %dms (%s)"
+				% [timings["post_session_ms"], str(session_result.get("error", "?"))]
+			)
+		)
 	return session_result
 
 
@@ -495,20 +554,78 @@ func _bff_url() -> String:
 
 
 # Normalize a /attest/session response into the result shape used by the
-# cycle. Both platforms share this — the success body is identical.
-func _session_response_to_result(resp: Dictionary) -> Dictionary:
+# cycle. Both platforms share this — the success body is identical. Extracts
+# the server-side `code` (e.g. ATTESTATION_IOS_BAD_ASSERTION) for telemetry
+# when the response is an error.
+func _session_response_to_result(resp: Dictionary, timings: Dictionary) -> Dictionary:
 	if resp.get("__error", false):
-		return {"ok": false, "error": "session: " + JSON.stringify(resp)}
+		var code: String = str(resp.get("code", "client_error"))
+		return _fail("post_session", code, JSON.stringify(resp), timings)
 	var token := str(resp.get("token", ""))
 	if token.is_empty():
-		return {"ok": false, "error": "session: missing token"}
+		return _fail("post_session", "client_error", "session: missing token", timings)
 	var exp := _parse_iso_to_unix(str(resp.get("expires_at", "")))
 	if exp <= 0:
-		return {
-			"ok": false,
-			"error": "session: bad expires_at (raw=%s)" % str(resp.get("expires_at", "")),
-		}
-	return {"ok": true, "token": token, "expires_at": exp}
+		return _fail(
+			"post_session",
+			"client_error",
+			"session: bad expires_at (raw=%s)" % str(resp.get("expires_at", "")),
+			timings,
+		)
+	return {"ok": true, "token": token, "expires_at": exp, "timings": timings}
+
+
+# Construct a failure result dict. Centralizes the shape so every callsite
+# in the iOS/Android flows packs the same fields.
+func _fail(step: String, code: String, error: String, timings: Dictionary) -> Dictionary:
+	return {
+		"ok": false,
+		"step": step,
+		"code": code,
+		"error": "%s: %s" % [step, error],
+		"timings": timings,
+	}
+
+
+# Emit one Segment event per attempt. Sentinels: empty string for missing
+# string fields, -1 for missing int fields — track_attestation_attempt
+# converts these to Option::None on the Rust side. No-op when telemetry is
+# disabled (asset_server mode, builds with disable_telemetry feature).
+func _track_attempt(
+	cycle_id: String,
+	attempt_number: int,
+	trigger: String,
+	attempt_duration_ms: int,
+	result: Dictionary
+) -> void:
+	if Global.metrics == null:
+		return
+	var timings: Dictionary = result.get("timings", {})
+	var ok: bool = result.get("ok", false)
+	var session_ttl_s: int = -1
+	if ok:
+		var exp: int = int(result["expires_at"])
+		session_ttl_s = exp - int(Time.get_unix_time_from_system())
+	(
+		Global
+		. metrics
+		. track_attestation_attempt(
+			OS.get_name().to_lower(),
+			cycle_id,
+			attempt_number,
+			trigger,
+			"success" if ok else "failure",
+			str(result.get("step", "")),
+			str(result.get("code", "")),
+			attempt_duration_ms,
+			int(timings.get("challenge_ms", -1)),
+			int(timings.get("generate_key_ms", -1)),
+			int(timings.get("attest_key_ms", -1)),
+			int(timings.get("play_integrity_ms", -1)),
+			int(timings.get("post_session_ms", -1)),
+			session_ttl_s,
+		)
+	)
 
 
 # Re-uses Global.http_requester so we inherit the shared retry / 429-backoff
@@ -555,14 +672,21 @@ func _async_post_json(url: String, body: String, headers: Dictionary) -> Diction
 # ---------------- persistence ----------------
 
 
-func _load_session() -> void:
+# Loads the persisted session file and returns one of:
+#   "hit"            — non-expired token (outside EXPIRY_MARGIN_SEC).
+#   "miss_no_file"   — no file present (fresh install or post-uninstall).
+#   "miss_expired"   — file present, parsed OK, but already within margin.
+#   "miss_corrupted" — file present but unreadable / unparseable / missing fields.
+# Always populates _cached_token/_cached_expires_at on successful parse so the
+# cycle can re-use the data even when the session is too close to expiry.
+func _load_session() -> String:
 	if not FileAccess.file_exists(SESSION_PATH):
 		_log("_load_session: no file at %s" % SESSION_PATH)
-		return
+		return "miss_no_file"
 	var f := FileAccess.open(SESSION_PATH, FileAccess.READ)
 	if f == null:
 		push_warning("[Attestation] _load_session: file exists but open failed")
-		return
+		return "miss_corrupted"
 	var raw := f.get_as_text()
 	f.close()
 	var parsed = JSON.parse_string(raw)
@@ -570,7 +694,7 @@ func _load_session() -> void:
 		push_warning(
 			"[Attestation] _load_session: file contents not a JSON dict (raw_len=%d)" % raw.length()
 		)
-		return
+		return "miss_corrupted"
 	var token := str(parsed.get("token", ""))
 	var exp := int(parsed.get("expires_at", 0))
 	if token.is_empty() or exp <= 0:
@@ -580,7 +704,7 @@ func _load_session() -> void:
 				% [token.is_empty(), exp]
 			)
 		)
-		return
+		return "miss_corrupted"
 	_cached_token = token
 	_cached_expires_at = exp
 	var remaining: int = exp - int(Time.get_unix_time_from_system())
@@ -590,6 +714,7 @@ func _load_session() -> void:
 			% [_secret_prefix(token), remaining, str(parsed.get("platform", "?"))]
 		)
 	)
+	return "hit" if has_valid_session() else "miss_expired"
 
 
 func _save_session(token: String, expires_at_unix: int) -> void:

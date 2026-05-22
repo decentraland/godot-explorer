@@ -18,6 +18,7 @@ use crate::{
 use super::{
     data_definition::{
         build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
+        SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventRequestFriend, SegmentEventScreenViewed,
@@ -392,6 +393,74 @@ impl Metrics {
         let event = SegmentEvent::Unfriend(SegmentEventUnfriend { receiver_id });
         self.events.push(event.clone());
         self.debug_print_event("Unfriend", &event);
+    }
+
+    /// Per-attempt event from AttestationService's FSM. See
+    /// data_definition::SegmentEventAttestationAttempt for field meanings.
+    ///
+    /// GDScript-friendly signature: nullable fields use sentinels because
+    /// gdext doesn't surface Option<T> well across the FFI boundary.
+    ///   - String fields: empty string ("") == None.
+    ///   - Numeric fields: -1 == None.
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    pub fn track_attestation_attempt(
+        &mut self,
+        platform: String,
+        cycle_id: String,
+        attempt_number: u32,
+        trigger: String,
+        outcome: String,
+        failure_step: String,
+        failure_code: String,
+        attempt_duration_ms: u32,
+        challenge_ms: i64,
+        generate_key_ms: i64,
+        attest_key_ms: i64,
+        play_integrity_ms: i64,
+        post_session_ms: i64,
+        session_ttl_s: i64,
+    ) {
+        let opt_str = |s: String| if s.is_empty() { None } else { Some(s) };
+        let opt_u32 = |n: i64| if n < 0 { None } else { Some(n as u32) };
+        let opt_i64 = |n: i64| if n < 0 { None } else { Some(n) };
+        let event = SegmentEvent::AttestationAttempt(SegmentEventAttestationAttempt {
+            platform,
+            cycle_id,
+            attempt_number,
+            trigger,
+            outcome,
+            failure_step: opt_str(failure_step),
+            failure_code: opt_str(failure_code),
+            attempt_duration_ms,
+            challenge_ms: opt_u32(challenge_ms),
+            generate_key_ms: opt_u32(generate_key_ms),
+            attest_key_ms: opt_u32(attest_key_ms),
+            play_integrity_ms: opt_u32(play_integrity_ms),
+            post_session_ms: opt_u32(post_session_ms),
+            session_ttl_s: opt_i64(session_ttl_s),
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("Attestation Attempt", &event);
+    }
+
+    /// Boot-time cache probe event. `remaining_s` is -1 (becomes None) for any
+    /// miss outcome.
+    #[func]
+    pub fn track_attestation_session_cache_loaded(
+        &mut self,
+        platform: String,
+        result: String,
+        remaining_s: i64,
+    ) {
+        let event =
+            SegmentEvent::AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded {
+                platform,
+                result,
+                remaining_s: if remaining_s < 0 { None } else { Some(remaining_s) },
+            });
+        self.events.push(event.clone());
+        self.debug_print_event("Attestation Session Cache Loaded", &event);
     }
 
     #[func]
