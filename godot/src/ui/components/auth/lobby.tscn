@@ -489,6 +489,7 @@ unique_name_in_owner = true
 layout_mode = 2
 hide_background = true
 hide_navbar = true
+disable_avatar_zoom = true
 
 [node name="Button_Continue" type="Button" parent="Main/BackpackContainer/MarginContainer/VBoxContainer" unique_id=1544524370]
 custom_minimum_size = Vector2(624, 112)
