@@ -6,6 +6,18 @@ This guide gives concrete budgets, recommended techniques, and a triage checklis
 
 ---
 
+## A note on where this should actually be solved
+
+Decentraland scenes are **user-generated content** with no upper bound on complexity — a creator can ship a 100 k-triangle prop with 4K textures and the platform has to render it somewhere. The right place to make UGC mobile-friendly is **at upload time to the catalyst**, as a shared optimization service that runs once per scene revision and produces device-tier variants ready to serve.
+
+That service should do automatically what this document asks creators to do manually: LOD generation, mesh splitting / chunking, dynamic texture atlasing, impostor generation for far props, vertex-stream stripping, format compression per target tier. Each client (Godot, Unity, web) would consume the pre-processed output instead of paying the cost at runtime on a thousand devices.
+
+We are implementing pieces of this at the client level today — LODs, mesh splitting, atlasing, impostors all live in our pipeline — but **per-client implementations are duplicated work that drift apart over time**. A unified upload-time service shared across Decentraland products is the structurally correct place for this. Until then, this guide is a stopgap for creators who want their scenes to run on mobile.
+
+The recommendations below are what an author can do **today** to ship mobile-ready scenes without waiting for the platform-side service.
+
+---
+
 ## Why mobile is different in one paragraph
 
 Desktop GPUs have lots of memory bandwidth, deep pixel pipelines, and a stable power budget. Mobile GPUs have **shared memory** with the CPU, much shallower pipelines (fragment shading is the slowest stage on Mali), and **thermal throttling** that drops performance ~30 % after ~3 minutes of heavy load. Optimizing for mobile means: less data, fewer state changes, simpler shaders.
