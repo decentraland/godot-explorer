@@ -8,13 +8,13 @@ This guide gives concrete budgets, recommended techniques, and a triage checklis
 
 ## A note on where this should actually be solved
 
-Decentraland scenes are **user-generated content** with no upper bound on complexity — a creator can ship a 100 k-triangle prop with 4K textures and the platform has to render it somewhere. The right place to make UGC mobile-friendly is **at upload time to the catalyst**, as a shared optimization service that runs once per scene revision and produces device-tier variants ready to serve.
+Decentraland scenes are **user-generated content** — creators ship whatever GLTFs they make, and the platform has to render them. Most of the optimizations in this guide are **operations on the GLTF itself**: generating LOD meshes, splitting oversized meshes, atlasing textures within a GLB, baking impostors, stripping unused vertex streams.
 
-That service should do automatically what this document asks creators to do manually: LOD generation, mesh splitting / chunking, dynamic texture atlasing, impostor generation for far props, vertex-stream stripping, format compression per target tier. Each client (Godot, Unity, web) would consume the pre-processed output instead of paying the cost at runtime on a thousand devices.
+These are GLTF-in / GLTF-out transformations. The right place to run them is **at upload time to the catalyst**, once per scene revision, producing an optimized GLTF that every client (Godot, Unity, web) consumes as-is.
 
-We are implementing pieces of this at the client level today — LODs, mesh splitting, atlasing, impostors all live in our pipeline — but **per-client implementations are duplicated work that drift apart over time**. A unified upload-time service shared across Decentraland products is the structurally correct place for this. Until then, this guide is a stopgap for creators who want their scenes to run on mobile.
+We are implementing those transformations at the client level today, but per-client GLTF processing is duplicated work — Godot, Unity and the web client each end up reimplementing the same LOD bake, the same atlasing, the same vertex-stream cleanup. A unified GLTF-optimization service at upload time is the structurally correct place for this.
 
-The recommendations below are what an author can do **today** to ship mobile-ready scenes without waiting for the platform-side service.
+Until that service exists, the recommendations below are what an author can do today to ship mobile-friendly GLTFs.
 
 ---
 
@@ -306,6 +306,165 @@ If you need many small lights, use **emissive materials** instead — they don't
 | 1 day   | Medium    | Merge small static decorations into shared GLBs |
 | 1 day   | Medium    | Bake AO + AO-modulated lighting into albedo |
 | 2 days  | Medium    | Split hero buildings into ~ 8 m chunks for cleaner LOD / shadow behavior |
+
+---
+
+## What we measured: raw GLTF data from Genesis Plaza
+
+We audited every `.glb` shipped in the Genesis Plaza scene cache (`Genesis-Plaza-2025-30cdaffd`). Numbers come from parsing the GLBs directly, not from runtime measurement.
+
+### Totals
+
+| Metric                          | Value     | Notes |
+|---|---:|---|
+| Total `.glb` files              | 637       | one scene |
+| Total disk size                 | 603 MB    | downloaded by every player |
+| Total triangles                 | 2.61 M    | summed across all meshes (LOD0 only — no LODs shipped) |
+| Total vertices                  | 2.48 M    | suggests poor index reuse (verts ≈ tris, so each tri is ~3 unique verts) |
+| Total Godot meshes              | 3,490     | distinct mesh objects |
+| Total primitives                | 4,393     | mesh × surface |
+| Total materials                 | 1,606     | unique BaseMaterial3D |
+| Total textures                  | 3,013     | most are 512 or 1024 |
+| Animations                      | 247       | (across 82 skinned + others keyframed) |
+
+### Source-mesh size distribution
+
+| Triangle bucket | GLBs |
+|---|---:|
+| < 100 tris       | 121 |
+| 100 – 1k         | 296 |
+| 1k – 5k          | 147 |
+| 5k – 20k         | 42  |
+| 20k – 50k        | 17  |
+| **> 50k tris**   | **14** ← over the recommended building budget |
+
+Worst offenders (top 5 by triangle count, single GLB):
+
+| GLB | Triangles | File size |
+|---|---:|---:|
+| `background-buildings/BB_buildings.glb`    | 268,106 | 14 MB |
+| `central-plaza/clockTower.glb`             | 158,800 |  5 MB |
+| `blockout/clock-tower.glb`                 |  95,922 | 12 MB |
+| `closed-game-arena.glb`                    |  82,664 |  8 MB |
+| `theatre.glb`                              |  80,515 |  3 MB |
+
+A single 268k-triangle building is **5× the hero/landmark budget** and singlehandedly fills ~25 % of the per-frame triangle budget.
+
+### File-size distribution
+
+| Size bucket | GLBs |
+|---|---:|
+| < 100 KB         | 428 |
+| 100 KB – 500 KB  | 108 |
+| 500 KB – 1 MB    | 26  |
+| 1 MB – 5 MB      | 51  |
+| 5 MB – 10 MB     | 7   |
+| **> 10 MB**      | **17** ← too big to download fast on mobile |
+
+The 17 GLBs over 10 MB account for **45 % of total disk** despite being 2.7 % of the file count. Worst single GLB: `blockout/cp_roads.glb` at **69 MB**.
+
+### Texture inventory
+
+We parsed embedded image headers (PNG/JPEG) and found:
+
+| Resolution | Count |
+|---|---:|
+| 256 × 256   | 20  |
+| 512 × 512   | 204 |
+| 1024 × 1024 | 422 |
+| 2048 × 2048 | 17  |
+| Other / external | 2088 |
+
+422 textures at 1024 × 1024 is the dominant authoring resolution. That's reasonable for medium buildings but oversized for the many small props that are also 1024.
+
+### Material-feature usage
+
+| Feature                     | GLBs (of 637) | % |
+|---|---:|---:|
+| Uses normal maps            | 410 | **64 %** |
+| Uses emissive               | 231 | 36 % |
+| Uses alpha BLEND (transparent) | 84 | 13 % |
+| Uses alpha MASK (alpha-tested) | 65 | 10 % |
+| Skinned (rigged to bones)   | 82  | 13 % |
+
+### Vertex-stream usage
+
+| Stream                | GLBs |
+|---|---:|
+| POSITION + NORMAL + TEXCOORD_0 | 602 (mandatory) |
+| TEXCOORD_1 (UV2)               | 50  |
+| TEXCOORD_2                     | 47  |
+| COLOR_0                        | 76  |
+| COLOR_1                        | 69  |
+| COLOR_2                        | 3   |
+| COLOR_3                        | 1   |
+| JOINTS_0 / WEIGHTS_0 (skinning) | 47 |
+
+---
+
+## Issues found in Genesis Plaza (and what to do about them)
+
+These are concrete things visible in the raw GLTF data above.
+
+### 1. 14 GLBs blow the per-mesh triangle budget by 2–5×
+
+`BB_buildings.glb` (268 k tris), `clockTower.glb` (159 k), `clock-tower.glb` (96 k), `closed-game-arena.glb` (83 k), `theatre.glb` (80 k), and 9 others.
+
+**Action**: decimate at authoring time. Most of these are visually identifiable as "could be 30 % the polygon count without a perceivable difference" — they're authored at desktop-game density.
+
+### 2. 17 GLBs are > 10 MB on disk (45 % of total scene weight)
+
+`cp_roads.glb` at 69 MB, `theatre.glb` at 45 MB, `store.glb` at 33 MB, `environment.glb` at 31 MB, `news.glb` at 29 MB.
+
+**Action**: audit individually. Usually one of (a) oversized embedded textures, (b) too many triangles, or (c) duplicated geometry within the file.
+
+### 3. 410 of 637 GLBs (64 %) ship normal maps
+
+Most small / distant props don't need normal maps and pay 2× the texture-memory cost plus force per-fragment lighting.
+
+**Action**: strip normal maps from any prop < 2 m AABB. Keep them on hero buildings and characters.
+
+### 4. 231 GLBs (36 %) ship emissive textures
+
+Many of these are likely "lit logos" or "screen content" that could be baked into albedo with a high constant brightness.
+
+**Action**: audit which emissives genuinely glow at runtime. Replace the rest with bright albedo + post-process bloom on a single global emissive pass.
+
+### 5. 1,606 materials for 3,490 meshes (~ 1 material per 2.2 meshes)
+
+Material reuse is poor — only ~ 2× sharing across the whole scene. Each unique material is a separate state change in the draw call stream.
+
+**Action**: identify near-duplicate materials (`stone_01`, `stone_01_dark`, `stone_01_wet`) and consolidate. Vary appearance via UV offset or vertex color rather than material clones.
+
+### 6. 3,013 textures with no atlasing
+
+Each texture is a separate sampler binding. With ~ 1,200 average draws per frame and ~ 3,000 textures available, the texture cache thrashes.
+
+**Action**: build atlases for groups of small props (signs, decals, small building trim). Realistic target: 3,013 → ~ 400 textures via atlasing.
+
+### 7. 149 GLBs ship vertex `COLOR_X` streams; 47 ship `TEXCOORD_2`
+
+UV2/UV3 and COLOR_1+ are useless at runtime — we don't lightmap-bake and most materials ignore vertex color.
+
+**Action**: strip these streams at export. They add 8–16 bytes per vertex with zero visual benefit.
+
+### 8. 47 GLBs ship `JOINTS_0` / `WEIGHTS_0` (skinning streams)
+
+That's higher than the 82 GLBs that actually have `skins` set, suggesting **35 GLBs ship skinning attributes for meshes that aren't actually rigged**. Those bytes are pure waste — skinning streams cost 16 bytes per vertex.
+
+**Action**: strip JOINTS/WEIGHTS on any mesh whose top-level GLTF `skin` array is empty.
+
+### 9. 269 GLBs are < 100 KB (likely duplicable / atlasable)
+
+A 100 KB GLB is typically a tiny prop. With 269 of them, many are repeated decorations.
+
+**Action**: identify which ones are near-duplicates (lampposts, benches, signs) and consolidate to a single GLB + SDK transform instancing.
+
+### 10. 84 + 65 = 149 GLBs use transparency or alpha-test (23 %)
+
+Each one is significantly more expensive per visible triangle than opaque equivalents.
+
+**Action**: review which need true transparency. Most signs / posters can be opaque rectangles with transparent areas baked into UV offsets in an atlas.
 
 ---
 
