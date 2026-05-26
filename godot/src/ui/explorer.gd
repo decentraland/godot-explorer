@@ -1563,7 +1563,7 @@ func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
 
 
 func apply_gamepad_mode() -> void:
-	var enabled := Global.get_config().gamepad_mode_enabled
+	var enabled: bool = Global.get_config().gamepad_mode_enabled
 	_gamepad_connected = enabled and Input.get_connected_joypads().size() > 0
 	_update_virtual_controls_visibility()
 

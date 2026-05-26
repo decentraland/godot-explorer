@@ -74,7 +74,7 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 	text_up = text_pet_up if !text_pet_up.is_empty() else text_pet_down
 
 	var action_lower: String = action.to_lower()
-	var gamepad_connected := (
+	var gamepad_connected: bool = (
 		Global.get_config().gamepad_mode_enabled and Input.get_connected_joypads().size() > 0
 	)
 

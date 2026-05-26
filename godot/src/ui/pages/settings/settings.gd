@@ -125,7 +125,7 @@ func _ready():
 	_refresh_hide_explorer_ui_row()
 
 	_init_gamepad_sensitivity.call_deferred()
-	var gamepad_enabled := Global.get_config().gamepad_mode_enabled
+	var gamepad_enabled: bool = Global.get_config().gamepad_mode_enabled
 	check_button_gamepad_mode_enabled.button_pressed = gamepad_enabled
 	container_gamepad.visible = Global.is_mobile()
 	gamepad_camera_sensitivity.visible = gamepad_enabled
