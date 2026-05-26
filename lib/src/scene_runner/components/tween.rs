@@ -364,6 +364,13 @@ fn setup_native_tween(scene: &mut Scene, entity: &crate::dcl::components::SceneE
 }
 
 pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    // Diagnostic: --kill-animations disables every animation driver.
+    if crate::godot_classes::dcl_global::DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().kill_animations)
+        .unwrap_or(false)
+    {
+        return;
+    }
     let dirty_lww_components = &scene.current_dirty.lww_components;
     let tween_component = SceneCrdtStateProtoComponents::get_tween(crdt_state);
 

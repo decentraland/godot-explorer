@@ -19,6 +19,13 @@ fn get_gltf_container(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<DclG
 }
 
 pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    // Diagnostic: --kill-animations disables every animation driver.
+    if crate::godot_classes::dcl_global::DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().kill_animations)
+        .unwrap_or(false)
+    {
+        return;
+    }
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
     if let Some(animator_dirty) = dirty_lww_components.get(&SceneComponentId::ANIMATOR) {
