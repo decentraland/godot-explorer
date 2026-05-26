@@ -74,7 +74,8 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 	text_up = text_pet_up if !text_pet_up.is_empty() else text_pet_down
 
 	var action_lower: String = action.to_lower()
-	var gamepad_connected := Input.get_connected_joypads().size() > 0
+	# TODO: replace with a proper gamepad mode flag once the enter-gamepad-mode dialog is implemented.
+	var gamepad_connected := false  # Input.get_connected_joypads().size() > 0
 
 	if not label_text:
 		return

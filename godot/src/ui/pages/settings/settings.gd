@@ -123,10 +123,10 @@ func _ready():
 		Global.session_hide_ui_options_sync.connect(_on_session_hide_ui_options_sync)
 	_refresh_hide_explorer_ui_row()
 
-	# gamepad
+	# TODO: replace with a proper gamepad mode flag once the enter-gamepad-mode dialog is implemented.
 	_init_gamepad_sensitivity.call_deferred()
-	container_gamepad.visible = Input.get_connected_joypads().size() > 0
-	Input.joy_connection_changed.connect(_on_joy_connection_changed)
+	container_gamepad.visible = false  # Input.get_connected_joypads().size() > 0
+	#Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 	dropdown_list_max_cache_size.add_item("1 GB", 0)
 	dropdown_list_max_cache_size.add_item("2 GB", 1)
@@ -885,8 +885,10 @@ func _on_gamepad_camera_sensitivity_value_changed(value: float) -> void:
 	Global.get_config().save_to_settings_file()
 
 
+# TODO: replace with a proper gamepad mode flag once the enter-gamepad-mode dialog is implemented.
 func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	container_gamepad.visible = Input.get_connected_joypads().size() > 0
+	pass
+	#container_gamepad.visible = Input.get_connected_joypads().size() > 0
 
 
 func _on_custom_button_sign_out_pressed() -> void:
