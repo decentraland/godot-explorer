@@ -37,6 +37,8 @@ pub struct DeepLinkResult {
     pub scene_inspector_file: bool,
     /// Simulate low-spec iPhone warnings (for testing)
     pub low_spec_warning: bool,
+    /// Show a transparent safe-area debug overlay on every screen
+    pub safe_margin_debug: bool,
 }
 
 impl DeepLinkResult {
@@ -176,6 +178,9 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "low_spec_warning" => {
                 result.low_spec_warning = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "safemargindebug" => {
+                result.safe_margin_debug = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
@@ -523,6 +528,24 @@ mod tests {
     fn low_spec_warning_one() {
         let r = parse("decentraland://open?low_spec_warning=1");
         assert!(r.low_spec_warning);
+    }
+
+    #[test]
+    fn safe_margin_debug_true() {
+        let r = parse("decentraland://open?safemargindebug=true");
+        assert!(r.safe_margin_debug);
+    }
+
+    #[test]
+    fn safe_margin_debug_one() {
+        let r = parse("decentraland://open?safemargindebug=1");
+        assert!(r.safe_margin_debug);
+    }
+
+    #[test]
+    fn safe_margin_debug_default_off() {
+        let r = parse("decentraland://open");
+        assert!(!r.safe_margin_debug);
     }
 
     // ---- Edge cases ---------------------------------------------------------
