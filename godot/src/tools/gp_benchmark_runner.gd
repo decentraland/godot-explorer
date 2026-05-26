@@ -811,6 +811,9 @@ func _apply_deeplink_overrides() -> void:
 	var cpbr: String = params.get("cheap-pbr", "")
 	if not cpbr.is_empty():
 		Global.cli.cheap_pbr_enabled = cpbr.to_lower() in ["true", "1", "yes"]
+	var ntw: String = params.get("native-tween", "")
+	if not ntw.is_empty():
+		Global.cli.native_tween_enabled = ntw.to_lower() in ["true", "1", "yes"]
 	var skipg: String = params.get("skip-gltf", "")
 	if not skipg.is_empty():
 		Global.cli.set_skip_gltf_load(skipg.to_lower() in ["true", "1", "yes"])
