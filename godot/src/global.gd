@@ -123,6 +123,8 @@ var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
 
+var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
+
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
 
@@ -220,6 +222,10 @@ func _ready():
 			DclGlobal.set_rust_log_filter(rust_log_value)
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
+
+		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
+		if deep_link_obj.safe_margin_debug:
+			set_safe_margin_debug_enable(true)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -599,6 +605,21 @@ func set_raycast_debugger_enable(enable: bool):
 		remove_child(raycast_debugger)
 		raycast_debugger.queue_free()
 		raycast_debugger = null
+
+
+func set_safe_margin_debug_enable(enable: bool) -> void:
+	var current_enabled = is_instance_valid(_safe_margin_debug_overlay)
+	if current_enabled == enable:
+		return
+
+	if enable:
+		_safe_margin_debug_overlay = (load("res://src/tool/safe_margin_debug_overlay.gd").new())
+		add_child(_safe_margin_debug_overlay)
+		print("[SafeMarginDebug] overlay instantiated")
+	else:
+		remove_child(_safe_margin_debug_overlay)
+		_safe_margin_debug_overlay.queue_free()
+		_safe_margin_debug_overlay = null
 
 
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:

@@ -701,14 +701,6 @@ func _apply_deeplink_overrides() -> void:
 	if not sample.is_empty() and sample.is_valid_int():
 		config["sample_seconds"] = sample.to_int()
 
-	# RenderingServer migration flags. Writes back to DclCli so the Rust side
-	# (mesh_renderer, gltf_container) and any GDScript that reads Global.cli
-	# observe the same value. See plan in
-	# ~/.claude/plans/https-github-com-decentraland-godot-expl-precious-nest.md
-	var rs_gltf_direct: String = params.get("rs-gltf-direct", "")
-	if not rs_gltf_direct.is_empty():
-		Global.cli.rs_gltf_direct = rs_gltf_direct.to_lower() in ["true", "1", "yes"]
-
 	# Force a graphic profile for the bench. Index matches GraphicSettings
 	# PROFILE_NAMES: 0=Very Low, 1=Low, 2=Medium, 3=High, 4=Custom. Stashed
 	# here, applied at loading_complete (after HardwareBenchmark would clobber

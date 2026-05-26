@@ -40,6 +40,8 @@ pub struct DeepLinkResult {
     /// Genesis Plaza profiling benchmark trigger (issue #1862). Mirrors `--gp-benchmark`
     /// for mobile, where deep links are the only practical way to pass launch flags.
     pub gp_benchmark: bool,
+    /// Show a transparent safe-area debug overlay on every screen
+    pub safe_margin_debug: bool,
 }
 
 impl DeepLinkResult {
@@ -182,6 +184,9 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "gp-benchmark" => {
                 result.gp_benchmark = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "safemargindebug" => {
+                result.safe_margin_debug = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
@@ -529,6 +534,24 @@ mod tests {
     fn low_spec_warning_one() {
         let r = parse("decentraland://open?low_spec_warning=1");
         assert!(r.low_spec_warning);
+    }
+
+    #[test]
+    fn safe_margin_debug_true() {
+        let r = parse("decentraland://open?safemargindebug=true");
+        assert!(r.safe_margin_debug);
+    }
+
+    #[test]
+    fn safe_margin_debug_one() {
+        let r = parse("decentraland://open?safemargindebug=1");
+        assert!(r.safe_margin_debug);
+    }
+
+    #[test]
+    fn safe_margin_debug_default_off() {
+        let r = parse("decentraland://open");
+        assert!(!r.safe_margin_debug);
     }
 
     // ---- Edge cases ---------------------------------------------------------
