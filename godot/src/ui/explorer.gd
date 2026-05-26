@@ -255,11 +255,8 @@ func _ready():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()
-		# TODO: replace automatic gamepad detection with a dialog asking the user
-		# to enter gamepad mode. Re-enable the lines below once the dialog is implemented.
-		#Input.joy_connection_changed.connect(_on_joy_connection_changed)
-		#_gamepad_connected = Input.get_connected_joypads().size() > 0
-		#_update_virtual_controls_visibility()
+		Input.joy_connection_changed.connect(_on_joy_connection_changed)
+		apply_gamepad_mode()
 	else:
 		mobile_ui.hide()
 
@@ -1561,30 +1558,30 @@ func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
 
 
-# TODO: replace automatic gamepad detection with a dialog asking the user
-# to enter gamepad mode. Re-enable and adapt these functions once the dialog is implemented.
 func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	pass
-	#_gamepad_connected = Input.get_connected_joypads().size() > 0
-	#_update_virtual_controls_visibility()
+	apply_gamepad_mode()
+
+
+func apply_gamepad_mode() -> void:
+	var enabled := Global.get_config().gamepad_mode_enabled
+	_gamepad_connected = enabled and Input.get_connected_joypads().size() > 0
+	_update_virtual_controls_visibility()
 
 
 func _update_virtual_controls_visibility() -> void:
-	pass
-	#if _gamepad_connected:
-	#	joypad.hide()
-	#	virtual_joystick.hide()
-	#else:
-	#	# Only restore if no panel is covering them
-	#	var panel_open := (
-	#		friends_panel.visible
-	#		or notifications_panel.visible
-	#		or settings_panel.visible
-	#		or profile_container.visible
-	#	)
-	#	if not panel_open:
-	#		joypad.show()
-	#	virtual_joystick.show()
+	if _gamepad_connected:
+		joypad.hide()
+		virtual_joystick.hide()
+	else:
+		var panel_open := (
+			friends_panel.visible
+			or notifications_panel.visible
+			or settings_panel.visible
+			or profile_container.visible
+		)
+		if not panel_open:
+			joypad.show()
+		virtual_joystick.show()
 
 
 func _on_backpack_emote_opened(on_emotes := false) -> void:
