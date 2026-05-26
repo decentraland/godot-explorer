@@ -143,6 +143,14 @@ pub struct DclCli {
     #[var]
     pub cheap_pbr_enabled: bool,
 
+    // Migrate SDK7 Tween Move/Rotate/Scale modes from per-frame Rust
+    // interpolation + CRDT re-dirty to Godot's native Tween (RefCounted).
+    // Eliminates the double-pass (Rust calc → CRDT put → transform_and_parent
+    // apply); Godot processes all active tweens in one C++ loop. Continuous
+    // and TextureMove modes stay on the Rust path.
+    #[var]
+    pub native_tween_enabled: bool,
+
     // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
     // set in `update_gltf_container` so the bench can measure the rendering
     // floor without any scene meshes loaded. Pure perf-debug knob.
@@ -154,6 +162,13 @@ pub struct DclCli {
     // floor without sky fragment cost.
     #[var]
     pub kill_sky: bool,
+
+    // Diagnostic: disable ALL animation drivers — skips update_tween +
+    // update_animator on the Rust side, and a GDScript sweep sets every
+    // AnimationPlayer / AnimationTree active=false. Measures the
+    // animation-free frame ceiling.
+    #[var]
+    pub kill_animations: bool,
 
     // Arguments with values
     #[var(get)]
@@ -503,6 +518,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--native-tween".to_string(),
+                description: "Migrate SDK7 Tween Move/Rotate/Scale to Godot's native Tween. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--skip-gltf".to_string(),
                 description: "Diagnostic: skip every GltfContainer instantiation so the renderer floor (sky+UI+avatar) can be measured. Default OFF".to_string(),
                 arg_type: ArgType::Flag,
@@ -511,6 +532,12 @@ impl DclCli {
             ArgDefinition {
                 name: "--kill-sky".to_string(),
                 description: "Diagnostic: force WorldEnvironment background_mode=COLOR everywhere — no sky shader, no procedural sky. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--kill-animations".to_string(),
+                description: "Diagnostic: disable all animation drivers (tween + animator + AnimationPlayer/Tree sweep) to measure the animation-free frame ceiling. Default OFF".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
@@ -733,8 +760,10 @@ impl INode for DclCli {
             .map(GString::from)
             .unwrap_or_default();
         let cheap_pbr_enabled = !args_map.contains_key("--no-cheap-pbr");
+        let native_tween_enabled = args_map.contains_key("--native-tween");
         let skip_gltf_load = args_map.contains_key("--skip-gltf");
         let kill_sky = args_map.contains_key("--kill-sky");
+        let kill_animations = args_map.contains_key("--kill-animations");
         // bench_mode auto-enabled when gp_benchmark is set, so the desktop
         // CLI doesn't have to pass both. Mobile flips this from
         // deep_link_router.gd when it sees gp-benchmark=true.
@@ -863,8 +892,10 @@ impl INode for DclCli {
             rs_gltf_direct,
             optimized_content_base_url,
             cheap_pbr_enabled,
+            native_tween_enabled,
             skip_gltf_load,
             kill_sky,
+            kill_animations,
             bench_mode,
             inspect_scene_title,
             asset_server_port,

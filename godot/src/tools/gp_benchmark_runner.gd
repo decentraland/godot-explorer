@@ -811,6 +811,12 @@ func _apply_deeplink_overrides() -> void:
 	var cpbr: String = params.get("cheap-pbr", "")
 	if not cpbr.is_empty():
 		Global.cli.cheap_pbr_enabled = cpbr.to_lower() in ["true", "1", "yes"]
+	var ntw: String = params.get("native-tween", "")
+	if not ntw.is_empty():
+		Global.cli.native_tween_enabled = ntw.to_lower() in ["true", "1", "yes"]
+	var kanim: String = params.get("kill-anims", "")
+	if not kanim.is_empty():
+		Global.cli.kill_animations = kanim.to_lower() in ["true", "1", "yes"]
 	var skipg: String = params.get("skip-gltf", "")
 	if not skipg.is_empty():
 		Global.cli.set_skip_gltf_load(skipg.to_lower() in ["true", "1", "yes"])
@@ -951,6 +957,13 @@ func _set_phase(p: String) -> void:
 	phase = p
 	phase_started_at_ms = Time.get_ticks_msec()
 	_log("phase -> %s" % p)
+	# Diagnostic: --kill-animations / kill-anims deeplink — disable every
+	# AnimationPlayer + AnimationTree so the bench measures the animation-free
+	# ceiling. Done at warmup entry so it's settled before sampling. The Rust
+	# tween/animator updates are already gated by Global.cli.kill_animations.
+	if p == "warmup" and Global.cli.kill_animations:
+		var killed := _kill_all_animations(get_tree().root)
+		_log("kill-animations: disabled %d AnimationPlayer/Tree nodes" % killed)
 	# Markers consumed by scripts/bench/profile_android.sh / profile_ios.sh to
 	# trigger simpleperf / xctrace recording exactly during the sampling window.
 	if p == "sampling":
@@ -962,6 +975,26 @@ func _set_phase(p: String) -> void:
 		)
 	elif p == "done":
 		_log("PROFILE_WINDOW_END")
+
+
+func _kill_all_animations(node: Node) -> int:
+	var count := 0
+	if node is AnimationPlayer:
+		(node as AnimationPlayer).stop()
+		(node as AnimationPlayer).active = false
+		(node as AnimationPlayer).callback_mode_process = (
+			AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		)
+		count += 1
+	elif node is AnimationTree:
+		(node as AnimationTree).active = false
+		(node as AnimationTree).callback_mode_process = (
+			AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		)
+		count += 1
+	for child in node.get_children():
+		count += _kill_all_animations(child)
+	return count
 
 
 func _phase_elapsed_ms() -> int:

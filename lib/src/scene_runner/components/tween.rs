@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use godot::{
     builtin::Basis,
-    classes::{BaseMaterial3D, MeshInstance3D, Node3D},
+    classes::{tween::EaseType, tween::TransitionType, BaseMaterial3D, MeshInstance3D, Node3D},
     prelude::*,
 };
 
@@ -40,6 +40,14 @@ pub struct Tween {
     /// removes ~50 % of all `dirty_lww_entries/frame` in GP (measured
     /// 2026-05-06: TweenState=135/frame, ≈51 % of recv pressure).
     pub last_emitted_state: Option<i32>,
+    /// When `--native-tween` is enabled and the mode is Move/Rotate/Scale,
+    /// this holds the Godot Tween that drives `node.position/rotation/scale`
+    /// directly from C++. None means: tween not yet bound, or mode is not
+    /// native-eligible (Continuous / TextureMove still run via Rust loop).
+    pub godot_tween: Option<Gd<godot::classes::Tween>>,
+    /// Set to true once we've written the final transform value back to CRDT
+    /// after a native Godot tween finished, so SDK7 readout sees the end pose.
+    pub native_finalized: bool,
 }
 
 impl Tween {
@@ -150,7 +158,219 @@ fn apply_texture_animation_to_entity(
     }
 }
 
+fn easing_to_godot(ef: EasingFunction) -> (TransitionType, EaseType) {
+    use EasingFunction::*;
+    match ef {
+        EfLinear => (TransitionType::LINEAR, EaseType::IN_OUT),
+        EfEaseinquad => (TransitionType::QUAD, EaseType::IN),
+        EfEaseoutquad => (TransitionType::QUAD, EaseType::OUT),
+        EfEasequad => (TransitionType::QUAD, EaseType::IN_OUT),
+        EfEaseinsine => (TransitionType::SINE, EaseType::IN),
+        EfEaseoutsine => (TransitionType::SINE, EaseType::OUT),
+        EfEasesine => (TransitionType::SINE, EaseType::IN_OUT),
+        EfEaseinexpo => (TransitionType::EXPO, EaseType::IN),
+        EfEaseoutexpo => (TransitionType::EXPO, EaseType::OUT),
+        EfEaseexpo => (TransitionType::EXPO, EaseType::IN_OUT),
+        EfEaseinelastic => (TransitionType::ELASTIC, EaseType::IN),
+        EfEaseoutelastic => (TransitionType::ELASTIC, EaseType::OUT),
+        EfEaseelastic => (TransitionType::ELASTIC, EaseType::IN_OUT),
+        EfEaseinbounce => (TransitionType::BOUNCE, EaseType::IN),
+        EfEaseoutbounce => (TransitionType::BOUNCE, EaseType::OUT),
+        EfEasebounce => (TransitionType::BOUNCE, EaseType::IN_OUT),
+        EfEaseincubic => (TransitionType::CUBIC, EaseType::IN),
+        EfEaseoutcubic => (TransitionType::CUBIC, EaseType::OUT),
+        EfEasecubic => (TransitionType::CUBIC, EaseType::IN_OUT),
+        EfEaseinquart => (TransitionType::QUART, EaseType::IN),
+        EfEaseoutquart => (TransitionType::QUART, EaseType::OUT),
+        EfEasequart => (TransitionType::QUART, EaseType::IN_OUT),
+        EfEaseinquint => (TransitionType::QUINT, EaseType::IN),
+        EfEaseoutquint => (TransitionType::QUINT, EaseType::OUT),
+        EfEasequint => (TransitionType::QUINT, EaseType::IN_OUT),
+        EfEaseincirc => (TransitionType::CIRC, EaseType::IN),
+        EfEaseoutcirc => (TransitionType::CIRC, EaseType::OUT),
+        EfEasecirc => (TransitionType::CIRC, EaseType::IN_OUT),
+        EfEaseinback => (TransitionType::BACK, EaseType::IN),
+        EfEaseoutback => (TransitionType::BACK, EaseType::OUT),
+        EfEaseback => (TransitionType::BACK, EaseType::IN_OUT),
+    }
+}
+
+/// Modes where Godot's native Tween can drive the node property directly:
+/// position, quaternion, scale. Continuous + TextureMove stay on the Rust
+/// path because they need per-frame delta-time / UV callbacks.
+fn is_native_eligible(mode: &Option<Mode>) -> bool {
+    matches!(
+        mode,
+        Some(Mode::Move(_)) | Some(Mode::Rotate(_)) | Some(Mode::Scale(_))
+    )
+}
+
+/// Returns the final CRDT-side transform an SDK7 tween will produce when
+/// it completes. Caller writes this back to the CRDT after the Godot Tween
+/// finishes so SDK7 readout matches the rendered pose.
+fn final_transform_for(
+    crdt_state: &mut SceneCrdtState,
+    entity: &crate::dcl::components::SceneEntityId,
+    data: &PbTween,
+) -> Option<crate::dcl::components::transform_and_parent::DclTransformAndParent> {
+    let mut transform: crate::dcl::components::transform_and_parent::DclTransformAndParent =
+        crdt_state
+            .get_transform_mut()
+            .get(entity)
+            .and_then(|t| t.value.clone())
+            .unwrap_or_default();
+    match &data.mode {
+        Some(Mode::Move(d)) => {
+            let end = d.end.clone()?.to_godot();
+            if d.face_direction == Some(true) {
+                let start = d.start.clone()?.to_godot();
+                let direction = (end - start).normalized();
+                if !direction.is_zero_approx() {
+                    let v_x = godot::builtin::Vector3::UP.cross(direction);
+                    let v_x = if v_x.is_zero_approx() {
+                        godot::builtin::Vector3::FORWARD.cross(direction)
+                    } else {
+                        v_x
+                    }
+                    .normalized();
+                    let v_y = direction.cross(v_x);
+                    let mut basis = Basis::IDENTITY;
+                    basis.set_col_a(v_x);
+                    basis.set_col_b(v_y);
+                    basis.set_col_c(direction);
+                    transform.rotation = basis.get_quaternion();
+                }
+            }
+            transform.translation = end;
+            Some(transform)
+        }
+        Some(Mode::Rotate(d)) => {
+            transform.rotation = d.end.clone()?.to_godot();
+            Some(transform)
+        }
+        Some(Mode::Scale(d)) => {
+            transform.scale = d.end.clone()?.to_godot();
+            Some(transform)
+        }
+        _ => None,
+    }
+}
+
+/// Build a Godot `Tween` (RefCounted) bound to the entity's Node3D and
+/// configure it to drive position/quaternion/scale for the duration of
+/// the SDK7 tween. Stores the Gd<Tween> on the per-entity `Tween` so the
+/// main loop can poll its run state.
+fn setup_native_tween(scene: &mut Scene, entity: &crate::dcl::components::SceneEntityId) {
+    let Some(t) = scene.tweens.get(entity) else {
+        return;
+    };
+    let data = t.data.clone();
+    let ease_fn_input = match EasingFunction::from_i32(data.easing_function) {
+        Some(ef) => ef,
+        None => return,
+    };
+    let (trans_type, ease_type) = easing_to_godot(ease_fn_input);
+    let duration_secs = (data.duration as f64) / 1000.0;
+
+    // Get the entity's Node3D. ensure_node_3d returns a tuple — we want the
+    // Node3D handle.
+    let (_, mut node) = scene.godot_dcl_scene.ensure_node_3d(entity);
+
+    // For Move with face_direction, set the rotation upfront (one-shot)
+    // and let the tween drive position only.
+    if let Some(Mode::Move(d)) = &data.mode {
+        if d.face_direction == Some(true) {
+            if let (Some(start), Some(end)) = (d.start.clone(), d.end.clone()) {
+                let s = start.to_godot();
+                let e = end.to_godot();
+                let direction = (e - s).normalized();
+                if !direction.is_zero_approx() {
+                    let v_x = godot::builtin::Vector3::UP.cross(direction);
+                    let v_x = if v_x.is_zero_approx() {
+                        godot::builtin::Vector3::FORWARD.cross(direction)
+                    } else {
+                        v_x
+                    }
+                    .normalized();
+                    let v_y = direction.cross(v_x);
+                    let mut basis = Basis::IDENTITY;
+                    basis.set_col_a(v_x);
+                    basis.set_col_b(v_y);
+                    basis.set_col_c(direction);
+                    node.set_quaternion(basis.get_quaternion());
+                }
+            }
+        }
+    }
+
+    // Build the Godot Tween. node.create_tween() returns Option<Gd<Tween>>.
+    let Some(mut gt) = node.create_tween() else {
+        return;
+    };
+    gt.set_trans(trans_type);
+    gt.set_ease(ease_type);
+
+    match &data.mode {
+        Some(Mode::Move(d)) => {
+            let Some(start) = d.start.clone() else { return };
+            let Some(end) = d.end.clone() else { return };
+            // Set node position to start, then tween to end. Godot's Tween
+            // captures the "from" value at the moment tween_property is
+            // called; setting it explicitly avoids races with the parent
+            // hierarchy update.
+            node.set_position(start.to_godot());
+            if let Some(mut prop) = gt.tween_property(
+                &node.clone().upcast::<godot::classes::Object>(),
+                "position",
+                &end.to_godot().to_variant(),
+                duration_secs,
+            ) {
+                prop.from(&start.to_godot().to_variant());
+            }
+        }
+        Some(Mode::Rotate(d)) => {
+            let Some(start) = d.start.clone() else { return };
+            let Some(end) = d.end.clone() else { return };
+            node.set_quaternion(start.to_godot());
+            if let Some(mut prop) = gt.tween_property(
+                &node.clone().upcast::<godot::classes::Object>(),
+                "quaternion",
+                &end.to_godot().to_variant(),
+                duration_secs,
+            ) {
+                prop.from(&start.to_godot().to_variant());
+            }
+        }
+        Some(Mode::Scale(d)) => {
+            let Some(start) = d.start.clone() else { return };
+            let Some(end) = d.end.clone() else { return };
+            node.set_scale(start.to_godot());
+            if let Some(mut prop) = gt.tween_property(
+                &node.clone().upcast::<godot::classes::Object>(),
+                "scale",
+                &end.to_godot().to_variant(),
+                duration_secs,
+            ) {
+                prop.from(&start.to_godot().to_variant());
+            }
+        }
+        _ => {}
+    }
+
+    // Store the Gd<Tween> so the main loop can poll its run state.
+    if let Some(t_mut) = scene.tweens.get_mut(entity) {
+        t_mut.godot_tween = Some(gt);
+    }
+}
+
 pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    // Diagnostic: --kill-animations disables every animation driver.
+    if crate::godot_classes::dcl_global::DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().kill_animations)
+        .unwrap_or(false)
+    {
+        return;
+    }
     let dirty_lww_components = &scene.current_dirty.lww_components;
     let tween_component = SceneCrdtStateProtoComponents::get_tween(crdt_state);
 
@@ -158,6 +378,10 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     let mut tweens_to_delete = Vec::new();
     let mut texture_animations_to_apply = Vec::new();
+
+    let native_enabled = crate::godot_classes::dcl_global::DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().native_tween_enabled)
+        .unwrap_or(false);
 
     if let Some(tween_dirty) = dirty_lww_components.get(&SceneComponentId::TWEEN) {
         for entity in tween_dirty {
@@ -199,6 +423,12 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         || new_value.current_time.is_some();
                     if reset_tween {
                         existing_tween.start_time = now - offset_time;
+                        // Kill any active native Godot tween; the new mode/data
+                        // requires a fresh one (or falls back to Rust path).
+                        if let Some(mut gt) = existing_tween.godot_tween.take() {
+                            gt.kill();
+                        }
+                        existing_tween.native_finalized = false;
                     }
 
                     // copy new tween values
@@ -227,6 +457,8 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             playing: None,
                             last_update: now,
                             last_emitted_state: None,
+                            godot_tween: None,
+                            native_finalized: false,
                         },
                     );
                 };
@@ -235,7 +467,11 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     }
 
     for entity in tweens_to_delete {
-        scene.tweens.remove(entity);
+        if let Some(mut t) = scene.tweens.remove(entity) {
+            if let Some(mut gt) = t.godot_tween.take() {
+                gt.kill();
+            }
+        }
         // Also clean up any texture animation state
         scene.texture_animations.remove(entity);
 
@@ -243,7 +479,91 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         SceneCrdtStateProtoComponents::get_tween_state_mut(crdt_state).put(*entity, None);
     }
 
+    // ============================================================
+    // Native Godot Tween path (Move / Rotate / Scale only).
+    // ============================================================
+    // Pre-pass 1: setup Godot Tweens for newly-active native-eligible
+    // entities. Done outside the main loop so we can borrow both
+    // scene.tweens and scene.godot_dcl_scene.
+    if native_enabled {
+        let to_setup: Vec<crate::dcl::components::SceneEntityId> = scene
+            .tweens
+            .iter()
+            .filter(|(_, t)| {
+                is_native_eligible(&t.data.mode)
+                    && t.godot_tween.is_none()
+                    && !t.native_finalized
+                    && t.playing != Some(false)
+            })
+            .map(|(e, _)| *e)
+            .collect();
+        for entity in to_setup {
+            setup_native_tween(scene, &entity);
+        }
+    }
+
     for (entity, tween) in &mut scene.tweens {
+        // Native-path: Godot drives the property directly. We only emit
+        // TweenState on transitions and finalize CRDT once at the end.
+        if native_enabled && tween.godot_tween.is_some() {
+            let still_running = tween
+                .godot_tween
+                .as_mut()
+                .map(|gt| gt.is_running())
+                .unwrap_or(false);
+            let new_state_status = if !still_running {
+                TweenStateStatus::TsCompleted
+            } else if tween.playing == Some(false) {
+                TweenStateStatus::TsPaused
+            } else {
+                TweenStateStatus::TsActive
+            };
+            let new_state = new_state_status as i32;
+            if tween.last_emitted_state != Some(new_state) {
+                let progress = match new_state_status {
+                    TweenStateStatus::TsCompleted => 1.0,
+                    _ => {
+                        let elapsed = now.duration_since(tween.start_time).as_millis() as f32;
+                        (elapsed / tween.data.duration).clamp(0.0, 1.0)
+                    }
+                };
+                SceneCrdtStateProtoComponents::get_tween_state_mut(crdt_state).put(
+                    *entity,
+                    Some(PbTweenState {
+                        current_time: progress,
+                        state: new_state,
+                    }),
+                );
+                tween.last_emitted_state = Some(new_state);
+            }
+            // On completion, write final transform into CRDT so SDK7 readout
+            // sees the end pose (the Godot tween already wrote the node).
+            if !still_running && !tween.native_finalized {
+                if let Some(end_transform) = final_transform_for(crdt_state, entity, &tween.data) {
+                    crdt_state
+                        .get_transform_mut()
+                        .put(*entity, Some(end_transform));
+                    if let Some(dirty) = scene
+                        .current_dirty
+                        .lww_components
+                        .get_mut(&SceneComponentId::TRANSFORM)
+                    {
+                        dirty.insert_if_not_exists(*entity);
+                    } else {
+                        scene
+                            .current_dirty
+                            .lww_components
+                            .insert(SceneComponentId::TRANSFORM, vec![*entity]);
+                    }
+                }
+                tween.native_finalized = true;
+                // Drop the Gd<Tween> so it gets freed (it's already inert).
+                tween.godot_tween = None;
+            }
+            scene.kinematic_entities.insert(*entity);
+            continue;
+        }
+
         if tween.playing == Some(false) {
             continue;
         }
