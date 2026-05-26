@@ -2,14 +2,26 @@ extends PlayerColliderFilter
 
 @export var user_id: String = "":
 	set(value):
-		if user_id != value:
-			_player_avatar_node = null
-			user_id = value
+		if user_id == value:
+			return
+		_unregister_from_current_avatar()
+		_player_avatar_node = null
+		user_id = value
 
 # See AvatarAnchorPointType in avatar_attach.proto.
-var attach_point: int = -1
+var attach_point: int = -1:
+	set(value):
+		if attach_point == value:
+			return
+		_unregister_from_current_avatar()
+		attach_point = value
+		_register_with_current_avatar()
 
 var _player_avatar_node: Avatar
+# Tracks the anchor id this instance is currently registered with on
+# _player_avatar_node, so the matching unregister fires even if attach_point
+# or user_id changes mid-flight. -1 when not registered.
+var _registered_anchor: int = -1
 
 # Scene-authored local scale snapshot. transform_and_parent.rs (Rust) sets
 # p.scale whenever the SDK Transform is updated; we adopt that value whenever
@@ -27,12 +39,18 @@ func init():
 	process_priority = 0
 
 
+func _exit_tree() -> void:
+	_unregister_from_current_avatar()
+
+
 func _process(_delta):
 	var p: Node3D = get_parent()
 	if p == null:
 		return
 
-	if _player_avatar_node == null:
+	if _player_avatar_node == null or not is_instance_valid(_player_avatar_node):
+		_player_avatar_node = null
+		_registered_anchor = -1
 		look_up_player()
 		if _player_avatar_node == null:
 			return
@@ -56,5 +74,25 @@ func look_up_player():
 		_player_avatar_node = get_node("/root/explorer/world/Player/Avatar")
 	else:
 		_player_avatar_node = Global.avatars.get_avatar_by_address(user_id)
-		if _player_avatar_node != null:
-			_player_avatar_node.activate_attach_points()
+
+	_register_with_current_avatar()
+
+
+# Registers this instance against the current _player_avatar_node for the
+# current attach_point. No-op for non-skeletal anchors (POSITION/NAME_TAG)
+# and out-of-range ids, which don't use the avatar's anchor cache.
+func _register_with_current_avatar() -> void:
+	if _player_avatar_node == null or not is_instance_valid(_player_avatar_node):
+		return
+	if attach_point < 2 or attach_point > 25:
+		return
+	_player_avatar_node.register_anchor_use(attach_point, self)
+	_registered_anchor = attach_point
+
+
+func _unregister_from_current_avatar() -> void:
+	if _registered_anchor == -1:
+		return
+	if _player_avatar_node != null and is_instance_valid(_player_avatar_node):
+		_player_avatar_node.unregister_anchor_use(_registered_anchor, self)
+	_registered_anchor = -1

@@ -26,7 +26,7 @@ const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
 # directly in get_anchor_point_global_transform.
-const _ANCHOR_BONE_NAMES := {
+const _ANCHOR_BONE_NAMES: Dictionary[int, String] = {
 	2: "Avatar_LeftHand",
 	3: "Avatar_RightHand",
 	4: "Avatar_Head",
@@ -52,6 +52,36 @@ const _ANCHOR_BONE_NAMES := {
 	24: "Avatar_RightFoot",
 	25: "Avatar_RightToeBase",
 }
+
+
+# Per-anchor state held by the Avatar's _anchors dict. One instance per
+# currently-attached anchor (lazily created in register_anchor_use). Stores
+# the resolved bone index, the cached bone pose (basis pre-scaled by 100 to
+# cancel the Skeleton3D's 0.01 unit-conversion scale), and the set of
+# AvatarAttach instances currently using this anchor.
+class AnchorState:
+	extends RefCounted
+
+	var bone_name: String
+	var bone_idx: int = -1
+	var cached_transform: Transform3D
+	var users: Array[Node] = []
+
+	func _init(p_bone_name: String) -> void:
+		bone_name = p_bone_name
+
+	func resolve(skeleton: Skeleton3D) -> void:
+		bone_idx = skeleton.find_bone(bone_name)
+		if bone_idx != -1:
+			refresh(skeleton)
+
+	func refresh(skeleton: Skeleton3D) -> void:
+		if bone_idx == -1:
+			return
+		var t := skeleton.get_bone_global_pose(bone_idx)
+		t.basis = t.basis.scaled(100.0 * Vector3.ONE)
+		cached_transform = t
+
 
 @export var skip_process: bool = false
 @export var hide_name: bool = false:
@@ -82,8 +112,6 @@ var wearables_by_category: Dictionary = {}
 
 var emote_controller: AvatarEmoteController  # Rust binded. Don't change this variable name
 
-var generate_attach_points: bool = false
-
 var voice_chat_audio_player: AudioStreamPlayer = null
 var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
@@ -92,14 +120,10 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
-# anchor_point_id -> bone index in body_shape_skeleton_3d. Only entries whose
-# bone resolved at activation time are stored.
-var _anchor_bone_idx: Dictionary = {}
-# anchor_point_id -> cached bone global pose, with basis pre-scaled by 100 to
-# cancel the Skeleton3D's 0.01 unit-conversion scale. After composing with
-# body_shape_skeleton_3d.global_transform the basis has world scale 1; the
-# entity's own scale is then preserved by avatar_attach.gd.
-var _anchor_transform: Dictionary = {}
+# anchor_point_id -> AnchorState for currently-attached anchors only. Entries
+# are added lazily by register_anchor_use() and removed when the last
+# AvatarAttach using them is unregistered.
+var _anchors: Dictionary[int, AnchorState] = {}
 
 # Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
 var _force_hide_name: bool = false
@@ -664,7 +688,7 @@ func async_try_to_set_body_shape(body_shape_hash):
 
 	# Free the now-empty body shape container
 	body_shape.queue_free()
-	_add_attach_points()
+	_reresolve_active_anchors()
 
 
 # Renames bones previously merged via _merge_extra_wearable_bones_into_base to a
@@ -1573,33 +1597,52 @@ func push_voice_frame(frame):
 	timer_hide_mic.start()
 
 
-func activate_attach_points():
-	generate_attach_points = true
-	_add_attach_points()
+# Called by AvatarAttach.gd when it starts following a skeletal anchor on
+# this avatar. Creates the per-anchor cache lazily; multiple attachments
+# targeting the same anchor share one AnchorState.
+func register_anchor_use(anchor_id: int, attachment: Node) -> void:
+	var state: AnchorState = _anchors.get(anchor_id)
+	if state == null:
+		var bone_name: String = _ANCHOR_BONE_NAMES.get(anchor_id, "")
+		if bone_name.is_empty():
+			return  # not a skeletal anchor (POSITION/NAME_TAG/out-of-range)
+		state = AnchorState.new(bone_name)
+		_anchors[anchor_id] = state
+		if body_shape_skeleton_3d != null:
+			state.resolve(body_shape_skeleton_3d)
+	if not state.users.has(attachment):
+		state.users.append(attachment)
 
 
-func _add_attach_points():
-	if not generate_attach_points:
+# Called by AvatarAttach.gd when it stops following an anchor (free, detach,
+# attach_point changed, user_id changed). Drops the AnchorState when the last
+# user leaves.
+func unregister_anchor_use(anchor_id: int, attachment: Node) -> void:
+	var state: AnchorState = _anchors.get(anchor_id)
+	if state == null:
 		return
+	state.users.erase(attachment)
+	if state.users.is_empty():
+		_anchors.erase(anchor_id)
 
+
+# Refreshes bone poses for currently-active anchors only. Wired to the
+# Skeleton3D's skeleton_updated signal in _ready().
+func _attach_point_skeleton_updated():
 	if body_shape_skeleton_3d == null:
 		return
-
-	_anchor_bone_idx.clear()
-	for anchor_id in _ANCHOR_BONE_NAMES:
-		var idx := body_shape_skeleton_3d.find_bone(_ANCHOR_BONE_NAMES[anchor_id])
-		if idx != -1:
-			_anchor_bone_idx[anchor_id] = idx
-	# Prime the cache so the first frame after activation doesn't read default
-	# Transform3D() zeros.
-	_attach_point_skeleton_updated()
+	for state in _anchors.values():
+		state.refresh(body_shape_skeleton_3d)
 
 
-func _attach_point_skeleton_updated():
-	for anchor_id in _anchor_bone_idx:
-		var t := body_shape_skeleton_3d.get_bone_global_pose(_anchor_bone_idx[anchor_id])
-		t.basis = t.basis.scaled(100.0 * Vector3.ONE)
-		_anchor_transform[anchor_id] = t
+# Called after a wearable merge rebuilds the skeleton (avatar.gd:667). Walks
+# only the currently-used anchors and re-resolves their bone indices in the
+# new skeleton layout.
+func _reresolve_active_anchors():
+	if body_shape_skeleton_3d == null:
+		return
+	for state in _anchors.values():
+		state.resolve(body_shape_skeleton_3d)
 
 
 # Returns the world-space transform of an avatar anchor point for an
@@ -1616,9 +1659,9 @@ func get_anchor_point_global_transform(anchor_point_id: int) -> Transform3D:
 	# same discrepancy.
 	if anchor_point_id == 1:  # AAPT_NAME_TAG
 		return nickname_quad.global_transform.rotated_local(Vector3.UP, PI)
-	if body_shape_skeleton_3d != null and _anchor_transform.has(anchor_point_id):
-		var cached: Transform3D = _anchor_transform[anchor_point_id]
-		var t := body_shape_skeleton_3d.global_transform * cached
+	var state: AnchorState = _anchors.get(anchor_point_id)
+	if state != null and body_shape_skeleton_3d != null and state.bone_idx != -1:
+		var t := body_shape_skeleton_3d.global_transform * state.cached_transform
 		return t.rotated_local(Vector3.UP, PI)
 	return global_transform
 
