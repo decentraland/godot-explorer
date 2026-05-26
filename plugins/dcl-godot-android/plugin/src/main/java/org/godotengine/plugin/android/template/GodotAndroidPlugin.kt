@@ -49,6 +49,10 @@ import com.reown.android.relay.ConnectionType
 import com.reown.sign.client.Sign
 import com.reown.sign.client.SignClient
 
+// Play Integrity — server-side platform attestation for /sign-message.
+import com.google.android.play.core.integrity.IntegrityManagerFactory
+import com.google.android.play.core.integrity.IntegrityTokenRequest
+
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     private var webView: WebView? = null
@@ -90,7 +94,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // Emitted once when Firebase Analytics resolves the app instance id (ga_pseudo_user_id).
             // The Rust side uses this as the trigger to queue the Segment `Firebase Init` event,
             // which is the cross-system correlation anchor (Segment <-> Firebase).
-            SignalInfo("firebase_app_instance_id_ready", String::class.java)
+            SignalInfo("firebase_app_instance_id_ready", String::class.java),
+            // Play Integrity completion (one shot per getPlayIntegrityToken() call).
+            // `token` is empty when `error` is non-empty.
+            SignalInfo("play_integrity_token_ready", String::class.java, String::class.java)
         )
     }
 
@@ -2328,6 +2335,51 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         pending["status"] = "pending"
         Log.i(pluginName, "[IR] Returning pending (callback will fire later)")
         return pending
+    }
+
+    // --- Play Integrity (platform attestation for /sign-message) ---
+
+    /**
+     * Request an integrity token bound to the SHA256 of the request body the
+     * caller is about to send. The token is delivered asynchronously via the
+     * `play_integrity_token_ready(token, error)` signal — `error` is "" on
+     * success, otherwise `token` is "".
+     *
+     * `requestHashB64` is `base64(SHA256(rawBody))` (standard base64, with or
+     * without padding — the backend normalizes). The GDScript side is
+     * responsible for hashing the exact bytes the HTTP layer will send.
+     */
+    @UsedByGodot
+    fun requestPlayIntegrityToken(requestHashB64: String) {
+        val ctx = activity?.applicationContext ?: run {
+            Log.w(pluginName, "[PlayIntegrity] applicationContext null — cannot start")
+            emitSignal("play_integrity_token_ready", "", "applicationContext not ready")
+            return
+        }
+        try {
+            val manager = IntegrityManagerFactory.create(ctx)
+            val request = IntegrityTokenRequest.builder()
+                .setNonce(requestHashB64)
+                .build()
+            val task = manager.requestIntegrityToken(request)
+            task.addOnSuccessListener { response ->
+                val token = response?.token() ?: ""
+                if (token.isEmpty()) {
+                    Log.w(pluginName, "[PlayIntegrity] success but empty token")
+                    emitSignal("play_integrity_token_ready", "", "empty integrity token")
+                } else {
+                    Log.i(pluginName, "[PlayIntegrity] token ready (len=${token.length})")
+                    emitSignal("play_integrity_token_ready", token, "")
+                }
+            }
+            task.addOnFailureListener { e ->
+                Log.w(pluginName, "[PlayIntegrity] failure: ${e.message}", e)
+                emitSignal("play_integrity_token_ready", "", "${e.javaClass.simpleName}: ${e.message}")
+            }
+        } catch (e: Throwable) {
+            Log.e(pluginName, "[PlayIntegrity] setup error: ${e.javaClass.name}: ${e.message}", e)
+            emitSignal("play_integrity_token_ready", "", "${e.javaClass.simpleName}: ${e.message}")
+        }
     }
 
 }
