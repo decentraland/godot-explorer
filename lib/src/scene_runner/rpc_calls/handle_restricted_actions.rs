@@ -145,10 +145,11 @@ pub fn open_nft_dialog(
     // Get nodes
     let mut dialog_stack = get_dialog_stack_node(scene);
 
-    let mut confirm_dialog =
-        godot::tools::load::<PackedScene>("res://src/ui/dialogs/nft_dialog.tscn")
-            .instantiate()
-            .expect("NftDialog instantiate error");
+    let mut confirm_dialog = godot::tools::load::<PackedScene>(
+        "res://src/ui/components/organisms/dialogs/nft_dialog.tscn",
+    )
+    .instantiate()
+    .expect("NftDialog instantiate error");
 
     // Setup confirm dialog
     dialog_stack.add_child(&confirm_dialog.clone());

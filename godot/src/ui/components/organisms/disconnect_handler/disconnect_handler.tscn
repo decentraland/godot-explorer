@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c31o7afee5aos"]
+
+[ext_resource type="Script" uid="uid://dgohaug17b8q6" path="res://src/ui/components/organisms/disconnect_handler/disconnect_handler.gd" id="1_script"]
+
+[node name="DisconnectHandler" type="Node" unique_id=251210116]
+script = ExtResource("1_script")

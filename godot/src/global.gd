@@ -29,6 +29,10 @@ signal close_combo
 signal delete_account
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
+## Sync settings "Hide View Profile" / "Hide World Interactions" checkboxes.
+signal session_hide_ui_options_sync(
+	hide_view_profile: bool, hide_world_interactions: bool, hide_player_names: bool
+)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
@@ -93,7 +97,6 @@ var modal_manager: ModalManager
 var standalone = false
 
 var network_inspector_window: Window = null
-var selected_avatar: Avatar = null
 
 var last_emitted_height: int = 0
 var current_height: int = -1
@@ -119,6 +122,8 @@ var _is_portrait: bool = true
 var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
+
+var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
 
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
@@ -211,6 +216,10 @@ func _ready():
 			DclGlobal.set_rust_log_filter(rust_log_value)
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
+
+		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
+		if deep_link_obj.safe_margin_debug:
+			set_safe_margin_debug_enable(true)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -338,7 +347,7 @@ func _ready():
 	self.locations = load("res://src/helpers_components/locations.gd").new()
 	self.locations.set_name("locations")
 
-	self.modal_manager = load("res://src/ui/components/modal/modal_manager.gd").new()
+	self.modal_manager = load("res://src/ui/components/organisms/modal/modal_manager.gd").new()
 	self.modal_manager.set_name("modal_manager")
 
 	get_tree().root.add_child.call_deferred(self.cli)
@@ -572,6 +581,21 @@ func set_raycast_debugger_enable(enable: bool):
 		raycast_debugger = null
 
 
+func set_safe_margin_debug_enable(enable: bool) -> void:
+	var current_enabled = is_instance_valid(_safe_margin_debug_overlay)
+	if current_enabled == enable:
+		return
+
+	if enable:
+		_safe_margin_debug_overlay = (load("res://src/tool/safe_margin_debug_overlay.gd").new())
+		add_child(_safe_margin_debug_overlay)
+		print("[SafeMarginDebug] overlay instantiated")
+	else:
+		remove_child(_safe_margin_debug_overlay)
+		_safe_margin_debug_overlay.queue_free()
+		_safe_margin_debug_overlay = null
+
+
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
 	if is_instance_valid(raycast_debugger):
 		raycast_debugger.add_raycast(id, time, from, to)
@@ -607,7 +631,7 @@ func sign_out() -> void:
 	# Lobby/login is portrait-only; reset orientation so logging out from a
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
-	get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+	get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
 
 
 func explorer_has_focus() -> bool:
@@ -638,7 +662,7 @@ func capture_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		explorer.capture_mouse()
-	else:
+	elif DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -646,7 +670,7 @@ func release_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		explorer.release_mouse()
-	else:
+	elif DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -714,7 +738,7 @@ func open_network_inspector_ui():
 	)
 
 	const NETWORK_INSPECTOR_UI = preload(
-		"res://src/ui/components/debug_panel/network_inspector/network_inspector_ui.tscn"
+		"res://src/ui/components/organisms/debug_panel/network_inspector/network_inspector_ui.tscn"
 	)
 	network_inspector_window.add_child(NETWORK_INSPECTOR_UI.instantiate())
 

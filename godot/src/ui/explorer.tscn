@@ -1,33 +1,34 @@
 [gd_scene format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
+[ext_resource type="Script" path="res://src/logic/player/mobile_camera_input.gd" id="1_mcinput"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
-[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="5_c8ksg"]
-[ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
-[ext_resource type="PackedScene" uid="uid://b7e8iko6dwv7p" path="res://src/ui/components/joypad/joypad.tscn" id="7_admxk"]
-[ext_resource type="PackedScene" uid="uid://bviu1proryfux" path="res://src/ui/components/chat/chat_panel.tscn" id="9_chatpanel"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="5_c8ksg"]
+[ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/organisms/menu/menu.tscn" id="5_mso44"]
+[ext_resource type="PackedScene" uid="uid://b7e8iko6dwv7p" path="res://src/ui/components/organisms/joypad/joypad.tscn" id="7_admxk"]
+[ext_resource type="PackedScene" uid="uid://bviu1proryfux" path="res://src/ui/pages/chat/chat_panel.tscn" id="9_chatpanel"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
-[ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
-[ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
-[ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/notifications/notifications_panel.tscn" id="14_notif_panel"]
+[ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/components/organisms/dialogs/dialog_stack.tscn" id="10_y1lkn"]
+[ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/molecules/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
+[ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/organisms/notifications/notifications_panel.tscn" id="14_notif_panel"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_karsc"]
-[ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_0blod"]
-[ext_resource type="Script" uid="uid://dqpk827xdxpcy" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
-[ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
-[ext_resource type="PackedScene" uid="uid://btl8ag3s7oanm" path="res://src/ui/components/navbar/navbar.tscn" id="21_admxk"]
-[ext_resource type="PackedScene" uid="uid://dd2w2ysk3akdj" path="res://src/ui/components/friends/friends_panel.tscn" id="21_cwgs4"]
-[ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
-[ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
-[ext_resource type="PackedScene" uid="uid://bectasdgy1btu" path="res://src/ui/components/profile/profile_container.tscn" id="25_c5h7v"]
+[ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/pages/loading_screen/loading_screen.tscn" id="17_0blod"]
+[ext_resource type="Script" uid="uid://dqpk827xdxpcy" path="res://src/ui/components/organisms/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
+[ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/organisms/recording_notification/recording_notification.tscn" id="20_uf6rv"]
+[ext_resource type="PackedScene" uid="uid://btl8ag3s7oanm" path="res://src/ui/components/organisms/navbar/navbar.tscn" id="21_admxk"]
+[ext_resource type="PackedScene" uid="uid://dd2w2ysk3akdj" path="res://src/ui/pages/friends/friends_panel.tscn" id="21_cwgs4"]
+[ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/organisms/emotes/emote_wheel.tscn" id="21_pows0"]
+[ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/organisms/warning_messages/warning_messages.tscn" id="23_bi432"]
+[ext_resource type="PackedScene" uid="uid://bectasdgy1btu" path="res://src/ui/pages/profile/profile_container.tscn" id="25_c5h7v"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="26_smf4l"]
 [ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="27_u4dfr"]
-[ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/url_popup/url_popup.tscn" id="27_url_popup"]
-[ext_resource type="PackedScene" uid="uid://ks0sxu8dsf66" path="res://src/ui/components/jump_in_popup/jump_in_popup.tscn" id="28_jump_in_popup"]
+[ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/organisms/url_popup/url_popup.tscn" id="27_url_popup"]
+[ext_resource type="PackedScene" uid="uid://ks0sxu8dsf66" path="res://src/ui/components/organisms/jump_in_popup/jump_in_popup.tscn" id="28_jump_in_popup"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
-[ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="33_settings"]
+[ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/pages/settings/settings.tscn" id="33_settings"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_smf4l"]
 content_margin_left = 7.0
@@ -101,6 +102,15 @@ focus_mode = 1
 mouse_filter = 1
 theme = ExtResource("4_2vs87")
 
+[node name="MobileCameraInput" type="Control" parent="UI" unique_id=435960516]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mcinput")
+
 [node name="MarginContainer_ShowUI" type="MarginContainer" parent="UI" unique_id=1783716233]
 unique_name_in_owner = true
 visible = false
@@ -168,17 +178,8 @@ vertical_alignment = 1
 [node name="Control_PointerTooltip" parent="UI" unique_id=944970499 instance=ExtResource("11_qjs00")]
 unique_name_in_owner = true
 layout_mode = 1
+z_index = -4096
 metadata/_edit_lock_ = true
-
-[node name="SceneUIContainer" type="Control" parent="UI" unique_id=1950684600]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
 
 [node name="LeftRightSafeContainer" type="MarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
@@ -350,6 +351,16 @@ vertical_alignment = 1
 [node name="EmoteWheel" parent="UI/LeftRightSafeContainer/InteractableHUD" unique_id=228992295 instance=ExtResource("21_pows0")]
 unique_name_in_owner = true
 layout_mode = 1
+
+[node name="SceneUIContainer" type="Control" parent="UI" unique_id=1950684600]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI" unique_id=926156601]
 autostart = true

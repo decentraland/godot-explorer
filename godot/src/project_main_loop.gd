@@ -25,6 +25,7 @@ const NOISE_PATTERNS := [
 	"Mouse is not supported",
 	"utf16 surrogate",
 	"ClientMessagesHandler",
+	"StreamProtocol",
 	'Condition "active"',
 ]
 # Keep this fraction of noise events as a canary — if the shape or volume of

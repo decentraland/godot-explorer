@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://brrjhhjf1jey2"]
+
+[ext_resource type="Script" uid="uid://dnr7hqihagwq1" path="res://src/ui/pages/events/events_generator.gd" id="1_7lpcq"]
+
+[node name="EventsGenerator" type="Node" unique_id=104356812]
+script = ExtResource("1_7lpcq")
