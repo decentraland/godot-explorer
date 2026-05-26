@@ -263,9 +263,8 @@ func try_show():
 func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 	_unset_avatar_modifier_area()  # Reset state
 
-	for exclude_id in area.exclude_ids:
-		if avatar_id == exclude_id:
-			return  # the avatar is not going to be modified
+	if AvatarExcludeIdMatcher.is_excluded(avatar_id, area.exclude_ids):
+		return  # the avatar is not going to be modified
 
 	for modifier in area.avatar_modifiers:
 		if modifier == 0:  # hide avatar
@@ -348,6 +347,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
 	nickname_ui.name_claimed = profile.has_claimed_name()
 
+	var avatar_id_changed := avatar_id != profile.get_ethereum_address()
 	avatar_id = profile.get_ethereum_address()
 	has_connected_web3 = profile.has_connected_web3()
 	prints("Async update avatar from profile", avatar_id)
@@ -355,6 +355,12 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	# Update metadata with the new avatar_id
 	if click_area:
 		click_area.set_meta("avatar_id", avatar_id)
+
+	# Re-evaluate AvatarModifierArea exclusion: the area may have triggered
+	# before the profile arrived (issue #2166 race), leaving the avatar hidden
+	# even though its id is in excludeIds.
+	if avatar_id_changed:
+		try_show()
 
 	await async_update_avatar(avatar, new_avatar_name)
 
@@ -378,6 +384,7 @@ func async_update_avatar(
 			avatar_id = shape_id
 			if click_area:
 				click_area.set_meta("avatar_id", avatar_id)
+			try_show()
 
 	# Update metadata for raycast detection
 	if click_area:
