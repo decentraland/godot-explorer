@@ -15,6 +15,10 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 @export var hide_background: bool = false
 @export var hide_navbar: bool = false
 @export var default_main_category: String = Wearables.Categories.ALL
+## When true, locks the embedded AvatarPreview to rotation only —
+## disables mouse-wheel zoom, pinch zoom and pinch vertical-pan. Used by
+## the lobby's "Create your avatar" screen.
+@export var disable_avatar_zoom: bool = false
 
 var wearable_button_group_per_category: Dictionary = {}
 var filtered_data: Array
@@ -97,6 +101,9 @@ func _ready():
 
 	if size_canary != null:
 		size_canary.show()
+
+	if disable_avatar_zoom:
+		avatar_preview.can_drag = false
 
 	emote_editor.avatar = avatar_preview.avatar
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
