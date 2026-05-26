@@ -122,11 +122,13 @@ func _on_panel_chat_on_exit_chat() -> void:
 func _on_chat_enter_write_mode() -> void:
 	_apply_writing_state()
 	Global.chat_write_mode_changed.emit(true)
+	chat.scroll_to_bottom_deferred()
 
 
 func _on_chat_exit_write_mode() -> void:
 	_apply_open_state()
 	Global.chat_write_mode_changed.emit(false)
+	chat.scroll_to_bottom_deferred()
 
 
 func _on_panel_chat_submit_message(message: String) -> void:
