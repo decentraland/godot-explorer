@@ -66,12 +66,12 @@ func _on_button_price_pressed() -> void:
 	if product_id.is_empty():
 		return
 	if not Global.get_config().iap_terms_accepted:
-		_show_terms_then_purchase()
+		_async_show_terms_then_purchase()
 		return
 	Iap.purchase(product_id)
 
 
-func _show_terms_then_purchase() -> void:
+func _async_show_terms_then_purchase() -> void:
 	button_price.disabled = true
 	await Global.modal_manager.async_show_iap_terms_modal()
 	if not Global.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
