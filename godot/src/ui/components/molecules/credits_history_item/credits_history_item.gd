@@ -7,8 +7,9 @@ extends PanelContainer
 
 func setup(credits: int, is_refund: bool, timestamp: String) -> void:
 	label_date.text = timestamp
-	label_amount.text = str(credits)
 	if is_refund:
-		label_detail.text = "Refunded %d CREDITS" % credits
+		label_detail.text = "Refund Deduction"
+		label_amount.text = "-%d" % credits
 	else:
 		label_detail.text = "Purchased %d CREDITS" % credits
+		label_amount.text = str(credits)
