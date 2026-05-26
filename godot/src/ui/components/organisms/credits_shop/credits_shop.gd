@@ -27,10 +27,3 @@ func _show_content() -> void:
 	credits_faq_skeleton.hide()
 	credits_option_inner.show()
 	credits_faq.show()
-
-
-func reset() -> void:
-	credits_options_skeleton.show()
-	credits_faq_skeleton.show()
-	credits_option_inner.hide()
-	credits_faq.hide()

@@ -5,6 +5,8 @@
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="3_hjnkx"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l5d46"]
+content_margin_top = 8.0
+content_margin_bottom = 12.0
 draw_center = false
 border_width_bottom = 1
 border_color = Color(0.9098039, 0.7254902, 1, 1)
@@ -31,12 +33,12 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer" type="PanelContainer" parent="VBoxContainer" unique_id=245013328]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer" unique_id=245013328]
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_l5d46")
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer" unique_id=1086757594]
+[node name="Label" type="Label" parent="VBoxContainer/PanelContainer" unique_id=1086757594]
 layout_mode = 2
 text = "purchase history"
 label_settings = SubResource("LabelSettings_ovwu6")

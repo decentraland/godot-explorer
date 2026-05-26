@@ -65,7 +65,9 @@ const _OUTCOME_REJECTED := 1
 const _OUTCOME_RETRY := 2
 
 # TODO: replace with backend/endpoint query
-const _MAX_CREDITS := 115
+const _MAX_CREDITS := 1000
+# TODO: replace with actual daily limit once known
+const _MAX_DAILY_CREDITS := 100
 
 var _store_kit := DclStoreKitPlugin.new()
 var _store_kit_available: bool = false
@@ -161,9 +163,26 @@ func purchase(product_id: String) -> void:
 	var credits_to_add: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
 	if _balance + credits_to_add > _MAX_CREDITS:
 		printerr(
-			"[IAP] credit limit reached: ", _balance, " + ", credits_to_add, " > ", _MAX_CREDITS
+			"[IAP] total credit limit reached: ",
+			_balance,
+			" + ",
+			credits_to_add,
+			" > ",
+			_MAX_CREDITS
 		)
-		Global.modal_manager.async_show_credit_limit_modal()
+		Global.modal_manager.async_show_credit_limit_total_modal()
+		return
+	var today_credits = _get_today_credits()
+	if today_credits + credits_to_add > _MAX_DAILY_CREDITS:
+		printerr(
+			"[IAP] daily credit limit reached: ",
+			today_credits,
+			" + ",
+			credits_to_add,
+			" > ",
+			_MAX_DAILY_CREDITS
+		)
+		Global.modal_manager.async_show_credit_limit_daily_modal()
 		return
 	_purchase_in_flight = true
 	_show_overlay()
@@ -174,7 +193,11 @@ func purchase(product_id: String) -> void:
 func _async_simulate_editor_purchase(product_id: String) -> void:
 	var credits: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
 	if _balance + credits > _MAX_CREDITS:
-		Global.modal_manager.async_show_credit_limit_modal()
+		Global.modal_manager.async_show_credit_limit_total_modal()
+		return
+	var today_credits = _get_today_credits()
+	if today_credits + credits > _MAX_DAILY_CREDITS:
+		Global.modal_manager.async_show_credit_limit_daily_modal()
 		return
 	_purchase_in_flight = true
 	_show_overlay()
@@ -200,6 +223,16 @@ func _record_transaction(credits: int, is_refund: bool) -> void:
 		)
 	)
 	transaction_history_updated.emit()
+
+
+func _get_today_credits() -> int:
+	var now = Time.get_datetime_dict_from_system()
+	var today = "%04d.%02d.%02d" % [now.year, now.month, now.day]
+	var total = 0
+	for tx in _transaction_history:
+		if tx.get("timestamp", "") == today and not tx.get("is_refund", false):
+			total += tx.get("credits", 0)
+	return total
 
 
 func _on_products_loaded(json: String) -> void:

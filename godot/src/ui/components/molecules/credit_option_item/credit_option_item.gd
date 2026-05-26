@@ -65,6 +65,30 @@ func _find_product(pid: String) -> Dictionary:
 func _on_button_price_pressed() -> void:
 	if product_id.is_empty():
 		return
-	# IapManager owns the global purchase overlay (full-screen blocking
-	# spinner) and the in-flight guard, so re-taps are safely ignored there.
+	if not Global.get_config().iap_terms_accepted:
+		_show_terms_then_purchase()
+		return
 	Iap.purchase(product_id)
+
+
+func _show_terms_then_purchase() -> void:
+	button_price.disabled = true
+	await Global.modal_manager.async_show_iap_terms_modal()
+	if not Global.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
+		Global.modal_manager.iap_terms_accepted.connect(_on_iap_terms_accepted, CONNECT_ONE_SHOT)
+	# Re-enable the button once the modal is gone (accept or cancel).
+	var modal = Global.modal_manager.current_modal
+	if modal and not modal.tree_exited.is_connected(_on_terms_modal_exited):
+		modal.tree_exited.connect(_on_terms_modal_exited, CONNECT_ONE_SHOT)
+
+
+func _on_iap_terms_accepted() -> void:
+	Iap.purchase(product_id)
+
+
+func _on_terms_modal_exited() -> void:
+	button_price.disabled = false
+	# If the user cancelled, the one-shot is still connected — clean it up
+	# so a later accept on a different item doesn't trigger this product.
+	if Global.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
+		Global.modal_manager.iap_terms_accepted.disconnect(_on_iap_terms_accepted)

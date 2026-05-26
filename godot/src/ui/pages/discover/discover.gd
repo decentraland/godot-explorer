@@ -522,7 +522,6 @@ func _on_button_back_to_explorer_pressed() -> void:
 		search_bar.show()
 		credits_option.hide()
 		button_history.hide()
-		credits_shop.reset()
 		_show_credits_button()
 		container_content.show()
 		label_title.show()
@@ -540,11 +539,15 @@ func _on_button_back_to_explorer_pressed() -> void:
 
 
 func _on_button_credits_pressed() -> void:
+	Global.metrics.track_click_button("BUTTON_CREDITS", "DISCOVER", "")
+	_open_credits_section()
+
+
+func _open_credits_section() -> void:
 	button_back_to_explorer.show()
 	label_title.text = "Credits"
 	search_container.hide()
 	container_content.hide()
-	Global.metrics.track_click_button("BUTTON_CREDITS", "DISCOVER", "")
 	_show_credits_button()
 	credits_option.show()
 	credits_history.hide()

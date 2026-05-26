@@ -154,6 +154,7 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 		last_parcel_position = value
 
 var terms_and_conditions_version: int = 0
+var iap_terms_accepted: bool = false
 
 # Unix timestamp until which the soft version-upgrade overlay is snoozed
 # (set when the user presses "Later"; ignored for required-minimum blocks).
@@ -448,6 +449,10 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
+	self.iap_terms_accepted = settings_file.get_value(
+		"user", "iap_terms_accepted", data_default.iap_terms_accepted
+	)
+
 	self.version_gate_snooze_until = settings_file.get_value(
 		"user", "version_gate_snooze_until", data_default.version_gate_snooze_until
 	)
@@ -536,6 +541,7 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
+	new_settings_file.set_value("user", "iap_terms_accepted", self.iap_terms_accepted)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)

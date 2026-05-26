@@ -7,6 +7,7 @@ extends Node
 
 signal connection_lost_retry
 signal connection_lost_exit
+signal iap_terms_accepted
 
 const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
@@ -49,12 +50,23 @@ const PURCHASE_FAILED_BODY = "Your purchase could not be completed"
 const PURCHASE_FAILED_PRIMARY = "OK"
 
 const CREDIT_LIMIT_TITLE = "Limit reached"
-const CREDIT_LIMIT_BODY = "You've reached the maximum amount of credits you can buy this month."
+const CREDIT_LIMIT_TOTAL_BODY = "You can't buy more credits because you've reached maximum holding limit. Spend your credits to buy more."
+const CREDIT_LIMIT_DAILY_BODY = "You've reached the maximum amount of credits you can buy today."
 const CREDIT_LIMIT_PRIMARY = "OK"
 
 const PURCHASE_IN_FLIGHT_TITLE = "Purchase in progress"
 const PURCHASE_IN_FLIGHT_BODY = "A purchase is already being processed. Please wait for it to complete before starting a new one."
 const PURCHASE_IN_FLIGHT_PRIMARY = "OK"
+
+const IAP_TERMS_TITLE = "Terms of use"
+# TODO: replace placeholder URLs with final ones
+const IAP_TERMS_CHECKBOX_BBCODE = (
+	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms/"]Terms of Service[/url][/color], '
+	+ '[color=#E8B9FF][url="https://decentraland.org/privacy/"]Privacy Policy[/url][/color] and '
+	+ '[color=#E8B9FF][url="https://decentraland.org/content/"]Content Policy[/url][/color].'
+)
+const IAP_TERMS_PRIMARY = "CONFIRM"
+const IAP_TERMS_SECONDARY = "CANCEL"
 
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
@@ -341,14 +353,32 @@ func async_show_purchase_failed_modal() -> void:
 	current_modal.button_primary.pressed.connect(close_current_modal)
 
 
-## Shows a credit limit reached modal
-func async_show_credit_limit_modal() -> void:
+## Shows a total credit limit reached modal
+func async_show_credit_limit_total_modal() -> void:
 	if not current_modal:
 		if not await _async_create_modal():
 			return
 
 	current_modal.set_title(CREDIT_LIMIT_TITLE)
-	current_modal.set_body(CREDIT_LIMIT_BODY)
+	current_modal.set_body(CREDIT_LIMIT_TOTAL_BODY)
+	current_modal.set_primary_button_text(CREDIT_LIMIT_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a daily credit limit reached modal
+func async_show_credit_limit_daily_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(CREDIT_LIMIT_TITLE)
+	current_modal.set_body(CREDIT_LIMIT_DAILY_BODY)
 	current_modal.set_primary_button_text(CREDIT_LIMIT_PRIMARY)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
@@ -375,6 +405,52 @@ func async_show_purchase_in_flight_modal() -> void:
 
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows IAP terms of use modal with a checkbox that must be accepted before confirming
+func async_show_iap_terms_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(IAP_TERMS_TITLE)
+	current_modal.set_body("")
+	current_modal.set_primary_button_text(IAP_TERMS_PRIMARY)
+	current_modal.set_secondary_button_text(IAP_TERMS_SECONDARY)
+	current_modal.hide_icon()
+	current_modal.hide_url()
+	current_modal.blocker = true
+	current_modal.button_primary.disabled = true
+
+	current_modal.show_checkbox(IAP_TERMS_CHECKBOX_BBCODE)
+	current_modal.checkbox.toggled.connect(_on_iap_terms_checkbox_toggled)
+	current_modal.checkbox_text.meta_clicked.connect(_on_iap_terms_link_clicked)
+
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_iap_terms_confirmed)
+	current_modal.button_secondary.pressed.connect(_on_iap_terms_cancelled)
+
+
+func _on_iap_terms_checkbox_toggled(checked: bool) -> void:
+	if current_modal:
+		current_modal.button_primary.disabled = not checked
+
+
+func _on_iap_terms_confirmed() -> void:
+	Global.get_config().iap_terms_accepted = true
+	Global.get_config().save_to_settings_file()
+	close_current_modal()
+	iap_terms_accepted.emit()
+
+
+func _on_iap_terms_cancelled() -> void:
+	close_current_modal()
+
+
+func _on_iap_terms_link_clicked(meta) -> void:
+	Global.open_url(str(meta))
 
 
 ## Clears the suppress flag so the next ban_kicked_modal call is not silenced.
