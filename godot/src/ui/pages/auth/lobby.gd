@@ -277,7 +277,7 @@ func _ready():
 	# the editor overlay instead of being sized into the uncovered slice.
 	var create_avatar_label: Label = $Main/BackpackContainer/MarginContainer/VBoxContainer/Label_Name
 	backpack.avatar_preview.snap_top_to_viewport = true
-	backpack.avatar_preview.preview_margin_top = 10
+	backpack.avatar_preview.preview_margin_top = 30
 	backpack.avatar_preview.set_top_margin_node(create_avatar_label)
 
 	# Secret guest mode: double-tap logo when not in prod
