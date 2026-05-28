@@ -95,6 +95,8 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::AudioStream => "AudioStream",
         S::AvatarModifierArea => "AvatarModifierArea",
         S::AvatarLocomotionSettings => "AvatarLocomotionSettings",
+        S::PhysicsCombinedForce => "PhysicsCombinedForce",
+        S::PhysicsCombinedImpulse => "PhysicsCombinedImpulse",
         S::CameraModeArea => "CameraModeArea",
         S::InputModifier => "InputModifier",
         S::SkyboxTime => "SkyboxTime",
