@@ -209,13 +209,12 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     (0.0, 0.0)
                 };
 
-                if text_wrapping {
-                    label_3d.set_autowrap_mode(AutowrapMode::WORD_SMART);
-                    label_3d.set_width(200.0 * new_value.width.unwrap_or(16.0));
+                label_3d.set_autowrap_mode(if text_wrapping {
+                    AutowrapMode::WORD_SMART
                 } else {
-                    label_3d.set_autowrap_mode(AutowrapMode::OFF);
-                    label_3d.set_width(200.0 * new_value.width.unwrap_or(16.0));
-                }
+                    AutowrapMode::OFF
+                });
+                label_3d.set_width(200.0 * new_value.width.unwrap_or(16.0));
 
                 let (v_align, y_pos) = match text_align {
                     TextAlignMode::TamMiddleLeft
