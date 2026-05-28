@@ -116,6 +116,10 @@ var session_id: String
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
 
+# Seeds Sentry user / context / tags from realm / scene_fetcher /
+# player_identity / comms signals. Instantiated alongside scene_fetcher.
+var sentry_seeder: SentrySeeder = null
+
 # Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
 # token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
 # see attestation_service.gd. Other code obtains a token via
@@ -353,15 +357,16 @@ func _ready():
 		self.metrics.set_debug_level(0)  # 0 off - 1 on
 		self.metrics.set_name("metrics")
 
-	# Sentry user / session tagging
-	if telemetry_enabled:
-		var sentry_user = SentryUser.new()
-		sentry_user.id = self.config.analytics_user_id
-		SentrySDK.set_tag("dcl_session_id", session_id)
-
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
+
+	# RefCounted, kept alive by this strong reference. Seeds Sentry user /
+	# context / tags from the runtime signals exposed by the subsystems
+	# created above. No scene-tree presence.
+	if telemetry_enabled:
+		self.sentry_seeder = SentrySeeder.new()
+		self.sentry_seeder.setup()
 
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
