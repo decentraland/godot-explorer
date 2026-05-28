@@ -83,7 +83,8 @@ var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContai
 @onready
 var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/RestoreNameHead/Label_SignedAsName
 
-@onready var button_enter_as_guest: Button = %Button_EnterAsGuest
+@onready var button_continue_as_guest: Button = %Button_ContinueAsGuest
+@onready var button_enter_as_disposable_account: Button = %Button_EnterAsDisposableAccount
 @onready var button_back: Button = %Button_Back
 @onready var sign_in_title: Label = %SignInTitle
 @onready var sign_in_logo: TextureRect = %SignInLogo
@@ -267,7 +268,7 @@ func async_close_sign_in():
 func _ready():
 	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
 	label_version.set_text(DclGlobal.get_version_with_env())
-	button_enter_as_guest.visible = false
+	button_enter_as_disposable_account.visible = false
 
 	# The backpack ships with top_node_margin pointing at its own navbar (hidden
 	# via hide_navbar=true here), which leaves the preview without a real top
@@ -344,7 +345,7 @@ func _ready():
 		# clear() would also corrupt the reference inside settings_file, causing the
 		# copy loop in save_to_settings_file() to lose the saved wallet session.
 		session_account = {}
-		Global.player_identity.create_guest_account()
+		Global.player_identity.create_disposable_account()
 		Global.player_identity.set_random_profile()
 		var random_profile = Global.player_identity.get_profile_or_null()
 		if random_profile != null:
@@ -412,7 +413,7 @@ func _on_sign_in_logo_gui_input(event: InputEvent) -> void:
 
 		if _logo_tap_count >= 2:
 			_logo_tap_count = 0
-			button_enter_as_guest.visible = true
+			button_enter_as_disposable_account.visible = true
 
 
 func go_to_explorer():
@@ -490,6 +491,8 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> vo
 	var new_stored_account := {}
 	if Global.player_identity.get_recover_account_to(new_stored_account):
 		Global.get_config().session_account = new_stored_account
+	else:
+		push_error("[recovery] get_recover_account_to returned false for address=%s" % address)
 
 	Global.get_config().save_to_settings_file()
 
@@ -679,7 +682,7 @@ func create_guest_account_if_needed():
 
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
-		Global.player_identity.create_guest_account()
+		Global.player_identity.create_disposable_account()
 		if is_creating_account:
 			Global.player_identity.set_profile(current_profile)
 		else:
@@ -692,16 +695,61 @@ func profile_has_name():
 	return profile != null and not profile.get_name().is_empty()
 
 
-func _on_button_enter_as_guest_pressed():
-	Global.metrics.track_click_button("enter_as_guest", current_screen_name, "")
+func _on_button_enter_as_disposable_account_pressed():
+	Global.metrics.track_click_button("enter_as_disposable_account", current_screen_name, "")
 	Global.get_config().guest_profile = {}
 	Global.get_config().save_to_settings_file()
 	guest_account_created = false
-	Global.player_identity.create_guest_account()
+	Global.player_identity.create_disposable_account()
 	Global.player_identity.set_default_profile()
 	guest_account_created = true
 	_show_avatar_preview()
 	show_avatar_create_screen()
+
+
+# Resolves the platform-native device anchor (SSAID on Android, Keychain UUID
+# on iOS) used to derive a deterministic thirdweb guest wallet. Empty string
+# means "no native anchor available" — Rust falls back to a UUID stored in
+# user:// so desktop still works.
+#
+# Android note: `has_method()` always returns false for JNISingleton methods
+# (Object.has_method consults ClassDB, the Android plugin method_map is
+# separate). Don't guard the call with has_method or it silently no-ops.
+# See: https://github.com/godotengine/godot/issues/106436
+func _get_device_anchor_id() -> String:
+	if Global.is_android():
+		var plugin = Engine.get_singleton("dcl-godot-android")
+		if plugin != null:
+			return plugin.getDeviceAnchorId()
+	elif Global.is_ios():
+		var plugin = Engine.get_singleton("DclGodotiOS")
+		if plugin != null and plugin.has_method("get_device_anchor_id"):
+			return plugin.get_device_anchor_id()
+	return ""
+
+
+# gdlint:ignore = async-function-name
+func _on_button_continue_as_guest_pressed():
+	Global.metrics.track_click_button("continue_as_guest", current_screen_name, "")
+	button_continue_as_guest.disabled = true
+
+	# Mirror the social-login flow: flag `waiting_for_new_wallet` so the
+	# wallet_connected → async_fetch_profile → profile_changed chain routes
+	# us to comeback screen (existing profile) or avatar create (new wallet)
+	# instead of forcing one or the other manually.
+	waiting_for_new_wallet = true
+
+	var anchor: String = _get_device_anchor_id()
+	var promise: Promise = Global.player_identity.async_create_guest_account(anchor)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	button_continue_as_guest.disabled = false
+
+	if result is PromiseError:
+		waiting_for_new_wallet = false
+		var error_text: String = result.get_error()
+		push_error("Guest login failed: " + error_text)
+		_show_auth_error("Could not start guest session: " + error_text)
 
 
 func _show_avatar_preview():

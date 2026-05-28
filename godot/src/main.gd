@@ -63,7 +63,7 @@ func _start():
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.set_default_profile()
-		Global.player_identity.create_guest_account()
+		Global.player_identity.create_disposable_account()
 		get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
 	elif Global.cli.emote_test_mode:
 		print("Running in Emote Test mode")
@@ -81,7 +81,7 @@ func _start():
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.set_default_profile()
-		Global.player_identity.create_guest_account()
+		Global.player_identity.create_disposable_account()
 
 		var new_stored_account: Dictionary = {}
 		if Global.player_identity.get_recover_account_to(new_stored_account):

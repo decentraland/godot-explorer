@@ -18,8 +18,10 @@ use super::auth_identity::{
     generate_ephemeral_for_signing, start_mobile_auth,
 };
 use super::decentraland_auth_server::{do_request, CreateRequest};
+use super::device_anchor;
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
+use super::thirdweb_guest;
 use super::wallet::{AsH160, Wallet};
 
 enum CurrentWallet {
@@ -171,12 +173,83 @@ impl DclPlayerIdentity {
             .emit_signal("auth_error", &[error_str.to_variant()]);
     }
 
+    /// Creates a random throwaway wallet that lives only as long as the install.
+    /// "Disposable" because every cold start mints a brand-new wallet — no
+    /// persistence, no recovery. Reserved for dev / hidden behind double-tap
+    /// in non-prod. For silent + persistent guest, use `async_create_guest_account`.
     #[func]
-    fn create_guest_account(&mut self) {
+    fn create_disposable_account(&mut self) {
         let local_wallet = LocalWallet::new(&mut thread_rng());
         let local_wallet_bytes = local_wallet.signer().to_bytes().to_vec();
         let ephemeral_auth_chain = create_local_ephemeral(&local_wallet);
         self._update_local_wallet(local_wallet_bytes.as_slice(), ephemeral_auth_chain);
+    }
+
+    /// Silent guest login backed by thirdweb. Returns a Promise that resolves
+    /// with the wallet address string on success, or rejects with an error
+    /// message. The same `device_anchor_id` always resolves to the same
+    /// wallet address — pass the SSAID (Android) / Keychain UUID (iOS), or
+    /// leave empty to use the desktop UUID file fallback.
+    #[func]
+    fn async_create_guest_account(&mut self, device_anchor_id: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let instance_id = self.base().instance_id();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let anchor_input = device_anchor_id.to_string();
+
+        handle.spawn(async move {
+            let result = perform_thirdweb_guest_login(anchor_input).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::error!("thirdweb guest_login: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok((address, ephemeral_auth_chain)) => {
+                    let address_str = format!("{:#x}", address);
+                    let ephemeral_chain_json = serde_json::to_string(&ephemeral_auth_chain)
+                        .expect("serialize ephemeral auth chain");
+
+                    if let Ok(mut identity) =
+                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                    {
+                        // Thirdweb wallets are real custodial wallets — same model
+                        // as WalletConnect / Apple / Google as far as Decentraland
+                        // is concerned. The thirdweb "guest" label is just the auth
+                        // method (no social link) and doesn't affect `is_guest`,
+                        // which stays reserved for disposable LocalWallet sessions.
+                        identity.call_deferred(
+                            "try_set_remote_wallet",
+                            &[
+                                address_str.clone().to_variant(),
+                                1_u64.to_variant(),
+                                ephemeral_chain_json.to_variant(),
+                            ],
+                        );
+                    }
+
+                    promise
+                        .bind_mut()
+                        .resolve_with_data(address_str.to_variant());
+                }
+                Err(e) => {
+                    tracing::error!("thirdweb guest_login failed: {:?}", e);
+                    promise
+                        .bind_mut()
+                        .reject(GString::from(&format!("Guest login failed: {}", e)));
+                }
+            }
+        });
+
+        promise
     }
 
     #[func]
@@ -765,4 +838,57 @@ impl DclPlayerIdentity {
             });
         }
     }
+}
+
+/// Runs the silent guest-login flow end-to-end:
+///   1. resolve the device anchor (native value or desktop fallback)
+///   2. hash anchor → opaque thirdweb `sessionId`
+///   3. POST /v1/auth/complete (guest) → wallet address + bearer token
+///   4. mint a local ephemeral keypair + Decentraland delegation message
+///   5. POST /v1/wallets/sign-message → external signature
+///   6. assemble the EphemeralAuthChain
+///
+/// On success, the returned `EphemeralAuthChain` is signed by the thirdweb
+/// wallet and delegates request signing to the local ephemeral key for the
+/// usual ~30 day window. The thirdweb JWT itself is dropped after step 5 —
+/// every cold start re-runs steps 1–6 (idempotent because the anchor is
+/// stable, so thirdweb returns the same wallet address).
+async fn perform_thirdweb_guest_login(
+    device_anchor_id: String,
+) -> Result<(H160, EphemeralAuthChain), anyhow::Error> {
+    let anchor = device_anchor::resolve_anchor(&device_anchor_id);
+    let session_id = device_anchor::compute_session_id(&anchor);
+
+    let session = thirdweb_guest::guest_login(&session_id).await?;
+
+    let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
+
+    let signature_hex = thirdweb_guest::sign_message(
+        &session.token,
+        session.wallet_address,
+        1,
+        &ephemeral_message,
+    )
+    .await?;
+
+    let signer_address_str = format!("{:#x}", session.wallet_address);
+    let chain = create_ephemeral_from_external_signature(
+        &signer_address_str,
+        &signature_hex,
+        &ephemeral_keys,
+        expiration,
+        &ephemeral_message,
+    )?;
+
+    // Persist the JWT so future cold starts can renew the ephemeral
+    // delegation without re-running `guest_login`. Failure is non-fatal:
+    // we already have a valid in-memory ephemeral chain for this session.
+    if let Err(e) = thirdweb_guest::save_session_to_disk(&session) {
+        tracing::warn!(
+            "thirdweb: failed to persist session to disk (non-fatal): {}",
+            e
+        );
+    }
+
+    Ok((session.wallet_address, chain))
 }

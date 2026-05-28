@@ -814,7 +814,18 @@ layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Button_EnterAsGuest" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=69878849]
+[node name="Button_ContinueAsGuest" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=204815734]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 80)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 24
+text = "CONTINUE AS GUEST"
+expand_icon = true
+
+[node name="Button_EnterAsDisposableAccount" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=69878849]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(320, 80)
@@ -823,7 +834,7 @@ focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 24
-text = "QUICK DIVE AS A GUEST"
+text = "QUICK DIVE (DISPOSABLE ACCOUNT)"
 expand_icon = true
 
 [node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer" unique_id=1774682901]
@@ -964,7 +975,8 @@ expand_icon = true
 [connection signal="gui_input" from="Main/Comeback/MarginContainer/VBoxContainer/AvatarPreviewContainer_Comeback/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
 [connection signal="pressed" from="Main/Comeback/MarginContainer/VBoxContainer/RestoreNameFooter/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="pressed" from="Main/Comeback/MarginContainer/VBoxContainer/RestoreNameFooter/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]
-[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
+[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1/Button_ContinueAsGuest" to="." method="_on_button_continue_as_guest_pressed"]
+[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsDisposableAccount" to="." method="_on_button_enter_as_disposable_account_pressed"]
 [connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
 [connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain" to="." method="_on_button_try_again_pressed"]
 [connection signal="ftue_completed" from="Main/FTUE/FTUE" to="." method="_on_ftue_ftue_completed"]

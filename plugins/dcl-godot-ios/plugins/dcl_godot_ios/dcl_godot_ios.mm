@@ -16,6 +16,7 @@
 #import <LinkPresentation/LinkPresentation.h>
 #import <UserNotifications/UserNotifications.h>
 #import <DeviceCheck/DeviceCheck.h>
+#import <Security/Security.h>
 
 const char* DCLGODOTIOS_VERSION = "1.0";
 
@@ -221,6 +222,9 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("attestation_generate_key"), &DclGodotiOS::attestation_generate_key);
     ClassDB::bind_method(D_METHOD("attestation_attest_key", "key_id", "client_data_hash"), &DclGodotiOS::attestation_attest_key);
     ClassDB::bind_method(D_METHOD("attestation_generate_assertion", "key_id", "client_data_hash"), &DclGodotiOS::attestation_generate_assertion);
+
+    // Device anchor — Keychain-stored UUID that survives uninstall.
+    ClassDB::bind_method(D_METHOD("get_device_anchor_id"), &DclGodotiOS::get_device_anchor_id);
 
     // Signal emitted when a deeplink URL is received
     ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
@@ -1608,6 +1612,58 @@ void DclGodotiOS::emit_attestation_assertion_completed(String assertion_b64u, St
     if (singleton) {
         singleton->emit_signal("attestation_assertion_completed", assertion_b64u, error);
     }
+}
+
+String DclGodotiOS::get_device_anchor_id() {
+    #if TARGET_OS_IOS
+    NSString *service = @"xyz.decentraland.guest-anchor";
+    NSString *account = @"device-id";
+
+    NSDictionary *readQuery = @{
+        (id)kSecClass: (id)kSecClassGenericPassword,
+        (id)kSecAttrService: service,
+        (id)kSecAttrAccount: account,
+        (id)kSecReturnData: @YES,
+        (id)kSecMatchLimit: (id)kSecMatchLimitOne
+    };
+    CFTypeRef readResult = NULL;
+    OSStatus readStatus = SecItemCopyMatching((__bridge CFDictionaryRef)readQuery, &readResult);
+    if (readStatus == errSecSuccess && readResult) {
+        NSData *data = (__bridge_transfer NSData *)readResult;
+        NSString *uuid = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        if (uuid.length > 0) {
+            return _dcl_string_from_ns(uuid);
+        }
+        NSLog(@"[DeviceAnchor] keychain item present but UTF8 decode failed; regenerating");
+        NSDictionary *deleteQuery = @{
+            (id)kSecClass: (id)kSecClassGenericPassword,
+            (id)kSecAttrService: service,
+            (id)kSecAttrAccount: account
+        };
+        SecItemDelete((__bridge CFDictionaryRef)deleteQuery);
+    } else if (readStatus != errSecItemNotFound) {
+        NSLog(@"[DeviceAnchor] read failed: OSStatus=%d", (int)readStatus);
+    }
+
+    NSString *newUuid = [[NSUUID UUID] UUIDString];
+    NSData *uuidData = [newUuid dataUsingEncoding:NSUTF8StringEncoding];
+    NSDictionary *addQuery = @{
+        (id)kSecClass: (id)kSecClassGenericPassword,
+        (id)kSecAttrService: service,
+        (id)kSecAttrAccount: account,
+        (id)kSecValueData: uuidData,
+        (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock
+    };
+    OSStatus addStatus = SecItemAdd((__bridge CFDictionaryRef)addQuery, NULL);
+    if (addStatus != errSecSuccess) {
+        NSLog(@"[DeviceAnchor] keychain SecItemAdd failed: OSStatus=%d (anchor will not persist)", (int)addStatus);
+    } else {
+        NSLog(@"[DeviceAnchor] stored new UUID in keychain");
+    }
+    return _dcl_string_from_ns(newUuid);
+    #else
+    return String();
+    #endif
 }
 
 DclGodotiOS::~DclGodotiOS() {
