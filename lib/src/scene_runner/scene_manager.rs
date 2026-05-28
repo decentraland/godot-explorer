@@ -1542,6 +1542,10 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(true);
             }
 
+            // Stop any wind/impulse the player just walked out of.
+            scene.active_external_force = Vector3::ZERO;
+            scene.pending_impulses.clear();
+
             scene
                 .avatar_scene_updates
                 .internal_player_data
@@ -1646,6 +1650,27 @@ impl SceneManager {
             .get(&self.current_parcel_scene_id)
             .map(|x| x.locomotion_settings.clone())
             .unwrap_or_default()
+    }
+
+    /// Current parcel scene's external force on the player (Godot axes), or
+    /// zero if no scene is driving one.
+    #[func]
+    pub fn get_active_external_force(&self) -> Vector3 {
+        self.scenes
+            .get(&self.current_parcel_scene_id)
+            .map(|x| x.active_external_force)
+            .unwrap_or(Vector3::ZERO)
+    }
+
+    /// Drain pending impulse vectors (Godot axes) from the current parcel
+    /// scene. The player controller calls this once per physics tick.
+    #[func]
+    pub fn consume_pending_impulses(&mut self) -> PackedVector3Array {
+        let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) else {
+            return PackedVector3Array::new();
+        };
+        let drained: Vec<Vector3> = scene.pending_impulses.drain(..).collect();
+        PackedVector3Array::from(drained.as_slice())
     }
 
     #[func]
