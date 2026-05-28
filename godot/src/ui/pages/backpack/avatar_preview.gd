@@ -12,7 +12,9 @@ const AVATAR_ROTATION_SMOOTH = 15.0
 @export var show_platform: bool = false
 ## Enables rotation and pan/zoom interactions.
 @export var can_move: bool = true
-## When can_move is true, controls whether vertical pan is allowed. Rotation is always enabled.
+## When can_move is true, gates wheel zoom, pinch zoom, pinch vertical-pan, and
+## per-category auto-focus (focus_camera_on stays on "overall" when false).
+## Rotation (mouse drag, single-touch drag) is always enabled.
 @export var can_drag: bool = true
 @export var custom_environment: Environment = null
 @export var with_light: bool = true
@@ -160,23 +162,26 @@ func _process(delta: float) -> void:
 
 
 func focus_camera_on(type):
-	match type:
-		Wearables.Categories.FACIAL_HAIR:
-			_camera_focus = "head_base_facial"
-		Wearables.Categories.EYES, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH:
-			_camera_focus = "head_base"
-		Wearables.Categories.HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.ALL_EXTRAS:
-			_camera_focus = "head"
-		Wearables.Categories.UPPER_BODY:
-			_camera_focus = "torso"
-		Wearables.Categories.HANDS_WEAR, Wearables.Categories.HANDS:
-			_camera_focus = "hands"
-		Wearables.Categories.LOWER_BODY:
-			_camera_focus = "legs"
-		Wearables.Categories.FEET:
-			_camera_focus = "feet"
-		_:
-			_camera_focus = "overall"
+	if not can_drag:
+		_camera_focus = "overall"
+	else:
+		match type:
+			Wearables.Categories.FACIAL_HAIR:
+				_camera_focus = "head_base_facial"
+			Wearables.Categories.EYES, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH:
+				_camera_focus = "head_base"
+			Wearables.Categories.HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.ALL_EXTRAS:
+				_camera_focus = "head"
+			Wearables.Categories.UPPER_BODY:
+				_camera_focus = "torso"
+			Wearables.Categories.HANDS_WEAR, Wearables.Categories.HANDS:
+				_camera_focus = "hands"
+			Wearables.Categories.LOWER_BODY:
+				_camera_focus = "legs"
+			Wearables.Categories.FEET:
+				_camera_focus = "feet"
+			_:
+				_camera_focus = "overall"
 	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 	if aabb_key not in _cached_aabbs:
 		return

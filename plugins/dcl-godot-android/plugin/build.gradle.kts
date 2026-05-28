@@ -86,6 +86,10 @@ dependencies {
     // Using 'api' to make the dependency transitive so it's included in the final APK
     api("com.android.installreferrer:installreferrer:2.2")
 
+    // Play Integrity — server-side platform attestation for /sign-message.
+    // Standard variant (no Play Services dependency required on-device).
+    api("com.google.android.play:integrity:1.4.0")
+
     // Reown Sign SDK (WalletConnect successor) for native wallet connection
     api(platform("com.reown:android-bom:1.5.2"))
     api("com.reown:android-core") {

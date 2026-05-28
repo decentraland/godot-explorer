@@ -927,16 +927,22 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
 
     print_message(MessageType::Success, "App installed on device");
 
-    // Launch the app. Positional args after `--` are propagated to the app as
-    // process argv and picked up by Godot's `Os.get_cmdline_user_args()`.
-    // `--console` streams stdout/stderr from the device process to this terminal
-    // and blocks until the app exits (Ctrl-C to detach).
+    // Launch the app with `--console` so stdout/stderr from the device are
+    // streamed back to this terminal (Godot prints, Rust tracing, native
+    // NSLog all surface here). Mirrors the Android flow which runs adb
+    // logcat after starting the activity. Blocks until the app exits or
+    // the user hits Ctrl-C, which is exactly what we want during dev runs.
+    //
+    // Positional args after `--` are propagated to the app as process argv
+    // and picked up by Godot's `Os.get_cmdline_user_args()`.
+    let spinner = create_spinner("Launching application...");
     let mut launch_args: Vec<String> = vec![
         "devicectl".into(),
         "device".into(),
         "process".into(),
         "launch".into(),
         "--console".into(),
+        "--terminate-existing".into(),
         "--device".into(),
         device_id.clone(),
         IOS_BUNDLE_ID.into(),
@@ -945,23 +951,33 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
         launch_args.push("--".into());
         launch_args.extend(extras.iter().cloned());
     }
-
+    spinner.finish();
     print_message(
         MessageType::Info,
-        "Launching application (streaming stdout/stderr — Ctrl-C to detach)...",
+        "Application launched on iOS device — streaming device logs (Ctrl+C to stop):",
     );
-    let status = std::process::Command::new("xcrun")
+
+    let launch_status = std::process::Command::new("xcrun")
         .args(&launch_args)
         .status()?;
 
-    if !status.success() {
-        return Err(anyhow::anyhow!(
-            "Failed to launch app on device (exit status: {})",
-            status
-        ));
+    // A non-zero exit when --console is interrupted by Ctrl-C is the normal
+    // way to stop watching logs, so don't surface that as a build failure.
+    // Real launch failures (bundle missing, signing mismatch) surface in
+    // the streamed stderr above and devicectl exits before we attach.
+    if !launch_status.success() {
+        match launch_status.code() {
+            // 130 = SIGINT (Ctrl-C), 143 = SIGTERM. Both are user-initiated.
+            Some(130) | Some(143) | None => {}
+            Some(code) => {
+                return Err(anyhow::anyhow!(
+                    "devicectl launch --console exited with code {}",
+                    code
+                ));
+            }
+        }
     }
 
-    print_message(MessageType::Success, "Application exited on iOS device");
     Ok(())
 }
 

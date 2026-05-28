@@ -62,6 +62,8 @@ pub enum SegmentEvent {
     Unfriend(SegmentEventUnfriend),
     InstallAttribution(SegmentEventInstallAttribution),
     FirebaseInit(SegmentEventFirebaseInit),
+    AttestationAttempt(SegmentEventAttestationAttempt),
+    AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -340,6 +342,77 @@ pub struct SegmentEventInstallAttribution {
     pub google_play_instant: bool,
 }
 
+// Emitted once per attestation cycle attempt (FSM in attestation_service.gd).
+// Robust to mid-cycle app kills: each attempt is fired-and-forget, so previous
+// attempts survive even if the app dies before the cycle resolves.
+//
+// Multiple attempts share the same `cycle_id`. A cycle ends when one attempt
+// returns outcome="success" OR the user re-launches the app (next launch
+// starts a fresh cycle_id). Analysts compute:
+//   - success rate    = cycles with any success attempt / distinct cycle_id
+//   - retry distribution = count(attempts) per cycle_id
+//   - abandonment     = cycle_id with no success and no recent attempt
+//   - top failure     = group_by(failure_code) where outcome=failure
+#[derive(Serialize, Clone)]
+pub struct SegmentEventAttestationAttempt {
+    // "ios" | "android"
+    pub platform: String,
+    // UUID v4, identical across attempts of the same cycle.
+    pub cycle_id: String,
+    // 1-based attempt counter within the cycle.
+    pub attempt_number: u32,
+    // What caused the cycle to start: "boot", "force_reattest", "on_demand".
+    pub trigger: String,
+    // The mobile-bff base URL this attempt actually hit (e.g.
+    // "https://mobile-bff.decentraland.org"). Lets analysts segment by
+    // backend — useful while staging deploys precede prod (.zone before .org)
+    // and to spot leaks of non-prod URLs into release builds.
+    pub bff_url: String,
+    // "success" | "failure"
+    pub outcome: String,
+    // Which step failed: "challenge", "generate_key", "attest_key",
+    // "play_integrity", "post_session", "plugin_missing", "unsupported".
+    // None on success.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failure_step: Option<String>,
+    // Server-side code (e.g. ATTESTATION_IOS_BAD_ASSERTION) or "client_error"
+    // for plugin/network failures. None on success.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failure_code: Option<String>,
+    // Total time spent on this attempt, including any plugin/HTTP latencies.
+    pub attempt_duration_ms: u32,
+    // Per-step durations. Each is only present if the step actually executed:
+    // a failure at step 2 will populate step-1 timing and leave the rest null.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub challenge_ms: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generate_key_ms: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attest_key_ms: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_integrity_ms: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_session_ms: Option<u32>,
+    // TTL of the issued session token (seconds). Only on success.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_ttl_s: Option<i64>,
+}
+
+// Emitted once at boot (after _ready loads the on-disk session, before any
+// network calls). Measures the cache-hit ratio of the persisted session token.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventAttestationSessionCacheLoaded {
+    pub platform: String,
+    // "hit"             — non-expired token loaded, no re-attest needed.
+    // "miss_no_file"    — first launch (or post-uninstall).
+    // "miss_expired"    — file present but expires_at within EXPIRY_MARGIN_SEC.
+    // "miss_corrupted"  — file present but unreadable / unparseable.
+    pub result: String,
+    // Seconds remaining when result="hit". None for any miss.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remaining_s: Option<i64>,
+}
+
 pub fn build_segment_event_batch_item(
     user_id: String,
     common: &SegmentEventCommonExplorerFields,
@@ -413,6 +486,16 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::FirebaseInit(event) => (
             "Firebase Init".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::AttestationAttempt(event) => (
+            "Attestation Attempt".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::AttestationSessionCacheLoaded(event) => (
+            "Attestation Session Cache Loaded".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

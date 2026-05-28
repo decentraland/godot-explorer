@@ -182,7 +182,6 @@ func _ready():
 
 	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.is_local_player = true
-	avatar.activate_attach_points()
 
 	floor_snap_length = 0.2
 

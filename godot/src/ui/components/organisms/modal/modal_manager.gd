@@ -8,6 +8,9 @@ extends Node
 signal connection_lost_retry
 signal connection_lost_exit
 signal iap_terms_accepted
+signal session_ended_sign_in
+signal session_ended_retry
+signal session_ended_exit
 
 const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
@@ -67,6 +70,16 @@ const IAP_TERMS_CHECKBOX_BBCODE = (
 )
 const IAP_TERMS_PRIMARY = "CONFIRM"
 const IAP_TERMS_SECONDARY = "CANCEL"
+
+const SESSION_ENDED_DUPLICATE_TITLE = "Session Ended"
+const SESSION_ENDED_DUPLICATE_BODY = "Your session was ended because your account logged in from another location."
+const SESSION_ENDED_ROOM_CLOSED_TITLE = "Room Closed"
+const SESSION_ENDED_ROOM_CLOSED_BODY = "The room you were in has been closed."
+const SESSION_ENDED_OTHER_TITLE = "Disconnected"
+const SESSION_ENDED_OTHER_BODY = "You have been disconnected from the server. Please try again later."
+const SESSION_ENDED_SIGN_IN_PRIMARY = "SIGN IN"
+const SESSION_ENDED_RETRY_PRIMARY = "RECONNECT"
+const SESSION_ENDED_SECONDARY = "EXIT"
 
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
@@ -313,6 +326,74 @@ func async_show_ban_kicked_modal() -> void:
 
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_ban_go_to_discover)
+
+
+## Shows the modal for a DuplicateIdentity disconnect (another session signed in with same account).
+## Primary action signs the user out and returns them to the sign-in screen.
+func async_show_session_ended_modal() -> void:
+	await _async_show_disconnect_modal(
+		SESSION_ENDED_DUPLICATE_TITLE,
+		SESSION_ENDED_DUPLICATE_BODY,
+		SESSION_ENDED_SIGN_IN_PRIMARY,
+		_on_session_ended_sign_in
+	)
+
+
+## Shows the modal for a RoomClosed disconnect. Primary action retries the connection.
+func async_show_room_closed_modal() -> void:
+	await _async_show_disconnect_modal(
+		SESSION_ENDED_ROOM_CLOSED_TITLE,
+		SESSION_ENDED_ROOM_CLOSED_BODY,
+		SESSION_ENDED_RETRY_PRIMARY,
+		_on_session_ended_retry
+	)
+
+
+## Shows the modal for a generic/other disconnect (after reconnect attempts are exhausted).
+## Primary action retries the connection.
+func async_show_disconnected_modal() -> void:
+	await _async_show_disconnect_modal(
+		SESSION_ENDED_OTHER_TITLE,
+		SESSION_ENDED_OTHER_BODY,
+		SESSION_ENDED_RETRY_PRIMARY,
+		_on_session_ended_retry
+	)
+
+
+func _async_show_disconnect_modal(
+	title: String, body: String, primary_label: String, primary_handler: Callable
+) -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.blocker = true
+	current_modal.set_title(title)
+	current_modal.set_body(body)
+	current_modal.set_primary_button_text(primary_label)
+	current_modal.set_secondary_button_text(SESSION_ENDED_SECONDARY)
+	current_modal.show_icon(Modal.MODAL_CONNECTION_ICON)
+	current_modal.hide_url()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(primary_handler)
+	current_modal.button_secondary.pressed.connect(_on_session_ended_secondary)
+
+
+func _on_session_ended_sign_in() -> void:
+	session_ended_sign_in.emit()
+	close_current_modal()
+
+
+func _on_session_ended_retry() -> void:
+	session_ended_retry.emit()
+	close_current_modal()
+
+
+func _on_session_ended_secondary() -> void:
+	session_ended_exit.emit()
+	close_current_modal()
 
 
 ## Shows a low-spec iPhone warning modal (lobby popup)
