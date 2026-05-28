@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
-[ext_resource type="Script" path="res://src/logic/player/mobile_camera_input.gd" id="1_mcinput"]
+[ext_resource type="Script" uid="uid://bv8yaml1r4cmi" path="res://src/logic/player/mobile_camera_input.gd" id="1_mcinput"]
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
@@ -177,8 +177,8 @@ vertical_alignment = 1
 
 [node name="Control_PointerTooltip" parent="UI" unique_id=944970499 instance=ExtResource("11_qjs00")]
 unique_name_in_owner = true
-layout_mode = 1
 z_index = -4096
+layout_mode = 1
 metadata/_edit_lock_ = true
 
 [node name="LeftRightSafeContainer" type="MarginContainer" parent="UI" unique_id=1210894567]

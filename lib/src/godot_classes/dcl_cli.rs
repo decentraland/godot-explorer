@@ -106,6 +106,24 @@ pub struct DclCli {
     pub fi_benchmark_size: i32,
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
+    #[var(get)]
+    pub gp_benchmark: bool,
+    // Bench substrate flag. When true, skip first-launch HardwareBenchmark
+    // and skip DynamicGraphicsManager init. Auto-set by deeplink param
+    // `gp-benchmark=true` (see deep_link_router.gd) so callers don't have to
+    // pass both. Avoids contaminating profile/measurement state with the
+    // startup overhead and viewport_set_measure_render_time toggles those
+    // subsystems do.
+    #[var]
+    pub bench_mode: bool,
+
+    // V8 inspector target. When non-empty AND the build has the
+    // `enable_inspector` feature, the SDK7 scene whose title matches
+    // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
+    // Title-match (instead of hash id) so it works from deeplinks without
+    // having to discover the scene id beforehand.
+    #[var]
+    pub inspect_scene_title: GString,
 
     // Arguments with values
     #[var(get)]
@@ -421,6 +439,33 @@ impl DclCli {
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
             },
+            // Genesis Plaza Benchmark (issue #1862). Trigger only — all knobs
+            // (toggles, durations, output path, tag) live in
+            // godot/bench/genesis_plaza.config.json so the CLI doesn't bloat.
+            ArgDefinition {
+                name: "--gp-benchmark".to_string(),
+                description: "Run Genesis Plaza profiling benchmark (config in godot/bench/genesis_plaza.config.json)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--bench-mode".to_string(),
+                description: "Skip first-launch HardwareBenchmark and DynamicGraphicsManager init. Auto-enabled when --gp-benchmark / gp-benchmark=true deeplink is set. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--rs-gltf-direct".to_string(),
+                description: "Migrate SDK7 GltfContainer rendering to direct RenderingServer instances (drops per-entity MeshInstance3D wrappers). Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--inspect-scene-title".to_string(),
+                description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
+                arg_type: ArgType::Value("<title>".to_string()),
+                category: "Debugging".to_string(),
+            },
             // Authentication
             ArgDefinition {
                 name: "--saved-profile".to_string(),
@@ -626,6 +671,16 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
+        let gp_benchmark = args_map.contains_key("--gp-benchmark");
+        // bench_mode auto-enabled when gp_benchmark is set, so the desktop
+        // CLI doesn't have to pass both. Mobile flips this from
+        // deep_link_router.gd when it sees gp-benchmark=true.
+        let bench_mode = gp_benchmark || args_map.contains_key("--bench-mode");
+        let inspect_scene_title = args_map
+            .get("--inspect-scene-title")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -741,6 +796,9 @@ impl INode for DclCli {
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
+            gp_benchmark,
+            bench_mode,
+            inspect_scene_title,
             asset_server_port,
             realm,
             location,

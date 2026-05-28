@@ -124,6 +124,13 @@ pub struct SceneManager {
     // Loading session tracking
     current_loading_session: Option<LoadingSession>,
     next_session_id: u64,
+
+    // Benchmark toggles (issue #1862). Set by gp_benchmark_runner.gd from
+    // godot/bench/genesis_plaza.config.json before scenes start ticking.
+    #[var(get, set)]
+    bench_disable_tweens: bool,
+    #[var(get, set)]
+    bench_disable_transforms: bool,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -401,6 +408,59 @@ impl SceneManager {
             self.check_loading_phase_transition();
             self.emit_loading_progress();
         }
+    }
+
+    /// Reset per-state CPU timing buckets used by the GP benchmark to measure
+    /// where steady-state per-frame work goes (call right before sampling).
+    #[func]
+    pub fn reset_state_timing(&mut self) {
+        super::update_scene::reset_state_timing();
+    }
+
+    /// Drain per-state CPU timing buckets as `State=us(count)\n...` lines.
+    /// Call right after sampling; embed in benchmark JSON for analysis.
+    #[func]
+    pub fn drain_state_timing(&mut self) -> GString {
+        let s = super::update_scene::drain_state_timing();
+        GString::from(s.as_str())
+    }
+
+    /// Reset CRDT cross-boundary metrics (send/recv bytes, op counts, dirty
+    /// entries). Call right before sampling.
+    #[func]
+    pub fn reset_crdt_metrics(&mut self) {
+        crate::dcl::js::engine::reset_crdt_metrics();
+    }
+
+    /// Drain CRDT cross-boundary metrics as `key=value\n...` lines. Call right
+    /// after sampling; embed in benchmark JSON.
+    #[func]
+    pub fn drain_crdt_metrics(&mut self) -> GString {
+        let m = crate::dcl::js::engine::drain_crdt_metrics();
+        let s = format!(
+            "send_bytes={}\nsend_ops={}\nrecv_bytes={}\nrecv_ops={}\ndirty_lww_entries={}\ndirty_gos_entries={}\n",
+            m.send_bytes, m.send_ops, m.recv_bytes, m.recv_ops, m.dirty_lww_entries, m.dirty_gos_entries,
+        );
+        GString::from(s.as_str())
+    }
+
+    /// Drain per-component-id breakdown of dirty entries from the Rust→V8 path.
+    /// Returns a multi-line string: `lww:<name>(<id>)=<count>` then
+    /// `gos:<name>(<id>)=<count>`, sorted descending. Bench runner embeds this
+    /// in JSON to identify which SDK7 components dominate the round-trip.
+    #[func]
+    pub fn drain_crdt_component_breakdown(&mut self) -> GString {
+        let breakdown = crate::dcl::js::engine::drain_crdt_component_breakdown();
+        let mut out = String::new();
+        for (id, count) in breakdown.lww {
+            let name = crate::dcl::components::component_id_to_name(id);
+            out.push_str(&format!("lww:{}({})={}\n", name, id, count));
+        }
+        for (id, count) in breakdown.gos {
+            let name = crate::dcl::components::component_id_to_name(id);
+            out.push_str(&format!("gos:{}({})={}\n", name, id, count));
+        }
+        GString::from(out.as_str())
     }
 
     /// Report that a scene was spawned and is now loading assets
@@ -841,6 +901,13 @@ impl SceneManager {
             return;
         }
 
+        // SceneManager outlives the Explorer scene (autoload singleton). When the user
+        // signs out via change_scene_to_file, player_avatar_node becomes a dangling
+        // reference until the next Explorer load reassigns it via set_player_node.
+        if !self.player_avatar_node.is_instance_valid() {
+            return;
+        }
+
         let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let end_time_us = start_time_us + MAX_TIME_PER_SCENE_TICK_US;
 
@@ -978,6 +1045,8 @@ impl SceneManager {
                     &self.ui_canvas_information,
                     &self.pool_manager,
                     force_complete,
+                    self.bench_disable_tweens,
+                    self.bench_disable_transforms,
                 ) {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -1473,6 +1542,10 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(true);
             }
 
+            // Stop any wind/impulse the player just walked out of.
+            scene.active_external_force = Vector3::ZERO;
+            scene.pending_impulses.clear();
+
             scene
                 .avatar_scene_updates
                 .internal_player_data
@@ -1577,6 +1650,27 @@ impl SceneManager {
             .get(&self.current_parcel_scene_id)
             .map(|x| x.locomotion_settings.clone())
             .unwrap_or_default()
+    }
+
+    /// Current parcel scene's external force on the player (Godot axes), or
+    /// zero if no scene is driving one.
+    #[func]
+    pub fn get_active_external_force(&self) -> Vector3 {
+        self.scenes
+            .get(&self.current_parcel_scene_id)
+            .map(|x| x.active_external_force)
+            .unwrap_or(Vector3::ZERO)
+    }
+
+    /// Drain pending impulse vectors (Godot axes) from the current parcel
+    /// scene. The player controller calls this once per physics tick.
+    #[func]
+    pub fn consume_pending_impulses(&mut self) -> PackedVector3Array {
+        let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) else {
+            return PackedVector3Array::new();
+        };
+        let drained: Vec<Vector3> = scene.pending_impulses.drain(..).collect();
+        PackedVector3Array::from(drained.as_slice())
     }
 
     #[func]
@@ -1782,6 +1876,8 @@ impl INode for SceneManager {
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
+            bench_disable_tweens: false,
+            bench_disable_transforms: false,
         }
     }
 
@@ -1806,6 +1902,14 @@ impl INode for SceneManager {
 
         // Check loading session timeouts
         self.check_loading_timeouts();
+
+        // SceneManager is owned by DclGlobal (autoload) and outlives the Explorer scene.
+        // After change_scene_to_file (e.g. Sign Out), `player_avatar_node` becomes a
+        // dangling reference until the next Explorer load reassigns it via set_player_node.
+        // The pointer/raycast/tooltip block below derefs that node, so bail out here.
+        if !self.player_avatar_node.is_instance_valid() {
+            return;
+        }
 
         // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
         // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.

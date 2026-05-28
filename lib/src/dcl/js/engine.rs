@@ -1,7 +1,11 @@
 use std::{
     cell::{Cell, RefCell},
+    collections::HashMap,
     rc::Rc,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex, OnceLock,
+    },
 };
 
 use deno_core::{op2, OpDecl, OpState};
@@ -34,6 +38,105 @@ use super::scene_inspector_ops::SceneDebugFlag;
 /// single-threaded inside its own tokio runtime, so we don't need atomics.
 pub struct SceneTickCounter(pub Cell<u32>);
 
+/// Cross-thread CRDT throughput counters. With ~70 GP scene threads each
+/// running their own JsRuntime, we need atomics to aggregate. Drained from
+/// the GP benchmark runner via `SceneManager::drain_crdt_metrics` so we can
+/// quantify the V8↔Rust round-trip cost per frame in the JSON output.
+static CRDT_SEND_BYTES: AtomicU64 = AtomicU64::new(0);
+static CRDT_SEND_OPS: AtomicU64 = AtomicU64::new(0);
+static CRDT_RECV_BYTES: AtomicU64 = AtomicU64::new(0);
+static CRDT_RECV_OPS: AtomicU64 = AtomicU64::new(0);
+static CRDT_DIRTY_LWW_ENTRIES: AtomicU64 = AtomicU64::new(0);
+static CRDT_DIRTY_GOS_ENTRIES: AtomicU64 = AtomicU64::new(0);
+
+/// Gates the per-component breakdown maps. Without it, every recv across all
+/// scene threads contends on a global Mutex<HashMap>, serializing the CRDT
+/// pipeline. The bench runner flips this on right before sampling and the
+/// drain function turns it off afterwards.
+pub static CRDT_BREAKDOWN_ENABLED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Per-component-id breakdown of dirty entries seen on the Rust→V8 path.
+/// Lazy-init Mutex<HashMap> — only touched when bench instrumentation is
+/// reading/draining; the hot path is a single `lock()` + `entry().or_insert(0)`
+/// per component-id per recv (~70 entries/frame, not per-message).
+fn crdt_dirty_lww_by_component() -> &'static Mutex<HashMap<u32, u64>> {
+    static M: OnceLock<Mutex<HashMap<u32, u64>>> = OnceLock::new();
+    M.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn crdt_dirty_gos_by_component() -> &'static Mutex<HashMap<u32, u64>> {
+    static M: OnceLock<Mutex<HashMap<u32, u64>>> = OnceLock::new();
+    M.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct CrdtMetricsSnapshot {
+    pub send_bytes: u64,
+    pub send_ops: u64,
+    pub recv_bytes: u64,
+    pub recv_ops: u64,
+    pub dirty_lww_entries: u64,
+    pub dirty_gos_entries: u64,
+}
+
+pub fn drain_crdt_metrics() -> CrdtMetricsSnapshot {
+    CrdtMetricsSnapshot {
+        send_bytes: CRDT_SEND_BYTES.swap(0, Ordering::Relaxed),
+        send_ops: CRDT_SEND_OPS.swap(0, Ordering::Relaxed),
+        recv_bytes: CRDT_RECV_BYTES.swap(0, Ordering::Relaxed),
+        recv_ops: CRDT_RECV_OPS.swap(0, Ordering::Relaxed),
+        dirty_lww_entries: CRDT_DIRTY_LWW_ENTRIES.swap(0, Ordering::Relaxed),
+        dirty_gos_entries: CRDT_DIRTY_GOS_ENTRIES.swap(0, Ordering::Relaxed),
+    }
+}
+
+pub fn reset_crdt_metrics() {
+    CRDT_SEND_BYTES.store(0, Ordering::Relaxed);
+    CRDT_SEND_OPS.store(0, Ordering::Relaxed);
+    CRDT_RECV_BYTES.store(0, Ordering::Relaxed);
+    CRDT_RECV_OPS.store(0, Ordering::Relaxed);
+    CRDT_DIRTY_LWW_ENTRIES.store(0, Ordering::Relaxed);
+    CRDT_DIRTY_GOS_ENTRIES.store(0, Ordering::Relaxed);
+    if let Ok(mut m) = crdt_dirty_lww_by_component().lock() {
+        m.clear();
+    }
+    if let Ok(mut m) = crdt_dirty_gos_by_component().lock() {
+        m.clear();
+    }
+    CRDT_BREAKDOWN_ENABLED.store(true, Ordering::Relaxed);
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CrdtComponentBreakdown {
+    pub lww: Vec<(u32, u64)>,
+    pub gos: Vec<(u32, u64)>,
+}
+
+/// Drain per-component-id dirty counts (lww, gos), sorted descending by count.
+/// Used by bench runner to identify which SDK7 components dominate the V8↔Rust
+/// round-trip. Side-effect: leaves recording disabled so post-sampling work
+/// doesn't pollute the next bench window.
+pub fn drain_crdt_component_breakdown() -> CrdtComponentBreakdown {
+    CRDT_BREAKDOWN_ENABLED.store(false, Ordering::Relaxed);
+    // Drain via try-lock; a poisoned mutex (from a panicking scene thread)
+    // returns an empty breakdown rather than crashing the bench runner.
+    // Mirrors the pattern used by drain_state_timing in update_scene.rs.
+    let mut lww: Vec<(u32, u64)> = if let Ok(mut m) = crdt_dirty_lww_by_component().lock() {
+        std::mem::take(&mut *m).into_iter().collect()
+    } else {
+        Vec::new()
+    };
+    lww.sort_by(|a, b| b.1.cmp(&a.1));
+    let mut gos: Vec<(u32, u64)> = if let Ok(mut m) = crdt_dirty_gos_by_component().lock() {
+        std::mem::take(&mut *m).into_iter().collect()
+    } else {
+        Vec::new()
+    };
+    gos.sort_by(|a, b| b.1.cmp(&a.1));
+    CrdtComponentBreakdown { lww, gos }
+}
+
 use super::{
     comms::{InternalPendingBinaryMessages, COMMS_MSG_TYPE_BINARY},
     events::process_events,
@@ -48,6 +151,8 @@ pub fn ops() -> Vec<OpDecl> {
 // receive and process a buffer of crdt messages
 #[op2(fast)]
 fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messages: &[u8]) {
+    CRDT_SEND_BYTES.fetch_add(messages.len() as u64, Ordering::Relaxed);
+    CRDT_SEND_OPS.fetch_add(1, Ordering::Relaxed);
     let mut op_state = op_state.borrow_mut();
     let elapsed_time = op_state.borrow::<SceneElapsedTime>().0;
     let scene_id = op_state.take::<SceneId>();
@@ -123,6 +228,34 @@ async fn op_crdt_recv_from_renderer(
             dirty_crdt_state,
             incoming_comms_message,
         }) => {
+            CRDT_RECV_OPS.fetch_add(1, Ordering::Relaxed);
+            CRDT_DIRTY_LWW_ENTRIES.fetch_add(
+                dirty_crdt_state.lww.values().map(|v| v.len() as u64).sum(),
+                Ordering::Relaxed,
+            );
+            CRDT_DIRTY_GOS_ENTRIES.fetch_add(
+                dirty_crdt_state.gos.values().map(|v| v.len() as u64).sum(),
+                Ordering::Relaxed,
+            );
+            // Per-component breakdown — gated by CRDT_BREAKDOWN_ENABLED so the
+            // global mutex isn't contended outside the bench sampling window.
+            // Each scene thread hits this on every recv (~70 scenes × 30 fps),
+            // and a shared lock here serializes the whole CRDT pipeline.
+            if CRDT_BREAKDOWN_ENABLED.load(Ordering::Relaxed) {
+                {
+                    let mut map = crdt_dirty_lww_by_component().lock().unwrap();
+                    for (component_id, entities) in dirty_crdt_state.lww.iter() {
+                        *map.entry(component_id.0).or_insert(0) += entities.len() as u64;
+                    }
+                }
+                {
+                    let mut map = crdt_dirty_gos_by_component().lock().unwrap();
+                    for (component_id, entities) in dirty_crdt_state.gos.iter() {
+                        *map.entry(component_id.0).or_insert(0) += entities.len() as u64;
+                    }
+                }
+            }
+
             let mut data_buf = Vec::new();
             let mut data_writter = DclWriter::new(&mut data_buf);
 
@@ -276,8 +409,10 @@ async fn op_crdt_recv_from_renderer(
     op_state.put(mutex_scene_crdt_state);
     let mut ret = Vec::<Vec<u8>>::with_capacity(1);
     if let Some(main_crdt) = op_state.try_take::<SceneMainCrdtFileContent>() {
+        CRDT_RECV_BYTES.fetch_add(main_crdt.0.len() as u64, Ordering::Relaxed);
         ret.push(main_crdt.0);
     }
+    CRDT_RECV_BYTES.fetch_add(data.len() as u64, Ordering::Relaxed);
     ret.push(data);
     Ok(ret)
 }

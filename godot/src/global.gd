@@ -120,12 +120,21 @@ var analytics_controller: AnalyticsController = null
 # player_identity / comms signals. Instantiated alongside scene_fetcher.
 var sentry_seeder: SentrySeeder = null
 
+# Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
+# token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
+# see attestation_service.gd. Other code obtains a token via
+# `await Global.attestation.async_get_valid_jwt()`. Instantiated in _ready as a Node
+# child of Global so it can use timers and signals across the session lifetime.
+var attestation: AttestationService = null
+
 var _is_portrait: bool = true
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
+
+var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
 
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
@@ -137,6 +146,12 @@ func is_xr() -> bool:
 
 func is_emulating_safe_area() -> bool:
 	return cli.emulate_ios or cli.emulate_android
+
+
+## True when GP benchmark was triggered, either via desktop CLI (`--gp-benchmark`)
+## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
+func is_gp_benchmark() -> bool:
+	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
 func _get_safe_area_presets() -> GDScript:
@@ -218,6 +233,10 @@ func _ready():
 			DclGlobal.set_rust_log_filter(rust_log_value)
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
+
+		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
+		if deep_link_obj.safe_margin_debug:
+			set_safe_margin_debug_enable(true)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -317,6 +336,15 @@ func _ready():
 		get_tree().root.add_child.call_deferred(fi_runner)
 		return
 
+	# Genesis Plaza profiling benchmark (issue #1862). Lives alongside the full
+	# explorer flow: it primes realm/parcel, then samples once the scene loads.
+	# Skip if the deeplink path already spawned the runner (mobile cold-start race).
+	if is_gp_benchmark() and get_node_or_null("GPBenchmarkRunner") == null:
+		print("Running Genesis Plaza Benchmark...")
+		var gp_runner = load("res://src/tools/gp_benchmark_runner.gd").new()
+		gp_runner.set_name("GPBenchmarkRunner")
+		add_child(gp_runner)
+
 	session_id = DclConfig.generate_uuid_v4()
 	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
 	# telemetry is disabled at build time (CI desktop builds use the
@@ -376,6 +404,10 @@ func _ready():
 		# spawns a transient Timer under Global only while polling for first_move_in_world.
 		self.analytics_controller = AnalyticsController.new()
 		self.analytics_controller.setup()
+	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The
+	# service self-gates on EULA acceptance and caches the issued session token on disk.
+	self.attestation = AttestationService.new()
+	add_child(self.attestation)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
@@ -438,8 +470,12 @@ func _dcl_swift_lib_smoke_test() -> void:
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
-## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI
+## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI.
+## Skipped in bench mode: HardwareBenchmark calls viewport_set_measure_render_time and
+## can clobber the gp_benchmark_runner's measurement state mid-bench.
 func should_run_first_launch_benchmark() -> bool:
+	if cli.bench_mode:
+		return false
 	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
 
 
@@ -475,6 +511,13 @@ func _async_clear_cache_if_needed() -> void:
 
 
 func _init_dynamic_graphics_manager() -> void:
+	# In bench mode, skip DG init entirely: the bench runner pins force-graphic-profile,
+	# disables thermal cap, and disconnects DG's signal handlers anyway — initializing
+	# DG just adds startup CPU noise and queues thermal_fps_cap signals that race the
+	# bench setup.
+	if cli.bench_mode:
+		print("[DynamicGraphics] skipped (bench_mode=true)")
+		return
 	# Initialize with config values and connect signals
 	dynamic_graphics_manager.initialize(
 		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps
@@ -578,6 +621,21 @@ func set_raycast_debugger_enable(enable: bool):
 		remove_child(raycast_debugger)
 		raycast_debugger.queue_free()
 		raycast_debugger = null
+
+
+func set_safe_margin_debug_enable(enable: bool) -> void:
+	var current_enabled = is_instance_valid(_safe_margin_debug_overlay)
+	if current_enabled == enable:
+		return
+
+	if enable:
+		_safe_margin_debug_overlay = (load("res://src/tool/safe_margin_debug_overlay.gd").new())
+		add_child(_safe_margin_debug_overlay)
+		print("[SafeMarginDebug] overlay instantiated")
+	else:
+		remove_child(_safe_margin_debug_overlay)
+		_safe_margin_debug_overlay.queue_free()
+		_safe_margin_debug_overlay = null
 
 
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
