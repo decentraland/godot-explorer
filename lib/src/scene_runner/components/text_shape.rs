@@ -22,22 +22,28 @@ use godot::{
     prelude::*,
 };
 
-/// Empirically-derived scale factor between Unity TextMeshPro's `fontSize`
-/// (world-space units per em) and Godot `Label3D.font_size` (glyph pixels):
-/// our baseline test confirmed that SDK `font_size = 1.4` renders identically
-/// in both clients when Label3D `font_size = 30` and `pixel_size = 0.005`,
-/// i.e. 30 / 1.4 ≈ 21.4. Kept at 22.0 to round-trip cleanly with `i32` sizes.
-const TMP_TO_LABEL3D_FONT_SIZE: f32 = 22.0;
+/// Empirical correction factor between Unity TMP's expected sizing and the
+/// effective sizing in the live DCL Unity client. Visual tuning against the
+/// reference rendering (both autosize-fallback and non-autosize cases) landed
+/// on 17/18 — apply it once and have it flow through every TMP-derived
+/// constant below.
+const DCL_TMP_SIZE_FACTOR: f32 = 17.0 / 18.0;
 
-/// Unity TextMeshPro's autosize bounds. TMP documentation lists `fontSizeMin = 18`
-/// and `fontSizeMax = 72` as the component defaults, but empirical measurement
-/// against the live Unity client (autosize-fallback case: degenerate rect,
-/// `text_wrapping = false`) gave a Godot:Unity render ratio that implies the
-/// DCL TMP prefab scales those bounds down to about 16/64. Express that as a
-/// single scale factor applied to both bounds so future tuning is one number.
-const DCL_TMP_AUTOSIZE_SCALE: f32 = 17.0 / 18.0;
-const UNITY_TMP_FONT_SIZE_MIN: f32 = 18.0 * DCL_TMP_AUTOSIZE_SCALE;
-const UNITY_TMP_FONT_SIZE_MAX: f32 = 72.0 * DCL_TMP_AUTOSIZE_SCALE;
+/// Conversion between Unity TextMeshPro `fontSize` (world units per em) and
+/// Godot `Label3D.font_size` (glyph pixels). Baseline test confirmed that SDK
+/// `font_size = 1.4` renders identically in both clients when Label3D
+/// `font_size = 30` and `pixel_size = 0.005`, i.e. 30 / 1.4 ≈ 21.4 — kept at
+/// 22.0 to round-trip cleanly with `i32` sizes, then scaled by
+/// `DCL_TMP_SIZE_FACTOR` to absorb the same correction the autosize bounds
+/// use.
+const TMP_TO_LABEL3D_FONT_SIZE: f32 = 22.0 * DCL_TMP_SIZE_FACTOR;
+
+/// Unity TMP's autosize bounds. The component documentation lists
+/// `fontSizeMin = 18` and `fontSizeMax = 72` as defaults; we scale both by
+/// `DCL_TMP_SIZE_FACTOR` to match what the DCL TMP prefab effectively
+/// renders.
+const UNITY_TMP_FONT_SIZE_MIN: f32 = 18.0 * DCL_TMP_SIZE_FACTOR;
+const UNITY_TMP_FONT_SIZE_MAX: f32 = 72.0 * DCL_TMP_SIZE_FACTOR;
 
 /// Unity TMP's `_OutlineWidth` is a 0..1 shader-domain SDF distance — the
 /// outline appears as a thin ring drawn outside the glyph silhouette without
