@@ -4,6 +4,9 @@ extends Control
 const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/molecules/wearable_item/wearable_item.tscn"
 )
+const MARKETPLACE_SECTION_SCENE = preload(
+	"res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.tscn"
+)
 
 const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 	"reward_assignment",
@@ -38,6 +41,10 @@ var avatar_wearables_body_shape_cache: Dictionary = {}
 var avatar_loading_counter: int = 0
 var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
+
+# Mock credits balance — replace with real credits API when #2115 is ready
+var _mock_credits: int = 100
+var _ios_marketplace_section: MarketplaceRecommendedSection = null
 
 var _avatar_update_retries: int = 0
 var _is_currently_narrow: bool = false
@@ -180,6 +187,8 @@ func _ready():
 	container_backpack.show()
 	backpack_loading.hide()
 
+	_setup_ios_marketplace_section()
+
 	request_show_wearables = true
 
 	# Listen for notifications that may indicate new wearables (e.g. rewards)
@@ -224,6 +233,8 @@ func _update_grid_columns() -> void:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var is_portrait := window_size.x < window_size.y
 	grid_container_wearables_list.columns = columns
+	if _ios_marketplace_section:
+		_ios_marketplace_section.set_columns(columns)
 	#if emote_editor.container_all_emotes != null:
 	emote_editor.container_all_emotes.columns = columns if is_portrait else columns - 1
 
@@ -383,6 +394,8 @@ func _show_wearables():
 
 	control_no_items.visible = filtered_data.is_empty()
 	grid_container_wearables_list.visible = not filtered_data.is_empty()
+	if _ios_marketplace_section:
+		_ios_marketplace_section.visible = not filtered_data.is_empty()
 
 	for wearable_id in filtered_data:
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
@@ -404,6 +417,29 @@ func _show_wearables():
 		wearable_item.set_equiped(is_wearable_pressed)
 
 
+func _setup_ios_marketplace_section():
+	# TODO: restore iOS gate when done testing
+	#if not Global.is_ios():
+	#	return
+
+	var grid_parent = grid_container_wearables_list.get_parent()
+
+	# Wrap grid in a VBoxContainer so we can stack the marketplace section below
+	var items_wrapper = VBoxContainer.new()
+	items_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	items_wrapper.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	grid_parent.add_child(items_wrapper)
+	grid_parent.move_child(items_wrapper, 0)
+	grid_container_wearables_list.reparent(items_wrapper)
+
+	_ios_marketplace_section = MARKETPLACE_SECTION_SCENE.instantiate()
+	_ios_marketplace_section.credits_balance = _mock_credits
+	_ios_marketplace_section.asset_type = "wearables"
+	_ios_marketplace_section.item_equip.connect(_on_marketplace_equip)
+	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
+	items_wrapper.add_child(_ios_marketplace_section)
+
+
 func _on_main_category_filter_type(type: String):
 	main_category_selected = type
 	_update_visible_categories()
@@ -412,6 +448,8 @@ func _on_main_category_filter_type(type: String):
 func _on_wearable_filter_button_filter_type(type):
 	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
+	if _ios_marketplace_section:
+		_ios_marketplace_section.update_category(type)
 	var color_name := "%s Color" % type.to_pascal_case()
 	color_carrousel.set_title(color_name)
 
@@ -512,6 +550,29 @@ func _on_wearable_unequip(wearable_id: String):
 
 	Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 	request_update_avatar = true
+
+
+func _on_marketplace_equip(urn: String):
+	if urn.is_empty():
+		return
+	# Fetch the wearable if not already cached
+	if not wearable_data.has(urn):
+		var promise = Global.content_provider.fetch_wearables(
+			[urn], Global.realm.get_profile_content_url()
+		)
+		await PromiseUtils.async_all(promise)
+		var wearable = Global.content_provider.get_wearable(urn)
+		if wearable == null:
+			printerr("[Marketplace] Failed to fetch wearable: ", urn)
+			return
+		wearable_data[urn] = wearable
+	_on_wearable_equip(urn)
+
+
+func _on_marketplace_unequip(urn: String):
+	if urn.is_empty():
+		return
+	_on_wearable_unequip(urn)
 
 
 func _on_button_logout_pressed():

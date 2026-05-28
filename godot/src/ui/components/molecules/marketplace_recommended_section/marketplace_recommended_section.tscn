@@ -1,0 +1,58 @@
+[gd_scene format=3 uid="uid://e8wxgnrt3ge6"]
+
+[ext_resource type="Script" uid="uid://c7aad3q4ry16f" path="res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_font"]
+[ext_resource type="PackedScene" uid="uid://ns3o3p227rk7" path="res://src/ui/components/molecules/marketplace_cta_card/marketplace_cta_button.tscn" id="3_cta"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hn18y"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_hn18y"]
+font = ExtResource("2_font")
+font_size = 26
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="MarketplaceRecommendedSection" type="VBoxContainer" unique_id=1445414476]
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+script = ExtResource("1_script")
+
+[node name="HSeparator3" type="HSeparator" parent="." unique_id=1865974958]
+layout_mode = 2
+theme_override_constants/separation = 40
+theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")
+
+[node name="Label_Title" type="Label" parent="." unique_id=478616753]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "Recommended for you"
+label_settings = SubResource("LabelSettings_hn18y")
+uppercase = true
+
+[node name="HSeparator" type="HSeparator" parent="." unique_id=1555805592]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")
+
+[node name="GridContainer_Recommended" type="GridContainer" parent="." unique_id=1217259695]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 24
+columns = 3
+
+[node name="HSeparator2" type="HSeparator" parent="." unique_id=1179708111]
+layout_mode = 2
+theme_override_constants/separation = 32
+theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")
+
+[node name="Button_CTA" parent="." unique_id=420466605 instance=ExtResource("3_cta")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator4" type="HSeparator" parent="." unique_id=460356009]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")

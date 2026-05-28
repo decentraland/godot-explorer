@@ -16,6 +16,19 @@ bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8)
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
+[sub_resource type="LabelSettings" id="LabelSettings_price"]
+font_size = 20
+font_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_action"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.584, 0.176, 0.776, 1)
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_24axm"]
 bg_color = Color(1, 0.1764706, 0.33333334, 1)
 draw_center = false
@@ -140,6 +153,54 @@ mouse_filter = 2
 texture = ExtResource("7_h4p8s")
 expand_mode = 1
 stretch_mode = 4
+
+[node name="PanelContainer_Price" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = -42.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_225su")
+
+[node name="Label_Price" type="Label" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/PanelContainer_Price"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+label_settings = SubResource("LabelSettings_price")
+horizontal_alignment = 1
+
+[node name="Button_Action" type="Button" parent="MarginContainer/PanelContainer_White/TextureRect_Preview"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = -42.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 0
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_action")
+theme_override_styles/hover = SubResource("StyleBoxFlat_action")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_action")
 
 [node name="TextureRect_Skeleton" type="TextureRect" parent="MarginContainer/PanelContainer_White" unique_id=10976566]
 unique_name_in_owner = true

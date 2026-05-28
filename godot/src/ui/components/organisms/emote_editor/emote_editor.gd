@@ -5,6 +5,9 @@ signal emote_grid_selected(emote_name: String)
 signal emote_equipped(equipped: bool)
 
 const EMOTE_SQUARE_ITEM = preload("res://src/ui/components/organisms/emotes/emote_square_item.tscn")
+const MARKETPLACE_SECTION_SCENE = preload(
+	"res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.tscn"
+)
 
 @export var avatar: Avatar = null:
 	set(new_value):
@@ -19,6 +22,8 @@ var current_selected_index: int = -1
 var _currently_selected_emote_item: EmoteItemUi = null
 var _equipped_emote_urns: PackedStringArray = []
 var _only_collectibles: bool = false
+var _mock_credits: int = 100  # Mock — replace with real credits API when #2115 is ready
+var _ios_marketplace_section: MarketplaceRecommendedSection = null
 
 @onready var container_avatar_emotes = %VBoxContainer_AvatarEmotes
 @onready var container_all_emotes = %GridContainer_Emotes
@@ -50,7 +55,29 @@ func _ready():
 
 	button_group_all_emotes.allow_unpress = false
 
+	_setup_ios_marketplace_section()
 	_async_load_emotes()
+
+
+func _setup_ios_marketplace_section():
+	# TODO: restore iOS gate when done testing
+	#if not Global.is_ios():
+	#	return
+
+	var grid_parent = container_all_emotes.get_parent()
+
+	var items_wrapper = VBoxContainer.new()
+	items_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	items_wrapper.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	grid_parent.add_child(items_wrapper)
+	grid_parent.move_child(items_wrapper, 0)
+	container_all_emotes.reparent(items_wrapper)
+
+	_ios_marketplace_section = MARKETPLACE_SECTION_SCENE.instantiate()
+	_ios_marketplace_section.credits_balance = _mock_credits
+	_ios_marketplace_section.asset_type = "emotes"
+	items_wrapper.add_child(_ios_marketplace_section)
+	_ios_marketplace_section.update_category("emotes")
 
 
 func async_set_only_collectibles(new_state: bool):
@@ -109,6 +136,8 @@ func _update_empty_state():
 	if control_no_emotes != null:
 		control_no_emotes.visible = is_empty
 	container_all_emotes.visible = not is_empty
+	if _ios_marketplace_section:
+		_ios_marketplace_section.visible = not is_empty
 
 
 func _on_avatar_loaded():
@@ -255,5 +284,7 @@ func _on_landscape() -> void:
 	emote_grid_outter_margin_container.add_theme_constant_override("margin_top", 0)
 	external_margin_container.add_theme_constant_override("margin_top", 0)
 	container_all_emotes.columns = 2
+	if _ios_marketplace_section:
+		_ios_marketplace_section.set_columns(2)
 	for emote_item in avatar_emote_items:
 		emote_item.custom_minimum_size = Vector2(138, 138)
