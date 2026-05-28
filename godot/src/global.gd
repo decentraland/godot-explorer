@@ -29,6 +29,10 @@ signal close_combo
 signal delete_account
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
+## Sync settings "Hide View Profile" / "Hide World Interactions" checkboxes.
+signal session_hide_ui_options_sync(
+	hide_view_profile: bool, hide_world_interactions: bool, hide_player_names: bool
+)
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
@@ -78,7 +82,6 @@ const LOCAL_ASSETS_CACHE_VERSION: int = 4
 var standalone = false
 
 var network_inspector_window: Window = null
-var selected_avatar: Avatar = null
 
 var last_emitted_height: int = 0
 var current_height: int = -1
@@ -100,6 +103,8 @@ var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
 
+var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
@@ -107,6 +112,12 @@ func is_xr() -> bool:
 
 func is_emulating_safe_area() -> bool:
 	return cli.emulate_ios or cli.emulate_android
+
+
+## True when GP benchmark was triggered, either via desktop CLI (`--gp-benchmark`)
+## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
+func is_gp_benchmark() -> bool:
+	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
 func _get_safe_area_presets() -> GDScript:
@@ -195,6 +206,10 @@ func _ready() -> void:
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
+		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
+		if deep_link_obj.safe_margin_debug:
+			set_safe_margin_debug_enable(true)
+
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
@@ -261,6 +276,15 @@ func async_route_to_target_scene() -> void:
 		print("Running in Asset Server mode")
 		_start_asset_server()
 		return
+
+	# Genesis Plaza profiling benchmark (issue #1862). Lives alongside the full
+	# explorer flow: it primes realm/parcel, then samples once the scene loads.
+	# Skip if the deeplink path already spawned the runner (mobile cold-start race).
+	if is_gp_benchmark() and get_node_or_null("GPBenchmarkRunner") == null:
+		print("Running Genesis Plaza Benchmark...")
+		var gp_runner = load("res://src/tools/gp_benchmark_runner.gd").new()
+		gp_runner.set_name("GPBenchmarkRunner")
+		add_child(gp_runner)
 
 	if cli.avatar_impostor_benchmark:
 		print("Running in Avatar Impostor Benchmark mode")
@@ -339,8 +363,12 @@ func _dcl_swift_lib_smoke_test() -> void:
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
-## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI
+## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI.
+## Skipped in bench mode: HardwareBenchmark calls viewport_set_measure_render_time and
+## can clobber the gp_benchmark_runner's measurement state mid-bench.
 func should_run_first_launch_benchmark() -> bool:
+	if cli.bench_mode:
+		return false
 	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
 
 
@@ -376,6 +404,13 @@ func _async_clear_cache_if_needed() -> void:
 
 
 func _init_dynamic_graphics_manager() -> void:
+	# In bench mode, skip DG init entirely: the bench runner pins force-graphic-profile,
+	# disables thermal cap, and disconnects DG's signal handlers anyway — initializing
+	# DG just adds startup CPU noise and queues thermal_fps_cap signals that race the
+	# bench setup.
+	if cli.bench_mode:
+		print("[DynamicGraphics] skipped (bench_mode=true)")
+		return
 	# Initialize with config values and connect signals
 	dynamic_graphics_manager.initialize(
 		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps
@@ -481,6 +516,21 @@ func set_raycast_debugger_enable(enable: bool):
 		Services.raycast_debugger = null
 
 
+func set_safe_margin_debug_enable(enable: bool) -> void:
+	var current_enabled = is_instance_valid(_safe_margin_debug_overlay)
+	if current_enabled == enable:
+		return
+
+	if enable:
+		_safe_margin_debug_overlay = (load("res://src/tool/safe_margin_debug_overlay.gd").new())
+		add_child(_safe_margin_debug_overlay)
+		print("[SafeMarginDebug] overlay instantiated")
+	else:
+		remove_child(_safe_margin_debug_overlay)
+		_safe_margin_debug_overlay.queue_free()
+		_safe_margin_debug_overlay = null
+
+
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
 	if is_instance_valid(Services.raycast_debugger):
 		Services.raycast_debugger.add_raycast(id, time, from, to)
@@ -547,7 +597,7 @@ func capture_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		explorer.capture_mouse()
-	else:
+	elif DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -555,7 +605,7 @@ func release_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
 		explorer.release_mouse()
-	else:
+	elif DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 

@@ -74,7 +74,9 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 	text_up = text_pet_up if !text_pet_up.is_empty() else text_pet_down
 
 	var action_lower: String = action.to_lower()
-	var gamepad_connected := Input.get_connected_joypads().size() > 0
+	var gamepad_connected: bool = (
+		Global.get_config().gamepad_mode_enabled and Input.get_connected_joypads().size() > 0
+	)
 
 	if not label_text:
 		return
@@ -181,7 +183,9 @@ func _physics_process(_delta):
 
 func mobile_on_panel_container_gui_input(event):
 	if event is InputEventScreenTouch:
-		if action_to_trigger.is_empty():
+		# ia_any is a virtual action with no InputMap entry — pressing it
+		# would emit "InputMap action 'ia_any' doesn't exist" engine errors.
+		if action_to_trigger.is_empty() or action_to_trigger == "ia_any":
 			return
 		if event.pressed:
 			Input.action_press(action_to_trigger)

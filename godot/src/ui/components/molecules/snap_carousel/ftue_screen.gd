@@ -19,6 +19,7 @@ var _places: Array[Dictionary] = []
 
 func _ready() -> void:
 	carousel.card_changed.connect(_on_card_changed)
+	carousel.card_tapped.connect(_on_card_tapped)
 	carousel.all_cards_loaded.connect(_on_all_cards_loaded)
 	carousel.items_loaded.connect(_on_items_loaded)
 	button_jump_in.pressed.connect(_on_button_jump_in_pressed)
@@ -59,6 +60,10 @@ func _on_card_changed(index: int) -> void:
 	if creator.is_empty():
 		creator = place.get("owner", "")
 	label_creator.text = creator
+
+
+func _on_card_tapped(_index: int) -> void:
+	_on_button_jump_in_pressed()
 
 
 func _on_button_jump_in_pressed() -> void:

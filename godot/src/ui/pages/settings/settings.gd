@@ -43,7 +43,14 @@ const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
 @onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
+@onready var check_button_hide_view_profile: CheckButton = %CheckButton_HideViewProfile
+@onready var check_button_hide_world_interactions: CheckButton = %CheckButton_HideWorldInteractions
+@onready var check_button_hide_player_names: CheckButton = %CheckButton_HidePlayerNames
+@onready var hide_view_profile_row: HBoxContainer = %HideViewProfile
+@onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
+@onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var gamepad_camera_sensitivity: SettingsSlider = %GamepadCameraSensitivity
+@onready var check_button_gamepad_mode_enabled: CheckButton = %CheckButton_GamepadModeEnabled
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 @onready var container_interface: MarginContainer = %Container_Interface
@@ -113,11 +120,15 @@ func _ready():
 
 	if not Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
 		Global.session_hide_ui_toggle_sync.connect(_on_session_hide_ui_toggle_sync)
+	if not Global.session_hide_ui_options_sync.is_connected(_on_session_hide_ui_options_sync):
+		Global.session_hide_ui_options_sync.connect(_on_session_hide_ui_options_sync)
 	_refresh_hide_explorer_ui_row()
 
-	# gamepad
 	_init_gamepad_sensitivity.call_deferred()
-	container_gamepad.visible = Input.get_connected_joypads().size() > 0
+	var gamepad_enabled: bool = Global.get_config().gamepad_mode_enabled
+	check_button_gamepad_mode_enabled.button_pressed = gamepad_enabled
+	container_gamepad.visible = Global.is_mobile()
+	gamepad_camera_sensitivity.visible = gamepad_enabled
 	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 	dropdown_list_max_cache_size.add_item("1 GB", 0)
@@ -452,10 +463,47 @@ func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.set_hide_main_hud_from_settings(toggled_on)
+	_update_hide_ui_sub_toggles(toggled_on)
+
+
+func _on_check_button_hide_view_profile_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_hide_view_profile(toggled_on)
+
+
+func _on_check_button_hide_world_interactions_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_hide_world_interactions(toggled_on)
+
+
+func _on_check_button_hide_player_names_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_hide_player_names(toggled_on)
 
 
 func _on_session_hide_ui_toggle_sync(pressed: bool) -> void:
 	check_button_hide_explorer_ui.set_pressed_no_signal(pressed)
+	_update_hide_ui_sub_toggles(pressed)
+
+
+func _on_session_hide_ui_options_sync(
+	hide_view_profile: bool, hide_interactions: bool, hide_labels: bool
+) -> void:
+	check_button_hide_view_profile.set_pressed_no_signal(hide_view_profile)
+	check_button_hide_world_interactions.set_pressed_no_signal(hide_interactions)
+	check_button_hide_player_names.set_pressed_no_signal(hide_labels)
+
+
+func _update_hide_ui_sub_toggles(hide_ui_on: bool) -> void:
+	check_button_hide_view_profile.disabled = not hide_ui_on
+	check_button_hide_world_interactions.disabled = not hide_ui_on
+	check_button_hide_player_names.disabled = not hide_ui_on
+	hide_view_profile_row.modulate.a = 1.0 if hide_ui_on else 0.5
+	hide_world_interactions_row.modulate.a = 1.0 if hide_ui_on else 0.5
+	hide_player_names_row.modulate.a = 1.0 if hide_ui_on else 0.5
 
 
 func _refresh_hide_explorer_ui_row() -> void:
@@ -463,14 +511,31 @@ func _refresh_hide_explorer_ui_row() -> void:
 	var in_explorer := is_instance_valid(explorer)
 	container_interface.visible = in_explorer
 	if in_explorer:
-		check_button_hide_explorer_ui.set_pressed_no_signal(explorer.is_session_hide_main_hud())
+		var hide_on = explorer.is_session_hide_main_hud()
+		check_button_hide_explorer_ui.set_pressed_no_signal(hide_on)
+		check_button_hide_view_profile.set_pressed_no_signal(
+			explorer.is_session_hide_view_profile()
+		)
+		check_button_hide_world_interactions.set_pressed_no_signal(
+			explorer.is_session_hide_world_interactions()
+		)
+		check_button_hide_player_names.set_pressed_no_signal(
+			explorer.is_session_hide_player_names()
+		)
+		_update_hide_ui_sub_toggles(hide_on)
 	else:
 		check_button_hide_explorer_ui.set_pressed_no_signal(false)
+		check_button_hide_view_profile.set_pressed_no_signal(true)
+		check_button_hide_world_interactions.set_pressed_no_signal(true)
+		check_button_hide_player_names.set_pressed_no_signal(true)
+		_update_hide_ui_sub_toggles(false)
 
 
 func _exit_tree() -> void:
 	if Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
 		Global.session_hide_ui_toggle_sync.disconnect(_on_session_hide_ui_toggle_sync)
+	if Global.session_hide_ui_options_sync.is_connected(_on_session_hide_ui_options_sync):
+		Global.session_hide_ui_options_sync.disconnect(_on_session_hide_ui_options_sync)
 
 
 func _on_button_developer_pressed() -> void:
@@ -823,8 +888,20 @@ func _on_gamepad_camera_sensitivity_value_changed(value: float) -> void:
 	Services.config.save_to_settings_file()
 
 
+func _on_check_button_gamepad_mode_enabled_toggled(toggled_on: bool) -> void:
+	if Global.get_config().gamepad_mode_enabled != toggled_on:
+		Global.get_config().gamepad_mode_enabled = toggled_on
+		Global.get_config().save_to_settings_file()
+	gamepad_camera_sensitivity.visible = toggled_on
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.apply_gamepad_mode()
+
+
 func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	container_gamepad.visible = Input.get_connected_joypads().size() > 0
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.apply_gamepad_mode()
 
 
 func _on_custom_button_sign_out_pressed() -> void:

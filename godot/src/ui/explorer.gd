@@ -42,6 +42,10 @@ var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
 
 ## Session-only: minimized main HUD (settings toggle); reset on each loading_started / new explorer run.
 var _session_hide_main_hud: bool = false
+## Session-only sub-options for hide UI.
+var _session_hide_view_profile: bool = true
+var _session_hide_world_interactions: bool = true
+var _session_hide_player_names: bool = true
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -76,7 +80,6 @@ var _debug_panel_from_settings: bool = false
 @onready var world: Node3D = %world
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
-@onready var safe_margin_container_hud: SafeMarginContainer = %SafeMarginContainerHUD
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
@@ -252,11 +255,8 @@ func _ready():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()
-		ui_root.gui_input.connect(self._on_ui_root_gui_input)
-		# Detect physical gamepad to hide virtual controls
 		Input.joy_connection_changed.connect(_on_joy_connection_changed)
-		_gamepad_connected = Input.get_connected_joypads().size() > 0
-		_update_virtual_controls_visibility()
+		apply_gamepad_mode()
 	else:
 		mobile_ui.hide()
 
@@ -613,13 +613,30 @@ func change_tooltips():
 	var tooltip_data = Services.scene_runner.pointer_tooltips.duplicate()
 
 	# Check if there's an avatar behind the crosshair
-	_avatar_under_crosshair = player.get_avatar_under_crosshair()
-	Global.selected_avatar = _avatar_under_crosshair
+	if _session_hide_main_hud and _session_hide_view_profile:
+		_avatar_under_crosshair = null
+	else:
+		_avatar_under_crosshair = player.get_avatar_under_crosshair()
 
 	# Handle outline changes through the outline system
 	if _avatar_under_crosshair != _last_outlined_avatar:
 		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
 		_last_outlined_avatar = _avatar_under_crosshair
+
+	# Filter tooltips based on hide UI sub-toggles
+	if _session_hide_main_hud and (_session_hide_view_profile or _session_hide_world_interactions):
+		var filtered = []
+		for i in tooltip_data.size():
+			var entry = tooltip_data[i]
+			var is_view_profile = (
+				entry is Dictionary and entry.get("text_pet_down", "") == "View profile"
+			)
+			if is_view_profile and _session_hide_view_profile:
+				continue
+			if not is_view_profile and _session_hide_world_interactions:
+				continue
+			filtered.append(entry)
+		tooltip_data = filtered
 
 	# Tooltips now include avatar detection from scene_runner
 	if not tooltip_data.is_empty():
@@ -974,14 +991,16 @@ func avatar_look_at_independent(look_at_position: Vector3):
 
 
 func capture_mouse():
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if label_crosshair and ui_root:
 		label_crosshair.show()
 		ui_root.grab_focus.call_deferred()
 
 
 func release_mouse():
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	if not Global.is_mobile():
 		if label_crosshair:
 			label_crosshair.hide()
@@ -1127,18 +1146,6 @@ func reset_cursor_position():
 	control_pointer_tooltip.set_global_cursor_position(center_position)
 
 
-func _on_ui_root_gui_input(event: InputEvent):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			set_cursor_position(event.position)
-		# On mobile in PointerUnlocked mode (VirtualCamera active), trigger ia_pointer on touch
-		if Global.is_mobile() and Services.scene_runner.raycast_use_cursor_position:
-			if event.pressed:
-				Input.action_press("ia_pointer")
-			else:
-				Input.action_release("ia_pointer")
-
-
 func _on_panel_profile_open_profile():
 	_open_own_profile()
 
@@ -1211,6 +1218,8 @@ func _async_open_profile_by_address(user_address: String):
 
 
 func _async_open_profile_by_avatar(avatar: DclAvatar):
+	if _session_hide_main_hud and _session_hide_view_profile:
+		return
 	# Check if it's an Avatar (GDScript class) to access avatar_id
 	if avatar is Avatar:
 		var avatar_instance = avatar as Avatar
@@ -1311,6 +1320,7 @@ func _show_settings_panel() -> void:
 
 func _on_settings_panel_closed() -> void:
 	settings_panel.hide()
+	apply_deferred_hide_ui()
 	Global.explorer_grab_focus()
 	capture_mouse()
 
@@ -1397,8 +1407,12 @@ func _on_loading_started() -> void:
 	Services.modal_manager.ban_pre_check_active = false
 	_pending_notification_toast = {}  # Clear any pending notification
 	_session_hide_main_hud = false
+	_session_hide_view_profile = true
+	_session_hide_world_interactions = true
+	_session_hide_player_names = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
+	Global.session_hide_ui_options_sync.emit(true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 
 
@@ -1547,7 +1561,12 @@ func _on_emote_wheel_emote_wheel_opened() -> void:
 
 
 func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	_gamepad_connected = Input.get_connected_joypads().size() > 0
+	apply_gamepad_mode()
+
+
+func apply_gamepad_mode() -> void:
+	var enabled: bool = Global.get_config().gamepad_mode_enabled
+	_gamepad_connected = enabled and Input.get_connected_joypads().size() > 0
 	_update_virtual_controls_visibility()
 
 
@@ -1556,7 +1575,6 @@ func _update_virtual_controls_visibility() -> void:
 		joypad.hide()
 		virtual_joystick.hide()
 	else:
-		# Only restore if no panel is covering them
 		var panel_open := (
 			friends_panel.visible
 			or notifications_panel.visible
@@ -1682,24 +1700,65 @@ func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
 
 func _on_button_show_ui_pressed() -> void:
 	_session_hide_main_hud = false
+	_session_hide_view_profile = true
+	_session_hide_world_interactions = true
+	_session_hide_player_names = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
+	Global.session_hide_ui_options_sync.emit(true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 
 
 func set_hide_main_hud_from_settings(minimized: bool) -> void:
 	_session_hide_main_hud = minimized
-	set_visible_ui(not minimized, true)
-	_apply_hide_ui_to_avatar_nicks(minimized)
+	if not minimized:
+		# Turning off: restore UI immediately and reset sub-options
+		_session_hide_view_profile = true
+		_session_hide_world_interactions = true
+		_session_hide_player_names = true
+		set_visible_ui(true, true)
+		_apply_hide_ui_to_avatar_nicks(false)
+		Global.session_hide_ui_options_sync.emit(true, true, true)
+
+
+func set_hide_view_profile(value: bool) -> void:
+	_session_hide_view_profile = value
+
+
+func set_hide_world_interactions(value: bool) -> void:
+	_session_hide_world_interactions = value
+
+
+func set_hide_player_names(value: bool) -> void:
+	_session_hide_player_names = value
 
 
 func is_session_hide_main_hud() -> bool:
 	return _session_hide_main_hud
 
 
+func is_session_hide_view_profile() -> bool:
+	return _session_hide_view_profile
+
+
+func is_session_hide_world_interactions() -> bool:
+	return _session_hide_world_interactions
+
+
+func is_session_hide_player_names() -> bool:
+	return _session_hide_player_names
+
+
+func apply_deferred_hide_ui() -> void:
+	if not _session_hide_main_hud:
+		return
+	set_visible_ui(false, true)
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
+
+
 func _on_avatar_added_apply_hide_ui(avatar = null) -> void:
 	# Called when a new avatar is spawned; ensure its nickname obeys current Hide UI state.
-	if not _session_hide_main_hud:
+	if not _session_hide_main_hud or not _session_hide_player_names:
 		return
 	if avatar != null and avatar is Avatar:
 		(avatar as Avatar).set_force_hide_name(true)

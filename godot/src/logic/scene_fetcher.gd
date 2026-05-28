@@ -554,11 +554,7 @@ func get_scene_by_req_id(request_id: int):
 
 
 func is_using_floating_islands() -> bool:
-	return not (
-		Services.cli.scene_test_mode
-		or Services.cli.scene_renderer_mode
-		or Services.cli.preview_mode
-	)
+	return not (Services.cli.scene_test_mode or Services.cli.scene_renderer_mode)
 
 
 func _unload_scenes_except_current(current_scene_id: int) -> void:
@@ -1072,6 +1068,17 @@ func _on_try_spawn_scene(
 	var enable_js_inspector: bool = false
 	if Global.has_javascript_debugger and _debugging_js_scene_id == scene_item.id:
 		enable_js_inspector = true
+	# Auto-attach inspector for the scene whose title matches the
+	# --inspect-scene-title CLI flag or `inspect-scene-title=<title>` deeplink
+	# param. Lets `launch_devices.sh --param inspect-scene-title="Genesis Plaza"`
+	# pick the right isolate without UI interaction.
+	if Global.has_javascript_debugger:
+		var target_title := _resolve_inspect_scene_title()
+		if (
+			not target_title.is_empty()
+			and scene_item.scene_entity_definition.get_title() == target_title
+		):
+			enable_js_inspector = true
 
 	var scene_number_id: int = Services.scene_runner.start_scene(
 		local_main_js_path,
@@ -1127,6 +1134,17 @@ func _on_preview_scene_update(scene_id: String) -> void:
 
 func set_debugging_js_scene_id(id: String) -> void:
 	_debugging_js_scene_id = id
+
+
+## Pull the inspector target title from CLI flag or deeplink param.
+## Deeplink wins when both are set (deeplink is the more dynamic source —
+## benchmark runs override per-session).
+func _resolve_inspect_scene_title() -> String:
+	if Global.deep_link_obj != null:
+		var v: String = Global.deep_link_obj.params.get("inspect-scene-title", "")
+		if not v.is_empty():
+			return v
+	return Global.cli.inspect_scene_title
 
 
 func _calculate_parcel_adjacency(

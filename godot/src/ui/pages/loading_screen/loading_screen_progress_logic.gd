@@ -87,8 +87,11 @@ func _hide_loading_screen():
 	Services.content_provider.set_max_concurrent_downloads(12)
 	Services.content_provider.set_max_low_priority_downloads(12)
 
-	# Connect the scene room now that loading is done
-	Services.comms.release_comms()
+	# Keep comms held during the GP benchmark so two devices running the
+	# matrix in parallel don't see each other (remote avatars would shift
+	# each frame's draw count and break the screenshot sanity check).
+	if not Global.is_gp_benchmark():
+		Services.comms.release_comms()
 
 	# Restore voice chat and scene volume
 	AudioSettings.apply_scene_volume_settings()

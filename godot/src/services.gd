@@ -46,6 +46,17 @@ var locations: Node
 var modal_manager: ModalManager
 var analytics_controller: AnalyticsController
 
+# Seeds Sentry user / context / tags from realm / scene_fetcher /
+# player_identity / comms signals. RefCounted, kept alive by this reference.
+var sentry_seeder: SentrySeeder
+
+# Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
+# token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
+# see attestation_service.gd. Other code obtains a token via
+# `await Services.attestation.async_get_valid_jwt()`. A Node child of Services so it
+# can use timers and native plugin signals across the session lifetime.
+var attestation: AttestationService
+
 # Eagerly instantiated (used in Global._ready, which runs before bootstrap).
 var deep_link_router := DeepLinkRouter.new()
 
@@ -186,6 +197,12 @@ func bootstrap() -> void:
 		var sentry_user = SentryUser.new()
 		sentry_user.id = Global.config.analytics_user_id
 		SentrySDK.set_tag("dcl_session_id", Global.session_id)
+
+		# RefCounted, kept alive by the Services reference. Seeds Sentry user /
+		# context / tags from the runtime signals exposed by the subsystems
+		# created above. No scene-tree presence.
+		sentry_seeder = SentrySeeder.new()
+		sentry_seeder.setup()
 	BootInstrumentation.mark("services.bootstrap.telemetry_initialized")
 
 	# Instantiate the 5 demoted node services as children of Services. Each
@@ -266,6 +283,11 @@ func bootstrap() -> void:
 		# spawns a transient Timer under Services only while polling for first_move_in_world.
 		analytics_controller = AnalyticsController.new()
 		analytics_controller.setup()
+
+	# Platform attestation: needs to be a Node (uses timers + native plugin signals).
+	# The service self-gates on EULA acceptance and caches the issued session token on disk.
+	attestation = AttestationService.new()
+	add_child(attestation)
 
 	add_child(Global.network_inspector)
 	add_child(Global.scene_inspector_dispatcher)
