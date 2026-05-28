@@ -54,6 +54,14 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
     private var loadedProducts: [String: Product] = [:]
     private var transactionUpdatesTask: Task<Void, Never>?
 
+    // TODO: IMPORTANT - remove this mock fallback before production.
+    // Required while the Paid Applications Agreement is unsigned (or while
+    // products are still propagating in Sandbox / ASC). When `Product.products(for:)`
+    // returns zero items, we synthesize fake products from the requested IDs so
+    // the UI can be exercised. Any ID in this set is routed through `mockPurchase`
+    // instead of real StoreKit on the buy path.
+    private var mockedProductIds: Set<String> = []
+
     deinit {
         transactionUpdatesTask?.cancel()
     }
@@ -103,8 +111,16 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
                     self.loadedProducts[product.id] = product
                     gdLog("[DclStoreKit]   - \(product.id) | \(product.displayPrice) | \(product.type.rawValue)")
                 }
-                if products.count == 0 {
-                    gdLog("[DclStoreKit] loadProducts: 0 products returned. Likely causes: (1) product still propagating in sandbox (5-30min after metadata save), (2) device not signed into Sandbox Account, (3) bundle id mismatch with ASC, (4) sandbox region != product availability region")
+                if products.count == 0 && !ids.isEmpty {
+                    // TODO: IMPORTANT - remove this IAP mock fallback before production.
+                    // Triggered when ASC returns no products (Paid Agreement unsigned,
+                    // products still propagating, sandbox account not set, etc).
+                    gdLog("[DclStoreKit] loadProducts: 0 products returned. Likely causes: (1) product still propagating in sandbox (5-30min after metadata save), (2) device not signed into Sandbox Account, (3) bundle id mismatch with ASC, (4) sandbox region != product availability region, (5) Paid Applications Agreement not signed")
+                    gdLog("[DclStoreKit] loadProducts: FALLING BACK TO MOCK PRODUCTS — remove before production")
+                    self.mockedProductIds = Set(ids)
+                    let mockJson = self.serializeMockProducts(ids)
+                    self.productsLoaded.emit(mockJson)
+                    return
                 }
                 let json = self.serializeProducts(products)
                 self.productsLoaded.emit(json)
@@ -131,6 +147,13 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
     /// will reject the resulting transaction.
     @Callable(autoSnakeCase: true)
     func purchase(productId: String, walletAddress: String) {
+        // TODO: IMPORTANT - remove this IAP mock fallback before production.
+        // When the product was loaded via the mock fallback (ASC returned 0
+        // products), short-circuit StoreKit and emit a synthetic outcome.
+        if mockedProductIds.contains(productId) {
+            mockPurchase(productId: productId, walletAddress: walletAddress)
+            return
+        }
         guard let product = loadedProducts[productId] else {
             gdLog("[DclStoreKit] purchase: product not loaded: \(productId)")
             purchaseFailed.emit(productId, "product not loaded; call load_products first")
@@ -226,6 +249,69 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
             transactionUpdated.emit(json)
         case .unverified(_, let err):
             gdLog("[DclStoreKit] unverified transaction update: \(err.localizedDescription)")
+        }
+    }
+
+    // TODO: IMPORTANT - remove this IAP mock fallback before production.
+    // Builds the same JSON shape as `serializeProducts` from requested IDs
+    // so the GDScript side can populate the UI without real StoreKit data.
+    private func serializeMockProducts(_ ids: [String]) -> String {
+        let arr: [[String: Any]] = ids.map { id in
+            let credits = Int(id.split(separator: "_").last ?? "") ?? 0
+            let price: Double
+            switch credits {
+            case 10: price = 4.99
+            case 50: price = 24.99
+            case 100: price = 49.99
+            default: price = max(0.99, Double(credits) * 0.499)
+            }
+            return [
+                "id": id,
+                "displayName": "\(credits) Credits (MOCK)",
+                "description": "Mock product — real StoreKit returned 0 results",
+                "price": "\(price)",
+                "displayPrice": String(format: "$%.2f", price),
+                "type": "Consumable",
+            ]
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: arr),
+           let s = String(data: data, encoding: .utf8) {
+            return s
+        }
+        return "[]"
+    }
+
+    // TODO: IMPORTANT - remove this IAP mock fallback before production.
+    // 50/50 success/failure to exercise both UI paths. On success we emit a
+    // synthetic transaction JSON shaped like serializeTransaction; on failure
+    // we emit purchaseFailed with a tagged reason.
+    private func mockPurchase(productId: String, walletAddress: String) {
+        gdLog("[DclStoreKit] MOCK purchase: \(productId) (mock fallback active — remove before production)")
+        let succeeded = Bool.random()
+        Task { [weak self] in
+            // Synthetic delay so the GDScript-side purchase overlay actually shows.
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard let self = self else { return }
+            if succeeded {
+                let txId = UUID().uuidString
+                let fakeJws = "MOCK_JWS_" + UUID().uuidString
+                let obj: [String: Any] = [
+                    "id": txId,
+                    "originalId": txId,
+                    "productId": productId,
+                    "purchaseDate": Date().timeIntervalSince1970,
+                    "jwsRepresentation": fakeJws,
+                ]
+                if let data = try? JSONSerialization.data(withJSONObject: obj),
+                   let s = String(data: data, encoding: .utf8) {
+                    gdLog("[DclStoreKit] MOCK purchase succeeded: \(productId) tx=\(txId)")
+                    self.purchaseCompleted.emit(s)
+                    return
+                }
+                gdLog("[DclStoreKit] MOCK purchase: failed to serialize synthetic tx — falling through to failure path")
+            }
+            gdLog("[DclStoreKit] MOCK purchase failed: \(productId)")
+            self.purchaseFailed.emit(productId, "mock random failure (50%)")
         }
     }
 

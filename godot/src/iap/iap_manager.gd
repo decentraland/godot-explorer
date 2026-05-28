@@ -69,6 +69,12 @@ const _MAX_CREDITS := 1000
 # TODO: replace with actual daily limit once known
 const _MAX_DAILY_CREDITS := 100
 
+# Gates all IAP behavior. Default false — must be turned on via the
+# `decentraland://open?iap_enabled=true` launch deeplink. Until enable() is
+# called, _ready is a no-op: no signal subscriptions, no product load,
+# is_available() returns false (which hides the credits UI entry point).
+var enabled: bool = false
+
 var _store_kit := DclStoreKitPlugin.new()
 var _store_kit_available: bool = false
 var _products: Array = []
@@ -89,6 +95,18 @@ var _purchase_in_flight: bool = false
 
 
 func _ready() -> void:
+	# IAP starts disabled. DeepLinkRouter calls enable() when the launch
+	# deeplink carries iap_enabled=true.
+	pass
+
+
+# Idempotent. Called by DeepLinkRouter when iap_enabled=true is present in
+# the launch deeplink. Performs the StoreKit wiring originally in _ready.
+func enable() -> void:
+	if enabled:
+		return
+	enabled = true
+
 	# is_available() lazily instantiates the Swift class and wires the
 	# Rust-side signal forwarders on the first call.
 	if not _store_kit.is_available():
@@ -118,6 +136,8 @@ func _ready() -> void:
 
 
 func is_available() -> bool:
+	if not enabled:
+		return false
 	# TODO: remove editor override — forces IAP UI visible for desktop testing
 	if OS.has_feature("editor"):
 		return true
