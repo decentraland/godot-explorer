@@ -77,6 +77,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var check_button_debug_server: CheckButton = %CheckButton_DebugServer
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
 @onready var button_graphics: Button = %Button_Graphics
@@ -842,6 +843,16 @@ func _on_check_button_livekit_debug_toggled(toggled_on: bool) -> void:
 
 func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
 	Global.set_raycast_debugger_enable(toggled_on)
+
+
+func _on_check_button_debug_server_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		var ok: bool = DebugWs.start()
+		if not ok:
+			# Bind failed (port in use or permission). Snap the toggle back.
+			check_button_debug_server.set_pressed_no_signal(false)
+	else:
+		DebugWs.stop()
 
 
 func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:
