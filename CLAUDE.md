@@ -268,6 +268,81 @@ In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual
 - "Copy --rust-log" / "Copy RUST_LOG" copies the filter for use in terminal or deeplinks
 - Settings persist across editor restarts via EditorSettings
 
+### Debug WebSocket inspector
+
+A localhost-only WS server exposes a JSON inspection protocol for the live
+client state. Off by default; turn on in **Settings → Developer → "Debug WS
+Server"**. Binds to `127.0.0.1:9230`. Hidden in production builds.
+
+**Wiring:**
+- Autoload: `DebugWs` → `godot/src/tool/debug_server/debug_ws_server.gd`
+- Data assembly: `godot/src/tool/debug_server/debug_collector.gd`
+- Rust `#[func]` hooks for state only Rust can reach:
+  - `SceneManager::debug_*` (`lib/src/scene_runner/scene_manager.rs`) —
+    CRDT enumeration, deserialization, UI control lookup.
+  - `AvatarScene::debug_*` (`lib/src/avatars/avatar_scene.rs`) — avatar
+    listing, address/alias/entity/local lookup.
+
+**Protocol:** each frame is a JSON object with `id` (echoed in the reply) and
+`cmd`. Reply shape: `{"id":..., "ok":true, "data":{...}}` or
+`{"id":..., "ok":false, "error":"..."}`.
+
+**Five trees, one protocol:**
+
+| cmd | Tree | Identified by |
+|---|---|---|
+| `scene` / `entity` | 3D entity tree (`DclSceneNode` → `DclNodeEntity3d`) | `(scene_id, entity_id)` |
+| `ui_scene` / `ui_entity` | per-scene SDK UI (`UiNode.base_control`) | `(scene_id, entity_id)` |
+| `avatars` / `avatar` | global `AvatarScene` | `by` ∈ {`address`,`alias`,`entity`,`local`} |
+| `app_ui` | Explorer's own UI | auto-detected (`/root/explorer/UI` or `/root/Menu`) |
+| `ping` / `scenes` | — | — |
+
+All four data cmds (`scene`, `ui_scene`, `avatar`, `app_ui`) share a `filters` dict:
+- `component: [...]` — OR-match SDK component names (cheap, no proto decode)
+- `property_is: {component, field, contains}` — generic substring filter on
+  any (SDK component, field) pair
+- `collect_nodes: {<child_name>: [<property>, ...]}` — per-child-node
+  property dump via `Object.get()`; values pass through `_variant_to_json`
+- `include_parents`, `include_children`, `limit`, `offset`, `depth`,
+  `class_filter`, `name_contains` — traversal/pagination knobs
+
+**Quick examples:**
+
+```bash
+# Install websocat (one-time): `cargo install websocat` or your package manager
+# Confirm connection
+echo '{"id":1,"cmd":"ping"}' | websocat -n1 --text ws://127.0.0.1:9230
+
+# All loaded scenes
+echo '{"id":2,"cmd":"scenes"}' | websocat -n1 --text ws://127.0.0.1:9230
+
+# All TextShape entities in scene 0 with their Label3D properties
+echo '{"id":3,"cmd":"scene","scene_id":0,"filters":{
+  "component":["TextShape"],
+  "collect_nodes":{"TextShape":["text","font_size","pixel_size","outline_size","modulate"]}
+}}' | websocat -n1 --text ws://127.0.0.1:9230
+
+# Your own avatar — what it's wearing + what's playing
+echo '{"id":4,"cmd":"avatar","by":"local","filters":{
+  "collect_nodes":{"AnimationPlayer":["current_animation","autoplay"],"AnimationTree":["active"]}
+}}' | websocat -n1 --text ws://127.0.0.1:9230
+
+# Explorer's own UI hierarchy (lobby in this state, scene UI when loaded)
+echo '{"id":5,"cmd":"app_ui","filters":{"depth":2}}' | websocat -n1 --text ws://127.0.0.1:9230
+```
+
+**Important notes:**
+- The local-player avatar appears in `avatars` with `is_local: true` and lives
+  on `SceneManager.player_avatar_node`, separate from the
+  `AvatarScene.avatar_godot_scene` HashMap that tracks remote players.
+- The `entity` cmd returns `godot.present: false` for CRDT entities the
+  renderer hasn't instantiated yet — that's an instantiation throttle in
+  large scenes, not a bug in the tool.
+- `app_ui` skips `<root>/SceneUIContainer/scenes_ui` by default to avoid
+  shadowing `ui_scene`; pass `include_scene_ui: true` to lift the skip.
+- Read-only. No cmd mutates client state. Loopback bind only — never exposed
+  beyond the local machine.
+
 ### Debugging scene loading:
 1. Enable verbose logging: `RUST_LOG=debug cargo run -- run`
 2. Check the scene runner logs in `lib/src/dcl/scene_runner.rs`

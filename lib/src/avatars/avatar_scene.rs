@@ -890,11 +890,8 @@ impl AvatarScene {
 
         // Build entity_id → alias and alias → &H160 reverse maps so we can
         // resolve identity from the entity_id we iterate.
-        let entity_to_alias: HashMap<SceneEntityId, AvatarAlias> = self
-            .avatar_entity
-            .iter()
-            .map(|(&a, &e)| (e, a))
-            .collect();
+        let entity_to_alias: HashMap<SceneEntityId, AvatarAlias> =
+            self.avatar_entity.iter().map(|(&a, &e)| (e, a)).collect();
         let alias_to_address: HashMap<AvatarAlias, &H160> = self
             .avatar_address
             .iter()
