@@ -310,6 +310,12 @@ All four data cmds (`scene`, `ui_scene`, `avatar`, `app_ui`) share a `filters` d
 
 ```bash
 # Install websocat (one-time): `cargo install websocat` or your package manager
+# Note: websocat's default inbound buffer is 64 KiB. `ping`/`scenes`/`avatars`
+# fit easily, but `scene`/`ui_scene`/`app_ui`/`avatar` replies routinely exceed
+# that and websocat will split the frame ("Incoming message too long ...
+# splitting it to parts") which breaks JSON parsing. Pass `-B <bytes>` for
+# anything beyond the trivial commands — `-B 16777216` (16 MiB) matches the
+# server's 8 MiB outbound cap with headroom.
 # Confirm connection
 echo '{"id":1,"cmd":"ping"}' | websocat -n1 --text ws://127.0.0.1:9230
 
@@ -320,15 +326,15 @@ echo '{"id":2,"cmd":"scenes"}' | websocat -n1 --text ws://127.0.0.1:9230
 echo '{"id":3,"cmd":"scene","scene_id":0,"filters":{
   "component":["TextShape"],
   "collect_nodes":{"TextShape":["text","font_size","pixel_size","outline_size","modulate"]}
-}}' | websocat -n1 --text ws://127.0.0.1:9230
+}}' | websocat -n1 -B 16777216 --text ws://127.0.0.1:9230
 
 # Your own avatar — what it's wearing + what's playing
 echo '{"id":4,"cmd":"avatar","by":"local","filters":{
   "collect_nodes":{"AnimationPlayer":["current_animation","autoplay"],"AnimationTree":["active"]}
-}}' | websocat -n1 --text ws://127.0.0.1:9230
+}}' | websocat -n1 -B 16777216 --text ws://127.0.0.1:9230
 
 # Explorer's own UI hierarchy (lobby in this state, scene UI when loaded)
-echo '{"id":5,"cmd":"app_ui","filters":{"depth":2}}' | websocat -n1 --text ws://127.0.0.1:9230
+echo '{"id":5,"cmd":"app_ui","filters":{"depth":2}}' | websocat -n1 -B 16777216 --text ws://127.0.0.1:9230
 ```
 
 **Important notes:**
@@ -342,6 +348,14 @@ echo '{"id":5,"cmd":"app_ui","filters":{"depth":2}}' | websocat -n1 --text ws://
   shadowing `ui_scene`; pass `include_scene_ui: true` to lift the skip.
 - Read-only. No cmd mutates client state. Loopback bind only — never exposed
   beyond the local machine.
+- Per-peer outbound buffer is 8 MiB. If a reply exceeds it the server returns a
+  short `{"ok":false,"error":"reply dropped (err=..., payload=..., buffer=...)"}`
+  frame carrying the original `id`, so the client gets an actionable error
+  instead of a silent hang — narrow `filters` (add `component` / `property_is`,
+  drop `include_children`/`include_parents`, use `limit`).
+- `scene` defaults `include_children` and `include_parents` to `false`. Pass
+  them as `true` explicitly when you want the tree expanded; `entity` still
+  inlines parents/direct children by default.
 
 ### Debugging scene loading:
 1. Enable verbose logging: `RUST_LOG=debug cargo run -- run`

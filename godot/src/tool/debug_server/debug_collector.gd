@@ -420,8 +420,10 @@ static func _ensure_entity_in_map(
 
 	# Parents / children are walked relative to the top-level call only — we
 	# pass an empty filters dict downstream so we don't compound traversal.
-	var want_parents: bool = filters.get("include_parents", true)
-	var want_children: bool = filters.get("include_children", true)
+	# Default off: expansion bypasses `limit` and can balloon a `scene` reply
+	# past the WS outbound buffer. Callers that want the tree opt in explicitly.
+	var want_parents: bool = filters.get("include_parents", false)
+	var want_children: bool = filters.get("include_children", false)
 	var inherited_filters: Dictionary = {
 		"include_parents": false,
 		"include_children": false,

@@ -37,7 +37,12 @@ extends Node
 
 const DEFAULT_PORT: int = 9230
 const DEFAULT_BIND: String = "127.0.0.1"
-const MAX_FRAME_BYTES: int = 65536  ## drop frames larger than this
+const MAX_FRAME_BYTES: int = 65536  ## drop inbound frames larger than this
+## Per-peer outbound buffer. Godot's default is 64 KiB, which a single `scene`
+## or `app_ui` reply trivially exceeds — `send_text` then returns
+## ERR_OUT_OF_MEMORY and the reply is silently dropped, leaving the client
+## hanging. 8 MiB comfortably fits expanded scene snapshots.
+const OUTBOUND_BUFFER_BYTES: int = 8 * 1024 * 1024
 const Collector := preload("res://src/tool/debug_server/debug_collector.gd")
 
 var _tcp: TCPServer
@@ -98,6 +103,7 @@ func _process(_dt: float) -> void:
 	while _tcp.is_connection_available():
 		var stream := _tcp.take_connection()
 		var peer := WebSocketPeer.new()
+		peer.set_outbound_buffer_size(OUTBOUND_BUFFER_BYTES)
 		var err := peer.accept_stream(stream)
 		if err != OK:
 			printerr("DebugWsServer: accept_stream failed err=%d" % err)
@@ -266,4 +272,28 @@ func _reply(peer: WebSocketPeer, request_id, ok: bool, data, err_msg: String) ->
 func _send(peer: WebSocketPeer, reply: Dictionary) -> void:
 	if peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
 		return
-	peer.send_text(JSON.stringify(reply))
+	var payload := JSON.stringify(reply)
+	var err := peer.send_text(payload)
+	if err == OK:
+		return
+	# Most common cause: payload exceeds `outbound_buffer_size`. The failed
+	# message is not enqueued, so a tiny replacement frame still fits and the
+	# client gets a usable error instead of hanging on a dropped reply.
+	var fallback := (
+		JSON
+		. stringify(
+			{
+				"id": reply.get("id", null),
+				"ok": false,
+				"error":
+				(
+					(
+						"reply dropped (err=%d, payload=%d bytes, buffer=%d). "
+						+ "Narrow `filters` (e.g. add `component`, set `include_children:false`)."
+					)
+					% [err, payload.length(), OUTBOUND_BUFFER_BYTES]
+				),
+			}
+		)
+	)
+	peer.send_text(fallback)
