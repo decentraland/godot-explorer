@@ -1,6 +1,6 @@
 mod adaptation_layer_helper;
 mod comms;
-mod engine;
+pub mod engine;
 mod ethereum_controller;
 mod events;
 mod fetch;

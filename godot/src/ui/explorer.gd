@@ -255,10 +255,8 @@ func _ready():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()
-		# Detect physical gamepad to hide virtual controls
 		Input.joy_connection_changed.connect(_on_joy_connection_changed)
-		_gamepad_connected = Input.get_connected_joypads().size() > 0
-		_update_virtual_controls_visibility()
+		apply_gamepad_mode()
 	else:
 		mobile_ui.hide()
 
@@ -1561,7 +1559,12 @@ func _on_emote_wheel_emote_wheel_opened() -> void:
 
 
 func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	_gamepad_connected = Input.get_connected_joypads().size() > 0
+	apply_gamepad_mode()
+
+
+func apply_gamepad_mode() -> void:
+	var enabled: bool = Global.get_config().gamepad_mode_enabled
+	_gamepad_connected = enabled and Input.get_connected_joypads().size() > 0
 	_update_virtual_controls_visibility()
 
 
@@ -1570,7 +1573,6 @@ func _update_virtual_controls_visibility() -> void:
 		joypad.hide()
 		virtual_joystick.hide()
 	else:
-		# Only restore if no panel is covering them
 		var panel_open := (
 			friends_panel.visible
 			or notifications_panel.visible
