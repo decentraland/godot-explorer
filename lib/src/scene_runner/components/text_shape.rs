@@ -38,12 +38,13 @@ const DCL_TMP_SIZE_FACTOR: f32 = 17.0 / 18.0;
 /// use.
 const TMP_TO_LABEL3D_FONT_SIZE: f32 = 22.0 * DCL_TMP_SIZE_FACTOR;
 
-/// Unity TMP's autosize bounds. The component documentation lists
-/// `fontSizeMin = 18` and `fontSizeMax = 72` as defaults; we scale both by
-/// `DCL_TMP_SIZE_FACTOR` to match what the DCL TMP prefab effectively
-/// renders.
-const UNITY_TMP_FONT_SIZE_MIN: f32 = 18.0 * DCL_TMP_SIZE_FACTOR;
-const UNITY_TMP_FONT_SIZE_MAX: f32 = 72.0 * DCL_TMP_SIZE_FACTOR;
+/// Unity TMP's autosize bounds, in TMP `fontSize` units. The component
+/// documentation lists `fontSizeMin = 18` and `fontSizeMax = 72` as defaults.
+/// Kept raw — the `DCL_TMP_SIZE_FACTOR` correction is carried by
+/// `TMP_TO_LABEL3D_FONT_SIZE` and applied exactly once on conversion to
+/// Label3D pixels.
+const UNITY_TMP_FONT_SIZE_MIN: f32 = 18.0;
+const UNITY_TMP_FONT_SIZE_MAX: f32 = 72.0;
 
 /// Unity TMP's `_OutlineWidth` is a 0..1 shader-domain SDF distance — the
 /// outline appears as a thin ring drawn outside the glyph silhouette without
@@ -63,6 +64,21 @@ const UNITY_TMP_FONT_SIZE_MAX: f32 = 72.0 * DCL_TMP_SIZE_FACTOR;
 /// (1) + (2) together approximate Unity's outline visual without needing a
 /// custom shader. Tune (2) empirically per the test scene.
 const TMP_TO_LABEL3D_OUTLINE_WIDTH: f32 = 0.8;
+
+/// Converts a Unity TMP `fontSize` (em units from the SDK proto / autosize
+/// bounds) to a Godot `Label3D.font_size` in glyph pixels. Applies the
+/// `DCL_TMP_SIZE_FACTOR` correction exactly once.
+fn unity_to_godot_font_size(tmp_font_size: f32) -> f32 {
+    tmp_font_size * TMP_TO_LABEL3D_FONT_SIZE
+}
+
+/// Converts a Unity TMP `_OutlineWidth` (0..1 SDF distance) and the resolved
+/// Godot glyph `font_size` (in pixels) to a `Label3D.outline_size`. The
+/// `TMP_TO_LABEL3D_OUTLINE_WIDTH` scale keeps the outline as a thin ring on
+/// the glyph edge rather than a glyph-thickening band. See the constant docs.
+fn unity_to_godot_outline_size(godot_font_size: f32, tmp_outline_width: f32) -> f32 {
+    godot_font_size * tmp_outline_width * TMP_TO_LABEL3D_OUTLINE_WIDTH
+}
 
 pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -173,7 +189,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     };
                     if fit_w <= 0.0 || fit_h <= 0.0 {
                         // Unity TMP fallback when the autosize rect is degenerate.
-                        UNITY_TMP_FONT_SIZE_MIN * TMP_TO_LABEL3D_FONT_SIZE
+                        unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MIN)
                     } else {
                         compute_auto_font_size(
                             &font_resource,
@@ -181,16 +197,15 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             fit_w,
                             fit_h,
                             label_3d.get_pixel_size(),
-                            (UNITY_TMP_FONT_SIZE_MIN * TMP_TO_LABEL3D_FONT_SIZE) as i32,
-                            (UNITY_TMP_FONT_SIZE_MAX * TMP_TO_LABEL3D_FONT_SIZE) as i32,
+                            unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MIN) as i32,
+                            unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MAX) as i32,
                         ) as f32
                     }
                 } else {
-                    (TMP_TO_LABEL3D_FONT_SIZE * new_value.font_size.unwrap_or(3.0)).max(1.0)
+                    unity_to_godot_font_size(new_value.font_size.unwrap_or(3.0)).max(1.0)
                 };
-                let outline_size = font_size
-                    * new_value.outline_width.unwrap_or(0.0)
-                    * TMP_TO_LABEL3D_OUTLINE_WIDTH;
+                let outline_size =
+                    unity_to_godot_outline_size(font_size, new_value.outline_width.unwrap_or(0.0));
                 label_3d.set_font_size(font_size as i32);
                 label_3d.set_outline_size(outline_size as i32);
                 label_3d.set_outline_modulate(outline_color);
@@ -244,9 +259,9 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 label_3d.set_vertical_alignment(v_align);
                 label_3d.set_horizontal_alignment(h_align);
 
+                label_3d.set_font(&font_resource);
                 if add_to_base {
                     label_3d.set_name("TextShape");
-                    label_3d.set_font(&font_resource);
                     node_3d.add_child(&label_3d.upcast::<Node>());
                 }
 
