@@ -135,7 +135,12 @@ pub struct DclCli {
     // fetches `<base_url>/<hash>-mobile.zip` instead of the hardcoded
     // production endpoint. Empty = use default
     // (https://optimized-assets.dclexplorer.com/v3).
-    #[var]
+    //
+    // Custom setter mirrors the value into a thread-safe static
+    // (`OPTIMIZED_URL_OVERRIDE` in content_provider.rs) because tokio
+    // workers can't reach `DclGlobal::try_singleton()` — Godot's singleton
+    // registry is main-thread-only.
+    #[var(get, set = set_optimized_content_base_url)]
     pub optimized_content_base_url: GString,
 
     // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
@@ -716,11 +721,18 @@ impl INode for DclCli {
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
         let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
-        let optimized_content_base_url = args_map
+        let optimized_content_base_url: GString = args_map
             .get("--optimized-content-base-url")
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
+        // Mirror the CLI-arg value into the thread-safe static so worker
+        // threads see it without going through `DclGlobal::try_singleton()`.
+        if !optimized_content_base_url.is_empty() {
+            crate::content::content_provider::set_optimized_url_override(
+                &optimized_content_base_url.to_string(),
+            );
+        }
         let skip_gltf_load = args_map.contains_key("--skip-gltf");
         let kill_sky = args_map.contains_key("--kill-sky");
         // bench_mode auto-enabled when gp_benchmark is set, so the desktop
@@ -871,6 +883,13 @@ impl INode for DclCli {
 
 #[godot_api]
 impl DclCli {
+    #[func]
+    pub fn set_optimized_content_base_url(&mut self, url: GString) {
+        let s = url.to_string();
+        crate::content::content_provider::set_optimized_url_override(&s);
+        self.optimized_content_base_url = url;
+    }
+
     #[func]
     pub fn has_arg(&self, arg: GString) -> bool {
         self.args_map.contains_key(&arg.to_string())
