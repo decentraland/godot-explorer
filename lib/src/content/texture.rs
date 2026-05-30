@@ -8,7 +8,7 @@ use godot::{
     builtin::{GString, PackedByteArray, Variant, Vector2i},
     classes::{
         image::CompressMode, image::Format as GodotFormat, AnimatedTexture, DirAccess, Image,
-        ImageTexture, ResourceLoader, Texture2D,
+        ImageTexture, PortableCompressedTexture2D, ResourceLoader, Texture2D,
     },
     global::Error,
     meta::ToGodot,
@@ -438,17 +438,26 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
         }
     }
 
-    match ImageTexture::create_from_image(&*image) {
-        Some(texture) => texture.upcast(),
-        None => {
-            tracing::error!(
-                "Failed to create ImageTexture ({}x{}), using placeholder",
-                image.get_width(),
-                image.get_height()
-            );
-            create_placeholder_texture()
-        }
+    // If compression failed, fall back to a plain RGBA8 ImageTexture.
+    if !image.is_compressed() {
+        return match ImageTexture::create_from_image(&*image) {
+            Some(texture) => texture.upcast(),
+            None => create_placeholder_texture(),
+        };
     }
+
+    // PortableCompressedTexture2D keeps the compressed bytes in CPU and
+    // serializes them directly. A plain ImageTexture serializes via a GPU
+    // readback that decompresses ETC2→RGBA8 on Vulkan and returns corrupt
+    // blocks under software GL (llvmpipe) — both break the saved .scn.
+    // Retention of the CPU buffer is controlled process-wide by
+    // `set_keep_all_compressed_buffers` (enabled in asset-server mode).
+    let mut pct2 = PortableCompressedTexture2D::new_gd();
+    pct2.create_from_image(
+        &*image,
+        godot::classes::portable_compressed_texture_2d::CompressionMode::ETC2,
+    );
+    pct2.upcast()
 }
 
 /// Hard cap on any single dimension, regardless of pixel budget.
