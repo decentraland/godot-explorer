@@ -228,6 +228,9 @@ func _ready():
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
 
+		if deep_link_obj.iap_enabled:
+			Iap.enable()
+
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
