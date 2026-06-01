@@ -73,17 +73,6 @@ corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qr6ir"]
-content_margin_left = 18.0
-content_margin_top = 8.0
-content_margin_right = 18.0
-content_margin_bottom = 8.0
-bg_color = Color(1, 1, 1, 0.2)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_iyg6d"]
@@ -222,12 +211,13 @@ theme_override_constants/icon_max_width = 48
 theme_override_font_sizes/font_size = 30
 theme_override_styles/normal = SubResource("StyleBoxFlat_ritxv")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_ksqvs")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_qr6ir")
-theme_override_styles/hover = SubResource("StyleBoxFlat_qr6ir")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_qr6ir")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_qr6ir")
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_qr6ir")
-theme_override_styles/focus = SubResource("StyleBoxFlat_qr6ir")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ritxv")
 text = "0"
 icon = ExtResource("9_g4fdo")
 alignment = 0

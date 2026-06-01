@@ -33,14 +33,14 @@ signal transaction_history_updated
 # ASC simply returns no product.
 const PRODUCT_IDS: PackedStringArray = [
 	"credits_10",
+	"credits_20",
 	"credits_50",
-	"credits_100",
 ]
 
 const _CREDITS_BY_PRODUCT := {
 	"credits_10": 10,
+	"credits_20": 20,
 	"credits_50": 50,
-	"credits_100": 100,
 }
 
 # Synthetic latency for the simulated backend round-trip — long enough that

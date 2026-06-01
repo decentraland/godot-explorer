@@ -171,3 +171,9 @@ layout_mode = 2
 text = "I agree I am purchasing a limited license to use Credits governed by the Terms of the License. By purchasing Credits, you agree to our Terms of Use and Privacy Policy, including the arbitration clause and revocation policy. You consent to the immediate performance of the contract and acknowledge that you thereby lose your right of withdrawal."
 label_settings = SubResource("LabelSettings_4pofo")
 autowrap_mode = 2
+
+[node name="HSeparator4" type="HSeparator" parent="CreditsFaq" unique_id=1361122907]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
