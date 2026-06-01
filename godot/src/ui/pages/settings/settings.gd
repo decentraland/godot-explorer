@@ -50,6 +50,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var gamepad_camera_sensitivity: SettingsSlider = %GamepadCameraSensitivity
+@onready var check_button_gamepad_mode_enabled: CheckButton = %CheckButton_GamepadModeEnabled
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 @onready var container_interface: MarginContainer = %Container_Interface
@@ -77,6 +78,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var check_button_debug_server: CheckButton = %CheckButton_DebugServer
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
 @onready var button_graphics: Button = %Button_Graphics
@@ -123,9 +125,11 @@ func _ready():
 		Global.session_hide_ui_options_sync.connect(_on_session_hide_ui_options_sync)
 	_refresh_hide_explorer_ui_row()
 
-	# gamepad
 	_init_gamepad_sensitivity.call_deferred()
-	container_gamepad.visible = Input.get_connected_joypads().size() > 0
+	var gamepad_enabled: bool = Global.get_config().gamepad_mode_enabled
+	check_button_gamepad_mode_enabled.button_pressed = gamepad_enabled
+	container_gamepad.visible = Global.is_mobile()
+	gamepad_camera_sensitivity.visible = gamepad_enabled
 	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 	dropdown_list_max_cache_size.add_item("1 GB", 0)
@@ -844,6 +848,16 @@ func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
 	Global.set_raycast_debugger_enable(toggled_on)
 
 
+func _on_check_button_debug_server_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		var ok: bool = DebugWs.start()
+		if not ok:
+			# Bind failed (port in use or permission). Snap the toggle back.
+			check_button_debug_server.set_pressed_no_signal(false)
+	else:
+		DebugWs.stop()
+
+
 func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:
 	request_debug_panel.emit(toggled_on)
 
@@ -885,8 +899,20 @@ func _on_gamepad_camera_sensitivity_value_changed(value: float) -> void:
 	Global.get_config().save_to_settings_file()
 
 
+func _on_check_button_gamepad_mode_enabled_toggled(toggled_on: bool) -> void:
+	if Global.get_config().gamepad_mode_enabled != toggled_on:
+		Global.get_config().gamepad_mode_enabled = toggled_on
+		Global.get_config().save_to_settings_file()
+	gamepad_camera_sensitivity.visible = toggled_on
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.apply_gamepad_mode()
+
+
 func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	container_gamepad.visible = Input.get_connected_joypads().size() > 0
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.apply_gamepad_mode()
 
 
 func _on_custom_button_sign_out_pressed() -> void:
