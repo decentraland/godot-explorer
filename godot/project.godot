@@ -42,6 +42,7 @@ general/ios/session_category=3
 BootInstrumentation="*res://src/utils/boot_instrumentation.gd"
 Services="*res://src/services.gd"
 Global="*res://src/global.gd"
+DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 
 [debug]
 
