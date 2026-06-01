@@ -181,28 +181,6 @@ pub fn pack_single_asset_to_zip(
 
     let _ = packer.close_file();
 
-    // PVS sidecar — only for Scene assets, only if the bake actually
-    // wrote one (`apply_pvs_bake` skips when there are no blockers or
-    // no static MIs).
-    if matches!(asset_type, AssetType::Scene) {
-        let sidecar_path = optimized_path
-            .strip_suffix(".scn")
-            .map(|p| format!("{}.pvs.bin", p))
-            .unwrap_or_default();
-        if !sidecar_path.is_empty() && std::path::Path::new(&sidecar_path).exists() {
-            if let Some(mut sf) = FileAccess::open(&GString::from(&sidecar_path), ModeFlags::READ) {
-                let sdata = sf.get_buffer(sf.get_length() as i64);
-                sf.close();
-                let zip_pvs_path = format!("glbs/{}.pvs.bin", hash);
-                let err = packer.start_file(&GString::from(&zip_pvs_path));
-                if err == godot::global::Error::OK {
-                    let _ = packer.write_file(&sdata);
-                    let _ = packer.close_file();
-                }
-            }
-        }
-    }
-
     let err = packer.close();
     if err != godot::global::Error::OK {
         return Err(anyhow::anyhow!("Failed to close ZIP file: {:?}", err));

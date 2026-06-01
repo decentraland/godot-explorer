@@ -34,12 +34,7 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
-	# Forward optimized-content-base-url from deeplink into DclCli.
-	# scene_fetcher / content_provider read it via get_optimized_base_url().
-	var opt_url = Global.deep_link_obj.params.get("optimized-content-base-url", "")
-	if not opt_url.is_empty():
-		print("[DEEPLINK] optimized-content-base-url=", opt_url)
-		Global.cli.optimized_content_base_url = opt_url
+	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The

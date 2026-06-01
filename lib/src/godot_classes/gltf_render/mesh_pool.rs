@@ -5,10 +5,10 @@
 //!
 //! Mirrors `floating_islands/props_pool.rs` semantics: max-heap freelist with
 //! tail compaction, geometric growth on overflow, zero-scale transform on
-//! release so the GPU stops drawing freed slots. We don't reuse our pure-Rust
-//! `SlotAllocator` here because the floating-islands pattern bakes ordering
-//! assumptions (RS calls interleaved with `high_water` mutations during grow)
-//! that are easier to read inline than to encode through an event channel.
+//! release so the GPU stops drawing freed slots. The freelist is kept inline
+//! here because the floating-islands pattern interleaves RS calls with
+//! `high_water` mutations during grow — easier to read inline than to encode
+//! through an event channel.
 
 use std::collections::{BinaryHeap, HashMap};
 
@@ -128,6 +128,14 @@ impl MeshPoolManager {
             .values()
             .map(|p| (p.high_water as usize) - p.free_slots.len())
             .sum()
+    }
+}
+
+impl Drop for MeshPoolManager {
+    fn drop(&mut self) {
+        // Release every MultiMesh/instance RID on teardown — otherwise per-key
+        // RIDs leak until scenario teardown when `--rs-gltf-direct` is on.
+        self.clear();
     }
 }
 

@@ -1,7 +1,7 @@
-//! Spawn an `ArrayOccluder3D` that mirrors the source mesh's geometry,
-//! decimated aggressively. Way more accurate than `BoxOccluder3D` for
-//! actual building shapes — culls things behind the real silhouette
-//! instead of just an AABB.
+//! Spawn a coarse `BoxOccluder3D` sized to the source mesh's AABB (inset a
+//! little) so Godot's culler can early-out geometry fully behind large opaque
+//! meshes. Cheap and conservative — it never over-culls, but only occludes
+//! within the box, not the true silhouette.
 
 use godot::classes::base_material_3d::Transparency;
 use godot::classes::{

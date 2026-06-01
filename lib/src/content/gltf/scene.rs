@@ -34,7 +34,7 @@ use super::super::{
 };
 use super::common::{count_nodes, load_gltf_pipeline};
 
-use crate::scene_runner::components::asset_preprocessor::{mesh_occluder, metrics};
+use crate::scene_runner::components::asset_preprocessor::mesh_occluder;
 
 struct AssetServerPreprocCounts {
     occluders: u32,
@@ -58,7 +58,6 @@ fn walk_and_preprocess(node: &Gd<Node>, counts: &mut AssetServerPreprocCounts) {
             if let Some(mesh) = mi.get_mesh() {
                 if let Ok(array_mesh) = mesh.try_cast::<ArrayMesh>() {
                     if mesh_occluder::try_spawn_for(&mut mi, &array_mesh) {
-                        metrics::record_occluder();
                         counts.occluders = counts.occluders.saturating_add(1);
                     }
                 }

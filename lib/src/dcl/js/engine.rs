@@ -29,7 +29,7 @@ use crate::dcl::{
 use super::scene_inspector_ops::SceneDebugFlag;
 
 /// Current frame tick, set by `scene_thread` at the start of each `onUpdate`
-/// iteration and read by `op_crdt_send_to_renderer` / `op_crdt_recv_from_renderer`
+/// iteration and read by `op_crdt_send_to_renderer` / `op_crdt_recv_wait`
 /// to tag CRDT log entries with the correct frame number. Always present in
 /// `op_state`; only consulted when `SceneDebugFlag` is on, but kept unconditional
 /// so the hot path doesn't pay an extra `try_borrow` lookup.

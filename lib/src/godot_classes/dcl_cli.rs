@@ -138,11 +138,6 @@ pub struct DclCli {
     #[var]
     pub optimized_content_base_url: GString,
 
-    // cheap_pbr_materials: tweak BaseMaterial3D mode flags (Lambert
-    // diffuse, no specular for matte) to reduce per-fragment ALU.
-    #[var]
-    pub cheap_pbr_enabled: bool,
-
     // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
     // set in `update_gltf_container` so the bench can measure the rendering
     // floor without any scene meshes loaded. Pure perf-debug knob.
@@ -497,12 +492,6 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
-                name: "--cheap-pbr".to_string(),
-                description: "Tweak BaseMaterial3D mode flags (Lambert diffuse, no specular for matte) to reduce per-fragment ALU. Default OFF".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
                 name: "--skip-gltf".to_string(),
                 description: "Diagnostic: skip every GltfContainer instantiation so the renderer floor (sky+UI+avatar) can be measured. Default OFF".to_string(),
                 arg_type: ArgType::Flag,
@@ -732,7 +721,6 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
-        let cheap_pbr_enabled = !args_map.contains_key("--no-cheap-pbr");
         let skip_gltf_load = args_map.contains_key("--skip-gltf");
         let kill_sky = args_map.contains_key("--kill-sky");
         // bench_mode auto-enabled when gp_benchmark is set, so the desktop
@@ -862,7 +850,6 @@ impl INode for DclCli {
             gp_benchmark,
             rs_gltf_direct,
             optimized_content_base_url,
-            cheap_pbr_enabled,
             skip_gltf_load,
             kill_sky,
             bench_mode,

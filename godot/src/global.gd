@@ -165,6 +165,16 @@ func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
+## Forward the optimized-content-base-url deeplink param into DclCli so the
+## scene fetcher / content provider use it for optimized loading. Shared by the
+## desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
+	var opt_url: String = obj.params.get("optimized-content-base-url", "")
+	if not opt_url.is_empty():
+		print("[DEEPLINK] optimized-content-base-url=", opt_url)
+		cli.optimized_content_base_url = opt_url
+
+
 ## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
 ## per-container Timer (~1419 in Genesis Plaza). Called from
 ## gltf_container.gd; created on first use, persists for the app's lifetime.
@@ -222,13 +232,13 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
-	# Force uncapped FPS very early, before any code path can re-pin Engine.max_fps.
-	# DG is disabled (no signal handlers) and HardwareBenchmark too. The config
-	# replacement (`self.config = ConfigData.new()` further down in _ready)
-	# happens later, so we touch only engine-level flags here. Bench-only knob.
-	Engine.max_fps = 0
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-	OS.low_processor_usage_mode = false
+	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
+	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
+	# uncaps via gp_benchmark_runner at the load->settling transition.
+	if cli.bench_mode:
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		OS.low_processor_usage_mode = false
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
@@ -277,12 +287,7 @@ func _ready():
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
-		# Forward optimized-content-base-url from deeplink into DclCli so the
-		# scene fetcher and content provider pick it up for optimized loading.
-		var opt_url = deep_link_obj.params.get("optimized-content-base-url", "")
-		if not opt_url.is_empty():
-			print("[DEEPLINK] optimized-content-base-url=", opt_url)
-			Global.cli.optimized_content_base_url = opt_url
+		_apply_optimized_content_base_url(deep_link_obj)
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
@@ -314,14 +319,13 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
-	# Bench: ensure limit_fps stays at NO_LIMIT after the settings file load,
-	# which would otherwise restore a saved FPS_18/FPS_30 cap. Engine.max_fps
-	# was already set to 0 at the top of _ready; this prevents any later
-	# `apply_fps_limit()` call (explorer/menu/main) from re-reading config and
-	# re-pinning the engine.
-	config.limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
-	Engine.max_fps = 0
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
+	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
+	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
+	if cli.bench_mode:
+		config.limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
 	# Initialize environment. Precedence: --dclenv CLI flag > deeplink dclenv param > "org".
 	var env := "org"
@@ -498,14 +502,10 @@ func _ready():
 		stress_test_controller.set_name("StressTestController")
 		get_tree().root.add_child.call_deferred(stress_test_controller)
 
-	# Initialize dynamic graphics manager after config is loaded.
-	# DISABLED while benching: even the bench-mode branch (set graphic_profile=Custom,
-	# DG.set_enabled(false), thermal_cap off, FPS uncapped) dropped fps 29 → 14 on
-	# A54 (v6 vs v5). The Custom-profile path applies render settings that hurt
-	# perf vs leaving the DG node uninitialized. Cheaper to leave the node parked
-	# in the tree (added at line 413) and never run `.initialize()`. Re-enable for
-	# production builds; bench results are only comparable when this stays off.
-	# _init_dynamic_graphics_manager.call_deferred()
+	# Initialize dynamic graphics manager after config is loaded. Self-skips in
+	# bench mode (the function early-returns on cli.bench_mode), so bench results
+	# stay comparable while production keeps thermal-cap + adaptive downgrade.
+	_init_dynamic_graphics_manager.call_deferred()
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)

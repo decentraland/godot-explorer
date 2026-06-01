@@ -146,27 +146,6 @@ func _async_load_optimized_asset(gltf_hash: String):
 		_finish_with_error(reason)
 		return
 
-	# Attach the PVS runtime if a sidecar exists alongside the .scn.
-	# Gated on the `pvs-runtime` deeplink param (default off) so a bad bake
-	# can't hide visible meshes silently. Sidecars produced by the
-	# processor still ship in the zips; this just decides whether to read
-	# them at runtime.
-	var pvs_enabled := false
-	if Global.deep_link_obj != null:
-		var v: String = Global.deep_link_obj.params.get("pvs-runtime", "")
-		pvs_enabled = v.to_lower() in ["true", "1", "yes"]
-	if pvs_enabled:
-		var pvs_path := "res://glbs/" + gltf_hash + ".pvs.bin"
-		var f := FileAccess.open(pvs_path, FileAccess.READ)
-		if f != null:
-			var buf := f.get_buffer(f.get_length())
-			f.close()
-			print("[pvs-hook] hash=", gltf_hash, " loaded buf=", buf.size(), " bytes")
-			var rt = load("res://src/tools/dcl_pvs_runtime.gd").new()
-			rt.name = "_PvsRuntime"
-			gltf_node.add_child(rt)
-			rt.init_with_buffer(gltf_node, buf)
-
 	# Add to scene tree
 	_async_add_gltf_to_tree.call_deferred(gltf_node)
 

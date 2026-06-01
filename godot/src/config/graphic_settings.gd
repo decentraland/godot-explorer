@@ -237,8 +237,8 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	if viewport:
 		viewport.scaling_3d_scale = config.resolution_3d_scale
 		# Apply per-profile mesh-LOD pixel threshold. Higher value = swap
-		# to lower-detail LOD sooner (more aggressive). LOD chain is
-		# baked at GLTF import time; this is the only knob that decides
-		# how aggressively the renderer picks LOD1/2/3 at distance.
+		# to lower-detail LOD sooner (more aggressive). Only does work when the
+		# loaded .scn carries a baked LOD chain (asset-server bake) — raw-GLB
+		# runtime loads have no LOD levels for this threshold to pick from.
 		var lod_thr: float = profile.get("mesh_lod_threshold", 1.0)
 		viewport.mesh_lod_threshold = lod_thr

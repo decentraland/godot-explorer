@@ -808,9 +808,6 @@ func _apply_deeplink_overrides() -> void:
 		if s > 0.1 and s <= 2.0:
 			config["viewport_scale_3d"] = s
 
-	var cpbr: String = params.get("cheap-pbr", "")
-	if not cpbr.is_empty():
-		Global.cli.cheap_pbr_enabled = cpbr.to_lower() in ["true", "1", "yes"]
 	var skipg: String = params.get("skip-gltf", "")
 	if not skipg.is_empty():
 		Global.cli.set_skip_gltf_load(skipg.to_lower() in ["true", "1", "yes"])
