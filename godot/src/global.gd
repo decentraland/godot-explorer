@@ -116,12 +116,25 @@ var session_id: String
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
 
+# Seeds Sentry user / context / tags from realm / scene_fetcher /
+# player_identity / comms signals. Instantiated alongside scene_fetcher.
+var sentry_seeder: SentrySeeder = null
+
+# Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
+# token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
+# see attestation_service.gd. Other code obtains a token via
+# `await Global.attestation.async_get_valid_jwt()`. Instantiated in _ready as a Node
+# child of Global so it can use timers and signals across the session lifetime.
+var attestation: AttestationService = null
+
 var _is_portrait: bool = true
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
 var _hardware_benchmark: HardwareBenchmark = null
+
+var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
 
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
@@ -271,6 +284,10 @@ func _ready():
 			print("[DEEPLINK] optimized-content-base-url=", opt_url)
 			Global.cli.optimized_content_base_url = opt_url
 
+		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
+		if deep_link_obj.safe_margin_debug:
+			set_safe_margin_debug_enable(true)
+
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
@@ -401,15 +418,16 @@ func _ready():
 		self.metrics.set_debug_level(0)  # 0 off - 1 on
 		self.metrics.set_name("metrics")
 
-	# Sentry user / session tagging
-	if telemetry_enabled:
-		var sentry_user = SentryUser.new()
-		sentry_user.id = self.config.analytics_user_id
-		SentrySDK.set_tag("dcl_session_id", session_id)
-
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
+
+	# RefCounted, kept alive by this strong reference. Seeds Sentry user /
+	# context / tags from the runtime signals exposed by the subsystems
+	# created above. No scene-tree presence.
+	if telemetry_enabled:
+		self.sentry_seeder = SentrySeeder.new()
+		self.sentry_seeder.setup()
 
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
@@ -447,6 +465,10 @@ func _ready():
 		# spawns a transient Timer under Global only while polling for first_move_in_world.
 		self.analytics_controller = AnalyticsController.new()
 		self.analytics_controller.setup()
+	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The
+	# service self-gates on EULA acceptance and caches the issued session token on disk.
+	self.attestation = AttestationService.new()
+	add_child(self.attestation)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
@@ -666,6 +688,21 @@ func set_raycast_debugger_enable(enable: bool):
 		remove_child(raycast_debugger)
 		raycast_debugger.queue_free()
 		raycast_debugger = null
+
+
+func set_safe_margin_debug_enable(enable: bool) -> void:
+	var current_enabled = is_instance_valid(_safe_margin_debug_overlay)
+	if current_enabled == enable:
+		return
+
+	if enable:
+		_safe_margin_debug_overlay = (load("res://src/tool/safe_margin_debug_overlay.gd").new())
+		add_child(_safe_margin_debug_overlay)
+		print("[SafeMarginDebug] overlay instantiated")
+	else:
+		remove_child(_safe_margin_debug_overlay)
+		_safe_margin_debug_overlay.queue_free()
+		_safe_margin_debug_overlay = null
 
 
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:

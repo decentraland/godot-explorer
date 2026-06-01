@@ -16,6 +16,7 @@ pub mod material;
 pub mod mesh_collider;
 pub mod mesh_renderer;
 pub mod nft_shape;
+pub mod physics_combined;
 pub mod pointer_events;
 pub mod raycast;
 pub mod realm_info;

@@ -70,6 +70,9 @@ func process_deep_link(url: String) -> void:
 		gp_runner.set_name("GPBenchmarkRunner")
 		Global.add_child(gp_runner)
 
+	if Global.deep_link_obj.safe_margin_debug:
+		Global.set_safe_margin_debug_enable(true)
+
 	# Trigger avatar impostor benchmark
 	var bench_param = Global.deep_link_obj.params.get("benchmark", "")
 	if bench_param == "avatar-impostors":

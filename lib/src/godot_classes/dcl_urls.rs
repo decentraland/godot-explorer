@@ -109,6 +109,10 @@ impl DclUrls {
     pub fn mobile_bff() -> GString {
         urls::mobile_bff().to_godot()
     }
+    #[func]
+    pub fn attestation_bff() -> GString {
+        urls::attestation_bff().to_godot()
+    }
 
     // Frontend
     #[func]

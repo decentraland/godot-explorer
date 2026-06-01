@@ -873,6 +873,253 @@ impl SceneManager {
         Vector2i::default()
     }
 
+    /// Debug: list scene IDs currently loaded in the renderer. Used by the
+    /// developer-only debug WebSocket endpoint.
+    #[func]
+    fn debug_get_loaded_scene_ids(&self) -> PackedInt32Array {
+        let mut out = PackedInt32Array::new();
+        for scene_id in self.scenes.keys() {
+            out.push(scene_id.0);
+        }
+        out
+    }
+
+    /// Debug: list every alive entity id in a scene's CRDT state.
+    /// Returns an empty array if the scene is not loaded.
+    #[func]
+    fn debug_list_entities(&self, scene_id: i32) -> PackedInt32Array {
+        let mut out = PackedInt32Array::new();
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return out;
+        };
+        let Ok(crdt) = scene.dcl_scene.scene_crdt.lock() else {
+            return out;
+        };
+        for number in 0u32..=u16::MAX as u32 {
+            let (version, live) = crdt.entities.get_entity_stat(number as u16);
+            if *live {
+                let entity = SceneEntityId::new(number as u16, *version);
+                out.push(entity.as_i32());
+            }
+        }
+        out
+    }
+
+    /// Debug: returns the Godot `InstanceId` (as i64) of the UI Control
+    /// associated with `entity_id` in `scene_id`, or `-1` if the entity has
+    /// no UI node attached or the scene is not loaded. GDScript can resolve
+    /// the returned id via `instance_from_id(...)`. Used by the debug WS
+    /// `ui_scene` / `ui_entity` commands to inspect the 2D render tree
+    /// (which lives separately from the 3D `DclNodeEntity3d` tree the
+    /// `scene` / `entity` cmds walk).
+    #[func]
+    fn debug_get_entity_ui_control_id(&self, scene_id: i32, entity_id: i32) -> i64 {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return -1;
+        };
+        let entity = SceneEntityId::from_i32(entity_id);
+        match scene.godot_dcl_scene.get_node_or_null_ui(&entity) {
+            Some(ui_node) => ui_node.base_control.instance_id().to_i64(),
+            None => -1,
+        }
+    }
+
+    /// Debug: returns the Transform.parent of `entity_id` in `scene_id` as an
+    /// i64 (i32 encoded SceneEntityId). Returns -1 if no Transform exists for
+    /// that entity or the scene is not loaded.
+    #[func]
+    fn debug_get_entity_parent(&self, scene_id: i32, entity_id: i32) -> i64 {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return -1;
+        };
+        let Ok(crdt) = scene.dcl_scene.scene_crdt.lock() else {
+            return -1;
+        };
+        let Some(transform_def) =
+            crdt.get_lww_component_definition(crate::dcl::components::SceneComponentId::TRANSFORM)
+        else {
+            return -1;
+        };
+        let entity = SceneEntityId::from_i32(entity_id);
+        let mut buf = Vec::new();
+        {
+            let mut writer = crate::dcl::serialization::writer::DclWriter::new(&mut buf);
+            if transform_def.to_binary(entity, &mut writer).is_err() {
+                return -1;
+            }
+        }
+        let json = match crate::dcl::components::proto_components::deserialize_component_to_json(
+            1, &buf,
+        ) {
+            Some(v) => v,
+            None => return -1,
+        };
+        json.get("parent").and_then(|v| v.as_i64()).unwrap_or(-1)
+    }
+
+    /// Debug: returns the names of CRDT components present on an entity,
+    /// without deserializing payloads. Cheap enough to call across every
+    /// entity for the WS server's component-name filter pass. GOS components
+    /// are included if the entity has any entries in them.
+    #[func]
+    fn debug_get_entity_component_names(&self, scene_id: i32, entity_id: i32) -> PackedStringArray {
+        let mut out = PackedStringArray::new();
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return out;
+        };
+        let Ok(crdt) = scene.dcl_scene.scene_crdt.lock() else {
+            return out;
+        };
+        let entity = SceneEntityId::from_i32(entity_id);
+        let component_ids: Vec<crate::dcl::components::SceneComponentId> =
+            crdt.components.keys().copied().collect();
+
+        for component_id in component_ids {
+            let present = if let Some(lww_def) = crdt.get_lww_component_definition(component_id) {
+                lww_def
+                    .get_opaque(entity)
+                    .map(|o| o.value.is_some())
+                    .unwrap_or(false)
+            } else if let Some(gos_def) = crdt.get_gos_component_definition(component_id) {
+                // Trait has no `len(entity)` — probe index 0 cheaply.
+                let mut probe = Vec::new();
+                let mut writer = crate::dcl::serialization::writer::DclWriter::new(&mut probe);
+                gos_def.to_binary(entity, 0, &mut writer).is_ok()
+            } else {
+                false
+            };
+            if present {
+                let name = crate::dcl::components::component_id_to_name(component_id.0);
+                let key = if name == "Unknown" {
+                    format!("Unknown_{}", component_id.0)
+                } else {
+                    name.to_string()
+                };
+                out.push(&key);
+            }
+        }
+        out
+    }
+
+    /// Debug: returns all CRDT components on an entity, with payloads
+    /// deserialized to JSON. Shape:
+    /// `{"lww": {"Transform": {...}, "TextShape": {...}, ...},
+    ///   "gos": {"PointerEventsResult": [{...}, {...}], ...}}`
+    /// Returns an empty string if the scene is not loaded.
+    #[func]
+    fn debug_get_entity_components_json(&self, scene_id: i32, entity_id: i32) -> GString {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return GString::default();
+        };
+        let entity = SceneEntityId::from_i32(entity_id);
+
+        // Collect raw binary payloads while holding the lock; drop the lock
+        // before doing the JSON deserialization to keep the locked section
+        // tight (scenes also touch this mutex during their tick).
+        type LwwBlobs = Vec<(u32, Vec<u8>)>;
+        type GosBlobs = Vec<(u32, Vec<Vec<u8>>)>;
+        let (lww_blobs, gos_blobs): (LwwBlobs, GosBlobs) = {
+            let Ok(crdt) = scene.dcl_scene.scene_crdt.lock() else {
+                return GString::default();
+            };
+            let mut lww_blobs = Vec::new();
+            let mut gos_blobs = Vec::new();
+            let component_ids: Vec<crate::dcl::components::SceneComponentId> =
+                crdt.components.keys().copied().collect();
+
+            for component_id in component_ids {
+                // Try LWW first.
+                if let Some(lww_def) = crdt.get_lww_component_definition(component_id) {
+                    if let Some(opaque) = lww_def.get_opaque(entity) {
+                        if opaque.value.is_some() {
+                            let mut buf = Vec::new();
+                            let mut writer =
+                                crate::dcl::serialization::writer::DclWriter::new(&mut buf);
+                            if lww_def.to_binary(entity, &mut writer).is_ok() {
+                                lww_blobs.push((component_id.0, buf));
+                            }
+                        }
+                        continue;
+                    }
+                }
+                // Then GOS. The Generic trait has no count method, so probe
+                // increasing indices until to_binary errors out.
+                if let Some(gos_def) = crdt.get_gos_component_definition(component_id) {
+                    let mut entries: Vec<Vec<u8>> = Vec::new();
+                    let mut i = 0usize;
+                    loop {
+                        let mut buf = Vec::new();
+                        let mut writer =
+                            crate::dcl::serialization::writer::DclWriter::new(&mut buf);
+                        if gos_def.to_binary(entity, i, &mut writer).is_err() {
+                            break;
+                        }
+                        entries.push(buf);
+                        i += 1;
+                        // Defensive cap; GOS values cap is 100 per entity.
+                        if i > 256 {
+                            break;
+                        }
+                    }
+                    if !entries.is_empty() {
+                        gos_blobs.push((component_id.0, entries));
+                    }
+                }
+            }
+            (lww_blobs, gos_blobs)
+        };
+
+        let mut lww_json = serde_json::Map::new();
+        for (component_id, buf) in lww_blobs {
+            let name = crate::dcl::components::component_id_to_name(component_id);
+            let key = if name == "Unknown" {
+                format!("Unknown_{}", component_id)
+            } else {
+                name.to_string()
+            };
+            match crate::dcl::components::proto_components::deserialize_component_to_json(
+                component_id,
+                &buf,
+            ) {
+                Some(v) => {
+                    lww_json.insert(key, v);
+                }
+                None => {
+                    lww_json.insert(
+                        key,
+                        serde_json::json!({ "__decode_error": true, "bytes_len": buf.len() }),
+                    );
+                }
+            }
+        }
+
+        let mut gos_json = serde_json::Map::new();
+        for (component_id, entries) in gos_blobs {
+            let name = crate::dcl::components::component_id_to_name(component_id);
+            let key = if name == "Unknown" {
+                format!("Unknown_{}", component_id)
+            } else {
+                name.to_string()
+            };
+            let arr: Vec<serde_json::Value> = entries
+                .into_iter()
+                .map(|buf| {
+                    crate::dcl::components::proto_components::deserialize_component_to_json(
+                        component_id,
+                        &buf,
+                    )
+                    .unwrap_or_else(
+                        || serde_json::json!({ "__decode_error": true, "bytes_len": buf.len() }),
+                    )
+                })
+                .collect();
+            gos_json.insert(key, serde_json::Value::Array(arr));
+        }
+
+        let out = serde_json::json!({ "lww": lww_json, "gos": gos_json });
+        GString::from(out.to_string().as_str())
+    }
+
     fn compute_scene_distance(&mut self) {
         self.current_parcel_scene_id = SceneId::INVALID;
 
@@ -898,6 +1145,13 @@ impl SceneManager {
 
     fn scene_runner_update(&mut self, delta: f64) {
         if self.pause {
+            return;
+        }
+
+        // SceneManager outlives the Explorer scene (autoload singleton). When the user
+        // signs out via change_scene_to_file, player_avatar_node becomes a dangling
+        // reference until the next Explorer load reassigns it via set_player_node.
+        if !self.player_avatar_node.is_instance_valid() {
             return;
         }
 
@@ -1535,6 +1789,10 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(true);
             }
 
+            // Stop any wind/impulse the player just walked out of.
+            scene.active_external_force = Vector3::ZERO;
+            scene.pending_impulses.clear();
+
             scene
                 .avatar_scene_updates
                 .internal_player_data
@@ -1639,6 +1897,27 @@ impl SceneManager {
             .get(&self.current_parcel_scene_id)
             .map(|x| x.locomotion_settings.clone())
             .unwrap_or_default()
+    }
+
+    /// Current parcel scene's external force on the player (Godot axes), or
+    /// zero if no scene is driving one.
+    #[func]
+    pub fn get_active_external_force(&self) -> Vector3 {
+        self.scenes
+            .get(&self.current_parcel_scene_id)
+            .map(|x| x.active_external_force)
+            .unwrap_or(Vector3::ZERO)
+    }
+
+    /// Drain pending impulse vectors (Godot axes) from the current parcel
+    /// scene. The player controller calls this once per physics tick.
+    #[func]
+    pub fn consume_pending_impulses(&mut self) -> PackedVector3Array {
+        let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) else {
+            return PackedVector3Array::new();
+        };
+        let drained: Vec<Vector3> = scene.pending_impulses.drain(..).collect();
+        PackedVector3Array::from(drained.as_slice())
     }
 
     #[func]
@@ -1870,6 +2149,14 @@ impl INode for SceneManager {
 
         // Check loading session timeouts
         self.check_loading_timeouts();
+
+        // SceneManager is owned by DclGlobal (autoload) and outlives the Explorer scene.
+        // After change_scene_to_file (e.g. Sign Out), `player_avatar_node` becomes a
+        // dangling reference until the next Explorer load reassigns it via set_player_node.
+        // The pointer/raycast/tooltip block below derefs that node, so bail out here.
+        if !self.player_avatar_node.is_instance_valid() {
+            return;
+        }
 
         // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
         // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.

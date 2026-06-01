@@ -700,6 +700,15 @@ impl MessageProcessor {
             self.handle_room_metadata_changed(metadata);
             return;
         }
+        if let MessageType::Disconnected(reason) = &message.message {
+            // Set disconnect_reason if not already set (first disconnect wins).
+            // Routed here because room-level events use H160::zero() and would
+            // otherwise be filtered out by the is_player_address check below.
+            if self.disconnect_reason.is_none() {
+                self.disconnect_reason = Some((*reason, message.room_id));
+            }
+            return;
+        }
 
         // Media messages (video/audio from streamers) use synthetic addresses (H160::zero())
         // and must bypass the player address check — they don't need peer lifecycle management.
@@ -897,12 +906,9 @@ impl MessageProcessor {
                 // Handle peer leaving a room
                 self.handle_peer_left(message.address, room_id);
             }
-            MessageType::Disconnected(reason) => {
-                // Set disconnect_reason if not already set (first disconnect wins)
-                // Any room disconnect (scene or archipelago) should be reported
-                if self.disconnect_reason.is_none() {
-                    self.disconnect_reason = Some((*reason, room_id));
-                }
+            MessageType::Disconnected(_) => {
+                // Handled earlier in process_message() as a room-level event before
+                // the per-peer routing — this arm is unreachable.
             }
             MessageType::PeerMetadata(ref metadata) => {
                 // Parse metadata JSON to extract version and catalyst info

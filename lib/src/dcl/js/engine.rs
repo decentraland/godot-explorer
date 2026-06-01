@@ -98,8 +98,12 @@ pub fn reset_crdt_metrics() {
     CRDT_RECV_OPS.store(0, Ordering::Relaxed);
     CRDT_DIRTY_LWW_ENTRIES.store(0, Ordering::Relaxed);
     CRDT_DIRTY_GOS_ENTRIES.store(0, Ordering::Relaxed);
-    crdt_dirty_lww_by_component().lock().unwrap().clear();
-    crdt_dirty_gos_by_component().lock().unwrap().clear();
+    if let Ok(mut m) = crdt_dirty_lww_by_component().lock() {
+        m.clear();
+    }
+    if let Ok(mut m) = crdt_dirty_gos_by_component().lock() {
+        m.clear();
+    }
     CRDT_BREAKDOWN_ENABLED.store(true, Ordering::Relaxed);
 }
 
@@ -115,15 +119,20 @@ pub struct CrdtComponentBreakdown {
 /// doesn't pollute the next bench window.
 pub fn drain_crdt_component_breakdown() -> CrdtComponentBreakdown {
     CRDT_BREAKDOWN_ENABLED.store(false, Ordering::Relaxed);
-    let mut lww: Vec<(u32, u64)> =
-        std::mem::take(&mut *crdt_dirty_lww_by_component().lock().unwrap())
-            .into_iter()
-            .collect();
+    // Drain via try-lock; a poisoned mutex (from a panicking scene thread)
+    // returns an empty breakdown rather than crashing the bench runner.
+    // Mirrors the pattern used by drain_state_timing in update_scene.rs.
+    let mut lww: Vec<(u32, u64)> = if let Ok(mut m) = crdt_dirty_lww_by_component().lock() {
+        std::mem::take(&mut *m).into_iter().collect()
+    } else {
+        Vec::new()
+    };
     lww.sort_by(|a, b| b.1.cmp(&a.1));
-    let mut gos: Vec<(u32, u64)> =
-        std::mem::take(&mut *crdt_dirty_gos_by_component().lock().unwrap())
-            .into_iter()
-            .collect();
+    let mut gos: Vec<(u32, u64)> = if let Ok(mut m) = crdt_dirty_gos_by_component().lock() {
+        std::mem::take(&mut *m).into_iter().collect()
+    } else {
+        Vec::new()
+    };
     gos.sort_by(|a, b| b.1.cmp(&a.1));
     CrdtComponentBreakdown { lww, gos }
 }

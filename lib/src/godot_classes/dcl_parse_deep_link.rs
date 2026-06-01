@@ -76,6 +76,10 @@ pub struct DclParseDeepLink {
     /// Mobile alternative to the desktop `--gp-benchmark` CLI flag.
     #[var]
     gp_benchmark: bool,
+
+    /// Show transparent safe-area debug overlay (deep link param: safemargindebug=true)
+    #[var]
+    safe_margin_debug: bool,
 }
 
 #[godot_api]
@@ -107,6 +111,7 @@ impl DclParseDeepLink {
             scene_inspector_file: false,
             low_spec_warning: false,
             gp_benchmark: false,
+            safe_margin_debug: false,
         }
     }
 
@@ -139,6 +144,7 @@ impl DclParseDeepLink {
             scene_inspector_file: r.scene_inspector_file,
             low_spec_warning: r.low_spec_warning,
             gp_benchmark: r.gp_benchmark,
+            safe_margin_debug: r.safe_margin_debug,
         }
     }
 }
