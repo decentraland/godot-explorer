@@ -27,6 +27,7 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal upgrade_to_otp
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 ## Sync settings "Hide View Profile" / "Hide World Interactions" checkboxes.
@@ -1120,3 +1121,24 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 		return
 	camera_mode_blocked = blocked
 	camera_mode_block_changed.emit(blocked)
+
+
+# Stable per-install device anchor used to derive the thirdweb guest session.
+# Android: SSAID via the native plugin; iOS: Keychain UUID; desktop: empty
+# (Rust falls back to the `user://device_anchor.txt` UUID). Shared by the lobby
+# guest-login flow and the "Upgrade to OTP" modal so both derive the same wallet.
+#
+# Android note: `has_method()` always returns false for JNISingleton methods
+# (Object.has_method consults ClassDB, the Android plugin method_map is
+# separate). Don't guard the Android call with has_method or it silently no-ops.
+# See: https://github.com/godotengine/godot/issues/106436
+func get_device_anchor_id() -> String:
+	if self.is_android():
+		var plugin = Engine.get_singleton("dcl-godot-android")
+		if plugin != null:
+			return plugin.getDeviceAnchorId()
+	elif self.is_ios():
+		var plugin = Engine.get_singleton("DclGodotiOS")
+		if plugin != null and plugin.has_method("get_device_anchor_id"):
+			return plugin.get_device_anchor_id()
+	return ""

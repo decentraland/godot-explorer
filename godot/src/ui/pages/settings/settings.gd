@@ -31,6 +31,7 @@ const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 @onready var container_advanced: VBoxContainer = %VBoxContainer_Advanced
 @onready var container_audio: VBoxContainer = %VBoxContainer_Audio
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
+@onready var button_upgrade_to_otp: CustomButton = %Button_UpgradeToOtp
 @onready var container_storage: VBoxContainer = %VBoxContainer_Storage
 @onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
 
@@ -100,6 +101,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	button_developer.visible = !Global.is_production()
+	_refresh_upgrade_to_otp_visibility()
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
 
@@ -562,7 +564,22 @@ func _on_button_audio_pressed():
 
 func _on_button_account_pressed() -> void:
 	show_control(container_account)
+	_refresh_upgrade_to_otp_visibility()
 	_async_scroll_to_tab_button(button_account)
+
+
+# The "Upgrade to OTP" button is only meaningful for a thirdweb guest wallet —
+# the persistent silent account that has no email/social recovery yet. Hidden
+# for real wallets, disposable LocalWallets, or when there's no identity.
+func _refresh_upgrade_to_otp_visibility() -> void:
+	button_upgrade_to_otp.visible = (
+		Global.player_identity != null and Global.player_identity.is_thirdweb_guest()
+	)
+
+
+func _on_button_upgrade_to_otp_pressed() -> void:
+	Global.metrics.track_click_button("upgrade_to_otp", "settings_account", "")
+	Global.upgrade_to_otp.emit()
 
 
 func _on_button_delete_account_pressed() -> void:

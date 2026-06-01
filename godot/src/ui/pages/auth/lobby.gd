@@ -722,21 +722,8 @@ func _on_button_enter_as_disposable_account_pressed():
 # on iOS) used to derive a deterministic thirdweb guest wallet. Empty string
 # means "no native anchor available" — Rust falls back to a UUID stored in
 # user:// so desktop still works.
-#
-# Android note: `has_method()` always returns false for JNISingleton methods
-# (Object.has_method consults ClassDB, the Android plugin method_map is
-# separate). Don't guard the call with has_method or it silently no-ops.
-# See: https://github.com/godotengine/godot/issues/106436
 func _get_device_anchor_id() -> String:
-	if Global.is_android():
-		var plugin = Engine.get_singleton("dcl-godot-android")
-		if plugin != null:
-			return plugin.getDeviceAnchorId()
-	elif Global.is_ios():
-		var plugin = Engine.get_singleton("DclGodotiOS")
-		if plugin != null and plugin.has_method("get_device_anchor_id"):
-			return plugin.get_device_anchor_id()
-	return ""
+	return Global.get_device_anchor_id()
 
 
 # gdlint:ignore = async-function-name

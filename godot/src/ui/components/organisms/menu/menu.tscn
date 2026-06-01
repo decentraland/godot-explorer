@@ -19,6 +19,7 @@
 [ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/pages/settings/settings_button.gd" id="18_3id7u"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/molecules/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
 [ext_resource type="PackedScene" uid="uid://b3e5xybvamaqr" path="res://src/ui/components/organisms/menu/account_deletion_popup.tscn" id="31_kkhkt"]
+[ext_resource type="PackedScene" uid="uid://b8wupgotppopup" path="res://src/ui/components/organisms/menu/upgrade_otp_popup.tscn" id="32_otp01"]
 
 [sub_resource type="Gradient" id="Gradient_6v8vt"]
 colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0.945098, 1)
@@ -233,6 +234,10 @@ theme_override_font_sizes/font_size = 40
 text = "Updating profile..."
 
 [node name="AccountDeletionPopUp" parent="." unique_id=1784076804 instance=ExtResource("31_kkhkt")]
+visible = false
+layout_mode = 1
+
+[node name="UpgradeOtpPopUp" parent="." unique_id=1784076805 instance=ExtResource("32_otp01")]
 visible = false
 layout_mode = 1
 
