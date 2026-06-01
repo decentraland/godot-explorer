@@ -89,6 +89,10 @@ var submit_message_closes_chat: bool = false:
 	set(value):
 		submit_message_closes_chat = value
 
+var gamepad_mode_enabled: bool = false:
+	set(value):
+		gamepad_mode_enabled = value
+
 # See FpsLimitMode enum for available options (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
 var limit_fps: int = FpsLimitMode.FPS_30:
 	set(value):
@@ -308,6 +312,7 @@ func load_from_default():
 	self.dynamic_skybox = true
 	self.skybox_time = 43200
 	self.submit_message_closes_chat = false
+	self.gamepad_mode_enabled = false
 
 	self.window_mode = 0
 
@@ -378,6 +383,9 @@ func load_from_settings_file():
 	self.skybox_time = settings_file.get_value("config", "skybox_time", data_default.skybox_time)
 	self.submit_message_closes_chat = settings_file.get_value(
 		"config", "submit_message_closes_chat", data_default.submit_message_closes_chat
+	)
+	self.gamepad_mode_enabled = settings_file.get_value(
+		"config", "gamepad_mode_enabled", data_default.gamepad_mode_enabled
 	)
 
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
@@ -506,6 +514,7 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"config", "submit_message_closes_chat", self.submit_message_closes_chat
 	)
+	new_settings_file.set_value("config", "gamepad_mode_enabled", self.gamepad_mode_enabled)
 	new_settings_file.set_value("config", "window_mode", self.window_mode)
 	new_settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	new_settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)

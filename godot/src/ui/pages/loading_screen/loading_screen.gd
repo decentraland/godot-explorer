@@ -185,7 +185,9 @@ func _on_timer_check_progress_timeout_timeout():
 
 	if should_timeout:
 		# Skip showing modal during tests to avoid affecting screenshots
-		if Global.testing_scene_mode or Global.cli.scene_test_mode:
+		# and during the GP benchmark, where the runner has its own 30 min
+		# hard cap and the modal would force a half-loaded sample.
+		if Global.testing_scene_mode or Global.cli.scene_test_mode or Global.is_gp_benchmark():
 			return
 		Global.modal_manager.async_show_scene_timeout_modal()
 		# LOADING_TIMEOUT metric
