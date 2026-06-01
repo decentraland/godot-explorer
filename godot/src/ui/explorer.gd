@@ -35,7 +35,6 @@ var _resubscribe_timer: Timer = null
 ## True between social-service init and player logout. Gates retry loops so they
 ## exit cleanly when the session ends mid-await instead of re-subscribing after sign-out.
 var _session_active: bool = false
-var _gamepad_connected: bool = false
 
 ## Children of %UI hidden while "hide explorer UI" is on; restored when toggled off.
 var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
@@ -255,8 +254,7 @@ func _ready():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()
-		Input.joy_connection_changed.connect(_on_joy_connection_changed)
-		apply_gamepad_mode()
+		_update_virtual_controls_visibility()
 	else:
 		mobile_ui.hide()
 
@@ -1194,7 +1192,7 @@ func _on_profile_container_visibility_changed() -> void:
 		# Keep profile visibility controlled by its own open/close flow in Hide UI mode.
 		# Avoid forcing hide/show here to prevent visibility_changed re-entrancy loops.
 		return
-	if not profile_container.visible and not _gamepad_connected:
+	if not profile_container.visible:
 		joypad.show()
 
 
@@ -1550,38 +1548,23 @@ func _on_deep_link_open_place(place_id: String) -> void:
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	if not _gamepad_connected:
-		virtual_joystick.show()
+	virtual_joystick.show()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
 
 
-func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	apply_gamepad_mode()
-
-
-func apply_gamepad_mode() -> void:
-	var enabled: bool = Global.get_config().gamepad_mode_enabled
-	_gamepad_connected = enabled and Input.get_connected_joypads().size() > 0
-	_update_virtual_controls_visibility()
-
-
 func _update_virtual_controls_visibility() -> void:
-	if _gamepad_connected:
-		joypad.hide()
-		virtual_joystick.hide()
-	else:
-		var panel_open := (
-			friends_panel.visible
-			or notifications_panel.visible
-			or settings_panel.visible
-			or profile_container.visible
-		)
-		if not panel_open:
-			joypad.show()
-		virtual_joystick.show()
+	var panel_open := (
+		friends_panel.visible
+		or notifications_panel.visible
+		or settings_panel.visible
+		or profile_container.visible
+	)
+	if not panel_open:
+		joypad.show()
+	virtual_joystick.show()
 
 
 func _on_backpack_emote_opened(on_emotes := false) -> void:
@@ -1597,14 +1580,12 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if not _gamepad_connected:
-		joypad.show()
+	joypad.show()
 
 
 func _on_discover_open():
 	navbar.collapse()
-	if not _gamepad_connected:
-		joypad.show()
+	joypad.show()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()

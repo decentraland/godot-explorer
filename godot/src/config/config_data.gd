@@ -31,7 +31,6 @@ enum ConfigParams {
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
-	GAMEPAD_CAMERA_SENSITIVITY,
 	AVATAR_IMPOSTORS_ENABLED,
 }
 
@@ -88,10 +87,6 @@ var skybox_time: int = 43200:
 var submit_message_closes_chat: bool = false:
 	set(value):
 		submit_message_closes_chat = value
-
-var gamepad_mode_enabled: bool = false:
-	set(value):
-		gamepad_mode_enabled = value
 
 # See FpsLimitMode enum for available options (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
 var limit_fps: int = FpsLimitMode.FPS_30:
@@ -228,11 +223,6 @@ var audio_mic_amplification: float = 100.0:
 	set(value):
 		audio_mic_amplification = value
 
-var gamepad_camera_sensitivity: float = 50.0:
-	set(value):
-		gamepad_camera_sensitivity = maxf(value, 1.0)
-		param_changed.emit(ConfigParams.GAMEPAD_CAMERA_SENSITIVITY)
-
 var analytics_user_id: String = "":
 	set(value):
 		analytics_user_id = value
@@ -311,7 +301,6 @@ func load_from_default():
 	self.dynamic_skybox = true
 	self.skybox_time = 43200
 	self.submit_message_closes_chat = false
-	self.gamepad_mode_enabled = false
 
 	self.window_mode = 0
 
@@ -383,10 +372,6 @@ func load_from_settings_file():
 	self.submit_message_closes_chat = settings_file.get_value(
 		"config", "submit_message_closes_chat", data_default.submit_message_closes_chat
 	)
-	self.gamepad_mode_enabled = settings_file.get_value(
-		"config", "gamepad_mode_enabled", data_default.gamepad_mode_enabled
-	)
-
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
 	self.resolution_3d_scale = settings_file.get_value(
@@ -419,10 +404,6 @@ func load_from_settings_file():
 
 	self.audio_mic_amplification = settings_file.get_value(
 		"config", "audio_mic_amplification", data_default.audio_mic_amplification
-	)
-
-	self.gamepad_camera_sensitivity = settings_file.get_value(
-		"config", "gamepad_camera_sensitivity", data_default.gamepad_camera_sensitivity
 	)
 
 	var profile_suffix := _get_profile_suffix()
@@ -509,7 +490,6 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"config", "submit_message_closes_chat", self.submit_message_closes_chat
 	)
-	new_settings_file.set_value("config", "gamepad_mode_enabled", self.gamepad_mode_enabled)
 	new_settings_file.set_value("config", "window_mode", self.window_mode)
 	new_settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	new_settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
@@ -522,9 +502,6 @@ func save_to_settings_file():
 		"config", "audio_avatar_and_emotes_volume", self.audio_avatar_and_emotes_volume
 	)
 	new_settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
-	new_settings_file.set_value(
-		"config", "gamepad_camera_sensitivity", self.gamepad_camera_sensitivity
-	)
 	new_settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 
 	# Preserve all existing session keys (other profile slots)

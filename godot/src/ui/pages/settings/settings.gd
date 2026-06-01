@@ -13,7 +13,6 @@ enum SceneLogLevel {
 
 const _SECTION_TITLE_SCRIPT = preload("res://src/ui/pages/settings/section_title.gd")
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
-const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 
 ## When true, settings operates as a side panel inside the explorer:
 ## orientation is not changed and the background texture is hidden.
@@ -49,8 +48,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var hide_view_profile_row: HBoxContainer = %HideViewProfile
 @onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
-@onready var gamepad_camera_sensitivity: SettingsSlider = %GamepadCameraSensitivity
-@onready var check_button_gamepad_mode_enabled: CheckButton = %CheckButton_GamepadModeEnabled
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 @onready var container_interface: MarginContainer = %Container_Interface
@@ -91,7 +88,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
-@onready var container_gamepad: MarginContainer = %Container_Gamepad
 
 @onready var button_sign_out: CustomButton = %CustomButton_SignOut
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
@@ -124,13 +120,6 @@ func _ready():
 	if not Global.session_hide_ui_options_sync.is_connected(_on_session_hide_ui_options_sync):
 		Global.session_hide_ui_options_sync.connect(_on_session_hide_ui_options_sync)
 	_refresh_hide_explorer_ui_row()
-
-	_init_gamepad_sensitivity.call_deferred()
-	var gamepad_enabled: bool = Global.get_config().gamepad_mode_enabled
-	check_button_gamepad_mode_enabled.button_pressed = gamepad_enabled
-	container_gamepad.visible = Global.is_mobile()
-	gamepad_camera_sensitivity.visible = gamepad_enabled
-	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 	dropdown_list_max_cache_size.add_item("1 GB", 0)
 	dropdown_list_max_cache_size.add_item("2 GB", 1)
@@ -881,38 +870,6 @@ func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
 	Global.get_config().audio_avatar_and_emotes_volume = value
 	AudioSettings.apply_avatar_and_emotes_volume_settings()
 	Global.get_config().save_to_settings_file()
-
-
-func _init_gamepad_sensitivity() -> void:
-	gamepad_camera_sensitivity.min_value = MIN_GAMEPAD_CAMERA_SENSITIVITY
-	var clamped_sensitivity := maxf(
-		Global.get_config().gamepad_camera_sensitivity, MIN_GAMEPAD_CAMERA_SENSITIVITY
-	)
-	gamepad_camera_sensitivity.value = clamped_sensitivity
-	if clamped_sensitivity != Global.get_config().gamepad_camera_sensitivity:
-		Global.get_config().gamepad_camera_sensitivity = clamped_sensitivity
-		Global.get_config().save_to_settings_file()
-
-
-func _on_gamepad_camera_sensitivity_value_changed(value: float) -> void:
-	Global.get_config().gamepad_camera_sensitivity = maxf(value, MIN_GAMEPAD_CAMERA_SENSITIVITY)
-	Global.get_config().save_to_settings_file()
-
-
-func _on_check_button_gamepad_mode_enabled_toggled(toggled_on: bool) -> void:
-	if Global.get_config().gamepad_mode_enabled != toggled_on:
-		Global.get_config().gamepad_mode_enabled = toggled_on
-		Global.get_config().save_to_settings_file()
-	gamepad_camera_sensitivity.visible = toggled_on
-	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		explorer.apply_gamepad_mode()
-
-
-func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		explorer.apply_gamepad_mode()
 
 
 func _on_custom_button_sign_out_pressed() -> void:
