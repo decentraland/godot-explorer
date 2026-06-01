@@ -27,19 +27,20 @@ signal purchase_pending(product_id: String)
 signal balance_changed(new_balance: int)
 signal transaction_history_updated
 
-# Credit packs. Today we only ship the local/dev catalog (served by
-# `godot/ios/LocalStoreKit.storekit` via the Xcode scheme). Real ASC product
-# IDs will live alongside these once production wiring is added.
+# Credit packs. These IDs must exist as consumable products in App Store
+# Connect — StoreKit resolves them against Sandbox (TestFlight / sandbox
+# account) and Production. No local/mock catalog: an ID not configured in
+# ASC simply returns no product.
 const PRODUCT_IDS: PackedStringArray = [
-	"local_credits_10",
-	"local_credits_50",
-	"local_credits_100",
+	"credits_10",
+	"credits_50",
+	"credits_100",
 ]
 
 const _CREDITS_BY_PRODUCT := {
-	"local_credits_10": 10,
-	"local_credits_50": 50,
-	"local_credits_100": 100,
+	"credits_10": 10,
+	"credits_50": 50,
+	"credits_100": 100,
 }
 
 # Synthetic latency for the simulated backend round-trip — long enough that
@@ -138,20 +139,10 @@ func enable() -> void:
 func is_available() -> bool:
 	if not enabled:
 		return false
-	# TODO: remove editor override — forces IAP UI visible for desktop testing
-	if OS.has_feature("editor"):
-		return true
 	return _store_kit_available
 
 
 func get_products() -> Array:
-	# TODO: remove editor override — returns mock products for desktop testing
-	if OS.has_feature("editor") and _products.is_empty():
-		return [
-			{"id": "local_credits_10", "displayName": "10 Credits", "displayPrice": "$0.99"},
-			{"id": "local_credits_50", "displayName": "50 Credits", "displayPrice": "$3.99"},
-			{"id": "local_credits_100", "displayName": "100 Credits", "displayPrice": "$6.99"},
-		]
 	return _products
 
 
@@ -164,10 +155,6 @@ func get_transaction_history() -> Array:
 
 
 func purchase(product_id: String) -> void:
-	# TODO: remove — simulates purchase flow in the editor for testing
-	if not _store_kit_available and OS.has_feature("editor"):
-		_async_simulate_editor_purchase(product_id)
-		return
 	if not _store_kit_available:
 		print("[IAP] not available; ignoring purchase(", product_id, ")")
 		return
@@ -207,27 +194,6 @@ func purchase(product_id: String) -> void:
 	_purchase_in_flight = true
 	_show_overlay()
 	_store_kit.purchase(product_id, wallet)
-
-
-# TODO: remove — editor-only simulated purchase for desktop testing
-func _async_simulate_editor_purchase(product_id: String) -> void:
-	var credits: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
-	if _balance + credits > _MAX_CREDITS:
-		Global.modal_manager.async_show_credit_limit_total_modal()
-		return
-	var today_credits = _get_today_credits()
-	if today_credits + credits > _MAX_DAILY_CREDITS:
-		Global.modal_manager.async_show_credit_limit_daily_modal()
-		return
-	_purchase_in_flight = true
-	_show_overlay()
-	await get_tree().create_timer(1.0).timeout
-	_finish_purchase_flow()
-	_balance += credits
-	balance_changed.emit(_balance)
-	_show_success_modal(credits)
-	_record_transaction(credits, false)
-	purchase_completed.emit(product_id, credits)
 
 
 func _record_transaction(credits: int, is_refund: bool) -> void:

@@ -14,15 +14,15 @@ theme_override_constants/separation = 48
 layout_mode = 2
 texture = ExtResource("1_4gvv1")
 credits = 100
-product_id = "local_credits_100"
+product_id = "credits_100"
 
 [node name="CreditOption2" parent="." unique_id=572394239 instance=ExtResource("1_qs1i0")]
 layout_mode = 2
 texture = ExtResource("3_4cjag")
 credits = 50
-product_id = "local_credits_50"
+product_id = "credits_50"
 
 [node name="CreditOption3" parent="." unique_id=1135887016 instance=ExtResource("1_qs1i0")]
 layout_mode = 2
 texture = ExtResource("4_7ctuo")
-product_id = "local_credits_10"
+product_id = "credits_10"

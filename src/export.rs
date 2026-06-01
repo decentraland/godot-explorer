@@ -424,18 +424,6 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
         &format!("Export completed: {}", output_rel_path),
     );
 
-    // iOS-specific post-export: install the local StoreKit Configuration
-    // and patch the freshly regenerated Xcode scheme to reference it. Without
-    // this, IAP development against the local mock breaks on every re-export.
-    if target == "ios" {
-        if let Err(e) = crate::ios_xcode::apply_storekit_patch() {
-            print_message(
-                MessageType::Warning,
-                &format!("StoreKit patch failed: {} (continuing)", e),
-            );
-        }
-    }
-
     Ok(())
 }
 
