@@ -59,6 +59,7 @@ impl ProcessorContext {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: true, // Asset server always compresses for mobile
+            apply_optimizations: true, // Bake split/LODs/shadows/materials into the .scn
         }
     }
 
