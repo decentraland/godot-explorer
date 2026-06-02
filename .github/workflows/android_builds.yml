@@ -107,18 +107,22 @@ jobs:
           mv exports/decentraland.godot.client-signed.apk exports/decentraland.godot.client.apk
           rm exports/decentraland.godot.client-aligned.apk
 
+      # The AAB is the Play Store artifact — only build/sign/upload it on main/release.
       - name: Export Android AAB
+        if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
         run: |
           cargo run -- export --target android --format aab --release
 
       # Decode and setup keystore for AAB signing
       - name: Setup AAB Signing Keystore
+        if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > dclgodot.upload.jks
           ls -la dclgodot.upload.jks
 
       # Sign the AAB file
       - name: Sign Android AAB
+        if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
         run: |
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
             -keystore dclgodot.upload.jks \
@@ -224,7 +228,7 @@ jobs:
 
       - name: Upload AAB Artifacts
         uses: actions/upload-artifact@v4
-        if: success() || failure()
+        if: (success() || failure()) && (github.ref_name == 'main' || github.ref_name == 'release')
         with:
           name: AndroidAAB
           path: android-artifacts-aab/
@@ -232,15 +236,15 @@ jobs:
 
       - name: Upload Android Debug Symbols
         uses: actions/upload-artifact@v4
-        if: success() || failure()
+        if: (success() || failure()) && (github.ref_name == 'main' || github.ref_name == 'release')
         with:
           name: Android Native Debug Symbols
           path: android-debug-symbols/
           if-no-files-found: error
         
-      # Upload debug symbols to Sentry for production builds
+      # Upload debug symbols to Sentry for production builds (main/release only)
       - name: Upload debug symbols to Sentry
-        if: success()
+        if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
         shell: bash
         run: |
           EXPLORER_VERSION=$(cargo run -- explorer-version)
@@ -353,14 +357,14 @@ jobs:
             else
               APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
             fi
-            AAB_LINK="[📦 Download AAB](${ARTIFACTS_URL}/artifacts)"
-            SYMBOLS_LINK="[🔧 Debug Symbols](${ARTIFACTS_URL}/artifacts)"
           else
             ANDROID_STATUS="❌ Failed"
             APK_LINK="Build failed"
-            AAB_LINK="Build failed"
-            SYMBOLS_LINK="Build failed"
           fi
+          # AAB and debug symbols are only built on main/release, never on PRs (this
+          # report only runs on PRs), so don't link to artifacts that won't exist.
+          AAB_LINK="_main/release builds only_"
+          SYMBOLS_LINK="_main/release builds only_"
 
           {
             echo "## 📦 Build Report"
