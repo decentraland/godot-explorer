@@ -191,7 +191,10 @@ cargo run -- export --target ios
    The `build` label (or the legacy alias `build-ios`) triggers `mobile_distribute.yml`,
    which builds & ships iOS → TestFlight and, once the commit's APK is in R2, posts a
    Slack "🤖 Android Build Ready" notification (uses the existing `SLACK_WEBHOOK_URL`).
-   It does not rebuild Android and does not push to any store.
+   It does not rebuild Android and does not push to any store. A **manual dispatch on
+   `main`/`release`** additionally publishes the **AAB** (Play Store artifact) to R2 and
+   posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
+   `main`/`release` builds.
    ```bash
    # On a PR: add the build label (iOS TestFlight + Android Slack notification)
    gh pr edit --add-label "build"

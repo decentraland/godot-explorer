@@ -12,7 +12,8 @@ name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 #   - Manual workflow dispatch on the main / release branch
 #
 # The Android leg does NOT rebuild and does NOT distribute to a store — it only
-# surfaces the R2 download link once the APK is ready.
+# surfaces the R2 download link once the APK is ready. On a manual dispatch of
+# main/release it additionally surfaces the AAB (Play Store artifact) the same way.
 on:
   pull_request:
     types: [labeled]
@@ -263,6 +264,85 @@ jobs:
             ]
           }" "$SLACK_WEBHOOK_URL"
           echo "✅ Slack notification sent (Android build ready)"
+
+      # The AAB (Play Store artifact) is only published for main/release builds, so we
+      # only surface it on a manual dispatch of main/release. Best-effort: if the AAB
+      # isn't in R2 we warn and skip rather than failing the job.
+      - name: Wait for Android AAB in R2
+        if: success() && github.event_name == 'workflow_dispatch' && (needs.prepare.outputs.ref == 'main' || needs.prepare.outputs.ref == 'release')
+        run: |
+          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
+          echo "Waiting for s3://${AWS_S3_BUCKET}/${KEY}"
+
+          # The AAB is uploaded in the same CI step as the APK, so it should already be
+          # present now that the APK wait succeeded — short timeout is enough.
+          DEADLINE=$(( $(date +%s) + 15 * 60 ))
+          while true; do
+            if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
+              echo "✅ AAB is available in R2"
+              echo "AAB_READY=true" >> "$GITHUB_ENV"
+              break
+            fi
+            if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+              echo "⚠️  AAB not found in R2 after timeout ($KEY) — skipping AAB notification."
+              echo "AAB_READY=false" >> "$GITHUB_ENV"
+              break
+            fi
+            echo "⏳ AAB not ready yet, retrying in 20s..."
+            sleep 20
+          done
+
+      - name: Notify Slack - Android AAB ready
+        if: success() && env.AAB_READY == 'true' && github.event_name == 'workflow_dispatch' && (needs.prepare.outputs.ref == 'main' || needs.prepare.outputs.ref == 'release')
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
+            exit 0
+          fi
+
+          AAB_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
+          COMMIT_SHORT="${SHA:0:7}"
+          TRIGGERED_BY="${{ github.actor }}"
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"blocks\": [
+              {
+                \"type\": \"header\",
+                \"text\": { \"type\": \"plain_text\", \"text\": \"📦 Android AAB Ready (Play Store)\", \"emoji\": true }
+              },
+              {
+                \"type\": \"section\",
+                \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Decentraland Mobile Client*\nAndroid AAB ready for Play Store upload (${REF})\" }
+              },
+              {
+                \"type\": \"section\",
+                \"fields\": [
+                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${REF}\`\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
+                ]
+              },
+              {
+                \"type\": \"actions\",
+                \"elements\": [
+                  {
+                    \"type\": \"button\",
+                    \"text\": { \"type\": \"plain_text\", \"text\": \"📦 Download AAB\", \"emoji\": true },
+                    \"style\": \"primary\",
+                    \"url\": \"${AAB_URL}\"
+                  },
+                  {
+                    \"type\": \"button\",
+                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Build Report\", \"emoji\": true },
+                    \"url\": \"${WORKFLOW_URL}\"
+                  }
+                ]
+              }
+            ]
+          }" "$SLACK_WEBHOOK_URL"
+          echo "✅ Slack notification sent (Android AAB ready)"
 
       - name: Notify Slack - Android build failed
         if: failure()

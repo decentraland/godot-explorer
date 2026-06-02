@@ -145,10 +145,12 @@ jobs:
           mv exports/decentraland.godot.client.apk android-artifacts-apk/ || true
           mv exports/decentraland.godot.client.aab android-artifacts-aab/ || true
 
-      # Upload the signed APK to the R2 mobile-artifacts bucket so it can be downloaded
-      # directly (the PR build report and the Mobile Distribute Slack notification link here).
-      # Keyed by branch + commit SHA so a download can target an exact build.
-      - name: Upload APK to R2
+      # Upload the signed artifacts to the R2 mobile-artifacts bucket so they can be
+      # downloaded directly (the PR build report and the Mobile Distribute Slack
+      # notification link here). Keyed by branch + commit SHA so a download can target
+      # an exact build. The APK is uploaded for every build; the AAB (Play Store
+      # artifact) only for main/release.
+      - name: Upload Android artifacts to R2
         if: success()
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
@@ -193,6 +195,24 @@ jobs:
           echo "🔗 Public URL: ${PUBLIC_URL}"
           # Surface the direct download link to later steps (build report comment).
           echo "APK_PUBLIC_URL=${PUBLIC_URL}" >> "$GITHUB_ENV"
+
+          # The AAB is the Play Store artifact — only publish it for main/release.
+          if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "release" ]; then
+            AAB_PATH="android-artifacts-aab/decentraland.godot.client.aab"
+            if [ -f "$AAB_PATH" ]; then
+              AAB_KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
+              AAB_LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.aab"
+              echo "📤 Uploading AAB to s3://${AWS_S3_BUCKET}/${AAB_KEY}"
+              aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+              aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+              echo "✅ AAB uploaded to R2"
+              echo "🔗 Public URL: ${R2_PUBLIC_BASE_URL}/${AAB_KEY}"
+            else
+              echo "⚠️  AAB not found at $AAB_PATH, skipping AAB upload"
+            fi
+          else
+            echo "ℹ️  Branch '$BRANCH' is not main/release — skipping AAB upload (APK only)"
+          fi
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
