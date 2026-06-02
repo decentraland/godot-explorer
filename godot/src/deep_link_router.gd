@@ -68,6 +68,9 @@ func process_deep_link(url: String) -> void:
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
 
+	if Global.deep_link_obj.iap_enabled:
+		Iap.enable()
+
 	# Trigger avatar impostor benchmark
 	var bench_param = Global.deep_link_obj.params.get("benchmark", "")
 	if bench_param == "avatar-impostors":

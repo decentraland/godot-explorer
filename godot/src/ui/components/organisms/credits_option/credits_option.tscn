@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://dv5qtn5it8js0"]
+
+[ext_resource type="Texture2D" uid="uid://1ikv8durm04q" path="res://assets/ui/iap/credits_3.png" id="1_4gvv1"]
+[ext_resource type="PackedScene" uid="uid://cxyvv774su2j2" path="res://src/ui/components/molecules/credit_option_item/credit_option_item.tscn" id="1_qs1i0"]
+[ext_resource type="Texture2D" uid="uid://1jx0fllepsg3" path="res://assets/ui/iap/credits_2.png" id="3_4cjag"]
+[ext_resource type="Texture2D" uid="uid://cmcrxxx2i86qs" path="res://assets/ui/iap/credits_1.png" id="4_7ctuo"]
+
+[node name="CreditsOptions" type="VBoxContainer" unique_id=1695278166]
+offset_right = 528.0
+offset_bottom = 732.0
+theme_override_constants/separation = 48
+
+[node name="CreditOption1" parent="." unique_id=1421119342 instance=ExtResource("1_qs1i0")]
+layout_mode = 2
+texture = ExtResource("1_4gvv1")
+credits = 50
+product_id = "credits_50"
+
+[node name="CreditOption2" parent="." unique_id=572394239 instance=ExtResource("1_qs1i0")]
+layout_mode = 2
+texture = ExtResource("3_4cjag")
+credits = 20
+product_id = "credits_20"
+
+[node name="CreditOption3" parent="." unique_id=1135887016 instance=ExtResource("1_qs1i0")]
+layout_mode = 2
+texture = ExtResource("4_7ctuo")
+product_id = "credits_10"
