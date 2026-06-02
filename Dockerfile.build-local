@@ -1,0 +1,64 @@
+# Local godot-explorer build for the consumer-processor asset-server pipeline.
+#
+# Strategy: reuse the prod image (quay.io/decentraland/godot-explorer:next) as
+# the runtime base — it has Godot + .pck + sentry + crashpad already wired.
+# We only rebuild libdclgodot.so from this branch and swap it in. The bench's
+# Rust optimizations (cheap-pbr at GLTF import, meshopt LOD chain via
+# apply_pre_generate_mesh_simplification) live entirely in libdclgodot.so,
+# so the swap is the minimal effective change.
+#
+# Build: docker build --platform linux/amd64 -f Dockerfile.build-local -t godot-explorer:local .
+# Run:   docker run --rm --platform linux/amd64 -p 8080:8080 godot-explorer:local \
+#            --headless --asset-server --asset-server-port 8080
+
+############################################################
+# Stage 1 — Rebuild libdclgodot.so on debian/rust
+############################################################
+FROM --platform=linux/amd64 rust:1.90-bookworm AS rust-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        protobuf-compiler libprotobuf-dev clang pkg-config \
+        libssl-dev libudev-dev libasound2-dev \
+        libx11-dev libgl1-mesa-dev libxext-dev libxcursor-dev \
+        libxinerama-dev libxrandr-dev libxi-dev \
+        libdbus-1-dev libxrender-dev libxkbcommon-dev libfontconfig1-dev \
+        ca-certificates curl unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY lib/Cargo.toml lib/Cargo.lock ./lib/
+COPY Cargo.toml Cargo.lock* ./
+COPY . .
+
+# lib/build.rs hardcodes .bin/protoc/bin/protoc. Symlink the system protoc.
+# Drop rust-toolchain.toml so the base image's rust 1.90 doesn't trigger
+# rustup channel sync (which is blocked inside this build network).
+RUN mkdir -p .bin/protoc/bin && \
+    ln -sf /usr/bin/protoc .bin/protoc/bin/protoc && \
+    rm -f rust-toolchain.toml lib/rust-toolchain.toml
+
+WORKDIR /build/lib
+# Disable LTO and use lld to keep the linker step under the colima VM's
+# memory limit (default 8GB; LTO link would peak ~10-12GB and get OOM-killed
+# under Rosetta translation).
+ENV CARGO_PROFILE_DEV_RELEASE_LTO=off
+RUN cargo build --profile dev-release --features asset_server && \
+    cp target/dev-release/libdclgodot.so /libdclgodot.so
+
+############################################################
+# Stage 2 — Inherit prod image + swap libdclgodot.so
+############################################################
+FROM --platform=linux/amd64 quay.io/decentraland/godot-explorer:next
+
+USER root
+COPY --from=rust-builder /libdclgodot.so /app/libdclgodot.so
+RUN chmod 644 /app/libdclgodot.so
+
+# Swap in the locally-exported .pck so project.godot tweaks like the
+# message_queue bump propagate. The prod .pck shipped in this image is
+# from a different branch's autoload stack and overflows the default
+# queue on this build.
+COPY exports/decentraland-godot-client-linux.pck /app/decentraland.godot.client.pck
+RUN chmod 644 /app/decentraland.godot.client.pck

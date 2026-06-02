@@ -132,6 +132,18 @@ pub struct DclCli {
     #[var]
     pub optimized_content_base_url: GString,
 
+    // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
+    // set in `update_gltf_container` so the bench can measure the rendering
+    // floor without any scene meshes loaded. Pure perf-debug knob.
+    #[var]
+    pub skip_gltf_load: bool,
+
+    // Diagnostic: force every WorldEnvironment to BG_COLOR (no sky shader,
+    // no procedural sky). Combined with `skip-gltf` measures the renderer
+    // floor without sky fragment cost.
+    #[var]
+    pub kill_sky: bool,
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -474,6 +486,18 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--skip-gltf".to_string(),
+                description: "Diagnostic: skip every GltfContainer instantiation so the renderer floor (sky+UI+avatar) can be measured. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--kill-sky".to_string(),
+                description: "Diagnostic: force WorldEnvironment background_mode=COLOR everywhere — no sky shader, no procedural sky. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -690,6 +714,8 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
+        let skip_gltf_load = args_map.contains_key("--skip-gltf");
+        let kill_sky = args_map.contains_key("--kill-sky");
         // bench_mode auto-enabled when gp_benchmark is set, so the desktop
         // CLI doesn't have to pass both. Mobile flips this from
         // deep_link_router.gd when it sees gp-benchmark=true.
@@ -816,6 +842,8 @@ impl INode for DclCli {
             avatar_impostor_benchmark,
             gp_benchmark,
             optimized_content_base_url,
+            skip_gltf_load,
+            kill_sky,
             bench_mode,
             inspect_scene_title,
             asset_server_port,
