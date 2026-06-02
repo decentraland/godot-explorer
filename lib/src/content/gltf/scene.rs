@@ -2,12 +2,30 @@
 
 use godot::{
     classes::{
-        node::ProcessMode, CollisionShape3D, ConcavePolygonShape3D, MeshInstance3D, Node, Node3D,
-        StaticBody3D,
+        base_material_3d::{CullMode, ShadingMode, Transparency},
+        geometry_instance_3d::ShadowCastingSetting,
+        node::ProcessMode,
+        ArrayMesh, BaseMaterial3D, CollisionShape3D, ConcavePolygonShape3D, MeshInstance3D, Node,
+        Node3D, StandardMaterial3D, StaticBody3D,
     },
-    meta::ToGodot,
-    obj::Gd,
+    prelude::*,
 };
+
+use crate::godot_classes::dcl_global::DclGlobal;
+
+/// Shared material override for shadow-proxy colliders: cull FRONT faces so
+/// only the inner (back) faces rasterize into the shadow map. Because DCL
+/// colliders are slightly larger than the visible mesh they wrap, leaving
+/// front-face culling on would self-shadow the visible mesh. PER_VERTEX
+/// shading keeps the shader path consistent with the importer's cheap-pbr
+/// path; transparency is OFF, alpha not used.
+fn build_shadow_proxy_material() -> Gd<BaseMaterial3D> {
+    let mut mat = StandardMaterial3D::new_gd();
+    mat.set_cull_mode(CullMode::FRONT);
+    mat.set_shading_mode(ShadingMode::PER_VERTEX);
+    mat.set_transparency(Transparency::DISABLED);
+    mat.upcast()
+}
 
 use super::super::{
     content_mapping::ContentMappingAndUrlRef,
@@ -15,6 +33,41 @@ use super::super::{
     scene_saver::{get_scene_path_for_hash, save_node_as_scene},
 };
 use super::common::{count_nodes, load_gltf_pipeline};
+
+use crate::scene_runner::components::asset_preprocessor::mesh_occluder;
+
+struct AssetServerPreprocCounts {
+    occluders: u32,
+}
+
+fn apply_asset_server_optimizations(root: &Gd<Node3D>, hash: &str) {
+    let mut counts = AssetServerPreprocCounts { occluders: 0 };
+    walk_and_preprocess(&root.clone().upcast(), &mut counts);
+    if counts.occluders > 0 {
+        godot::global::godot_print!(
+            "[asset-server-preproc] {}: occluders={}",
+            hash,
+            counts.occluders
+        );
+    }
+}
+
+fn walk_and_preprocess(node: &Gd<Node>, counts: &mut AssetServerPreprocCounts) {
+    if let Ok(mut mi) = node.clone().try_cast::<MeshInstance3D>() {
+        if mi.is_visible_in_tree() && mi.get_layer_mask() == 1 {
+            if let Some(mesh) = mi.get_mesh() {
+                if let Ok(array_mesh) = mesh.try_cast::<ArrayMesh>() {
+                    if mesh_occluder::try_spawn_for(&mut mi, &array_mesh) {
+                        counts.occluders = counts.occluders.saturating_add(1);
+                    }
+                }
+            }
+        }
+    }
+    for child in node.get_children().iter_shared() {
+        walk_and_preprocess(&child, counts);
+    }
+}
 
 /// Load and save a scene GLTF to disk.
 ///
@@ -42,7 +95,25 @@ pub async fn load_and_save_scene_gltf(
         |node, hash, ctx| {
             // Create colliders (with mask=0 initially - will be set by gltf_container.gd after loading)
             let root_node = node.clone();
+
             create_scene_colliders(node.clone().upcast(), root_node.clone());
+
+            // Auto-attach `OccluderInstance3D` siblings on big opaque
+            // meshes so Godot's culler can early-out everything behind
+            // them at runtime. Baked into the saved `.scn` so the
+            // device pays zero generation cost.
+            //
+            // Gated on `--asset-server`: this code path also runs when
+            // the cliente loads a fresh GLTF (no cache yet), and
+            // re-applying it on device duplicates the occluders that
+            // are already baked in the optimized `.scn`. Limiting to
+            // asset-server mode keeps the device-side path lean.
+            let in_asset_server_mode = DclGlobal::try_singleton()
+                .map(|g| g.bind().cli.bind().asset_server)
+                .unwrap_or(false);
+            if in_asset_server_mode {
+                apply_asset_server_optimizations(&root_node, hash);
+            }
 
             // Save the processed scene to disk (in the same cache folder as other content)
             let scene_path = get_scene_path_for_hash(&ctx.content_folder, hash);
@@ -95,6 +166,23 @@ fn get_static_body_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<Sta
 /// Note: Colliders are created with mask=0 (disabled) and no scene_id/entity_id.
 /// The masks and metadata should be set by the caller after instantiating the scene.
 fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
+    // Shadow_proxy permanently disabled. The old approach (collider
+    // SHADOWS_ONLY + visible cast_shadow=OFF) saved shadow-pass cost
+    // but disrupted the GP zeppelin animation (cast_shadow=OFF on
+    // the visible MI breaks its AnimationPlayer drive). The
+    // visible mesh now casts shadow normally; Godot's LOD selector
+    // picks LOD3 at distance for the shadow pass, which keeps the
+    // cost low without the dual-MI trick.
+    let shadow_proxy = false;
+    create_scene_colliders_inner(node_to_inspect, root_node, shadow_proxy, &mut None);
+}
+
+fn create_scene_colliders_inner(
+    node_to_inspect: Gd<Node>,
+    root_node: Gd<Node3D>,
+    shadow_proxy: bool,
+    shadow_proxy_mat: &mut Option<Gd<BaseMaterial3D>>,
+) {
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mut mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             let invisible_mesh = mesh_instance_3d
@@ -104,7 +192,29 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
                 .contains("collider");
 
             if invisible_mesh {
-                mesh_instance_3d.set_visible(false);
+                if shadow_proxy {
+                    // Keep the collider in the visible tree (so the renderer
+                    // submits it to the shadow pass) but flag it as
+                    // SHADOW_ONLY — the visible pass skips it entirely.
+                    mesh_instance_3d.set_cast_shadows_setting(ShadowCastingSetting::SHADOWS_ONLY);
+                    // Cull FRONT faces so only the inner back faces write to
+                    // the shadow map. DCL colliders are slightly inflated
+                    // relative to the visible mesh; without front-cull the
+                    // collider's front face would project a shadow onto the
+                    // visible mesh's surface (self-shadow acne / Peter
+                    // Panning).
+                    let mat = shadow_proxy_mat
+                        .get_or_insert_with(build_shadow_proxy_material)
+                        .clone();
+                    mesh_instance_3d
+                        .set_material_override(&mat.upcast::<godot::classes::Material>());
+                } else {
+                    mesh_instance_3d.set_visible(false);
+                }
+            } else if shadow_proxy {
+                // Visible mesh in a scene that has a shadow proxy chain:
+                // hand off shadow-casting to the collider sibling.
+                mesh_instance_3d.set_cast_shadows_setting(ShadowCastingSetting::OFF);
             }
 
             // First check if there's already a StaticBody3D (created by create_trimesh_collision)
@@ -155,7 +265,7 @@ fn create_scene_colliders(node_to_inspect: Gd<Node>, root_node: Gd<Node3D>) {
             }
         }
 
-        create_scene_colliders(child, root_node.clone());
+        create_scene_colliders_inner(child, root_node.clone(), shadow_proxy, shadow_proxy_mat);
     }
 }
 

@@ -234,6 +234,11 @@ rendering_device/vulkan/max_descriptors_per_pool=256
 rendering_device/driver.ios="vulkan"
 rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
+; Occluders (BoxOccluder3D) are produced only by the asset-server bake, so the
+; runtime payoff requires CDN-baked .scn. Raw-GLB loads have nothing to cull.
+occlusion_culling/use_occlusion_culling=true
+occlusion_culling/occlusion_rays_per_thread=512
+occlusion_culling/bvh_build_quality=1
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=512
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
