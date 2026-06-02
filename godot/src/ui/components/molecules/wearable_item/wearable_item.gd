@@ -163,8 +163,7 @@ func _on_action_pressed():
 	if credits_balance >= marketplace_price and not marketplace_url.is_empty():
 		Global.open_url(marketplace_url)
 	else:
-		# Placeholder for StoreKit IAP flow (#2115)
-		pass
+		Global.open_credits.emit()
 
 
 func _update_category_icon(wearable: DclItemEntityDefinition):

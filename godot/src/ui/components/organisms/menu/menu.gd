@@ -85,6 +85,7 @@ func _ready():
 	Global.open_settings.connect(async_show_settings)
 	Global.open_backpack.connect(async_show_backpack)
 	Global.open_discover.connect(async_show_discover)
+	Global.open_credits.connect(async_show_credits)
 	Global.open_own_profile.connect(async_show_own_profile)
 	Global.open_profile_editor.connect(async_show_profile_editor)
 	Global.close_menu.connect(async_close)
@@ -142,6 +143,12 @@ func async_show_discover(open_menu := true):
 		static_button_discover.button_pressed = true
 	if open_menu:
 		_open()
+
+
+func async_show_credits():
+	await async_show_discover()
+	if is_instance_valid(control_discover.instance):
+		control_discover.instance._open_credits_section()
 
 
 func async_show_backpack(on_emotes := false):

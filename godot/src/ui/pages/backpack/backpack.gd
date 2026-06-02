@@ -40,7 +40,6 @@ var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
 # Mock credits balance — replace with real credits API when #2115 is ready
-var _mock_credits: int = 100
 var _ios_marketplace_section: MarketplaceRecommendedSection = null
 var _marketplace_preview_urn: String = ""
 var _marketplace_saved_wearables: PackedStringArray = []
@@ -432,9 +431,10 @@ func _setup_ios_marketplace_section():
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
 		return
-	_ios_marketplace_section.credits_balance = _mock_credits
+	_ios_marketplace_section.credits_balance = Iap.get_balance()
 	_ios_marketplace_section.item_equip.connect(_on_marketplace_equip)
 	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
+	Iap.balance_changed.connect(_on_credits_balance_changed)
 
 
 func _on_main_category_filter_type(type: String):
@@ -643,6 +643,11 @@ func _deferred_marketplace_restore():
 
 func _on_button_logout_pressed():
 	Global.comms.disconnect(true)
+
+
+func _on_credits_balance_changed(new_balance: int):
+	if _ios_marketplace_section:
+		_ios_marketplace_section.credits_balance = new_balance
 
 
 func _on_color_picker_panel_pick_color(color: Color):

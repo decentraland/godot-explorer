@@ -36,4 +36,5 @@ func _on_pressed():
 		can_afford = credits_balance >= _selected_price
 	if can_afford:
 		Global.open_url(DclUrls.marketplace() + "/browse?section=" + marketplace_section)
-	# else: placeholder for StoreKit IAP (#2115)
+	else:
+		Global.open_credits.emit()
