@@ -1,0 +1,179 @@
+[gd_scene format=3 uid="uid://bk0bh2bgdycxx"]
+
+[ext_resource type="Script" uid="uid://v1u6oogcki02" path="res://src/ui/components/organisms/credits_shop/credits_shop.gd" id="1_script"]
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/pages/discover/carrousel/discover_carrousel_skeleton_material.tres" id="2_kvsbr"]
+[ext_resource type="PackedScene" uid="uid://dv5qtn5it8js0" path="res://src/ui/components/organisms/credits_option/credits_option.tscn" id="3_trbvm"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_frnrg"]
+[ext_resource type="PackedScene" uid="uid://dy6b2qqq4pve0" path="res://src/ui/components/molecules/faq_collapsable/faq_collapsable.tscn" id="5_uc6fc"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="6_2k0t8"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sp7y0"]
+bg_color = Color(1, 1, 1, 0.078431375)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7yfw2"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_a02fn"]
+font = ExtResource("4_frnrg")
+font_size = 38
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_4pofo"]
+font = ExtResource("6_2k0t8")
+font_size = 24
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="CreditsShop" type="VBoxContainer" unique_id=2110848340]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 1265.0
+grow_horizontal = 2
+theme_override_constants/separation = 78
+script = ExtResource("1_script")
+
+[node name="CreditsOptions_Skeleton" type="VBoxContainer" parent="." unique_id=1682929723]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 48
+
+[node name="Skeleton1" type="PanelContainer" parent="CreditsOptions_Skeleton" unique_id=36094732]
+material = ExtResource("2_kvsbr")
+custom_minimum_size = Vector2(0, 212)
+layout_mode = 2
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_sp7y0")
+
+[node name="Skeleton2" type="PanelContainer" parent="CreditsOptions_Skeleton" unique_id=1848539075]
+material = ExtResource("2_kvsbr")
+custom_minimum_size = Vector2(0, 212)
+layout_mode = 2
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_sp7y0")
+
+[node name="Skeleton3" type="PanelContainer" parent="CreditsOptions_Skeleton" unique_id=17111724]
+material = ExtResource("2_kvsbr")
+custom_minimum_size = Vector2(0, 212)
+layout_mode = 2
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_sp7y0")
+
+[node name="CreditsFaq_Skeleton" type="VBoxContainer" parent="." unique_id=919876334]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Skeleton_Title" type="PanelContainer" parent="CreditsFaq_Skeleton" unique_id=774237161]
+material = ExtResource("2_kvsbr")
+custom_minimum_size = Vector2(75, 47)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_sp7y0")
+
+[node name="HSeparator" type="HSeparator" parent="CreditsFaq_Skeleton" unique_id=1503755178]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
+
+[node name="Faq1" type="PanelContainer" parent="CreditsFaq_Skeleton" unique_id=1738001891]
+material = ExtResource("2_kvsbr")
+custom_minimum_size = Vector2(75, 80)
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_sp7y0")
+
+[node name="HSeparator2" type="HSeparator" parent="CreditsFaq_Skeleton" unique_id=746127168]
+layout_mode = 2
+theme_override_constants/separation = 32
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
+
+[node name="Faq2" type="PanelContainer" parent="CreditsFaq_Skeleton" unique_id=1442356401]
+material = ExtResource("2_kvsbr")
+custom_minimum_size = Vector2(75, 80)
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_sp7y0")
+
+[node name="HSeparator3" type="HSeparator" parent="CreditsFaq_Skeleton" unique_id=1475312061]
+layout_mode = 2
+theme_override_constants/separation = 38
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
+
+[node name="Faq3" type="PanelContainer" parent="CreditsFaq_Skeleton" unique_id=578683077]
+material = ExtResource("2_kvsbr")
+custom_minimum_size = Vector2(75, 228)
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_sp7y0")
+
+[node name="CreditsOptionInner" parent="." unique_id=1695278166 instance=ExtResource("3_trbvm")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="CreditsFaq" type="VBoxContainer" parent="." unique_id=884681734]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Label_Title" type="Label" parent="CreditsFaq" unique_id=505089774]
+layout_mode = 2
+text = "FAQ"
+label_settings = SubResource("LabelSettings_a02fn")
+
+[node name="HSeparator" type="HSeparator" parent="CreditsFaq" unique_id=1486703698]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
+
+[node name="FaqCollapsable1" parent="CreditsFaq" unique_id=1032732015 instance=ExtResource("5_uc6fc")]
+layout_mode = 2
+size_flags_horizontal = 1
+title = "What are Credits?"
+description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since."
+
+[node name="HSeparator2" type="HSeparator" parent="CreditsFaq" unique_id=895173665]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 32
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
+
+[node name="FaqCollapsable2" parent="CreditsFaq" unique_id=671593998 instance=ExtResource("5_uc6fc")]
+layout_mode = 2
+size_flags_horizontal = 1
+title = "Do Credits expire?"
+description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since."
+
+[node name="HSeparator3" type="HSeparator" parent="CreditsFaq" unique_id=1758333132]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 38
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
+
+[node name="Label_Description" type="Label" parent="CreditsFaq" unique_id=1501175946]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(1, 1)
+layout_mode = 2
+text = "I agree I am purchasing a limited license to use Credits governed by the Terms of the License. By purchasing Credits, you agree to our Terms of Use and Privacy Policy, including the arbitration clause and revocation policy. You consent to the immediate performance of the contract and acknowledge that you thereby lose your right of withdrawal."
+label_settings = SubResource("LabelSettings_4pofo")
+autowrap_mode = 2
+
+[node name="HSeparator4" type="HSeparator" parent="CreditsFaq" unique_id=1361122907]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
