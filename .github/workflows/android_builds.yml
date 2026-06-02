@@ -1,4 +1,4 @@
-name: 🤖 Android (VR and Mobile)
+name: 🤖 Android
 on:
   workflow_call:
     secrets:
@@ -16,6 +16,16 @@ on:
         required: true
       SENTRY_PROJECT:
         required: true
+      # R2 mobile-artifacts bucket where the signed APK is published for download.
+      # Optional: when unset the APK upload step is skipped (e.g. fork PRs).
+      MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID:
+        required: false
+      MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY:
+        required: false
+      MOBILE_ARTIFACTS_R2_ENDPOINT:
+        required: false
+      MOBILE_ARTIFACTS_R2_BUCKET:
+        required: false
 
 permissions:
   pull-requests: write
@@ -27,7 +37,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build VR and Mobile
+    name: Build Android
     runs-on: warp-ubuntu-latest-x64-4x
     timeout-minutes: 35
     container:
@@ -134,6 +144,55 @@ jobs:
           mkdir -p android-artifacts-aab
           mv exports/decentraland.godot.client.apk android-artifacts-apk/ || true
           mv exports/decentraland.godot.client.aab android-artifacts-aab/ || true
+
+      # Upload the signed APK to the R2 mobile-artifacts bucket so it can be downloaded
+      # directly (the PR build report and the Mobile Distribute Slack notification link here).
+      # Keyed by branch + commit SHA so a download can target an exact build.
+      - name: Upload APK to R2
+        if: success()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+          # Public R2 domain mapped to the mobile-artifacts bucket root.
+          R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_S3_BUCKET" ] || [ -z "$AWS_ENDPOINT_URL" ]; then
+            echo "⚠️  R2 mobile-artifacts bucket not configured (MOBILE_ARTIFACTS_R2_* secrets), skipping APK upload"
+            exit 0
+          fi
+
+          APK_PATH="android-artifacts-apk/decentraland.godot.client.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "⚠️  APK not found at $APK_PATH, skipping R2 upload"
+            exit 0
+          fi
+
+          # The android builder image does not ship the AWS CLI; install v2 on demand.
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "Installing AWS CLI v2..."
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q /tmp/awscliv2.zip -d /tmp
+            /tmp/aws/install -i /tmp/aws-cli -b /tmp/aws-bin
+            export PATH="/tmp/aws-bin:$PATH"
+          fi
+
+          SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          BRANCH="${{ github.head_ref || github.ref_name }}"
+          SAFE_BRANCH=$(echo "$BRANCH" | tr '/' '-')
+          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.apk"
+
+          echo "📤 Uploading APK to s3://${AWS_S3_BUCKET}/${KEY}"
+          aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+
+          PUBLIC_URL="${R2_PUBLIC_BASE_URL}/${KEY}"
+          echo "✅ APK uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
+          echo "🔗 Public URL: ${PUBLIC_URL}"
+          # Surface the direct download link to later steps (build report comment).
+          echo "APK_PUBLIC_URL=${PUBLIC_URL}" >> "$GITHUB_ENV"
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
@@ -268,7 +327,12 @@ jobs:
           # Determine build status
           if [ "${{ job.status }}" = "success" ]; then
             ANDROID_STATUS="✅ Success"
-            APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
+            # Prefer the direct R2 download link when the APK was uploaded.
+            if [ -n "${APK_PUBLIC_URL:-}" ]; then
+              APK_LINK="[📱 Download APK](${APK_PUBLIC_URL})"
+            else
+              APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
+            fi
             AAB_LINK="[📦 Download AAB](${ARTIFACTS_URL}/artifacts)"
             SYMBOLS_LINK="[🔧 Debug Symbols](${ARTIFACTS_URL}/artifacts)"
           else
@@ -293,7 +357,7 @@ jobs:
             echo ""
             echo "### 🍏 iOS"
             echo ""
-            echo "> iOS builds are triggered manually. Add the \`build-ios\` label to trigger an iOS build."
+            echo "> The signed APK is uploaded to R2 on every build (link above). Add the \`build\` label (alias: \`build-ios\`) to build & ship iOS to TestFlight and post a Slack \"Android build ready\" notification."
             echo ""
             echo "---"
             echo ""
