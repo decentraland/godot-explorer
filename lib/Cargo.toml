@@ -79,6 +79,10 @@ modular-bitfield = "0.11"
 # Image decoding for formats not natively supported by Godot (GIF, animated WebP)
 image = { version = "0.25", default-features = false, features = ["gif", "webp"] }
 
+# PNG encoding for off-main-thread impostor cache writes (Godot's Image::save_png
+# blocks the render thread; we encode + write on a tokio blocking worker instead).
+png = "0.17"
+
 # Procedural noise for Floating Islands terrain generation. Pure-Rust port of
 # FastNoiseLite (same algorithm Godot uses) so seeds match the legacy GDScript
 # implementation bit-for-bit.
