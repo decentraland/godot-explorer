@@ -520,8 +520,7 @@ func _on_iap_terms_checkbox_toggled(checked: bool) -> void:
 
 
 func _on_iap_terms_confirmed() -> void:
-	Global.get_config().iap_terms_accepted = true
-	Global.get_config().save_to_settings_file()
+	Iap.accept_terms()
 	close_current_modal()
 	iap_terms_accepted.emit()
 

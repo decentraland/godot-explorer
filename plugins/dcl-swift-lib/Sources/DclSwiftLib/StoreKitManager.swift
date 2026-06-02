@@ -51,11 +51,28 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
 
     // MARK: - State
 
+    // `loadedProducts` is written from the `loadProducts` background Task and
+    // read from `purchase` (called on the main thread). Swift Dictionary is not
+    // thread-safe, so all access goes through `loadedProductsLock`. The class is
+    // `@unchecked Sendable`, meaning we take on that synchronization manually.
+    private let loadedProductsLock = NSLock()
     private var loadedProducts: [String: Product] = [:]
     private var transactionUpdatesTask: Task<Void, Never>?
 
     deinit {
         transactionUpdatesTask?.cancel()
+    }
+
+    private func storeProduct(_ product: Product) {
+        loadedProductsLock.lock()
+        defer { loadedProductsLock.unlock() }
+        loadedProducts[product.id] = product
+    }
+
+    private func loadedProduct(_ id: String) -> Product? {
+        loadedProductsLock.lock()
+        defer { loadedProductsLock.unlock() }
+        return loadedProducts[id]
     }
 
     // MARK: - Public API
@@ -100,7 +117,7 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
                 let returnedIds = products.map { $0.id }.joined(separator: ",")
                 gdLog("[DclStoreKit] loadProducts: got \(products.count) products [\(returnedIds)]")
                 for product in products {
-                    self.loadedProducts[product.id] = product
+                    self.storeProduct(product)
                     gdLog("[DclStoreKit]   - \(product.id) | \(product.displayPrice) | \(product.type.rawValue)")
                 }
                 if products.count == 0 && !ids.isEmpty {
@@ -136,7 +153,7 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
     /// will reject the resulting transaction.
     @Callable(autoSnakeCase: true)
     func purchase(productId: String, walletAddress: String) {
-        guard let product = loadedProducts[productId] else {
+        guard let product = loadedProduct(productId) else {
             gdLog("[DclStoreKit] purchase: product not loaded: \(productId)")
             purchaseFailed.emit(productId, "product not loaded; call load_products first")
             return

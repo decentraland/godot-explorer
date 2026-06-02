@@ -65,7 +65,7 @@ func _find_product(pid: String) -> Dictionary:
 func _on_button_price_pressed() -> void:
 	if product_id.is_empty():
 		return
-	if not Global.get_config().iap_terms_accepted:
+	if not Iap.are_terms_accepted():
 		_async_show_terms_then_purchase()
 		return
 	Iap.purchase(product_id)
@@ -73,9 +73,12 @@ func _on_button_price_pressed() -> void:
 
 func _async_show_terms_then_purchase() -> void:
 	button_price.disabled = true
-	await Global.modal_manager.async_show_iap_terms_modal()
+	# Wire the one-shot BEFORE awaiting the modal: connecting after the await
+	# leaves a window where an instant confirm could fire iap_terms_accepted
+	# before we're listening, dropping the purchase.
 	if not Global.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
 		Global.modal_manager.iap_terms_accepted.connect(_on_iap_terms_accepted, CONNECT_ONE_SHOT)
+	await Global.modal_manager.async_show_iap_terms_modal()
 	# Re-enable the button once the modal is gone (accept or cancel).
 	var modal = Global.modal_manager.current_modal
 	if modal and not modal.tree_exited.is_connected(_on_terms_modal_exited):

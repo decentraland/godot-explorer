@@ -1,3 +1,4 @@
+use godot::classes::object::ConnectFlags;
 use godot::prelude::*;
 
 /// Typed wrapper around the Swift `DclSwiftLib` GDExtension class.
@@ -139,14 +140,19 @@ impl DclStoreKitPlugin {
         let cb_purchase_pending = self.base().callable("_on_purchase_pending");
         let cb_transaction_updated = self.base().callable("_on_transaction_updated");
 
+        // The Swift signals are emitted from background `Task`s (StoreKit runs
+        // its async work off the main thread). Connect DEFERRED so the forwarders
+        // — and everything they re-emit into GDScript — run on the main thread,
+        // where scene-tree mutations are safe.
         let inner = self.inner.as_mut().unwrap();
-        inner.connect("products_loaded", &cb_products_loaded);
-        inner.connect("products_load_failed", &cb_products_load_failed);
-        inner.connect("purchase_completed", &cb_purchase_completed);
-        inner.connect("purchase_failed", &cb_purchase_failed);
-        inner.connect("purchase_cancelled", &cb_purchase_cancelled);
-        inner.connect("purchase_pending", &cb_purchase_pending);
-        inner.connect("transaction_updated", &cb_transaction_updated);
+        let deferred = ConnectFlags::DEFERRED;
+        inner.connect_flags("products_loaded", &cb_products_loaded, deferred);
+        inner.connect_flags("products_load_failed", &cb_products_load_failed, deferred);
+        inner.connect_flags("purchase_completed", &cb_purchase_completed, deferred);
+        inner.connect_flags("purchase_failed", &cb_purchase_failed, deferred);
+        inner.connect_flags("purchase_cancelled", &cb_purchase_cancelled, deferred);
+        inner.connect_flags("purchase_pending", &cb_purchase_pending, deferred);
+        inner.connect_flags("transaction_updated", &cb_transaction_updated, deferred);
         self.wired = true;
     }
 

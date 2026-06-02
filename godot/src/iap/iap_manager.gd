@@ -154,6 +154,25 @@ func get_transaction_history() -> Array:
 	return _transaction_history
 
 
+# IAP terms are a per-wallet legal consent: a flag set by account A must never
+# count as consent for account B on the same device. We key acceptance by the
+# accepting wallet (lowercased) rather than a device-wide bool.
+func are_terms_accepted() -> bool:
+	var wallet := _wallet_address().to_lower()
+	if wallet.is_empty():
+		return false
+	return Global.get_config().iap_terms_accepted_wallet == wallet
+
+
+func accept_terms() -> void:
+	var wallet := _wallet_address().to_lower()
+	if wallet.is_empty():
+		return
+	var config := Global.get_config()
+	config.iap_terms_accepted_wallet = wallet
+	config.save_to_settings_file()
+
+
 func purchase(product_id: String) -> void:
 	if not _store_kit_available:
 		print("[IAP] not available; ignoring purchase(", product_id, ")")
@@ -414,7 +433,9 @@ func _on_overlay_timeout(token: int) -> void:
 	if token != _overlay_token:
 		return
 	printerr("[IAP] purchase overlay timed out after ", _PURCHASE_OVERLAY_TIMEOUT_SEC, "s")
-	_hide_overlay()
+	# Clear the in-flight guard too, not just the overlay — otherwise a stuck
+	# purchase would block every future purchase() via the re-entry check.
+	_finish_purchase_flow()
 
 
 func _finish_purchase_flow() -> void:
