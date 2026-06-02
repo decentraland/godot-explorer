@@ -1349,6 +1349,24 @@ flat = true
 alignment = 0
 icon_alignment = 2
 
+[node name="Button_Marketplace" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+mouse_filter = 1
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/h_separation = 16
+theme_override_constants/icon_max_width = 32
+theme_override_fonts/font = ExtResource("23_c03rv")
+theme_override_font_sizes/font_size = 30
+text = "Marketplace"
+icon = ExtResource("24_jf4mt")
+flat = true
+alignment = 0
+icon_alignment = 2
+
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account" unique_id=1029705279]
 layout_mode = 2
 theme_override_constants/margin_left = 0
@@ -1412,5 +1430,6 @@ font = ExtResource("25_jf4mt")
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_ContentPolicy" to="." method="_on_button_content_policy_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_TermsOfService" to="." method="_on_button_terms_of_service_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_Discord" to="." method="_on_button_discord_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_Marketplace" to="." method="_on_button_marketplace_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer/CustomButton_SignOut" to="." method="_on_custom_button_sign_out_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer/UnderlinedButton_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
