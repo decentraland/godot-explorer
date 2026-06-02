@@ -26,6 +26,11 @@ on:
         options:
           - main
           - release
+      whats_new:
+        description: 'TestFlight "What to Test" notes (optional; auto-generated from the commit when empty)'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   pull-requests: write
@@ -132,6 +137,8 @@ jobs:
     with:
       ref: ${{ needs.prepare.outputs.ref }}
       pr_number: ${{ needs.prepare.outputs.pr_number }}
+      # Empty on PR-label triggers (labels carry no text) → ios_builds auto-generates from the commit
+      whats_new: ${{ github.event.inputs.whats_new }}
     secrets: inherit
 
   android-notify:
