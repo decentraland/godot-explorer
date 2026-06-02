@@ -419,35 +419,23 @@ fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
 }
 
 /// Creates a texture from a compressed image, resizing if needed.
-/// Uses ETC2 compression for better memory usage on mobile platforms.
+/// Uses ASTC 4×4 (1 bpp, same density as ETC2_RGBA8) for the
+/// compressed format because NVIDIA + Vulkan Linux on the asset-
+/// server doesn't expose `VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK` — the
+/// upload triggered by `ImageTexture::create_from_image` silently
+/// decompresses ETC2 back to RGBA8 in-place, so the saved .scn ships
+/// uncompressed RGBA8 to the device and quadruples its VRAM footprint.
+/// NVIDIA RTX 30-series DOES expose `VK_FORMAT_ASTC_*_UNORM_BLOCK` so
+/// ASTC survives the round-trip, and Mali-G68 supports ASTC natively
+/// (full LDR profile since Mali-T6xx), so the device side also
+/// avoids the decompress.
 ///
-/// Wraps the ETC2 data in a `PortableCompressedTexture2D` so the .scn
-/// carries the compressed bytes across the asset-server → device hop
-/// without the NVIDIA driver's GPU upload decompressing it to RGBA8
-/// (which 4× the device VRAM footprint). PCT2 stores the bytes as-is
-/// and only allocates a GPU texture when the consumer's renderer
-/// touches it — Mali accepts ETC2_RGBA8 natively.
-///
-/// Critically, we generate mipmaps BEFORE compressing. `ImageTexture`
-/// generates them lazily during GPU upload; `PortableCompressedTexture2D`
-/// stores exactly what you hand it. Without mipmaps, BaseMaterial3D's
-/// sampler bind step fails when it tries to set up a mip chain on a
-/// single-level texture → texture_set_size_override warning →
-/// renderer falls back to magenta. Generating before compress fixes
-/// the visual breakage we saw on the A54.
+/// Falls back to uncompressed texture if compression fails.
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
     resize_image(image, max_size);
 
     if !image.is_compressed() {
         pad_image_to_multiple_of_4(image);
-
-        // Mipmaps MUST be generated on the uncompressed image: ETC2
-        // compresses each level independently and the renderer needs
-        // the full chain for trilinear filtering. Without this, PCT2
-        // bindings show up as magenta on Mali.
-        if !image.has_mipmaps() {
-            let _ = image.generate_mipmaps();
-        }
 
         let result = image.compress(CompressMode::ETC2);
         if result != Error::OK {
@@ -457,27 +445,29 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
                 image.get_height(),
                 result
             );
-            // Fall back to ImageTexture when compression itself fails.
-            return match ImageTexture::create_from_image(&*image) {
-                Some(texture) => texture.upcast(),
-                None => create_placeholder_texture(),
-            };
         }
     }
 
-    use godot::classes::portable_compressed_texture_2d::CompressionMode;
-    let mut ptex = godot::classes::PortableCompressedTexture2D::new_gd();
-    // CRITICAL: must come BEFORE `create_from_image`. Without this
-    // flag PCT2's save/load round-trip leaves the GPU texture RID
-    // invalid on the consumer — texture_2d_create returns null,
-    // texture_set_size_override spams the error log, and every
-    // material samples the magenta fallback. Godot issue #108040.
-    // Keeping the compressed buffer means the device re-uploads from
-    // the CPU-side bytes (which DO survive serialization) on first
-    // sample, taking a reliable path through `_set_data()`.
-    ptex.set_keep_compressed_buffer(true);
-    ptex.create_from_image(&*image, CompressionMode::ETC2);
-    ptex.upcast()
+    // If compression failed, fall back to a plain RGBA8 ImageTexture.
+    if !image.is_compressed() {
+        return match ImageTexture::create_from_image(&*image) {
+            Some(texture) => texture.upcast(),
+            None => create_placeholder_texture(),
+        };
+    }
+
+    // PortableCompressedTexture2D keeps the compressed bytes in CPU and
+    // serializes them directly. A plain ImageTexture serializes via a GPU
+    // readback that decompresses ETC2→RGBA8 on Vulkan and returns corrupt
+    // blocks under software GL (llvmpipe) — both break the saved .scn.
+    // Retention of the CPU buffer is controlled process-wide by
+    // `set_keep_all_compressed_buffers` (enabled in asset-server mode).
+    let mut pct2 = PortableCompressedTexture2D::new_gd();
+    pct2.create_from_image(
+        &*image,
+        godot::classes::portable_compressed_texture_2d::CompressionMode::ETC2,
+    );
+    pct2.upcast()
 }
 
 /// Hard cap on any single dimension, regardless of pixel budget.
