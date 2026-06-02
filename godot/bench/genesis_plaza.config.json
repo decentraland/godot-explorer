@@ -1,6 +1,6 @@
 {
   "_doc": "Genesis Plaza profiling benchmark config (issue #1862). Read by gp_benchmark_runner.gd when --gp-benchmark (desktop) or gp-benchmark=true (deeplink) fires. Mobile runs override tag/warmup/sample/toggles via deeplink params (bench-tag, bench-warmup, bench-sample, bench-disable-tweens, bench-disable-transforms) so the matrix runs without re-exporting.",
-  "genesis_plaza_commit": "30cdaffd752a02bc811dfdbd7e5aaaa4b97f595d",
+  "genesis_plaza_commit": "ea9cc738b6f5c1080043c4ae7ca9115e5c817600",
   "genesis_plaza_repo": "https://github.com/decentraland-scenes/Genesis-Plaza-2025",
   "warmup_seconds": 30,
   "sample_seconds": 10,

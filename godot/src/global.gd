@@ -216,6 +216,13 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
+	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
+	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
+	# uncaps via gp_benchmark_runner at the load->settling transition.
+	if cli.bench_mode:
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		OS.low_processor_usage_mode = false
 	# Use CLI singleton for command-line args
 	if cli.force_mobile:
 		_set_is_mobile(true)
@@ -296,6 +303,13 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
+	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
+	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
+	if cli.bench_mode:
+		config.limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+		Engine.max_fps = 0
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
 	# Initialize environment. Precedence: --dclenv CLI flag > deeplink dclenv param > "org".
 	var env := "org"
@@ -376,6 +390,9 @@ func _ready():
 		var gp_runner = load("res://src/tools/gp_benchmark_runner.gd").new()
 		gp_runner.set_name("GPBenchmarkRunner")
 		add_child(gp_runner)
+
+	if not DirAccess.dir_exists_absolute("user://content/"):
+		DirAccess.make_dir_absolute("user://content/")
 
 	session_id = DclConfig.generate_uuid_v4()
 	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
@@ -469,7 +486,9 @@ func _ready():
 		stress_test_controller.set_name("StressTestController")
 		get_tree().root.add_child.call_deferred(stress_test_controller)
 
-	# Initialize dynamic graphics manager after config is loaded
+	# Initialize dynamic graphics manager after config is loaded. Self-skips in
+	# bench mode (the function early-returns on cli.bench_mode), so bench results
+	# stay comparable while production keeps thermal-cap + adaptive downgrade.
 	_init_dynamic_graphics_manager.call_deferred()
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()

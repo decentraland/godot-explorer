@@ -52,6 +52,7 @@ DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 
 file_logging/enable_file_logging=true
 settings/gdscript/always_track_call_stacks=true
+memory/limits/message_queue/max_size_mb=64
 gdscript/warnings/unused_variable=2
 gdscript/warnings/unused_signal=0
 gdscript/warnings/shadowed_variable=2
@@ -63,6 +64,7 @@ window/size/viewport_width=1600
 window/size/viewport_height=720
 window/size/window_width_override=720
 window/size/window_height_override=1280
+window/frame_pacing/android/enable_frame_pacing=false
 window/handheld/orientation=6
 
 [editor]

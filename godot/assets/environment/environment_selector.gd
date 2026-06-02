@@ -25,6 +25,25 @@ func _on_config_changed(param: ConfigData.ConfigParams):
 func set_skybox_and_shadow(skybox_index: int):
 	if sky != null:
 		sky.queue_free()
+		sky = null
+
+	# `kill-sky` cli flag (or `skybox_index == -1`): skip every sky scene
+	# entirely and drop the WorldEnvironment to a clear-color background.
+	# Used to measure rendering floor without the (expensive) sky shader.
+	if skybox_index == -1 or (Global.cli != null and Global.cli.kill_sky):
+		var we := WorldEnvironment.new()
+		var env := Environment.new()
+		env.background_mode = Environment.BG_COLOR
+		env.background_color = Color.BLACK
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.ambient_light_color = Color(0.5, 0.5, 0.5)
+		env.ambient_light_energy = 1.0
+		we.environment = env
+		add_child(we)
+		# Walk the whole tree and stomp any other WorldEnvironment that
+		# might still be hanging around (other scenes may load their own).
+		_stomp_all_world_envs()
+		return
 
 	if Global.testing_scene_mode:
 		sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
@@ -43,6 +62,9 @@ func set_skybox_and_shadow(skybox_index: int):
 
 
 func set_shadow(shadow_quality: int):
+	# kill-sky nulls `sky`; nothing to configure (no main_light, no shadow setup)
+	if sky == null:
+		return
 	var quality: RenderingServer.ShadowQuality = RenderingServer.SHADOW_QUALITY_HARD
 	# Atlas size + bit-depth for the directional shadow map. Mali tile-based
 	# GPUs pay tile-write bandwidth proportional to size × bit-depth, so
@@ -75,6 +97,10 @@ func set_shadow(shadow_quality: int):
 
 
 func set_bloom(bloom_quality: int):
+	# kill-sky path: `sky` was nulled and replaced with a flat WorldEnvironment.
+	# Bloom is irrelevant in floor-measurement mode, just bail.
+	if sky == null:
+		return
 	var environment = sky.world_environment.environment
 	match bloom_quality:
 		0:  # Off
@@ -115,3 +141,20 @@ func set_anti_aliasing(anti_aliasing: int):
 			value = RenderingServer.VIEWPORT_MSAA_8X
 
 	RenderingServer.viewport_set_msaa_3d(get_viewport().get_viewport_rid(), value)
+
+
+# Walk the SceneTree and stomp every WorldEnvironment whose Environment
+# resource still has `background_mode == BG_SKY`. Used by `kill-sky` to
+# defeat default `game_environment.tres` and any per-scene WorldEnvironment
+# that the explorer/sky scenes load on top of us.
+func _stomp_all_world_envs() -> void:
+	var root := get_tree().root
+	var stack: Array = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is WorldEnvironment and n.environment != null:
+			n.environment.background_mode = Environment.BG_COLOR
+			n.environment.background_color = Color.BLACK
+			n.environment.background_energy_multiplier = 0.0
+		for c in n.get_children():
+			stack.append(c)
