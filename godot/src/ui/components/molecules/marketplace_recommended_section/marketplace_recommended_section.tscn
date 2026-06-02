@@ -16,7 +16,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 0
 script = ExtResource("1_script")
 
-[node name="HSeparator3" type="HSeparator" parent="." unique_id=1865974958]
+[node name="HSeparator3" type="HSeparator" parent="." unique_id=1709486589]
 layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")
@@ -51,8 +51,3 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")
 [node name="Button_CTA" parent="." unique_id=420466605 instance=ExtResource("3_cta")]
 unique_name_in_owner = true
 layout_mode = 2
-
-[node name="HSeparator4" type="HSeparator" parent="." unique_id=460356009]
-layout_mode = 2
-theme_override_constants/separation = 20
-theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")

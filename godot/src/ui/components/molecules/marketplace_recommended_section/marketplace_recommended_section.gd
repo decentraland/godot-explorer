@@ -3,77 +3,131 @@ extends VBoxContainer
 
 signal item_equip(urn: String)
 signal item_unequip(urn: String)
+signal item_selected(urn: String, item_name: String)
 
 const CATALOG_API_URL = "https://marketplace-api.decentraland.org/v2/catalog"
 const WEARABLE_ITEM_SCENE = preload(
 	"res://src/ui/components/molecules/wearable_item/wearable_item.tscn"
 )
 
-## Maps backpack subcategory names to the v2/catalog query parameter.
-const CATEGORY_FILTER_MAP: Dictionary = {
-	"head": "isWearableHead",
-	"upper_body": "isWearableUpperBody",
-	"lower_body": "isWearableLowerBody",
-	"feet": "isWearableFeet",
-	"hair": "isWearableHair",
-	"facial_hair": "isWearableFacialHair",
-	"eyes": "isWearableEyes",
-	"eyebrows": "isWearableEyebrows",
-	"mouth": "isWearableMouth",
-	"hat": "isWearableHat",
-	"helmet": "isWearableHelmet",
-	"tiara": "isWearableTiara",
-	"top_head": "isWearableTopHead",
-	"eyewear": "isWearableEyewear",
-	"mask": "isWearableMask",
-	"earring": "isWearableEarring",
-	"skin": "isWearableSkin",
-	"handwear": "isWearableHandwear",
-}
+## Backpack subcategories that map directly to wearableCategory param values.
+const WEARABLE_CATEGORIES: Array = [
+	"facial_hair",
+	"hair",
+	"eyes",
+	"eyebrows",
+	"mouth",
+	"upper_body",
+	"hands",
+	"lower_body",
+	"feet",
+	"earring",
+	"eyewear",
+	"hat",
+	"helmet",
+	"mask",
+	"tiara",
+	"top_head",
+	"skin",
+]
 
-@export var credits_balance: int = 0
+## Categories that have no marketplace suggestions.
+const HIDDEN_CATEGORIES: Array = ["body_shape", "all", "all_extras"]
+
+@export var credits_balance: int = 0:
+	set(value):
+		credits_balance = value
+		if _button_cta:
+			_button_cta.credits_balance = value
 @export var asset_type: String = "wearables"
 
 var _current_category: String = ""
 var _card_button_group: ButtonGroup
+var _card_prices: Dictionary = {}  # urn -> price
+var _card_names: Dictionary = {}  # urn -> display name
 
 @onready var _grid: GridContainer = %GridContainer_Recommended
 @onready var _button_cta: MarketplaceCtaCard = %Button_CTA
 
 
 func _ready():
-	_button_cta.has_credits = credits_balance > 0
+	_button_cta.credits_balance = credits_balance
 	_button_cta.marketplace_section = asset_type
 	_card_button_group = ButtonGroup.new()
 	_card_button_group.allow_unpress = true
-	_add_placeholder_cards()
+	# Start hidden — update_category will show when there are results
+	visible = false
 
 
 func set_columns(columns: int):
 	if _grid:
 		_grid.columns = columns
+		_update_visible_cards()
+
+
+func refresh():
+	if not _current_category.is_empty():
+		_load_category(_current_category)
+
+
+func clear_selection():
+	if _card_button_group:
+		var pressed = _card_button_group.get_pressed_button()
+		if pressed:
+			pressed.set_pressed(false)
+	_button_cta.update_selection(-1)
 
 
 func update_category(category: String):
 	if category == _current_category:
 		return
 	_current_category = category
+	_load_category(category)
+
+
+func _load_category(category: String):
+	if category in HIDDEN_CATEGORIES:
+		visible = false
+		return
+
+	# Show skeleton placeholders immediately while fetching
+	_reset_to_placeholders()
+	visible = true
 	_async_fetch_items(category)
 
 
-func _build_catalog_url(category: String) -> String:
-	var skip = randi_range(0, 10)
+func _build_catalog_url(category: String, skip: int = 0, first: int = 3) -> String:
+	if asset_type == "emotes":
+		return (
+			CATALOG_API_URL
+			+ (
+				"?first=%d&skip=%d&category=emote&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
+				% [first, skip]
+			)
+		)
 	var url = (
 		CATALOG_API_URL
 		+ (
-			"?first=3&skip=%d&category=wearable&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
-			% skip
+			"?first=%d&skip=%d&category=wearable&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
+			% [first, skip]
 		)
 	)
-	var filter_key = CATEGORY_FILTER_MAP.get(category, "")
-	if not filter_key.is_empty():
-		url += "&%s=true" % filter_key
+	var wearable_cat = category if category in WEARABLE_CATEGORIES else ""
+	if category == "handwear":
+		wearable_cat = "hands"
+	if not wearable_cat.is_empty():
+		url += "&wearableCategory=%s" % wearable_cat
 	return url
+
+
+## Shows only as many cards as there are columns (one row).
+func _update_visible_cards():
+	if not _grid:
+		return
+	var cols = _grid.columns
+	var children = _grid.get_children()
+	for i in range(children.size()):
+		children[i].visible = i < cols
 
 
 func _add_placeholder_cards():
@@ -82,8 +136,23 @@ func _add_placeholder_cards():
 		_grid.add_child(card)
 
 
+func _reset_to_placeholders():
+	for child in _grid.get_children():
+		_grid.remove_child(child)
+		child.queue_free()
+	_add_placeholder_cards()
+	_update_visible_cards()
+
+
 func _async_fetch_items(category: String):
-	var url = _build_catalog_url(category)
+	var total = await _async_fetch_total(category)
+	if total <= 0:
+		visible = false
+		return
+	visible = true
+	var max_skip = maxi(total - 3, 0)
+	var skip = randi_range(0, max_skip)
+	var url = _build_catalog_url(category, skip)
 	var promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
@@ -94,13 +163,28 @@ func _async_fetch_items(category: String):
 	_populate_cards(items)
 
 
+func _async_fetch_total(category: String) -> int:
+	var url = _build_catalog_url(category, 0, 0)
+	var promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		return 0
+	var json = result.get_string_response_as_json()
+	return json.get("total", 0)
+
+
 func _populate_cards(items: Array):
 	for child in _grid.get_children():
+		_grid.remove_child(child)
 		child.queue_free()
+	_card_prices.clear()
+	_card_names.clear()
+	_button_cta.update_selection(-1)
 	for item_data in items:
 		var card = WEARABLE_ITEM_SCENE.instantiate()
 		_grid.add_child(card)
 		_setup_card(card, item_data)
+	_update_visible_cards()
 
 
 func _setup_card(card: WearableItem, item_data: Dictionary):
@@ -117,6 +201,8 @@ func _setup_card(card: WearableItem, item_data: Dictionary):
 	card.button_group = _card_button_group
 	card.equip.connect(_on_card_equip.bind(urn))
 	card.unequip.connect(_on_card_unequip.bind(urn))
+	_card_prices[urn] = price
+	_card_names[urn] = item_data.get("name", "")
 
 	var thumbnail_url = item_data.get("thumbnail", "")
 	if not thumbnail_url.is_empty():
@@ -124,10 +210,13 @@ func _setup_card(card: WearableItem, item_data: Dictionary):
 
 
 func _on_card_equip(urn: String):
+	_button_cta.update_selection(_card_prices.get(urn, 0))
+	item_selected.emit(urn, _card_names.get(urn, ""))
 	item_equip.emit(urn)
 
 
 func _on_card_unequip(urn: String):
+	_button_cta.update_selection(-1)
 	item_unequip.emit(urn)
 
 

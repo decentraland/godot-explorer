@@ -5,9 +5,6 @@ signal emote_grid_selected(emote_name: String)
 signal emote_equipped(equipped: bool)
 
 const EMOTE_SQUARE_ITEM = preload("res://src/ui/components/organisms/emotes/emote_square_item.tscn")
-const MARKETPLACE_SECTION_SCENE = preload(
-	"res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.tscn"
-)
 
 @export var avatar: Avatar = null:
 	set(new_value):
@@ -64,19 +61,11 @@ func _setup_ios_marketplace_section():
 	#if not Global.is_ios():
 	#	return
 
-	var grid_parent = container_all_emotes.get_parent()
-
-	var items_wrapper = VBoxContainer.new()
-	items_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	items_wrapper.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	grid_parent.add_child(items_wrapper)
-	grid_parent.move_child(items_wrapper, 0)
-	container_all_emotes.reparent(items_wrapper)
-
-	_ios_marketplace_section = MARKETPLACE_SECTION_SCENE.instantiate()
+	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
+	if _ios_marketplace_section == null:
+		return
 	_ios_marketplace_section.credits_balance = _mock_credits
-	_ios_marketplace_section.asset_type = "emotes"
-	items_wrapper.add_child(_ios_marketplace_section)
+	_ios_marketplace_section.item_selected.connect(_on_marketplace_emote_selected)
 	_ios_marketplace_section.update_category("emotes")
 
 
@@ -270,6 +259,8 @@ func _on_visibility_changed() -> void:
 		return
 	if scroll_container_grid != null:
 		scroll_container_grid.scroll_vertical = 0
+	if is_visible_in_tree() and _ios_marketplace_section:
+		_ios_marketplace_section.refresh()
 
 
 func on_narrow(is_narrow: bool) -> void:
@@ -288,3 +279,9 @@ func _on_landscape() -> void:
 		_ios_marketplace_section.set_columns(2)
 	for emote_item in avatar_emote_items:
 		emote_item.custom_minimum_size = Vector2(138, 138)
+
+
+func _on_marketplace_emote_selected(urn: String, emote_name: String):
+	if is_instance_valid(avatar) and not urn.is_empty():
+		avatar.async_play_emote(urn)
+	emote_grid_selected.emit(emote_name)

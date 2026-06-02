@@ -3,7 +3,6 @@ extends CustomTouchButton
 
 signal equip
 signal unequip
-signal action_pressed
 
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
@@ -142,7 +141,7 @@ func setup_marketplace(price: int, url: String, credits: int):
 	credits_balance = credits
 	texture_rect_equiped.hide()
 	panel_container_price.show()
-	label_price.text = "%d Credits" % price
+	label_price.text = "%d" % price
 
 
 func _update_marketplace_state(is_selected: bool):
@@ -150,9 +149,9 @@ func _update_marketplace_state(is_selected: bool):
 		panel_container_price.hide()
 		button_action.show()
 		if credits_balance >= marketplace_price:
-			button_action.text = "View details"
+			button_action.text = "DETAIL"
 		else:
-			button_action.text = "Get credits"
+			button_action.text = "GET CREDITS"
 	else:
 		panel_container_price.show()
 		button_action.hide()
@@ -166,7 +165,6 @@ func _on_action_pressed():
 	else:
 		# Placeholder for StoreKit IAP flow (#2115)
 		pass
-	action_pressed.emit()
 
 
 func _update_category_icon(wearable: DclItemEntityDefinition):
