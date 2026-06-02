@@ -116,6 +116,10 @@ var session_id: String
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
 
+# Seeds Sentry user / context / tags from realm / scene_fetcher /
+# player_identity / comms signals. Instantiated alongside scene_fetcher.
+var sentry_seeder: SentrySeeder = null
+
 # Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
 # token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
 # see attestation_service.gd. Other code obtains a token via
@@ -142,6 +146,12 @@ func is_xr() -> bool:
 
 func is_emulating_safe_area() -> bool:
 	return cli.emulate_ios or cli.emulate_android
+
+
+## True when GP benchmark was triggered, either via desktop CLI (`--gp-benchmark`)
+## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
+func is_gp_benchmark() -> bool:
+	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
 func _get_safe_area_presets() -> GDScript:
@@ -326,6 +336,15 @@ func _ready():
 		get_tree().root.add_child.call_deferred(fi_runner)
 		return
 
+	# Genesis Plaza profiling benchmark (issue #1862). Lives alongside the full
+	# explorer flow: it primes realm/parcel, then samples once the scene loads.
+	# Skip if the deeplink path already spawned the runner (mobile cold-start race).
+	if is_gp_benchmark() and get_node_or_null("GPBenchmarkRunner") == null:
+		print("Running Genesis Plaza Benchmark...")
+		var gp_runner = load("res://src/tools/gp_benchmark_runner.gd").new()
+		gp_runner.set_name("GPBenchmarkRunner")
+		add_child(gp_runner)
+
 	session_id = DclConfig.generate_uuid_v4()
 	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
 	# telemetry is disabled at build time (CI desktop builds use the
@@ -338,15 +357,16 @@ func _ready():
 		self.metrics.set_debug_level(0)  # 0 off - 1 on
 		self.metrics.set_name("metrics")
 
-	# Sentry user / session tagging
-	if telemetry_enabled:
-		var sentry_user = SentryUser.new()
-		sentry_user.id = self.config.analytics_user_id
-		SentrySDK.set_tag("dcl_session_id", session_id)
-
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
+
+	# RefCounted, kept alive by this strong reference. Seeds Sentry user /
+	# context / tags from the runtime signals exposed by the subsystems
+	# created above. No scene-tree presence.
+	if telemetry_enabled:
+		self.sentry_seeder = SentrySeeder.new()
+		self.sentry_seeder.setup()
 
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
@@ -450,8 +470,12 @@ func _dcl_swift_lib_smoke_test() -> void:
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
-## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI
+## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI.
+## Skipped in bench mode: HardwareBenchmark calls viewport_set_measure_render_time and
+## can clobber the gp_benchmark_runner's measurement state mid-bench.
 func should_run_first_launch_benchmark() -> bool:
+	if cli.bench_mode:
+		return false
 	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
 
 
@@ -487,6 +511,13 @@ func _async_clear_cache_if_needed() -> void:
 
 
 func _init_dynamic_graphics_manager() -> void:
+	# In bench mode, skip DG init entirely: the bench runner pins force-graphic-profile,
+	# disables thermal cap, and disconnects DG's signal handlers anyway — initializing
+	# DG just adds startup CPU noise and queues thermal_fps_cap signals that race the
+	# bench setup.
+	if cli.bench_mode:
+		print("[DynamicGraphics] skipped (bench_mode=true)")
+		return
 	# Initialize with config values and connect signals
 	dynamic_graphics_manager.initialize(
 		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps
