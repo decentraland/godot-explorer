@@ -6,11 +6,13 @@ extends Node
 # here; on non-iOS the wrapper's `is_available()` returns false and every
 # method is a no-op.
 #
-# The backend is currently SIMULATED locally — `_async_validate_with_backend`
-# returns OK after a short delay and credits live only in memory (no disk
-# persistence, balance resets on relaunch). The async/tri-state-outcome
-# shape mirrors the real flow so swapping in a real HTTP call later is a
-# localized change.
+# Talks to the IAP backend (mobile-bff) over DCL signed-fetch (ADR-44):
+#   - POST /iap/apple/quote  : pre-purchase gate (daily + total caps) BEFORE
+#                              StoreKit charges (a consumable can't be un-charged).
+#   - POST /iap/apple/verify : verifies the StoreKit JWS, binds it to the wallet,
+#                              and credits idempotently. Tri-state outcome
+#                              (OK/REJECTED/RETRY) drives StoreKit finish/redelivery.
+#   - GET  /iap/balance      : reconciles the server balance into the local cache.
 #
 # Owns the global purchase overlay (full-screen blocking spinner). The overlay
 # is shown the moment a purchase is initiated and stays up until the flow
@@ -43,10 +45,6 @@ const _CREDITS_BY_PRODUCT := {
 	"credits_50": 50,
 }
 
-# Synthetic latency for the simulated backend round-trip — long enough that
-# the purchase overlay actually flashes during testing.
-const _SIMULATED_VALIDATION_DELAY_SEC := 0.5
-
 # Bound how long the purchase overlay stays up. StoreKit prompt + validation
 # should land well inside this; past it we assume something stuck (network
 # drop, redelivery loop, missing signal) and let the user retry.
@@ -54,6 +52,13 @@ const _PURCHASE_OVERLAY_TIMEOUT_SEC := 15.0
 
 const _OVERLAY_SCENE_PATH := "res://src/ui/components/organisms/iap_purchase_overlay/iap_purchase_overlay.tscn"
 const _SUCCESS_MODAL_SCENE_PATH := "res://src/ui/components/organisms/iap_purchase_success_modal/iap_purchase_success_modal.tscn"
+
+# IAP backend base URL. Points at the dedicated sandbox instance used to
+# validate the StoreKit + App Store Server Notifications flow end-to-end. All
+# calls go through Global.async_signed_fetch (DCL signed-fetch / ADR-44), and
+# the host is not part of the signed payload, so this can be repointed at the
+# production mobile-bff host without touching the signing path.
+const _IAP_BACKEND_BASE_URL := "https://iap-sandbox.dclregenesislabs.xyz"
 
 # Validation outcomes for `_async_validate_with_backend`:
 # OK — credits granted (or already granted, idempotent), finish the tx.
@@ -65,10 +70,8 @@ const _OUTCOME_OK := 0
 const _OUTCOME_REJECTED := 1
 const _OUTCOME_RETRY := 2
 
-# TODO: replace with backend/endpoint query
-const _MAX_CREDITS := 1000
-# TODO: replace with actual daily limit once known
-const _MAX_DAILY_CREDITS := 100
+# Total + daily credit caps are enforced server-side by the IAP backend
+# (POST /iap/apple/quote). The client no longer holds these limits.
 
 # Gates all IAP behavior. Default false — must be turned on via the
 # `decentraland://open?iap_enabled=true` launch deeplink. Until enable() is
@@ -79,14 +82,17 @@ var enabled: bool = false
 var _store_kit := DclStoreKitPlugin.new()
 var _store_kit_available: bool = false
 var _products: Array = []
-# In-memory only; resets on relaunch.
+# Local cache of the server-authoritative balance, reconciled from quote/verify/
+# balance responses. Server is the source of truth.
 var _balance: int = 0
 # Tx-id dedup. Apple delivers the same transaction twice on a fresh purchase
 # (once via `purchaseCompleted`, once via the `Transaction.updates` listener
 # that picks up any unfinished tx). The real backend dedupes by tx id server
 # side; we mirror that here. Cleared on relaunch like `_balance`.
 var _seen_tx_ids: Dictionary = {}
-# TODO: replace with backend endpoint query to get persistent transaction history
+# Local cache of the server's transaction history (GET /iap/history). Populated
+# on wallet connect and when the history view opens; also gets the just-bought
+# entry appended optimistically on a successful purchase.
 var _transaction_history: Array = []
 # Bumped on each purchase start AND each overlay hide so stale SceneTreeTimer
 # timeouts (which can't be cancelled) become no-ops.
@@ -186,32 +192,50 @@ func purchase(product_id: String) -> void:
 		printerr("[IAP] cannot purchase without wallet (sign in first)")
 		purchase_failed.emit(product_id, "not signed in")
 		return
-	var credits_to_add: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
-	if _balance + credits_to_add > _MAX_CREDITS:
-		printerr(
-			"[IAP] total credit limit reached: ",
-			_balance,
-			" + ",
-			credits_to_add,
-			" > ",
-			_MAX_CREDITS
-		)
-		Global.modal_manager.async_show_credit_limit_total_modal()
-		return
-	var today_credits = _get_today_credits()
-	if today_credits + credits_to_add > _MAX_DAILY_CREDITS:
-		printerr(
-			"[IAP] daily credit limit reached: ",
-			today_credits,
-			" + ",
-			credits_to_add,
-			" > ",
-			_MAX_DAILY_CREDITS
-		)
-		Global.modal_manager.async_show_credit_limit_daily_modal()
-		return
+	# Take the overlay + in-flight lock up-front so the button can't be
+	# re-tapped while the quote round-trips. The quote is the server-
+	# authoritative pre-purchase gate; only on `allowed` do we hand off to
+	# StoreKit. _async_begin_purchase owns the flow from here.
 	_purchase_in_flight = true
 	_show_overlay()
+	_async_begin_purchase(product_id, wallet)
+
+
+# gdlint:ignore = async-function-name
+func _async_begin_purchase(product_id: String, wallet: String) -> void:
+	# Pre-purchase gate. Enforces the daily + total caps BEFORE StoreKit charges
+	# (a consumable cannot be un-charged, so limits must run before the charge).
+	var body := JSON.stringify({"productId": product_id})
+	var envelope = await _async_signed_iap("/iap/apple/quote", HTTPClient.METHOD_POST, body)
+	if envelope == null or not envelope.get("ok", false):
+		# Transport/auth failure — fail closed (do NOT let StoreKit charge).
+		printerr("[IAP] quote failed; aborting purchase of ", product_id)
+		_finish_purchase_flow()
+		Global.modal_manager.async_show_purchase_failed_modal()
+		purchase_failed.emit(product_id, "quote failed")
+		return
+	var data = envelope.get("data", {})
+	if not (data is Dictionary):
+		data = {}
+	# Keep the cached balance fresh from the quote.
+	if data.has("balance"):
+		_balance = int(data.get("balance"))
+		balance_changed.emit(_balance)
+	if not data.get("allowed", false):
+		var reason := str(data.get("reason", ""))
+		print("[IAP] quote denied for ", product_id, " reason=", reason)
+		_finish_purchase_flow()
+		match reason:
+			"total_limit":
+				Global.modal_manager.async_show_credit_limit_total_modal()
+			"daily_limit":
+				Global.modal_manager.async_show_credit_limit_daily_modal()
+			_:
+				Global.modal_manager.async_show_purchase_failed_modal()
+		purchase_failed.emit(product_id, "not allowed: " + reason)
+		return
+	# Gate passed — initiate the real StoreKit purchase. Overlay stays up until
+	# the purchase resolves via the StoreKit signal handlers.
 	_store_kit.purchase(product_id, wallet)
 
 
@@ -228,16 +252,6 @@ func _record_transaction(credits: int, is_refund: bool) -> void:
 		)
 	)
 	transaction_history_updated.emit()
-
-
-func _get_today_credits() -> int:
-	var now = Time.get_datetime_dict_from_system()
-	var today = "%04d.%02d.%02d" % [now.year, now.month, now.day]
-	var total = 0
-	for tx in _transaction_history:
-		if tx.get("timestamp", "") == today and not tx.get("is_refund", false):
-			total += tx.get("credits", 0)
-	return total
 
 
 func _on_products_loaded(json: String) -> void:
@@ -342,10 +356,15 @@ func _async_handle_verified_transaction(tx: Dictionary) -> void:
 
 # gdlint:ignore = async-function-name
 func _async_validate_with_backend(tx: Dictionary) -> int:
-	# SIMULATED backend. Shape mirrors the real flow (async, tri-state
-	# outcome) so the real HTTP call is a localized swap later. The JWS /
-	# wallet checks here are sanity-only — nothing on this side is actually
-	# verifying signatures or persisting state.
+	# Real backend validation. POSTs the StoreKit JWS to the IAP backend, which
+	# verifies the Apple signature, binds appAccountToken<->wallet, and credits
+	# idempotently. The tri-state mirrors StoreKit's redelivery contract:
+	#   OK       -> credited (or already credited) -> finish the tx.
+	#   REJECTED -> backend refused permanently (bad signature, wallet mismatch,
+	#               unknown product, wrong environment) -> finish to stop the
+	#               redelivery loop; retrying won't help.
+	#   RETRY    -> transport/transient error -> do NOT finish; StoreKit
+	#               redelivers on next launch.
 	var jws := str(tx.get("jwsRepresentation", ""))
 	if jws.is_empty():
 		printerr("[IAP] missing JWS")
@@ -355,17 +374,25 @@ func _async_validate_with_backend(tx: Dictionary) -> int:
 		printerr("[IAP] no wallet address yet; deferring grant")
 		return _OUTCOME_RETRY
 
-	var product_id := str(tx.get("productId", ""))
-	var credits: int = _CREDITS_BY_PRODUCT.get(product_id, 0)
-	if credits <= 0:
-		printerr("[IAP] sim rejected: unknown product ", product_id)
+	var body := JSON.stringify({"jwsRepresentation": jws})
+	var envelope = await _async_signed_iap("/iap/apple/verify", HTTPClient.METHOD_POST, body)
+	# null == transport error (non-2xx / timeout) -> transient -> RETRY.
+	if envelope == null:
+		printerr("[IAP] verify transport error; will retry on next launch")
+		return _OUTCOME_RETRY
+	# Permanent rejections come back as HTTP 200 with ok:false (see
+	# verify-handler) so they are NEVER mistaken for a transient failure.
+	if not envelope.get("ok", false):
+		printerr(
+			"[IAP] verify rejected: ", envelope.get("code", ""), " ", envelope.get("error", "")
+		)
 		return _OUTCOME_REJECTED
 
-	await get_tree().create_timer(_SIMULATED_VALIDATION_DELAY_SEC).timeout
-
-	_balance += credits
-	balance_changed.emit(_balance)
-	print("[IAP] sim granted ", credits, " for ", product_id, " balance=", _balance)
+	var data = envelope.get("data", {})
+	if data is Dictionary and data.has("balance"):
+		_balance = int(data.get("balance"))
+		balance_changed.emit(_balance)
+	print("[IAP] verify ok: granted=", data.get("granted", false), " balance=", _balance)
 	return _OUTCOME_OK
 
 
@@ -378,25 +405,77 @@ func _connect_wallet_signals() -> void:
 	# and the signal won't fire — fetch now to cover that case.
 	if not _wallet_address().is_empty():
 		_async_fetch_balance()
+		_async_fetch_history()
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
 	_async_fetch_balance()
+	_async_fetch_history()
+
+
+# Public trigger so the credits history view can pull fresh data when shown.
+func refresh_history() -> void:
+	_async_fetch_history()
 
 
 # gdlint:ignore = async-function-name
 func _async_fetch_balance() -> void:
-	# SIMULATED. In prod this would GET /balance/<wallet> and reconcile the
-	# server-side balance into `_balance`. With no backend or persistence
-	# there's nothing to reconcile against — just re-emit the current value
-	# after a synthetic delay so listeners refresh.
+	# Reconciles the server-side balance for the signed-in wallet into the local
+	# cache. The wallet is taken from the signed-fetch auth chain server-side, so
+	# the path carries no address.
 	var wallet := _wallet_address()
 	if wallet.is_empty():
 		return
-	await get_tree().create_timer(_SIMULATED_VALIDATION_DELAY_SEC).timeout
+	var envelope = await _async_signed_iap("/iap/balance", HTTPClient.METHOD_GET, "")
+	# Guard against a wallet switch while the request was in flight.
 	if _wallet_address() != wallet:
 		return
+	if envelope == null or not envelope.get("ok", false):
+		return
+	var data = envelope.get("data", {})
+	if data is Dictionary and data.has("balance"):
+		_balance = int(data.get("balance"))
 	balance_changed.emit(_balance)
+
+
+# gdlint:ignore = async-function-name
+func _async_fetch_history() -> void:
+	# Pulls the wallet's persistent transaction history from the backend (incl.
+	# refunds) and replaces the local cache. Entries match the UI shape:
+	# {credits, is_refund, timestamp}.
+	var wallet := _wallet_address()
+	if wallet.is_empty():
+		return
+	var envelope = await _async_signed_iap("/iap/history", HTTPClient.METHOD_GET, "")
+	if _wallet_address() != wallet:
+		return
+	if envelope == null or not envelope.get("ok", false):
+		return
+	var data = envelope.get("data", {})
+	if not (data is Dictionary):
+		return
+	var txs = data.get("transactions", [])
+	if txs is Array:
+		_transaction_history = txs
+		transaction_history_updated.emit()
+
+
+# gdlint:ignore = async-function-name
+func _async_signed_iap(path: String, method: int, body: String) -> Variant:
+	# DCL signed-fetch (ADR-44) call to the IAP backend. Returns the parsed JSON
+	# envelope ({ok, data, ...}) on any HTTP 2xx, or null on a transport error
+	# (non-2xx, timeout, unparseable). Business-level rejections come back as
+	# 2xx with ok:false, so callers must inspect `ok` themselves.
+	var url := _IAP_BACKEND_BASE_URL + path
+	var response = await Global.async_signed_fetch(url, method, body)
+	if response is PromiseError:
+		printerr("[IAP] ", path, " transport error: ", response.get_error())
+		return null
+	var json = response.get_string_response_as_json()
+	if not (json is Dictionary):
+		printerr("[IAP] ", path, " unparseable response")
+		return null
+	return json
 
 
 func _wallet_address() -> String:
