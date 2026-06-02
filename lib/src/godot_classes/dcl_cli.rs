@@ -125,6 +125,13 @@ pub struct DclCli {
     #[var]
     pub inspect_scene_title: GString,
 
+    // Override the default optimized-content base URL. When set, runtime
+    // fetches `<base_url>/<hash>-mobile.zip` instead of the hardcoded
+    // production endpoint. Empty = use default
+    // (https://optimized-assets.dclexplorer.com/v3).
+    #[var]
+    pub optimized_content_base_url: GString,
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -461,6 +468,12 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--optimized-content-base-url".to_string(),
+                description: "Override the default optimized-content base URL (default: https://optimized-assets.dclexplorer.com/v3). Also accepted as deeplink param.".to_string(),
+                arg_type: ArgType::Value("<url>".to_string()),
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -672,6 +685,11 @@ impl INode for DclCli {
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
+        let optimized_content_base_url = args_map
+            .get("--optimized-content-base-url")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
         // bench_mode auto-enabled when gp_benchmark is set, so the desktop
         // CLI doesn't have to pass both. Mobile flips this from
         // deep_link_router.gd when it sees gp-benchmark=true.
@@ -797,6 +815,7 @@ impl INode for DclCli {
             fi_benchmark_size,
             avatar_impostor_benchmark,
             gp_benchmark,
+            optimized_content_base_url,
             bench_mode,
             inspect_scene_title,
             asset_server_port,

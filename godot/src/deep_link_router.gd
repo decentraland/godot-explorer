@@ -34,6 +34,8 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	Global._apply_optimized_content_base_url(Global.deep_link_obj)
+
 	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
 	# runner from Global._ready, but on mobile the deep link is not parsed by
 	# then — spawn here once the deeplink lands and only if no runner exists.

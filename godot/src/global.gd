@@ -154,6 +154,16 @@ func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
+## Forward the optimized-content-base-url deeplink param into DclCli so the
+## scene fetcher / content provider use it for optimized loading. Shared by the
+## desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
+	var opt_url: String = obj.params.get("optimized-content-base-url", "")
+	if not opt_url.is_empty():
+		print("[DEEPLINK] optimized-content-base-url=", opt_url)
+		cli.optimized_content_base_url = opt_url
+
+
 func _get_safe_area_presets() -> GDScript:
 	if _safe_area_presets == null:
 		_safe_area_presets = load("res://assets/no-export/safe_area_presets.gd")
@@ -233,6 +243,8 @@ func _ready():
 			DclGlobal.set_rust_log_filter(rust_log_value)
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
+
+		_apply_optimized_content_base_url(deep_link_obj)
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
