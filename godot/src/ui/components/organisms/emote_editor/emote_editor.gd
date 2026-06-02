@@ -56,9 +56,8 @@ func _ready():
 
 
 func _setup_ios_marketplace_section():
-	# TODO: restore iOS gate when done testing
-	#if not Global.is_ios():
-	#	return
+	if not Global.is_ios():
+		return
 
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:

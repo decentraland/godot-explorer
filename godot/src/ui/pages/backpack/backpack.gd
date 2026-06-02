@@ -39,7 +39,6 @@ var avatar_loading_counter: int = 0
 var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
-# Mock credits balance — replace with real credits API when #2115 is ready
 var _ios_marketplace_section: MarketplaceRecommendedSection = null
 var _marketplace_preview_urn: String = ""
 var _marketplace_saved_wearables: PackedStringArray = []
@@ -424,9 +423,8 @@ func _show_wearables():
 
 
 func _setup_ios_marketplace_section():
-	# TODO: restore iOS gate when done testing
-	#if not Global.is_ios():
-	#	return
+	if not Global.is_ios():
+		return
 
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
