@@ -38,6 +38,8 @@ func process_deep_link(url: String) -> void:
 	# before reaching Settings (e.g. on the login/lobby screens).
 	apply_debug_ws_param(Global.deep_link_obj.params.get("debug-ws", ""))
 
+	Global._apply_optimized_content_base_url(Global.deep_link_obj)
+
 	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
 	# runner from Global._ready, but on mobile the deep link is not parsed by
 	# then — spawn here once the deeplink lands and only if no runner exists.
