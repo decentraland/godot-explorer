@@ -336,7 +336,7 @@ func _async_update_avatar():
 	if not _marketplace_preview_urn.is_empty():
 		var wearable = Global.content_provider.get_wearable(_marketplace_preview_urn)
 		if wearable != null:
-			_marketplace_preview_equip(_marketplace_preview_urn, wearable)
+			_async_marketplace_preview_equip(_marketplace_preview_urn, wearable)
 			return
 
 	mutable_profile.set_avatar(mutable_avatar)
@@ -432,7 +432,7 @@ func _setup_ios_marketplace_section():
 	if _ios_marketplace_section == null:
 		return
 	_ios_marketplace_section.credits_balance = Iap.get_balance()
-	_ios_marketplace_section.item_equip.connect(_on_marketplace_equip)
+	_ios_marketplace_section.item_equip.connect(_async_on_marketplace_equip)
 	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
 	Iap.balance_changed.connect(_on_credits_balance_changed)
 
@@ -551,7 +551,7 @@ func _on_wearable_unequip(wearable_id: String):
 	request_update_avatar = true
 
 
-func _on_marketplace_equip(urn: String):
+func _async_on_marketplace_equip(urn: String):
 	if urn.is_empty():
 		return
 	# Fetch wearable definition — use content_provider cache, don't add to wearable_data
@@ -565,7 +565,7 @@ func _on_marketplace_equip(urn: String):
 		if wearable == null:
 			printerr("[Marketplace] Failed to fetch wearable: ", urn)
 			return
-	_marketplace_preview_equip(urn, wearable)
+	_async_marketplace_preview_equip(urn, wearable)
 
 
 func _on_marketplace_unequip(_urn: String):
@@ -577,7 +577,7 @@ func _on_marketplace_unequip(_urn: String):
 
 ## Temporarily equips a marketplace wearable for visual preview only.
 ## Never touches mutable avatar/profile — only updates the local avatar_preview.
-func _marketplace_preview_equip(urn: String, wearable: DclItemEntityDefinition):
+func _async_marketplace_preview_equip(urn: String, wearable: DclItemEntityDefinition):
 	# Cancel any pending restore from a ButtonGroup switch
 	_marketplace_restore_pending = false
 
