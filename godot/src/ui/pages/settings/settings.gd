@@ -96,6 +96,8 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	button_developer.visible = !Global.is_production()
+	# Reflect the live server state: debug builds auto-start it in DebugWs._ready.
+	check_button_debug_server.set_pressed_no_signal(DebugWs.is_running())
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
 
