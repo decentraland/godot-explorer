@@ -64,8 +64,13 @@ func _async_fetch_catalyst_body(user_id: String) -> Image:
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		return null
-	if result is Texture2D:
-		return result.get_image()
+	# fetch_avatar_body_texture resolves a TextureEntry (image + texture + failed),
+	# not a bare Texture2D. The old `is Texture2D` check never matched, so every
+	# catalyst body — even when the download succeeded — was discarded and fell
+	# back to the ~300ms off-screen local bake. Read the image directly and skip
+	# the placeholder that TextureEntry.failed marks.
+	if result != null and result.get("image") != null and not result.get("failed"):
+		return result.image
 	return null
 
 
