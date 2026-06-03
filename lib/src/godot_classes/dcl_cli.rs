@@ -125,6 +125,36 @@ pub struct DclCli {
     #[var]
     pub inspect_scene_title: GString,
 
+    // RenderingServer-direct migration flag. Default OFF; flipped via
+    // --rs-gltf-direct CLI flag or rs-gltf-direct deeplink param. See plan in
+    // ~/.claude/plans/https-github-com-decentraland-godot-expl-precious-nest.md
+    #[var]
+    pub rs_gltf_direct: bool,
+
+    // Override the default optimized-content base URL. When set, runtime
+    // fetches `<base_url>/<hash>-mobile.zip` instead of the hardcoded
+    // production endpoint. Empty = use default
+    // (https://optimized-assets.dclexplorer.com/v3).
+    //
+    // Custom setter mirrors the value into a thread-safe static
+    // (`OPTIMIZED_URL_OVERRIDE` in content_provider.rs) because tokio
+    // workers can't reach `DclGlobal::try_singleton()` — Godot's singleton
+    // registry is main-thread-only.
+    #[var(get, set = set_optimized_content_base_url)]
+    pub optimized_content_base_url: GString,
+
+    // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
+    // set in `update_gltf_container` so the bench can measure the rendering
+    // floor without any scene meshes loaded. Pure perf-debug knob.
+    #[var]
+    pub skip_gltf_load: bool,
+
+    // Diagnostic: force every WorldEnvironment to BG_COLOR (no sky shader,
+    // no procedural sky). Combined with `skip-gltf` measures the renderer
+    // floor without sky fragment cost.
+    #[var]
+    pub kill_sky: bool,
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -461,6 +491,24 @@ impl DclCli {
                 category: "Performance".to_string(),
             },
             ArgDefinition {
+                name: "--optimized-content-base-url".to_string(),
+                description: "Override the default optimized-content base URL (default: https://optimized-assets.dclexplorer.com/v3). Also accepted as deeplink param.".to_string(),
+                arg_type: ArgType::Value("<url>".to_string()),
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--skip-gltf".to_string(),
+                description: "Diagnostic: skip every GltfContainer instantiation so the renderer floor (sky+UI+avatar) can be measured. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--kill-sky".to_string(),
+                description: "Diagnostic: force WorldEnvironment background_mode=COLOR everywhere — no sky shader, no procedural sky. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -672,6 +720,21 @@ impl INode for DclCli {
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
+        let rs_gltf_direct = args_map.contains_key("--rs-gltf-direct");
+        let optimized_content_base_url: GString = args_map
+            .get("--optimized-content-base-url")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
+        // Mirror the CLI-arg value into the thread-safe static so worker
+        // threads see it without going through `DclGlobal::try_singleton()`.
+        if !optimized_content_base_url.is_empty() {
+            crate::content::content_provider::set_optimized_url_override(
+                &optimized_content_base_url.to_string(),
+            );
+        }
+        let skip_gltf_load = args_map.contains_key("--skip-gltf");
+        let kill_sky = args_map.contains_key("--kill-sky");
         // bench_mode auto-enabled when gp_benchmark is set, so the desktop
         // CLI doesn't have to pass both. Mobile flips this from
         // deep_link_router.gd when it sees gp-benchmark=true.
@@ -797,6 +860,10 @@ impl INode for DclCli {
             fi_benchmark_size,
             avatar_impostor_benchmark,
             gp_benchmark,
+            rs_gltf_direct,
+            optimized_content_base_url,
+            skip_gltf_load,
+            kill_sky,
             bench_mode,
             inspect_scene_title,
             asset_server_port,
@@ -816,6 +883,13 @@ impl INode for DclCli {
 
 #[godot_api]
 impl DclCli {
+    #[func]
+    pub fn set_optimized_content_base_url(&mut self, url: GString) {
+        let s = url.to_string();
+        crate::content::content_provider::set_optimized_url_override(&s);
+        self.optimized_content_base_url = url;
+    }
+
     #[func]
     pub fn has_arg(&self, arg: GString) -> bool {
         self.args_map.contains_key(&arg.to_string())

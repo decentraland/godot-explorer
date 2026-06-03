@@ -13,7 +13,7 @@ use godot::{
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::{RwLock, Semaphore};
+use tokio::sync::{oneshot, RwLock, Semaphore};
 
 use crate::{
     auth::wallet::AsH160,
@@ -79,6 +79,29 @@ struct ImageSize {
     width: i32,
 }
 
+/// Main-thread queue for `ProjectSettings.load_resource_pack`. That call
+/// mutates Godot's virtual filesystem and is main-thread-only; running it
+/// on a tokio worker raced with the render thread over Godot's internal
+/// ResourceLoader/filesystem locks and intermittently DEADLOCKED the load
+/// (both VkThread and a tokio worker parked in futex_wait). Workers now
+/// enqueue (zip_path, reply) here and await the reply; `process()` drains
+/// it on the main thread where the call belongs.
+#[allow(clippy::type_complexity)]
+static MAIN_THREAD_PACK_QUEUE: once_cell::sync::Lazy<
+    std::sync::Mutex<Vec<(String, oneshot::Sender<bool>)>>,
+> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(Vec::new()));
+
+/// Enqueue a resource-pack mount for the main thread and await its result.
+/// Safe to call from any tokio worker.
+async fn load_resource_pack_on_main(zip_path: String) -> bool {
+    let (tx, rx) = oneshot::channel();
+    match MAIN_THREAD_PACK_QUEUE.lock() {
+        Ok(mut q) => q.push((zip_path, tx)),
+        Err(_) => return false,
+    }
+    rx.await.unwrap_or(false)
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct ContentProvider {
@@ -133,11 +156,58 @@ pub struct SceneGltfContext {
     pub texture_quality: TextureQuality,
     /// Force ETC2 compression even on non-mobile platforms (for asset server)
     pub force_compress: bool,
+    /// Run the post-generate optimization pipeline (split → LODs → shadows →
+    /// materials). Set true ONLY when running as the asset processor — the
+    /// pipeline is expensive and is meant to be baked once into the saved
+    /// .scn, not re-run on every phone load.
+    pub apply_optimizations: bool,
 }
 
 unsafe impl Send for SceneGltfContext {}
 
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v3";
+const DEFAULT_ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v3";
+
+/// Resolved optimized-content base URL, with no trailing slash.
+///
+/// Reads `--optimized-content-base-url` from `DclCli` at call time. Returns the
+/// hardcoded default when the override is empty or DclGlobal isn't available.
+/// Thread-safe mirror of `cli.optimized_content_base_url`.
+///
+/// `DclGlobal::try_singleton()` only succeeds on the main thread. Most
+/// callers of `resolved_optimized_base_url()` run on tokio workers, where
+/// the singleton lookup returns `None` → silent fallback to the default
+/// prod URL, which 404s on locally-baked content. This static is updated
+/// from the main thread (via the `#[var(set)]` setter on `DclCli`) and
+/// read lock-free from worker threads.
+static OPTIMIZED_URL_OVERRIDE: std::sync::RwLock<String> = std::sync::RwLock::new(String::new());
+
+pub fn set_optimized_url_override(value: &str) {
+    if let Ok(mut w) = OPTIMIZED_URL_OVERRIDE.write() {
+        *w = value.to_string();
+    }
+}
+
+fn resolved_optimized_base_url() -> String {
+    // Prefer the singleton when reachable (main thread); otherwise fall
+    // back to the cached value the setter mirrored from the main thread.
+    let override_url = DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().optimized_content_base_url.to_string())
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            OPTIMIZED_URL_OVERRIDE
+                .read()
+                .ok()
+                .map(|r| r.clone())
+                .filter(|s| !s.is_empty())
+        })
+        .unwrap_or_default();
+    let url = if override_url.is_empty() {
+        DEFAULT_ASSET_OPTIMIZED_BASE_URL.to_string()
+    } else {
+        override_url
+    };
+    url.trim_end_matches('/').to_string()
+}
 
 #[godot_api]
 impl INode for ContentProvider {
@@ -186,7 +256,7 @@ impl INode for ContentProvider {
             optimized_assets: HashSet::default(),
             optimized_original_size: HashMap::default(),
             // Default to the same URL used for scene optimized assets
-            optimized_wearable_base_url: Some(format!("{}/", ASSET_OPTIMIZED_BASE_URL)),
+            optimized_wearable_base_url: Some(format!("{}/", resolved_optimized_base_url())),
         }
     }
     fn ready(&mut self) {}
@@ -196,6 +266,22 @@ impl INode for ContentProvider {
     }
 
     fn process(&mut self, dt: f64) {
+        // Mount any resource packs queued by worker threads. Done here,
+        // on the main thread, because load_resource_pack mutates Godot's
+        // virtual filesystem and deadlocks against the render thread when
+        // called from tokio workers. See MAIN_THREAD_PACK_QUEUE.
+        let queued: Vec<(String, oneshot::Sender<bool>)> = match MAIN_THREAD_PACK_QUEUE.lock() {
+            Ok(mut q) => std::mem::take(&mut *q),
+            Err(_) => Vec::new(),
+        };
+        for (zip_path, reply) in queued {
+            let ok = godot::classes::ProjectSettings::singleton()
+                .load_resource_pack_ex(&zip_path)
+                .replace_files(false)
+                .done();
+            let _ = reply.send(ok);
+        }
+
         // Update resource download tracking
         #[cfg(feature = "use_resource_tracking")]
         {
@@ -318,6 +404,7 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
+            apply_optimizations: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -456,6 +543,7 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
+            apply_optimizations: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -602,6 +690,7 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
+            apply_optimizations: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -676,6 +765,7 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
+            apply_optimizations: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -945,7 +1035,6 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            #[allow(unused_variables)]
             let result = ContentProvider::async_fetch_optimized_asset(
                 file_hash.clone(),
                 ctx,
@@ -961,7 +1050,10 @@ impl ContentProvider {
                 report_resource_loaded(&file_hash);
             }
 
-            then_promise(get_promise, Ok(None));
+            match result {
+                Ok(_) => then_promise(get_promise, Ok(None)),
+                Err(e) => then_promise(get_promise, Err(anyhow::anyhow!(e))),
+            }
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
             optimized_scene_counter.fetch_add(1, Ordering::Relaxed);
@@ -994,7 +1086,6 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            #[allow(unused_variables)]
             let result = ContentProvider::async_fetch_optimized_asset(
                 file_hash.clone(),
                 ctx,
@@ -1010,7 +1101,10 @@ impl ContentProvider {
                 report_resource_loaded(&file_hash);
             }
 
-            then_promise(get_promise, Ok(None));
+            match result {
+                Ok(_) => then_promise(get_promise, Ok(None)),
+                Err(e) => then_promise(get_promise, Err(anyhow::anyhow!(e))),
+            }
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
             optimized_scene_counter.fetch_add(1, Ordering::Relaxed);
@@ -1807,7 +1901,7 @@ impl ContentProvider {
 
     #[func]
     pub fn get_optimized_base_url(&self) -> GString {
-        ASSET_OPTIMIZED_BASE_URL.to_godot()
+        resolved_optimized_base_url().to_godot()
     }
 
     /// Set the base URL for optimized wearable/emote assets.
@@ -2280,11 +2374,9 @@ impl ContentProvider {
 
         let loaded_dependencies = optimized_data.loaded_assets.read().await;
 
+        let optimized_base = resolved_optimized_base_url();
         for hash_dependency in &dependencies {
-            let asset_url: String = format!(
-                "{}/{}-mobile.zip",
-                ASSET_OPTIMIZED_BASE_URL, hash_dependency
-            );
+            let asset_url: String = format!("{}/{}-mobile.zip", optimized_base, hash_dependency);
             let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
 
@@ -2353,52 +2445,66 @@ impl ContentProvider {
         }
         drop(loaded_dependencies); // drop write
 
-        // 3. Wait all downloads
+        // 3. Wait all downloads. If ANY download fails, abort — proceeding to
+        // load resource packs whose deps are missing causes Godot to read
+        // null ExtResource pointers during PackedScene instantiation and
+        // segfault deep in core. Pulling the failure back to the caller's
+        // promise lets the gdscript fall through to the runtime path or
+        // report a clean error instead.
         tracing::debug!(
             "Waiting for {} optimized asset downloads...",
             futures_to_wait.len()
         );
-        let download_results = try_join_all(futures_to_wait).await;
-        match &download_results {
-            Ok(_) => tracing::debug!("All optimized asset downloads completed successfully"),
-            Err(e) => tracing::error!("Some optimized asset downloads failed: {}", e),
+        if let Err(e) = try_join_all(futures_to_wait).await {
+            tracing::error!("Some optimized asset downloads failed: {}", e);
+            // Roll back the loaded_assets bookkeeping so a retry can re-fetch.
+            let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
+            for hash_to_load in &hashes_to_load {
+                loaded_dependencies.remove(hash_to_load);
+            }
+            return Err(format!("optimized asset download failed: {}", e));
         }
+        tracing::debug!("All optimized asset downloads completed successfully");
 
-        // 4. Load what was listed
+        // 4. Load what was listed. Same reasoning: a single
+        // load_resource_pack failure means the .scn we're about to
+        // instantiate has dangling ExtResource refs.
         tracing::debug!(
             "Loading {} resource packs into Godot...",
             hashes_to_load.len()
         );
+        let mut pack_load_failures: Vec<String> = Vec::new();
         for hash_to_load in &hashes_to_load {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
             let zip_path = &format!("user://content/{}", hash_zip);
 
-            // Check if file exists before loading
             let absolute_path = format!("{}{}", ctx.content_folder, hash_zip);
             let exists = std::path::Path::new(&absolute_path).exists();
             tracing::debug!("Loading resource pack: {} (exists: {})", zip_path, exists);
 
-            // Load resource pack on main thread via semaphore to prevent SIGSEGV crashes
-            // from concurrent Godot API access (COW string reference counting corruption)
-            let sem = ctx.godot_single_thread.clone();
-            let _permit = sem.acquire().await.map_err(|e| {
-                format!(
-                    "Failed to acquire semaphore for resource pack loading: {}",
-                    e
-                )
-            })?;
-
-            let result = godot::classes::ProjectSettings::singleton()
-                .load_resource_pack_ex(zip_path)
-                .replace_files(false)
-                .done();
+            // Mount on the MAIN thread — load_resource_pack is main-thread
+            // only and deadlocks the render thread if run on a worker.
+            let result = load_resource_pack_on_main(zip_path.to_string()).await;
 
             if !result {
                 tracing::error!("load_resource_pack FAILED on {}", zip_path);
                 godot_error!("load_resource_pack failed on {zip_path}");
+                pack_load_failures.push(hash_to_load.clone());
             } else {
                 tracing::debug!("load_resource_pack SUCCESS: {}", zip_path);
             }
+        }
+
+        if !pack_load_failures.is_empty() {
+            let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
+            for hash in &pack_load_failures {
+                loaded_dependencies.remove(hash);
+            }
+            return Err(format!(
+                "{} resource pack(s) failed to load (e.g. {})",
+                pack_load_failures.len(),
+                pack_load_failures[0]
+            ));
         }
 
         Ok(())
@@ -2518,19 +2624,9 @@ impl ContentProvider {
             // Load the resource pack
             let zip_godot_path = format!("user://content/{}", zip_name);
 
-            // Load resource pack on main thread via semaphore
-            let sem = ctx.godot_single_thread.clone();
-            let _permit = sem.acquire().await.map_err(|e| {
-                anyhow::anyhow!(
-                    "Failed to acquire semaphore for resource pack loading: {}",
-                    e
-                )
-            })?;
-
-            let result = godot::classes::ProjectSettings::singleton()
-                .load_resource_pack_ex(&zip_godot_path)
-                .replace_files(false)
-                .done();
+            // Mount on the MAIN thread (see MAIN_THREAD_PACK_QUEUE) —
+            // load_resource_pack from a worker deadlocks the render thread.
+            let result = load_resource_pack_on_main(zip_godot_path.clone()).await;
 
             if result {
                 let scene_path = format!("res://glbs/{}.scn", file_hash);

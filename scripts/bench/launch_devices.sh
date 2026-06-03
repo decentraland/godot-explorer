@@ -271,6 +271,15 @@ launch_android() {
   fi
   echo "[android] force-stop $PKG"
   adb shell am force-stop "$PKG" >/dev/null
+  # gp-benchmark runs need a clean slate — the optimized scene fetcher
+  # short-circuits to a locally cached zip whenever one exists, so any
+  # asset-pipeline change made on the server would be invisible until
+  # the device-side cache is wiped. `pm clear` removes app data
+  # (including user://content/*-mobile.zip) but keeps the install.
+  if [[ "$GP_BENCHMARK" -eq 1 ]]; then
+    echo "[android] pm clear $PKG (gp-benchmark: wipe cached optimized zips)"
+    adb shell pm clear "$PKG" >/dev/null
+  fi
   adb logcat -c
   echo "[android] launching deeplink"
   # Quote the URL inside the device-side `am start` arg list — adb shell

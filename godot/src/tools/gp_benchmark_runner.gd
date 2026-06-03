@@ -230,6 +230,10 @@ func _process(_delta: float) -> void:
 				# sampling-window numbers aren't polluted by load-time spikes.
 				Global.scene_runner.reset_state_timing()
 				Global.scene_runner.reset_crdt_metrics()
+				if Global.cli.get_skip_gltf_load():
+					_purge_existing_gltfs()
+				if Global.cli.get_kill_sky():
+					_purge_existing_skies()
 				_set_phase("sampling")
 		"sampling":
 			_enforce_pinned_pose()
@@ -337,6 +341,8 @@ func _count_node_types() -> Dictionary:
 	# therefore convertible to RenderingServer-direct, vs UI/logic nodes.
 	var counts := {}
 	var mesh_resource_ids := {}
+	var merge_buckets := {}
+	var unique_materials := {}
 	var skipped := {"animated": 0, "skinned": 0, "shadermat": 0, "no_mesh": 0, "no_material": 0}
 	var stack: Array = [get_tree().root]
 	while not stack.is_empty():
@@ -349,6 +355,7 @@ func _count_node_types() -> Dictionary:
 			if mesh != null:
 				var rid := mesh.get_rid()
 				mesh_resource_ids[rid] = mesh_resource_ids.get(rid, 0) + 1
+				_classify_mesh_mergeable(mi, merge_buckets, unique_materials, skipped)
 			else:
 				skipped.no_mesh += 1
 		for c in n.get_children():
@@ -368,6 +375,8 @@ func _count_node_types() -> Dictionary:
 			dup_buckets.dup_21_plus += 1
 	counts["_unique_meshes"] = mesh_resource_ids.size()
 	counts["_mesh_dup_buckets"] = dup_buckets
+	counts["_merge_buckets"] = merge_buckets
+	counts["_unique_materials"] = unique_materials.size()
 	counts["_merge_skipped"] = skipped
 	return counts
 
@@ -386,6 +395,58 @@ func _count_node_types() -> Dictionary:
 ## Bucket key combines pipeline-state features that MUST match between
 ## merge candidates: alpha_mode + double_sided + vertex format. Texture
 ## sets are handled by the atlas at merge time.
+func _classify_mesh_mergeable(
+	mi: MeshInstance3D, buckets: Dictionary, unique_mats: Dictionary, skipped: Dictionary
+) -> void:
+	if mi.skeleton != NodePath(""):
+		skipped.skinned += 1
+		return
+	var p: Node = mi.get_parent()
+	while p != null:
+		if p is AnimationPlayer or p is Skeleton3D:
+			skipped.animated += 1
+			return
+		var c := p.get_class()
+		if c == "DclAvatar":
+			skipped.animated += 1
+			return
+		# DCL components: any gltf-container with a tween or modifier on
+		# this entity will mutate the subtree per-frame; can't bake.
+		if p.has_meta("dcl_has_tween") or p.has_meta("dcl_has_modifier"):
+			skipped.animated += 1
+			return
+		p = p.get_parent()
+	var mesh := mi.mesh
+	if mesh != null and mesh is ArrayMesh:
+		if (mesh as ArrayMesh).get_blend_shape_count() > 0:
+			skipped.animated += 1
+			return
+	var mat: Material = mi.get_active_material(0)
+	if mat == null:
+		skipped.no_material += 1
+		return
+	if mat is ShaderMaterial:
+		skipped.shadermat += 1
+		return
+	unique_mats[mat.get_rid()] = true
+	# Bucket by pipeline state only — texture atlas resolves per-bucket.
+	var key: String = ""
+	if mat is BaseMaterial3D:
+		var bm := mat as BaseMaterial3D
+		var tex_albedo := 1 if bm.albedo_texture != null else 0
+		var tex_normal := 1 if bm.normal_texture != null else 0
+		var tex_emissive := 1 if bm.emission_texture != null else 0
+		var tex_orm := 1 if bm.orm_texture != null else 0
+		var ds := 1 if bm.cull_mode == BaseMaterial3D.CULL_DISABLED else 0
+		key = (
+			"transp=%d cull=%d alb=%d nrm=%d em=%d orm=%d"
+			% [bm.transparency, ds, tex_albedo, tex_normal, tex_emissive, tex_orm]
+		)
+	else:
+		key = "other_basemat"
+	buckets[key] = buckets.get(key, 0) + 1
+
+
 func _finish() -> void:
 	_log("sampling done: %d samples" % samples.size())
 	_set_phase("done")
@@ -401,6 +462,7 @@ func _finish() -> void:
 	# Per-component-id breakdown of dirty entries on the Rust→V8 path.
 	# Identifies which SDK7 components dominate the round-trip pressure.
 	var crdt_component_breakdown: String = Global.scene_runner.drain_crdt_component_breakdown()
+
 	var result := {
 		"tag": config.get("tag", ""),
 		"genesis_plaza_commit": config.get("genesis_plaza_commit", ""),
@@ -460,6 +522,27 @@ func _finish() -> void:
 			]
 		)
 	)
+	print("[GP Benchmark] unique_materials=%d" % node_types.get("_unique_materials", 0))
+	var skipped: Dictionary = node_types.get("_merge_skipped", {})
+	print(
+		(
+			"[GP Benchmark] merge_skipped animated=%d skinned=%d shadermat=%d no_mat=%d no_mesh=%d"
+			% [
+				skipped.get("animated", 0),
+				skipped.get("skinned", 0),
+				skipped.get("shadermat", 0),
+				skipped.get("no_material", 0),
+				skipped.get("no_mesh", 0),
+			]
+		)
+	)
+	var bk: Dictionary = node_types.get("_merge_buckets", {})
+	var bk_sorted := []
+	for k in bk:
+		bk_sorted.append([k, bk[k]])
+	bk_sorted.sort_custom(func(a, b): return a[1] > b[1])
+	for i in range(min(10, bk_sorted.size())):
+		print("[GP Benchmark] merge_bucket [%s] count=%d" % [bk_sorted[i][0], bk_sorted[i][1]])
 	print("[GP Benchmark] END_RESULT_JSON")
 	# Sanity-check screenshot. Compared against the prior run's image by
 	# scripts/bench/compare_screenshots.py — if it diverges too far the run
@@ -701,6 +784,14 @@ func _apply_deeplink_overrides() -> void:
 	if not sample.is_empty() and sample.is_valid_int():
 		config["sample_seconds"] = sample.to_int()
 
+	# RenderingServer migration flags. Writes back to DclCli so the Rust side
+	# (mesh_renderer, gltf_container) and any GDScript that reads Global.cli
+	# observe the same value. See plan in
+	# ~/.claude/plans/https-github-com-decentraland-godot-expl-precious-nest.md
+	var rs_gltf_direct: String = params.get("rs-gltf-direct", "")
+	if not rs_gltf_direct.is_empty():
+		Global.cli.rs_gltf_direct = rs_gltf_direct.to_lower() in ["true", "1", "yes"]
+
 	# Force a graphic profile for the bench. Index matches GraphicSettings
 	# PROFILE_NAMES: 0=Very Low, 1=Low, 2=Medium, 3=High, 4=Custom. Stashed
 	# here, applied at loading_complete (after HardwareBenchmark would clobber
@@ -711,16 +802,15 @@ func _apply_deeplink_overrides() -> void:
 		if idx >= 0 and idx <= 4:
 			config["force_graphic_profile"] = idx
 
-	# GDScript cell-based visibility culling (visibility_grid.gd). Stored in
-	# config and consumed at loading_complete to build the grid; the per-frame
-	# update runs in warmup/sampling.
-
 	var viewport_scale: String = params.get("viewport-scale-3d", "")
 	if not viewport_scale.is_empty() and viewport_scale.is_valid_float():
 		var s: float = viewport_scale.to_float()
 		if s > 0.1 and s <= 2.0:
 			config["viewport_scale_3d"] = s
 
+	var skipg: String = params.get("skip-gltf", "")
+	if not skipg.is_empty():
+		Global.cli.set_skip_gltf_load(skipg.to_lower() in ["true", "1", "yes"])
 	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
 	# conservative); raising it picks lower-detail LODs sooner and is the
 	# whole point of the LOD bake on mobile. Stash here, apply at
@@ -731,14 +821,13 @@ func _apply_deeplink_overrides() -> void:
 		if thr >= 0.0 and thr <= 64.0:
 			config["mesh_lod_threshold"] = thr
 
-	# Pin skybox time of day so screenshots / textures are deterministic
-	# across runs. `fixed-skybox-time=true` clamps to ~3pm (DclGlobal sets
-	# `target_time = 0.625` in time.gd:53). Recommended for any A/B run
-	# whose conclusion involves comparing visuals or draw counts under
-	# different lighting.
+	# Pin skybox time of day so lighting / shadows / draw counts are
+	# deterministic across runs. Forced ON for every gp-benchmark run: clamps
+	# to ~3pm (DclGlobal sets `target_time = 0.625` in time.gd:53), which keeps
+	# the directional shadow pass active. Pass `fixed-skybox-time=false` to opt
+	# out and run under world time instead.
 	var fst: String = params.get("fixed-skybox-time", "")
-	if not fst.is_empty():
-		Global.fixed_skybox_time = fst.to_lower() in ["true", "1", "yes"]
+	Global.fixed_skybox_time = fst.is_empty() or fst.to_lower() in ["true", "1", "yes"]
 
 	# Per-feature graphics overrides applied AFTER `force-graphic-profile` so
 	# we can isolate the GPU cost of one feature at a time. Each accepts an
@@ -879,6 +968,36 @@ func _log(msg: String) -> void:
 	print("[GP Benchmark] %s" % msg)
 
 
+func _purge_existing_gltfs() -> void:
+	var stack: Array = [Global.get_tree().root]
+	var freed: int = 0
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n.is_class("DclGltfContainer"):
+			n.queue_free()
+			freed += 1
+			continue
+		for c in n.get_children():
+			stack.append(c)
+	_log("purged %d existing DclGltfContainer nodes" % freed)
+
+
+func _purge_existing_skies() -> void:
+	var stack: Array = [Global.get_tree().root]
+	var stomped: int = 0
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is WorldEnvironment and n.environment != null:
+			n.environment.background_mode = Environment.BG_COLOR
+			n.environment.background_color = Color.BLACK
+			n.environment.background_energy_multiplier = 0.0
+			n.environment.glow_enabled = false
+			stomped += 1
+		for c in n.get_children():
+			stack.append(c)
+	_log("purged %d WorldEnvironments to BG_COLOR" % stomped)
+
+
 ## Count DclGltfContainer nodes whose `dcl_gltf_loading_state` is still
 ## UNKNOWN (0) or LOADING (1). FINISHED (4), NOT_FOUND (2) and
 ## FINISHED_WITH_ERROR (3) are terminal states. Walks the scene tree
@@ -898,6 +1017,10 @@ func _count_loading_gltf_containers() -> int:
 	return pending
 
 
+## Real process RSS via /proc/self/status — Android. Godot's MEMORY_STATIC tracks
+## the C++ heap only; on Android we also have JNI/Java/native allocations that
+## live outside it. This reads VmRSS (resident set size, kB) so the bench
+## captures the full process footprint, not just Godot's view.
 func _read_process_rss_mb() -> float:
 	if not OS.has_feature("linux") and not OS.has_feature("android"):
 		return 0.0
