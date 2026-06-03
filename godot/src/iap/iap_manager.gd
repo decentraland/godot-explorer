@@ -78,13 +78,18 @@ const _WEI_PER_MANA := 1e18
 
 # Outcomes of POST /credits/iap/verify, mapped to StoreKit's redelivery contract:
 # OK — credited (or already credited, idempotent); finish the tx.
-# REJECTED — server refused permanently (bad JWS, unknown product, over cap).
-#            Finish to stop StoreKit's redelivery loop; retrying won't help.
-# RETRY — server unreachable / transient. Do NOT finish; StoreKit redelivers on
-#         the next launch (and the webhook backstop may credit meanwhile).
+# REJECTED — server refused permanently (invalid_jws, token_mismatch,
+#            revoked_transaction, unknown_product, cap_exceeded). Finish to stop
+#            StoreKit's redelivery loop; retrying won't help.
+# RETRY — server unreachable / transient (HTTP 500). Do NOT finish; StoreKit
+#         redelivers on the next launch (and the webhook backstop may credit meanwhile).
+# DEFERRED — server at its global daily ceiling (service_daily_limit). Apple
+#            already charged; the S2S webhook credits it once the cap resets.
+#            Finish the tx and tell the user it's on the way — no client retry.
 const _OUTCOME_OK := 0
 const _OUTCOME_REJECTED := 1
 const _OUTCOME_RETRY := 2
+const _OUTCOME_DEFERRED := 3
 
 # After a purchase the credit is minted server-side (by /verify or, racing it, the
 # webhook), but the reported balance can lag a moment behind the mint. Poll the
@@ -232,33 +237,47 @@ func _async_begin_purchase(product_id: String, _wallet: String) -> void:
 	# webhook can resolve who to credit.
 	var body := JSON.stringify({"productId": product_id})
 	var envelope = await _async_signed_iap("/credits/iap/quote", HTTPClient.METHOD_POST, body)
-	if envelope == null or not envelope.get("ok", false):
-		# Transport/auth failure — fail closed (do NOT let StoreKit charge).
-		printerr("[IAP] quote failed; aborting purchase of ", product_id)
+	# null == transport/auth failure (non-2xx, timeout). Fail closed: do NOT charge.
+	if envelope == null:
+		printerr("[IAP] quote transport error; aborting purchase of ", product_id)
 		_finish_purchase_flow()
 		Global.modal_manager.async_show_purchase_failed_modal()
 		purchase_failed.emit(product_id, "quote failed")
 		return
-	var data = envelope.get("data", {})
-	if not (data is Dictionary):
-		data = {}
-	if not data.get("allowed", false):
-		var reason := str(data.get("reason", ""))
-		print("[IAP] quote denied for ", product_id, " reason=", reason)
+	# Unified envelope: a denial is HTTP 200 with ok:false + a business `code`
+	# (cap_exceeded[+reason] / service_daily_limit / unknown_product). There is no
+	# `data.allowed` anymore.
+	if not envelope.get("ok", false):
+		var code := str(envelope.get("code", ""))
+		var reason := str(envelope.get("reason", ""))
+		print("[IAP] quote denied for ", product_id, " code=", code, " reason=", reason)
 		_finish_purchase_flow()
-		match reason:
-			"total_limit":
-				Global.modal_manager.async_show_credit_limit_total_modal()
-			"daily_limit":
-				Global.modal_manager.async_show_credit_limit_daily_modal()
-			_:
-				Global.modal_manager.async_show_purchase_failed_modal()
-		purchase_failed.emit(product_id, "not allowed: " + reason)
+		_show_quote_denied_modal(code, reason)
+		purchase_failed.emit(product_id, "not allowed: " + code)
 		return
-	# Gate passed — initiate the real StoreKit purchase. The Swift side derives
-	# the same appAccountToken from the wallet that the server just registered.
+	# Allowed — initiate the real StoreKit purchase. The Swift side derives the same
+	# appAccountToken from the wallet (== data.appAccountToken the server registered),
+	# and /verify is signed with this same wallet, so the server's token check passes.
 	# Overlay stays up until the purchase resolves via the StoreKit handlers.
 	_store_kit.purchase(product_id, _wallet)
+
+
+func _show_quote_denied_modal(code: String, reason: String) -> void:
+	# Map a /quote denial code to the matching UI. `reason` only accompanies
+	# `cap_exceeded` and names the breached axis (total_limit / daily_limit).
+	match code:
+		"cap_exceeded":
+			if reason == "total_limit":
+				Global.modal_manager.async_show_credit_limit_total_modal()
+			else:
+				Global.modal_manager.async_show_credit_limit_daily_modal()
+		"service_daily_limit":
+			# Server-wide daily ceiling (not the user's fault). Nothing was charged
+			# at quote time; ask them to try again later.
+			Global.modal_manager.async_show_purchase_unavailable_modal()
+		_:
+			# unknown_product or any unexpected code.
+			Global.modal_manager.async_show_purchase_failed_modal()
 
 
 func _record_transaction(credits: int, is_refund: bool) -> void:
@@ -342,6 +361,7 @@ func _async_handle_purchased_transaction(tx: Dictionary) -> void:
 	# signature and mints. The outcome maps to StoreKit's redelivery contract:
 	#   OK       -> finish the tx (Apple stops redelivering).
 	#   REJECTED -> finish anyway (a bad JWS / over-cap won't succeed on retry).
+	#   DEFERRED -> finish the tx; the webhook credits it later (server at daily cap).
 	#   RETRY    -> do NOT finish; StoreKit redelivers on the next launch (and the
 	#               webhook backstop may credit the same tx meanwhile).
 	var product_id := str(tx.get("productId", ""))
@@ -379,6 +399,17 @@ func _async_handle_purchased_transaction(tx: Dictionary) -> void:
 			_finish_purchase_flow()
 			Global.modal_manager.async_show_purchase_failed_modal()
 			purchase_failed.emit(product_id, "rejected by backend")
+		_OUTCOME_DEFERRED:
+			# Apple charged, but the server is at its global daily ceiling. The S2S
+			# webhook is independent of StoreKit redelivery and credits this tx once
+			# the cap resets, so we finish the tx, tell the user it's on the way, and
+			# poll the balance in case it lands shortly. No failure, no client retry.
+			_store_kit.finish_transaction(tx_id)
+			_finish_purchase_flow()
+			Global.modal_manager.async_show_purchase_processing_modal()
+			purchase_pending.emit(product_id)
+			print("[IAP] tx ", tx_id, " deferred (service_daily_limit); webhook will credit")
+			_async_poll_balance_after_purchase()
 		_OUTCOME_RETRY:
 			# Transient (server unreachable / not ready). Don't finish: StoreKit
 			# redelivers on the next launch. Unmark so that delivery retries.
@@ -391,25 +422,34 @@ func _async_handle_purchased_transaction(tx: Dictionary) -> void:
 # gdlint:ignore = async-function-name
 func _async_credit_with_backend(tx: Dictionary) -> int:
 	# POSTs the StoreKit transaction JWS to credits-server /credits/iap/verify.
-	# The server re-verifies Apple's signature and mints idempotently. Tri-state
-	# mirrors StoreKit's redelivery contract (see caller):
-	#   OK       -> credited (or already credited).
-	#   REJECTED -> HTTP 200 ok:false (invalid_jws / unknown_product / cap_exceeded);
-	#               a permanent refusal, retrying won't help.
-	#   RETRY    -> transport error (non-2xx / timeout); redeliver on next launch.
+	# The server re-verifies Apple's signature and mints idempotently. Maps the
+	# unified envelope to an outcome (see caller / the _OUTCOME_* docs):
+	#   OK       -> ok:true (credited, or alreadyExisted via the webhook race).
+	#   DEFERRED -> ok:false code:service_daily_limit (charged; webhook credits later).
+	#   RETRY    -> transport error / HTTP 500 (transient); redeliver on next launch.
+	#   REJECTED -> ok:false with any other code (invalid_jws / token_mismatch /
+	#               revoked_transaction / unknown_product / cap_exceeded). Permanent.
 	var jws := str(tx.get("jwsRepresentation", ""))
 	if jws.is_empty():
 		printerr("[IAP] missing JWS; cannot credit")
 		return _OUTCOME_REJECTED
 	var body := JSON.stringify({"jwsRepresentation": jws})
 	var envelope = await _async_signed_iap("/credits/iap/verify", HTTPClient.METHOD_POST, body)
-	# null == transport error (non-2xx / timeout) -> transient -> RETRY.
+	# null == transport error (non-2xx / HTTP 500 / timeout) -> transient -> RETRY.
 	if envelope == null:
 		printerr("[IAP] verify transport error; will retry on next launch")
 		return _OUTCOME_RETRY
-	# Permanent rejections come back as HTTP 200 with ok:false.
+	# Business rejections come back as HTTP 200 with ok:false + a `code`.
 	if not envelope.get("ok", false):
-		printerr("[IAP] verify rejected: ", envelope.get("code", ""))
+		var code := str(envelope.get("code", ""))
+		if code == "service_daily_limit":
+			# Charged OK, but the server is at its global daily ceiling. The S2S
+			# webhook credits it once the cap resets — not a failure, don't retry.
+			print("[IAP] verify deferred (service_daily_limit); webhook will credit")
+			return _OUTCOME_DEFERRED
+		# invalid_jws / token_mismatch / revoked_transaction / unknown_product /
+		# cap_exceeded — permanent refusals; retrying won't help.
+		printerr("[IAP] verify rejected: ", code)
 		return _OUTCOME_REJECTED
 	var data = envelope.get("data", {})
 	var already = data is Dictionary and data.get("alreadyExisted", false)

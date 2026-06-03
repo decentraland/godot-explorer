@@ -1,7 +1,6 @@
 import SwiftGodotRuntime
 import Foundation
 import StoreKit
-import CryptoKit
 
 /// Logs to both NSLog (Console.app) and Godot's stdout so messages show up
 /// in `cargo run -- run --target ios` output as well as the device console.
@@ -209,22 +208,11 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
 
     // MARK: - Private
 
-    /// Deterministic wallet → UUID. Same algorithm as the backend's
-    /// `wallet.ts::uuidFromWallet` so the appAccountToken inside the JWS
-    /// matches what the server expects from the wallet param.
+    /// Deterministic wallet → UUID for StoreKit's `appAccountToken`. The pure
+    /// derivation lives in `IapAppAccountToken` (unit-tested against fixed
+    /// vectors); it must match the backend's `uuidFromWallet`.
     private func appAccountToken(forWallet wallet: String) -> UUID? {
-        let normalized = wallet.lowercased()
-        guard !normalized.isEmpty else { return nil }
-        let input = "dcl-iap:" + normalized
-        let hash = SHA256.hash(data: Data(input.utf8))
-        let bytes = Array(hash.prefix(16))
-        guard bytes.count == 16 else { return nil }
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return IapAppAccountToken.derive(forWallet: wallet)
     }
 
     private func handlePurchaseVerification(_ result: VerificationResult<Transaction>, productId: String) {
