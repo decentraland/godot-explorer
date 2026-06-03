@@ -146,6 +146,8 @@ func _reset_to_placeholders():
 
 func _async_fetch_items(category: String):
 	var total = await _async_fetch_total(category)
+	if category != _current_category:
+		return
 	if total <= 0:
 		visible = false
 		return
@@ -155,6 +157,8 @@ func _async_fetch_items(category: String):
 	var url = _build_catalog_url(category, skip)
 	var promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
+	if category != _current_category:
+		return
 	if result is PromiseError:
 		printerr("[MarketplaceRecommended] Error fetching items: ", result.get_error())
 		return
