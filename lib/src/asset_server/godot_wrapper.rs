@@ -60,6 +60,12 @@ impl DclAssetServer {
             return;
         }
 
+        // Keep PCT2 compressed buffers so baked ETC2 textures serialize
+        // their CPU bytes directly — no GPU readback (which decompresses
+        // ETC2→RGBA8 on Vulkan and corrupts blocks under software GL).
+        // Process-wide; set only in the asset-server (bake) process.
+        godot::classes::PortableCompressedTexture2D::set_keep_all_compressed_buffers(true);
+
         let port = self.port;
         tracing::info!("Starting asset optimization server on port {}", port);
 

@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use godot::classes::image::CompressMode;
 use godot::classes::resource_saver::SaverFlags;
-use godot::classes::{Image, ImageTexture, Os, Resource, ResourceSaver};
+use godot::classes::{
+    Image, ImageTexture, Os, PortableCompressedTexture2D, Resource, ResourceSaver,
+};
 use godot::prelude::*;
 use tokio::sync::Semaphore;
 
@@ -508,14 +510,29 @@ async fn process_texture(
         }
     }
 
-    // Create ImageTexture from the compressed image
-    let texture = ImageTexture::create_from_image(&image).ok_or_else(|| {
-        anyhow::anyhow!(
-            "Failed to create ImageTexture from compressed image ({}x{})",
-            image.get_width(),
-            image.get_height()
-        )
-    })?;
+    // PortableCompressedTexture2D keeps the compressed bytes in CPU and
+    // serializes them directly. A plain ImageTexture serializes via a GPU
+    // readback that decompresses ETC2→RGBA8 on Vulkan and returns corrupt
+    // blocks under software GL (llvmpipe). Buffer retention is process-wide
+    // via set_keep_all_compressed_buffers (enabled in asset-server mode).
+    let texture: Gd<godot::classes::Texture2D> = if image.is_compressed() {
+        let mut pct2 = PortableCompressedTexture2D::new_gd();
+        pct2.create_from_image(
+            &image,
+            godot::classes::portable_compressed_texture_2d::CompressionMode::ETC2,
+        );
+        pct2.upcast()
+    } else {
+        ImageTexture::create_from_image(&image)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Failed to create ImageTexture from image ({}x{})",
+                    image.get_width(),
+                    image.get_height()
+                )
+            })?
+            .upcast()
+    };
 
     let texture_width = texture.get_width();
     let texture_height = texture.get_height();
