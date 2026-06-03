@@ -189,6 +189,8 @@ func _close_write_mode() -> void:
 	_header.show()
 	if Global.is_mobile():
 		DisplayServer.virtual_keyboard_hide()
+	# Hand ui_root focus back (the LineEdit took it) so movement re-enables.
+	Global.explorer_grab_focus()
 	on_exit_write_mode.emit()
 	_relayout_all_messages()
 

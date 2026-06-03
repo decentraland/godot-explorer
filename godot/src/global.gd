@@ -145,7 +145,22 @@ func is_xr() -> bool:
 
 
 func is_emulating_safe_area() -> bool:
-	return cli.emulate_ios or cli.emulate_android
+	return should_emulate_ios() or should_emulate_android()
+
+
+## Emulation flags are desktop-preview only; ignore them on a real device (the
+## editor forwards its run args to one-click device deploys, which would
+## otherwise force the emulated window size on the phone).
+func _is_native_mobile() -> bool:
+	return is_android() or is_ios()
+
+
+func should_emulate_ios() -> bool:
+	return cli.emulate_ios and not _is_native_mobile()
+
+
+func should_emulate_android() -> bool:
+	return cli.emulate_android and not _is_native_mobile()
 
 
 ## True when GP benchmark was triggered, either via desktop CLI (`--gp-benchmark`)
@@ -161,10 +176,10 @@ func _get_safe_area_presets() -> GDScript:
 
 
 func get_safe_area() -> Rect2i:
-	if cli.emulate_ios:
+	if should_emulate_ios():
 		var presets := _get_safe_area_presets()
 		return presets.get_ios_safe_area(is_orientation_portrait(), get_window().size)
-	if cli.emulate_android:
+	if should_emulate_android():
 		var presets := _get_safe_area_presets()
 		return presets.get_android_safe_area(is_orientation_portrait(), get_window().size)
 	return DisplayServer.get_display_safe_area()
@@ -191,14 +206,14 @@ func _ready():
 		_set_is_mobile(true)
 
 	# Handle safe area emulation (enables mobile mode and resizes window)
-	if cli.emulate_ios:
+	if should_emulate_ios():
 		_set_is_mobile(true)
 		var presets := _get_safe_area_presets()
 		var target_size: Vector2i = presets.get_ios_window_size(is_orientation_portrait())
 		get_window().size = target_size
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
-	elif cli.emulate_android:
+	elif should_emulate_android():
 		_set_is_mobile(true)
 		var presets := _get_safe_area_presets()
 		var target_size: Vector2i = presets.get_android_window_size(is_orientation_portrait())
@@ -206,7 +221,7 @@ func _ready():
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
 
-	if cli.landscape and (cli.emulate_ios or cli.emulate_android):
+	if cli.landscape and (should_emulate_ios() or should_emulate_android()):
 		set_orientation_landscape()
 
 	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
@@ -818,11 +833,11 @@ func set_orientation_landscape():
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
-	elif cli.emulate_ios:
+	elif should_emulate_ios():
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(false)
 		get_window().move_to_center()
-	elif cli.emulate_android:
+	elif should_emulate_android():
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_android_window_size(false)
 		get_window().move_to_center()
@@ -841,11 +856,11 @@ func set_orientation_portrait():
 	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
-	elif cli.emulate_ios:
+	elif should_emulate_ios():
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(true)
 		get_window().move_to_center()
-	elif cli.emulate_android:
+	elif should_emulate_android():
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_android_window_size(true)
 		get_window().move_to_center()
