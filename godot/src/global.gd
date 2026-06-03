@@ -139,6 +139,12 @@ var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
 
+# Guards sign_out() against re-entrancy. comms.disconnect(true) emits the
+# player_identity.logout signal deferred, which can route back into sign_out() a
+# frame later; without this the whole teardown + scene swap would run twice.
+# Cleared in lobby._ready once we're back on a clean screen.
+var _signing_out: bool = false
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
@@ -675,7 +681,25 @@ func get_explorer() -> Explorer:
 	return null
 
 
+## Single canonical sign-out / logout entry point. Tears down the live session —
+## explorer signals & timers, social streams, every running DCL scene, comms,
+## realm, scene-fetcher state and the Rust player identity — then returns to a
+## fresh lobby so the next login starts as if the app had restarted. Every UI
+## logout button and the disconnect handler funnel through here.
 func sign_out() -> void:
+	if _signing_out:
+		return
+	_signing_out = true
+
+	# 1. Tear down the live Explorer first, while it is still in the tree, so its
+	#    autoload-signal callbacks and retry timers are severed before the steps
+	#    below re-emit any of those signals (orientation, realm clear, scene kill)
+	#    or free the Explorer node.
+	var explorer := get_explorer()
+	if explorer != null:
+		explorer.prepare_for_logout()
+
+	# 2. Stop session pollers and tear down the social gRPC streams.
 	NotificationsManager.stop_polling()
 	social_service.unsubscribe_from_updates()
 	social_service.unsubscribe_from_connectivity_updates()
@@ -686,12 +710,42 @@ func sign_out() -> void:
 	social_service.disconnect()
 	social_blacklist.clear_blocked()
 	social_blacklist.clear_muted()
+
+	# 3. Kill every running DCL scene. kill_all_scenes() marks them ToKill; the
+	#    SceneManager reaps them in the background (reap_dying_scenes runs even
+	#    while the lobby pauses the runner), tearing down their V8/Deno threads.
+	scene_runner.kill_all_scenes()
+
+	# 4. Reset realm and scene-fetcher state so nothing from the old session leaks
+	#    into the next login. async_clear_realm() runs synchronously here (it only
+	#    zeroes realm fields and kills scenes — no network await before returning).
+	realm.async_clear_realm()
+	scene_fetcher.reset_for_logout()
+
+	# 5. Close comms (MainRoom / SceneRoom / LiveKit) AND clear the Rust player
+	#    identity (wallet + ephemeral keys). disconnect(true) is idempotent: a
+	#    second logout() no-ops once the address is already cleared.
+	comms.disconnect(true)
+
+	# 6. The Explorer reparents scene_runner.base_ui into its tree; freeing the
+	#    Explorer leaves a dangling pointer. Recreate it now so nothing touches a
+	#    freed node before the next Explorer load.
+	scene_runner.recreate_base_ui()
+
+	# 7. Erase the persisted session (ephemeral keys / wallet bytes) from disk.
+	#    Everything else (graphics, last realm, content cache) is intentionally
+	#    kept — this is a sign-out, not a factory reset.
 	get_config().session_account = {}
 	get_config().save_to_settings_file()
+
 	# Lobby/login is portrait-only; reset orientation so logging out from a
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
-	get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
+
+	# 8. Swap to a fresh lobby on the next frame, after the current signal/await
+	#    stack fully unwinds (sign_out may have been reached via the deferred
+	#    logout signal). lobby._ready clears _signing_out.
+	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
 
 
 func explorer_has_focus() -> bool:

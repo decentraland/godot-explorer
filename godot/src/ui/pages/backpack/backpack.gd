@@ -515,7 +515,9 @@ func _on_wearable_unequip(wearable_id: String):
 
 
 func _on_button_logout_pressed():
-	Global.comms.disconnect(true)
+	# Route through the single canonical teardown (kills scenes, closes comms,
+	# clears identity, resets realm) instead of just dropping comms.
+	Global.sign_out()
 
 
 func _on_color_picker_panel_pick_color(color: Color):

@@ -1144,6 +1144,13 @@ impl SceneManager {
     }
 
     fn scene_runner_update(&mut self, delta: f64) {
+        // Scene teardown must always make progress, even when the runner is paused
+        // (the lobby pauses it) or the player avatar is gone (post sign-out). The
+        // early-returns below would otherwise skip the kill state machine, leaving
+        // scenes marked ToKill on sign-out / realm change alive forever with live
+        // V8/Deno threads. Reaping here guarantees background teardown either way.
+        self.reap_dying_scenes();
+
         if self.pause {
             return;
         }
@@ -1239,11 +1246,10 @@ impl SceneManager {
         //     tracing::info!("next_update: {next_update_vec:#?}");
         // }
 
-        let mut current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for scene_id in self.sorted_scene_ids.iter() {
             let scene: &mut Scene = self.scenes.get_mut(scene_id).unwrap();
 
-            current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+            let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
             if scene.next_tick_us > current_time_us {
                 break;
             }
@@ -1306,6 +1312,33 @@ impl SceneManager {
 
         // Process loading session updates from all scenes
         self.update_loading_session_from_scenes();
+
+        // Explicitly-killed scenes are advanced by reap_dying_scenes() at the top
+        // of this function (so they tear down even while paused). Here we only
+        // collect scenes that exited while still Alive (thread finished without a
+        // kill signal); they are freed by the drain loop below.
+
+        // Periodic pool health check and stats logging (handled by PoolManager)
+        self.pool_manager.borrow_mut().tick();
+
+        for scene_id in scene_to_remove.iter() {
+            self.finalize_scene_removal(scene_id);
+        }
+    }
+
+    /// Advance the kill state machine for every dying scene and free those that
+    /// have finished. Runs every frame from the top of `scene_runner_update`,
+    /// unconditionally — before the `pause` / avatar-validity early-returns — so
+    /// scenes killed on sign-out or realm change are guaranteed to be torn down
+    /// (V8/Deno threads joined, Godot nodes freed) even after the lobby pauses the
+    /// runner. Without this, killed scenes would linger forever as ToKill.
+    fn reap_dying_scenes(&mut self) {
+        if self.dying_scene_ids.is_empty() {
+            return;
+        }
+
+        let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+        let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
 
         for scene_id in self.dying_scene_ids.iter() {
             let scene = self.scenes.get_mut(scene_id).unwrap();
@@ -1378,63 +1411,67 @@ impl SceneManager {
             }
         }
 
-        // Periodic pool health check and stats logging (handled by PoolManager)
-        self.pool_manager.borrow_mut().tick();
-
         for scene_id in scene_to_remove.iter() {
-            let mut scene = self.scenes.remove(scene_id).unwrap();
-            let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+            self.finalize_scene_removal(scene_id);
+        }
+    }
 
-            // Cleanup trigger areas and release RIDs back to pool
-            scene
-                .trigger_areas
-                .cleanup(self.pool_manager.borrow_mut().physics_area());
+    /// Remove a single dead scene: free its Godot nodes, drop bookkeeping, join the
+    /// thread and emit scene_killed / scene_crashed. Shared by the normal update
+    /// path (scenes that exited while Alive) and reap_dying_scenes().
+    fn finalize_scene_removal(&mut self, scene_id: &SceneId) {
+        let mut scene = self.scenes.remove(scene_id).unwrap();
+        let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
 
-            // Cleanup Rust references first (doesn't free nodes yet)
-            scene.cleanup();
+        // Cleanup trigger areas and release RIDs back to pool
+        scene
+            .trigger_areas
+            .cleanup(self.pool_manager.borrow_mut().physics_area());
 
-            // Free root nodes - queue_free handles both removal from tree and freeing
-            // This is safer than manually calling remove_child + queue_free separately
-            // because queue_free schedules everything atomically for end of frame
-            scene.godot_dcl_scene.free_root_nodes();
+        // Cleanup Rust references first (doesn't free nodes yet)
+        scene.cleanup();
 
-            self.sorted_scene_ids.retain(|x| x != scene_id);
-            self.dying_scene_ids.retain(|x| x != scene_id);
-            self.global_scene_ids.retain(|x| x != scene_id);
+        // Free root nodes - queue_free handles both removal from tree and freeing
+        // This is safer than manually calling remove_child + queue_free separately
+        // because queue_free schedules everything atomically for end of frame
+        scene.godot_dcl_scene.free_root_nodes();
 
-            // Clean up VM_HANDLES entry
-            #[cfg(feature = "use_deno")]
-            {
-                if let Ok(mut handles) = crate::dcl::js::VM_HANDLES.lock() {
-                    handles.remove(scene_id);
-                }
+        self.sorted_scene_ids.retain(|x| x != scene_id);
+        self.dying_scene_ids.retain(|x| x != scene_id);
+        self.global_scene_ids.retain(|x| x != scene_id);
+
+        // Clean up VM_HANDLES entry
+        #[cfg(feature = "use_deno")]
+        {
+            if let Ok(mut handles) = crate::dcl::js::VM_HANDLES.lock() {
+                handles.remove(scene_id);
             }
+        }
 
-            if scene.dcl_scene.thread_join_handle.is_finished() {
-                if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
-                    let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
-                        format!("Thread panicked with: {}", panic_info)
-                    } else if let Some(panic_info) = err.downcast_ref::<String>() {
-                        format!("Thread panicked with: {}", panic_info)
-                    } else {
-                        "Thread panicked with an unknown payload".to_string()
-                    };
-                    tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
-                }
+        if scene.dcl_scene.thread_join_handle.is_finished() {
+            if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
+                let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
+                    format!("Thread panicked with: {}", panic_info)
+                } else if let Some(panic_info) = err.downcast_ref::<String>() {
+                    format!("Thread panicked with: {}", panic_info)
+                } else {
+                    "Thread panicked with an unknown payload".to_string()
+                };
+                tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
             }
+        }
 
+        self.base_mut().emit_signal(
+            "scene_killed",
+            &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+        );
+
+        if self.crashed_scene_ids.contains(scene_id) {
+            self.crashed_scene_ids.retain(|x| x != scene_id);
             self.base_mut().emit_signal(
-                "scene_killed",
+                "scene_crashed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
-
-            if self.crashed_scene_ids.contains(scene_id) {
-                self.crashed_scene_ids.retain(|x| x != scene_id);
-                self.base_mut().emit_signal(
-                    "scene_crashed",
-                    &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
-                );
-            }
         }
     }
 
