@@ -12,6 +12,12 @@ const DEBUG_SAVE_AVATAR_DATA = false
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
+# AABB for the off-screen freeze notifier — sized to cover the avatar including
+# arms-out emote poses. Erring large is the safe direction: a too-eager "on
+# screen" only animates an avatar that might be off-screen, whereas a too-eager
+# "off screen" freezes a drawn one.
+const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 2.8, 2.0))
+
 const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
 const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
 const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
@@ -174,10 +180,19 @@ var _impostor_layer_is_overflow: bool = false
 # entirely — no multimesh instance, no real layer, no capture. Disk cache makes
 # re-entry fast (texture rehydrates from PNG without recapture).
 var _off_frustum: bool = false
-# Latched while off-frustum: the AnimationTree was paused regardless of LOD
-# state, so when we come back in-frustum we know we have to restore the
+# Driven by _screen_notifier's screen_entered/screen_exited signals: Godot's
+# exact draw state for this avatar. The animation freeze keys off this, NOT the
+# coordinator's approximate _off_frustum sphere test — otherwise an avatar near
+# the screen edge (still drawn, but flagged off-frustum) or one sweeping into
+# view during the coordinator's 6-frame update lag freezes on a stale pose
+# instead of throttling. Default true so a freshly spawned avatar animates until
+# the notifier reports its real state.
+var _on_screen: bool = true
+var _screen_notifier: VisibleOnScreenNotifier3D = null
+# Latched while frozen off-screen: the AnimationTree was paused regardless of LOD
+# state, so when we come back on-screen we know we have to restore the
 # state-driven anim setup (active/manual/throttle).
-var _anim_frozen_off_frustum: bool = false
+var _anim_frozen_off_screen: bool = false
 # Wall-clock ms when the freeze started. Used to advance the AnimationTree by
 # the elapsed time on re-entry so the emote phase matches what it would have
 # been had we not paused — single one-shot recompute, not a frame-by-frame
@@ -258,6 +273,7 @@ func _ready():
 
 	_lod_phase = int(self.unique_id) % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES
 	AvatarLODCoordinator.register(self)
+	_setup_screen_notifier()
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
@@ -1241,7 +1257,10 @@ func _update_lod() -> void:
 			fade_alpha = 0.0
 
 	_apply_lod_state(new_state, dither_alpha, fade_alpha, tint_strength, dist)
-	_apply_off_frustum_anim_freeze()
+	# Reconcile against the notifier's current state in case a screen_entered /
+	# screen_exited signal was missed; idempotent thanks to the _anim_frozen_off_screen
+	# latch. Unfreezing still happens immediately in the signal handler.
+	AvatarLODHelpers.apply_screen_freeze(self)
 
 
 func _apply_lod_state(
@@ -1309,71 +1328,41 @@ func _release_impostor() -> void:
 
 
 func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
-	match new_state:
-		LODState.FULL:
-			AvatarLODHelpers.set_meshes_visible(self, true)
-			AvatarLODHelpers.set_animation_active(self, true)
-			AvatarLODHelpers.set_animation_speed(self, 1.0)
-			AvatarLODHelpers.set_animation_throttle(self, false)
-			AvatarLODHelpers.set_particles_visible(self, true)
-			AvatarLODHelpers.set_click_active(self, true)
-			_apply_nickname_visibility()
-		LODState.MID:
-			AvatarLODHelpers.set_meshes_visible(self, true)
-			AvatarLODHelpers.set_animation_active(self, true)
-			AvatarLODHelpers.set_animation_speed(self, 1.0)
-			AvatarLODHelpers.set_animation_throttle(self, true)
-			AvatarLODHelpers.set_particles_visible(self, false)
-			AvatarLODHelpers.set_click_active(self, false)
-			_apply_nickname_visibility()
-		LODState.CROSSFADE:
-			AvatarLODHelpers.set_meshes_visible(self, true)
-			AvatarLODHelpers.set_animation_active(self, true)
-			AvatarLODHelpers.set_animation_speed(self, 1.0)
-			AvatarLODHelpers.set_animation_throttle(self, true)
-			AvatarLODHelpers.set_particles_visible(self, false)
-			AvatarLODHelpers.set_click_active(self, false)
-			_apply_nickname_visibility()
-		LODState.FAR:
-			AvatarLODHelpers.set_meshes_visible(self, false)
-			AvatarLODHelpers.set_animation_active(self, false)
-			AvatarLODHelpers.set_animation_speed(self, 1.0)
-			AvatarLODHelpers.set_animation_throttle(self, false)
-			AvatarLODHelpers.set_particles_visible(self, false)
-			AvatarLODHelpers.set_click_active(self, false)
-			_apply_nickname_visibility()
+	var full: bool = new_state == LODState.FULL
+	AvatarLODHelpers.set_meshes_visible(self, new_state != LODState.FAR)
+	AvatarLODHelpers.set_particles_visible(self, full)
+	AvatarLODHelpers.set_click_active(self, full)
+	AvatarLODHelpers.set_animation_speed(self, 1.0)
+	# Animation drive is on-screen-aware so an off-screen avatar that changes LOD
+	# stays frozen rather than re-animating; apply_screen_freeze restores it on
+	# re-entry. Single source of truth shared with the freeze, so callback mode
+	# and throttle flag can never drift into the frozen-while-drawn state.
+	var drive: Dictionary = AvatarLODHelpers.resolve_anim_drive(_on_screen, new_state)
+	AvatarLODHelpers.set_animation_active(self, drive.active)
+	AvatarLODHelpers.set_animation_throttle(self, drive.throttle)
+	_apply_nickname_visibility()
 
 
-# Freeze the AnimationTree when off-frustum, regardless of LOD state. The mesh
-# is still visible logically (so re-entry doesn't pop), but Godot's GPU
-# frustum cull skips drawing it and the AnimationTree pauses CPU-side. On
-# re-entry we restore the state-driven anim setup and advance the tree by the
-# wall-clock time we were paused, so emote phase matches what it would have
-# been had we not paused — single recompute, no frame-by-frame catch-up.
-func _apply_off_frustum_anim_freeze() -> void:
-	if animation_tree == null:
-		return
-	if _off_frustum:
-		if not _anim_frozen_off_frustum:
-			animation_tree.active = false
-			_anim_throttle_active = false
-			_anim_freeze_start_ms = Time.get_ticks_msec()
-			_anim_frozen_off_frustum = true
-	elif _anim_frozen_off_frustum:
-		_anim_frozen_off_frustum = false
-		var elapsed_s: float = (Time.get_ticks_msec() - _anim_freeze_start_ms) / 1000.0
-		match _lod_state:
-			LODState.FULL:
-				AvatarLODHelpers.set_animation_active(self, true)
-				AvatarLODHelpers.set_animation_throttle(self, false)
-			LODState.MID, LODState.CROSSFADE:
-				AvatarLODHelpers.set_animation_active(self, true)
-				AvatarLODHelpers.set_animation_throttle(self, true)
-			LODState.FAR:
-				AvatarLODHelpers.set_animation_active(self, false)
-				AvatarLODHelpers.set_animation_throttle(self, false)
-		if animation_tree.active and elapsed_s > 0.0:
-			animation_tree.advance(elapsed_s)
+# Drive the animation freeze off Godot's own on-screen detection instead of the
+# coordinator's approximate, 6-frame-lagged _off_frustum flag. screen_entered /
+# screen_exited fire exactly when the avatar starts/stops being drawn, so the
+# freeze can never leave a visible avatar stuck on a stale pose.
+func _setup_screen_notifier() -> void:
+	_screen_notifier = VisibleOnScreenNotifier3D.new()
+	_screen_notifier.aabb = SCREEN_NOTIFIER_AABB
+	add_child(_screen_notifier)
+	_screen_notifier.screen_entered.connect(_on_avatar_screen_entered)
+	_screen_notifier.screen_exited.connect(_on_avatar_screen_exited)
+
+
+func _on_avatar_screen_entered() -> void:
+	_on_screen = true
+	AvatarLODHelpers.apply_screen_freeze(self)
+
+
+func _on_avatar_screen_exited() -> void:
+	_on_screen = false
+	AvatarLODHelpers.apply_screen_freeze(self)
 
 
 func _tick_animation_throttle(delta: float) -> void:
@@ -1406,9 +1395,9 @@ func _process(delta):
 		animation_tree.active = false
 		return
 
-	# Ensure animation tree is active for normal avatars
-	if not animation_tree.active:
-		animation_tree.active = true
+	# Ensure animation tree is active for normal avatars — but never undo an
+	# off-screen freeze (that re-activation is what left frozen avatars stuck).
+	AvatarLODHelpers.ensure_anim_active(self)
 
 	# #b18: `is_grounded` guard suppresses the all-false condition window at the
 	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.

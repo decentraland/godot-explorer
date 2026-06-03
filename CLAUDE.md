@@ -182,16 +182,37 @@ cargo run -- export --target ios
    - Use `--cache` to reuse previously downloaded files instead of re-downloading
    - The strip command auto-detects already-stripped templates (< 1GB) and skips
 
-5. **Triggering iOS CI builds**:
-   iOS builds are skipped by default to save CI resources. To trigger an iOS build:
-   ```bash
-   # On a PR: add the build-ios label
-   gh pr edit --add-label "build-ios"
+5. **Android APK hosting & mobile distribution**:
+   Every Android CI build (`android_builds.yml`, on every push/PR) uploads the signed
+   APK to the R2 mobile-artifacts bucket and links it from the PR build-report comment.
+   Required repo secrets: `MOBILE_ARTIFACTS_R2_{ACCESS_KEY_ID,SECRET_ACCESS_KEY,ENDPOINT,BUCKET}`.
+   APKs are served at `https://mobile-artifacts.dclregenesislabs.xyz/android/<branch>/<sha>/decentraland.godot.client.apk`.
 
-   # Manual trigger: use the GitHub Actions UI or gh CLI
-   gh workflow run "🍏 iOS" --ref main
+   `mobile_distribute.yml` builds & ships iOS → TestFlight and, once the commit's APK is
+   in R2, posts a Slack "🤖 Android Build Ready" notification (uses the existing
+   `SLACK_WEBHOOK_URL`). It does not rebuild Android and does not push to any store. For
+   **`main`/`release`** builds it additionally surfaces the **AAB** (Play Store artifact)
+   and posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
+   `main`/`release` builds.
+
+   It is triggered by:
+   - **Every push to `release`** → full distribution.
+   - **A daily 09:00 UTC cron on `main`** → distribution, but only when `main` changed
+     since the last *successful* main distribution run (compared via
+     `gh run list --workflow mobile_distribute.yml --branch main --status success`). When
+     unchanged the `prepare` job logs "main unchanged — skipping" and the iOS/Android jobs
+     are skipped (the run still concludes successfully, which is what the next day's cron
+     compares against).
+   - **The `build` label** (or legacy alias `build-ios`) on a PR.
+   - **Manual `workflow_dispatch`** on `main`/`release`.
+   ```bash
+   # On a PR: add the build label (iOS TestFlight + Android Slack notification)
+   gh pr edit --add-label "build"
+
+   # Manual trigger on main/release (GitHub Actions UI or gh CLI)
+   gh workflow run "📱 Mobile Build & Distribute (iOS TestFlight + Android APK)" --ref main
    ```
-   The label is automatically removed after the build completes on PRs.
+   The label is automatically removed after the build is triggered on PRs.
 
 ## Important Notes
 
