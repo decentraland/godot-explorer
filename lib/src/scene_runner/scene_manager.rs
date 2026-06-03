@@ -1367,9 +1367,16 @@ impl SceneManager {
 
         let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
+        let mut stale_scene_ids: Vec<SceneId> = Vec::new();
 
         for scene_id in self.dying_scene_ids.iter() {
-            let scene = self.scenes.get_mut(scene_id).unwrap();
+            let Some(scene) = self.scenes.get_mut(scene_id) else {
+                // The scene was already removed from the map (e.g. its nodes were
+                // freed with the Explorer during sign-out before we reaped it).
+                // Drop the dangling id below instead of unwrap()-panicking on it.
+                stale_scene_ids.push(*scene_id);
+                continue;
+            };
             match scene.state {
                 SceneState::ToKill => {
                     match scene
@@ -1439,6 +1446,17 @@ impl SceneManager {
             }
         }
 
+        // Drop any dangling ids whose scenes are already gone, so we don't retry
+        // (and re-panic) on them every frame.
+        if !stale_scene_ids.is_empty() {
+            self.sorted_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+            self.dying_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+            self.global_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+        }
+
         for scene_id in scene_to_remove.iter() {
             self.finalize_scene_removal(scene_id);
         }
@@ -1448,7 +1466,16 @@ impl SceneManager {
     /// thread and emit scene_killed / scene_crashed. Shared by the normal update
     /// path (scenes that exited while Alive) and reap_dying_scenes().
     fn finalize_scene_removal(&mut self, scene_id: &SceneId) {
-        let mut scene = self.scenes.remove(scene_id).unwrap();
+        // Prune bookkeeping FIRST so that even if a later step (e.g. freeing an
+        // already-freed Godot node) were to fail, the id can't get stuck in
+        // dying_scene_ids and spam reap_dying_scenes() every frame.
+        self.sorted_scene_ids.retain(|x| x != scene_id);
+        self.dying_scene_ids.retain(|x| x != scene_id);
+        self.global_scene_ids.retain(|x| x != scene_id);
+
+        let Some(mut scene) = self.scenes.remove(scene_id) else {
+            return;
+        };
         let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
 
         // Cleanup trigger areas and release RIDs back to pool
@@ -1463,10 +1490,6 @@ impl SceneManager {
         // This is safer than manually calling remove_child + queue_free separately
         // because queue_free schedules everything atomically for end of frame
         scene.godot_dcl_scene.free_root_nodes();
-
-        self.sorted_scene_ids.retain(|x| x != scene_id);
-        self.dying_scene_ids.retain(|x| x != scene_id);
-        self.global_scene_ids.retain(|x| x != scene_id);
 
         // Clean up VM_HANDLES entry
         #[cfg(feature = "use_deno")]
