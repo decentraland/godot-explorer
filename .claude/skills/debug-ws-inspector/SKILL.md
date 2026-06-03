@@ -1,6 +1,6 @@
 ---
 name: debug-ws-inspector
-description: Use when inspecting the running Decentraland Godot Explorer client over the localhost debug WebSocket (port 9230), writing or interpreting `websocat` queries against `ws://127.0.0.1:9230`, or extending the debug server itself. Covers the JSON protocol, the five trees (`scene`/`entity`, `ui_scene`/`ui_entity`, `avatars`/`avatar`, `app_ui`, `ping`/`scenes`), the shared `filters` dict, and the wiring across `godot/src/tool/debug_server/` and the Rust `SceneManager::debug_*` / `AvatarScene::debug_*` hooks. Trigger when the user mentions the debug WS server, port 9230, `DebugWs`, `debug_collector`, websocat against the client, or asks how to query live scene/UI/avatar state.
+description: Use when inspecting the running Decentraland Godot Explorer client over the localhost debug WebSocket (port 9230), writing or interpreting `websocat` queries against `ws://127.0.0.1:9230`, or extending the debug server itself. Covers the JSON protocol, the five trees (`scene`/`entity`, `ui_scene`/`ui_entity`, `avatars`/`avatar`, `app_ui`, `ping`/`scenes`), the `focus` keyboard-focus tracker, the shared `filters` dict, and the wiring across `godot/src/tool/debug_server/` and the Rust `SceneManager::debug_*` / `AvatarScene::debug_*` hooks. Trigger when the user mentions the debug WS server, port 9230, `DebugWs`, `debug_collector`, websocat against the client, or asks how to query live scene/UI/avatar/focus state.
 ---
 
 # Debug WebSocket inspector
@@ -33,7 +33,7 @@ shape: `{"id":..., "ok":true, "data":{...}}` or
 | `ui_scene` / `ui_entity` | per-scene SDK UI (`UiNode.base_control`) | `(scene_id, entity_id)` |
 | `avatars` / `avatar` | global `AvatarScene` | `by` ∈ {`address`,`alias`,`entity`,`local`} |
 | `app_ui` | Explorer's own UI | auto-detected (`/root/explorer/UI` or `/root/Menu`) |
-| `ping` / `scenes` | — | — |
+| `ping` / `scenes` / `focus` | — | — |
 
 All four data cmds (`scene`, `ui_scene`, `avatar`, `app_ui`) share a `filters` dict:
 - `component: [...]` — OR-match SDK component names (cheap, no proto decode)
@@ -78,7 +78,29 @@ outbound cap with headroom.
 
 # Explorer's own UI hierarchy (lobby in this state, scene UI when loaded)
 ./scripts/debug-ws.sh '{"id":5,"cmd":"app_ui","filters":{"depth":2}}'
+
+# Keyboard-focus tracker — current owner + ui_root + change history
+./scripts/debug-ws.sh '{"id":6,"cmd":"focus"}'
 ```
+
+## `focus` — keyboard-focus tracker
+
+`focus` takes no args and returns the viewport's current keyboard-focus owner
+plus a timestamped change history (no `filters`). Reply `data`:
+`{"current": "<path> [<class>]", "ui_root_path": "/root/explorer/UI",
+"history": [{"t_ms", "frame", "from", "to"}, ...]}` (last `FOCUS_HISTORY_MAX`
+= 64 changes; `"<none>"` means focus was released to null).
+
+The server polls `get_viewport().gui_get_focus_owner()` every `_process` frame
+(only while running) so the history captures transient changes — including
+release-to-null, which the engine's `gui_focus_changed` signal misses.
+
+Use it for "input stops working" bugs: mobile walk/jump are gated by
+`player.gd` → `explorer_has_focus()` (`== ui_root.has_focus()`), so movement
+silently dies whenever `current` ≠ `ui_root_path`. The history shows which
+control stole focus and on which frame. (This is how the navbar-toggle
+focus-steal bug was found: the gate read true→false when a press landed focus
+on the navbar's full-rect `Button`.)
 
 ## Important notes
 
