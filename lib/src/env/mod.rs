@@ -58,10 +58,11 @@ pub enum ServiceGroup {
     MobileBff,
     Attestation,
     Notifications,
+    CreditsServer,
 }
 
 impl ServiceGroup {
-    pub const COUNT: usize = 8;
+    pub const COUNT: usize = 9;
 
     pub fn index(self) -> usize {
         match self {
@@ -73,6 +74,7 @@ impl ServiceGroup {
             Self::MobileBff => 5,
             Self::Attestation => 6,
             Self::Notifications => 7,
+            Self::CreditsServer => 8,
         }
     }
 
@@ -86,6 +88,7 @@ impl ServiceGroup {
             Self::MobileBff => "mobilebff",
             Self::Attestation => "attestation",
             Self::Notifications => "notifications",
+            Self::CreditsServer => "creditsserver",
         }
     }
 
@@ -99,6 +102,7 @@ impl ServiceGroup {
             "mobilebff" => Some(Self::MobileBff),
             "attestation" => Some(Self::Attestation),
             "notifications" => Some(Self::Notifications),
+            "creditsserver" => Some(Self::CreditsServer),
             _ => None,
         }
     }
@@ -112,6 +116,7 @@ impl ServiceGroup {
         Self::MobileBff,
         Self::Attestation,
         Self::Notifications,
+        Self::CreditsServer,
     ];
 }
 

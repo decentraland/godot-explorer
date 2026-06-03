@@ -212,6 +212,15 @@ pub fn notifications_api() -> String {
     )
 }
 
+// Credits server (IAP purchases + on-chain credits balance). Base host only; the
+// IAP client appends paths like /credits/iap/quote and /users/:address/credits.
+pub fn credits_server() -> String {
+    format!(
+        "https://credits.decentraland.{}",
+        suffix(ServiceGroup::CreditsServer)
+    )
+}
+
 // Frontend (ungrouped — uses default)
 pub fn host() -> String {
     format!("https://decentraland.{}", default_suffix())
@@ -295,6 +304,7 @@ mod tests {
             events_api(),
             mobile_events_api(),
             notifications_api(),
+            credits_server(),
             mobile_bff(),
             host(),
             marketplace(),
