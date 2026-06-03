@@ -76,7 +76,33 @@ impl RustHttpQueueRequester {
             "" => None,
             _ => Some(body.to_string().into_bytes()),
         };
-        self._request_json(url, method, body, headers)
+        self._request_json(url, method, body, headers, None)
+    }
+
+    /// Same as `request_json` but with an explicit per-request timeout (in seconds). Use this
+    /// for short-lived health/poll requests that race a timeout and discard the result: it makes
+    /// the underlying request abort at the HTTP layer instead of lingering on the default 60s
+    /// timeout, so it releases its slot in the shared request queue promptly. A non-positive or
+    /// non-finite value falls back to the default timeout.
+    #[func]
+    pub fn request_json_with_timeout(
+        &self,
+        url: GString,
+        method: godot::classes::http_client::Method,
+        body: GString,
+        headers: VarDictionary,
+        timeout_seconds: f64,
+    ) -> Gd<Promise> {
+        let body = match body.to_string().as_str() {
+            "" => None,
+            _ => Some(body.to_string().into_bytes()),
+        };
+        let timeout = if timeout_seconds.is_finite() && timeout_seconds > 0.0 {
+            Some(std::time::Duration::from_secs_f64(timeout_seconds))
+        } else {
+            None
+        };
+        self._request_json(url, method, body, headers, timeout)
     }
 
     #[func]
@@ -87,7 +113,7 @@ impl RustHttpQueueRequester {
         body: PackedByteArray,
         headers: VarDictionary,
     ) -> Gd<Promise> {
-        self._request_json(url, method, Some(body.to_vec()), headers)
+        self._request_json(url, method, Some(body.to_vec()), headers, None)
     }
 }
 
@@ -98,6 +124,7 @@ impl RustHttpQueueRequester {
         method: godot::classes::http_client::Method,
         body: Option<Vec<u8>>,
         headers: VarDictionary,
+        timeout: Option<std::time::Duration>,
     ) -> Gd<Promise> {
         // tracing::info!("Requesting json: {:?}", url.to_string());
 
@@ -134,7 +161,7 @@ impl RustHttpQueueRequester {
             crate::http_request::request_response::ResponseType::AsString,
             body,
             headers,
-            None,
+            timeout,
         );
         let http_requester = self.http_queue_requester.clone();
         let (ret_promise, get_promise) = Promise::make_to_async();
