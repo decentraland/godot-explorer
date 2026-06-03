@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="5_dtfap"]
 [ext_resource type="Texture2D" uid="uid://dw4mn6l1jn25f" path="res://assets/ui/Intersect.svg" id="6_ckipv"]
 [ext_resource type="Texture2D" uid="uid://bygnpeber2qmc" path="res://assets/ui/wearable_categories/mask-icon.svg" id="7_h4p8s"]
-[ext_resource type="Texture2D" uid="uid://bdjpwpn5lt2yw" path="res://assets/ui/alert.svg" id="7_qd6e0"]
+[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="7_jpiph"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_ys8dn"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_jpiph"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="10_nwsor"]
@@ -195,7 +195,6 @@ theme_override_constants/margin_bottom = 7
 
 [node name="PanelContainer_Price" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/MarginContainer" unique_id=1617226028]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -210,7 +209,7 @@ theme_override_constants/separation = 6
 [node name="TextureRect" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/MarginContainer/PanelContainer_Price/HBoxContainer" unique_id=1075722656]
 custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
-texture = ExtResource("7_qd6e0")
+texture = ExtResource("7_jpiph")
 expand_mode = 1
 stretch_mode = 5
 
