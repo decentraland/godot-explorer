@@ -798,37 +798,9 @@ impl SceneManager {
         player_body_node: Gd<Node3D>,
         console: Callable,
     ) {
-        // Free any leftover placeholder from clear_player_nodes() before replacing,
-        // so the orphan stand-in nodes don't leak across logout/login cycles.
-        Self::free_if_orphan_placeholder(&mut self.player_avatar_node);
-        Self::free_if_orphan_placeholder(&mut self.player_body_node);
         self.player_avatar_node = player_avatar_node.clone();
         self.player_body_node = player_body_node.clone();
         self.console = console;
-    }
-
-    /// Reset the player node handles to fresh placeholders. Called on sign-out:
-    /// change_scene_to_file frees the Explorer's Player node, leaving these #[var]
-    /// Gd<Node3D> handles dangling. Their auto-generated getters call to_godot(),
-    /// which PANICS on a freed instance — and several GDScript readers touch them
-    /// after sign-out (e.g. the analytics first-move poll on the Global autoload
-    /// reads player_body_node). Swapping in valid orphan placeholders keeps every
-    /// getter safe; they are replaced by the next set_player_node() on Explorer load.
-    #[func]
-    fn clear_player_nodes(&mut self) {
-        Self::free_if_orphan_placeholder(&mut self.player_avatar_node);
-        Self::free_if_orphan_placeholder(&mut self.player_body_node);
-        self.player_avatar_node = Node3D::new_alloc();
-        self.player_body_node = Node3D::new_alloc();
-    }
-
-    /// Free a player-node handle iff it is a leftover orphan placeholder (valid but
-    /// not in the scene tree). The real player node is owned by the Explorer's tree
-    /// and must NOT be freed here — change_scene_to_file handles it.
-    fn free_if_orphan_placeholder(node: &mut Gd<Node3D>) {
-        if node.is_instance_valid() && !node.is_inside_tree() {
-            node.clone().free();
-        }
     }
 
     #[func]

@@ -701,6 +701,11 @@ func sign_out() -> void:
 
 	# 2. Stop session pollers and tear down the social gRPC streams.
 	NotificationsManager.stop_polling()
+	# The analytics first-move poll (a Timer under this autoload) reads
+	# scene_runner.player_body_node; left running it would poll the freed Player
+	# after the swap, panicking the #[var] getter. It restarts on the next login.
+	if analytics_controller != null:
+		analytics_controller.cancel_first_move_poll()
 	social_service.unsubscribe_from_updates()
 	social_service.unsubscribe_from_connectivity_updates()
 	social_service.unsubscribe_from_block_updates()
@@ -727,19 +732,14 @@ func sign_out() -> void:
 	#    second logout() no-ops once the address is already cleared.
 	comms.disconnect(true)
 
-	# 6. Reset the scene_runner's dangling player-node handles before the Explorer
-	#    (and its Player) is freed. The #[var] player-node getters PANIC on a freed
-	#    instance and survivors poll them after sign-out (e.g. the analytics
-	#    first-move poll reads player_body_node), so swap in safe placeholders.
-	#    base_ui is intentionally NOT recreated here: it (and the dying scenes' UI
-	#    roots parented under it) must stay alive until the scenes are reaped;
-	#    explorer._ready() recreates it on the next login.
-	scene_runner.clear_player_nodes()
-	player_camera_node = null
-
-	# 7. Erase the persisted session (ephemeral keys / wallet bytes) from disk.
+	# 6. Erase the persisted session (ephemeral keys / wallet bytes) from disk.
 	#    Everything else (graphics, last realm, content cache) is intentionally
 	#    kept — this is a sign-out, not a factory reset.
+	#
+	#    Note: the scene_runner's player-node handles (and base_ui) are deliberately
+	#    left as-is — once the Explorer is freed they report is_instance_valid()==false
+	#    and the SceneManager's existing guards skip them; explorer._ready() reassigns
+	#    them on the next login.
 	get_config().session_account = {}
 	get_config().save_to_settings_file()
 
