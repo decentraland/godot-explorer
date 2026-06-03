@@ -188,13 +188,23 @@ cargo run -- export --target ios
    Required repo secrets: `MOBILE_ARTIFACTS_R2_{ACCESS_KEY_ID,SECRET_ACCESS_KEY,ENDPOINT,BUCKET}`.
    APKs are served at `https://mobile-artifacts.dclregenesislabs.xyz/android/<branch>/<sha>/decentraland.godot.client.apk`.
 
-   The `build` label (or the legacy alias `build-ios`) triggers `mobile_distribute.yml`,
-   which builds & ships iOS → TestFlight and, once the commit's APK is in R2, posts a
-   Slack "🤖 Android Build Ready" notification (uses the existing `SLACK_WEBHOOK_URL`).
-   It does not rebuild Android and does not push to any store. A **manual dispatch on
-   `main`/`release`** additionally publishes the **AAB** (Play Store artifact) to R2 and
-   posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
+   `mobile_distribute.yml` builds & ships iOS → TestFlight and, once the commit's APK is
+   in R2, posts a Slack "🤖 Android Build Ready" notification (uses the existing
+   `SLACK_WEBHOOK_URL`). It does not rebuild Android and does not push to any store. For
+   **`main`/`release`** builds it additionally surfaces the **AAB** (Play Store artifact)
+   and posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
    `main`/`release` builds.
+
+   It is triggered by:
+   - **Every push to `release`** → full distribution.
+   - **A daily 09:00 UTC cron on `main`** → distribution, but only when `main` changed
+     since the last *successful* main distribution run (compared via
+     `gh run list --workflow mobile_distribute.yml --branch main --status success`). When
+     unchanged the `prepare` job logs "main unchanged — skipping" and the iOS/Android jobs
+     are skipped (the run still concludes successfully, which is what the next day's cron
+     compares against).
+   - **The `build` label** (or legacy alias `build-ios`) on a PR.
+   - **Manual `workflow_dispatch`** on `main`/`release`.
    ```bash
    # On a PR: add the build label (iOS TestFlight + Android Slack notification)
    gh pr edit --add-label "build"
