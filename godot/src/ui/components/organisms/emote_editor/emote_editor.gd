@@ -285,6 +285,11 @@ func _on_credits_balance_changed(new_balance: int):
 		_ios_marketplace_section.credits_balance = new_balance
 
 
+func _exit_tree():
+	if Iap.balance_changed.is_connected(_on_credits_balance_changed):
+		Iap.balance_changed.disconnect(_on_credits_balance_changed)
+
+
 func _on_marketplace_emote_selected(urn: String, emote_name: String):
 	if is_instance_valid(avatar) and not urn.is_empty():
 		avatar.async_play_emote(urn)

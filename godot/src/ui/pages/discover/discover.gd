@@ -540,10 +540,10 @@ func _on_button_back_to_explorer_pressed() -> void:
 
 func _on_button_credits_pressed() -> void:
 	Global.metrics.track_click_button("BUTTON_CREDITS", "DISCOVER", "")
-	_open_credits_section()
+	open_credits_section()
 
 
-func _open_credits_section() -> void:
+func open_credits_section() -> void:
 	button_back_to_explorer.show()
 	label_title.text = "Credits"
 	search_container.hide()

@@ -770,6 +770,9 @@ func _exit_tree():
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
 
+	if Iap.balance_changed.is_connected(_on_credits_balance_changed):
+		Iap.balance_changed.disconnect(_on_credits_balance_changed)
+
 
 func _on_blacklist_changed():
 	# Don't trigger deployment if we're loading a profile from server

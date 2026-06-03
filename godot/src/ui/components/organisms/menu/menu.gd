@@ -148,7 +148,7 @@ func async_show_discover(open_menu := true):
 func async_show_credits():
 	await async_show_discover()
 	if is_instance_valid(control_discover.instance):
-		control_discover.instance._open_credits_section()
+		control_discover.instance.open_credits_section()
 
 
 func async_show_backpack(on_emotes := false):
