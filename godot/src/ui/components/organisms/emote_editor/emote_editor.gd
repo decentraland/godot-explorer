@@ -56,7 +56,7 @@ func _ready():
 
 
 func _setup_ios_marketplace_section():
-	if not Global.is_ios():
+	if not Iap.is_available():
 		return
 
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")

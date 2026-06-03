@@ -5,7 +5,6 @@ signal item_equip(urn: String)
 signal item_unequip(urn: String)
 signal item_selected(urn: String, item_name: String)
 
-const CATALOG_API_URL = "https://marketplace-api.decentraland.org/v2/catalog"
 const WEARABLE_ITEM_SCENE = preload(
 	"res://src/ui/components/molecules/wearable_item/wearable_item.tscn"
 )
@@ -99,14 +98,14 @@ func _load_category(category: String):
 func _build_catalog_url(category: String, skip: int = 0, first: int = 3) -> String:
 	if asset_type == "emotes":
 		return (
-			CATALOG_API_URL
+			DclUrls.marketplace_catalog_api()
 			+ (
 				"?first=%d&skip=%d&category=emote&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
 				% [first, skip]
 			)
 		)
 	var url = (
-		CATALOG_API_URL
+		DclUrls.marketplace_catalog_api()
 		+ (
 			"?first=%d&skip=%d&category=wearable&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
 			% [first, skip]
