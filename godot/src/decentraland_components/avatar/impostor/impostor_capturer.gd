@@ -72,7 +72,14 @@ func _async_run_fetch() -> void:
 		image = await _async_fetch_default_body(avatar)
 
 	if image != null and is_instance_valid(avatar) and Global.avatars != null:
-		Global.avatars.set_impostor_texture(iid, image, _key_for(avatar))
+		# The default placeholder must NOT be disk-cached under the avatar's
+		# identity key: a persisted placeholder makes request_impostor_layer
+		# treat the avatar as already captured (impostor_needs_capture stays
+		# false), so the real snapshot would never be generated. Empty key =
+		# upload without persisting; only real looks (catalyst / generated)
+		# are cached.
+		var cache_key: String = _key_for(avatar) if got_catalyst else ""
+		Global.avatars.set_impostor_texture(iid, image, cache_key)
 
 	# When the placeholder default stood in for a custom avatar, queue a real
 	# snapshot to swap in; otherwise this avatar is done.
@@ -143,11 +150,11 @@ func _key_for(avatar) -> String:
 
 # Real generation only pays off when the avatar has custom content; a plain
 # default body already looks identical to the placeholder we uploaded.
+# get_wearables() returns a PackedStringArray (not Array), so check it directly.
 func _should_generate(avatar) -> bool:
 	if avatar.avatar_data == null:
 		return false
-	var wearables = avatar.avatar_data.get_wearables()
-	return wearables is Array and not wearables.is_empty()
+	return not avatar.avatar_data.get_wearables().is_empty()
 
 
 # gdlint:ignore = async-function-name
