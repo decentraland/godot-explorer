@@ -727,10 +727,14 @@ func sign_out() -> void:
 	#    second logout() no-ops once the address is already cleared.
 	comms.disconnect(true)
 
-	# 6. The Explorer reparents scene_runner.base_ui into its tree; freeing the
-	#    Explorer leaves a dangling pointer. Recreate it now so nothing touches a
-	#    freed node before the next Explorer load.
+	# 6. Reset the scene_runner's Godot-node handles before the Explorer (and its
+	#    Player) is freed. The #[var] player-node getters PANIC on a freed instance
+	#    and survivors poll them after sign-out (e.g. the analytics first-move poll
+	#    reads player_body_node); base_ui is reparented into the Explorer and would
+	#    dangle too. Reset them to safe placeholders / a fresh instance now.
+	scene_runner.clear_player_nodes()
 	scene_runner.recreate_base_ui()
+	player_camera_node = null
 
 	# 7. Erase the persisted session (ephemeral keys / wallet bytes) from disk.
 	#    Everything else (graphics, last realm, content cache) is intentionally
