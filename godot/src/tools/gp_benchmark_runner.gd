@@ -821,14 +821,13 @@ func _apply_deeplink_overrides() -> void:
 		if thr >= 0.0 and thr <= 64.0:
 			config["mesh_lod_threshold"] = thr
 
-	# Pin skybox time of day so screenshots / textures are deterministic
-	# across runs. `fixed-skybox-time=true` clamps to ~3pm (DclGlobal sets
-	# `target_time = 0.625` in time.gd:53). Recommended for any A/B run
-	# whose conclusion involves comparing visuals or draw counts under
-	# different lighting.
+	# Pin skybox time of day so lighting / shadows / draw counts are
+	# deterministic across runs. Forced ON for every gp-benchmark run: clamps
+	# to ~3pm (DclGlobal sets `target_time = 0.625` in time.gd:53), which keeps
+	# the directional shadow pass active. Pass `fixed-skybox-time=false` to opt
+	# out and run under world time instead.
 	var fst: String = params.get("fixed-skybox-time", "")
-	if not fst.is_empty():
-		Global.fixed_skybox_time = fst.to_lower() in ["true", "1", "yes"]
+	Global.fixed_skybox_time = fst.is_empty() or fst.to_lower() in ["true", "1", "yes"]
 
 	# Per-feature graphics overrides applied AFTER `force-graphic-profile` so
 	# we can isolate the GPU cost of one feature at a time. Each accepts an
