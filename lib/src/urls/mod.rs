@@ -220,7 +220,10 @@ pub fn marketplace() -> String {
     format!("https://decentraland.{}/marketplace", default_suffix())
 }
 pub fn marketplace_catalog_api() -> String {
-    format!("https://marketplace-api.decentraland.{}/v2/catalog", default_suffix())
+    format!(
+        "https://marketplace-api.decentraland.{}/v2/catalog",
+        default_suffix()
+    )
 }
 pub fn marketplace_claim_name() -> String {
     format!(
