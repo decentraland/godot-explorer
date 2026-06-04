@@ -349,6 +349,9 @@ func refresh_values():
 	process_tick_quota.value = Global.get_config().process_tick_quota_ms
 	if is_instance_valid(Global.raycast_debugger):
 		check_button_raycast_debugger.set_pressed_no_signal(true)
+	# Reflect the real server state: it may have been started from a deeplink
+	# (debug-ws param) before Settings was ever opened.
+	check_button_debug_server.set_pressed_no_signal(DebugWs.is_running())
 
 
 func _on_button_connect_preview_pressed():
