@@ -880,3 +880,9 @@ func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
 
 func _on_custom_button_sign_out_pressed() -> void:
 	Global.sign_out()
+
+
+func _on_button_return_to_discover_pressed() -> void:
+	# Dev Tools: leave the current world and return to the Discover menu while
+	# staying signed in (soft sign-out). See Global.return_to_discover().
+	Global.return_to_discover()
