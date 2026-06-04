@@ -34,6 +34,26 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
+	# runner from Global._ready, but on mobile the deep link is not parsed by
+	# then — spawn here once the deeplink lands and only if no runner exists.
+	if Global.deep_link_obj.gp_benchmark and Global.get_node_or_null("GPBenchmarkRunner") == null:
+		# Flip bench_mode BEFORE spawning the runner: this fires earlier than
+		# DG's deferred _init_dynamic_graphics_manager (07.4xx vs 07.7xx on A54)
+		# and before lobby.gd's first-launch HW bench trigger, so both honor it.
+		Global.cli.bench_mode = true
+		print("[DEEPLINK] bench_mode=true (gp-benchmark deeplink)")
+		print("[DEEPLINK] Spawning GP benchmark runner")
+		var gp_runner = load("res://src/tools/gp_benchmark_runner.gd").new()
+		gp_runner.set_name("GPBenchmarkRunner")
+		Global.add_child(gp_runner)
+
+	if Global.deep_link_obj.safe_margin_debug:
+		Global.set_safe_margin_debug_enable(true)
+
+	if Global.deep_link_obj.iap_enabled:
+		Iap.enable()
+
 	# Trigger avatar impostor benchmark
 	var bench_param = Global.deep_link_obj.params.get("benchmark", "")
 	if bench_param == "avatar-impostors":

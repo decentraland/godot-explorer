@@ -1,0 +1,493 @@
+[gd_scene format=3 uid="uid://bp6yn0qw2s6ua"]
+
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
+[ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/pages/discover/discover.gd" id="2_f08es"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_17slp"]
+[ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="3_lvgj0"]
+[ext_resource type="PackedScene" uid="uid://3de823q04ptd" path="res://src/ui/pages/discover/carrousel/discover_carrousel.tscn" id="3_s5vyg"]
+[ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/pages/discover/icons/back.svg" id="4_edk0s"]
+[ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/pages/discover/places/places_generator.tscn" id="4_q55yj"]
+[ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="6_b1byu"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_73ifx"]
+[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="9_g4fdo"]
+[ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/pages/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
+[ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/atoms/controls/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="10_q2sj0"]
+[ext_resource type="Texture2D" uid="uid://v10kj2je18ti" path="res://assets/ui/iap/purchase-history.svg" id="11_o7fsu"]
+[ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/pages/discover/icons/not-found.svg" id="12_g4fdo"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="13_73ifx"]
+[ext_resource type="PackedScene" uid="uid://ct64rhq0dtpa3" path="res://src/ui/pages/discover/search_bar/search_suggestions.tscn" id="14_5g6gd"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
+[ext_resource type="PackedScene" uid="uid://brrjhhjf1jey2" path="res://src/ui/pages/events/events_generator.tscn" id="15_edk0s"]
+[ext_resource type="PackedScene" uid="uid://cwlnydq8rjjxt" path="res://src/ui/pages/events/event_discover_skeleton.tscn" id="16_skel"]
+[ext_resource type="PackedScene" uid="uid://bic3gcms4bi8g" path="res://src/ui/pages/events/event_details.tscn" id="17_lvgj0"]
+[ext_resource type="PackedScene" uid="uid://3uibe7yuvd3j" path="res://src/ui/components/molecules/search_bar/search_bar.tscn" id="18_sbar"]
+[ext_resource type="PackedScene" uid="uid://b8k2m5nf3qr7x" path="res://src/ui/pages/discover/friends/friends_generator.tscn" id="19_fgen"]
+[ext_resource type="PackedScene" uid="uid://c7n3k8p2xq4rf" path="res://src/ui/pages/discover/friends/friend_jump_in.tscn" id="20_fjump"]
+[ext_resource type="PackedScene" uid="uid://bk7m3n5xp2qrf" path="res://src/ui/pages/discover/friends/friend_discover_skeleton.tscn" id="21_fskel"]
+[ext_resource type="PackedScene" uid="uid://byp4n7u2145fx" path="res://src/ui/components/molecules/snap_carousel/snap_carousel.tscn" id="22_snap"]
+[ext_resource type="PackedScene" uid="uid://bk0bh2bgdycxx" path="res://src/ui/components/organisms/credits_shop/credits_shop.tscn" id="24_qr6ir"]
+[ext_resource type="PackedScene" uid="uid://c7m54lyhw5fwp" path="res://src/ui/components/organisms/credits_history/credits_history.tscn" id="27_ritxv"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cwrnu"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(1, 0.176471, 0.333333, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ritxv"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vsmw3"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ksqvs"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_iyg6d"]
+font = ExtResource("13_73ifx")
+font_size = 48
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_86ojj"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_8uyq4"]
+font = ExtResource("14_dn5gj")
+font_size = 34
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w46h5"]
+
+[node name="Discover" type="Control" unique_id=666812766]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 1
+theme = ExtResource("1_tkk7t")
+script = ExtResource("2_f08es")
+metadata/mobile_preview_orientation = "portrait"
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=221185123]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_lvgj0")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect" unique_id=1162063470]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SafeTopMarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer" unique_id=1300559865]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 20
+script = ExtResource("6_b1byu")
+use_left = false
+use_right = false
+use_bottom = false
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeTopMarginContainer" unique_id=1866425189]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer" unique_id=2084974317]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_constants/separation = 14
+
+[node name="Button_BackToExplorer" type="Button" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=26838025]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_cwrnu")
+icon = ExtResource("4_edk0s")
+flat = true
+expand_icon = true
+
+[node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=711539979]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("3_17slp")
+theme_override_font_sizes/font_size = 28
+text = "Discover"
+label_settings = ExtResource("5_q2sj0")
+
+[node name="SearchBar" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=1551021918 instance=ExtResource("18_sbar")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 20.0
+
+[node name="Button_History" type="Button" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=419384389]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 5
+focus_mode = 0
+mouse_filter = 1
+theme = ExtResource("9_73ifx")
+theme_type_variation = &"SettingsButton"
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 0.49803922)
+theme_override_constants/icon_max_width = 48
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/focus = SubResource("StyleBoxFlat_vsmw3")
+icon = ExtResource("11_o7fsu")
+flat = true
+alignment = 0
+
+[node name="Button_Credits" type="Button" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=532861808]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 5
+focus_mode = 0
+mouse_filter = 1
+theme = ExtResource("9_73ifx")
+theme_type_variation = &"SettingsButton"
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 0.49803922)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 0.69803923)
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 0.49803922)
+theme_override_constants/h_separation = 8
+theme_override_constants/icon_max_width = 48
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_ksqvs")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_ritxv")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ritxv")
+text = "0"
+icon = ExtResource("9_g4fdo")
+alignment = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer" unique_id=921349866]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="ScrollContainer_Content" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1734613381]
+unique_name_in_owner = true
+visible = false
+clip_contents = true
+layout_mode = 2
+script = ExtResource("10_q2sj0")
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+scroll_deadzone = 100
+drag = 6.0
+metadata/_custom_type_script = "uid://c3wphp306q0w"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content" unique_id=1313088106]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="MessageSearching" type="Control" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=337974216]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageSearching" unique_id=1643354028]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 20.0
+text = "Searching!"
+
+[node name="MessageNoResultsFound" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=318965605]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound" unique_id=1274623953]
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("12_g4fdo")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound" unique_id=320252381]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_242e4")
+
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound" unique_id=149979491]
+layout_mode = 2
+text = "No result found"
+label_settings = SubResource("LabelSettings_iyg6d")
+horizontal_alignment = 1
+
+[node name="HSeparator2" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound" unique_id=309040651]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_86ojj")
+
+[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound" unique_id=1453431553]
+layout_mode = 2
+text = "Try searching with
+different keywords."
+label_settings = SubResource("LabelSettings_8uyq4")
+horizontal_alignment = 1
+
+[node name="MessageError" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=1133761533]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError" unique_id=1013233616]
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("12_g4fdo")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError" unique_id=432179620]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_242e4")
+
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError" unique_id=412916740]
+layout_mode = 2
+text = "Something
+went wrong"
+label_settings = SubResource("LabelSettings_iyg6d")
+horizontal_alignment = 1
+
+[node name="HSeparator2" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError" unique_id=716016033]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_86ojj")
+
+[node name="Label2" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError" unique_id=1908489445]
+layout_mode = 2
+text = "We couldn’t load the results.
+Please try again."
+label_settings = SubResource("LabelSettings_8uyq4")
+horizontal_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=1835596805]
+layout_mode = 2
+theme_override_constants/separation = 40
+
+[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1265686382 instance=ExtResource("22_snap")]
+unique_name_in_owner = true
+layout_mode = 2
+auto_fetch = true
+auto_scroll = true
+
+[node name="FriendsOnline" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=411918289 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("FriendsGenerator")
+skeleton_scene = ExtResource("21_fskel")
+skeleton_height = 225.0
+title = "Friends"
+
+[node name="FriendsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/FriendsOnline" unique_id=1004775239 node_paths=PackedStringArray("discover") instance=ExtResource("19_fgen")]
+discover = NodePath("../../../../../../../..")
+
+[node name="Events" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=73924472 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("EventsGenerator")
+skeleton_scene = ExtResource("16_skel")
+skeleton_height = 359.0
+title = "Events"
+
+[node name="EventsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/Events" unique_id=703296619 node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
+discover = NodePath("../../../../../../../..")
+
+[node name="LastVisited" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=2117442036 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("LastVisitGenerator")
+title = "Last Visited"
+
+[node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/LastVisited" unique_id=846206327 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+unique_name_in_owner = true
+last_places_logic = true
+discover = NodePath("../../../../../../../..")
+
+[node name="PlacesMostActive" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=855884893 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "Most Actives"
+
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesMostActive" unique_id=967342122 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+order_by = 1
+discover = NodePath("../../../../../../../..")
+
+[node name="PlacesFavorites" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1984096611 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "Favorites"
+
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesFavorites" unique_id=1688057200 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+order_by = 1
+only_favorites = true
+discover = NodePath("../../../../../../../..")
+
+[node name="PlacesMyPlaces" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=896981506 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "My Places"
+
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesMyPlaces" unique_id=1133896643 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+only_my_places = true
+discover = NodePath("../../../../../../../..")
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=5261525]
+layout_mode = 2
+theme_override_constants/separation = 128
+theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
+
+[node name="PanelContainer" type="PanelContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=1850716807]
+layout_mode = 2
+
+[node name="SearchSugestionsContainer" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1120422632 instance=ExtResource("14_5g6gd")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="CreditsOption" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1831528012]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 2
+script = ExtResource("10_q2sj0")
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+scroll_deadzone = 100
+drag = 6.0
+metadata/_custom_type_script = "uid://c3wphp306q0w"
+
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption" unique_id=2135426436]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+
+[node name="CreditsShop" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer" unique_id=2110848340 instance=ExtResource("24_qr6ir")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CreditsHistory" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=580961379]
+unique_name_in_owner = true
+visible = false
+clip_contents = true
+layout_mode = 2
+script = ExtResource("10_q2sj0")
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+scroll_deadzone = 100
+drag = 6.0
+metadata/_custom_type_script = "uid://c3wphp306q0w"
+
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsHistory" unique_id=476548167]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+
+[node name="CreditsHistory" parent="TextureRect/VBoxContainer/MarginContainer/CreditsHistory/MarginContainer" unique_id=1406653384 instance=ExtResource("27_ritxv")]
+layout_mode = 2
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=485396354]
+
+[node name="JumpIn" parent="CanvasLayer" unique_id=1825131609 instance=ExtResource("9_gh6mh")]
+unique_name_in_owner = true
+visible = false
+
+[node name="EventDetails" parent="CanvasLayer" unique_id=1053982210 instance=ExtResource("17_lvgj0")]
+unique_name_in_owner = true
+visible = false
+
+[node name="FriendJumpIn" parent="CanvasLayer" unique_id=1751478495 instance=ExtResource("20_fjump")]
+unique_name_in_owner = true
+visible = false
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]
+[connection signal="focus_entered" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_search_bar_opened"]
+[connection signal="text_changed" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
+[connection signal="text_submitted" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/SearchBar" to="." method="_async_on_line_edit_search_bar_text_submitted"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Button_History" to="." method="_on_button_history_pressed"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer/Button_Credits" to="." method="_on_button_credits_pressed"]

@@ -12,6 +12,12 @@ const DEBUG_SAVE_AVATAR_DATA = false
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
+# AABB for the off-screen freeze notifier — sized to cover the avatar including
+# arms-out emote poses. Erring large is the safe direction: a too-eager "on
+# screen" only animates an avatar that might be off-screen, whereas a too-eager
+# "off screen" freezes a drawn one.
+const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 2.8, 2.0))
+
 const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
 const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
 const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
@@ -22,6 +28,66 @@ const TOON_SHADER_ALPHA_CLIP_DOUBLE = preload(
 const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
 	"res://assets/avatar/dcl_toon_alpha_blend_double.gdshader"
 )
+
+# Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
+# bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
+# directly in get_anchor_point_global_transform.
+const _ANCHOR_BONE_NAMES: Dictionary[int, String] = {
+	2: "Avatar_LeftHand",
+	3: "Avatar_RightHand",
+	4: "Avatar_Head",
+	5: "Avatar_Neck",
+	6: "Avatar_Spine",
+	7: "Avatar_Spine1",
+	8: "Avatar_Spine2",
+	9: "Avatar_Hips",
+	10: "Avatar_LeftShoulder",
+	11: "Avatar_LeftArm",
+	12: "Avatar_LeftForeArm",
+	13: "Avatar_LeftHandIndex1",
+	14: "Avatar_RightShoulder",
+	15: "Avatar_RightArm",
+	16: "Avatar_RightForeArm",
+	17: "Avatar_RightHandIndex1",
+	18: "Avatar_LeftUpLeg",
+	19: "Avatar_LeftLeg",
+	20: "Avatar_LeftFoot",
+	21: "Avatar_LeftToeBase",
+	22: "Avatar_RightUpLeg",
+	23: "Avatar_RightLeg",
+	24: "Avatar_RightFoot",
+	25: "Avatar_RightToeBase",
+}
+
+
+# Per-anchor state held by the Avatar's _anchors dict. One instance per
+# currently-attached anchor (lazily created in register_anchor_use). Stores
+# the resolved bone index, the cached bone pose (basis pre-scaled by 100 to
+# cancel the Skeleton3D's 0.01 unit-conversion scale), and the set of
+# AvatarAttach instances currently using this anchor.
+class AnchorState:
+	extends RefCounted
+
+	var bone_name: String
+	var bone_idx: int = -1
+	var cached_transform: Transform3D
+	var users: Array[Node] = []
+
+	func _init(p_bone_name: String) -> void:
+		bone_name = p_bone_name
+
+	func resolve(skeleton: Skeleton3D) -> void:
+		bone_idx = skeleton.find_bone(bone_name)
+		if bone_idx != -1:
+			refresh(skeleton)
+
+	func refresh(skeleton: Skeleton3D) -> void:
+		if bone_idx == -1:
+			return
+		var t := skeleton.get_bone_global_pose(bone_idx)
+		t.basis = t.basis.scaled(100.0 * Vector3.ONE)
+		cached_transform = t
+
 
 @export var skip_process: bool = false
 @export var hide_name: bool = false:
@@ -38,6 +104,7 @@ var is_local_player: bool = false
 var avatar_id: String = ""
 var hidden: bool = false
 var passport_disabled: bool = false
+var nametag_hidden: bool = false
 var avatar_ready: bool = false
 var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
@@ -51,12 +118,6 @@ var wearables_by_category: Dictionary = {}
 
 var emote_controller: AvatarEmoteController  # Rust binded. Don't change this variable name
 
-var generate_attach_points: bool = false
-var right_hand_idx: int = -1
-var right_hand_position: Transform3D
-var left_hand_idx: int = -1
-var left_hand_position: Transform3D
-
 var voice_chat_audio_player: AudioStreamPlayer = null
 var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
@@ -64,6 +125,11 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
+
+# anchor_point_id -> AnchorState for currently-attached anchors only. Entries
+# are added lazily by register_anchor_use() and removed when the last
+# AvatarAttach using them is unregistered.
+var _anchors: Dictionary[int, AnchorState] = {}
 
 # Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
 var _force_hide_name: bool = false
@@ -114,10 +180,19 @@ var _impostor_layer_is_overflow: bool = false
 # entirely — no multimesh instance, no real layer, no capture. Disk cache makes
 # re-entry fast (texture rehydrates from PNG without recapture).
 var _off_frustum: bool = false
-# Latched while off-frustum: the AnimationTree was paused regardless of LOD
-# state, so when we come back in-frustum we know we have to restore the
+# Driven by _screen_notifier's screen_entered/screen_exited signals: Godot's
+# exact draw state for this avatar. The animation freeze keys off this, NOT the
+# coordinator's approximate _off_frustum sphere test — otherwise an avatar near
+# the screen edge (still drawn, but flagged off-frustum) or one sweeping into
+# view during the coordinator's 6-frame update lag freezes on a stale pose
+# instead of throttling. Default true so a freshly spawned avatar animates until
+# the notifier reports its real state.
+var _on_screen: bool = true
+var _screen_notifier: VisibleOnScreenNotifier3D = null
+# Latched while frozen off-screen: the AnimationTree was paused regardless of LOD
+# state, so when we come back on-screen we know we have to restore the
 # state-driven anim setup (active/manual/throttle).
-var _anim_frozen_off_frustum: bool = false
+var _anim_frozen_off_screen: bool = false
 # Wall-clock ms when the freeze started. Used to advance the AnimationTree by
 # the elapsed time on re-entry so the emote phase matches what it would have
 # been had we not paused — single one-shot recompute, not a frame-by-frame
@@ -198,6 +273,7 @@ func _ready():
 
 	_lod_phase = int(self.unique_id) % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES
 	AvatarLODCoordinator.register(self)
+	_setup_screen_notifier()
 
 	# Setup metadata for raycast detection (same as DCL entities)
 	click_area.set_meta("is_avatar", true)
@@ -245,6 +321,13 @@ func _input(event):
 		var selected = Global.get_selected_avatar()
 		if selected and selected == self and avatar_id and not hidden and not passport_disabled:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				var explorer = Global.get_explorer()
+				if (
+					is_instance_valid(explorer)
+					and explorer.is_session_hide_main_hud()
+					and explorer.is_session_hide_view_profile()
+				):
+					return
 				Global.open_profile_by_avatar.emit(self)
 
 
@@ -255,9 +338,8 @@ func try_show():
 func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 	_unset_avatar_modifier_area()  # Reset state
 
-	for exclude_id in area.exclude_ids:
-		if avatar_id == exclude_id:
-			return  # the avatar is not going to be modified
+	if AvatarExcludeIdMatcher.is_excluded(avatar_id, area.exclude_ids):
+		return  # the avatar is not going to be modified
 
 	for modifier in area.avatar_modifiers:
 		if modifier == 0:  # hide avatar
@@ -266,6 +348,10 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 			_set_click_area_enabled(false)
 		elif modifier == 1:  # disable passport
 			passport_disabled = true
+		elif modifier == 2:  # hide nametag
+			nametag_hidden = true
+
+	_apply_nickname_visibility()
 
 
 func set_hidden(value):
@@ -325,6 +411,8 @@ func _unset_avatar_modifier_area():
 		show()
 		_set_click_area_enabled(true)
 	passport_disabled = false
+	nametag_hidden = false
+	_apply_nickname_visibility()
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
@@ -334,6 +422,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
 	nickname_ui.name_claimed = profile.has_claimed_name()
 
+	var avatar_id_changed := avatar_id != profile.get_ethereum_address()
 	avatar_id = profile.get_ethereum_address()
 	has_connected_web3 = profile.has_connected_web3()
 	prints("Async update avatar from profile", avatar_id)
@@ -341,6 +430,12 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	# Update metadata with the new avatar_id
 	if click_area:
 		click_area.set_meta("avatar_id", avatar_id)
+
+	# Re-evaluate AvatarModifierArea exclusion: the area may have triggered
+	# before the profile arrived (issue #2166 race), leaving the avatar hidden
+	# even though its id is in excludeIds.
+	if avatar_id_changed:
+		try_show()
 
 	await async_update_avatar(avatar, new_avatar_name)
 
@@ -364,6 +459,7 @@ func async_update_avatar(
 			avatar_id = shape_id
 			if click_area:
 				click_area.set_meta("avatar_id", avatar_id)
+			try_show()
 
 	# Update metadata for raycast detection
 	if click_area:
@@ -523,7 +619,9 @@ func _apply_nickname_visibility() -> void:
 		is_avatar_shape and (current_name.is_empty() or current_name == "NPC")
 	)
 	var far_lod: bool = _lod_state == LODState.FAR
-	var should_hide := avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod
+	var should_hide := (
+		avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod or nametag_hidden
+	)
 	if should_hide:
 		nickname_quad.hide()
 		if nickname_viewport != null:
@@ -613,7 +711,7 @@ func async_try_to_set_body_shape(body_shape_hash):
 
 	# Free the now-empty body shape container
 	body_shape.queue_free()
-	_add_attach_points()
+	_reresolve_active_anchors()
 
 
 # Renames bones previously merged via _merge_extra_wearable_bones_into_base to a
@@ -1112,7 +1210,13 @@ func _update_lod() -> void:
 	# helpers (set_hidden / modifier area). Don't change LOD state — the
 	# avatar's mesh is already invisible via the parent hide(); we just need
 	# the impostor slot off.
-	if not visible:
+	# Use is_visible_in_tree(), not the node's own `visible` flag: scene
+	# AvatarShapes (e.g. the Tower of Madness podium) are hidden by their parent
+	# entity via a VisibilityComponent (parent visible=false / scale ~0) while
+	# the Avatar node keeps visible=true. The impostor MultiMesh lives on
+	# AvatarScene and ignores the avatar's tree visibility/scale, so without this
+	# an invisible avatar still draws a full-size impostor (phantom-podium bug).
+	if not is_visible_in_tree():
 		_hide_impostor_render()
 		return
 
@@ -1159,7 +1263,10 @@ func _update_lod() -> void:
 			fade_alpha = 0.0
 
 	_apply_lod_state(new_state, dither_alpha, fade_alpha, tint_strength, dist)
-	_apply_off_frustum_anim_freeze()
+	# Reconcile against the notifier's current state in case a screen_entered /
+	# screen_exited signal was missed; idempotent thanks to the _anim_frozen_off_screen
+	# latch. Unfreezing still happens immediately in the signal handler.
+	AvatarLODHelpers.apply_screen_freeze(self)
 
 
 func _apply_lod_state(
@@ -1227,71 +1334,41 @@ func _release_impostor() -> void:
 
 
 func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
-	match new_state:
-		LODState.FULL:
-			AvatarLODHelpers.set_meshes_visible(self, true)
-			AvatarLODHelpers.set_animation_active(self, true)
-			AvatarLODHelpers.set_animation_speed(self, 1.0)
-			AvatarLODHelpers.set_animation_throttle(self, false)
-			AvatarLODHelpers.set_particles_visible(self, true)
-			AvatarLODHelpers.set_click_active(self, true)
-			_apply_nickname_visibility()
-		LODState.MID:
-			AvatarLODHelpers.set_meshes_visible(self, true)
-			AvatarLODHelpers.set_animation_active(self, true)
-			AvatarLODHelpers.set_animation_speed(self, 1.0)
-			AvatarLODHelpers.set_animation_throttle(self, true)
-			AvatarLODHelpers.set_particles_visible(self, false)
-			AvatarLODHelpers.set_click_active(self, false)
-			_apply_nickname_visibility()
-		LODState.CROSSFADE:
-			AvatarLODHelpers.set_meshes_visible(self, true)
-			AvatarLODHelpers.set_animation_active(self, true)
-			AvatarLODHelpers.set_animation_speed(self, 1.0)
-			AvatarLODHelpers.set_animation_throttle(self, true)
-			AvatarLODHelpers.set_particles_visible(self, false)
-			AvatarLODHelpers.set_click_active(self, false)
-			_apply_nickname_visibility()
-		LODState.FAR:
-			AvatarLODHelpers.set_meshes_visible(self, false)
-			AvatarLODHelpers.set_animation_active(self, false)
-			AvatarLODHelpers.set_animation_speed(self, 1.0)
-			AvatarLODHelpers.set_animation_throttle(self, false)
-			AvatarLODHelpers.set_particles_visible(self, false)
-			AvatarLODHelpers.set_click_active(self, false)
-			_apply_nickname_visibility()
+	var full: bool = new_state == LODState.FULL
+	AvatarLODHelpers.set_meshes_visible(self, new_state != LODState.FAR)
+	AvatarLODHelpers.set_particles_visible(self, full)
+	AvatarLODHelpers.set_click_active(self, full)
+	AvatarLODHelpers.set_animation_speed(self, 1.0)
+	# Animation drive is on-screen-aware so an off-screen avatar that changes LOD
+	# stays frozen rather than re-animating; apply_screen_freeze restores it on
+	# re-entry. Single source of truth shared with the freeze, so callback mode
+	# and throttle flag can never drift into the frozen-while-drawn state.
+	var drive: Dictionary = AvatarLODHelpers.resolve_anim_drive(_on_screen, new_state)
+	AvatarLODHelpers.set_animation_active(self, drive.active)
+	AvatarLODHelpers.set_animation_throttle(self, drive.throttle)
+	_apply_nickname_visibility()
 
 
-# Freeze the AnimationTree when off-frustum, regardless of LOD state. The mesh
-# is still visible logically (so re-entry doesn't pop), but Godot's GPU
-# frustum cull skips drawing it and the AnimationTree pauses CPU-side. On
-# re-entry we restore the state-driven anim setup and advance the tree by the
-# wall-clock time we were paused, so emote phase matches what it would have
-# been had we not paused — single recompute, no frame-by-frame catch-up.
-func _apply_off_frustum_anim_freeze() -> void:
-	if animation_tree == null:
-		return
-	if _off_frustum:
-		if not _anim_frozen_off_frustum:
-			animation_tree.active = false
-			_anim_throttle_active = false
-			_anim_freeze_start_ms = Time.get_ticks_msec()
-			_anim_frozen_off_frustum = true
-	elif _anim_frozen_off_frustum:
-		_anim_frozen_off_frustum = false
-		var elapsed_s: float = (Time.get_ticks_msec() - _anim_freeze_start_ms) / 1000.0
-		match _lod_state:
-			LODState.FULL:
-				AvatarLODHelpers.set_animation_active(self, true)
-				AvatarLODHelpers.set_animation_throttle(self, false)
-			LODState.MID, LODState.CROSSFADE:
-				AvatarLODHelpers.set_animation_active(self, true)
-				AvatarLODHelpers.set_animation_throttle(self, true)
-			LODState.FAR:
-				AvatarLODHelpers.set_animation_active(self, false)
-				AvatarLODHelpers.set_animation_throttle(self, false)
-		if animation_tree.active and elapsed_s > 0.0:
-			animation_tree.advance(elapsed_s)
+# Drive the animation freeze off Godot's own on-screen detection instead of the
+# coordinator's approximate, 6-frame-lagged _off_frustum flag. screen_entered /
+# screen_exited fire exactly when the avatar starts/stops being drawn, so the
+# freeze can never leave a visible avatar stuck on a stale pose.
+func _setup_screen_notifier() -> void:
+	_screen_notifier = VisibleOnScreenNotifier3D.new()
+	_screen_notifier.aabb = SCREEN_NOTIFIER_AABB
+	add_child(_screen_notifier)
+	_screen_notifier.screen_entered.connect(_on_avatar_screen_entered)
+	_screen_notifier.screen_exited.connect(_on_avatar_screen_exited)
+
+
+func _on_avatar_screen_entered() -> void:
+	_on_screen = true
+	AvatarLODHelpers.apply_screen_freeze(self)
+
+
+func _on_avatar_screen_exited() -> void:
+	_on_screen = false
+	AvatarLODHelpers.apply_screen_freeze(self)
 
 
 func _tick_animation_throttle(delta: float) -> void:
@@ -1324,9 +1401,9 @@ func _process(delta):
 		animation_tree.active = false
 		return
 
-	# Ensure animation tree is active for normal avatars
-	if not animation_tree.active:
-		animation_tree.active = true
+	# Ensure animation tree is active for normal avatars — but never undo an
+	# off-screen freeze (that re-activation is what left frozen avatars stuck).
+	AvatarLODHelpers.ensure_anim_active(self)
 
 	# #b18: `is_grounded` guard suppresses the all-false condition window at the
 	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.
@@ -1522,30 +1599,73 @@ func push_voice_frame(frame):
 	timer_hide_mic.start()
 
 
-func activate_attach_points():
-	generate_attach_points = true
-	_add_attach_points()
+# Called by AvatarAttach.gd when it starts following a skeletal anchor on
+# this avatar. Creates the per-anchor cache lazily; multiple attachments
+# targeting the same anchor share one AnchorState.
+func register_anchor_use(anchor_id: int, attachment: Node) -> void:
+	var state: AnchorState = _anchors.get(anchor_id)
+	if state == null:
+		var bone_name: String = _ANCHOR_BONE_NAMES.get(anchor_id, "")
+		if bone_name.is_empty():
+			return  # not a skeletal anchor (POSITION/NAME_TAG/out-of-range)
+		state = AnchorState.new(bone_name)
+		_anchors[anchor_id] = state
+		if body_shape_skeleton_3d != null:
+			state.resolve(body_shape_skeleton_3d)
+	if not state.users.has(attachment):
+		state.users.append(attachment)
 
 
-func _add_attach_points():
-	if not generate_attach_points:
+# Called by AvatarAttach.gd when it stops following an anchor (free, detach,
+# attach_point changed, user_id changed). Drops the AnchorState when the last
+# user leaves.
+func unregister_anchor_use(anchor_id: int, attachment: Node) -> void:
+	var state: AnchorState = _anchors.get(anchor_id)
+	if state == null:
 		return
+	state.users.erase(attachment)
+	if state.users.is_empty():
+		_anchors.erase(anchor_id)
 
+
+# Refreshes bone poses for currently-active anchors only. Wired to the
+# Skeleton3D's skeleton_updated signal in _ready().
+func _attach_point_skeleton_updated():
 	if body_shape_skeleton_3d == null:
 		return
+	for state in _anchors.values():
+		state.refresh(body_shape_skeleton_3d)
 
-	right_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_RightHand")
-	left_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_LeftHand")
+
+# Called after a wearable merge rebuilds the skeleton (avatar.gd:667). Walks
+# only the currently-used anchors and re-resolves their bone indices in the
+# new skeleton layout.
+func _reresolve_active_anchors():
+	if body_shape_skeleton_3d == null:
+		return
+	for state in _anchors.values():
+		state.resolve(body_shape_skeleton_3d)
 
 
-func _attach_point_skeleton_updated():
-	if left_hand_idx != -1:
-		left_hand_position = body_shape_skeleton_3d.get_bone_global_pose(left_hand_idx)
-		left_hand_position.basis = left_hand_position.basis.scaled(100.0 * Vector3.ONE)
-
-	if right_hand_idx != -1:
-		right_hand_position = body_shape_skeleton_3d.get_bone_global_pose(right_hand_idx)
-		right_hand_position.basis = right_hand_position.basis.scaled(100.0 * Vector3.ONE)
+# Returns the world-space transform of an avatar anchor point for an
+# AvatarAttach component. anchor_point_id matches the SDK proto enum
+# AvatarAnchorPointType (see avatar_attach.proto). Unknown / unresolved ids
+# fall back to the avatar root so attached entities stay glued to the avatar
+# instead of teleporting to world origin.
+func get_anchor_point_global_transform(anchor_point_id: int) -> Transform3D:
+	# Post-rotate 180° around local Y to align with the Unity reference client.
+	# Godot's GLTF import flips the skeleton coordinate basis vs Unity, leaving
+	# bone-derived +X / +Z inverted relative to the Decentraland SDK / Unity
+	# convention; +Y stays correct. Applies to NAME_TAG too because nickname_quad
+	# is parented under a BoneAttachment3D on Avatar_Head, so it inherits the
+	# same discrepancy.
+	if anchor_point_id == 1:  # AAPT_NAME_TAG
+		return nickname_quad.global_transform.rotated_local(Vector3.UP, PI)
+	var state: AnchorState = _anchors.get(anchor_point_id)
+	if state != null and body_shape_skeleton_3d != null and state.bone_idx != -1:
+		var t := body_shape_skeleton_3d.global_transform * state.cached_transform
+		return t.rotated_local(Vector3.UP, PI)
+	return global_transform
 
 
 func _on_timer_hide_mic_timeout():

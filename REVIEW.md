@@ -13,9 +13,9 @@
 These are blocking prerequisites. Resolve each one (or explicitly note its status in your review) before reading the diff.
 
 1. **Branch must be up to date with `main`.** Run `gh pr view <pr> --json mergeStateStatus,headRefOid,baseRefOid` (or check the PR page). If the PR is behind `main`, **request the author update the branch before a substantive review** — CI signals (especially Android/iOS artifacts) are not trustworthy on a stale base, and recently-merged fixes (autoload ordering, mouse-filter changes, skeleton recycling) frequently invalidate older diffs. A one-line "please rebase / merge `main` and I'll re-review" is the right output if the branch is stale.
-2. **iOS build must be present for platform-sensitive changes.** iOS builds are gated on the `build-ios` label and skipped by default. Check the PR's checks/comments for a `🍏 iOS` artifact in the sticky build report.
+2. **iOS build must be present for platform-sensitive changes.** Mobile builds are gated on the `build` label (alias: `build-ios`) and skipped by default. Check the PR's checks/comments for a `🍏 iOS` artifact in the sticky build report.
    - If the PR touches: native iOS plugins (`plugins/dcl-godot-ios/**`), `OS.get_name() == "iOS"` branches, deeplinks, virtual keyboard / safe-area / `UIView` paths, audio/video/livekit interop, or anything under `lib/src/comms/` or `lib/src/av/` → **an iOS build is required**.
-   - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build-ios` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
+   - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
    - If the PR is purely backend / GDScript-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
 3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes under `plugins/dcl-godot-ios/godot` or any submodule and the PR description does not mention it, treat it as accidental and ask the author to confirm.
 
@@ -90,7 +90,16 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 
 ### Tier 2 — Correctness
 
-6. **Cross-platform regressions.** Touch targets, gestures, virtual keyboard sync on Android/iOS, safe-area insets, landscape vs portrait. `DisplayServer.virtual_keyboard_show()` buffer sync after programmatic text insertion is a known class of bug (#1822). Godot `MOUSE_FILTER` behavior differs between `STOP` / `PASS` / `IGNORE` in non-obvious ways — siblings don't propagate (#1875).
+6. **UI tier structure compliance (Atomic Design — `godot/src/ui/`).** PR #2021 (issue [#1876](https://github.com/decentraland/godot-explorer/issues/1876)) reorganized `godot/src/ui/` into a 5-tier Atomic Design layout: `components/atoms/{buttons,inputs,images,controls}/`, `components/molecules/`, `components/organisms/`, `layouts/`, `pages/`. **Any PR that adds or moves UI files must land them in the correct tier.** Reject:
+   - New files at the bare `components/` root (must be under `atoms/`, `molecules/`, or `organisms/`).
+   - New feature-grouped folders like `components/profile/`, `components/discover/` — features are pages now (`pages/<feature>/`).
+   - A new "Nth button variant" / duplicate input / duplicate toast — `godot/src/ui/COMPONENT_AUDIT.md` lists the 6 known duplication sets; ask the author to pick the canonical one or to file a follow-up issue rather than add another duplicate.
+   - Hardcoded `res://src/ui/<old>/...` paths that survived a move (grep `lib/` too — Rust files like `lib/src/scene_runner/rpc_calls/handle_restricted_actions.rs` load UI scenes by string).
+   - `.png` moves where the sibling `.import` file's `source_file=` still points at the old path.
+   - Mixed-tier placement (e.g. a reusable molecule buried inside `pages/profile/` when it's used by other pages too).
+   The skill `godot-ui-components` (in `.claude/skills/godot-ui-components/SKILL.md`) is the source of truth — it has the decision tree, naming conventions, and verification checklist. The audit doc `godot/src/ui/COMPONENT_AUDIT.md` is the lookup table for current placements and known duplicates.
+
+7. **Cross-platform regressions.** Touch targets, gestures, virtual keyboard sync on Android/iOS, safe-area insets, landscape vs portrait. `DisplayServer.virtual_keyboard_show()` buffer sync after programmatic text insertion is a known class of bug (#1822). Godot `MOUSE_FILTER` behavior differs between `STOP` / `PASS` / `IGNORE` in non-obvious ways — siblings don't propagate (#1875).
 7. **Mouse/input filter and focus stealing.** Buttons that steal focus from a `LineEdit`, containers with fixed `custom_minimum_size` that silently block scene UI underneath, `ScrollContainer` needing dynamic `mouse_filter` based on whether content overflows. Any new UI overlay on the left / bottom of the screen must be tested against SDK-rendered UI underneath.
 8. **Async / race conditions.** Re-entrant `await` inside resize / rotation / teleport handlers (#1823 needed an `_is_switching` guard). Signals connected on a node that hasn't readied yet. Awaits that the caller doesn't `await` on (missing `await` on a coroutine is a real bug class here — see #1851).
 9. **Resource leaks.** Godot does not auto-free bones, nodes outside the tree, or duplicated resources. Historical incident: spring-bone merge never recycled slots across outfit changes → unbounded `Skeleton3D` growth and stale bones silently binding to new meshes (#1849). When you see "add to skeleton / duplicate skin / instantiate on event", ask how it gets removed.
@@ -143,7 +152,7 @@ The PR-level workflows a reviewer should expect green before approving:
 - `Clippy` — `-D warnings`
 - `🐧 Linux`, `🪟 Windows`, `🍎 macOS` builds
 - `🤖 Android` builds (APK/AAB posted as a sticky comment on the PR)
-- `🍏 iOS` is **opt-in** — gated on the `build-ios` label. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
+- `🍏 iOS` is **opt-in** — gated on the `build` label (alias: `build-ios`), which also posts a Slack "Android build ready" notification with the R2 APK download link. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
 
 ### Release flow
 `release` branch is used for production cuts. PRs titled `Release: merge release into main` / `Merge main into release` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).

@@ -31,7 +31,6 @@ enum ConfigParams {
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
-	GAMEPAD_CAMERA_SENSITIVITY,
 	AVATAR_IMPOSTORS_ENABLED,
 }
 
@@ -154,6 +153,11 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 		last_parcel_position = value
 
 var terms_and_conditions_version: int = 0
+# Lowercased wallet address that accepted the IAP terms, or "" if none. Scoped
+# per-wallet (not a plain bool) so one account's legal consent never carries
+# over to a different account signing in on the same device. See
+# IapManager.are_terms_accepted / accept_terms.
+var iap_terms_accepted_wallet: String = ""
 
 # Unix timestamp until which the soft version-upgrade overlay is snoozed
 # (set when the user presses "Later"; ignored for required-minimum blocks).
@@ -223,11 +227,6 @@ var audio_avatar_and_emotes_volume: float = 100.0:
 var audio_mic_amplification: float = 100.0:
 	set(value):
 		audio_mic_amplification = value
-
-var gamepad_camera_sensitivity: float = 50.0:
-	set(value):
-		gamepad_camera_sensitivity = maxf(value, 1.0)
-		param_changed.emit(ConfigParams.GAMEPAD_CAMERA_SENSITIVITY)
 
 var analytics_user_id: String = "":
 	set(value):
@@ -378,7 +377,6 @@ func load_from_settings_file():
 	self.submit_message_closes_chat = settings_file.get_value(
 		"config", "submit_message_closes_chat", data_default.submit_message_closes_chat
 	)
-
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
 	self.resolution_3d_scale = settings_file.get_value(
@@ -413,10 +411,6 @@ func load_from_settings_file():
 		"config", "audio_mic_amplification", data_default.audio_mic_amplification
 	)
 
-	self.gamepad_camera_sensitivity = settings_file.get_value(
-		"config", "gamepad_camera_sensitivity", data_default.gamepad_camera_sensitivity
-	)
-
 	var profile_suffix := _get_profile_suffix()
 	self.session_account = settings_file.get_value(
 		"session", "account" + profile_suffix, data_default.session_account
@@ -446,6 +440,10 @@ func load_from_settings_file():
 
 	self.terms_and_conditions_version = settings_file.get_value(
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
+	)
+
+	self.iap_terms_accepted_wallet = settings_file.get_value(
+		"user", "iap_terms_accepted_wallet", data_default.iap_terms_accepted_wallet
 	)
 
 	self.version_gate_snooze_until = settings_file.get_value(
@@ -513,9 +511,6 @@ func save_to_settings_file():
 		"config", "audio_avatar_and_emotes_volume", self.audio_avatar_and_emotes_volume
 	)
 	new_settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
-	new_settings_file.set_value(
-		"config", "gamepad_camera_sensitivity", self.gamepad_camera_sensitivity
-	)
 	new_settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 
 	# Preserve all existing session keys (other profile slots)
@@ -536,6 +531,7 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
+	new_settings_file.set_value("user", "iap_terms_accepted_wallet", self.iap_terms_accepted_wallet)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)

@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://nn0iih4xpn2e"]
+
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_asumd"]
+[ext_resource type="Script" uid="uid://dn3hlhbknm1ej" path="res://src/ui/components/atoms/buttons/button_touch_action/button_touch_action.gd" id="2_c0jk1"]
+
+[node name="Button_TouchAction" type="Button" unique_id=1532661067]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+custom_minimum_size = Vector2(65, 65)
+offset_right = 31.0
+offset_bottom = 55.0
+focus_mode = 0
+theme = ExtResource("2_asumd")
+theme_type_variation = &"TouchableButton"
+text = "E"
+icon_alignment = 1
+script = ExtResource("2_c0jk1")
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]

@@ -124,6 +124,13 @@ pub struct SceneManager {
     // Loading session tracking
     current_loading_session: Option<LoadingSession>,
     next_session_id: u64,
+
+    // Benchmark toggles (issue #1862). Set by gp_benchmark_runner.gd from
+    // godot/bench/genesis_plaza.config.json before scenes start ticking.
+    #[var(get, set)]
+    bench_disable_tweens: bool,
+    #[var(get, set)]
+    bench_disable_transforms: bool,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -401,6 +408,59 @@ impl SceneManager {
             self.check_loading_phase_transition();
             self.emit_loading_progress();
         }
+    }
+
+    /// Reset per-state CPU timing buckets used by the GP benchmark to measure
+    /// where steady-state per-frame work goes (call right before sampling).
+    #[func]
+    pub fn reset_state_timing(&mut self) {
+        super::update_scene::reset_state_timing();
+    }
+
+    /// Drain per-state CPU timing buckets as `State=us(count)\n...` lines.
+    /// Call right after sampling; embed in benchmark JSON for analysis.
+    #[func]
+    pub fn drain_state_timing(&mut self) -> GString {
+        let s = super::update_scene::drain_state_timing();
+        GString::from(s.as_str())
+    }
+
+    /// Reset CRDT cross-boundary metrics (send/recv bytes, op counts, dirty
+    /// entries). Call right before sampling.
+    #[func]
+    pub fn reset_crdt_metrics(&mut self) {
+        crate::dcl::js::engine::reset_crdt_metrics();
+    }
+
+    /// Drain CRDT cross-boundary metrics as `key=value\n...` lines. Call right
+    /// after sampling; embed in benchmark JSON.
+    #[func]
+    pub fn drain_crdt_metrics(&mut self) -> GString {
+        let m = crate::dcl::js::engine::drain_crdt_metrics();
+        let s = format!(
+            "send_bytes={}\nsend_ops={}\nrecv_bytes={}\nrecv_ops={}\ndirty_lww_entries={}\ndirty_gos_entries={}\n",
+            m.send_bytes, m.send_ops, m.recv_bytes, m.recv_ops, m.dirty_lww_entries, m.dirty_gos_entries,
+        );
+        GString::from(s.as_str())
+    }
+
+    /// Drain per-component-id breakdown of dirty entries from the Rust→V8 path.
+    /// Returns a multi-line string: `lww:<name>(<id>)=<count>` then
+    /// `gos:<name>(<id>)=<count>`, sorted descending. Bench runner embeds this
+    /// in JSON to identify which SDK7 components dominate the round-trip.
+    #[func]
+    pub fn drain_crdt_component_breakdown(&mut self) -> GString {
+        let breakdown = crate::dcl::js::engine::drain_crdt_component_breakdown();
+        let mut out = String::new();
+        for (id, count) in breakdown.lww {
+            let name = crate::dcl::components::component_id_to_name(id);
+            out.push_str(&format!("lww:{}({})={}\n", name, id, count));
+        }
+        for (id, count) in breakdown.gos {
+            let name = crate::dcl::components::component_id_to_name(id);
+            out.push_str(&format!("gos:{}({})={}\n", name, id, count));
+        }
+        GString::from(out.as_str())
     }
 
     /// Report that a scene was spawned and is now loading assets
@@ -813,6 +873,253 @@ impl SceneManager {
         Vector2i::default()
     }
 
+    /// Debug: list scene IDs currently loaded in the renderer. Used by the
+    /// developer-only debug WebSocket endpoint.
+    #[func]
+    fn debug_get_loaded_scene_ids(&self) -> PackedInt32Array {
+        let mut out = PackedInt32Array::new();
+        for scene_id in self.scenes.keys() {
+            out.push(scene_id.0);
+        }
+        out
+    }
+
+    /// Debug: list every alive entity id in a scene's CRDT state.
+    /// Returns an empty array if the scene is not loaded.
+    #[func]
+    fn debug_list_entities(&self, scene_id: i32) -> PackedInt32Array {
+        let mut out = PackedInt32Array::new();
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return out;
+        };
+        let Ok(crdt) = scene.dcl_scene.scene_crdt.lock() else {
+            return out;
+        };
+        for number in 0u32..=u16::MAX as u32 {
+            let (version, live) = crdt.entities.get_entity_stat(number as u16);
+            if *live {
+                let entity = SceneEntityId::new(number as u16, *version);
+                out.push(entity.as_i32());
+            }
+        }
+        out
+    }
+
+    /// Debug: returns the Godot `InstanceId` (as i64) of the UI Control
+    /// associated with `entity_id` in `scene_id`, or `-1` if the entity has
+    /// no UI node attached or the scene is not loaded. GDScript can resolve
+    /// the returned id via `instance_from_id(...)`. Used by the debug WS
+    /// `ui_scene` / `ui_entity` commands to inspect the 2D render tree
+    /// (which lives separately from the 3D `DclNodeEntity3d` tree the
+    /// `scene` / `entity` cmds walk).
+    #[func]
+    fn debug_get_entity_ui_control_id(&self, scene_id: i32, entity_id: i32) -> i64 {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return -1;
+        };
+        let entity = SceneEntityId::from_i32(entity_id);
+        match scene.godot_dcl_scene.get_node_or_null_ui(&entity) {
+            Some(ui_node) => ui_node.base_control.instance_id().to_i64(),
+            None => -1,
+        }
+    }
+
+    /// Debug: returns the Transform.parent of `entity_id` in `scene_id` as an
+    /// i64 (i32 encoded SceneEntityId). Returns -1 if no Transform exists for
+    /// that entity or the scene is not loaded.
+    #[func]
+    fn debug_get_entity_parent(&self, scene_id: i32, entity_id: i32) -> i64 {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return -1;
+        };
+        let Ok(crdt) = scene.dcl_scene.scene_crdt.lock() else {
+            return -1;
+        };
+        let Some(transform_def) =
+            crdt.get_lww_component_definition(crate::dcl::components::SceneComponentId::TRANSFORM)
+        else {
+            return -1;
+        };
+        let entity = SceneEntityId::from_i32(entity_id);
+        let mut buf = Vec::new();
+        {
+            let mut writer = crate::dcl::serialization::writer::DclWriter::new(&mut buf);
+            if transform_def.to_binary(entity, &mut writer).is_err() {
+                return -1;
+            }
+        }
+        let json = match crate::dcl::components::proto_components::deserialize_component_to_json(
+            1, &buf,
+        ) {
+            Some(v) => v,
+            None => return -1,
+        };
+        json.get("parent").and_then(|v| v.as_i64()).unwrap_or(-1)
+    }
+
+    /// Debug: returns the names of CRDT components present on an entity,
+    /// without deserializing payloads. Cheap enough to call across every
+    /// entity for the WS server's component-name filter pass. GOS components
+    /// are included if the entity has any entries in them.
+    #[func]
+    fn debug_get_entity_component_names(&self, scene_id: i32, entity_id: i32) -> PackedStringArray {
+        let mut out = PackedStringArray::new();
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return out;
+        };
+        let Ok(crdt) = scene.dcl_scene.scene_crdt.lock() else {
+            return out;
+        };
+        let entity = SceneEntityId::from_i32(entity_id);
+        let component_ids: Vec<crate::dcl::components::SceneComponentId> =
+            crdt.components.keys().copied().collect();
+
+        for component_id in component_ids {
+            let present = if let Some(lww_def) = crdt.get_lww_component_definition(component_id) {
+                lww_def
+                    .get_opaque(entity)
+                    .map(|o| o.value.is_some())
+                    .unwrap_or(false)
+            } else if let Some(gos_def) = crdt.get_gos_component_definition(component_id) {
+                // Trait has no `len(entity)` — probe index 0 cheaply.
+                let mut probe = Vec::new();
+                let mut writer = crate::dcl::serialization::writer::DclWriter::new(&mut probe);
+                gos_def.to_binary(entity, 0, &mut writer).is_ok()
+            } else {
+                false
+            };
+            if present {
+                let name = crate::dcl::components::component_id_to_name(component_id.0);
+                let key = if name == "Unknown" {
+                    format!("Unknown_{}", component_id.0)
+                } else {
+                    name.to_string()
+                };
+                out.push(&key);
+            }
+        }
+        out
+    }
+
+    /// Debug: returns all CRDT components on an entity, with payloads
+    /// deserialized to JSON. Shape:
+    /// `{"lww": {"Transform": {...}, "TextShape": {...}, ...},
+    ///   "gos": {"PointerEventsResult": [{...}, {...}], ...}}`
+    /// Returns an empty string if the scene is not loaded.
+    #[func]
+    fn debug_get_entity_components_json(&self, scene_id: i32, entity_id: i32) -> GString {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return GString::default();
+        };
+        let entity = SceneEntityId::from_i32(entity_id);
+
+        // Collect raw binary payloads while holding the lock; drop the lock
+        // before doing the JSON deserialization to keep the locked section
+        // tight (scenes also touch this mutex during their tick).
+        type LwwBlobs = Vec<(u32, Vec<u8>)>;
+        type GosBlobs = Vec<(u32, Vec<Vec<u8>>)>;
+        let (lww_blobs, gos_blobs): (LwwBlobs, GosBlobs) = {
+            let Ok(crdt) = scene.dcl_scene.scene_crdt.lock() else {
+                return GString::default();
+            };
+            let mut lww_blobs = Vec::new();
+            let mut gos_blobs = Vec::new();
+            let component_ids: Vec<crate::dcl::components::SceneComponentId> =
+                crdt.components.keys().copied().collect();
+
+            for component_id in component_ids {
+                // Try LWW first.
+                if let Some(lww_def) = crdt.get_lww_component_definition(component_id) {
+                    if let Some(opaque) = lww_def.get_opaque(entity) {
+                        if opaque.value.is_some() {
+                            let mut buf = Vec::new();
+                            let mut writer =
+                                crate::dcl::serialization::writer::DclWriter::new(&mut buf);
+                            if lww_def.to_binary(entity, &mut writer).is_ok() {
+                                lww_blobs.push((component_id.0, buf));
+                            }
+                        }
+                        continue;
+                    }
+                }
+                // Then GOS. The Generic trait has no count method, so probe
+                // increasing indices until to_binary errors out.
+                if let Some(gos_def) = crdt.get_gos_component_definition(component_id) {
+                    let mut entries: Vec<Vec<u8>> = Vec::new();
+                    let mut i = 0usize;
+                    loop {
+                        let mut buf = Vec::new();
+                        let mut writer =
+                            crate::dcl::serialization::writer::DclWriter::new(&mut buf);
+                        if gos_def.to_binary(entity, i, &mut writer).is_err() {
+                            break;
+                        }
+                        entries.push(buf);
+                        i += 1;
+                        // Defensive cap; GOS values cap is 100 per entity.
+                        if i > 256 {
+                            break;
+                        }
+                    }
+                    if !entries.is_empty() {
+                        gos_blobs.push((component_id.0, entries));
+                    }
+                }
+            }
+            (lww_blobs, gos_blobs)
+        };
+
+        let mut lww_json = serde_json::Map::new();
+        for (component_id, buf) in lww_blobs {
+            let name = crate::dcl::components::component_id_to_name(component_id);
+            let key = if name == "Unknown" {
+                format!("Unknown_{}", component_id)
+            } else {
+                name.to_string()
+            };
+            match crate::dcl::components::proto_components::deserialize_component_to_json(
+                component_id,
+                &buf,
+            ) {
+                Some(v) => {
+                    lww_json.insert(key, v);
+                }
+                None => {
+                    lww_json.insert(
+                        key,
+                        serde_json::json!({ "__decode_error": true, "bytes_len": buf.len() }),
+                    );
+                }
+            }
+        }
+
+        let mut gos_json = serde_json::Map::new();
+        for (component_id, entries) in gos_blobs {
+            let name = crate::dcl::components::component_id_to_name(component_id);
+            let key = if name == "Unknown" {
+                format!("Unknown_{}", component_id)
+            } else {
+                name.to_string()
+            };
+            let arr: Vec<serde_json::Value> = entries
+                .into_iter()
+                .map(|buf| {
+                    crate::dcl::components::proto_components::deserialize_component_to_json(
+                        component_id,
+                        &buf,
+                    )
+                    .unwrap_or_else(
+                        || serde_json::json!({ "__decode_error": true, "bytes_len": buf.len() }),
+                    )
+                })
+                .collect();
+            gos_json.insert(key, serde_json::Value::Array(arr));
+        }
+
+        let out = serde_json::json!({ "lww": lww_json, "gos": gos_json });
+        GString::from(out.to_string().as_str())
+    }
+
     fn compute_scene_distance(&mut self) {
         self.current_parcel_scene_id = SceneId::INVALID;
 
@@ -837,7 +1144,21 @@ impl SceneManager {
     }
 
     fn scene_runner_update(&mut self, delta: f64) {
+        // Scene teardown must always make progress, even when the runner is paused
+        // (the lobby pauses it) or the player avatar is gone (post sign-out). The
+        // early-returns below would otherwise skip the kill state machine, leaving
+        // scenes marked ToKill on sign-out / realm change alive forever with live
+        // V8/Deno threads. Reaping here guarantees background teardown either way.
+        self.reap_dying_scenes();
+
         if self.pause {
+            return;
+        }
+
+        // SceneManager outlives the Explorer scene (autoload singleton). When the user
+        // signs out via change_scene_to_file, player_avatar_node becomes a dangling
+        // reference until the next Explorer load reassigns it via set_player_node.
+        if !self.player_avatar_node.is_instance_valid() {
             return;
         }
 
@@ -925,11 +1246,10 @@ impl SceneManager {
         //     tracing::info!("next_update: {next_update_vec:#?}");
         // }
 
-        let mut current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for scene_id in self.sorted_scene_ids.iter() {
             let scene: &mut Scene = self.scenes.get_mut(scene_id).unwrap();
 
-            current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+            let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
             if scene.next_tick_us > current_time_us {
                 break;
             }
@@ -978,6 +1298,8 @@ impl SceneManager {
                     &self.ui_canvas_information,
                     &self.pool_manager,
                     force_complete,
+                    self.bench_disable_tweens,
+                    self.bench_disable_transforms,
                 ) {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -991,8 +1313,42 @@ impl SceneManager {
         // Process loading session updates from all scenes
         self.update_loading_session_from_scenes();
 
+        // Explicitly-killed scenes are advanced by reap_dying_scenes() at the top
+        // of this function (so they tear down even while paused). Here we only
+        // collect scenes that exited while still Alive (thread finished without a
+        // kill signal); they are freed by the drain loop below.
+
+        // Periodic pool health check and stats logging (handled by PoolManager)
+        self.pool_manager.borrow_mut().tick();
+
+        for scene_id in scene_to_remove.iter() {
+            self.finalize_scene_removal(scene_id);
+        }
+    }
+
+    /// Advance the kill state machine for every dying scene and free those that
+    /// have finished. Runs every frame from the top of `scene_runner_update`,
+    /// unconditionally — before the `pause` / avatar-validity early-returns — so
+    /// scenes killed on sign-out or realm change are guaranteed to be torn down
+    /// (V8/Deno threads joined, Godot nodes freed) even after the lobby pauses the
+    /// runner. Without this, killed scenes would linger forever as ToKill.
+    fn reap_dying_scenes(&mut self) {
+        if self.dying_scene_ids.is_empty() {
+            return;
+        }
+
+        let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+        let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
+        let mut stale_scene_ids: Vec<SceneId> = Vec::new();
+
         for scene_id in self.dying_scene_ids.iter() {
-            let scene = self.scenes.get_mut(scene_id).unwrap();
+            let Some(scene) = self.scenes.get_mut(scene_id) else {
+                // The scene was already removed from the map (e.g. its nodes were
+                // freed with the Explorer during sign-out before we reaped it).
+                // Drop the dangling id below instead of unwrap()-panicking on it.
+                stale_scene_ids.push(*scene_id);
+                continue;
+            };
             match scene.state {
                 SceneState::ToKill => {
                     match scene
@@ -1062,63 +1418,83 @@ impl SceneManager {
             }
         }
 
-        // Periodic pool health check and stats logging (handled by PoolManager)
-        self.pool_manager.borrow_mut().tick();
+        // Drop any dangling ids whose scenes are already gone, so we don't retry
+        // (and re-panic) on them every frame.
+        if !stale_scene_ids.is_empty() {
+            self.sorted_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+            self.dying_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+            self.global_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+        }
 
         for scene_id in scene_to_remove.iter() {
-            let mut scene = self.scenes.remove(scene_id).unwrap();
-            let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+            self.finalize_scene_removal(scene_id);
+        }
+    }
 
-            // Cleanup trigger areas and release RIDs back to pool
-            scene
-                .trigger_areas
-                .cleanup(self.pool_manager.borrow_mut().physics_area());
+    /// Remove a single dead scene: free its Godot nodes, drop bookkeeping, join the
+    /// thread and emit scene_killed / scene_crashed. Shared by the normal update
+    /// path (scenes that exited while Alive) and reap_dying_scenes().
+    fn finalize_scene_removal(&mut self, scene_id: &SceneId) {
+        // Prune bookkeeping FIRST so that even if a later step (e.g. freeing an
+        // already-freed Godot node) were to fail, the id can't get stuck in
+        // dying_scene_ids and spam reap_dying_scenes() every frame.
+        self.sorted_scene_ids.retain(|x| x != scene_id);
+        self.dying_scene_ids.retain(|x| x != scene_id);
+        self.global_scene_ids.retain(|x| x != scene_id);
 
-            // Cleanup Rust references first (doesn't free nodes yet)
-            scene.cleanup();
+        let Some(mut scene) = self.scenes.remove(scene_id) else {
+            return;
+        };
+        let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
 
-            // Free root nodes - queue_free handles both removal from tree and freeing
-            // This is safer than manually calling remove_child + queue_free separately
-            // because queue_free schedules everything atomically for end of frame
-            scene.godot_dcl_scene.free_root_nodes();
+        // Cleanup trigger areas and release RIDs back to pool
+        scene
+            .trigger_areas
+            .cleanup(self.pool_manager.borrow_mut().physics_area());
 
-            self.sorted_scene_ids.retain(|x| x != scene_id);
-            self.dying_scene_ids.retain(|x| x != scene_id);
-            self.global_scene_ids.retain(|x| x != scene_id);
+        // Cleanup Rust references first (doesn't free nodes yet)
+        scene.cleanup();
 
-            // Clean up VM_HANDLES entry
-            #[cfg(feature = "use_deno")]
-            {
-                if let Ok(mut handles) = crate::dcl::js::VM_HANDLES.lock() {
-                    handles.remove(scene_id);
-                }
+        // Free root nodes - queue_free handles both removal from tree and freeing
+        // This is safer than manually calling remove_child + queue_free separately
+        // because queue_free schedules everything atomically for end of frame
+        scene.godot_dcl_scene.free_root_nodes();
+
+        // Clean up VM_HANDLES entry
+        #[cfg(feature = "use_deno")]
+        {
+            if let Ok(mut handles) = crate::dcl::js::VM_HANDLES.lock() {
+                handles.remove(scene_id);
             }
+        }
 
-            if scene.dcl_scene.thread_join_handle.is_finished() {
-                if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
-                    let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
-                        format!("Thread panicked with: {}", panic_info)
-                    } else if let Some(panic_info) = err.downcast_ref::<String>() {
-                        format!("Thread panicked with: {}", panic_info)
-                    } else {
-                        "Thread panicked with an unknown payload".to_string()
-                    };
-                    tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
-                }
+        if scene.dcl_scene.thread_join_handle.is_finished() {
+            if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
+                let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
+                    format!("Thread panicked with: {}", panic_info)
+                } else if let Some(panic_info) = err.downcast_ref::<String>() {
+                    format!("Thread panicked with: {}", panic_info)
+                } else {
+                    "Thread panicked with an unknown payload".to_string()
+                };
+                tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
             }
+        }
 
+        self.base_mut().emit_signal(
+            "scene_killed",
+            &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+        );
+
+        if self.crashed_scene_ids.contains(scene_id) {
+            self.crashed_scene_ids.retain(|x| x != scene_id);
             self.base_mut().emit_signal(
-                "scene_killed",
+                "scene_crashed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
-
-            if self.crashed_scene_ids.contains(scene_id) {
-                self.crashed_scene_ids.retain(|x| x != scene_id);
-                self.base_mut().emit_signal(
-                    "scene_crashed",
-                    &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
-                );
-            }
         }
     }
 
@@ -1384,16 +1760,19 @@ impl SceneManager {
         let right = (canvas_size.x - ia_end.x as f32).clamp(0.0, canvas_size.x);
         let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
 
+        let border_rect = BorderRect {
+            top,
+            left,
+            right,
+            bottom,
+        };
+
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
-            interactable_area: Some(BorderRect {
-                top,
-                left,
-                right,
-                bottom,
-            }),
+            interactable_area: Some(border_rect.clone()),
+            screen_inset_area: Some(border_rect),
         }
     }
 
@@ -1469,6 +1848,10 @@ impl SceneManager {
             for (_, video_player_node) in scene.video_players.iter_mut() {
                 video_player_node.bind_mut().set_muted(true);
             }
+
+            // Stop any wind/impulse the player just walked out of.
+            scene.active_external_force = Vector3::ZERO;
+            scene.pending_impulses.clear();
 
             scene
                 .avatar_scene_updates
@@ -1574,6 +1957,27 @@ impl SceneManager {
             .get(&self.current_parcel_scene_id)
             .map(|x| x.locomotion_settings.clone())
             .unwrap_or_default()
+    }
+
+    /// Current parcel scene's external force on the player (Godot axes), or
+    /// zero if no scene is driving one.
+    #[func]
+    pub fn get_active_external_force(&self) -> Vector3 {
+        self.scenes
+            .get(&self.current_parcel_scene_id)
+            .map(|x| x.active_external_force)
+            .unwrap_or(Vector3::ZERO)
+    }
+
+    /// Drain pending impulse vectors (Godot axes) from the current parcel
+    /// scene. The player controller calls this once per physics tick.
+    #[func]
+    pub fn consume_pending_impulses(&mut self) -> PackedVector3Array {
+        let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) else {
+            return PackedVector3Array::new();
+        };
+        let drained: Vec<Vector3> = scene.pending_impulses.drain(..).collect();
+        PackedVector3Array::from(drained.as_slice())
     }
 
     #[func]
@@ -1779,6 +2183,8 @@ impl INode for SceneManager {
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
+            bench_disable_tweens: false,
+            bench_disable_transforms: false,
         }
     }
 
@@ -1803,6 +2209,14 @@ impl INode for SceneManager {
 
         // Check loading session timeouts
         self.check_loading_timeouts();
+
+        // SceneManager is owned by DclGlobal (autoload) and outlives the Explorer scene.
+        // After change_scene_to_file (e.g. Sign Out), `player_avatar_node` becomes a
+        // dangling reference until the next Explorer load reassigns it via set_player_node.
+        // The pointer/raycast/tooltip block below derefs that node, so bail out here.
+        if !self.player_avatar_node.is_instance_valid() {
+            return;
+        }
 
         // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
         // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.

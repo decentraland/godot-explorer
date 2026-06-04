@@ -1,0 +1,1028 @@
+[gd_scene format=3 uid="uid://dcar8bc8rcscu"]
+
+[ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/pages/profile/profile.gd" id="1_y2op1"]
+[ext_resource type="Material" uid="uid://bv7vw2bdrp1mm" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_px_material.tres" id="2_odsw2"]
+[ext_resource type="Texture2D" uid="uid://dp0taipjfwpux" path="res://src/ui/pages/profile/profile-background-corner0.png" id="3_doqh1"]
+[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/layouts/hide_orientation.gd" id="3_oe5oo"]
+[ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="5_yx7pe"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="7_m8kjd"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_fhbaj"]
+[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="8_wxsqs"]
+[ext_resource type="Texture2D" uid="uid://cxrkry4lwh1a4" path="res://assets/ui/edit-icon.svg" id="9_ybu4s"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_odsw2"]
+[ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/atoms/buttons/custom_button/custom_button.tscn" id="12_7xla3"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_dja5r"]
+[ext_resource type="Texture2D" uid="uid://byaritt3jr72o" path="res://assets/ui/friend-icon.svg" id="13_pa1ft"]
+[ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="13_quy3q"]
+[ext_resource type="Texture2D" uid="uid://6nj4qi6iey2o" path="res://assets/ui/pending-icon.svg" id="14_7xla3"]
+[ext_resource type="Texture2D" uid="uid://bu0ha8dwtwdcl" path="res://assets/ui/unfriend.svg" id="14_ur8se"]
+[ext_resource type="Texture2D" uid="uid://db3wvj8amhgv4" path="res://assets/ui/cancel-request-icon.svg" id="15_pa1ft"]
+[ext_resource type="Texture2D" uid="uid://b4tgkud7pa3en" path="res://assets/ui/add-friend-icon.svg" id="16_aoppn"]
+[ext_resource type="Texture2D" uid="uid://cqjwja1mdqpus" path="res://assets/ui/menu-icon.svg" id="18_7xla3"]
+[ext_resource type="PackedScene" uid="uid://7u7y8c3bnf1i" path="res://src/ui/components/organisms/social/mutual_friends.tscn" id="18_61jmm"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="18_fhbaj"]
+[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/pages/discover/icons/close.svg" id="19_7xla3"]
+[ext_resource type="Texture2D" uid="uid://71yn28q2vqlq" path="res://assets/ui/copy-icon.svg" id="19_awuqu"]
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/pages/discover/carrousel/discover_carrousel_skeleton_material.tres" id="26_doqh1"]
+[ext_resource type="Texture2D" uid="uid://0w50cay6b2b6" path="res://assets/ui/mute.svg" id="27_8iwyo"]
+[ext_resource type="PackedScene" uid="uid://ddgiwkq38wjib" path="res://src/ui/pages/profile/profile_about.tscn" id="40_about"]
+[ext_resource type="PackedScene" uid="uid://b2ojldlluptgu" path="res://src/ui/pages/profile/profile_equipped.tscn" id="41_equipped"]
+[ext_resource type="PackedScene" uid="uid://d2i7uk87vqea0" path="res://src/ui/pages/profile/profile_links.tscn" id="42_links"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_usboe"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_54w24"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_awuqu"]
+font = ExtResource("18_fhbaj")
+font_size = 38
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_pa1ft"]
+font = ExtResource("8_fhbaj")
+font_size = 28
+font_color = Color(1, 1, 1, 0.69803923)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7xla3"]
+content_margin_left = 24.0
+content_margin_top = 8.0
+content_margin_right = 24.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.1764706, 0.33333334, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pa1ft"]
+content_margin_left = 24.0
+content_margin_top = 8.0
+content_margin_right = 24.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.6)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.1764706, 0.33333334, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aoppn"]
+content_margin_left = 24.0
+content_margin_top = 8.0
+content_margin_right = 24.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.3019608)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.1764706, 0.33333334, 0.3019608)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ancl8"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gsgit"]
+content_margin_left = 0.0
+content_margin_top = 8.0
+content_margin_right = 0.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dd43y"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_62kvd"]
+content_margin_left = 0.0
+content_margin_top = 8.0
+content_margin_right = 0.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6livn"]
+content_margin_left = 0.0
+content_margin_top = 8.0
+content_margin_right = 0.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_31qfp"]
+content_margin_left = 0.0
+content_margin_top = 8.0
+content_margin_right = 0.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cfhsh"]
+content_margin_left = 0.0
+content_margin_top = 8.0
+content_margin_right = 0.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cpyjo"]
+content_margin_left = 0.0
+content_margin_top = 8.0
+content_margin_right = 0.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cwb2j"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0, 0, 0, 0.3019608)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fc0ga"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.3019608)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pv147"]
+content_margin_left = 0.0
+content_margin_top = 8.0
+content_margin_right = 0.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="LabelSettings" id="LabelSettings_7xla3"]
+font = ExtResource("18_fhbaj")
+font_size = 26
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[sub_resource type="DPITexture" id="DPITexture_odsw2"]
+_source = "<svg width=\"50\" height=\"50\" viewBox=\"0 0 50 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
+<path d=\"M36.6363 34.7917H38.1667C41.4804 34.7917 44.1667 32.1054 44.1667 28.7917V11.625C44.1667 8.31129 41.4804 5.625 38.1667 5.625H21C17.6863 5.625 15 8.31129 15 11.625V13.7109\" stroke=\"#FFFFFF\" stroke-width=\"3\" stroke-linejoin=\"round\"/>
+<rect x=\"6.6665\" y=\"13.9583\" width=\"29.1667\" height=\"29.1667\" rx=\"6\" stroke=\"#FFFFFF\" stroke-width=\"5\" stroke-linejoin=\"round\"/>
+</svg>
+"
+base_scale = 2.0
+color_map = {
+Color(1, 1, 1, 1): Color(0.9098039, 0.7254902, 1, 1)
+}
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_odsw2"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8iwyo"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_quy3q"]
+bg_color = Color(0.105882354, 0, 0.1764706, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 0.69803923)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_dja5r"]
+
+[node name="Profile" type="PanelContainer" unique_id=1702914277]
+show_behind_parent = true
+clip_contents = true
+custom_minimum_size = Vector2(1338, 620)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 2
+mouse_force_pass_scroll_events = false
+theme_override_styles/panel = SubResource("StyleBoxEmpty_usboe")
+script = ExtResource("1_y2op1")
+metadata/_edit_vertical_guides_ = [-101.0]
+metadata/mobile_preview_orientation = "landscape"
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=2110333046]
+material = ExtResource("2_odsw2")
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("3_doqh1")
+
+[node name="MarginContainer2" type="MarginContainer" parent="." unique_id=1754883546]
+layout_mode = 2
+theme_override_constants/margin_top = 26
+theme_override_constants/margin_bottom = 16
+
+[node name="HBoxContainer_Data" type="HBoxContainer" parent="MarginContainer2" unique_id=1271933701]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Control_landscape_avatar" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_Data" unique_id=1014042853]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(317, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("3_oe5oo")
+hide_on_portrait = true
+
+[node name="AvatarPreview" parent="MarginContainer2/HBoxContainer_Data/Control_landscape_avatar" unique_id=1777828426 instance=ExtResource("5_yx7pe")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 1
+size_flags_vertical = 3
+mouse_filter = 0
+stretch = true
+hide_name = true
+can_drag = false
+preview_margin_top = 64
+preview_margin_bottom = 26
+preview_margin_left = 20
+preview_margin_right = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_Data/Control_landscape_avatar" unique_id=1343734943]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+
+[node name="MutualFriends" parent="MarginContainer2/HBoxContainer_Data/Control_landscape_avatar/VBoxContainer" unique_id=826336159 instance=ExtResource("18_61jmm")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+theme_override_constants/margin_bottom = 0
+
+[node name="VSeparator" type="VSeparator" parent="MarginContainer2/HBoxContainer_Data" unique_id=1251501615]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_54w24")
+
+[node name="VBoxContainer_info" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_Data" unique_id=1139272719]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+theme_override_constants/separation = 15
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info" unique_id=296076160]
+layout_mode = 2
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 32
+
+[node name="ProfileHeader" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer" unique_id=15557438]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader" unique_id=1112054873]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3" unique_id=1476327908]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer" unique_id=21230866]
+custom_minimum_size = Vector2(0, 51)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Label_Nickname" type="Label" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer" unique_id=810898146]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("7_m8kjd")
+theme_override_font_sizes/font_size = 27
+text = "Nickname"
+label_settings = SubResource("LabelSettings_awuqu")
+
+[node name="MarginContainer_Tag" type="MarginContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer" unique_id=1454372201]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 6
+
+[node name="Label_Tag" type="Label" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer/MarginContainer_Tag" unique_id=931200006]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.625597, 0.625597, 0.625597, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("7_m8kjd")
+theme_override_font_sizes/font_size = 27
+text = ""
+label_settings = SubResource("LabelSettings_pa1ft")
+vertical_alignment = 1
+
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer" unique_id=1590476500]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("8_wxsqs")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3" unique_id=1069876298]
+custom_minimum_size = Vector2(84, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 2
+
+[node name="Button_EditProfile" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=468004764 instance=ExtResource("12_7xla3")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 60)
+layout_mode = 2
+size_flags_horizontal = 1
+theme_override_constants/h_separation = 16
+theme_override_font_sizes/font_size = 20
+custom_icon = ExtResource("9_ybu4s")
+custom_icon_pressed = ExtResource("9_ybu4s")
+custom_text = "EDIT PROFILE"
+
+[node name="Button_Friend" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1094644081 instance=ExtResource("12_7xla3")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(168, 60)
+layout_mode = 2
+theme_type_variation = &"SecondaryLittle"
+custom_icon = ExtResource("13_pa1ft")
+custom_icon_pressed = ExtResource("13_pa1ft")
+custom_text = "FRIEND"
+
+[node name="Button_Pending" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=952246903 instance=ExtResource("12_7xla3")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(190, 60)
+layout_mode = 2
+theme_type_variation = &"SecondaryLittle"
+custom_icon = ExtResource("14_7xla3")
+custom_icon_pressed = ExtResource("14_7xla3")
+custom_text = "PENDING"
+
+[node name="Button_CancelRequest" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=2129687283 instance=ExtResource("12_7xla3")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(301, 60)
+layout_mode = 2
+theme_type_variation = &"SecondaryLittle"
+theme_override_styles/normal = SubResource("StyleBoxFlat_7xla3")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_7xla3")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/hover = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_aoppn")
+theme_override_styles/focus = SubResource("StyleBoxFlat_pa1ft")
+custom_icon = ExtResource("15_pa1ft")
+custom_icon_pressed = ExtResource("15_pa1ft")
+custom_text = "CANCEL REQUEST"
+
+[node name="Button_Blocked" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1628868722 instance=ExtResource("12_7xla3")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(196, 60)
+layout_mode = 2
+theme_type_variation = &"SecondaryLittle"
+theme_override_styles/normal = SubResource("StyleBoxFlat_7xla3")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_7xla3")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/hover = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_pa1ft")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_aoppn")
+theme_override_styles/focus = SubResource("StyleBoxFlat_pa1ft")
+custom_icon = ExtResource("15_pa1ft")
+custom_icon_pressed = ExtResource("15_pa1ft")
+custom_text = "BLOCKED"
+
+[node name="Button_AddFriend" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1444914885 instance=ExtResource("12_7xla3")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(227, 60)
+layout_mode = 2
+theme_type_variation = &"ButtonLittle"
+custom_icon = ExtResource("16_aoppn")
+custom_icon_pressed = ExtResource("16_aoppn")
+custom_text = "ADD FRIEND"
+
+[node name="Button_Menu" type="Button" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=339281591]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"SecondaryLittle"
+theme_override_colors/icon_focus_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_ancl8")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_gsgit")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_dd43y")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_62kvd")
+theme_override_styles/hover = SubResource("StyleBoxFlat_6livn")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_31qfp")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_cfhsh")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_cpyjo")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_cwb2j")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_fc0ga")
+theme_override_styles/focus = SubResource("StyleBoxFlat_pv147")
+toggle_mode = true
+icon = ExtResource("18_7xla3")
+icon_alignment = 1
+
+[node name="Button_CloseProfile" type="Button" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=853408696]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"SecondaryLittle"
+theme_override_colors/icon_focus_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_constants/icon_max_width = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_ancl8")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_gsgit")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_dd43y")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_62kvd")
+theme_override_styles/hover = SubResource("StyleBoxFlat_6livn")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_31qfp")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_cfhsh")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_cpyjo")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_cwb2j")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_fc0ga")
+theme_override_styles/focus = SubResource("StyleBoxFlat_pv147")
+icon = ExtResource("19_7xla3")
+icon_alignment = 1
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader" unique_id=1417316208]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2" unique_id=2044423602]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Label_Address" type="Label" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer" unique_id=763917136]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("10_odsw2")
+theme_override_font_sizes/font_size = 18
+text = "0x4e1...1c13B"
+label_settings = SubResource("LabelSettings_7xla3")
+
+[node name="Button_CopyAddress" type="TextureButton" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer" unique_id=936456046]
+unique_name_in_owner = true
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"SecondaryLittle"
+texture_normal = ExtResource("19_awuqu")
+texture_pressed = SubResource("DPITexture_odsw2")
+texture_hover = ExtResource("19_awuqu")
+texture_disabled = ExtResource("19_awuqu")
+texture_focused = ExtResource("19_awuqu")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info" unique_id=1558586121]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/ScrollContainer" unique_id=114432164]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 30
+
+[node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/ScrollContainer/VBoxContainer" unique_id=1047773352]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" unique_id=944153357]
+layout_mode = 2
+theme_override_constants/margin_right = 32
+
+[node name="ProfileAbout" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer" unique_id=1041749057 instance=ExtResource("40_about")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ProfileEquipped" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" unique_id=76723050 instance=ExtResource("41_equipped")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ProfileLinks" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" unique_id=1049095341 instance=ExtResource("42_links")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Control_OwnAndLandscape" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_Data" unique_id=860719787]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="Control" type="Control" parent="MarginContainer2/HBoxContainer_Data/Control_OwnAndLandscape" unique_id=38563128]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+script = ExtResource("3_oe5oo")
+hide_on_portrait = true
+
+[node name="HBoxContainer_PlaceHolder" type="HBoxContainer" parent="MarginContainer2" unique_id=1513030540]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0.19215687)
+layout_mode = 2
+
+[node name="Control_landscape_avatar" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder" unique_id=1677837571]
+custom_minimum_size = Vector2(317, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("3_oe5oo")
+hide_on_portrait = true
+
+[node name="Control" type="Control" parent="MarginContainer2/HBoxContainer_PlaceHolder/Control_landscape_avatar" unique_id=459651402]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Panel_Mutual" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/Control_landscape_avatar" unique_id=1156073032]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(90, 25)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="VSeparator" type="VSeparator" parent="MarginContainer2/HBoxContainer_PlaceHolder" unique_id=2011888171]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_54w24")
+
+[node name="VBoxContainer_info" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder" unique_id=1379239470]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+theme_override_constants/separation = 15
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info" unique_id=1346677370]
+layout_mode = 2
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 32
+
+[node name="ProfileHeader" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer" unique_id=471513043]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader" unique_id=821396110]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3" unique_id=1125489651]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer" unique_id=426485205]
+custom_minimum_size = Vector2(0, 51)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Panel_Nick" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer" unique_id=657375799]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(325, 25)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3" unique_id=1725675208]
+custom_minimum_size = Vector2(84, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 2
+
+[node name="Panel_Edit" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1606489106]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(220, 25)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Panel_Menu" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=543501182]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Panel_Close" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=50236357]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader" unique_id=1330879912]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2" unique_id=1441536413]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Panel_Address" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer" unique_id=1836270838]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(175, 48)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Panel_Copy" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer" unique_id=759876515]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info" unique_id=1247326997]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer" unique_id=1807979918]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 30
+
+[node name="VBoxContainer_Content" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer" unique_id=1705853377]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content" unique_id=830950416]
+layout_mode = 2
+theme_override_constants/margin_right = 32
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer" unique_id=491237574]
+layout_mode = 2
+theme_override_constants/separation = 13
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer" unique_id=36260615]
+layout_mode = 2
+
+[node name="Panel_About" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1494742129]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(123, 26)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer" unique_id=815731882]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="Panel_About" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=763475347]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(123, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer" unique_id=1309651412]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="Panel_About" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=1562838400]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(123, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer" unique_id=102088633]
+layout_mode = 2
+theme_override_constants/separation = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_odsw2")
+
+[node name="HBoxContainer4" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer" unique_id=1235978734]
+layout_mode = 2
+alignment = 2
+
+[node name="Panel_About" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Content/MarginContainer/VBoxContainer/HBoxContainer4" unique_id=244127874]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(123, 26)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="VBoxContainer_Equipped" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer" unique_id=2056692719]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped" unique_id=883189569]
+layout_mode = 2
+theme_override_constants/margin_right = 32
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer" unique_id=1734593845]
+layout_mode = 2
+theme_override_constants/separation = 13
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer" unique_id=822181973]
+layout_mode = 2
+
+[node name="Panel_About" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/HBoxContainer" unique_id=495928787]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(123, 26)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ScrollContainer_Equipped" type="ScrollContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/ScrollContainer_Equipped" unique_id=1003982377]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 24
+
+[node name="Panel_About" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/ScrollContainer_Equipped/HBoxContainer2" unique_id=598660212]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(150, 218)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Panel_About2" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/ScrollContainer_Equipped/HBoxContainer2" unique_id=1850662072]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(150, 218)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Panel_About3" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/ScrollContainer_Equipped/HBoxContainer2" unique_id=1713142800]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(150, 218)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Panel_About4" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/ScrollContainer_Equipped/HBoxContainer2" unique_id=669078741]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(150, 218)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Panel_About5" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/ScrollContainer_Equipped/HBoxContainer2" unique_id=923293350]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(150, 218)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Panel_About6" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/ScrollContainer_Equipped/HBoxContainer2" unique_id=463717355]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(150, 218)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Panel_About7" type="Panel" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer/ScrollContainer_Equipped/HBoxContainer2" unique_id=1714483702]
+material = ExtResource("26_doqh1")
+custom_minimum_size = Vector2(150, 218)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Control_OwnAndLandscape" type="VBoxContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder" unique_id=886012963]
+visible = false
+layout_mode = 2
+
+[node name="Control" type="Control" parent="MarginContainer2/HBoxContainer_PlaceHolder/Control_OwnAndLandscape" unique_id=1684271951]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+script = ExtResource("3_oe5oo")
+hide_on_portrait = true
+
+[node name="Menu" type="ColorRect" parent="." unique_id=593290901]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+metadata/_edit_lock_ = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Menu" unique_id=2087272426]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu/HBoxContainer" unique_id=1292031649]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator" type="HSeparator" parent="Menu/HBoxContainer/VBoxContainer" unique_id=146327634]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 95
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8iwyo")
+
+[node name="PanelContainer_Menu" type="PanelContainer" parent="Menu/HBoxContainer/VBoxContainer" unique_id=1848081357]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_quy3q")
+
+[node name="MarginContainer" type="MarginContainer" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu" unique_id=1008953083]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer" unique_id=1552825068]
+z_index = 10
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 8
+
+[node name="Button_MuteUser" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer" unique_id=542284295]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(298, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"ProfileMenuButton"
+text = "Mute chat"
+icon = ExtResource("27_8iwyo")
+alignment = 0
+expand_icon = true
+
+[node name="Button_UnmuteUser" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer" unique_id=371737470]
+unique_name_in_owner = true
+visible = false
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(298, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"ProfileMenuButtonRed"
+text = "Unmute chat"
+icon = ExtResource("27_8iwyo")
+alignment = 0
+expand_icon = true
+
+[node name="Button_BlockUser" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer" unique_id=1352976327]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(298, 64)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"ProfileMenuButton"
+text = "Block"
+icon = ExtResource("13_quy3q")
+alignment = 0
+expand_icon = true
+
+[node name="Button_UnblockUser" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer" unique_id=1936232811]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(298, 64)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"ProfileMenuButtonRed"
+text = "Unblock"
+icon = ExtResource("13_quy3q")
+alignment = 0
+expand_icon = true
+
+[node name="Button_Unfriend" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer" unique_id=1991471728]
+unique_name_in_owner = true
+modulate = Color(0.796243, 0.796243, 0.796243, 1)
+custom_minimum_size = Vector2(298, 64)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("12_dja5r")
+theme_type_variation = &"ProfileMenuButton"
+text = "Unfriend"
+icon = ExtResource("14_ur8se")
+alignment = 0
+expand_icon = true
+
+[node name="VSeparator" type="VSeparator" parent="Menu/HBoxContainer" unique_id=1959308087]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 108
+theme_override_styles/separator = SubResource("StyleBoxEmpty_dja5r")
+
+[node name="Control_OwnAndLandscapeMenu" type="VBoxContainer" parent="Menu/HBoxContainer" unique_id=281041086]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="Menu/HBoxContainer/Control_OwnAndLandscapeMenu" unique_id=2083024384]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3_oe5oo")
+hide_on_portrait = true
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="toggled" from="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_Menu" to="." method="_on_button_menu_toggled"]
+[connection signal="pressed" from="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2/Button_CloseProfile" to="." method="close"]
+[connection signal="pressed" from="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer/Button_CopyAddress" to="." method="_on_copy_address_pressed"]

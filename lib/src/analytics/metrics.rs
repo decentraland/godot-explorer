@@ -18,6 +18,7 @@ use crate::{
 use super::{
     data_definition::{
         build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
+        SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventRequestFriend, SegmentEventScreenViewed,
@@ -392,6 +393,99 @@ impl Metrics {
         let event = SegmentEvent::Unfriend(SegmentEventUnfriend { receiver_id });
         self.events.push(event.clone());
         self.debug_print_event("Unfriend", &event);
+    }
+
+    /// Per-attempt event from AttestationService's FSM. See
+    /// data_definition::SegmentEventAttestationAttempt for field meanings.
+    ///
+    /// GDScript-friendly signature: nullable fields use sentinels because
+    /// gdext doesn't surface Option<T> well across the FFI boundary.
+    ///   - String fields: empty string ("") == None.
+    ///   - Numeric fields: -1 == None.
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    pub fn track_attestation_attempt(
+        &mut self,
+        platform: String,
+        cycle_id: String,
+        attempt_number: u32,
+        trigger: String,
+        bff_url: String,
+        outcome: String,
+        failure_step: String,
+        failure_code: String,
+        attempt_duration_ms: u32,
+        // Packed timings + session ttl to stay under gdext's ParamTuple
+        // arity limit. Layout (index → field, -1 = None):
+        //   [0] challenge_ms       (iOS step 1)
+        //   [1] generate_key_ms    (iOS step 2)
+        //   [2] attest_key_ms      (iOS step 3)
+        //   [3] play_integrity_ms  (Android step 1)
+        //   [4] post_session_ms    (both, step final)
+        //   [5] session_ttl_s      (success only)
+        extras: godot::builtin::PackedInt32Array,
+    ) {
+        let opt_str = |s: String| if s.is_empty() { None } else { Some(s) };
+        let at = |i: usize| -> i32 { extras.get(i).unwrap_or(-1) };
+        let opt_u32 = |i: usize| -> Option<u32> {
+            let n = at(i);
+            if n < 0 {
+                None
+            } else {
+                Some(n as u32)
+            }
+        };
+        let opt_i64 = |i: usize| -> Option<i64> {
+            let n = at(i);
+            if n < 0 {
+                None
+            } else {
+                Some(n as i64)
+            }
+        };
+        let event = SegmentEvent::AttestationAttempt(SegmentEventAttestationAttempt {
+            platform,
+            cycle_id,
+            attempt_number,
+            trigger,
+            bff_url,
+            outcome,
+            failure_step: opt_str(failure_step),
+            failure_code: opt_str(failure_code),
+            attempt_duration_ms,
+            challenge_ms: opt_u32(0),
+            generate_key_ms: opt_u32(1),
+            attest_key_ms: opt_u32(2),
+            play_integrity_ms: opt_u32(3),
+            post_session_ms: opt_u32(4),
+            session_ttl_s: opt_i64(5),
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("Attestation Attempt", &event);
+    }
+
+    /// Boot-time cache probe event. `remaining_s` is -1 (becomes None) for any
+    /// miss outcome.
+    #[func]
+    pub fn track_attestation_session_cache_loaded(
+        &mut self,
+        platform: String,
+        result: String,
+        remaining_s: i64,
+    ) {
+        let event = SegmentEvent::AttestationSessionCacheLoaded(
+            SegmentEventAttestationSessionCacheLoaded {
+                platform,
+                result,
+                remaining_s: if remaining_s < 0 {
+                    None
+                } else {
+                    Some(remaining_s)
+                },
+            },
+        );
+        self.events.push(event.clone());
+        self.debug_print_event("Attestation Session Cache Loaded", &event);
     }
 
     #[func]
