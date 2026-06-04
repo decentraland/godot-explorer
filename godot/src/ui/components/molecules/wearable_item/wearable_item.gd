@@ -23,7 +23,6 @@ var was_pressed = false
 var is_marketplace_item: bool = false
 var marketplace_price: int = 0
 var marketplace_url: String = ""
-var credits_balance: int = 0
 
 @onready var panel_container_external = $PanelContainer_External
 
@@ -134,11 +133,10 @@ func set_equiped(is_equiped: bool):
 	effect_toggle()
 
 
-func setup_marketplace(price: int, url: String, credits: int):
+func setup_marketplace(price: int, url: String):
 	is_marketplace_item = true
 	marketplace_price = price
 	marketplace_url = url
-	credits_balance = credits
 	texture_rect_equiped.hide()
 	panel_container_price.show()
 	label_price.text = "%d" % price
@@ -148,7 +146,7 @@ func _update_marketplace_state(is_selected: bool):
 	if is_selected:
 		panel_container_price.hide()
 		button_action.show()
-		if credits_balance >= marketplace_price:
+		if Iap.get_balance() >= marketplace_price:
 			button_action.text = "DETAIL"
 		else:
 			button_action.text = "GET CREDITS"
@@ -160,7 +158,7 @@ func _update_marketplace_state(is_selected: bool):
 func _on_action_pressed():
 	if not is_marketplace_item:
 		return
-	if credits_balance >= marketplace_price and not marketplace_url.is_empty():
+	if Iap.get_balance() >= marketplace_price and not marketplace_url.is_empty():
 		Global.open_url(marketplace_url)
 	else:
 		Global.open_credits.emit()

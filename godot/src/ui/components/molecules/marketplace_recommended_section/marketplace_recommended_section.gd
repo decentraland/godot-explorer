@@ -33,11 +33,6 @@ const WEARABLE_CATEGORIES: Array = [
 ## Categories that have no marketplace suggestions.
 const HIDDEN_CATEGORIES: Array = ["body_shape", "all", "all_extras"]
 
-@export var credits_balance: int = 0:
-	set(value):
-		credits_balance = value
-		if _button_cta:
-			_button_cta.credits_balance = value
 @export var asset_type: String = "wearables"
 
 var _current_category: String = ""
@@ -50,7 +45,6 @@ var _card_names: Dictionary = {}  # urn -> display name
 
 
 func _ready():
-	_button_cta.credits_balance = credits_balance
 	_button_cta.marketplace_section = asset_type
 	_card_button_group = ButtonGroup.new()
 	_card_button_group.allow_unpress = true
@@ -198,7 +192,7 @@ func _setup_card(card: WearableItem, item_data: Dictionary):
 	var price = _parse_price(item_data.get("minPrice", item_data.get("price", "0")))
 	var item_url = item_data.get("url", "")
 	var full_url = str(DclUrls.marketplace()) + item_url if not item_url.is_empty() else ""
-	card.setup_marketplace(price, full_url, credits_balance)
+	card.setup_marketplace(price, full_url)
 
 	card.wearable_id = urn
 	card.button_group = _card_button_group

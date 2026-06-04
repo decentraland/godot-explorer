@@ -429,10 +429,8 @@ func _setup_ios_marketplace_section():
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
 		return
-	_ios_marketplace_section.credits_balance = Iap.get_balance()
 	_ios_marketplace_section.item_equip.connect(_async_on_marketplace_equip)
 	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
-	Iap.balance_changed.connect(_on_credits_balance_changed)
 
 
 func _on_main_category_filter_type(type: String):
@@ -645,11 +643,6 @@ func _on_button_logout_pressed():
 	Global.sign_out()
 
 
-func _on_credits_balance_changed(new_balance: int):
-	if _ios_marketplace_section:
-		_ios_marketplace_section.credits_balance = new_balance
-
-
 func _on_color_picker_panel_pick_color(color: Color):
 	match color_carrousel.color_type:
 		color_carrousel.ColorTargetType.EYES:
@@ -771,9 +764,6 @@ func _exit_tree():
 
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
-
-	if Iap.balance_changed.is_connected(_on_credits_balance_changed):
-		Iap.balance_changed.disconnect(_on_credits_balance_changed)
 
 
 func _on_blacklist_changed():

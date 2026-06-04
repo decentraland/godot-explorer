@@ -62,10 +62,8 @@ func _setup_ios_marketplace_section():
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
 		return
-	_ios_marketplace_section.credits_balance = Iap.get_balance()
 	_ios_marketplace_section.item_selected.connect(_on_marketplace_emote_selected)
 	_ios_marketplace_section.update_category("emotes")
-	Iap.balance_changed.connect(_on_credits_balance_changed)
 
 
 func async_set_only_collectibles(new_state: bool):
@@ -278,16 +276,6 @@ func _on_landscape() -> void:
 		_ios_marketplace_section.set_columns(2)
 	for emote_item in avatar_emote_items:
 		emote_item.custom_minimum_size = Vector2(138, 138)
-
-
-func _on_credits_balance_changed(new_balance: int):
-	if _ios_marketplace_section:
-		_ios_marketplace_section.credits_balance = new_balance
-
-
-func _exit_tree():
-	if Iap.balance_changed.is_connected(_on_credits_balance_changed):
-		Iap.balance_changed.disconnect(_on_credits_balance_changed)
 
 
 func _on_marketplace_emote_selected(urn: String, emote_name: String):
