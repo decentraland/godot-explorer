@@ -260,6 +260,10 @@ func _ready():
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
+		# Toggle the loopback debug WS server from the fake deeplink (desktop/CLI
+		# testing). Same handling as runtime deeplinks in DeepLinkRouter.
+		deep_link_router.apply_debug_ws_param(deep_link_obj.params.get("debug-ws", ""))
+
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
@@ -746,6 +750,12 @@ func sign_out() -> void:
 	#    and the SceneManager's existing guards skip them; explorer._ready() reassigns
 	#    them on the next login.
 	get_config().session_account = {}
+	# Forget the previous identity so the next account starts fresh — otherwise
+	# the prior profile/avatar lingers in memory and leaks into the new account's
+	# avatar editor (issue #1658). Also drop the saved guest look on explicit
+	# sign-out to close the guest->guest leak vector.
+	get_config().guest_profile = {}
+	player_identity.reset_identity()
 	get_config().save_to_settings_file()
 
 	# Lobby/login is portrait-only; reset orientation so logging out from a
