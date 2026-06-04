@@ -145,6 +145,11 @@ var _startup_time: int = Time.get_ticks_msec()
 # Cleared in lobby._ready once we're back on a clean screen.
 var _signing_out: bool = false
 
+# Guards return_to_discover() against re-entrancy (e.g. a double tap on the Dev
+# Tools button before the deferred scene swap runs). Cleared in menu._ready once
+# we're back on the standalone Discover screen.
+var _returning_to_discover: bool = false
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
@@ -753,6 +758,69 @@ func sign_out() -> void:
 	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
 
 
+## Soft sign-out used by the Dev Tools "RETURN TO DISCOVER" button. Leaves the
+## current world and drops the user back on the standalone Discover menu WHILE
+## staying signed in: it tears down the live Explorer, every running DCL scene,
+## comms world rooms and realm / scene-fetcher state, but deliberately KEEPS the
+## player identity, the persisted session, the social gRPC streams and the
+## notification polling intact.
+##
+## This mirrors the world-teardown half of [sign_out]; the two intentionally
+## differ — sign_out additionally drops the social streams, wipes the
+## session/identity and returns to the sign-in lobby. When adding a new
+## world/scene subsystem to tear down, update BOTH paths.
+func return_to_discover() -> void:
+	if _returning_to_discover or _signing_out:
+		return
+	_returning_to_discover = true
+
+	# 1. Tear down the live Explorer first, while it is still in the tree, so its
+	#    autoload-signal callbacks and retry timers are severed before the steps
+	#    below re-emit any of those signals or free the Explorer node. No-op when
+	#    the button is pressed from the standalone Discover menu (no Explorer yet).
+	var explorer := get_explorer()
+	if explorer != null:
+		explorer.prepare_for_logout()
+
+	# 2. Stop the analytics first-move poll: it reads scene_runner.player_body_node,
+	#    which is freed once the Explorer goes away — left running, its #[var]
+	#    getter would panic on the freed Player. It re-arms on the next
+	#    loading_finished (i.e. when the user jumps into a world again).
+	if analytics_controller != null:
+		analytics_controller.cancel_first_move_poll()
+
+	# 3. Kill every running DCL scene. The SceneManager reaps them in the
+	#    background (reap_dying_scenes runs even while Discover pauses the runner).
+	scene_runner.kill_all_scenes()
+
+	# 4. Reset realm and scene-fetcher state so nothing from the world we just left
+	#    leaks into the next jump-in. This matches the post-login Discover state,
+	#    where no realm is joined yet.
+	realm.async_clear_realm()
+	scene_fetcher.reset_for_logout()
+
+	# 5. Close comms world rooms (MainRoom / SceneRoom / LiveKit). Pass `false` so
+	#    the Rust player identity (wallet + ephemeral keys) is KEPT — this is the
+	#    key difference from sign_out, which passes `true` to also log out.
+	comms.disconnect(false)
+
+	# NOTE: unlike sign_out we deliberately DO NOT stop NotificationsManager
+	# polling, drop the social gRPC streams, clear the blacklist, or wipe the
+	# persisted session — the session stays alive and the Discover screen's
+	# friends/notifications keep working.
+
+	# Discover/menu is portrait-only; reset orientation so returning from a
+	# landscape in-world screen (settings) doesn't strand the user in landscape.
+	set_orientation_portrait()
+
+	# Swap to the standalone Discover menu on the next frame, after the current
+	# call stack (the settings button handler) fully unwinds. menu._ready clears
+	# _returning_to_discover.
+	get_tree().change_scene_to_file.call_deferred(
+		"res://src/ui/components/organisms/menu/menu.tscn"
+	)
+
+
 func explorer_has_focus() -> bool:
 	var explorer = get_explorer()
 	if explorer == null:
@@ -1047,7 +1115,7 @@ func async_join_world(world_realm: String) -> void:
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func http_method_to_string(method: int) -> String:
+func _http_method_to_string(method: int) -> String:
 	match method:
 		HTTPClient.METHOD_GET:
 			return "GET"
@@ -1073,7 +1141,7 @@ func http_method_to_string(method: int) -> String:
 
 func async_signed_fetch(url: String, method: int, _body: String = ""):
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, _body, http_method_to_string(method)
+		url, _body, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 

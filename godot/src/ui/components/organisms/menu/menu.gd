@@ -45,6 +45,10 @@ var _close_node_to_free: PlaceholderManager = null
 
 
 func _ready():
+	# Back on the standalone Discover screen — release the soft sign-out guard so a
+	# later Dev Tools "RETURN TO DISCOVER" press works (no-op when set from in-game).
+	Global._returning_to_discover = false
+
 	# Out of the lobby — restore the relaxed 10s flush cadence so feed/search events batch.
 	Global.metrics.set_flush_interval(10.0)
 
