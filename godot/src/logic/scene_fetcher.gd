@@ -573,6 +573,29 @@ func _unload_scenes_except_current(current_scene_id: int) -> void:
 		loaded_scenes.erase(scene_id)
 
 
+## Reset all per-session scene bookkeeping so the next login starts from a clean
+## slate. Called from Global.sign_out(). The Rust scenes themselves are torn down
+## by scene_runner.kill_all_scenes(); here we drop the GDScript-side state and the
+## floating-island / floor / wall visuals that still reference them. The scene
+## entity coordinator is left as-is: the next realm change reconfigures it via
+## config() / set_fixed_desired_entities_urns().
+func reset_for_logout() -> void:
+	loaded_scenes.clear()
+	current_position = INVALID_PARCEL
+	current_scene_entity_id = ""
+	last_version_updated = -1
+	last_version_checked = -1
+	last_scene_group_hash = ""
+	desired_portable_experiences_urns.clear()
+
+	if is_instance_valid(islands_manager):
+		islands_manager.clear_all()
+	if is_instance_valid(wall_manager):
+		wall_manager.clear_walls()
+	if is_instance_valid(base_floor_manager):
+		base_floor_manager.clear_all_floors()
+
+
 ## Coalesced entry point for callers that may fire several regen requests in
 ## the same frame (e.g. spawning multiple scenes via `call_deferred`).
 func _request_regenerate_floating_islands() -> void:

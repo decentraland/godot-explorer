@@ -1123,6 +1123,15 @@ mouse_filter = 2
 theme_override_constants/separation = 74
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
+[node name="Button_ReturnToDiscover" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1709283746]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 96)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_type_variation = &"SecondaryOutlinedButton"
+text = "RETURN TO DISCOVER"
+
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
 visible = false
@@ -1374,6 +1383,7 @@ font = ExtResource("25_jf4mt")
 [connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/DropdownList_Realm" to="." method="_on_dropdown_list_realm_item_selected"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_ReturnToDiscover" to="." method="_on_button_return_to_discover_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_PrivacyPolicy" to="." method="_on_button_privacy_policy_pressed"]

@@ -1,0 +1,490 @@
+name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
+
+# Single entry point that builds & distributes BOTH mobile platforms:
+#   - iOS    → godot-mobile-deploy-pipeline → Xcode Cloud → TestFlight
+#   - Android → APK is already uploaded to the R2 mobile-artifacts bucket by the
+#               regular Android CI build (android_builds.yml) for every commit; this
+#               workflow waits for that commit's APK and posts a Slack "build ready"
+#               notification + PR comment with the direct download link.
+#
+# Triggered by:
+#   - Every push to `release` (full distribution)
+#   - A daily 09:00 UTC cron on `main` — only when main changed since the last
+#     successful main distribution (no point re-shipping an identical commit)
+#   - The `build` label on a PR (alias: `build-ios` for backward compatibility)
+#   - Manual workflow dispatch on the main / release branch
+#
+# The Android leg does NOT rebuild and does NOT distribute to a store — it only
+# surfaces the R2 download link once the APK is ready. For main/release builds it
+# additionally surfaces the AAB (Play Store artifact) the same way.
+on:
+  push:
+    branches:
+      - release          # every release push → full distribution
+  schedule:
+    - cron: '0 9 * * *'  # daily 09:00 UTC → main, only if changed since last build
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch to build & distribute'
+        required: true
+        type: choice
+        default: 'main'
+        options:
+          - main
+          - release
+      whats_new:
+        description: 'TestFlight "What to Test" notes (optional; auto-generated from the commit when empty)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  pull-requests: write
+  contents: read
+  actions: write
+
+jobs:
+  prepare:
+    name: Prepare distribution
+    # Run for: push to release, the daily main cron, a manual dispatch, or the
+    # build / build-ios label on a PR.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'push' ||
+      github.event.label.name == 'build' ||
+      github.event.label.name == 'build-ios'
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.ctx.outputs.ref }}
+      sha: ${{ steps.ctx.outputs.sha }}
+      pr_number: ${{ steps.ctx.outputs.pr_number }}
+      safe_branch: ${{ steps.ctx.outputs.safe_branch }}
+      # Defaults to 'true' for every event except the cron, where the change-detection
+      # step below may set it to 'false' when main is unchanged since the last build.
+      should_build: ${{ steps.changes.outputs.should_build || 'true' }}
+    steps:
+      - name: Resolve build context
+        id: ctx
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            REF="${{ github.event.inputs.ref }}"
+            SHA=$(gh api "repos/${{ github.repository }}/commits/${REF}" --jq '.sha')
+            PR_NUMBER=""
+          elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
+            # schedule always runs on the default branch (main); push is gated to release.
+            REF="${{ github.ref_name }}"
+            SHA="${{ github.sha }}"
+            PR_NUMBER=""
+          else
+            REF="${{ github.event.pull_request.head.ref }}"
+            SHA="${{ github.event.pull_request.head.sha }}"
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+          SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "safe_branch=$SAFE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "Distributing ref=$REF sha=$SHA pr=$PR_NUMBER"
+
+      - name: Check main for changes since last successful distribution
+        id: changes
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CURRENT_SHA="${{ github.sha }}"
+          # Last *successful* mobile_distribute run on main (cron or dispatch-on-main).
+          # PR-label runs live on the PR head branch and push-to-release on `release`,
+          # so --branch main isolates the real main distributions.
+          LAST_SHA=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow mobile_distribute.yml \
+            --branch main \
+            --status success \
+            --limit 1 \
+            --json headSha \
+            --jq '.[0].headSha // ""')
+          if [ -n "$LAST_SHA" ] && [ "$LAST_SHA" = "$CURRENT_SHA" ]; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "⏭️  main unchanged since last distribution ($LAST_SHA) — skipping."
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "🆕 main changed (last=${LAST_SHA:-none} current=$CURRENT_SHA) — building."
+          fi
+
+      - name: Remove trigger label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --remove-label "${{ github.event.label.name }}" || true
+
+      - name: Cancel previous distribution runs for this branch
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for STATUS in in_progress queued; do
+            IDS=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow mobile_distribute.yml \
+              --branch "${{ github.event.pull_request.head.ref }}" \
+              --status "$STATUS" \
+              --json databaseId \
+              --jq '.[].databaseId')
+            for ID in $IDS; do
+              if [ -n "$ID" ] && [ "$ID" != "${{ github.run_id }}" ]; then
+                echo "Cancelling previous run: $ID"
+                gh run cancel "$ID" --repo "${{ github.repository }}" || true
+              fi
+            done
+          done
+
+      - name: Post distribution started comment
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMENT_BODY="---
+
+          ### 📱 Mobile Distribution Triggered
+
+          🍏 **iOS** → TestFlight &nbsp;&nbsp;|&nbsp;&nbsp; 🤖 **Android** → APK ready (R2) + Slack notification
+
+          🔗 **Workflow**: [View run](${WORKFLOW_URL})
+
+          📍 **Branch**: \`${{ github.event.pull_request.head.ref }}\`
+
+          🔄 **Triggered**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --jq '.[] | select(.body | contains("Mobile Distribution") or contains("iOS Build Triggered") or contains("build-report-ios")) | .id' | head -1)
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${COMMENT_BODY}"
+          else
+            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -f body="${COMMENT_BODY}"
+          fi
+
+  ios:
+    name: 🍏 iOS → TestFlight
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    uses: ./.github/workflows/ios_builds.yml
+    with:
+      ref: ${{ needs.prepare.outputs.ref }}
+      pr_number: ${{ needs.prepare.outputs.pr_number }}
+      # Empty on PR-label triggers (labels carry no text) → ios_builds auto-generates from the commit
+      whats_new: ${{ github.event.inputs.whats_new }}
+    secrets: inherit
+
+  android-notify:
+    name: 🤖 Android → APK ready
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+      # Public R2 domain mapped to the mobile-artifacts bucket root.
+      R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      REF: ${{ needs.prepare.outputs.ref }}
+      SHA: ${{ needs.prepare.outputs.sha }}
+      PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
+      SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Validate required secrets
+        run: |
+          MISSING=""
+          [ -z "$AWS_S3_BUCKET" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_BUCKET"
+          [ -z "$AWS_ENDPOINT_URL" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_ENDPOINT"
+          [ -z "$AWS_ACCESS_KEY_ID" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID"
+          if [ -n "$MISSING" ]; then
+            echo "❌ Missing required secrets:$MISSING"
+            exit 1
+          fi
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️  SLACK_WEBHOOK_URL not configured — the 'build ready' Slack notification will be skipped."
+          fi
+          echo "✅ Required secrets present"
+
+      - name: Wait for Android APK in R2
+        run: |
+          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          echo "Waiting for s3://${AWS_S3_BUCKET}/${KEY}"
+          echo "(produced by the Android CI build — android_builds.yml — for this commit)"
+
+          # Build CI takes ~35 min; give it headroom but fail fast if CI already failed.
+          DEADLINE=$(( $(date +%s) + 50 * 60 ))
+          while true; do
+            if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
+              echo "✅ APK is available in R2"
+              break
+            fi
+
+            # Fail fast if the CI run for this commit already finished without an APK.
+            CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow runner.yml \
+              --limit 100 --json headSha,conclusion \
+              --jq "first(.[] | select(.headSha==\"$SHA\") | .conclusion) // empty" 2>/dev/null || true)
+            if [ "$CONCLUSION" = "failure" ] || [ "$CONCLUSION" = "cancelled" ] || [ "$CONCLUSION" = "timed_out" ]; then
+              echo "❌ Android CI build for $SHA concluded '$CONCLUSION' and no APK was produced."
+              exit 1
+            fi
+
+            if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+              echo "❌ Timed out waiting for the APK in R2 ($KEY)."
+              echo "   Make sure the Android CI build for this commit succeeded."
+              exit 1
+            fi
+            echo "⏳ Not ready yet (CI conclusion='${CONCLUSION:-pending}'), retrying in 30s..."
+            sleep 30
+          done
+
+      - name: Notify Slack - Android build ready
+        if: success()
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
+            exit 0
+          fi
+
+          APK_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
+          COMMIT_SHORT="${SHA:0:7}"
+          TRIGGERED_BY="${{ github.actor }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_LABEL="PR-${PR_NUMBER}-${REF}"
+          else
+            BRANCH_LABEL="${REF}"
+          fi
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"blocks\": [
+              {
+                \"type\": \"header\",
+                \"text\": { \"type\": \"plain_text\", \"text\": \"🤖 Android Build Ready\", \"emoji\": true }
+              },
+              {
+                \"type\": \"section\",
+                \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Decentraland Mobile Client*\nAndroid APK ready (${BRANCH_LABEL})\" }
+              },
+              {
+                \"type\": \"section\",
+                \"fields\": [
+                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_LABEL}\`\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
+                ]
+              },
+              {
+                \"type\": \"actions\",
+                \"elements\": [
+                  {
+                    \"type\": \"button\",
+                    \"text\": { \"type\": \"plain_text\", \"text\": \"📱 Download APK\", \"emoji\": true },
+                    \"style\": \"primary\",
+                    \"url\": \"${APK_URL}\"
+                  },
+                  {
+                    \"type\": \"button\",
+                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Build Report\", \"emoji\": true },
+                    \"url\": \"${WORKFLOW_URL}\"
+                  }
+                ]
+              }
+            ]
+          }" "$SLACK_WEBHOOK_URL"
+          echo "✅ Slack notification sent (Android build ready)"
+
+      # The AAB (Play Store artifact) is only published for main/release builds, so we
+      # surface it for any main/release distribution (manual dispatch, push-to-release,
+      # or the daily main cron). Best-effort: if the AAB isn't in R2 we warn and skip
+      # rather than failing the job.
+      - name: Wait for Android AAB in R2
+        if: success() && (needs.prepare.outputs.ref == 'main' || needs.prepare.outputs.ref == 'release')
+        run: |
+          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
+          echo "Waiting for s3://${AWS_S3_BUCKET}/${KEY}"
+
+          # The AAB is uploaded in the same CI step as the APK, so it should already be
+          # present now that the APK wait succeeded — short timeout is enough.
+          DEADLINE=$(( $(date +%s) + 15 * 60 ))
+          while true; do
+            if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
+              echo "✅ AAB is available in R2"
+              echo "AAB_READY=true" >> "$GITHUB_ENV"
+              break
+            fi
+            if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+              echo "⚠️  AAB not found in R2 after timeout ($KEY) — skipping AAB notification."
+              echo "AAB_READY=false" >> "$GITHUB_ENV"
+              break
+            fi
+            echo "⏳ AAB not ready yet, retrying in 20s..."
+            sleep 20
+          done
+
+      - name: Notify Slack - Android AAB ready
+        if: success() && env.AAB_READY == 'true' && (needs.prepare.outputs.ref == 'main' || needs.prepare.outputs.ref == 'release')
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
+            exit 0
+          fi
+
+          AAB_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
+          COMMIT_SHORT="${SHA:0:7}"
+          TRIGGERED_BY="${{ github.actor }}"
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"blocks\": [
+              {
+                \"type\": \"header\",
+                \"text\": { \"type\": \"plain_text\", \"text\": \"📦 Android AAB Ready (Play Store)\", \"emoji\": true }
+              },
+              {
+                \"type\": \"section\",
+                \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Decentraland Mobile Client*\nAndroid AAB ready for Play Store upload (${REF})\" }
+              },
+              {
+                \"type\": \"section\",
+                \"fields\": [
+                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${REF}\`\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
+                ]
+              },
+              {
+                \"type\": \"actions\",
+                \"elements\": [
+                  {
+                    \"type\": \"button\",
+                    \"text\": { \"type\": \"plain_text\", \"text\": \"📦 Download AAB\", \"emoji\": true },
+                    \"style\": \"primary\",
+                    \"url\": \"${AAB_URL}\"
+                  },
+                  {
+                    \"type\": \"button\",
+                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Build Report\", \"emoji\": true },
+                    \"url\": \"${WORKFLOW_URL}\"
+                  }
+                ]
+              }
+            ]
+          }" "$SLACK_WEBHOOK_URL"
+          echo "✅ Slack notification sent (Android AAB ready)"
+
+      - name: Notify Slack - Android build failed
+        if: failure()
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
+            exit 0
+          fi
+
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
+          COMMIT_SHORT="${SHA:0:7}"
+          TRIGGERED_BY="${{ github.actor }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_LABEL="PR-${PR_NUMBER}-${REF}"
+          else
+            BRANCH_LABEL="${REF}"
+          fi
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"blocks\": [
+              {
+                \"type\": \"header\",
+                \"text\": { \"type\": \"plain_text\", \"text\": \"❌ Android Build Failed\", \"emoji\": true }
+              },
+              {
+                \"type\": \"section\",
+                \"fields\": [
+                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_LABEL}\`\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
+                ]
+              },
+              {
+                \"type\": \"actions\",
+                \"elements\": [
+                  {
+                    \"type\": \"button\",
+                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Logs\", \"emoji\": true },
+                    \"style\": \"danger\",
+                    \"url\": \"${WORKFLOW_URL}\"
+                  }
+                ]
+              }
+            ]
+          }" "$SLACK_WEBHOOK_URL"
+
+      - name: Update PR comment - Android success
+        if: success() && needs.prepare.outputs.pr_number != ''
+        run: |
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          APK_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          COMMENT_BODY="---
+
+          ### 🤖 Android Build Ready
+
+          ✅ **Status**: APK available for download
+
+          📱 **Download APK**: [direct link](${APK_URL})
+
+          🔗 **Workflow**: [View run](${WORKFLOW_URL})
+
+          📍 **Branch**: \`${REF}\` &nbsp;&nbsp;|&nbsp;&nbsp; **Commit**: \`${SHA}\`
+
+          🔄 **Completed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq '.[] | select(.body | contains("🤖 Android Build")) | .id' | head -1)
+          if [ -n "$COMMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${COMMENT_BODY}"
+          else
+            gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" -f body="${COMMENT_BODY}"
+          fi
+
+      - name: Update PR comment - Android failure
+        if: failure() && needs.prepare.outputs.pr_number != ''
+        run: |
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMENT_BODY="---
+
+          ### 🤖 Android Build Failed
+
+          ❌ **Status**: No APK was produced for this commit
+
+          🔗 **Workflow**: [View logs](${WORKFLOW_URL})
+
+          📍 **Branch**: \`${REF}\` &nbsp;&nbsp;|&nbsp;&nbsp; **Commit**: \`${SHA}\`
+
+          🔄 **Failed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq '.[] | select(.body | contains("🤖 Android Build")) | .id' | head -1)
+          if [ -n "$COMMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${COMMENT_BODY}"
+          else
+            gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" -f body="${COMMENT_BODY}"
+          fi

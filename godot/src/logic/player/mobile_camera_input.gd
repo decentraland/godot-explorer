@@ -5,6 +5,7 @@ const HORIZONTAL_SENS: float = 0.5
 const VERTICAL_SENS: float = 0.5
 
 var _player: Player = null
+var _chat_panel: Control = null
 var _touch_positions: Dictionary = {}
 var _drag_index: int = -1
 var _two_fingers: bool = false
@@ -24,9 +25,28 @@ func _resolve_player() -> void:
 	var explorer := Global.get_explorer()
 	if explorer:
 		_player = explorer.player as Player
+		_chat_panel = explorer.chat_panel
+
+
+func _is_chat_visible() -> bool:
+	if not is_instance_valid(_chat_panel):
+		var explorer := Global.get_explorer()
+		if explorer:
+			_chat_panel = explorer.chat_panel
+	return is_instance_valid(_chat_panel) and _chat_panel.is_chat_visible()
 
 
 func _on_gui_input(event: InputEvent) -> void:
+	# Chat open: a tap outside it reaches this catcher (the chat's own controls are
+	# STOP), so close the chat instead of moving the camera.
+	if _is_chat_visible() and event is InputEventScreenTouch and event.pressed:
+		Global.close_chat.emit()
+		accept_event()
+		return
+	# A tap reaching this catcher means no UI consumed it: reclaim ui_root focus so
+	# movement re-enables if some control stole it without handing it back.
+	if event is InputEventScreenTouch and event.pressed and not Global.explorer_has_focus():
+		Global.explorer_grab_focus()
 	if Global.scene_runner.raycast_use_cursor_position:
 		_handle_cinematic(event)
 		return
