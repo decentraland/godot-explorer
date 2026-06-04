@@ -24,12 +24,13 @@
 [ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/pages/backpack/no_items_message.tscn" id="27_noitems"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/organisms/emote_editor/emote_editor.tscn" id="30_vfwc7"]
 [ext_resource type="PackedScene" uid="uid://e8wxgnrt3ge6" path="res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.tscn" id="31_mktpl"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/credits_balance_button/credits_balance_button.tscn" id="32_crbtn"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/layouts/hide_orientation.gd" id="34_gaa2l"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hpvfb"]
 shader = ExtResource("17_4j6ii")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_q4rkm"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_ypiwx"]
 atlas = ExtResource("18_wp3bp")
 region = Rect2(0, 0, 343, 580)
 
@@ -151,7 +152,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("AtlasTexture_q4rkm")
+texture = SubResource("AtlasTexture_ypiwx")
 stretch_mode = 3
 script = ExtResource("19_ku1si")
 atlas = ExtResource("18_wp3bp")
@@ -444,6 +445,23 @@ grow_vertical = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=573091625]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_bottom = 32
+
+[node name="Button_Credits" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer" unique_id=1932276915 instance=ExtResource("32_crbtn")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 8
 
 [node name="RightEditorContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack" unique_id=1039508584]
 unique_name_in_owner = true
@@ -862,9 +880,9 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 60
-theme_override_constants/margin_top = 40
+theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 60
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_bottom = 34
 
 [node name="Control_NoItems" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/VBoxContainer_ItemsAndSuggestions/MarginContainer_NoItems" unique_id=498321059 instance=ExtResource("27_noitems")]
 layout_mode = 2

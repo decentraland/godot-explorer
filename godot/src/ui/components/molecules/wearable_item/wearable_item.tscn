@@ -15,6 +15,13 @@
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_m2ljc"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jpiph"]
+content_margin_left = 12.0
+content_margin_right = 12.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_225su"]
 content_margin_left = 12.0
 content_margin_right = 12.0
@@ -115,7 +122,6 @@ stretch_mode = 5
 
 [node name="TextureRect_Equiped" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=97707038]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 1
 anchors_preset = 12
@@ -128,7 +134,7 @@ offset_right = -2.0
 offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_225su")
+theme_override_styles/panel = SubResource("StyleBoxFlat_jpiph")
 
 [node name="TextureRect_EquipedB" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/TextureRect_Equiped" unique_id=594947545]
 custom_minimum_size = Vector2(36, 36)
@@ -195,6 +201,7 @@ theme_override_constants/margin_bottom = 7
 
 [node name="PanelContainer_Price" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/MarginContainer" unique_id=1617226028]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 size_flags_horizontal = 4

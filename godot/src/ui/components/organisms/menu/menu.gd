@@ -20,6 +20,8 @@ var selected_node: PlaceholderManager
 var current_screen_name: String = ""
 var fade_out_tween: Tween = null
 var fade_in_tween: Tween = null
+var _credits_page: CreditsPage = null
+var _credits_layer: CanvasLayer = null
 var _close_modulate_tween: Tween = null
 var _close_hide_tween: Tween = null
 var _close_node_to_free: PlaceholderManager = null
@@ -109,6 +111,7 @@ func async_close():
 	if not is_open:
 		return
 	is_open = false
+	_on_credits_page_closed()
 	GraphicSettings.apply_full_processor_mode()
 	if (
 		selected_node
@@ -146,9 +149,23 @@ func async_show_discover(open_menu := true):
 
 
 func async_show_credits():
-	await async_show_discover()
-	if is_instance_valid(control_discover.instance):
-		control_discover.instance.open_credits_section()
+	if is_instance_valid(_credits_page):
+		return
+	_open()
+	_credits_layer = CanvasLayer.new()
+	add_child(_credits_layer)
+	var scene = load("res://src/ui/pages/credits/credits_page.tscn")
+	_credits_page = scene.instantiate()
+	_credits_page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_credits_layer.add_child(_credits_page)
+	_credits_page.closed.connect(_on_credits_page_closed)
+
+
+func _on_credits_page_closed() -> void:
+	if is_instance_valid(_credits_layer):
+		_credits_layer.queue_free()
+		_credits_layer = null
+		_credits_page = null
 
 
 func async_show_backpack(on_emotes := false):

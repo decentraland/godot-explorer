@@ -51,3 +51,4 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")
 [node name="Button_CTA" parent="." unique_id=420466605 instance=ExtResource("3_cta")]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"SecondaryMediumOutlined"

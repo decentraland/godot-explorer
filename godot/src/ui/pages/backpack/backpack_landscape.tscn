@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/pages/backpack/no_items_message.tscn" id="20_noitems"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/organisms/emote_editor/emote_editor.tscn" id="23_jr70y"]
 [ext_resource type="PackedScene" uid="uid://e8wxgnrt3ge6" path="res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.tscn" id="24_mktpl"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/credits_balance_button/credits_balance_button.tscn" id="25_crbtn"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_no6vh"]
 bg_color = Color(0, 0, 0, 0)
@@ -58,7 +59,7 @@ resource_name = "CollectiblesFilter"
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_2eknj"]
 shader = ExtResource("13_n6hfh")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_bh3wq"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_ywdho"]
 atlas = ExtResource("14_n6hfh")
 region = Rect2(0, 0, 343, 580)
 
@@ -132,7 +133,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
-theme_override_constants/separation = 0
+theme_override_constants/separation = 24
 
 [node name="Control_LeftBar" type="Control" parent="SafeMarginContainer/HBoxContainer_Backpack" unique_id=371225857]
 unique_name_in_owner = true
@@ -367,7 +368,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("AtlasTexture_bh3wq")
+texture = SubResource("AtlasTexture_ywdho")
 script = ExtResource("14_vqisn")
 atlas = ExtResource("14_n6hfh")
 frame_count = 13
@@ -386,6 +387,23 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.6666667, 1, 1, 0.29411766)
 metadata/_edit_use_anchors_ = true
+
+[node name="MarginContainer2" type="MarginContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=189227384]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 53
+
+[node name="Button_Credits" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer2" unique_id=1936077969 instance=ExtResource("25_crbtn")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 
 [node name="RightEditorContainer" type="MarginContainer" parent="SafeMarginContainer/HBoxContainer_Backpack" unique_id=859585576]
 unique_name_in_owner = true
@@ -804,7 +822,7 @@ size_flags_horizontal = 3
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 48
+theme_override_constants/margin_bottom = 32
 
 [node name="VBoxContainer_ItemsAndSuggestions" type="VBoxContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2" unique_id=1449083648]
 layout_mode = 2
@@ -824,9 +842,9 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 20
+theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_bottom = 34
 
 [node name="Control_NoItems" parent="SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/WearableEditorr/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items/MarginContainer2/VBoxContainer_ItemsAndSuggestions/MarginContainer_NoItems" unique_id=2048815347 instance=ExtResource("20_noitems")]
 unique_name_in_owner = true
