@@ -43,12 +43,21 @@ const MAX_FRAME_BYTES: int = 65536  ## drop inbound frames larger than this
 ## ERR_OUT_OF_MEMORY and the reply is silently dropped, leaving the client
 ## hanging. 8 MiB comfortably fits expanded scene snapshots.
 const OUTBOUND_BUFFER_BYTES: int = 8 * 1024 * 1024
+## Max focus-change entries retained for the `focus` diagnostic cmd.
+const FOCUS_HISTORY_MAX: int = 64
 const Collector := preload("res://src/tool/debug_server/debug_collector.gd")
 
 var _tcp: TCPServer
 var _peers: Array[WebSocketPeer] = []
 var _running: bool = false
 var _port: int = DEFAULT_PORT
+
+## Focus tracking: poll the viewport's keyboard-focus owner each frame and log
+## every change (including release-to-null, which `gui_focus_changed` misses).
+## Exposed via the `focus` cmd. Diagnostic aid for "input stops working" bugs
+## where movement is gated by `ui_root.has_focus()`.
+var _focus_history: Array = []
+var _last_focus_desc: String = "<unset>"
 
 
 func _ready() -> void:
@@ -95,6 +104,7 @@ func stop() -> void:
 
 
 func _process(_dt: float) -> void:
+	_poll_focus()
 	if _tcp == null:
 		return
 
@@ -152,6 +162,8 @@ func _handle_message(peer: WebSocketPeer, text: String) -> void:
 	match cmd:
 		"ping":
 			_reply(peer, request_id, true, _build_ping_data(), "")
+		"focus":
+			_reply(peer, request_id, true, _build_focus_data(), "")
 		"scenes":
 			_reply(peer, request_id, true, Collector.collect_scenes_summary(), "")
 		"scene":
@@ -242,6 +254,53 @@ func _handle_message(peer: WebSocketPeer, text: String) -> void:
 				_reply(peer, request_id, true, av, "")
 		_:
 			_reply(peer, request_id, false, null, "unknown command: %s" % cmd)
+
+
+func _poll_focus() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	var vp := tree.root
+	if vp == null:
+		return
+	var owner := vp.gui_get_focus_owner()
+	var desc := _describe_focus(owner)
+	if desc == _last_focus_desc:
+		return
+	(
+		_focus_history
+		. append(
+			{
+				"t_ms": Time.get_ticks_msec(),
+				"frame": Engine.get_process_frames(),
+				"from": _last_focus_desc,
+				"to": desc,
+			}
+		)
+	)
+	if _focus_history.size() > FOCUS_HISTORY_MAX:
+		_focus_history = _focus_history.slice(_focus_history.size() - FOCUS_HISTORY_MAX)
+	_last_focus_desc = desc
+
+
+func _describe_focus(node: Control) -> String:
+	if node == null:
+		return "<none>"
+	return "%s [%s]" % [str(node.get_path()), node.get_class()]
+
+
+func _build_focus_data() -> Dictionary:
+	# `explorer_has_focus` (and thus mobile walk/jump) is true iff this matches
+	# the explorer's `ui_root` (%UI). Compare `current` against it.
+	var ui_root_path := "<no explorer>"
+	var explorer := get_node_or_null("/root/explorer")
+	if explorer != null and explorer.get("ui_root") != null:
+		ui_root_path = str(explorer.ui_root.get_path())
+	return {
+		"current": _last_focus_desc,
+		"ui_root_path": ui_root_path,
+		"history": _focus_history,
+	}
 
 
 func _build_ping_data() -> Dictionary:

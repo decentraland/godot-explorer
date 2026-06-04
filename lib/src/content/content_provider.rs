@@ -42,7 +42,9 @@ use super::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
         load_and_save_scene_gltf, load_and_save_wearable_gltf, DclEmoteGltf,
     },
-    profile::{prepare_request_requirements, request_lambda_profile},
+    profile::{
+        prepare_request_requirements, request_lambda_profile, request_lambda_profile_by_url,
+    },
     resource_provider::ResourceProvider,
     scene_saver::{get_emote_path_for_hash, get_scene_path_for_hash, get_wearable_path_for_hash},
     texture::{load_image_texture, TextureEntry},
@@ -2135,6 +2137,87 @@ impl ContentProvider {
             }
 
             let texture_hash = format!("avatar_body_{:x}", user_id_h160);
+
+            let result = load_image_texture(body_url_raw, texture_hash, ctx).await;
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            then_promise(get_promise, result);
+        });
+
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
+    /// Fetches one of the catalyst's stock default-avatar body snapshots
+    /// (`profiles/default{slot}`, slot 1..=160). Used as the impostor fallback
+    /// for avatars without a fetchable profile (scene AvatarShapes) so we never
+    /// run the heavy main-thread local bake. All 160 are shared across avatars
+    /// and cached by slot, so each is downloaded at most once per session.
+    #[func]
+    pub fn fetch_default_avatar_body_texture(&mut self, slot: i32) -> Gd<Promise> {
+        let slot = slot.clamp(1, 160);
+        let cache_key = format!("avatar_body_default_{}", slot);
+
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            return promise;
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let (lambda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        TokioRuntime::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let url = format!("{}profiles/default{}", lambda_server_base_url, slot);
+            let profile_result =
+                request_lambda_profile_by_url(url, profile_base_url.as_str(), http_requester).await;
+
+            let profile = match profile_result {
+                Ok(profile) => profile,
+                Err(e) => {
+                    loaded_resources.fetch_add(1, Ordering::Relaxed);
+                    then_promise(
+                        get_promise,
+                        Err(anyhow::anyhow!("Failed to fetch default profile: {}", e)),
+                    );
+                    return;
+                }
+            };
+
+            let Some(snapshots) = profile.content.avatar.snapshots.as_ref() else {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Default profile has no snapshots")),
+                );
+                return;
+            };
+
+            let body_url_raw = snapshots
+                .body_url
+                .clone()
+                .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.body));
+
+            if body_url_raw.is_empty()
+                || body_url_raw.ends_with('/')
+                || body_url_raw == profile.base_url
+            {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Default profile has no body snapshot")),
+                );
+                return;
+            }
+
+            let texture_hash = format!("avatar_body_default_{}", slot);
 
             let result = load_image_texture(body_url_raw, texture_hash, ctx).await;
 

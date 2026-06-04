@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://c7m54lyhw5fwp"]
+
+[ext_resource type="Script" uid="uid://d2hvhwmt0e6sp" path="res://src/ui/components/organisms/credits_history/credits_history.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://p3ggpd773fvm" path="res://src/ui/components/molecules/credits_balance_card/credits_balance_card.tscn" id="2_l5d46"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="3_hjnkx"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l5d46"]
+content_margin_top = 8.0
+content_margin_bottom = 12.0
+draw_center = false
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_ovwu6"]
+font = ExtResource("3_hjnkx")
+font_size = 26
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="CreditsHistory" type="VBoxContainer" unique_id=1854159234]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 183.0
+grow_horizontal = 2
+theme_override_constants/separation = 48
+script = ExtResource("1_script")
+
+[node name="CreditsBalanceCard" parent="." unique_id=1082406100 instance=ExtResource("2_l5d46")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=291048065]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer" unique_id=245013328]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_l5d46")
+
+[node name="Label" type="Label" parent="VBoxContainer/PanelContainer" unique_id=1086757594]
+layout_mode = 2
+text = "purchase history"
+label_settings = SubResource("LabelSettings_ovwu6")
+uppercase = true
