@@ -22,6 +22,7 @@ var fade_out_tween: Tween = null
 var fade_in_tween: Tween = null
 var _credits_page: CreditsPage = null
 var _credits_layer: CanvasLayer = null
+var _credits_was_portrait: bool = true
 var _close_modulate_tween: Tween = null
 var _close_hide_tween: Tween = null
 var _close_node_to_free: PlaceholderManager = null
@@ -156,6 +157,8 @@ func async_show_credits():
 	if is_instance_valid(_credits_page):
 		return
 	_open()
+	_credits_was_portrait = Global.is_orientation_portrait()
+	Global.set_orientation_portrait()
 	_credits_layer = CanvasLayer.new()
 	add_child(_credits_layer)
 	var scene = load("res://src/ui/pages/credits/credits_page.tscn")
@@ -170,6 +173,8 @@ func _on_credits_page_closed() -> void:
 		_credits_layer.queue_free()
 		_credits_layer = null
 		_credits_page = null
+		if not _credits_was_portrait:
+			Global.set_orientation_landscape()
 
 
 func async_show_backpack(on_emotes := false):
