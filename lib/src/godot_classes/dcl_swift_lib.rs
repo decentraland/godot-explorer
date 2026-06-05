@@ -110,6 +110,13 @@ impl DclStoreKitPlugin {
     #[signal]
     fn transaction_updated(json: GString);
 
+    /// `(environment, source, resolve_ms)` — emitted exactly once after
+    /// `resolve_environment()`, guaranteed even on timeout. `environment` is
+    /// `"production"` | `"sandbox"` | `"xcode"` | `"unknown"`; `source` tells how
+    /// it was determined; `resolve_ms` is how long `AppTransaction` took.
+    #[signal]
+    fn environment_resolved(environment: GString, source: GString, resolve_ms: f64);
+
     fn ensure_inner(&mut self) -> bool {
         if self.inner.is_some() {
             return true;
@@ -139,6 +146,7 @@ impl DclStoreKitPlugin {
         let cb_purchase_cancelled = self.base().callable("_on_purchase_cancelled");
         let cb_purchase_pending = self.base().callable("_on_purchase_pending");
         let cb_transaction_updated = self.base().callable("_on_transaction_updated");
+        let cb_environment_resolved = self.base().callable("_on_environment_resolved");
 
         // The Swift signals are emitted from background `Task`s (StoreKit runs
         // its async work off the main thread). Connect DEFERRED so the forwarders
@@ -153,6 +161,7 @@ impl DclStoreKitPlugin {
         inner.connect_flags("purchase_cancelled", &cb_purchase_cancelled, deferred);
         inner.connect_flags("purchase_pending", &cb_purchase_pending, deferred);
         inner.connect_flags("transaction_updated", &cb_transaction_updated, deferred);
+        inner.connect_flags("environment_resolved", &cb_environment_resolved, deferred);
         self.wired = true;
     }
 
@@ -174,6 +183,38 @@ impl DclStoreKitPlugin {
             .call("can_make_payments", &[])
             .try_to::<bool>()
             .unwrap_or(false)
+    }
+
+    /// Synchronous best-effort StoreKit environment: `"sandbox"`,
+    /// `"production"` or `"unknown"`, read instantly from the receipt URL.
+    /// Safe to call at startup before picking the credits backend. Empty
+    /// string on non-iOS. For the authoritative value (and to distinguish the
+    /// Xcode StoreKit-config environment) use [`Self::resolve_environment`].
+    #[func]
+    fn current_environment(&mut self) -> GString {
+        if !self.ensure_inner() {
+            return GString::new();
+        }
+        self.inner
+            .as_mut()
+            .unwrap()
+            .call("current_environment", &[])
+            .try_to::<GString>()
+            .unwrap_or_default()
+    }
+
+    /// Authoritative StoreKit environment via `AppTransaction.shared`. Resolves
+    /// asynchronously; connect to the `environment_resolved(environment,
+    /// source)` signal for the result. No-op on non-iOS.
+    #[func]
+    fn resolve_environment(&mut self) {
+        if !self.ensure_inner() {
+            return;
+        }
+        self.inner
+            .as_mut()
+            .unwrap()
+            .call("resolve_environment", &[]);
     }
 
     #[func]
@@ -261,5 +302,17 @@ impl DclStoreKitPlugin {
     fn _on_transaction_updated(&mut self, json: GString) {
         self.base_mut()
             .emit_signal("transaction_updated", &[json.to_variant()]);
+    }
+
+    #[func]
+    fn _on_environment_resolved(&mut self, environment: GString, source: GString, resolve_ms: f64) {
+        self.base_mut().emit_signal(
+            "environment_resolved",
+            &[
+                environment.to_variant(),
+                source.to_variant(),
+                resolve_ms.to_variant(),
+            ],
+        );
     }
 }

@@ -78,6 +78,12 @@ var enabled: bool = false
 
 var _store_kit := DclStoreKitPlugin.new()
 var _store_kit_available: bool = false
+# Synchronous receipt-read environment captured at startup, held until the
+# authoritative AppTransaction resolves so both go out in one atomic event.
+var _env_sync_value: String = ""
+# ms-since-startup when the synchronous read above was taken (same clock the
+# `[Startup]` logs use: Time.get_ticks_msec() - Global._startup_time).
+var _env_sync_at_ms: int = 0
 var _products: Array = []
 # In-memory only; resets on relaunch.
 var _balance: int = 0
@@ -99,6 +105,69 @@ func _ready() -> void:
 	# IAP starts disabled. DeepLinkRouter calls enable() when the launch
 	# deeplink carries iap_enabled=true.
 	pass
+
+
+# Reports the StoreKit environment (production / sandbox / xcode) to analytics.
+# Runs unconditionally on iOS at startup — independent of enable() / iap_enabled
+# — so we collect production telemetry from real App Store installs and validate
+# the environment-detection mechanism BEFORE wiring it to backend selection.
+# StoreKit's environment is fixed by how the binary was distributed and can't be
+# chosen by the app (see docs/iap-zone-submission/), so it's the ground truth for
+# which IAP backend a device will hit. No-op on non-iOS.
+func report_environment_to_analytics() -> void:
+	# is_available() lazily instantiates the Swift class; on non-iOS the class
+	# isn't registered so this returns false. Note this does NOT start the
+	# Transaction.updates listener (that only happens in enable()).
+	if not _store_kit.is_available():
+		return
+
+	# Capture the synchronous receipt read NOW, but don't emit yet: we send a
+	# single atomic event once the authoritative AppTransaction resolves, so the
+	# two readings can never arrive asymmetrically. The Swift side guarantees the
+	# signal fires exactly once (hard timeout falls back to the receipt read), so
+	# the event is never missing.
+	_env_sync_value = _store_kit.current_environment()
+	_env_sync_at_ms = Time.get_ticks_msec() - Global._startup_time
+
+	if not _store_kit.environment_resolved.is_connected(_on_environment_resolved):
+		_store_kit.environment_resolved.connect(_on_environment_resolved, CONNECT_DEFERRED)
+	_store_kit.resolve_environment()
+
+
+func _on_environment_resolved(environment: String, source: String, resolve_ms: float) -> void:
+	var env_at_ms := Time.get_ticks_msec() - Global._startup_time
+	var matched := environment == _env_sync_value
+	print(
+		(
+			"[IAP] StoreKit env: authoritative=%s (%s) sync=%s match=%s resolve=%dms sync@%dms env@%dms"
+			% [
+				environment,
+				source,
+				_env_sync_value,
+				matched,
+				int(resolve_ms),
+				_env_sync_at_ms,
+				env_at_ms
+			]
+		)
+	)
+	if Global.metrics == null:
+		return
+	# One atomic event with BOTH readings + resolve latency + the startup-relative
+	# times each reading was taken + agreement. flush() ships it immediately so a
+	# short session can't drop it (it respects the EULA consent gate, so
+	# pre-consent it stays queued until consent opens).
+	Global.metrics.track_ios_storekit_environment(
+		environment,
+		_env_sync_value,
+		source,
+		resolve_ms,
+		_env_sync_at_ms,
+		env_at_ms,
+		str(DclGlobal.get_dcl_environment()),
+		_store_kit.can_make_payments()
+	)
+	Global.metrics.flush()
 
 
 # Idempotent. Called by DeepLinkRouter when iap_enabled=true is present in

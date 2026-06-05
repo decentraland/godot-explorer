@@ -437,6 +437,16 @@ func _ready():
 		# spawns a transient Timer under Global only while polling for first_move_in_world.
 		self.analytics_controller = AnalyticsController.new()
 		self.analytics_controller.setup()
+
+		# iOS only: report the StoreKit environment (production/sandbox) to
+		# analytics once at startup. StoreKit's environment is fixed by how the
+		# binary was distributed and can't be chosen by the app, so this is the
+		# ground truth for which IAP backend a device will hit. We ship this
+		# BEFORE any purchase flow to validate in prod that real App Store
+		# installs report `production`. Deferred so it runs after every autoload
+		# (incl. Iap) is in the tree. See docs/iap-zone-submission/.
+		if self.is_ios():
+			Iap.report_environment_to_analytics.call_deferred()
 	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The
 	# service self-gates on EULA acceptance and caches the issued session token on disk.
 	self.attestation = AttestationService.new()
