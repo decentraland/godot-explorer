@@ -9,7 +9,28 @@ use crate::{
 
 pub fn update_avatar_scene_updates(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     for entity_id in scene.avatar_scene_updates.deleted_entities.drain() {
-        crdt_state.entities.kill(entity_id);
+        // Issue #1818: a departing player (disconnect or walk-out) must be communicated
+        // to the scene's V8 CRDT so `@dcl/sdk/players` onLeaveScene fires and iterating
+        // entities with PlayerIdentityData drops the peer.
+        //
+        // We must NOT do this with an entity death: the renderer→scene path never
+        // carries entity deaths (they're stripped from the dirty set, and #1444 stops
+        // them reaching the SDK). Instead we mirror the enter path — which works by
+        // PUT-ing components — and set the player components to None. A None value is a
+        // dirty component DELETE that propagates to V8 exactly like a PUT does.
+        //
+        // The entity is left alive (component-less) in the scene CRDT; avatar entity
+        // slots are recycled from `AvatarScene::crdt_state`, which is killed separately
+        // in `AvatarScene::remove_avatar`, so no scene-side kill is needed here.
+        SceneCrdtStateProtoComponents::get_player_identity_data_mut(crdt_state)
+            .put(entity_id, None);
+        SceneCrdtStateProtoComponents::get_avatar_base_mut(crdt_state).put(entity_id, None);
+        SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(crdt_state)
+            .put(entity_id, None);
+        crdt_state
+            .get_internal_player_data_mut()
+            .put(entity_id, None);
+        crdt_state.get_transform_mut().put(entity_id, None);
     }
 
     {
