@@ -550,6 +550,9 @@ func _on_wearable_unequip(wearable_id: String):
 func _async_on_marketplace_equip(urn: String):
 	if urn.is_empty():
 		return
+	# Cancel any pending restore immediately so the deferred call doesn't
+	# clear_selection while we await the wearable fetch.
+	_marketplace_restore_pending = false
 	# Fetch wearable definition — use content_provider cache, don't add to wearable_data
 	var wearable = Global.content_provider.get_wearable(urn)
 	if wearable == null:
