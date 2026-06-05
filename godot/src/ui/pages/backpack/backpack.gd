@@ -39,6 +39,11 @@ var avatar_loading_counter: int = 0
 var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
+var _ios_marketplace_section: MarketplaceRecommendedSection = null
+var _marketplace_preview_urn: String = ""
+var _marketplace_saved_wearables: PackedStringArray = []
+var _marketplace_restore_pending: bool = false
+
 var _avatar_update_retries: int = 0
 var _is_currently_narrow: bool = false
 
@@ -54,7 +59,6 @@ var _is_currently_narrow: bool = false
 
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
-@onready var control_no_items = %Control_NoItems
 @onready var backpack_loading = %TextureProgressBar_BackpackLoading
 @onready var container_backpack = %HBoxContainer_Backpack
 @onready var button_back_to_explorer := %Button_BackToExplorer
@@ -83,6 +87,7 @@ var _is_currently_narrow: bool = false
 @onready var canary_container: Control = get_node_or_null("%ControlContainer_Canary")
 @onready var canary_content: Control = get_node_or_null("%ControlContent_Canary")
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
+@onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
 
 
 # gdlint:ignore = async-function-name
@@ -180,6 +185,8 @@ func _ready():
 	container_backpack.show()
 	backpack_loading.hide()
 
+	_setup_ios_marketplace_section()
+
 	request_show_wearables = true
 
 	# Listen for notifications that may indicate new wearables (e.g. rewards)
@@ -224,6 +231,8 @@ func _update_grid_columns() -> void:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var is_portrait := window_size.x < window_size.y
 	grid_container_wearables_list.columns = columns
+	if _ios_marketplace_section:
+		_ios_marketplace_section.set_columns(columns)
 	#if emote_editor.container_all_emotes != null:
 	emote_editor.container_all_emotes.columns = columns if is_portrait else columns - 1
 
@@ -321,6 +330,14 @@ func _async_update_avatar():
 		request_update_avatar = true
 		return
 	_avatar_update_retries = 0
+
+	# If marketplace preview is active, rebuild the preview with updated colors
+	if not _marketplace_preview_urn.is_empty():
+		var wearable = Global.content_provider.get_wearable(_marketplace_preview_urn)
+		if wearable != null:
+			_async_marketplace_preview_equip(_marketplace_preview_urn, wearable)
+			return
+
 	mutable_profile.set_avatar(mutable_avatar)
 
 	var loading_id := _set_avatar_loading()
@@ -381,8 +398,9 @@ func _show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
 
-	control_no_items.visible = filtered_data.is_empty()
-	grid_container_wearables_list.visible = not filtered_data.is_empty()
+	var has_items = not filtered_data.is_empty()
+	margin_container_no_items.visible = not has_items
+	grid_container_wearables_list.visible = has_items
 
 	for wearable_id in filtered_data:
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
@@ -404,14 +422,29 @@ func _show_wearables():
 		wearable_item.set_equiped(is_wearable_pressed)
 
 
+func _setup_ios_marketplace_section():
+	if not Iap.is_available():
+		return
+
+	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
+	if _ios_marketplace_section == null:
+		return
+	_ios_marketplace_section.item_equip.connect(_async_on_marketplace_equip)
+	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
+
+
 func _on_main_category_filter_type(type: String):
+	_marketplace_preview_restore()
 	main_category_selected = type
 	_update_visible_categories()
 
 
 func _on_wearable_filter_button_filter_type(type):
+	_marketplace_preview_restore()
 	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
+	if _ios_marketplace_section:
+		_ios_marketplace_section.update_category(type)
 	var color_name := "%s Color" % type.to_pascal_case()
 	color_carrousel.set_title(color_name)
 
@@ -514,6 +547,99 @@ func _on_wearable_unequip(wearable_id: String):
 	request_update_avatar = true
 
 
+func _async_on_marketplace_equip(urn: String):
+	if urn.is_empty():
+		return
+	# Cancel any pending restore immediately so the deferred call doesn't
+	# clear_selection while we await the wearable fetch.
+	_marketplace_restore_pending = false
+	# Fetch wearable definition — use content_provider cache, don't add to wearable_data
+	var wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		var promise = Global.content_provider.fetch_wearables(
+			[urn], Global.realm.get_profile_content_url()
+		)
+		await PromiseUtils.async_all(promise)
+		wearable = Global.content_provider.get_wearable(urn)
+		if wearable == null:
+			printerr("[Marketplace] Failed to fetch wearable: ", urn)
+			return
+	_async_marketplace_preview_equip(urn, wearable)
+
+
+func _on_marketplace_unequip(_urn: String):
+	# When switching cards in the ButtonGroup, unequip fires before the new equip.
+	# Defer the restore so equip can cancel it if another card takes over.
+	_marketplace_restore_pending = true
+	_deferred_marketplace_restore.call_deferred()
+
+
+## Temporarily equips a marketplace wearable for visual preview only.
+## Never touches mutable avatar/profile — only updates the local avatar_preview.
+func _async_marketplace_preview_equip(urn: String, wearable: DclItemEntityDefinition):
+	# Cancel any pending restore from a ButtonGroup switch
+	_marketplace_restore_pending = false
+
+	var mutable_avatar = Global.player_identity.get_mutable_avatar()
+	if mutable_avatar == null:
+		return
+
+	# Save original wearables on first preview
+	if _marketplace_preview_urn.is_empty():
+		_marketplace_saved_wearables = mutable_avatar.get_wearables().duplicate()
+
+	_marketplace_preview_urn = urn
+	var category = wearable.get_category()
+
+	# Build temporary wearable list: replace same category, add new
+	var preview_wearables = _marketplace_saved_wearables.duplicate()
+	var to_remove = []
+	for current_id in preview_wearables:
+		var current_wearable = wearable_data.get(current_id)
+		if current_wearable != null and current_wearable.get_category() == category:
+			to_remove.push_back(current_id)
+	for remove_id in to_remove:
+		var idx = preview_wearables.find(remove_id)
+		if idx != -1:
+			preview_wearables.remove_at(idx)
+	preview_wearables.append(urn)
+
+	# Create a temporary avatar wire format for preview — don't touch the real one
+	var temp_avatar = DclAvatarWireFormat.new()
+	temp_avatar.set_body_shape(mutable_avatar.get_body_shape())
+	temp_avatar.set_eyes_color(mutable_avatar.get_eyes_color())
+	temp_avatar.set_hair_color(mutable_avatar.get_hair_color())
+	temp_avatar.set_skin_color(mutable_avatar.get_skin_color())
+	temp_avatar.set_wearables(preview_wearables)
+	temp_avatar.set_emotes(mutable_avatar.get_emotes())
+
+	var profile = Global.player_identity.get_mutable_profile()
+	var avatar_name = profile.get_name() if profile else ""
+
+	var loading_id := _set_avatar_loading()
+	await avatar_preview.avatar.async_update_avatar(temp_avatar, avatar_name)
+	_unset_avatar_loading(loading_id)
+
+
+## Restores the avatar preview to the real profile state.
+func _marketplace_preview_restore():
+	if _marketplace_preview_urn.is_empty():
+		return
+	_marketplace_restore_pending = false
+	_marketplace_preview_urn = ""
+	_marketplace_saved_wearables = []
+	if _ios_marketplace_section:
+		_ios_marketplace_section.clear_selection()
+	request_update_avatar = true
+
+
+## Deferred version — only runs if not cancelled by a new equip.
+func _deferred_marketplace_restore():
+	if not _marketplace_restore_pending:
+		return
+	_marketplace_preview_restore()
+
+
 func _on_button_logout_pressed():
 	# Route through the single canonical teardown (kills scenes, closes comms,
 	# clears identity, resets realm) instead of just dropping comms.
@@ -544,7 +670,9 @@ func _on_color_set() -> void:
 
 
 func _on_button_wearables_pressed():
+	_marketplace_preview_restore()
 	avatar_preview.avatar.emote_controller.stop_emote()
+	scroll_container_items.scroll_vertical = 0
 	wearable_editor.show()
 	emote_editor.hide()
 	if emote_name_anim != null:
@@ -552,6 +680,8 @@ func _on_button_wearables_pressed():
 
 
 func _on_button_emotes_pressed():
+	_marketplace_preview_restore()
+	scroll_container_items.scroll_vertical = 0
 	show_emotes()
 
 
@@ -678,12 +808,15 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 
 
 func _on_visibility_changed() -> void:
-	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		#Global.set_orientation_portrait()
+	if not is_node_ready() or not is_inside_tree():
+		return
+	if is_visible_in_tree():
 		if Global.get_explorer():
 			if button_back_to_explorer:
-				#button_back_to_explorer.show()
 				button_back_to_explorer.hide()
+	else:
+		# Leaving backpack — restore avatar preview to real state
+		_marketplace_preview_restore()
 
 
 func _on_button_back_to_explorer_pressed() -> void:

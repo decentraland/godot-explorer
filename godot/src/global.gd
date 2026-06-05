@@ -19,6 +19,7 @@ signal open_settings
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover
+signal open_credits
 signal open_own_profile
 signal open_profile_editor
 signal open_navbar_silently
