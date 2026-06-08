@@ -51,6 +51,10 @@ func process_deep_link(url: String) -> void:
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
 
+	# Toggle the loopback debug WS server from the deeplink. Lets it be enabled
+	# before reaching Settings (e.g. on the login/lobby screens).
+	apply_debug_ws_param(Global.deep_link_obj.params.get("debug-ws", ""))
+
 	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
 	# runner from Global._ready, but on mobile the deep link is not parsed by
 	# then — spawn here once the deeplink lands and only if no runner exists.
@@ -171,6 +175,35 @@ func _route_teleport() -> void:
 		Global.async_teleport_to(Global.deep_link_obj.location, realm)
 	elif not realm.is_empty():
 		Global.async_teleport_to(Vector2i.ZERO, realm)
+
+
+## Start/stop the developer debug WS server from a deeplink `debug-ws` param.
+## Mirrors the Settings → Developer → "Debug WS Server" toggle, but reachable
+## before Settings exists (login/lobby). Developer-only: ignored in production,
+## same as the hidden Settings toggle.
+##
+## Accepted values: empty -> no-op; "0"/"false"/"off"/"stop"/"disable" -> stop;
+## a port number (e.g. "9300") -> start on that port; anything else
+## ("1"/"true"/"on") -> start on the default port.
+func apply_debug_ws_param(value: String) -> void:
+	if value.is_empty():
+		return
+	if Global.is_production():
+		print("[DEEPLINK] Ignoring debug-ws param in production build")
+		return
+
+	if value.to_lower() in ["0", "false", "off", "stop", "disable"]:
+		DebugWs.stop()
+		print("[DEEPLINK] Debug WS server stopped")
+		return
+
+	var port: int = DebugWs.DEFAULT_PORT
+	if value.is_valid_int() and int(value) > 1:
+		port = int(value)
+	if DebugWs.start(port):
+		print("[DEEPLINK] Debug WS server listening on port ", DebugWs.get_port())
+	else:
+		printerr("[DEEPLINK] Failed to start debug WS server on port ", port)
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:
