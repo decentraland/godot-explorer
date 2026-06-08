@@ -402,27 +402,57 @@ func _push_scene_interactable_area() -> void:
 
 
 func _on_player_logout():
-	# Mark session inactive first so any in-flight retry awaits exit on next check
-	_session_active = false
+	# Funnel any logout signal (e.g. session expiry) into the single canonical
+	# teardown instead of quitting the app. Global.sign_out() is re-entrancy
+	# guarded, so this is safe even when sign_out() is what emitted the signal.
+	Global.sign_out()
 
-	# Stop re-subscribe timer
+
+## Sever this Explorer from every persistent (autoload / window / Rust singleton)
+## emitter and stop its retry timers, while the node is still in the tree. Called
+## by Global.sign_out() BEFORE it kills scenes / clears realm / changes orientation,
+## so none of those re-emit into this about-to-be-freed Explorer. Idempotent.
+func prepare_for_logout() -> void:
+	# Drain any in-flight subscription retry loops on their next check.
+	_session_active = false
+	_subscription_reconnecting = false
+
 	if _resubscribe_timer != null:
 		_resubscribe_timer.stop()
 		_resubscribe_timer.queue_free()
 		_resubscribe_timer = null
 
-	# Stop notifications polling
-	NotificationsManager.stop_polling()
+	_disconnect_persistent_signals()
 
-	# Clean stored session
-	Global.get_config().session_account = {}
-	Global.get_config().save_to_settings_file()
 
-	# TODO: It's crashing. Logout = exit app
-	#get_tree().change_scene_to_file("res://src/main.tscn")
+## Disconnect this Explorer from persistent emitters (autoloads / Rust singletons).
+## Godot auto-severs any connection whose RECEIVER is freed, so the many
+## Global.* -> _on_*() UI callbacks are cleaned up automatically when this node is
+## freed. We only manually sever the connections Godot would NOT clean up, or that
+## can fire synchronously into this node during the sign-out teardown (before the
+## deferred free): the Global -> Global connection (leaks one callback per login
+## otherwise) and the persistent Rust/autoload emitters used during teardown.
+func _disconnect_persistent_signals() -> void:
+	_safe_disconnect(Global.scene_runner.on_change_scene_id, _on_change_scene_id)
+	_safe_disconnect(Global.scene_runner.pointer_tooltip_changed, _on_pointer_tooltip_changed)
+	_safe_disconnect(Global.change_parcel, _on_change_parcel)
+	_safe_disconnect(Global.orientation_changed, _on_orientation_changed)
+	_safe_disconnect(Global.player_identity.logout, _on_player_logout)
 
-	# TODO: Temporal solution
-	get_tree().quit()
+	if Global.avatars != null:
+		# Global -> Global: not auto-severed, would leak one callback per login.
+		var profile_changed: Signal = Global.player_identity.profile_changed
+		_safe_disconnect(profile_changed, Global.avatars.update_primary_player_profile)
+		_safe_disconnect(Global.avatars.avatar_added, _on_avatar_added_apply_hide_ui)
+
+	if Global.social_service != null:
+		_safe_disconnect(Global.social_service.block_update_received, _on_block_update_received)
+		_safe_disconnect(Global.social_service.subscription_dropped, _async_on_subscription_dropped)
+
+
+func _safe_disconnect(sig: Signal, callable: Callable) -> void:
+	if sig.is_connected(callable):
+		sig.disconnect(callable)
 
 
 func _on_player_profile_changed(_profile: DclUserProfile) -> void:

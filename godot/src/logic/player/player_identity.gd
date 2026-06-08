@@ -123,6 +123,20 @@ func _on_profile_changed(new_profile: DclUserProfile):
 		Global.social_blacklist.append_muted(muted_list)
 
 
+## Fully reset the in-memory identity so the next account starts from a clean
+## slate. Without this, signing out keeps the previous profile/avatar in memory
+## and the next account's avatar editor inherits the old wearables (issue #1658).
+func reset_identity():
+	# clear_identity() is the native logout exposed for GDScript (the bare
+	# `logout` name is the logout *signal*). Clears wallet/ephemeral/profile so
+	# create_guest_account_if_needed() no longer sees the stale web3 wallet and
+	# correctly starts a fresh account.
+	clear_identity()
+	_mutable_profile = DclUserProfile.new()
+	_current_profile = DclUserProfile.new()
+	_mutable_avatar = _mutable_profile.get_avatar()
+
+
 func get_mutable_avatar() -> DclAvatarWireFormat:
 	return _mutable_avatar
 

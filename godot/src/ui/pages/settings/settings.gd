@@ -96,8 +96,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	button_developer.visible = !Global.is_production()
-	# Reflect the live server state: debug builds auto-start it in DebugWs._ready.
-	check_button_debug_server.set_pressed_no_signal(DebugWs.is_running())
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
 
@@ -351,6 +349,9 @@ func refresh_values():
 	process_tick_quota.value = Global.get_config().process_tick_quota_ms
 	if is_instance_valid(Global.raycast_debugger):
 		check_button_raycast_debugger.set_pressed_no_signal(true)
+	# Reflect the real server state: it may have been started from a deeplink
+	# (debug-ws param) before Settings was ever opened.
+	check_button_debug_server.set_pressed_no_signal(DebugWs.is_running())
 
 
 func _on_button_connect_preview_pressed():
@@ -882,3 +883,9 @@ func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
 
 func _on_custom_button_sign_out_pressed() -> void:
 	Global.sign_out()
+
+
+func _on_button_return_to_discover_pressed() -> void:
+	# Dev Tools: leave the current world and return to the Discover menu while
+	# staying signed in (soft sign-out). See Global.return_to_discover().
+	Global.return_to_discover()

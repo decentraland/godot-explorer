@@ -13,9 +13,9 @@
 These are blocking prerequisites. Resolve each one (or explicitly note its status in your review) before reading the diff.
 
 1. **Branch must be up to date with `main`.** Run `gh pr view <pr> --json mergeStateStatus,headRefOid,baseRefOid` (or check the PR page). If the PR is behind `main`, **request the author update the branch before a substantive review** — CI signals (especially Android/iOS artifacts) are not trustworthy on a stale base, and recently-merged fixes (autoload ordering, mouse-filter changes, skeleton recycling) frequently invalidate older diffs. A one-line "please rebase / merge `main` and I'll re-review" is the right output if the branch is stale.
-2. **iOS build must be present for platform-sensitive changes.** iOS builds are gated on the `build-ios` label and skipped by default. Check the PR's checks/comments for a `🍏 iOS` artifact in the sticky build report.
+2. **iOS build must be present for platform-sensitive changes.** Mobile builds are gated on the `build` label (alias: `build-ios`) and skipped by default. Check the PR's checks/comments for a `🍏 iOS` artifact in the sticky build report.
    - If the PR touches: native iOS plugins (`plugins/dcl-godot-ios/**`), `OS.get_name() == "iOS"` branches, deeplinks, virtual keyboard / safe-area / `UIView` paths, audio/video/livekit interop, or anything under `lib/src/comms/` or `lib/src/av/` → **an iOS build is required**.
-   - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build-ios` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
+   - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
    - If the PR is purely backend / GDScript-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
 3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes under `plugins/dcl-godot-ios/godot` or any submodule and the PR description does not mention it, treat it as accidental and ask the author to confirm.
 
@@ -152,7 +152,7 @@ The PR-level workflows a reviewer should expect green before approving:
 - `Clippy` — `-D warnings`
 - `🐧 Linux`, `🪟 Windows`, `🍎 macOS` builds
 - `🤖 Android` builds (APK/AAB posted as a sticky comment on the PR)
-- `🍏 iOS` is **opt-in** — gated on the `build-ios` label. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
+- `🍏 iOS` is **opt-in** — gated on the `build` label (alias: `build-ios`), which also posts a Slack "Android build ready" notification with the R2 APK download link. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
 
 ### Release flow
 `release` branch is used for production cuts. PRs titled `Release: merge release into main` / `Merge main into release` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).

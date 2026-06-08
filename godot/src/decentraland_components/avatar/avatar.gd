@@ -1210,7 +1210,13 @@ func _update_lod() -> void:
 	# helpers (set_hidden / modifier area). Don't change LOD state — the
 	# avatar's mesh is already invisible via the parent hide(); we just need
 	# the impostor slot off.
-	if not visible:
+	# Use is_visible_in_tree(), not the node's own `visible` flag: scene
+	# AvatarShapes (e.g. the Tower of Madness podium) are hidden by their parent
+	# entity via a VisibilityComponent (parent visible=false / scale ~0) while
+	# the Avatar node keeps visible=true. The impostor MultiMesh lives on
+	# AvatarScene and ignores the avatar's tree visibility/scale, so without this
+	# an invisible avatar still draws a full-size impostor (phantom-podium bug).
+	if not is_visible_in_tree():
 		_hide_impostor_render()
 		return
 
