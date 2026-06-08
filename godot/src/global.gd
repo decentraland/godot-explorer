@@ -716,6 +716,15 @@ func sign_out() -> void:
 
 	# 2. Stop session pollers and tear down the social gRPC streams.
 	NotificationsManager.stop_polling()
+	# Wipe the previous account's in-memory notification history so it can't leak
+	# into the next session's panel/bell badge (issue #2104).
+	NotificationsManager.clear_notification_history()
+	# Drop the previous account's event reminders so they can't fire on the
+	# device after sign-out. Only "event_" entries (per-account attended-event
+	# reminders) are cleared; the per-install day1 welcome is preserved. The
+	# sync-on-next-login REMOVE pass only runs for an authenticated account, so
+	# without this a signed-out/guest session keeps the old reminders scheduled.
+	NotificationsManager.clear_event_local_notifications()
 	# The analytics first-move poll (a Timer under this autoload) reads
 	# scene_runner.player_body_node; left running it would poll the freed Player
 	# after the swap, panicking the #[var] getter. It restarts on the next login.
