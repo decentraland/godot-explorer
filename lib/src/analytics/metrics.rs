@@ -21,8 +21,8 @@ use super::{
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventFirebaseInit, SegmentEventRequestFriend, SegmentEventScreenViewed,
-        SegmentEventUnfriend,
+        SegmentEventFirebaseInit, SegmentEventIosStoreKitEnvironment, SegmentEventRequestFriend,
+        SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
     install_referrer::InstallReferrer,
@@ -341,6 +341,41 @@ impl Metrics {
         });
         self.events.push(event.clone());
         self.debug_print_event("Click Button", &event);
+    }
+
+    /// Reports the iOS StoreKit environment to Segment. Fired once at startup
+    /// (and again when the authoritative `AppTransaction` resolves) so we can
+    /// validate in production that real App Store installs report `production`
+    /// — before any IAP purchase flow exists. Platform-agnostic on the Rust
+    /// side: callers gate to iOS. Subject to the EULA consent gate like every
+    /// other event.
+    #[allow(clippy::too_many_arguments)]
+    #[func]
+    pub fn track_ios_storekit_environment(
+        &mut self,
+        environment: String,
+        environment_sync: String,
+        source: String,
+        resolve_ms: f64,
+        environment_sync_at_ms: i64,
+        environment_at_ms: i64,
+        app_environment: String,
+        can_make_payments: bool,
+    ) {
+        let matched = environment == environment_sync;
+        let event = SegmentEvent::IosStoreKitEnvironment(SegmentEventIosStoreKitEnvironment {
+            environment,
+            environment_sync,
+            source,
+            resolve_ms,
+            environment_sync_at_ms,
+            environment_at_ms,
+            matched,
+            app_environment,
+            can_make_payments,
+        });
+        self.events.push(event.clone());
+        self.debug_print_event("iOS StoreKit Environment", &event);
     }
 
     #[func]
