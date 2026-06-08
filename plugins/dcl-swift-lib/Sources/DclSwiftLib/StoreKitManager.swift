@@ -49,6 +49,17 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
     /// purchases from another device, etc.). Argument: JSON of the transaction.
     @Signal var transactionUpdated: SignalWithArguments<String>
 
+    /// Emitted EXACTLY ONCE by `resolve_environment()` — guaranteed, even if
+    /// `AppTransaction.shared` hangs (a hard timeout falls back to the receipt
+    /// read). `(environment, source, resolveMs)`:
+    /// - `environment`: `"production"` | `"sandbox"` | `"xcode"` | `"unknown"`.
+    /// - `source`: `"app_transaction"` (authoritative) |
+    ///   `"app_transaction_unverified"` | `"receipt_fallback"` (AppTransaction
+    ///   threw) | `"timeout"` (AppTransaction didn't resolve in time).
+    /// - `resolveMs`: wall-clock ms `AppTransaction` took to resolve — the value
+    ///   we want to measure.
+    @Signal var environmentResolved: SignalWithArguments<String, String, Double>
+
     // MARK: - State
 
     // `loadedProducts` is written from the `loadProducts` background Task and
@@ -80,6 +91,97 @@ class DclStoreKit: RefCounted, @unchecked Sendable {
     @Callable(autoSnakeCase: true)
     func canMakePayments() -> Bool {
         return AppStore.canMakePayments
+    }
+
+    // MARK: - Environment
+
+    /// Synchronous, best-effort StoreKit environment. Returns `"sandbox"`,
+    /// `"production"` or `"unknown"` immediately from the app-receipt URL —
+    /// no network, no `await` — so it's safe to call at startup *before*
+    /// deciding which credits backend (.zone vs .org) to talk to.
+    ///
+    /// The environment is fixed by how the binary was distributed and the app
+    /// cannot choose it: App Store download → production; TestFlight and the
+    /// App Review build → sandbox (see `docs/iap-zone-submission/`). This getter
+    /// can't see the Xcode StoreKit-config environment (it has no receipt) and
+    /// may read `"unknown"` on a brand-new install before the receipt exists —
+    /// for the authoritative value use `resolve_environment()`.
+    @Callable(autoSnakeCase: true)
+    func currentEnvironment() -> String {
+        guard let url = Bundle.main.appStoreReceiptURL else { return "unknown" }
+        switch url.lastPathComponent {
+        case "sandboxReceipt": return "sandbox"
+        case "receipt": return "production"
+        default: return "unknown"
+        }
+    }
+
+    /// Authoritative StoreKit environment via `AppTransaction.shared` — the
+    /// app's own signed "download" receipt, available even before any purchase.
+    /// Resolves asynchronously and emits `environment_resolved(environment,
+    /// source)`. This is the same signal Apple uses to route App Review's
+    /// sandbox purchases, so it's the reliable input for picking the backend.
+    /// Falls back to `current_environment()` if `AppTransaction` can't be
+    /// fetched (e.g. no network on a fresh sandbox install).
+    @Callable(autoSnakeCase: true)
+    func resolveEnvironment() {
+        Task { [weak self] in
+            guard let self = self else { return }
+            let start = DispatchTime.now()
+            let (env, source) = await self.computeEnvironment()
+            let elapsedMs =
+                Double(DispatchTime.now().uptimeNanoseconds &- start.uptimeNanoseconds) / 1_000_000.0
+            gdLog("[DclStoreKit] resolveEnvironment: \(env) (\(source)) in \(Int(elapsedMs))ms")
+            self.environmentResolved.emit(env, source, elapsedMs)
+        }
+    }
+
+    /// Resolves the authoritative environment, ALWAYS returning within the hard
+    /// timeout and NEVER throwing — on error or timeout it falls back to the
+    /// synchronous receipt read. This is what lets `resolve_environment()`
+    /// guarantee its signal fires exactly once, so the analytics event is never
+    /// missing.
+    private func computeEnvironment() async -> (String, String) {
+        let timeoutNs: UInt64 = 10_000_000_000  // 10s hard cap
+        return await withTaskGroup(of: (String, String)?.self) { group in
+            group.addTask { [weak self] in
+                guard let self = self else { return nil }
+                do {
+                    let result = try await AppTransaction.shared
+                    switch result {
+                    case .verified(let appTx):
+                        return (Self.environmentString(appTx.environment), "app_transaction")
+                    case .unverified(let appTx, _):
+                        return (
+                            Self.environmentString(appTx.environment), "app_transaction_unverified"
+                        )
+                    }
+                } catch {
+                    return (self.currentEnvironment(), "receipt_fallback")
+                }
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: timeoutNs)
+                return nil  // timeout sentinel
+            }
+            defer { group.cancelAll() }
+            for await first in group {
+                if let value = first {
+                    return value
+                }
+                break  // sentinel reached first → timeout
+            }
+            return (self.currentEnvironment(), "timeout")
+        }
+    }
+
+    /// Normalises `AppStore.Environment` (a RawRepresentable struct, not an
+    /// enum) to a stable lowercase string for GDScript.
+    private static func environmentString(_ env: AppStore.Environment) -> String {
+        if env == .production { return "production" }
+        if env == .sandbox { return "sandbox" }
+        if env == .xcode { return "xcode" }
+        return env.rawValue
     }
 
     /// Start observing `Transaction.updates`. Idempotent. Call this early in

@@ -64,6 +64,7 @@ pub enum SegmentEvent {
     FirebaseInit(SegmentEventFirebaseInit),
     AttestationAttempt(SegmentEventAttestationAttempt),
     AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded),
+    IosStoreKitEnvironment(SegmentEventIosStoreKitEnvironment),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -286,6 +287,47 @@ pub struct SegmentEventScreenViewed {
     pub extra_properties: Option<String>,
 }
 
+/// Reports the StoreKit environment detected on iOS at startup. The environment
+/// is fixed by how the binary was distributed (App Store download → production;
+/// TestFlight / App Review build → sandbox) and the app cannot choose it, so
+/// this is the ground truth for which In-App-Purchase backend the device will
+/// hit. Emitted before any IAP flow exists, purely to validate in production
+/// that real App Store installs report `production`. See `docs/iap-zone-submission/`.
+// Single atomic event carrying BOTH readings of the StoreKit environment so they
+// can never arrive asymmetrically: the synchronous receipt read and the
+// authoritative `AppTransaction` value, plus how long the latter took and whether
+// they agree. One payload = the two readings are always present together, which
+// is the whole point (measure the resolve latency, confirm they coincide).
+#[derive(Serialize, Clone)]
+pub struct SegmentEventIosStoreKitEnvironment {
+    // Authoritative environment from AppTransaction (falls back to the receipt
+    // read on timeout/error): "production" | "sandbox" | "xcode" | "unknown".
+    pub environment: String,
+    // Synchronous receipt-URL read taken at startup, for comparison.
+    pub environment_sync: String,
+    // How `environment` was determined: "app_transaction" (authoritative) |
+    // "app_transaction_unverified" | "receipt_fallback" (AppTransaction threw) |
+    // "timeout" (AppTransaction didn't resolve within the hard cap).
+    pub source: String,
+    // Wall-clock milliseconds AppTransaction took to resolve (measured in Swift).
+    pub resolve_ms: f64,
+    // Milliseconds since app startup when the synchronous receipt read was taken.
+    pub environment_sync_at_ms: i64,
+    // Milliseconds since app startup when the authoritative environment was
+    // confirmed and readable. The gap to environment_sync_at_ms is how long the
+    // device went before the authoritative value was available.
+    pub environment_at_ms: i64,
+    // Whether the authoritative and synchronous readings agree.
+    #[serde(rename = "match")]
+    pub matched: bool,
+    // The app's own backend environment at the time: "org" | "zone" | "today".
+    // A mismatch (e.g. StoreKit "sandbox" while app "org") is exactly the
+    // App-Review conflict we're characterising.
+    pub app_environment: String,
+    // StoreKit's AppStore.canMakePayments for this device.
+    pub can_make_payments: bool,
+}
+
 #[derive(Serialize, Clone)]
 pub struct SegmentEventRequestFriend {
     // Wallet address of the user receiving the friend request.
@@ -496,6 +538,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::AttestationSessionCacheLoaded(event) => (
             "Attestation Session Cache Loaded".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::IosStoreKitEnvironment(event) => (
+            "iOS StoreKit Environment".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),
