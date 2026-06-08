@@ -163,6 +163,11 @@ var _free_bone_pool: Array[int] = []
 var _stale_bone_counter: int = 0
 
 var _lod_state: int = LODState.FULL
+# 2D screen-space nameplate (non-XR) vs legacy viewport quad (XR). Runtime lives in
+# NameplateLayer; these cache the hide-flag/FAR gate and the depth-occlusion result.
+var _use_2d_nameplate: bool = false
+var _nametag_gate_visible: bool = true
+var _nameplate_occluded: bool = false
 var _impostor_layer: int = -1
 var _lod_phase: int = 0
 var _mesh_lod_visibility_captured: bool = false
@@ -269,6 +274,9 @@ func _ready():
 	# Hide mic when the avatar is spawned
 	nickname_ui.mic_enabled = false
 	Global.on_chat_message.connect(on_chat_message)
+	_use_2d_nameplate = not Global.is_xr()
+	if _use_2d_nameplate:
+		NameplateLayer.attach(self)
 	_apply_nickname_visibility()
 
 	_lod_phase = int(self.unique_id) % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES
@@ -282,6 +290,11 @@ func _ready():
 
 func _exit_tree() -> void:
 	AvatarLODCoordinator.unregister(self)
+
+	# The 2D nameplate lives in the shared layer, not under this avatar, so it
+	# won't be auto-freed — free it explicitly.
+	if _use_2d_nameplate:
+		NameplateLayer.detach(self)
 
 	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
 	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
@@ -590,17 +603,11 @@ func set_force_hide_name(value: bool) -> void:
 		_apply_nickname_visibility()
 
 
-## Bump the nickname SubViewport to redraw exactly one frame. UPDATE_ONCE
-## auto-resets to UPDATE_DISABLED after rendering, so callers must invoke
-## this every time something nickname-related changes — `_apply_nickname_visibility`
-## bumps once on show, individual setters (chat message, mic, etc.) bump as
-## state changes, and `_process` bumps after the viewport resizes.
-##
-## Gate on `nickname_quad.visible` (the source of truth for "is this nickname
-## actually being shown") rather than `render_target_update_mode == UPDATE_DISABLED`
-## — the latter is also the post-render state after UPDATE_ONCE auto-resets, so
-## it can't distinguish "explicitly hidden" from "just finished rendering one frame".
+## Legacy XR-only: bump the nickname SubViewport to redraw one frame (UPDATE_ONCE
+## auto-resets). 2D nameplates are live Controls so content setters suffice.
 func _request_nickname_redraw() -> void:
+	if _use_2d_nameplate:
+		return
 	if nickname_viewport == null or nickname_quad == null:
 		return
 	if not nickname_quad.visible:
@@ -622,6 +629,12 @@ func _apply_nickname_visibility() -> void:
 	var should_hide := (
 		avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod or nametag_hidden
 	)
+	if _use_2d_nameplate:
+		# _update_nameplate_2d() positions/shows when allowed; hide now if gated off.
+		_nametag_gate_visible = not should_hide
+		if should_hide and nickname_ui != null:
+			nickname_ui.hide()
+		return
 	if should_hide:
 		nickname_quad.hide()
 		if nickname_viewport != null:
@@ -1382,11 +1395,20 @@ func _tick_animation_throttle(delta: float) -> void:
 		_anim_throttle_counter = 0
 
 
+func _physics_process(_delta):
+	# Occlusion raycast must run here, not in _process — direct_space_state crashes
+	# when queried from an idle frame.
+	if _use_2d_nameplate:
+		NameplateLayer.update_occlusion(self)
+
+
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
 
-	if nickname_viewport.size != Vector2i(nickname_ui.size):
+	if _use_2d_nameplate:
+		NameplateLayer.update(self)
+	elif nickname_viewport != null and nickname_viewport.size != Vector2i(nickname_ui.size):
 		nickname_viewport.size = Vector2i(nickname_ui.size)
 		_request_nickname_redraw()
 
