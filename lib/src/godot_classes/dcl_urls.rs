@@ -128,6 +128,10 @@ impl DclUrls {
         urls::marketplace().to_godot()
     }
     #[func]
+    pub fn marketplace_catalog_api() -> GString {
+        urls::marketplace_catalog_api().to_godot()
+    }
+    #[func]
     pub fn marketplace_claim_name() -> GString {
         urls::marketplace_claim_name().to_godot()
     }

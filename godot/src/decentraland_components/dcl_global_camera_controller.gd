@@ -18,6 +18,12 @@ func _ready():
 	global_virtual_camera.clear_current()
 	global_virtual_camera.cull_mask = 0x7fff
 
+	# A scene always starts non-cinematic. Reset the cinematic/virtual-camera state
+	# whenever the current parcel scene changes so the latch can't survive a teleport
+	# (mirrors how Rust resets input modifiers/skybox time on the same event).
+	if is_instance_valid(Global.scene_runner):
+		Global.scene_runner.on_change_scene_id.connect(_on_parcel_scene_changed)
+
 
 # in the process fn, this node has the responsibility of transitioning the camera between player one and virtual one
 #  virtuals can change between scenes or in the same scene, computed as desired_target
@@ -153,12 +159,7 @@ func _process(delta: float) -> void:
 			Global.scene_runner.raycast_use_cursor_position = false
 
 			# When coming back from virtual camera, we always show outline system and set the first/third person camera behaviour
-			var explorer = Global.get_explorer()
-			if is_instance_valid(explorer):
-				explorer.reset_cursor_position()
-				explorer.player.outline_system.show()
-				if explorer.player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-					explorer.player.avatar.set_hidden(true)
+			_restore_player_camera_visibility()
 	else:
 		# Transitioning to virtual camera target
 		var target_transform = desired_target.global_transform
@@ -177,3 +178,45 @@ func _process(delta: float) -> void:
 		# when desired_target != null and look_at_entity_node != null, compute the rotation (looking at)
 		if is_instance_valid(look_at_entity_node):
 			global_virtual_camera.look_at(look_at_entity_node.global_position)
+
+
+func _on_parcel_scene_changed(_scene_id: int) -> void:
+	# A teleport can free the virtual camera's target entity (and the camera reparented
+	# under it), latching this controller in its _process re-init branch and leaving
+	# raycast_use_cursor_position / CINEMATIC stuck — which freezes camera rotation.
+	# Only reset when actually latched, so normal scene crossings don't re-tween/replay
+	# the camera-mode fade. If the new scene is itself cinematic, _process re-enters it
+	# on the next tick (its virtual-camera component is only applied then).
+	var latched := (
+		Global.current_camera_mode == Global.CameraMode.CINEMATIC
+		or Global.scene_runner.raycast_use_cursor_position
+	)
+	if latched:
+		_force_return_to_player_camera()
+
+
+func _force_return_to_player_camera() -> void:
+	# Keep the persistent camera alive (it may be parented to a now-freed scene entity)
+	# and detach it from any virtual-camera target.
+	if is_instance_valid(global_virtual_camera):
+		if global_virtual_camera.get_parent() != self:
+			global_virtual_camera.reparent(self)
+		global_virtual_camera.clear_current()
+	last_virtual_camera_entity_node = null
+	last_camera_reached = true
+	transition_time_counter = 0.0
+	Global.scene_runner.raycast_use_cursor_position = false
+	Global.player_camera_node.make_current()
+	Global.set_camera_mode(Global.player_camera_node.get_camera_mode() as Global.CameraMode)
+	_restore_player_camera_visibility()
+
+
+func _restore_player_camera_visibility() -> void:
+	# When coming back from virtual camera, always show outline system and set the
+	# first/third person camera behaviour.
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.reset_cursor_position()
+		explorer.player.outline_system.show()
+		if explorer.player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
+			explorer.player.avatar.set_hidden(true)

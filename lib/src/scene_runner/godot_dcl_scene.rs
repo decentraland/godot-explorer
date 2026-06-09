@@ -375,20 +375,16 @@ impl GodotDclScene {
     /// Free the root nodes after they've been removed from the tree.
     /// This should be called via call_deferred after remove_child completes.
     pub fn free_root_nodes(&mut self) {
-        let child_count_3d = self.root_node_3d.get_child_count();
-        let in_tree_3d = self.root_node_3d.is_inside_tree();
-        let child_count_ui = self.root_node_ui.get_child_count();
-        let in_tree_ui = self.root_node_ui.is_inside_tree();
-
-        tracing::info!(
-            "free_root_nodes: 3D root has {} children, in_tree={}, UI root has {} children, in_tree={}",
-            child_count_3d,
-            in_tree_3d,
-            child_count_ui,
-            in_tree_ui
-        );
-
-        self.root_node_3d.queue_free();
-        self.root_node_ui.queue_free();
+        // The UI root lives under SceneManager.base_ui, which is reparented into the
+        // Explorer; on sign-out / change_scene_to_file the Explorer (hence base_ui and
+        // this UI root) is freed before the scene is reaped. Guard each root so a
+        // double queue_free() on an already-freed node can't panic and abort teardown
+        // (which would leave the scene id stuck in dying_scene_ids and spam the log).
+        if self.root_node_3d.is_instance_valid() {
+            self.root_node_3d.queue_free();
+        }
+        if self.root_node_ui.is_instance_valid() {
+            self.root_node_ui.queue_free();
+        }
     }
 }

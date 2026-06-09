@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: ''
+      whats_new:
+        description: 'TestFlight "What to Test" notes (optional; auto-generated from the commit when empty)'
+        required: false
+        type: string
+        default: ''
     secrets:
       DEPLOY_SSH_KEY:
         required: true
@@ -31,6 +36,11 @@ on:
         options:
           - main
           - release
+      whats_new:
+        description: 'TestFlight "What to Test" notes (optional; auto-generated from the commit when empty)'
+        required: false
+        type: string
+        default: ''
 permissions:
   pull-requests: write
   contents: read
@@ -85,7 +95,7 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.event.inputs.ref }}
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
           toolchain: "1.90"
           targets: aarch64-apple-ios
@@ -142,6 +152,9 @@ jobs:
 
       - name: Deploy iOS exports to mobile deploy pipeline
         timeout-minutes: 10
+        env:
+          # Passed via env (not inline) so free-text notes can't break/inject the script
+          WHATS_NEW: ${{ inputs.whats_new || github.event.inputs.whats_new }}
         run: |
           # Use PR-{number}-{branch} format for PR builds, otherwise use the ref name
           PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
@@ -157,6 +170,30 @@ jobs:
           mkdir -p exports/ci_scripts
           cp .github/scripts/ci_post_xcodebuild.sh exports/ci_scripts/
           chmod +x exports/ci_scripts/ci_post_xcodebuild.sh
+
+          # Add TestFlight "What to Test" notes. Xcode Cloud auto-attaches the
+          # contents of TestFlight/WhatToTest.<locale>.txt (next to the Xcode
+          # project) as the build description when distributing to TestFlight.
+          # Use the manual notes if provided, otherwise generate from the commit.
+          mkdir -p exports/TestFlight
+          if [ -n "$WHATS_NEW" ]; then
+            printf '%s\n' "$WHATS_NEW" > exports/TestFlight/WhatToTest.en-US.txt
+          else
+            {
+              echo "Branch: ${{ github.head_ref || github.ref_name }}"
+              echo "Commit: ${{ github.sha }}"
+              echo "PR: ${PR_NUMBER:-N/A}"
+              echo "Triggered by: ${{ github.actor }}"
+              echo ""
+              echo "Latest changes:"
+              git log -1 --pretty=%B
+            } > exports/TestFlight/WhatToTest.en-US.txt
+          fi
+          # TestFlight notes are capped at 4000 characters.
+          head -c 4000 exports/TestFlight/WhatToTest.en-US.txt > exports/TestFlight/WhatToTest.en-US.txt.tmp
+          mv exports/TestFlight/WhatToTest.en-US.txt.tmp exports/TestFlight/WhatToTest.en-US.txt
+          echo "Generated TestFlight/WhatToTest.en-US.txt:"
+          cat exports/TestFlight/WhatToTest.en-US.txt
 
           # Initialize fresh repo (no need to clone since we create orphan branch anyway)
           # This avoids downloading potentially GBs of LFS data

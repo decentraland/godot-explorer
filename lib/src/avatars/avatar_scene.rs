@@ -1071,40 +1071,68 @@ impl AvatarScene {
         // maybe it's better to cache the last parcel here instead of using prev_scene_id
         // the state of to what parcel the avatar belongs is stored in the avatar_scene
 
+        // Cached component values for this avatar, used to (re)populate the scene
+        // being entered. `@dcl/sdk/players` derives onEnterScene from an entity having
+        // both PlayerIdentityData and AvatarBase, and onLeaveScene from AvatarBase
+        // being removed — so scene membership must add/remove these components.
+        let avatar_base = SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt_state)
+            .get(&avatar_entity_id)
+            .and_then(|v| v.value.clone());
+        let player_identity_data =
+            SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt_state)
+                .get(&avatar_entity_id)
+                .and_then(|v| v.value.clone());
+        let avatar_equipped_data =
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt_state)
+                .get(&avatar_entity_id)
+                .and_then(|v| v.value.clone());
+
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
+
+        // Leaving the previous scene: clear the avatar's components there so the SDK's
+        // onLeaveScene fires and the player drops from getEntitiesWith(PlayerIdentityData).
+        // Routed through `deleted_entities`, which sets these components to None — the
+        // departure cannot be communicated as an entity death (the renderer→scene path
+        // never carries entity deaths). See `update_avatar_scene_updates`.
         if let Some(prev_scene) = scene_runner.get_scene_mut(&prev_scene_id) {
             prev_scene
                 .avatar_scene_updates
-                .transform
-                .insert(avatar_entity_id, None);
-            prev_scene
-                .avatar_scene_updates
-                .internal_player_data
-                .insert(avatar_entity_id, InternalPlayerData { inside: false });
+                .deleted_entities
+                .insert(avatar_entity_id);
         }
 
+        // Entering the new scene: (re)populate the avatar's components so onEnterScene
+        // fires and the player appears in getEntitiesWith(PlayerIdentityData, AvatarBase).
         if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
             let dcl_transform = DclTransformAndParent::default(); // TODO: get real transform with scene_offset
-
-            let mut avatar_scene_transform = dcl_transform.clone();
-            avatar_scene_transform.translation.x -=
-                (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
-
-            // TODO: I think this is working fine but
-            //   Should it be added instead of subtracted? (z is inverted in godot and dcl)
-            avatar_scene_transform.translation.z -=
-                (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
 
             scene
                 .avatar_scene_updates
                 .transform
-                .insert(avatar_entity_id, Some(dcl_transform.clone()));
-
+                .insert(avatar_entity_id, Some(dcl_transform));
             scene
                 .avatar_scene_updates
                 .internal_player_data
                 .insert(avatar_entity_id, InternalPlayerData { inside: true });
+            if let Some(avatar_base) = avatar_base {
+                scene
+                    .avatar_scene_updates
+                    .avatar_base
+                    .insert(avatar_entity_id, avatar_base);
+            }
+            if let Some(player_identity_data) = player_identity_data {
+                scene
+                    .avatar_scene_updates
+                    .player_identity_data
+                    .insert(avatar_entity_id, player_identity_data);
+            }
+            if let Some(avatar_equipped_data) = avatar_equipped_data {
+                scene
+                    .avatar_scene_updates
+                    .avatar_equipped_data
+                    .insert(avatar_entity_id, avatar_equipped_data);
+            }
         }
     }
 

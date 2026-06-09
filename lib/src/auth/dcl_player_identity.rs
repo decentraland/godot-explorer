@@ -555,6 +555,16 @@ impl DclPlayerIdentity {
         );
     }
 
+    /// GDScript-callable logout used by the sign-out flow to fully forget the
+    /// current identity (issue #1658). A bare `logout()` can't be called from
+    /// GDScript because the name is taken by the `logout` signal, and the
+    /// internal `logout()` fn is comms-only — so expose an explicitly-named
+    /// entry point. Clears wallet/ephemeral/profile and emits `logout`.
+    #[func]
+    pub fn clear_identity(&mut self) {
+        self.logout();
+    }
+
     #[func]
     pub fn get_address_str(&self) -> GString {
         match self.try_get_address() {
