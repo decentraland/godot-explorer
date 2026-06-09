@@ -1372,11 +1372,34 @@ impl ContentProvider {
             return promise;
         }
 
+        // Resolve which pre-baked artifact (if any) serves this request:
+        // - a v4 quality variant (`content/{hash}_q{N}.res`) when one satisfies
+        //   the requested quality;
+        // - the v3 legacy single bake (`content/{hash}.res`) when the hash is
+        //   optimized but the manifest carries no per-quality info (legacy
+        //   manifests have `optimizedContent` but no `textureQualities`). This
+        //   keeps serving the GPU-ready ETC2 `.res` instead of regressing to a
+        //   raw download + on-device recompress during the v3→v4 rollout.
         let selected_variant = self.select_texture_variant(&file_hash, &quality);
-        let variant_key = selected_variant.map(|v| format!("{}_v{}", file_hash, v));
+        let optimized_godot_path = match selected_variant {
+            Some(v) => Some(format!("res://content/{}_q{}.res", file_hash, v)),
+            None if self.optimized_asset_exists(file_hash_godot.clone()) => {
+                Some(format!("res://content/{}.res", file_hash))
+            }
+            None => None,
+        };
 
-        if let Some(ref variant_key) = variant_key {
-            if let Some(promise) = self.get_cached_promise(variant_key) {
+        // Promises resolving to the same baked artifact share a cache slot, so
+        // the default-quality and explicit-quality entry points don't load it
+        // twice. The legacy single bake is quality-independent → one slot.
+        let shared_key = match selected_variant {
+            Some(v) => Some(format!("{}_v{}", file_hash, v)),
+            None if optimized_godot_path.is_some() => Some(format!("{}_legacy", file_hash)),
+            None => None,
+        };
+
+        if let Some(ref shared_key) = shared_key {
+            if let Some(promise) = self.get_cached_promise(shared_key) {
                 self.cache_promise(primary_key, &promise);
                 return promise;
             }
@@ -1395,7 +1418,7 @@ impl ContentProvider {
 
         let hash_id = file_hash.clone();
 
-        if let Some(variant) = selected_variant {
+        if let Some(godot_path) = optimized_godot_path {
             let optimized_data = self.optimized_data.clone();
             let original_size = self.optimized_original_size.get(&hash_id).copied();
 
@@ -1408,17 +1431,15 @@ impl ContentProvider {
                 )
                 .await;
 
-                let godot_path = format!("res://content/{}_q{}.res", hash_id, variant);
-
                 if let Some(entry_variant) = load_baked_texture_entry(&godot_path, original_size) {
                     then_promise(get_promise, Ok(Some(entry_variant)));
                     return;
                 }
 
-                // Baked variant missing or unreadable (e.g. a stale pre-v4 ZIP
-                // in the local cache): fall back to download + decode.
+                // Baked artifact missing or unreadable (e.g. a stale ZIP in the
+                // local cache): fall back to download + decode.
                 tracing::warn!(
-                    "Failed to load baked texture variant {}, falling back to runtime decode",
+                    "Failed to load baked texture {}, falling back to runtime decode",
                     godot_path
                 );
                 let result = load_image_texture(url, hash_id.clone(), ctx).await;
@@ -1450,8 +1471,8 @@ impl ContentProvider {
         }
 
         self.cache_promise(primary_key, &promise);
-        if let Some(variant_key) = variant_key {
-            self.cache_promise(variant_key, &promise);
+        if let Some(shared_key) = shared_key {
+            self.cache_promise(shared_key, &promise);
         }
 
         promise
