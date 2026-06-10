@@ -9,6 +9,12 @@ enum LODState { FULL, MID, CROSSFADE, FAR }
 # Debug to store each avatar loaded in user://avatars
 const DEBUG_SAVE_AVATAR_DATA = false
 
+# Collision layers (mirrors decentraland.sdk.components.ColliderLayer)
+# CL_PLAYER (4) is set on every avatar; CL_MAIN_PLAYER (8) is added on top for the
+# local player so scenes can distinguish the main player from remote avatars.
+const CL_PLAYER = 4
+const CL_MAIN_PLAYER = 8
+
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
@@ -295,6 +301,11 @@ func setup_trigger_detection(p_entity_id: int) -> void:
 
 	# Set metadata on TriggerDetector so trigger_area.rs can identify this avatar
 	trigger_detector.set_meta("dcl_entity_id", dcl_entity_id)
+
+	# The local (main) player also lives on the CL_MAIN_PLAYER layer so scenes can
+	# tell it apart from remote avatars. Remote avatars stay on CL_PLAYER only.
+	if is_local_player:
+		trigger_detector.collision_layer = CL_PLAYER | CL_MAIN_PLAYER
 
 	# Enable the collision shape
 	trigger_detector.get_node("CollisionShape3D").disabled = false
