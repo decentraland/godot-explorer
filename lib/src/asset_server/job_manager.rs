@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 use super::types::{
     AssetType, Batch, BatchStatus, Job, JobStatus, SceneOptimizationMetadata, TextureSize,
+    TextureVariant,
 };
 
 /// Maximum number of concurrent processing jobs.
@@ -129,6 +130,15 @@ impl JobManager {
         }
     }
 
+    /// Set the baked quality variants for a texture job.
+    pub async fn set_texture_variants(&self, job_id: &str, variants: Vec<TextureVariant>) {
+        let mut jobs = self.jobs.write().await;
+        if let Some(job) = jobs.get_mut(job_id) {
+            job.texture_variants = Some(variants);
+            job.updated_at = Instant::now();
+        }
+    }
+
     /// Acquire a permit to process a job.
     /// This limits the number of concurrent jobs.
     pub async fn acquire_permit(&self) -> tokio::sync::OwnedSemaphorePermit {
@@ -208,11 +218,12 @@ impl JobManager {
     }
 
     /// Get all completed job results for a batch.
-    /// Returns (hash, optimized_path, asset_type) for each completed job.
+    /// Returns (hash, file_paths, asset_type) for each completed job.
+    /// GLTF jobs have a single path; texture jobs have one path per baked variant.
     pub async fn get_batch_results(
         &self,
         batch_id: &str,
-    ) -> Vec<(String, String, super::types::AssetType)> {
+    ) -> Vec<(String, Vec<String>, super::types::AssetType)> {
         let batches = self.batches.read().await;
         let batch = match batches.get(batch_id) {
             Some(b) => b,
@@ -232,7 +243,11 @@ impl JobManager {
             if let Some(job) = jobs.get(job_id) {
                 if job.status == JobStatus::Completed {
                     if let Some(ref path) = job.optimized_path {
-                        results.push((job.hash.clone(), path.clone(), job.asset_type));
+                        let paths = match job.texture_variants {
+                            Some(ref variants) => variants.iter().map(|v| v.path.clone()).collect(),
+                            None => vec![path.clone()],
+                        };
+                        results.push((job.hash.clone(), paths, job.asset_type));
                     } else {
                         completed_no_path += 1;
                         if completed_no_path <= 3 {
@@ -300,6 +315,7 @@ impl JobManager {
                     external_scene_dependencies: HashMap::new(),
                     original_sizes: HashMap::new(),
                     hash_size_map: HashMap::new(),
+                    texture_qualities: HashMap::new(),
                 }
             }
         };
@@ -309,6 +325,7 @@ impl JobManager {
         let mut external_scene_dependencies = HashMap::new();
         let mut original_sizes = HashMap::new();
         let mut hash_size_map = HashMap::new();
+        let mut texture_qualities = HashMap::new();
 
         for job_id in &batch.job_ids {
             if let Some(job) = jobs.get(job_id) {
@@ -323,8 +340,15 @@ impl JobManager {
                     original_sizes.insert(job.hash.clone(), size.clone());
                 }
 
-                // Add optimized file size
-                if let Some(size) = job.optimized_file_size {
+                // Add optimized file size; textures report the sum of all
+                // baked variant sizes (the per-hash ZIP contains every variant)
+                if let Some(ref variants) = job.texture_variants {
+                    let mut qualities: Vec<i32> = variants.iter().map(|v| v.quality).collect();
+                    qualities.sort_unstable();
+                    texture_qualities.insert(job.hash.clone(), qualities);
+                    hash_size_map
+                        .insert(job.hash.clone(), variants.iter().map(|v| v.file_size).sum());
+                } else if let Some(size) = job.optimized_file_size {
                     hash_size_map.insert(job.hash.clone(), size);
                 }
 
@@ -340,6 +364,7 @@ impl JobManager {
             external_scene_dependencies,
             original_sizes,
             hash_size_map,
+            texture_qualities,
         }
     }
 

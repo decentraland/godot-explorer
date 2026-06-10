@@ -948,9 +948,6 @@ func async_load_scene(
 			return PromiseUtils.resolved(false)
 
 	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
-	var asset_url: String = (
-		"%s/%s-mobile.zip" % [Global.content_provider.get_optimized_base_url(), scene_entity_id]
-	)
 
 	# Skip optimized zip download when:
 	# - XR mode (handled separately)
@@ -969,15 +966,17 @@ func async_load_scene(
 		if FileAccess.file_exists(zip_file_path):
 			download_success = true
 		else:
-			# First check if the file exists remotely (HEAD request)
-			# This avoids treating 404s as errors - scenes without optimized versions are expected
-			var exists_promise = Global.content_provider.check_remote_file_exists(asset_url)
-			var exists_res = await PromiseUtils.async_awaiter(exists_promise)
+			# Try each versioned bucket (newest first) until one has the zip
+			for base_url in Global.content_provider.get_optimized_base_urls():
+				var asset_url: String = "%s/%s" % [base_url, scene_hash_zip]
+				# First check if the file exists remotely (HEAD request)
+				# This avoids treating 404s as errors - scenes without optimized versions are expected
+				var exists_promise = Global.content_provider.check_remote_file_exists(asset_url)
+				var exists_res = await PromiseUtils.async_awaiter(exists_promise)
 
-			if exists_res is PromiseError or exists_res == false:
-				# File doesn't exist remotely or check failed - this is expected for non-optimized scenes
-				file_not_found_remotely = true
-			else:
+				if exists_res is PromiseError or exists_res == false:
+					continue
+
 				# File exists remotely, proceed with download
 				var download_promise: Promise = Global.content_provider.fetch_file_by_url(
 					scene_hash_zip, asset_url
@@ -987,6 +986,10 @@ func async_load_scene(
 					download_error = download_res
 				else:
 					download_success = true
+				break
+
+			# Not found in any bucket - expected for non-optimized scenes
+			file_not_found_remotely = not download_success and download_error == null
 
 	if skip_optimized:
 		pass  # Scene optimization skipped (XR, testing, or --only-no-optimized)
@@ -1000,9 +1003,7 @@ func async_load_scene(
 			loaded_scenes.erase(scene_entity_id)
 			return PromiseUtils.resolved(false)
 	elif download_error != null or not download_success:
-		printerr(
-			"Scene ", scene_entity_id, " failed to download optimized zip asset_url=", asset_url
-		)
+		printerr("Scene ", scene_entity_id, " failed to download optimized zip ", scene_hash_zip)
 
 		send_scene_failed_metrics(scene_entity_id, "zip_download_failed")
 
