@@ -1714,6 +1714,35 @@ func get_scene_emote_info(scene_id: String, glb_hash: String) -> Dictionary:
 	return {"base_url": Global.realm.content_base_url, "audio_hash": ""}
 
 
+## Resolve a scene-emote URN back to its registered (scene_id, glb_hash) and content.
+## The URN format `scene-emote:{scene_id}-{glb_hash}-{loop}` is ambiguous to dash-split
+## when the ids contain '-' — which is exactly the case for preview content, whose hashes
+## look like `b64-<base64-of-path>`. Splitting on '-' then drops the `b64-` prefix from
+## glb_hash and corrupts scene_id, the registry lookup misses, and the emote never loads.
+## Instead we match the URN against the registry that Rust populated via
+## register_scene_emote_content() right before async_play_emote(), which is unambiguous.
+## Returns {scene_id, glb_hash, base_url, audio_hash, looping} or {} when no entry matches.
+func find_scene_emote_by_urn(emote_urn: String) -> Dictionary:
+	for scene_id in _scene_emote_registry:
+		var scene_data = _scene_emote_registry[scene_id]
+		for glb_hash in scene_data["emotes"]:
+			for looping in [false, true]:
+				var loop_str := "true" if looping else "false"
+				var candidate := (
+					"urn:decentraland:off-chain:scene-emote:%s-%s-%s"
+					% [scene_id, glb_hash, loop_str]
+				)
+				if candidate == emote_urn:
+					return {
+						"scene_id": scene_id,
+						"glb_hash": glb_hash,
+						"base_url": scene_data["base_url"],
+						"audio_hash": scene_data["emotes"][glb_hash],
+						"looping": looping,
+					}
+	return {}
+
+
 ## Play emote triggered by AvatarShape's expression_trigger_id field.
 ## Supports: default emotes (e.g. "wave"), URN emotes, and local scene emotes (.glb/.gltf)
 func _async_play_expression_trigger(emote_id: String) -> void:
