@@ -9,6 +9,12 @@ enum LODState { FULL, MID, CROSSFADE, FAR }
 # Debug to store each avatar loaded in user://avatars
 const DEBUG_SAVE_AVATAR_DATA = false
 
+# Collision layers (mirrors decentraland.sdk.components.ColliderLayer)
+# CL_PLAYER (4) is set on every avatar; CL_MAIN_PLAYER (8) is added on top for the
+# local player so scenes can distinguish the main player from remote avatars.
+const CL_PLAYER = 4
+const CL_MAIN_PLAYER = 8
+
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
@@ -295,6 +301,11 @@ func setup_trigger_detection(p_entity_id: int) -> void:
 
 	# Set metadata on TriggerDetector so trigger_area.rs can identify this avatar
 	trigger_detector.set_meta("dcl_entity_id", dcl_entity_id)
+
+	# The local (main) player also lives on the CL_MAIN_PLAYER layer so scenes can
+	# tell it apart from remote avatars. Remote avatars stay on CL_PLAYER only.
+	if is_local_player:
+		trigger_detector.collision_layer = CL_PLAYER | CL_MAIN_PLAYER
 
 	# Enable the collision shape
 	trigger_detector.get_node("CollisionShape3D").disabled = false
@@ -1712,6 +1723,35 @@ func get_scene_emote_info(scene_id: String, glb_hash: String) -> Dictionary:
 			}
 	# Fallback for remote players - use realm URL (audio won't be available)
 	return {"base_url": Global.realm.content_base_url, "audio_hash": ""}
+
+
+## Resolve a scene-emote URN back to its registered (scene_id, glb_hash) and content.
+## The URN format `scene-emote:{scene_id}-{glb_hash}-{loop}` is ambiguous to dash-split
+## when the ids contain '-' — which is exactly the case for preview content, whose hashes
+## look like `b64-<base64-of-path>`. Splitting on '-' then drops the `b64-` prefix from
+## glb_hash and corrupts scene_id, the registry lookup misses, and the emote never loads.
+## Instead we match the URN against the registry that Rust populated via
+## register_scene_emote_content() right before async_play_emote(), which is unambiguous.
+## Returns {scene_id, glb_hash, base_url, audio_hash, looping} or {} when no entry matches.
+func find_scene_emote_by_urn(emote_urn: String) -> Dictionary:
+	for scene_id in _scene_emote_registry:
+		var scene_data = _scene_emote_registry[scene_id]
+		for glb_hash in scene_data["emotes"]:
+			for looping in [false, true]:
+				var loop_str := "true" if looping else "false"
+				var candidate := (
+					"urn:decentraland:off-chain:scene-emote:%s-%s-%s"
+					% [scene_id, glb_hash, loop_str]
+				)
+				if candidate == emote_urn:
+					return {
+						"scene_id": scene_id,
+						"glb_hash": glb_hash,
+						"base_url": scene_data["base_url"],
+						"audio_hash": scene_data["emotes"][glb_hash],
+						"looping": looping,
+					}
+	return {}
 
 
 ## Play emote triggered by AvatarShape's expression_trigger_id field.

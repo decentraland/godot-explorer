@@ -20,12 +20,13 @@ use crate::content::gltf::{
 };
 use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::content::resource_provider::ResourceProvider;
+use crate::content::texture::MAX_TEXTURE_DIMENSION;
 use crate::content::thread_safety::GodotSingleThreadSafety;
 use crate::godot_classes::dcl_config::TextureQuality;
 use crate::utils::infer_mime;
 
 use super::job_manager::JobManager;
-use super::types::{AssetRequest, AssetType, JobStatus};
+use super::types::{AssetRequest, AssetType, JobStatus, TextureVariant};
 
 /// Context for asset processing, similar to ContentProviderContext but standalone.
 #[derive(Clone)]
@@ -92,6 +93,8 @@ pub struct ProcessResult {
     pub optimized_file_size: Option<u64>,
     /// GLTF dependencies - texture hashes (for GLTFs only)
     pub gltf_dependencies: Option<Vec<String>>,
+    /// Baked quality variants (for textures only)
+    pub texture_variants: Option<Vec<TextureVariant>>,
 }
 
 /// Process an asset request.
@@ -142,6 +145,9 @@ pub async fn process_asset(
             }
             if let Some(deps) = process_result.gltf_dependencies {
                 job_manager.set_gltf_dependencies(&job_id, deps).await;
+            }
+            if let Some(variants) = process_result.texture_variants {
+                job_manager.set_texture_variants(&job_id, variants).await;
             }
 
             job_manager
@@ -253,6 +259,7 @@ async fn process_scene_gltf(
         original_size: None,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
+        texture_variants: None,
     })
 }
 
@@ -308,6 +315,7 @@ async fn process_wearable_gltf(
         original_size: None,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
+        texture_variants: None,
     })
 }
 
@@ -363,6 +371,7 @@ async fn process_emote_gltf(
         original_size: None,
         optimized_file_size,
         gltf_dependencies: Some(gltf_dependencies),
+        texture_variants: None,
     })
 }
 
@@ -377,8 +386,6 @@ async fn process_texture(
     tracing::debug!("Processing texture: {}", request.hash);
 
     let raw_file_path = format!("{}{}", ctx.content_folder, request.hash);
-    // Use .res extension for compressed ImageTexture (Godot binary resource format)
-    let res_file_path = format!("{}{}.res", ctx.content_folder, request.hash);
 
     // Download the raw image file (or read from cache if cache_only)
     let bytes_vec = if request.cache_only {
@@ -479,10 +486,86 @@ async fn process_texture(
         image_format
     );
 
-    // Resize if needed based on texture quality
-    let max_size = ctx.texture_quality.to_max_size();
-    resize_image_if_needed(&mut image, max_size);
+    // Bake one variant per quality tier. Each variant is resized from a fresh
+    // duplicate of the pristine decoded image to avoid lossy resize cascades.
+    //
+    // Tiers whose max size covers the original resolution all produce identical
+    // pixels, so when the original fits within High (1024) the top variant is
+    // baked once and named at the Source ordinal: a High request then selects
+    // the q3 file via the "smallest variant >= requested" rule and gets exactly
+    // the pixels a dedicated High bake would have produced.
+    let original_max = original_width.max(original_height) as i32;
+    let mut texture_variants: Vec<TextureVariant> = Vec::new();
 
+    for quality in [
+        TextureQuality::Low,
+        TextureQuality::Medium,
+        TextureQuality::High,
+        TextureQuality::Source,
+    ] {
+        if quality == TextureQuality::High && original_max <= TextureQuality::High.to_max_size() {
+            continue; // identical to the Source variant, which is always baked
+        }
+        let max_size = quality.to_max_size().min(MAX_TEXTURE_DIMENSION);
+
+        let mut variant_image = image
+            .duplicate()
+            .ok_or_else(|| anyhow::anyhow!("Failed to duplicate image for variant"))?
+            .cast::<Image>();
+        resize_image_if_needed(&mut variant_image, max_size);
+
+        let variant_path = format!(
+            "{}{}_q{}.res",
+            ctx.content_folder,
+            request.hash,
+            quality.to_i32()
+        );
+        let file_size = compress_and_save_variant(variant_image, &variant_path)?;
+
+        tracing::debug!(
+            "Texture variant saved: {} q{} -> {} ({} bytes)",
+            request.hash,
+            quality.to_i32(),
+            variant_path,
+            file_size
+        );
+
+        texture_variants.push(TextureVariant {
+            quality: quality.to_i32(),
+            path: variant_path,
+            file_size,
+        });
+    }
+
+    let top_variant = texture_variants
+        .last()
+        .ok_or_else(|| anyhow::anyhow!("No texture variants baked"))?;
+    let optimized_path = top_variant.path.clone();
+    let optimized_file_size = Some(top_variant.file_size);
+
+    tracing::debug!(
+        "Texture {} baked ({}x{}, {} variants)",
+        request.hash,
+        original_width,
+        original_height,
+        texture_variants.len()
+    );
+
+    Ok(ProcessResult {
+        optimized_path,
+        original_size: Some((original_width, original_height)),
+        optimized_file_size,
+        gltf_dependencies: None,
+        texture_variants: Some(texture_variants),
+    })
+}
+
+/// Pad to ETC2 block size, compress, and save an image as a `.res` ImageTexture.
+/// Returns the saved file size in bytes.
+fn compress_and_save_variant(
+    mut image: Gd<Image>,
+    res_file_path: &str,
+) -> Result<u64, anyhow::Error> {
     // Compress the image using ETC2 (mobile-optimized format)
     // Pad dimensions to multiples of 4 (ETC2 operates on 4x4 blocks)
     if !image.is_compressed() {
@@ -534,16 +617,7 @@ async fn process_texture(
             .upcast()
     };
 
-    let texture_width = texture.get_width();
-    let texture_height = texture.get_height();
-    tracing::debug!(
-        "Created compressed texture: {}x{}",
-        texture_width,
-        texture_height
-    );
-
-    // Verify compression succeeded
-    if texture_width == 0 || texture_height == 0 {
+    if texture.get_width() == 0 || texture.get_height() == 0 {
         return Err(anyhow::anyhow!(
             "Texture compression failed - resulting texture has no dimensions"
         ));
@@ -553,7 +627,7 @@ async fn process_texture(
     // We use .res instead of .ctex because ImageTexture doesn't support .ctex
     let err = ResourceSaver::singleton()
         .save_ex(&texture.upcast::<Resource>())
-        .path(&res_file_path)
+        .path(res_file_path)
         .flags(SaverFlags::COMPRESS)
         .done();
 
@@ -565,24 +639,9 @@ async fn process_texture(
         ));
     }
 
-    // Get optimized file size
-    let optimized_file_size = std::fs::metadata(&res_file_path).ok().map(|m| m.len());
-
-    tracing::debug!(
-        "Texture saved: {} -> {} ({}x{}, {:?} bytes)",
-        request.hash,
-        res_file_path,
-        original_width,
-        original_height,
-        optimized_file_size
-    );
-
-    Ok(ProcessResult {
-        optimized_path: res_file_path,
-        original_size: Some((original_width, original_height)),
-        optimized_file_size,
-        gltf_dependencies: None,
-    })
+    std::fs::metadata(res_file_path)
+        .map(|m| m.len())
+        .map_err(|e| anyhow::anyhow!("Failed to stat saved texture '{}': {}", res_file_path, e))
 }
 
 /// Resize image if it exceeds max size while maintaining aspect ratio.

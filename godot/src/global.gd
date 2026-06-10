@@ -487,6 +487,16 @@ func _ready():
 		# spawns a transient Timer under Global only while polling for first_move_in_world.
 		self.analytics_controller = AnalyticsController.new()
 		self.analytics_controller.setup()
+
+		# iOS only: report the StoreKit environment (production/sandbox) to
+		# analytics once at startup. StoreKit's environment is fixed by how the
+		# binary was distributed and can't be chosen by the app, so this is the
+		# ground truth for which IAP backend a device will hit. We ship this
+		# BEFORE any purchase flow to validate in prod that real App Store
+		# installs report `production`. Deferred so it runs after every autoload
+		# (incl. Iap) is in the tree. See docs/iap-zone-submission/.
+		if self.is_ios():
+			Iap.report_environment_to_analytics.call_deferred()
 	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The
 	# service self-gates on EULA acceptance and caches the issued session token on disk.
 	self.attestation = AttestationService.new()
@@ -762,6 +772,15 @@ func sign_out() -> void:
 
 	# 2. Stop session pollers and tear down the social gRPC streams.
 	NotificationsManager.stop_polling()
+	# Wipe the previous account's in-memory notification history so it can't leak
+	# into the next session's panel/bell badge (issue #2104).
+	NotificationsManager.clear_notification_history()
+	# Drop the previous account's event reminders so they can't fire on the
+	# device after sign-out. Only "event_" entries (per-account attended-event
+	# reminders) are cleared; the per-install day1 welcome is preserved. The
+	# sync-on-next-login REMOVE pass only runs for an authenticated account, so
+	# without this a signed-out/guest session keeps the old reminders scheduled.
+	NotificationsManager.clear_event_local_notifications()
 	# The analytics first-move poll (a Timer under this autoload) reads
 	# scene_runner.player_body_node; left running it would poll the freed Player
 	# after the swap, panicking the #[var] getter. It restarts on the next login.
