@@ -469,20 +469,37 @@ func _async_load_emote(emote_urn: String):
 ## Load a scene emote using the same code path as wearable emotes.
 ## This is the key to unification - scene emotes are stored in loaded_emotes_by_urn just like wearables.
 func _async_load_scene_emote_as_wearable(scene_emote_urn: String):
-	# Parse the URN to extract scene_id, glb_hash, looping
-	var parsed = EmoteSceneUrn.new(scene_emote_urn)
-	if not parsed.is_valid:
-		printerr("Failed to parse scene emote URN: %s" % scene_emote_urn)
-		return
+	# Resolve the URN to its registered content. Match against the registry
+	# (populated by Rust before async_play_emote) rather than dash-splitting the
+	# URN — preview hashes look like `b64-<base64>` and contain '-', which breaks
+	# the split and yields a wrong scene_id/glb_hash, so the emote never loads.
+	var glb_hash: String
+	var base_url: String
+	var audio_hash: String
+	var looping: bool
 
-	# Get content info from registry (registered by Rust before calling async_play_emote)
-	var info = avatar.get_scene_emote_info(parsed.scene_id, parsed.glb_hash)
-	var base_url = info["base_url"]
-	var audio_hash = info["audio_hash"]
+	var resolved = avatar.find_scene_emote_by_urn(scene_emote_urn)
+	if not resolved.is_empty():
+		glb_hash = resolved["glb_hash"]
+		base_url = resolved["base_url"]
+		audio_hash = resolved["audio_hash"]
+		looping = resolved["looping"]
+	else:
+		# Fallback: dash-split parse (correct for dashless CID hashes, e.g. deployed
+		# content) and the realm-URL fallback for remote players not in the registry.
+		var parsed = EmoteSceneUrn.new(scene_emote_urn)
+		if not parsed.is_valid:
+			printerr("Failed to parse scene emote URN: %s" % scene_emote_urn)
+			return
+		var info = avatar.get_scene_emote_info(parsed.scene_id, parsed.glb_hash)
+		glb_hash = parsed.glb_hash
+		base_url = info["base_url"]
+		audio_hash = info["audio_hash"]
+		looping = parsed.looping
 
 	# Create content mapping (same structure as wearables use)
 	# Note: base_url from scene already includes "contents/" typically
-	var files_dict = {"emote.glb": parsed.glb_hash}
+	var files_dict = {"emote.glb": glb_hash}
 	if not audio_hash.is_empty():
 		files_dict["emote.mp3"] = audio_hash
 
@@ -499,18 +516,18 @@ func _async_load_scene_emote_as_wearable(scene_emote_urn: String):
 		Global.cli.only_no_optimized_scene_emotes or Global.cli.only_no_optimized
 	)
 	var scene_path = await emote_loader.async_load_emote_from_mapping(
-		parsed.glb_hash, "emote.glb", content_mapping, force_runtime_only
+		glb_hash, "emote.glb", content_mapping, force_runtime_only
 	)
 	if scene_path.is_empty():
 		printerr("Failed to load scene emote: %s" % scene_emote_urn)
 		return
 
-	var obj = await emote_loader.async_get_emote_gltf(parsed.glb_hash)
+	var obj = await emote_loader.async_get_emote_gltf(glb_hash)
 	if obj == null:
 		printerr(
 			(
 				"Failed to extract emote GLTF for scene emote: %s (hash: %s)"
-				% [scene_emote_urn, parsed.glb_hash]
+				% [scene_emote_urn, glb_hash]
 			)
 		)
 		return
@@ -523,7 +540,7 @@ func _async_load_scene_emote_as_wearable(scene_emote_urn: String):
 		)
 		return
 	# Use the unified storage function with scene-specific flags
-	_load_emote_from_gltf_internal(scene_emote_urn, obj, parsed.glb_hash, true, parsed.looping)
+	_load_emote_from_gltf_internal(scene_emote_urn, obj, glb_hash, true, looping)
 
 
 func _has_emote(emote_urn: String) -> bool:
@@ -593,12 +610,17 @@ func _load_emote_from_gltf_internal(
 	emote_item_data.looping = looping
 
 	if obj.default_animation != null:
-		var anim_name = obj.default_animation.get_name()
-		if anim_name.is_empty():
-			if from_scene:
-				anim_name = "scene_emote_" + file_hash.substr(0, 8)
-			else:
-				anim_name = "emote_" + file_hash.substr(0, 8)
+		# The emotes library is shared across ALL of an avatar's emotes, but
+		# independent emote GLBs frequently ship the same internal animation name
+		# (e.g. every clip in this scene is named "Armature" or "Animation").
+		# Keying the library by that raw name collides, so the 2nd emote silently
+		# reuses the 1st emote's clip — the emote "never changes". Namespace the
+		# key by the per-GLB content hash so every emote stays distinct, and so
+		# cleaning up one emote can't remove a clip another emote still references.
+		var raw_anim_name = obj.default_animation.get_name()
+		if raw_anim_name.is_empty():
+			raw_anim_name = "scene_emote" if from_scene else "emote"
+		var anim_name = (file_hash + "_" + raw_anim_name).replace("/", "_").replace(":", "_")
 
 		# If we have both avatar and prop animations, merge them into one
 		# Always duplicate the animation to avoid sharing references between avatar instances
