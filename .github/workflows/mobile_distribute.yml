@@ -9,8 +9,8 @@ name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 #
 # Triggered by:
 #   - Every push to `release` (full distribution)
-#   - A daily 09:00 UTC cron on `main` — only when main changed since the last
-#     successful main distribution (no point re-shipping an identical commit)
+#   - A weekday (Mon–Fri) 09:00 UTC cron on `main` — only when main changed since the
+#     last successful main distribution (no point re-shipping an identical commit)
 #   - The `build` label on a PR (alias: `build-ios` for backward compatibility)
 #   - Manual workflow dispatch on the main / release branch
 #
@@ -22,7 +22,7 @@ on:
     branches:
       - release          # every release push → full distribution
   schedule:
-    - cron: '0 9 * * *'  # daily 09:00 UTC → main, only if changed since last build
+    - cron: '0 9 * * 1-5'  # weekdays 09:00 UTC → main, only if changed since last build
   pull_request:
     types: [labeled]
   workflow_dispatch:
@@ -49,7 +49,7 @@ permissions:
 jobs:
   prepare:
     name: Prepare distribution
-    # Run for: push to release, the daily main cron, a manual dispatch, or the
+    # Run for: push to release, the weekday main cron, a manual dispatch, or the
     # build / build-ios label on a PR.
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -314,7 +314,7 @@ jobs:
 
       # The AAB (Play Store artifact) is only published for main/release builds, so we
       # surface it for any main/release distribution (manual dispatch, push-to-release,
-      # or the daily main cron). Best-effort: if the AAB isn't in R2 we warn and skip
+      # or the weekday main cron). Best-effort: if the AAB isn't in R2 we warn and skip
       # rather than failing the job.
       - name: Wait for Android AAB in R2
         if: success() && (needs.prepare.outputs.ref == 'main' || needs.prepare.outputs.ref == 'release')

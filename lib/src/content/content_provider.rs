@@ -72,6 +72,10 @@ struct ContentData {
     external_scene_dependencies: HashMap<String, HashSet<String>>,
     original_sizes: HashMap<String, ImageSize>,
     hash_size_map: HashMap<String, u64>,
+    /// Texture hash -> baked quality ordinals (TextureQuality: 0=Low .. 3=Source).
+    /// Optional: manifests baked before quality variants existed lack it.
+    #[serde(default)]
+    texture_qualities: HashMap<String, Vec<i32>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
@@ -111,8 +115,11 @@ pub struct ContentProvider {
     // Set of optimized hashes that we know that exists...
     optimized_assets: HashSet<String>,
     optimized_original_size: HashMap<String, ImageSize>,
-    // URL base for optimized wearable/emote assets (e.g., "http://127.0.0.1:9090/")
-    optimized_wearable_base_url: Option<String>,
+    // Texture hash -> baked quality ordinals, sorted ascending
+    optimized_texture_qualities: HashMap<String, Vec<i32>>,
+    // URL bases for optimized wearable/emote assets, tried in order
+    // (e.g., ["http://127.0.0.1:9090/"])
+    optimized_wearable_base_urls: Option<Vec<String>>,
 }
 
 #[derive(Clone)]
@@ -139,7 +146,41 @@ pub struct SceneGltfContext {
 
 unsafe impl Send for SceneGltfContext {}
 
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclexplorer.com/v3";
+/// Versioned optimized-assets buckets, newest first. The runtime tries each in
+/// order, so clients keep serving older-format content until the newest bucket
+/// is fully populated. Remove old entries once their content is migrated.
+const ASSET_OPTIMIZED_BASE_URLS: &[&str] = &[
+    "https://optimized-assets.dclexplorer.com/v4",
+    "https://optimized-assets.dclexplorer.com/v3",
+];
+
+/// Smallest quality ordinal in `qualities` (sorted ascending) that is >= `requested`.
+fn select_variant_from(qualities: &[i32], requested: i32) -> Option<i32> {
+    qualities.iter().copied().find(|&q| q >= requested)
+}
+
+/// Load a baked texture variant from a mounted resource pack and build a
+/// TextureEntry variant. Returns None if the resource is missing or invalid.
+/// Synchronous on purpose: the non-Send Godot objects must not live across an
+/// await in the calling async block.
+fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) -> Option<Variant> {
+    let texture = ResourceLoader::singleton()
+        .load(&GString::from(godot_path))
+        .and_then(|res| res.try_cast::<godot::classes::Texture2D>().ok())?;
+    let image = texture.get_image()?;
+    let original_size = if let Some(original_size) = original_size {
+        Vector2i::new(original_size.width, original_size.height)
+    } else {
+        image.get_size()
+    };
+    let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
+        original_size,
+        image,
+        texture,
+        failed: false,
+    });
+    Some(texture_entry.to_variant())
+}
 
 #[godot_api]
 impl INode for ContentProvider {
@@ -187,8 +228,14 @@ impl INode for ContentProvider {
             }),
             optimized_assets: HashSet::default(),
             optimized_original_size: HashMap::default(),
-            // Default to the same URL used for scene optimized assets
-            optimized_wearable_base_url: Some(format!("{}/", ASSET_OPTIMIZED_BASE_URL)),
+            optimized_texture_qualities: HashMap::default(),
+            // Default to the same URLs used for scene optimized assets
+            optimized_wearable_base_urls: Some(
+                ASSET_OPTIMIZED_BASE_URLS
+                    .iter()
+                    .map(|url| format!("{}/", url))
+                    .collect(),
+            ),
         }
     }
     fn ready(&mut self) {}
@@ -461,7 +508,7 @@ impl ContentProvider {
         };
 
         let file_hash_clone = file_hash.clone();
-        let optimized_base_url = self.optimized_wearable_base_url.clone();
+        let optimized_base_urls = self.optimized_wearable_base_urls.clone();
         let opt_wearable_counter = self.optimized_wearable_count.clone();
         let rt_wearable_counter = self.runtime_wearable_count.clone();
 
@@ -472,7 +519,7 @@ impl ContentProvider {
                 file_path_str,
                 content_mapping_ref,
                 ctx,
-                optimized_base_url,
+                optimized_base_urls,
                 false, // is_emote = false
                 opt_wearable_counter,
                 rt_wearable_counter,
@@ -607,7 +654,7 @@ impl ContentProvider {
         };
 
         let file_hash_clone = file_hash.clone();
-        let optimized_base_url = self.optimized_wearable_base_url.clone();
+        let optimized_base_urls = self.optimized_wearable_base_urls.clone();
         let opt_wearable_counter = self.optimized_wearable_count.clone();
         let rt_wearable_counter = self.runtime_wearable_count.clone();
 
@@ -618,7 +665,7 @@ impl ContentProvider {
                 file_path_str,
                 content_mapping_ref,
                 ctx,
-                optimized_base_url,
+                optimized_base_urls,
                 true, // is_emote = true
                 opt_wearable_counter,
                 rt_wearable_counter,
@@ -1046,6 +1093,16 @@ impl ContentProvider {
             self.optimized_assets
                 .extend(content_data.optimized_content.clone());
 
+            self.optimized_texture_qualities.extend(
+                content_data
+                    .texture_qualities
+                    .into_iter()
+                    .map(|(hash, mut qualities)| {
+                        qualities.sort_unstable();
+                        (hash, qualities)
+                    }),
+            );
+
             let optimized_data = self.optimized_data.clone();
 
             TokioRuntime::spawn(async move {
@@ -1240,6 +1297,48 @@ impl ContentProvider {
         file_hash_godot: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
+        let quality = self.texture_quality.clone();
+        self.fetch_texture_by_hash_internal(file_hash_godot, content_mapping, quality, true)
+    }
+
+    /// Fetches a texture by hash with an explicit quality. Serves a baked variant
+    /// from the optimized pipeline when one satisfies the requested quality;
+    /// otherwise downloads and decodes at that quality.
+    /// Cache key: `{hash}_q{N}` — shared with `fetch_texture_by_url_with_quality`.
+    pub fn fetch_texture_by_hash_with_quality(
+        &mut self,
+        file_hash_godot: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+        quality: TextureQuality,
+    ) -> Gd<Promise> {
+        self.fetch_texture_by_hash_internal(file_hash_godot, content_mapping, quality, false)
+    }
+
+    /// Smallest baked variant whose quality satisfies (>=) the requested one.
+    /// `None` means no baked variant can serve the request without degrading it,
+    /// and the caller must fall back to download + decode.
+    fn select_texture_variant(&self, hash: &str, requested: &TextureQuality) -> Option<i32> {
+        select_variant_from(
+            self.optimized_texture_qualities.get(hash)?,
+            requested.to_i32(),
+        )
+    }
+
+    /// Shared implementation for hash-based texture fetching.
+    ///
+    /// Cache keys: each entry point keeps its historical primary key (plain
+    /// `{hash}` for the default-quality path, `{hash}_q{N}` for explicit
+    /// quality) since callers like `get_texture_from_hash` look promises up by
+    /// those. When a baked variant is selected, the promise is also cached
+    /// under `{hash}_v{N}` so both entry points resolving to the same variant
+    /// share a single load.
+    fn fetch_texture_by_hash_internal(
+        &mut self,
+        file_hash_godot: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+        quality: TextureQuality,
+        use_plain_cache_key: bool,
+    ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
 
         // Validate file_hash is not empty to prevent "Is a directory" errors
@@ -1248,7 +1347,13 @@ impl ContentProvider {
             return Promise::from_rejected("Empty texture hash".to_string());
         }
 
-        if let Some(promise) = self.get_cached_promise(&file_hash) {
+        let primary_key = if use_plain_cache_key {
+            file_hash.clone()
+        } else {
+            format!("{}_q{}", file_hash, quality.to_i32())
+        };
+
+        if let Some(promise) = self.get_cached_promise(&primary_key) {
             return promise;
         }
 
@@ -1258,85 +1363,92 @@ impl ContentProvider {
         if file_hash.starts_with("http") {
             // get file_hash from url
             let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
-            let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
-            self.cache_promise(file_hash, &promise);
+            let promise = self.fetch_texture_by_url_with_quality(
+                GString::from(&new_file_hash),
+                file_hash_godot,
+                quality,
+            );
+            self.cache_promise(primary_key, &promise);
             return promise;
         }
 
+        // Resolve which pre-baked artifact (if any) serves this request:
+        // - a v4 quality variant (`content/{hash}_q{N}.res`) when one satisfies
+        //   the requested quality;
+        // - the v3 legacy single bake (`content/{hash}.res`) when the hash is
+        //   optimized but the manifest carries no per-quality info (legacy
+        //   manifests have `optimizedContent` but no `textureQualities`). This
+        //   keeps serving the GPU-ready ETC2 `.res` instead of regressing to a
+        //   raw download + on-device recompress during the v3→v4 rollout.
+        let selected_variant = self.select_texture_variant(&file_hash, &quality);
+        let optimized_godot_path = match selected_variant {
+            Some(v) => Some(format!("res://content/{}_q{}.res", file_hash, v)),
+            None if self.optimized_asset_exists(file_hash_godot.clone()) => {
+                Some(format!("res://content/{}.res", file_hash))
+            }
+            None => None,
+        };
+
+        // Promises resolving to the same baked artifact share a cache slot, so
+        // the default-quality and explicit-quality entry points don't load it
+        // twice. The legacy single bake is quality-independent → one slot.
+        let shared_key = match selected_variant {
+            Some(v) => Some(format!("{}_v{}", file_hash, v)),
+            None if optimized_godot_path.is_some() => Some(format!("{}_legacy", file_hash)),
+            None => None,
+        };
+
+        if let Some(ref shared_key) = shared_key {
+            if let Some(promise) = self.get_cached_promise(shared_key) {
+                self.cache_promise(primary_key, &promise);
+                return promise;
+            }
+        }
+
         let (promise, get_promise) = Promise::make_to_async();
-        let ctx = self.get_context();
 
-        if self.optimized_asset_exists(file_hash_godot.clone()) {
-            let hash_id = file_hash.clone();
+        let mut ctx = self.get_context();
+        ctx.texture_quality = quality;
+
+        let url = format!(
+            "{}{}",
+            content_mapping.bind().get_base_url(),
+            file_hash.clone()
+        );
+
+        let hash_id = file_hash.clone();
+
+        if let Some(godot_path) = optimized_godot_path {
             let optimized_data = self.optimized_data.clone();
-
             let original_size = self.optimized_original_size.get(&hash_id).copied();
 
             TokioRuntime::spawn(async move {
                 let _ = ContentProvider::async_fetch_optimized_asset(
                     hash_id.clone(),
-                    ctx,
+                    ctx.clone(),
                     optimized_data,
                     false,
                 )
                 .await;
 
-                let godot_path = format!("res://content/{}.res", hash_id);
+                if let Some(entry_variant) = load_baked_texture_entry(&godot_path, original_size) {
+                    then_promise(get_promise, Ok(Some(entry_variant)));
+                    return;
+                }
 
-                let resource =
-                    match ResourceLoader::singleton().load(&GString::from(godot_path.as_str())) {
-                        Some(res) => res,
-                        None => {
-                            tracing::error!(
-                                "Failed to load optimized texture resource: {}",
-                                godot_path
-                            );
-                            then_promise(
-                                get_promise,
-                                Err(anyhow::anyhow!("Failed to load texture: {}", godot_path)),
-                            );
-                            return;
-                        }
-                    };
-
-                let texture = resource.cast::<godot::classes::Texture2D>();
-                let image = match texture.get_image() {
-                    Some(img) => img,
-                    None => {
-                        tracing::error!("Failed to get image from texture: {}", godot_path);
-                        then_promise(
-                            get_promise,
-                            Err(anyhow::anyhow!("Failed to get image from: {}", godot_path)),
-                        );
-                        return;
-                    }
-                };
-
-                let original_size = if let Some(original_size) = original_size {
-                    Vector2i::new(original_size.width, original_size.height)
-                } else {
-                    image.get_size()
-                };
-
-                let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
-                    original_size,
-                    image,
-                    texture,
-                    failed: false,
-                });
-
-                then_promise(get_promise, Ok(Some(texture_entry.to_variant())));
+                // Baked artifact missing or unreadable (e.g. a stale ZIP in the
+                // local cache): fall back to download + decode.
+                tracing::warn!(
+                    "Failed to load baked texture {}, falling back to runtime decode",
+                    godot_path
+                );
+                let result = load_image_texture(url, hash_id.clone(), ctx).await;
+                then_promise(get_promise, result);
             });
         } else {
-            let url = format!(
-                "{}{}",
-                content_mapping.bind().get_base_url(),
-                file_hash.clone()
-            );
-
             let loading_resources = self.loading_resources.clone();
             let loaded_resources = self.loaded_resources.clone();
-            let hash_id = file_hash.clone();
+
             TokioRuntime::spawn(async move {
                 #[cfg(feature = "use_resource_tracking")]
                 report_resource_start(&hash_id, "texture");
@@ -1358,84 +1470,10 @@ impl ContentProvider {
             });
         }
 
-        self.cache_promise(file_hash, &promise);
-
-        promise
-    }
-
-    /// Fetches a texture by hash with an explicit quality, bypassing the optimization
-    /// pipeline. Useful for UI textures that need a specific (usually Source) quality.
-    /// Cache key: `{hash}_q{N}` — shared with `fetch_texture_by_url_with_quality`.
-    pub fn fetch_texture_by_hash_with_quality(
-        &mut self,
-        file_hash_godot: GString,
-        content_mapping: Gd<DclContentMappingAndUrl>,
-        quality: TextureQuality,
-    ) -> Gd<Promise> {
-        let file_hash = file_hash_godot.to_string();
-
-        // Validate file_hash is not empty to prevent "Is a directory" errors
-        if file_hash.is_empty() {
-            tracing::warn!(
-                "fetch_texture_by_hash_with_quality: empty file_hash, returning rejected promise"
-            );
-            return Promise::from_rejected("Empty texture hash".to_string());
+        self.cache_promise(primary_key, &promise);
+        if let Some(shared_key) = shared_key {
+            self.cache_promise(shared_key, &promise);
         }
-
-        let cache_key = format!("{}_q{}", file_hash, quality.to_i32());
-
-        if let Some(promise) = self.get_cached_promise(&cache_key) {
-            return promise;
-        }
-
-        // Handle URL-based textures
-        if file_hash.starts_with("http") {
-            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
-            let promise = self.fetch_texture_by_url_with_quality(
-                GString::from(&new_file_hash),
-                file_hash_godot,
-                quality,
-            );
-            self.cache_promise(cache_key, &promise);
-            return promise;
-        }
-
-        let (promise, get_promise) = Promise::make_to_async();
-
-        let mut ctx = self.get_context();
-        ctx.texture_quality = quality;
-
-        let url = format!(
-            "{}{}",
-            content_mapping.bind().get_base_url(),
-            file_hash.clone()
-        );
-
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        let hash_id = file_hash.clone();
-
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id, "texture_with_quality");
-
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let result = load_image_texture(url, hash_id.clone(), ctx).await;
-
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
-            } else {
-                report_resource_loaded(&hash_id);
-            }
-
-            then_promise(get_promise, result);
-
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cache_promise(cache_key, &promise);
 
         promise
     }
@@ -1807,9 +1845,14 @@ impl ContentProvider {
             .set_max_low_priority_downloads(number as usize)
     }
 
+    /// Versioned optimized-assets base URLs, newest first. Callers should try
+    /// each in order until the content is found.
     #[func]
-    pub fn get_optimized_base_url(&self) -> GString {
-        ASSET_OPTIMIZED_BASE_URL.to_godot()
+    pub fn get_optimized_base_urls(&self) -> PackedStringArray {
+        ASSET_OPTIMIZED_BASE_URLS
+            .iter()
+            .map(|url| GString::from(*url))
+            .collect()
     }
 
     /// Set the base URL for optimized wearable/emote assets.
@@ -1820,7 +1863,7 @@ impl ContentProvider {
     pub fn set_optimized_wearable_base_url(&mut self, url: GString) {
         let url_str = url.to_string();
         if url_str.is_empty() {
-            self.optimized_wearable_base_url = None;
+            self.optimized_wearable_base_urls = None;
             tracing::info!("Optimized wearable base URL cleared");
         } else {
             // Ensure URL ends with slash
@@ -1830,14 +1873,18 @@ impl ContentProvider {
                 format!("{}/", url_str)
             };
             tracing::info!("Optimized wearable base URL set to: {}", url_with_slash);
-            self.optimized_wearable_base_url = Some(url_with_slash);
+            self.optimized_wearable_base_urls = Some(vec![url_with_slash]);
         }
     }
 
-    /// Get the configured optimized wearable base URL, if any.
+    /// Get the first configured optimized wearable base URL, if any.
     #[func]
     pub fn get_optimized_wearable_base_url(&self) -> GString {
-        match &self.optimized_wearable_base_url {
+        match self
+            .optimized_wearable_base_urls
+            .as_ref()
+            .and_then(|urls| urls.first())
+        {
             Some(url) => GString::from(url.as_str()),
             None => GString::new(),
         }
@@ -2364,18 +2411,10 @@ impl ContentProvider {
         let loaded_dependencies = optimized_data.loaded_assets.read().await;
 
         for hash_dependency in &dependencies {
-            let asset_url: String = format!(
-                "{}/{}-mobile.zip",
-                ASSET_OPTIMIZED_BASE_URL, hash_dependency
-            );
             let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
 
-            tracing::debug!(
-                "Optimized asset dependency: {} -> url: {}",
-                hash_dependency,
-                asset_url
-            );
+            tracing::debug!("Optimized asset dependency: {}", hash_dependency);
 
             if !loaded_dependencies.contains(hash_dependency) {
                 if hash_dependency != &file_hash {
@@ -2392,7 +2431,7 @@ impl ContentProvider {
             }
 
             // Fetch the resource if it's either a new dependency or missing in cache
-            tracing::debug!("Fetching optimized asset: {}", asset_url);
+            tracing::debug!("Fetching optimized asset: {}", hash_dependency_zip);
 
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_dependency_zip, "optimized_asset_dep");
@@ -2401,16 +2440,39 @@ impl ContentProvider {
             let hash_for_tracking = hash_dependency_zip.clone();
 
             let ctx_clone = ctx.clone();
-            let url_for_log = asset_url.clone();
             let future = async move {
-                let result = ctx_clone
-                    .resource_provider
-                    .fetch_resource(asset_url, hash_dependency_zip.clone(), absolute_file_path)
-                    .await;
+                // Try each versioned bucket (newest first) until one has the ZIP
+                let mut result = Err(format!(
+                    "No optimized asset bucket served {}",
+                    hash_dependency_zip
+                ));
+                for base_url in ASSET_OPTIMIZED_BASE_URLS {
+                    let asset_url = format!("{}/{}", base_url, hash_dependency_zip);
+                    result = ctx_clone
+                        .resource_provider
+                        .fetch_resource(
+                            asset_url.clone(),
+                            hash_dependency_zip.clone(),
+                            absolute_file_path.clone(),
+                        )
+                        .await;
 
-                match &result {
-                    Ok(_) => tracing::debug!("Downloaded optimized asset: {}", url_for_log),
-                    Err(e) => tracing::error!("Failed to download {}: {}", url_for_log, e),
+                    match &result {
+                        Ok(_) => {
+                            tracing::debug!("Downloaded optimized asset: {}", asset_url);
+                            break;
+                        }
+                        Err(e) => {
+                            tracing::debug!("Failed to download {}: {}", asset_url, e)
+                        }
+                    }
+                }
+                if let Err(e) = &result {
+                    tracing::error!(
+                        "Failed to download {} from all buckets: {}",
+                        hash_dependency_zip,
+                        e
+                    );
                 }
 
                 #[cfg(feature = "use_resource_tracking")]
@@ -2502,7 +2564,7 @@ impl ContentProvider {
         file_path: String,
         content_mapping: super::content_mapping::ContentMappingAndUrlRef,
         ctx: SceneGltfContext,
-        optimized_base_url: Option<String>,
+        optimized_base_urls: Option<Vec<String>>,
         is_emote: bool,
         optimized_wearable_counter: Arc<AtomicU64>,
         runtime_wearable_counter: Arc<AtomicU64>,
@@ -2514,9 +2576,9 @@ impl ContentProvider {
         let local_zip_path = format!("{}{}", ctx.content_folder, zip_name);
 
         // 2. Determine if we should use optimized version
-        // IMPORTANT: Only check for local ZIP if optimized_base_url is Some
+        // IMPORTANT: Only check for local ZIP if optimized_base_urls is Some
         // When None is passed (runtime-only mode), skip optimized assets entirely
-        let use_optimized = if let Some(base_url) = optimized_base_url {
+        let use_optimized = if let Some(base_urls) = optimized_base_urls {
             // Check local cache first
             let local_zip_exists = std::path::Path::new(&local_zip_path).exists();
             if local_zip_exists {
@@ -2528,63 +2590,77 @@ impl ContentProvider {
                 );
                 true
             } else {
-                // Try to check if optimized version exists on remote server
-                let zip_url = format!("{}{}", base_url, zip_name);
-                tracing::debug!("Checking for optimized {} at: {}", asset_type, zip_url);
+                // Try each versioned base URL (newest first) until one has the ZIP
+                let mut downloaded = false;
+                for base_url in &base_urls {
+                    let zip_url = format!("{}{}", base_url, zip_name);
+                    tracing::debug!("Checking for optimized {} at: {}", asset_type, zip_url);
 
-                match ctx
-                    .resource_provider
-                    .check_remote_file_exists(&zip_url)
-                    .await
-                {
-                    Ok(true) => {
-                        // File exists on server - download it
-                        tracing::debug!(
-                            "[OPTIMIZED] Downloading {} ZIP from: {}",
-                            asset_type.to_uppercase(),
-                            zip_url
-                        );
-                        match ctx
-                            .resource_provider
-                            .fetch_resource_low_priority(
-                                zip_url.clone(),
-                                zip_name.clone(),
-                                local_zip_path.clone(),
-                            )
-                            .await
-                        {
-                            Ok(_) => {
-                                tracing::debug!(
-                                    "[OPTIMIZED] Downloaded {} ZIP: {} (hash={})",
-                                    asset_type.to_uppercase(),
-                                    zip_name,
-                                    file_hash
-                                );
-                                true
+                    match ctx
+                        .resource_provider
+                        .check_remote_file_exists(&zip_url)
+                        .await
+                    {
+                        Ok(true) => {
+                            // File exists on server - download it
+                            tracing::debug!(
+                                "[OPTIMIZED] Downloading {} ZIP from: {}",
+                                asset_type.to_uppercase(),
+                                zip_url
+                            );
+                            match ctx
+                                .resource_provider
+                                .fetch_resource_low_priority(
+                                    zip_url.clone(),
+                                    zip_name.clone(),
+                                    local_zip_path.clone(),
+                                )
+                                .await
+                            {
+                                Ok(_) => {
+                                    tracing::debug!(
+                                        "[OPTIMIZED] Downloaded {} ZIP: {} (hash={})",
+                                        asset_type.to_uppercase(),
+                                        zip_name,
+                                        file_hash
+                                    );
+                                    downloaded = true;
+                                }
+                                Err(e) => {
+                                    tracing::warn!(
+                                        "Failed to download optimized {} from {}: {}",
+                                        asset_type,
+                                        zip_url,
+                                        e
+                                    );
+                                }
                             }
-                            Err(e) => {
-                                tracing::warn!(
-                                    "Failed to download optimized {}: {} - falling back to runtime processing",
-                                    asset_type,
-                                    e
-                                );
-                                false
-                            }
+                            break;
+                        }
+                        Ok(false) => {
+                            tracing::debug!(
+                                "No optimized {} available at: {}",
+                                asset_type,
+                                zip_url
+                            );
+                        }
+                        Err(e) => {
+                            tracing::debug!(
+                                "Failed to check optimized {} existence at {}: {}",
+                                asset_type,
+                                zip_url,
+                                e
+                            );
                         }
                     }
-                    Ok(false) => {
-                        tracing::debug!("No optimized {} available at: {}", asset_type, zip_url);
-                        false
-                    }
-                    Err(e) => {
-                        tracing::debug!(
-                            "Failed to check optimized {} existence: {} - falling back to runtime processing",
-                            asset_type,
-                            e
-                        );
-                        false
-                    }
                 }
+                if !downloaded {
+                    tracing::debug!(
+                        "No optimized {} in any bucket - falling back to runtime processing",
+                        asset_type
+                    );
+                }
+                downloaded
             }
         } else {
             // No optimized_base_url provided - use runtime processing only
@@ -2689,5 +2765,63 @@ impl ContentProvider {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_select_variant_from() {
+        // (baked qualities, requested, expected)
+        let cases: &[(&[i32], i32, Option<i32>)] = &[
+            // full set: exact matches
+            (&[0, 1, 2, 3], 0, Some(0)),
+            (&[0, 1, 2, 3], 2, Some(2)),
+            (&[0, 1, 2, 3], 3, Some(3)),
+            // collapsed High (original <= 1024): High request serves Source
+            (&[0, 1, 3], 2, Some(3)),
+            // only lower variants baked: never degrade, fall back to network
+            (&[0, 1], 2, None),
+            (&[0, 1, 2], 3, None),
+            // no variants known (pre-v4 manifest)
+            (&[], 1, None),
+        ];
+
+        for (qualities, requested, expected) in cases {
+            assert_eq!(
+                select_variant_from(qualities, *requested),
+                *expected,
+                "qualities={:?} requested={}",
+                qualities,
+                requested
+            );
+        }
+    }
+
+    #[test]
+    fn test_content_data_parses_texture_qualities() {
+        let json = r#"{
+            "optimizedContent": ["hashA"],
+            "externalSceneDependencies": {},
+            "originalSizes": {"hashA": {"width": 2048, "height": 1024}},
+            "hashSizeMap": {"hashA": 1000},
+            "textureQualities": {"hashA": [0, 1, 2, 3]}
+        }"#;
+        let data: ContentData = serde_json::from_str(json).expect("valid manifest");
+        assert_eq!(data.texture_qualities["hashA"], vec![0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn test_content_data_parses_legacy_manifest_without_texture_qualities() {
+        let json = r#"{
+            "optimizedContent": ["hashA"],
+            "externalSceneDependencies": {},
+            "originalSizes": {},
+            "hashSizeMap": {}
+        }"#;
+        let data: ContentData = serde_json::from_str(json).expect("legacy manifest");
+        assert!(data.texture_qualities.is_empty());
     }
 }
