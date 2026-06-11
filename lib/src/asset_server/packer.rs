@@ -12,83 +12,18 @@ use godot::prelude::*;
 
 use super::types::{AssetType, SceneOptimizationMetadata};
 
-/// Compute the path of a file inside the ZIP.
-/// No res:// prefix - Godot adds it when loading the resource pack.
-/// GLTFs go to glbs/, textures go to content/ keeping their on-disk file name
-/// (`{hash}_q{N}.res` for quality variants).
-fn zip_internal_path(hash: &str, path: &str, asset_type: AssetType) -> String {
-    match asset_type {
-        AssetType::Texture => {
-            let basename = path.rsplit('/').next().unwrap_or(path);
-            format!("content/{}", basename)
-        }
-        _ => format!("glbs/{}.scn", hash), // Scene, Wearable, Emote
-    }
-}
-
-/// Add a single file to an open ZIP, logging and skipping on failure.
-fn add_file_to_zip(packer: &mut Gd<ZipPacker>, hash: &str, path: &str, asset_type: AssetType) {
-    // Read the file contents
-    let file_access = FileAccess::open(&GString::from(path), ModeFlags::READ);
-    let Some(mut file) = file_access else {
-        tracing::warn!("Failed to open file for packing: {}", path);
-        return;
-    };
-
-    let data = file.get_buffer(file.get_length() as i64);
-    file.close();
-
-    let zip_internal_path = zip_internal_path(hash, path, asset_type);
-
-    tracing::debug!("Adding to ZIP: {} -> {}", path, zip_internal_path);
-
-    // Start file entry in ZIP
-    let err = packer.start_file(&GString::from(&zip_internal_path));
-    if err != godot::global::Error::OK {
-        tracing::warn!(
-            "Failed to start file entry in ZIP for {}: {:?}",
-            zip_internal_path,
-            err
-        );
-        return;
-    }
-
-    // Write file data
-    let err = packer.write_file(&data);
-    if err != godot::global::Error::OK {
-        tracing::warn!(
-            "Failed to write file data to ZIP for {}: {:?}",
-            zip_internal_path,
-            err
-        );
-        // Try to close the file entry anyway
-        let _ = packer.close_file();
-        return;
-    }
-
-    // Close file entry
-    let err = packer.close_file();
-    if err != godot::global::Error::OK {
-        tracing::warn!(
-            "Failed to close file entry in ZIP for {}: {:?}",
-            zip_internal_path,
-            err
-        );
-    }
-}
-
 /// Pack processed assets into a ZIP file.
 ///
 /// Creates a ZIP file at `{output_folder}{output_hash}-mobile.zip` containing
 /// all processed assets. The paths inside the ZIP are structured as:
 /// - `glbs/{hash}.scn` for GLTF assets (scene/wearable/emote)
-/// - `content/{hash}_q{N}.res` for texture quality variants
+/// - `content/{hash}.res` for texture files
 ///
 /// After `load_resource_pack()`, files become accessible at `res://glbs/...` and `res://content/...`
 ///
 /// # Arguments
 /// * `output_hash` - The hash to use for the ZIP filename
-/// * `asset_paths` - List of (hash, file_paths, asset_type) for each completed job
+/// * `asset_paths` - List of (hash, optimized_path, asset_type) for each completed job
 /// * `output_folder` - The output folder path for ZIP files (e.g., `./output/`)
 ///
 /// # Returns
@@ -96,7 +31,7 @@ fn add_file_to_zip(packer: &mut Gd<ZipPacker>, hash: &str, path: &str, asset_typ
 /// * `Err(anyhow::Error)` - If packing fails
 pub fn pack_assets_to_zip(
     output_hash: &str,
-    asset_paths: Vec<(String, Vec<String>, AssetType)>,
+    asset_paths: Vec<(String, String, AssetType)>,
     output_folder: &str,
 ) -> Result<String, anyhow::Error> {
     let zip_path = format!("{}{}-mobile.zip", output_folder, output_hash);
@@ -117,9 +52,59 @@ pub fn pack_assets_to_zip(
         ));
     }
 
-    for (hash, paths, asset_type) in asset_paths {
-        for path in &paths {
-            add_file_to_zip(&mut packer, &hash, path, asset_type);
+    for (hash, path, asset_type) in asset_paths {
+        // Read the file contents
+        let file_access = FileAccess::open(&GString::from(&path), ModeFlags::READ);
+        let Some(mut file) = file_access else {
+            tracing::warn!("Failed to open file for packing: {}", path);
+            continue;
+        };
+
+        let data = file.get_buffer(file.get_length() as i64);
+        file.close();
+
+        // Determine the path inside the ZIP
+        // No res:// prefix - Godot adds it when loading the resource pack
+        // GLTFs go to glbs/, textures go to content/
+        let zip_internal_path = match asset_type {
+            AssetType::Texture => format!("content/{}.res", hash),
+            _ => format!("glbs/{}.scn", hash), // Scene, Wearable, Emote
+        };
+
+        tracing::debug!("Adding to ZIP: {} -> {}", path, zip_internal_path);
+
+        // Start file entry in ZIP
+        let err = packer.start_file(&GString::from(&zip_internal_path));
+        if err != godot::global::Error::OK {
+            tracing::warn!(
+                "Failed to start file entry in ZIP for {}: {:?}",
+                zip_internal_path,
+                err
+            );
+            continue;
+        }
+
+        // Write file data
+        let err = packer.write_file(&data);
+        if err != godot::global::Error::OK {
+            tracing::warn!(
+                "Failed to write file data to ZIP for {}: {:?}",
+                zip_internal_path,
+                err
+            );
+            // Try to close the file entry anyway
+            let _ = packer.close_file();
+            continue;
+        }
+
+        // Close file entry
+        let err = packer.close_file();
+        if err != godot::global::Error::OK {
+            tracing::warn!(
+                "Failed to close file entry in ZIP for {}: {:?}",
+                zip_internal_path,
+                err
+            );
         }
     }
 
@@ -134,11 +119,10 @@ pub fn pack_assets_to_zip(
 
 /// Pack a single asset into its own ZIP file.
 ///
-/// Creates `{output_folder}{hash}-mobile.zip` containing the asset's files:
-/// a single `.scn` for GLTFs, or one `.res` per quality variant for textures.
+/// Creates `{output_folder}{hash}-mobile.zip` containing a single `.scn` or `.res` file.
 pub fn pack_single_asset_to_zip(
     hash: &str,
-    file_paths: &[String],
+    optimized_path: &str,
     asset_type: AssetType,
     output_folder: &str,
 ) -> Result<String, anyhow::Error> {
@@ -159,39 +143,43 @@ pub fn pack_single_asset_to_zip(
         ));
     }
 
-    for path in file_paths {
-        let file_access = FileAccess::open(&GString::from(path), ModeFlags::READ);
-        let Some(mut file) = file_access else {
-            packer.close();
-            return Err(anyhow::anyhow!("Failed to open file for packing: {}", path));
-        };
+    let file_access = FileAccess::open(&GString::from(optimized_path), ModeFlags::READ);
+    let Some(mut file) = file_access else {
+        packer.close();
+        return Err(anyhow::anyhow!(
+            "Failed to open file for packing: {}",
+            optimized_path
+        ));
+    };
 
-        let data = file.get_buffer(file.get_length() as i64);
-        file.close();
+    let data = file.get_buffer(file.get_length() as i64);
+    file.close();
 
-        let internal_path = zip_internal_path(hash, path, asset_type);
+    let zip_internal_path = match asset_type {
+        AssetType::Texture => format!("content/{}.res", hash),
+        _ => format!("glbs/{}.scn", hash),
+    };
 
-        let err = packer.start_file(&GString::from(&internal_path));
-        if err != godot::global::Error::OK {
-            packer.close();
-            return Err(anyhow::anyhow!(
-                "Failed to start file entry in ZIP: {:?}",
-                err
-            ));
-        }
-
-        let err = packer.write_file(&data);
-        if err != godot::global::Error::OK {
-            let _ = packer.close_file();
-            packer.close();
-            return Err(anyhow::anyhow!(
-                "Failed to write file data to ZIP: {:?}",
-                err
-            ));
-        }
-
-        let _ = packer.close_file();
+    let err = packer.start_file(&GString::from(&zip_internal_path));
+    if err != godot::global::Error::OK {
+        packer.close();
+        return Err(anyhow::anyhow!(
+            "Failed to start file entry in ZIP: {:?}",
+            err
+        ));
     }
+
+    let err = packer.write_file(&data);
+    if err != godot::global::Error::OK {
+        let _ = packer.close_file();
+        packer.close();
+        return Err(anyhow::anyhow!(
+            "Failed to write file data to ZIP: {:?}",
+            err
+        ));
+    }
+
+    let _ = packer.close_file();
 
     let err = packer.close();
     if err != godot::global::Error::OK {
@@ -209,13 +197,13 @@ pub fn pack_single_asset_to_zip(
 ///
 /// # Arguments
 /// * `output_hash` - The hash to use for the ZIP filename
-/// * `asset_paths` - List of (hash, file_paths, asset_type) for each completed job
+/// * `asset_paths` - List of (hash, optimized_path, asset_type) for each completed job
 /// * `preloaded_hashes` - Optional set of hashes to include alongside metadata
 /// * `metadata` - Scene optimization metadata to include in the ZIP
 /// * `output_folder` - The output folder path for ZIP files (e.g., `./output/`)
 pub fn pack_scene_assets_to_zip(
     output_hash: &str,
-    asset_paths: Vec<(String, Vec<String>, AssetType)>,
+    asset_paths: Vec<(String, String, AssetType)>,
     preloaded_hashes: Option<&HashSet<String>>,
     metadata: SceneOptimizationMetadata,
     output_folder: &str,
@@ -283,9 +271,57 @@ pub fn pack_scene_assets_to_zip(
     }
 
     // Add asset files
-    for (hash, paths, asset_type) in assets_to_pack {
-        for path in &paths {
-            add_file_to_zip(&mut packer, &hash, path, asset_type);
+    for (hash, path, asset_type) in assets_to_pack {
+        // Read the file contents
+        let file_access = FileAccess::open(&GString::from(&path), ModeFlags::READ);
+        let Some(mut file) = file_access else {
+            tracing::warn!("Failed to open file for packing: {}", path);
+            continue;
+        };
+
+        let data = file.get_buffer(file.get_length() as i64);
+        file.close();
+
+        // Determine the path inside the ZIP
+        // GLTFs go to glbs/, textures go to content/
+        let zip_internal_path = match asset_type {
+            AssetType::Texture => format!("content/{}.res", hash),
+            _ => format!("glbs/{}.scn", hash),
+        };
+
+        tracing::debug!("Adding to ZIP: {} -> {}", path, zip_internal_path);
+
+        // Start file entry in ZIP
+        let err = packer.start_file(&GString::from(&zip_internal_path));
+        if err != godot::global::Error::OK {
+            tracing::warn!(
+                "Failed to start file entry in ZIP for {}: {:?}",
+                zip_internal_path,
+                err
+            );
+            continue;
+        }
+
+        // Write file data
+        let err = packer.write_file(&data);
+        if err != godot::global::Error::OK {
+            tracing::warn!(
+                "Failed to write file data to ZIP for {}: {:?}",
+                zip_internal_path,
+                err
+            );
+            let _ = packer.close_file();
+            continue;
+        }
+
+        // Close file entry
+        let err = packer.close_file();
+        if err != godot::global::Error::OK {
+            tracing::warn!(
+                "Failed to close file entry in ZIP for {}: {:?}",
+                zip_internal_path,
+                err
+            );
         }
     }
 

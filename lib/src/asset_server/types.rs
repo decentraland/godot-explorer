@@ -161,17 +161,6 @@ pub struct TextureSize {
     pub height: u32,
 }
 
-/// A baked texture variant at a specific quality tier.
-#[derive(Debug, Clone)]
-pub struct TextureVariant {
-    /// TextureQuality ordinal (0=Low, 1=Medium, 2=High, 3=Source)
-    pub quality: i32,
-    /// Path to the baked `.res` file
-    pub path: String,
-    /// File size in bytes
-    pub file_size: u64,
-}
-
 /// A processing job.
 #[derive(Debug, Clone)]
 pub struct Job {
@@ -199,8 +188,6 @@ pub struct Job {
     pub optimized_file_size: Option<u64>,
     /// GLTF texture dependencies (for GLTF jobs)
     pub gltf_dependencies: Option<Vec<String>>,
-    /// Baked quality variants (for texture jobs)
-    pub texture_variants: Option<Vec<TextureVariant>>,
 }
 
 impl Job {
@@ -219,7 +206,6 @@ impl Job {
             original_size: None,
             optimized_file_size: None,
             gltf_dependencies: None,
-            texture_variants: None,
         }
     }
 }
@@ -374,50 +360,5 @@ pub struct SceneOptimizationMetadata {
     /// Map of texture hash -> original dimensions
     pub original_sizes: HashMap<String, TextureSize>,
     /// Map of hash -> optimized file size in bytes
-    /// (for textures: sum of all baked variant sizes)
     pub hash_size_map: HashMap<String, u64>,
-    /// Map of texture hash -> baked quality ordinals (ascending).
-    /// Ordinals follow TextureQuality: 0=Low, 1=Medium, 2=High, 3=Source.
-    #[serde(default)]
-    pub texture_qualities: HashMap<String, Vec<i32>>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_scene_optimization_metadata_serializes_camel_case() {
-        let metadata = SceneOptimizationMetadata {
-            optimized_content: vec!["hashA".to_string()],
-            external_scene_dependencies: HashMap::new(),
-            original_sizes: HashMap::new(),
-            hash_size_map: HashMap::from([("hashA".to_string(), 1500)]),
-            texture_qualities: HashMap::from([("hashA".to_string(), vec![0, 1, 3])]),
-        };
-
-        let json = serde_json::to_value(&metadata).expect("serializes");
-        assert_eq!(
-            json["textureQualities"]["hashA"],
-            serde_json::json!([0, 1, 3])
-        );
-        assert_eq!(json["hashSizeMap"]["hashA"], 1500);
-
-        let roundtrip: SceneOptimizationMetadata =
-            serde_json::from_value(json).expect("deserializes");
-        assert_eq!(roundtrip.texture_qualities["hashA"], vec![0, 1, 3]);
-    }
-
-    #[test]
-    fn test_scene_optimization_metadata_texture_qualities_optional_on_read() {
-        let json = r#"{
-            "optimizedContent": [],
-            "externalSceneDependencies": {},
-            "originalSizes": {},
-            "hashSizeMap": {}
-        }"#;
-        let metadata: SceneOptimizationMetadata =
-            serde_json::from_str(json).expect("legacy metadata");
-        assert!(metadata.texture_qualities.is_empty());
-    }
 }
