@@ -172,6 +172,7 @@ metadata/_edit_lock_ = true
 
 [node name="SceneUIContainer" type="Control" parent="UI" unique_id=1950684600]
 unique_name_in_owner = true
+editor_description = "Single container for all per-scene SDK UI (built at runtime under 'scenes_ui'). INPUT LAYERING: Godot picks GUI input by tree order and IGNORES z_index — scanning siblings from last child to first, the first mouse_filter=STOP control under the point wins. So UI siblings AFTER this node (shown BELOW it in the Scene tree) receive input before scene UI, while siblings BEFORE it (shown ABOVE) are blocked by scene UI wherever it has a STOP control. Keep movement/camera catch-areas (joystick, MobileCameraInput) before this node, and interactive app UI (HUD panels, navbar, menus) after it."
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
