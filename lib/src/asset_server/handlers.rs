@@ -545,8 +545,8 @@ async fn watch_and_pack_scene_batch(
     let _permit = ctx.godot_single_thread.acquire().await;
 
     // Create individual ZIPs for each completed asset
-    for (hash, paths, asset_type) in &results {
-        match pack_single_asset_to_zip(hash, paths, *asset_type, &ctx.output_folder) {
+    for (hash, path, asset_type) in &results {
+        match pack_single_asset_to_zip(hash, path, *asset_type, &ctx.output_folder) {
             Ok(zip_path) => {
                 job_manager
                     .add_individual_zip(&batch_id, hash.clone(), zip_path)

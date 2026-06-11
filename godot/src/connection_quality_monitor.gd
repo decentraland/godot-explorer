@@ -86,13 +86,6 @@ func _ready() -> void:
 
 
 func _connect_signals() -> void:
-	# Headless/server runs (e.g. script validation) boot autoloads but never
-	# initialize the UI, so modal_manager stays null forever and the retry below
-	# would re-defer itself every frame until the message queue OOMs. Nothing to
-	# monitor without a UI, so bail out.
-	if OS.has_feature("Server") or DisplayServer.get_name() == "headless":
-		return
-
 	if Global.modal_manager == null:
 		# modal_manager not ready yet; retry next frame
 		_connect_signals.call_deferred()
