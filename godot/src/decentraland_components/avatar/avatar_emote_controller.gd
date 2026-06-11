@@ -332,6 +332,24 @@ func _force_play_emote(emote_urn: String):
 	playing_loop = false
 
 
+## Legacy hotfix for emote props baked before the prop-origin fix.
+## Those assets only had their basis flipped 180° (not their translation), so a prop
+## authored at an offset from the avatar root (e.g. a ball ~1.5m in front of the kicker)
+## ends up mirrored through the avatar. Correctly-processed assets carry the
+## `prop_origin_corrected` metadata flag (set in Rust emote.rs); legacy optimized/runtime
+## .scn don't, so complete the flip here — rotate the origin 180° about Y (negate x/z) —
+## once, then stamp the node so it can't be double-corrected. Props anchored at the avatar
+## origin (most emotes) are unaffected since their origin is ~zero.
+func _hotfix_legacy_prop_origin(prop: Node3D) -> void:
+	if prop == null:
+		return
+	if bool(prop.get_meta("prop_origin_corrected", false)):
+		return
+	var p: Vector3 = prop.position
+	prop.position = Vector3(-p.x, p.y, -p.z)
+	prop.set_meta("prop_origin_corrected", true)
+
+
 func _hide_all_props():
 	# Hide all prop armatures to ensure clean state before playing new emote
 	if not is_instance_valid(avatar):
@@ -591,6 +609,7 @@ func _load_emote_from_gltf_internal(
 			if not avatar.has_node(NodePath(prop_name)):
 				armature_prop = obj.armature_prop
 				armature_prop.set_owner(null)
+				_hotfix_legacy_prop_origin(armature_prop)
 
 				var prop_anim_player = armature_prop.get_node_or_null("AnimationPlayer")
 				if prop_anim_player != null:
