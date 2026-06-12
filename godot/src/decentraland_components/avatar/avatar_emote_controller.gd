@@ -497,14 +497,20 @@ func _async_load_scene_emote_as_wearable(scene_emote_urn: String):
 	var looping: bool
 
 	var resolved = avatar.find_scene_emote_by_urn(scene_emote_urn)
+	if resolved.is_empty():
+		# Remote players and AvatarShape triggers never populate the per-avatar
+		# registry (it's filled by Rust only on the avatar that ran
+		# triggerSceneEmote), so resolve the URN against the loaded scenes —
+		# unambiguous even when ids/hashes contain '-' (preview `b64-` hashes).
+		resolved = Global.scene_runner.resolve_scene_emote_urn(scene_emote_urn)
 	if not resolved.is_empty():
 		glb_hash = resolved["glb_hash"]
 		base_url = resolved["base_url"]
 		audio_hash = resolved["audio_hash"]
 		looping = resolved["looping"]
 	else:
-		# Fallback: dash-split parse (correct for dashless CID hashes, e.g. deployed
-		# content) and the realm-URL fallback for remote players not in the registry.
+		# Last resort: dash-split parse (correct for dashless CID hashes, e.g. deployed
+		# content, when the emote's scene is not loaded locally).
 		var parsed = EmoteSceneUrn.new(scene_emote_urn)
 		if not parsed.is_valid:
 			printerr("Failed to parse scene emote URN: %s" % scene_emote_urn)

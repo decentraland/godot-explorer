@@ -828,6 +828,54 @@ impl SceneManager {
         GString::default()
     }
 
+    /// Resolve a scene-emote URN (`urn:decentraland:off-chain:scene-emote:{scene_id}-{glb_hash}-{loop}`)
+    /// against the currently loaded scenes. The URN payload cannot be dash-split:
+    /// preview ids/hashes look like `b64-<base64>` and contain `-` themselves. Matching
+    /// the payload against each loaded scene's entity id (exact prefix) is unambiguous.
+    /// This is the path for emotes that arrive *without* local context — broadcast from
+    /// remote players over comms, or AvatarShape expression triggers — where the
+    /// per-avatar content registry used by triggerSceneEmote was never populated.
+    /// Returns `{scene_id, glb_hash, base_url, audio_hash, looping}` or `{}`.
+    #[func]
+    pub fn resolve_scene_emote_urn(&self, emote_urn: GString) -> VarDictionary {
+        const URN_PREFIX: &str = "urn:decentraland:off-chain:scene-emote:";
+        let urn = emote_urn.to_string();
+        let Some(payload) = urn.strip_prefix(URN_PREFIX) else {
+            return VarDictionary::new();
+        };
+        let (payload, looping) = if let Some(p) = payload.strip_suffix("-true") {
+            (p, true)
+        } else if let Some(p) = payload.strip_suffix("-false") {
+            (p, false)
+        } else {
+            return VarDictionary::new();
+        };
+
+        for scene in self.scenes.values() {
+            let scene_entity_id = scene.scene_entity_definition.id.as_str();
+            let Some(glb_hash) = payload
+                .strip_prefix(scene_entity_id)
+                .and_then(|rest| rest.strip_prefix('-'))
+            else {
+                continue;
+            };
+            let audio_hash = scene
+                .content_mapping
+                .get_scene_emote_hash_by_glb_hash(glb_hash)
+                .and_then(|hash| hash.audio_hash)
+                .unwrap_or_default();
+
+            let mut dict = VarDictionary::new();
+            dict.set("scene_id", scene_entity_id);
+            dict.set("glb_hash", glb_hash);
+            dict.set("base_url", scene.content_mapping.base_url.as_str());
+            dict.set("audio_hash", audio_hash);
+            dict.set("looping", looping);
+            return dict;
+        }
+        VarDictionary::new()
+    }
+
     #[func]
     fn get_scene_is_paused(&self, scene_id: i32) -> bool {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
