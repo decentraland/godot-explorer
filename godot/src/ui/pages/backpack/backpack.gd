@@ -162,6 +162,12 @@ func _ready():
 			wearable_data[fake_urn] = null
 			print("[BACKPACK] Injected fake-owned wearable: ", fake_urn)
 
+	# Inject the deep link equip urn as owned (the deep link was already cleared, so
+	# it's no longer in fake_owned_wearables). Equipped below before the load render.
+	if not Global.pending_backpack_equip_urn.is_empty():
+		if not wearable_data.has(Global.pending_backpack_equip_urn):
+			wearable_data[Global.pending_backpack_equip_urn] = null
+
 	# Add base wearables last
 	for wearable_id in Wearables.BASE_WEARABLES:
 		var key = Wearables.get_base_avatar_urn(wearable_id)
@@ -179,6 +185,20 @@ func _ready():
 		if wearable == null:
 			printerr("Error loading wearable_id ", wearable_id)
 	_update_visible_categories()
+
+	# Auto-equip a deep link wearable (urn=... from the marketplace webview) as part
+	# of this single first-load avatar render below, so the equip can't race a later
+	# refresh (which left it equipped in data but not shown on the preview).
+	if not Global.pending_backpack_equip_urn.is_empty():
+		var deeplink_urn: String = Global.pending_backpack_equip_urn
+		Global.pending_backpack_equip_urn = ""
+		var deeplink_wearable = wearable_data.get(deeplink_urn)
+		if deeplink_wearable != null and Global.player_identity.get_mutable_avatar() != null:
+			_select_category_for(deeplink_wearable.get_category())
+			_on_wearable_equip(deeplink_urn)
+			print("[BACKPACK] deeplink urn equipped as owned: ", deeplink_urn)
+		else:
+			printerr("[BACKPACK] deeplink urn: could not equip wearable ", deeplink_urn)
 
 	request_update_avatar = true
 
@@ -545,6 +565,69 @@ func _on_wearable_unequip(wearable_id: String):
 
 	Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 	request_update_avatar = true
+
+
+## Deep link entry point (urn=<urn> from the marketplace webview): inject the
+## wearable as owned, select its category and equip it on the avatar. Runs hot,
+## so it works whether or not the backpack was already instantiated. The caller
+## (deep_link_router) has already disabled profile deploys — the wallet doesn't
+## actually own this wearable.
+func async_add_and_equip_owned(urn: String) -> void:
+	print("[BACKPACK] async_add_and_equip_owned START urn=", urn)
+	if urn.is_empty():
+		return
+
+	# Ensure the wearable definition is loaded.
+	var wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		var promise = Global.content_provider.fetch_wearables(
+			[urn], Global.realm.get_profile_content_url()
+		)
+		await PromiseUtils.async_all(promise)
+		wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		printerr("[BACKPACK] deeplink urn: failed to fetch wearable ", urn)
+		return
+
+	# Add it to the owned set so it lists as owned and can be equipped.
+	wearable_data[urn] = wearable
+
+	# Select its category, equip it on the avatar, and refresh the owned grid.
+	# The caller (menu) rebuilds the backpack fresh before this runs, so the equip
+	# is applied during a clean first-load avatar render (the cached path raced it).
+	_select_category_for(wearable.get_category())
+	_on_wearable_equip(urn)
+	request_show_wearables = true
+	print("[BACKPACK] deeplink urn equipped as owned: ", urn, " (", wearable.get_category(), ")")
+
+
+## Selects the main category (and its sub-filter) that contains `category`, so
+## the backpack opens focused on the just-equipped wearable.
+func _select_category_for(category: String) -> void:
+	var preferred: Array = [
+		Wearables.Categories.CLOTHING,
+		Wearables.Categories.HEAD,
+		Wearables.Categories.BODY,
+		Wearables.Categories.EXTRAS,
+		Wearables.Categories.FACE,
+	]
+	var main_cat: String = Wearables.Categories.ALL
+	for candidate in preferred:
+		var subs: Array = Wearables.Categories.MAIN_CATEGORIES.get(candidate, [])
+		if subs.has(category):
+			main_cat = candidate
+			break
+	main_category_selected = main_cat
+	_update_visible_categories()
+	# Press the exact sub-category button if it's visible after the main switch.
+	for wearable_filter_button in wearable_filter_buttons:
+		if (
+			wearable_filter_button.get_category_name() == category
+			and wearable_filter_button.visible
+		):
+			wearable_filter_button.set_pressed(true)
+			_on_wearable_filter_button_filter_type(category)
+			return
 
 
 func _async_on_marketplace_equip(urn: String):

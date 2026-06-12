@@ -159,7 +159,7 @@ func _on_action_pressed():
 	if not is_marketplace_item:
 		return
 	if Iap.get_balance() >= marketplace_price and not marketplace_url.is_empty():
-		Global.open_url(marketplace_url)
+		Global.open_webview_url(MarketplaceUrl.with_mobile_iap(marketplace_url))
 	else:
 		Global.open_credits.emit()
 

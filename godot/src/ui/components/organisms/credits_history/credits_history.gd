@@ -8,15 +8,19 @@ const HISTORY_ITEM_SCENE = preload(
 
 
 func _ready() -> void:
+	_rebuild()
+	# History is server-backed and refreshed asynchronously; rebuild whenever the
+	# manager signals an update (fetch completed, new purchase, refund).
+	Iap.transaction_history_updated.connect(_rebuild)
+	# Pull fresh data from the backend now that the view is open.
+	Iap.refresh_history()
+
+
+func _rebuild() -> void:
+	for child in item_container.get_children():
+		child.queue_free()
 	for entry in Iap.get_transaction_history():
-		_add_item(entry.credits, entry.is_refund, entry.timestamp)
-	Iap.purchase_completed.connect(_on_purchase_completed)
-
-
-func _on_purchase_completed(_product_id: String, credits: int) -> void:
-	var now = Time.get_datetime_dict_from_system()
-	var timestamp = "%04d.%02d.%02d" % [now.year, now.month, now.day]
-	_add_item(credits, false, timestamp)
+		_add_item(int(entry.credits), bool(entry.is_refund), str(entry.timestamp))
 
 
 func _add_item(credits: int, is_refund: bool, timestamp: String) -> void:

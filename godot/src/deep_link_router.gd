@@ -58,6 +58,19 @@ func process_deep_link(url: String) -> void:
 	if Global.deep_link_obj.iap_enabled:
 		Iap.enable()
 
+	# Deep link urn=<urn> from the marketplace webview: open the backpack and
+	# equip the wearable as if owned. Profile deploys are disabled because the
+	# wallet doesn't actually own it (the urn was also added to fake-owned).
+	var equip_urn: String = Global.deep_link_obj.urn
+	if not equip_urn.is_empty():
+		print("[DEEPLINK] equip wearable urn: ", equip_urn)
+		ProfileService.set_deploy_disabled(true)
+		Global.deeplink_equip_wearable.emit(equip_urn)
+		# Stop here: this deep link only equips a wearable. Falling through would
+		# hit the "/open" path routing below and pop the jump-in panel.
+		_clear_deep_link()
+		return
+
 	# Trigger avatar impostor benchmark
 	var bench_param = Global.deep_link_obj.params.get("benchmark", "")
 	if bench_param == "avatar-impostors":
