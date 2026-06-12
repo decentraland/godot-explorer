@@ -46,6 +46,7 @@ var _session_hide_view_profile: bool = true
 var _session_hide_world_interactions: bool = true
 var _session_hide_player_names: bool = true
 var _session_hide_scene_ui: bool = true
+var _mobile_controls_hidden_for_hide_ui: bool = false
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -1062,11 +1063,32 @@ func _is_ui_hud_mode_exception(node: Node) -> bool:
 		or node == control_menu
 		or node == margin_container_show_ui
 		or node == profile_container
+		or node.name == "LeftRightSafeContainerMobile"
+		or node.name == "MobileCameraInput"
 	)
+
+
+func _apply_mobile_controls_hide_ui(hidden: bool) -> void:
+	if not Global.is_mobile():
+		return
+	_mobile_controls_hidden_for_hide_ui = hidden
+	if hidden:
+		joypad.hide()
+		virtual_joystick.modulate.a = 0.0
+	else:
+		joypad.show()
+		virtual_joystick.modulate.a = 1.0
+
+
+func _show_joypad() -> void:
+	if _mobile_controls_hidden_for_hide_ui:
+		return
+	joypad.show()
 
 
 func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 	ui_root.show()
+	_apply_mobile_controls_hide_ui(not full_hud)
 	if full_hud:
 		for node in _ui_children_hidden_for_hud_mode:
 			if is_instance_valid(node):
@@ -1224,7 +1246,7 @@ func _on_profile_container_visibility_changed() -> void:
 		# Avoid forcing hide/show here to prevent visibility_changed re-entrancy loops.
 		return
 	if not profile_container.visible:
-		joypad.show()
+		_show_joypad()
 
 
 func _open_friends_panel() -> void:
@@ -1588,6 +1610,10 @@ func _on_emote_wheel_emote_wheel_opened() -> void:
 
 
 func _update_virtual_controls_visibility() -> void:
+	if _mobile_controls_hidden_for_hide_ui:
+		joypad.hide()
+		virtual_joystick.modulate.a = 0.0
+		return
 	var panel_open := (
 		friends_panel.visible
 		or notifications_panel.visible
@@ -1595,7 +1621,7 @@ func _update_virtual_controls_visibility() -> void:
 		or profile_container.visible
 	)
 	if not panel_open:
-		joypad.show()
+		_show_joypad()
 	virtual_joystick.show()
 
 
@@ -1612,12 +1638,12 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	joypad.show()
+	_show_joypad()
 
 
 func _on_discover_open():
 	navbar.collapse()
-	joypad.show()
+	_show_joypad()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
