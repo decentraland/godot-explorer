@@ -221,7 +221,9 @@ mod tests {
     #[test]
     fn scene_emote_by_glb_hash_unknown_hash() {
         let mapping = mapping_with(&[("emote.glb", "bafkreihash")]);
-        assert!(mapping.get_scene_emote_hash_by_glb_hash("missing").is_none());
+        assert!(mapping
+            .get_scene_emote_hash_by_glb_hash("missing")
+            .is_none());
     }
 
     #[test]
