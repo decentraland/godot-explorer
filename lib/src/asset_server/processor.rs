@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use godot::classes::image::CompressMode;
 use godot::classes::resource_saver::SaverFlags;
-use godot::classes::{Image, ImageTexture, Os, Resource, ResourceSaver};
+use godot::classes::{Image, Os, Resource, ResourceSaver};
 use godot::prelude::*;
 use tokio::sync::Semaphore;
 
@@ -364,10 +364,10 @@ async fn process_emote_gltf(
     })
 }
 
-/// Process a texture and save as compressed .ctex format.
+/// Process a texture and save one ETC2-compressed `.res` per quality tier.
 ///
-/// Downloads the texture, compresses it using ETC2 (mobile-optimized),
-/// and saves as a PortableCompressedTexture2D (.ctex) file.
+/// Downloads the texture, then bakes each quality variant by resizing and
+/// compressing with ETC2 (mobile-optimized) and saving the `Image` as a `.res`.
 async fn process_texture(
     request: &AssetRequest,
     ctx: &ProcessorContext,
@@ -508,34 +508,22 @@ async fn process_texture(
         }
     }
 
-    // Create ImageTexture from the compressed image
-    let texture = ImageTexture::create_from_image(&image).ok_or_else(|| {
-        anyhow::anyhow!(
-            "Failed to create ImageTexture from compressed image ({}x{})",
-            image.get_width(),
-            image.get_height()
-        )
-    })?;
-
-    let texture_width = texture.get_width();
-    let texture_height = texture.get_height();
-    tracing::debug!(
-        "Created compressed texture: {}x{}",
-        texture_width,
-        texture_height
-    );
-
-    // Verify compression succeeded
-    if texture_width == 0 || texture_height == 0 {
+    if image.get_width() == 0 || image.get_height() == 0 {
         return Err(anyhow::anyhow!(
-            "Texture compression failed - resulting texture has no dimensions"
+            "Texture compression failed - resulting image has no dimensions"
         ));
     }
 
-    // Save as .res file (Godot binary resource format)
-    // We use .res instead of .ctex because ImageTexture doesn't support .ctex
+    // Save the compressed `Image` resource directly. ResourceSaver writes the
+    // Image's CPU byte buffer (ETC2) verbatim — there is no GPU readback, so the
+    // asset-server's software GL (llvmpipe) can't decompress it to RGBA8. The
+    // device loads it back as an `Image` and wraps it in an `ImageTexture` (see
+    // `load_baked_texture_entry`), which round-trips correctly on real GPUs.
+    // We previously stored a `PortableCompressedTexture2D` to dodge the readback,
+    // but PCT2 reloads as a solid-magenta texture on devices — so both the bake
+    // and the device now use a plain `Image`/`ImageTexture` (matches `main`).
     let err = ResourceSaver::singleton()
-        .save_ex(&texture.upcast::<Resource>())
+        .save_ex(&image.upcast::<Resource>())
         .path(&res_file_path)
         .flags(SaverFlags::COMPRESS)
         .done();

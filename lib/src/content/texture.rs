@@ -420,6 +420,14 @@ fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
 
 /// Creates a texture from a compressed image, resizing if needed.
 /// Uses ETC2 compression for better memory usage on mobile platforms.
+///
+/// The ETC2 image is wrapped in a plain `ImageTexture` (not a
+/// `PortableCompressedTexture2D`): on a real device GPU this round-trips
+/// correctly through the `.scn` cache (`save_node_as_scene` → reload), whereas a
+/// `PortableCompressedTexture2D` baked on-device reloads as a solid-magenta
+/// texture. The asset-server's separate bake (`process_texture`) saves a raw
+/// ETC2 `Image` instead, for its own llvmpipe reasons.
+///
 /// Falls back to uncompressed texture if compression fails.
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
     resize_image(image, max_size);

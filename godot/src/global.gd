@@ -143,6 +143,12 @@ var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
 
+## Coalescer for GltfContainer load-timeouts. Lazy-init child node.
+## Adding `_process` directly on DclGlobal triggers a Godot Vulkan crash —
+## the coalescer must live on a separate Node to keep `_process` off the
+## autoload itself.
+var _gltf_load_timeout_coalescer: Node = null
+
 # Guards sign_out() against re-entrancy. comms.disconnect(true) emits the
 # player_identity.logout signal deferred, which can route back into sign_out() a
 # frame later; without this the whole teardown + scene swap would run twice.
@@ -153,12 +159,6 @@ var _signing_out: bool = false
 # Tools button before the deferred scene swap runs). Cleared in menu._ready once
 # we're back on the standalone Discover screen.
 var _returning_to_discover: bool = false
-
-## Coalescer for GltfContainer load-timeouts. Lazy-init child node.
-## Adding `_process` directly on DclGlobal triggers a Godot Vulkan crash —
-## the coalescer must live on a separate Node to keep `_process` off the
-## autoload itself.
-var _gltf_load_timeout_coalescer: Node = null
 
 
 func is_xr() -> bool:
@@ -301,11 +301,11 @@ func _ready():
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
+		_apply_optimized_content_base_url(deep_link_obj)
+
 		# Toggle the loopback debug WS server from the fake deeplink (desktop/CLI
 		# testing). Same handling as runtime deeplinks in DeepLinkRouter.
 		deep_link_router.apply_debug_ws_param(deep_link_obj.params.get("debug-ws", ""))
-
-		_apply_optimized_content_base_url(deep_link_obj)
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
@@ -394,6 +394,13 @@ func _ready():
 	)
 	await _async_clear_cache_if_needed()
 	print("[Startup] global._async_clear_cache end: %dms" % (Time.get_ticks_msec() - _startup_time))
+
+	# Start the debug WebSocket server if requested via --debug-ws
+	if cli.debug_ws:
+		if DebugWs.start():
+			print("[Startup] Debug WS server listening on port ", DebugWs.get_port())
+		else:
+			push_warning("[Startup] Failed to start Debug WS server")
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:

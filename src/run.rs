@@ -754,9 +754,7 @@ pub fn deploy_and_run_on_device(
 }
 
 /// Deploy and run on Android device using adb
-fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Result<()> {
-    // TODO: wire `_extras` into the `am start` intent via --esa args. For now
-    // keep the behaviour identical to the pre-extras code path.
+fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result<()> {
     // The APK name is always the same regardless of release/debug mode
     let apk_name = "decentraland.godot.client.apk";
     let apk_path = format!("{}/{}", EXPORTS_FOLDER, apk_name);
@@ -806,16 +804,38 @@ fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Resul
 
     // Launch the app
     let spinner = create_spinner("Launching application...");
+    let mut launch_args = vec![
+        "-s".to_string(),
+        device_id.clone(),
+        "shell".to_string(),
+        "am".to_string(),
+        "start".to_string(),
+        "-n".to_string(),
+        // GodotAppLauncher is the exported launcher activity; GodotApp itself
+        // is not exported, so `am start -n .../GodotApp` is denied from shell.
+        "org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher".to_string(),
+    ];
+
+    // Forward CLI flags as Android intent extras. Godot's Android launcher maps
+    // an extra `foo=true` to the `--foo` command-line arg picked up by DclCli.
+    // For example `--skip-lobby` / `--clear-cache-startup` / `--debug-ws`.
+    for extra in &extras {
+        let arg = extra.trim_start_matches('-');
+        if !arg.is_empty() {
+            launch_args.push("-e".to_string());
+            launch_args.push(arg.to_string());
+            launch_args.push("true".to_string());
+        }
+    }
+    if !extras.is_empty() {
+        print_message(
+            MessageType::Info,
+            &format!("Launching with extras: {:?}", extras),
+        );
+    }
+
     let launch_status = std::process::Command::new("adb")
-        .args([
-            "-s",
-            &device_id,
-            "shell",
-            "am",
-            "start",
-            "-n",
-            "org.decentraland.godotexplorer/com.godot.game.GodotApp",
-        ])
+        .args(&launch_args)
         .status()?;
     spinner.finish();
 
