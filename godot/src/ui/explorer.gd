@@ -71,6 +71,8 @@ var _debug_panel_from_settings: bool = false
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
 @onready var mobile_ui = %MobileUI
+@onready var mobile_camera_input: Control = %MobileCameraInput
+@onready var left_right_safe_container_mobile: MarginContainer = %LeftRightSafeContainerMobile
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
@@ -1063,8 +1065,8 @@ func _is_ui_hud_mode_exception(node: Node) -> bool:
 		or node == control_menu
 		or node == margin_container_show_ui
 		or node == profile_container
-		or node.name == "LeftRightSafeContainerMobile"
-		or node.name == "MobileCameraInput"
+		or node == left_right_safe_container_mobile
+		or node == mobile_camera_input
 	)
 
 
