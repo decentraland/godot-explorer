@@ -544,6 +544,10 @@ async fn watch_and_pack_scene_batch(
     // Acquire Godot thread for ZIPPacker (held for all ZIP operations)
     let _permit = ctx.godot_single_thread.acquire().await;
 
+    // R17 architecture: per-impostor ShaderMaterial + per-impostor
+    // ImageTexture embedded in each .scn. No global atlas finalize
+    // step.
+
     // Create individual ZIPs for each completed asset
     for (hash, path, asset_type) in &results {
         match pack_single_asset_to_zip(hash, path, *asset_type, &ctx.output_folder) {

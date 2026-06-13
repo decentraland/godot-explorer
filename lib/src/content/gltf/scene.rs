@@ -17,8 +17,8 @@ use crate::godot_classes::dcl_global::DclGlobal;
 /// only the inner (back) faces rasterize into the shadow map. Because DCL
 /// colliders are slightly larger than the visible mesh they wrap, leaving
 /// front-face culling on would self-shadow the visible mesh. PER_VERTEX
-/// shading keeps the shader path consistent with the importer's cheap-pbr
-/// path; transparency is OFF, alpha not used.
+/// shading matches the importer's post-pass material flip; transparency
+/// is OFF, alpha not used.
 fn build_shadow_proxy_material() -> Gd<BaseMaterial3D> {
     let mut mat = StandardMaterial3D::new_gd();
     mat.set_cull_mode(CullMode::FRONT);
@@ -34,38 +34,74 @@ use super::super::{
 };
 use super::common::{count_nodes, load_gltf_pipeline};
 
-use crate::scene_runner::components::asset_preprocessor::mesh_occluder;
+use crate::scene_runner::components::asset_preprocessor::{
+    mesh_occluder, metrics, octahedral_impostor,
+};
 
 struct AssetServerPreprocCounts {
     occluders: u32,
+    impostors_registered: u32,
 }
 
 fn apply_asset_server_optimizations(root: &Gd<Node3D>, hash: &str) {
-    let mut counts = AssetServerPreprocCounts { occluders: 0 };
-    walk_and_preprocess(&root.clone().upcast(), &mut counts);
-    if counts.occluders > 0 {
+    let mut counts = AssetServerPreprocCounts {
+        occluders: 0,
+        impostors_registered: 0,
+    };
+    let mut impostor_jobs: Vec<octahedral_impostor::ImpostorJob> = Vec::new();
+    let root_node: Gd<Node> = root.clone().upcast();
+    walk_and_preprocess(&root_node, &root_node, &mut counts, &mut impostor_jobs);
+
+    // Block this worker thread until the main-thread bake drain has
+    // swapped real atlases into every job's ShaderMaterial. Must
+    // happen before save_node_as_scene so the saved .scn captures
+    // the baked atlases (not the magenta placeholders).
+    let baked = if !impostor_jobs.is_empty() {
+        let n = octahedral_impostor::enqueue_and_wait(impostor_jobs);
+        metrics::record_impostors(n);
+        n
+    } else {
+        0
+    };
+
+    if counts.occluders > 0 || counts.impostors_registered > 0 || baked > 0 {
         godot::global::godot_print!(
-            "[asset-server-preproc] {}: occluders={}",
+            "[asset-server-preproc] {}: occluders={} impostors_registered={} impostors_baked={}",
             hash,
-            counts.occluders
+            counts.occluders,
+            counts.impostors_registered,
+            baked
         );
     }
 }
 
-fn walk_and_preprocess(node: &Gd<Node>, counts: &mut AssetServerPreprocCounts) {
+fn walk_and_preprocess(
+    node: &Gd<Node>,
+    scene_root: &Gd<Node>,
+    counts: &mut AssetServerPreprocCounts,
+    impostor_jobs: &mut Vec<octahedral_impostor::ImpostorJob>,
+) {
     if let Ok(mut mi) = node.clone().try_cast::<MeshInstance3D>() {
         if mi.is_visible_in_tree() && mi.get_layer_mask() == 1 {
             if let Some(mesh) = mi.get_mesh() {
                 if let Ok(array_mesh) = mesh.try_cast::<ArrayMesh>() {
-                    if mesh_occluder::try_spawn_for(&mut mi, &array_mesh) {
+                    if mesh_occluder::try_spawn_for(&mut mi, &array_mesh, scene_root) {
+                        metrics::record_occluder();
                         counts.occluders = counts.occluders.saturating_add(1);
+                    }
+
+                    if let Some(job) =
+                        octahedral_impostor::register_candidate(&mut mi, &array_mesh, scene_root)
+                    {
+                        impostor_jobs.push(job);
+                        counts.impostors_registered = counts.impostors_registered.saturating_add(1);
                     }
                 }
             }
         }
     }
     for child in node.get_children().iter_shared() {
-        walk_and_preprocess(&child, counts);
+        walk_and_preprocess(&child, scene_root, counts, impostor_jobs);
     }
 }
 

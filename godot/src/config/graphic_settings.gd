@@ -45,10 +45,15 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"scale": 1.0,
 		"mesh_lod_threshold": 3.0
 	},
-	# High (3) - Best quality
+	# High (3) - Best quality. shadow capped at 1 (Low) because Genesis
+	# Plaza bench on Mali-G68 showed shadow_quality=2 costs ~10ms gpu
+	# vs Low without buying meaningful visual quality at typical mobile
+	# resolution (62% of the geometry goes through the shadow pass; Low
+	# keeps shadows visually present with -22% prim and -36% draws,
+	# recovering ~5 fps over High).
 	{
 		"aa": 1,
-		"shadow": 2,
+		"shadow": 1,
 		"bloom": 2,
 		"skybox": 2,
 		"texture": 2,
@@ -237,8 +242,8 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	if viewport:
 		viewport.scaling_3d_scale = config.resolution_3d_scale
 		# Apply per-profile mesh-LOD pixel threshold. Higher value = swap
-		# to lower-detail LOD sooner (more aggressive). Only does work when the
-		# loaded .scn carries a baked LOD chain (asset-server bake) — raw-GLB
-		# runtime loads have no LOD levels for this threshold to pick from.
+		# to lower-detail LOD sooner (more aggressive). LOD chain is
+		# baked at GLTF import time; this is the only knob that decides
+		# how aggressively the renderer picks LOD1/2/3 at distance.
 		var lod_thr: float = profile.get("mesh_lod_threshold", 1.0)
 		viewport.mesh_lod_threshold = lod_thr

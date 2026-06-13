@@ -6,7 +6,7 @@ use godot::{
     builtin::GString,
     classes::{
         base_material_3d::{ShadingMode, TextureParam},
-        mesh::ArrayType,
+        mesh::{ArrayType, PrimitiveType},
         BaseMaterial3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D,
     },
     global::Error,
@@ -14,6 +14,7 @@ use godot::{
     obj::Gd,
     prelude::*,
 };
+use meshopt::{simplify, SimplifyOptions, VertexDataAdapter};
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::sync::Semaphore;
 
@@ -80,15 +81,15 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compr
 /// ArrayMesh → ImporterMesh → generate_lods → ArrayMesh). Runs AFTER the
 /// splitter so chunks also get LODs.
 ///
-/// Uses the native `generate_lods` because it produces a LOD chain in the
-/// exact format the renderer expects (custom simplification output has
-/// SIGSEGV'd the renderer when LODs engage).
+/// Hand-rolled meshopt::simplify output crashed Godot's renderer with SIGSEGV
+/// when LODs engaged. The native generate_lods produces a LOD chain in the
+/// exact format the renderer expects.
 fn apply_post_generate_godot_lods(root: Gd<Node>) {
     use godot::classes::{ArrayMesh, ImporterMesh, MeshInstance3D};
     use std::collections::HashMap;
     // Surfaces with fewer indices than this are too small for a useful LOD
-    // chain — generate_lods on tiny surfaces produces degenerate LOD levels
-    // that have triggered renderer SIGSEGVs in the past. Lowered from
+    // chain — meshopt/generate_lods on tiny surfaces produces degenerate LOD
+    // levels that have triggered renderer SIGSEGVs in the past. Lowered from
     // 96 (32 tris) to 24 (8 tris) so chunks of split meshes also get LODs.
     const MIN_INDICES_FOR_LOD: i32 = 24;
     let mut stack: Vec<Gd<Node>> = vec![root];
@@ -248,6 +249,24 @@ fn apply_post_generate_godot_lods(root: Gd<Node>) {
     );
 }
 
+/// Flip every `BaseMaterial3D` to `SHADING_MODE_PER_VERTEX`. Runs between
+/// `append_from_file_ex` and `generate_scene`, before the materials are
+/// bound to mesh instances or registered with the renderer's shader_map,
+/// so the first shader variant compiled is the vertex-lighting one —
+/// no recompile, no batching invalidation, single MaterialKey for the
+/// batch.
+#[allow(dead_code)]
+pub(super) fn apply_pre_generate_material_overrides(state: &mut Gd<GltfState>) {
+    let materials = state.get_materials();
+    for i in 0..materials.len() {
+        let material = materials.at(i);
+        let Ok(mut base) = material.try_cast::<BaseMaterial3D>() else {
+            continue;
+        };
+        base.set_shading_mode(ShadingMode::PER_VERTEX);
+    }
+}
+
 /// Post-everything material pass. Runs AFTER split + LODs + shadow so it
 /// catches any material that the splitter's new ArrayMesh-per-chunk path
 /// or the ImporterMesh.generate_lods roundtrip might have left in a
@@ -301,6 +320,443 @@ fn apply_post_material_overrides(root: &Gd<Node>) -> (u32, u32) {
         }
     }
     (flipped, without)
+}
+
+/// Per-surface LOD chain generation on the GltfState's `ImporterMesh`
+/// array, run between `append_from_file_ex` and `generate_scene`. LOD0
+/// (full quality) is preserved — every additional level is added via the
+/// `lods` Dictionary slot on `add_surface`, keyed by screen-space-error
+/// threshold. Godot's renderer swaps to a lower LOD when an instance's
+/// projected size makes its screen-space error exceed the viewport's
+/// `mesh_lod_threshold` (in pixels).
+///
+/// Vanilla `meshopt::simplify` is topology-preserving; DCL user-authored
+/// GLBs have UV-seam topology discontinuities at every material boundary
+/// so vanilla returns ~98.5% of source indices. `Permissive` lifts that
+/// constraint; `Sparse` skips the topology rebuild we don't need.
+///
+/// Skip rules:
+/// * meshes with blend shapes — `add_surface` doesn't roundtrip the
+///   per-shape vertex stream array, so morph-driven animation would lose
+///   its target data.
+/// * skinned surfaces (`ARRAY_BONES` populated) — decimated indices
+///   reference different source verts; bone-weighted transforms stretch
+///   the simplified geometry visibly during animation.
+/// * surfaces with < `MIN_INDICES_FOR_LOD` indices — meshopt's quadric
+///   error metric is noisy on tiny meshes and the per-LOD bookkeeping
+///   overhead exceeds the savings.
+/// * surfaces where the decimator kept ≥ 90% of source indices — common
+///   on terrain/fences; not worth a draw-state switch.
+#[allow(dead_code)]
+pub(super) fn apply_pre_generate_mesh_simplification(
+    state: &mut Gd<GltfState>,
+    _target_ratio: f32,
+) {
+    const LOD_LEVELS: &[(f32, f32)] = &[
+        (0.5, 0.1),  // LOD1: ~50% indices, kicks in at d > 0.1 unit
+        (0.25, 0.5), // LOD2: ~25%, d > 0.5
+        (0.1, 1.5),  // LOD3: ~10%, d > 1.5
+    ];
+    const MIN_INDICES_FOR_LOD: usize = 30;
+
+    let meshes = state.get_meshes();
+    let mesh_count = meshes.len();
+    let mut surfaces_with_lods = 0u32;
+    let mut surfaces_no_lods = 0u32;
+    let mut src_idx_total: u64 = 0;
+    let mut lod_idx_total: u64 = 0;
+
+    for mi in 0..mesh_count {
+        let mut gltf_mesh = meshes.at(mi);
+        let Some(mut importer) = gltf_mesh.get_mesh() else {
+            continue;
+        };
+        let surface_count = importer.get_surface_count();
+        if surface_count == 0 {
+            continue;
+        }
+        if importer.get_blend_shape_count() > 0 {
+            continue;
+        }
+
+        struct Snapshot {
+            primitive: PrimitiveType,
+            arrays: VarArray,
+            material: Option<Gd<godot::classes::Material>>,
+            name: String,
+            flags: u64,
+            lods: VarDictionary,
+        }
+
+        let mut snapshots: Vec<Snapshot> = Vec::with_capacity(surface_count as usize);
+        let mut mesh_has_any_skinned_surface = false;
+        for s in 0..surface_count {
+            let arrays = importer.get_surface_arrays(s);
+            // Pre-flight: if any surface in this mesh references bones, skip
+            // the whole mesh. ImporterMesh.add_surface doesn't roundtrip the
+            // bone-weighted vertex stream cleanly through `clear()` + re-add,
+            // so re-adding a skinned surface lands its vertices at the
+            // origin / wrong transform — visible as floating ghost meshes
+            // at random positions.
+            let has_bones = arrays
+                .at(ArrayType::BONES.ord() as usize)
+                .try_to::<PackedInt32Array>()
+                .map(|a| !a.is_empty())
+                .unwrap_or(false)
+                || arrays
+                    .at(ArrayType::BONES.ord() as usize)
+                    .try_to::<PackedFloat32Array>()
+                    .map(|a| !a.is_empty())
+                    .unwrap_or(false);
+            if has_bones {
+                mesh_has_any_skinned_surface = true;
+            }
+            snapshots.push(Snapshot {
+                primitive: importer.get_surface_primitive_type(s),
+                arrays,
+                material: importer.get_surface_material(s),
+                name: importer.get_surface_name(s).to_string(),
+                flags: importer.get_surface_format(s),
+                lods: VarDictionary::new(),
+            });
+        }
+        if mesh_has_any_skinned_surface {
+            continue;
+        }
+
+        let mut any_lod_built = false;
+        for snap in snapshots.iter_mut() {
+            if snap.primitive != PrimitiveType::TRIANGLES {
+                surfaces_no_lods += 1;
+                continue;
+            }
+            let Ok(idx) = snap
+                .arrays
+                .at(ArrayType::INDEX.ord() as usize)
+                .try_to::<PackedInt32Array>()
+            else {
+                surfaces_no_lods += 1;
+                continue;
+            };
+            if idx.len() < MIN_INDICES_FOR_LOD {
+                surfaces_no_lods += 1;
+                continue;
+            }
+            let Ok(verts) = snap
+                .arrays
+                .at(ArrayType::VERTEX.ord() as usize)
+                .try_to::<PackedVector3Array>()
+            else {
+                surfaces_no_lods += 1;
+                continue;
+            };
+            if verts.is_empty() {
+                surfaces_no_lods += 1;
+                continue;
+            }
+            let has_bones = snap
+                .arrays
+                .at(ArrayType::BONES.ord() as usize)
+                .try_to::<PackedInt32Array>()
+                .map(|a| !a.is_empty())
+                .unwrap_or(false)
+                || snap
+                    .arrays
+                    .at(ArrayType::BONES.ord() as usize)
+                    .try_to::<PackedFloat32Array>()
+                    .map(|a| !a.is_empty())
+                    .unwrap_or(false);
+            if has_bones {
+                surfaces_no_lods += 1;
+                continue;
+            }
+
+            let indices_u32: Vec<u32> = idx.as_slice().iter().map(|&i| i as u32).collect();
+            let mut vbytes: Vec<u8> = Vec::with_capacity(verts.len() * 12);
+            for v in verts.as_slice() {
+                vbytes.extend_from_slice(&v.x.to_le_bytes());
+                vbytes.extend_from_slice(&v.y.to_le_bytes());
+                vbytes.extend_from_slice(&v.z.to_le_bytes());
+            }
+            let Ok(adapter) = VertexDataAdapter::new(&vbytes, 12, 0) else {
+                surfaces_no_lods += 1;
+                continue;
+            };
+
+            src_idx_total = src_idx_total.saturating_add(idx.len() as u64);
+            let mut surface_had_lod = false;
+            for &(ratio, sse_key) in LOD_LEVELS {
+                let target_count = ((idx.len() as f32) * ratio).round() as usize;
+                let target_count = target_count - (target_count % 3);
+                if target_count < 3 || target_count >= idx.len() {
+                    continue;
+                }
+                let lod_indices = simplify(
+                    &indices_u32,
+                    &adapter,
+                    target_count,
+                    0.02,
+                    SimplifyOptions::Sparse,
+                    None,
+                );
+                if lod_indices.is_empty()
+                    || lod_indices.len() as f32 / idx.len() as f32 > 0.9
+                    || !lod_indices.len().is_multiple_of(3)
+                {
+                    continue;
+                }
+                let mut packed = PackedInt32Array::new();
+                packed.resize(lod_indices.len());
+                let slc = packed.as_mut_slice();
+                for (k, &i) in lod_indices.iter().enumerate() {
+                    slc[k] = i as i32;
+                }
+                let _ = snap.lods.insert(sse_key.to_variant(), packed.to_variant());
+                lod_idx_total = lod_idx_total.saturating_add(lod_indices.len() as u64);
+                surface_had_lod = true;
+            }
+            if surface_had_lod {
+                surfaces_with_lods += 1;
+                any_lod_built = true;
+            } else {
+                surfaces_no_lods += 1;
+            }
+        }
+
+        if !any_lod_built {
+            continue;
+        }
+        importer.clear();
+        for snap in snapshots {
+            let name_gs = GString::from(snap.name.as_str());
+            importer
+                .add_surface_ex(snap.primitive, &snap.arrays)
+                .name(&name_gs)
+                .material(snap.material.as_ref())
+                .lods(&snap.lods)
+                .flags(snap.flags)
+                .done();
+        }
+    }
+
+    if src_idx_total > 0 {
+        godot::global::godot_print!(
+            "[mesh-lod-chain] surfaces with_lods={} no_lods={} src_idx={} lod_idx={}",
+            surfaces_with_lods,
+            surfaces_no_lods,
+            src_idx_total,
+            lod_idx_total,
+        );
+    }
+}
+
+/// Post-generate LOD chain. Walks the scene tree and rebuilds each
+/// MeshInstance3D's ArrayMesh with the same surfaces plus a `lods` Dictionary
+/// on each surface (kept by `add_surface_from_arrays`).
+/// Kept (#[allow(dead_code)]) for follow-up when the splitter is revisited.
+#[allow(dead_code)]
+fn apply_post_generate_lod_chain(root: Gd<Node>) {
+    use godot::classes::{ArrayMesh, MeshInstance3D};
+
+    // (ratio_indices_kept, lod_threshold) — small thresholds. Bigger thresholds
+    // (5/20/80m) caused engaged LODs to render with corrupted geometry that
+    // SIGSEGV'd Godot's renderer; reverted until the simplify-output → Godot
+    // ArrayMesh interaction is debugged separately.
+    const LOD_LEVELS: &[(f32, f32)] = &[(0.5, 0.1), (0.25, 0.5), (0.1, 1.5)];
+    const MIN_INDICES_FOR_LOD: usize = 30;
+
+    let mut stack: Vec<Gd<Node>> = vec![root];
+    let mut surfaces_with_lods = 0u32;
+    let mut surfaces_no_lods = 0u32;
+    let mut chunk_surfaces_with_lods = 0u32;
+    let mut chunk_surfaces_no_lods = 0u32;
+    let mut chunks_seen = 0u32;
+    let mut src_idx_total: u64 = 0;
+    let mut lod_idx_total: u64 = 0;
+
+    while let Some(n) = stack.pop() {
+        let kids = n.get_children();
+        for i in 0..kids.len() {
+            stack.push(kids.at(i));
+        }
+        let Ok(mut mi) = n.try_cast::<MeshInstance3D>() else {
+            continue;
+        };
+        let is_chunk = mi
+            .get_parent()
+            .map(|p| p.get_name().to_string() == "_splitted")
+            .unwrap_or(false);
+        if is_chunk {
+            chunks_seen += 1;
+        }
+        let Some(mesh) = mi.get_mesh() else { continue };
+        let Ok(am) = mesh.try_cast::<ArrayMesh>() else {
+            continue;
+        };
+        if am.get_blend_shape_count() > 0 {
+            continue;
+        }
+
+        let surface_count = am.get_surface_count();
+        if surface_count == 0 {
+            continue;
+        }
+
+        let mut new_am = ArrayMesh::new_gd();
+        let mut any_lod_built = false;
+
+        for s in 0..surface_count {
+            let arrays = am.surface_get_arrays(s);
+            let material = am.surface_get_material(s);
+            let primitive = am.surface_get_primitive_type(s);
+
+            let bones_present = arrays
+                .at(ArrayType::BONES.ord() as usize)
+                .try_to::<PackedInt32Array>()
+                .map(|a| !a.is_empty())
+                .unwrap_or(false)
+                || arrays
+                    .at(ArrayType::BONES.ord() as usize)
+                    .try_to::<PackedFloat32Array>()
+                    .map(|a| !a.is_empty())
+                    .unwrap_or(false);
+
+            let mut lods = VarDictionary::new();
+            let lods_built = if !bones_present && primitive == PrimitiveType::TRIANGLES {
+                build_lods_for_surface(&arrays, LOD_LEVELS, MIN_INDICES_FOR_LOD, &mut lods)
+            } else {
+                None
+            };
+
+            if let Some((src_n, lod_n)) = lods_built {
+                src_idx_total = src_idx_total.saturating_add(src_n as u64);
+                lod_idx_total = lod_idx_total.saturating_add(lod_n as u64);
+                surfaces_with_lods += 1;
+                if is_chunk {
+                    chunk_surfaces_with_lods += 1;
+                }
+                any_lod_built = true;
+            } else {
+                surfaces_no_lods += 1;
+                if is_chunk {
+                    chunk_surfaces_no_lods += 1;
+                }
+            }
+
+            let surf_before = new_am.get_surface_count();
+            new_am
+                .add_surface_from_arrays_ex(primitive, &arrays)
+                .lods(&lods)
+                .done();
+            if let Some(mat) = material {
+                new_am.surface_set_material(surf_before, &mat);
+            }
+        }
+
+        if any_lod_built {
+            mi.set_mesh(&new_am);
+        }
+    }
+
+    if src_idx_total > 0 || chunks_seen > 0 {
+        godot::global::godot_print!(
+            "[mesh-lod-chain] surfaces with_lods={} no_lods={} src_idx={} lod_idx={} chunks_seen={} chunks_with_lods={} chunks_no_lods={}",
+            surfaces_with_lods,
+            surfaces_no_lods,
+            src_idx_total,
+            lod_idx_total,
+            chunks_seen,
+            chunk_surfaces_with_lods,
+            chunk_surfaces_no_lods,
+        );
+    }
+}
+
+/// Run meshopt::simplify for each LOD level and insert the resulting indices
+/// into `lods` keyed by screen-space-error. Returns (src_indices, total_lod_indices)
+/// if at least one LOD was added, None otherwise.
+#[allow(dead_code)]
+fn build_lods_for_surface(
+    arrays: &VarArray,
+    levels: &[(f32, f32)],
+    min_indices_for_lod: usize,
+    lods: &mut VarDictionary,
+) -> Option<(usize, usize)> {
+    let idx = arrays
+        .at(ArrayType::INDEX.ord() as usize)
+        .try_to::<PackedInt32Array>()
+        .ok()?;
+    if idx.len() < min_indices_for_lod {
+        return None;
+    }
+    let verts = arrays
+        .at(ArrayType::VERTEX.ord() as usize)
+        .try_to::<PackedVector3Array>()
+        .ok()?;
+    if verts.is_empty() {
+        return None;
+    }
+
+    let indices_u32: Vec<u32> = idx.as_slice().iter().map(|&i| i as u32).collect();
+    let mut vbytes: Vec<u8> = Vec::with_capacity(verts.len() * 12);
+    for v in verts.as_slice() {
+        vbytes.extend_from_slice(&v.x.to_le_bytes());
+        vbytes.extend_from_slice(&v.y.to_le_bytes());
+        vbytes.extend_from_slice(&v.z.to_le_bytes());
+    }
+    let adapter = VertexDataAdapter::new(&vbytes, 12, 0).ok()?;
+
+    let mut total_lod = 0usize;
+    let mut any = false;
+    for &(ratio, sse_key) in levels {
+        let target = ((idx.len() as f32) * ratio).round() as usize;
+        let target = target - (target % 3);
+        if target < 3 || target >= idx.len() {
+            continue;
+        }
+        let lod_indices = simplify(
+            &indices_u32,
+            &adapter,
+            target,
+            0.02,
+            SimplifyOptions::Sparse,
+            None,
+        );
+        if lod_indices.is_empty()
+            || lod_indices.len() as f32 / idx.len() as f32 > 0.9
+            || !lod_indices.len().is_multiple_of(3)
+        {
+            continue;
+        }
+        // Defensive: every LOD index must be within the surface's vertex
+        // range. Out-of-bounds indices crash Godot's renderer with SIGSEGV
+        // (observed when chunks have remapped vertices and meshopt::simplify
+        // edge cases produced indices > verts.len()).
+        let max_vert = verts.len() as u32;
+        let bounds_ok = lod_indices.iter().all(|&i| i < max_vert);
+        if !bounds_ok {
+            godot::global::godot_print!(
+                "[lod-chain] WARN: skip LOD with out-of-bounds index (verts={}, max_idx={})",
+                max_vert,
+                lod_indices.iter().max().copied().unwrap_or(0)
+            );
+            continue;
+        }
+        let mut packed = PackedInt32Array::new();
+        packed.resize(lod_indices.len());
+        let slc = packed.as_mut_slice();
+        for (k, &i) in lod_indices.iter().enumerate() {
+            slc[k] = i as i32;
+        }
+        let _ = lods.insert(sse_key.to_variant(), packed.to_variant());
+        total_lod += lod_indices.len();
+        any = true;
+    }
+    if any {
+        Some((idx.len(), total_lod))
+    } else {
+        None
+    }
 }
 
 /// Walk the generated scene tree and report how many MeshInstance3D surfaces
@@ -622,6 +1078,12 @@ where
         // the pipeline is meant to be baked once on the asset server and
         // saved into the .scn the phone consumes.
         if ctx.apply_optimizations {
+            // mesh-split DISABLED: was producing white-material chunks in
+            // multi-MI shared mesh groups (per-surface material not
+            // propagated to chunk_mesh when the source MI relied on
+            // material_override + an empty mesh.surface_get_material).
+            // Re-enable once the material fan-out is correct.
+            // apply_post_generate_mesh_split(node.clone(), node.clone());
             apply_post_generate_godot_lods(node.clone());
             verify_lods_in_generated_scene(node.clone());
         }

@@ -1,7 +1,7 @@
-//! Spawn a coarse `BoxOccluder3D` sized to the source mesh's AABB (inset a
-//! little) so Godot's culler can early-out geometry fully behind large opaque
-//! meshes. Cheap and conservative — it never over-culls, but only occludes
-//! within the box, not the true silhouette.
+//! Spawn an `ArrayOccluder3D` that mirrors the source mesh's geometry,
+//! decimated aggressively. Way more accurate than `BoxOccluder3D` for
+//! actual building shapes — culls things behind the real silhouette
+//! instead of just an AABB.
 
 use godot::classes::base_material_3d::Transparency;
 use godot::classes::{
@@ -32,7 +32,11 @@ const BOX_INSET_THIN: f32 = 0.50;
 /// aggressive inset above.
 const THIN_AXIS_M: f32 = 0.5;
 
-pub fn try_spawn_for(mi: &mut Gd<MeshInstance3D>, mesh: &Gd<ArrayMesh>) -> bool {
+pub fn try_spawn_for(
+    mi: &mut Gd<MeshInstance3D>,
+    mesh: &Gd<ArrayMesh>,
+    scene_root: &Gd<godot::classes::Node>,
+) -> bool {
     if mi.has_meta("dcl_preproc_occluder") {
         return false;
     }
@@ -79,7 +83,16 @@ pub fn try_spawn_for(mi: &mut Gd<MeshInstance3D>, mesh: &Gd<ArrayMesh>) -> bool 
     occluder_instance.set_occluder(&box_occluder.upcast::<godot::classes::Occluder3D>());
     occluder_instance.set_position(center_local);
 
-    mi.add_child(&occluder_instance.upcast::<godot::classes::Node>());
+    mi.add_child(&occluder_instance.clone().upcast::<godot::classes::Node>());
+
+    // DIAG: skip set_owner so PackedScene drops the occluder from
+    // the .scn. The set_owner-corrected version was over-culling
+    // foliage (bushes vanished) — the BoxOccluder3D footprints are
+    // too aggressive for non-rectangular geometry. Bushes-missing
+    // is a separate issue from impostors; once we tune box insets
+    // or switch to ArrayOccluder3D, we can re-enable the save.
+    let _ = scene_root;
+
     mi.set_meta("dcl_preproc_occluder", &true.to_variant());
     true
 }

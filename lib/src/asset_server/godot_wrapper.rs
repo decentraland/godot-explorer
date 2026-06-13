@@ -7,6 +7,7 @@ use godot::classes::Node;
 use godot::prelude::*;
 
 use super::server::start_server;
+use crate::scene_runner::components::asset_preprocessor::octahedral_impostor;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 /// Godot wrapper for the asset optimization server.
@@ -26,6 +27,15 @@ impl INode for DclAssetServer {
             port: 8080,
             is_running: false,
         }
+    }
+
+    /// Per-frame drain of the impostor bake queue. Worker threads
+    /// (running GLTF imports) enqueue bake requests; this main-thread
+    /// hook is the only place SubViewports get created, advanced, and
+    /// their pixel buffers read back.
+    fn process(&mut self, _dt: f64) {
+        let mut parent: Gd<Node> = self.base().clone().upcast();
+        octahedral_impostor::drain_bake_queue_on_main(&mut parent);
     }
 }
 
@@ -59,6 +69,12 @@ impl DclAssetServer {
             tracing::warn!("Asset server is already running");
             return;
         }
+
+        // Note: baked texture variants are now saved as plain ETC2 `Image`
+        // resources and impostor atlases as ETC2 `ImageTexture`s embedded in
+        // the `.scn` (no GPU readback on save, no PCT2 anywhere), so the
+        // process-wide `set_keep_all_compressed_buffers` PCT2 plumbing is no
+        // longer needed here.
 
         let port = self.port;
         tracing::info!("Starting asset optimization server on port {}", port);

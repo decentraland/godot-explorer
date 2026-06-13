@@ -34,10 +34,6 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
-	# Toggle the loopback debug WS server from the deeplink. Lets it be enabled
-	# before reaching Settings (e.g. on the login/lobby screens).
-	apply_debug_ws_param(Global.deep_link_obj.params.get("debug-ws", ""))
-
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
@@ -54,6 +50,10 @@ func process_deep_link(url: String) -> void:
 	if not kill_sky_value.is_empty():
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
+
+	# Toggle the loopback debug WS server from the deeplink. Lets it be enabled
+	# before reaching Settings (e.g. on the login/lobby screens).
+	apply_debug_ws_param(Global.deep_link_obj.params.get("debug-ws", ""))
 
 	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
 	# runner from Global._ready, but on mobile the deep link is not parsed by
