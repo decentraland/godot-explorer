@@ -53,6 +53,7 @@ RUN cargo build --profile dev-release --features asset_server && \
 FROM --platform=linux/amd64 quay.io/decentraland/godot-explorer:next
 
 USER root
+
 COPY --from=rust-builder /libdclgodot.so /app/libdclgodot.so
 RUN chmod 644 /app/libdclgodot.so
 

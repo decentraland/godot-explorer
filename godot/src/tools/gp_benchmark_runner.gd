@@ -73,7 +73,125 @@ func _ready() -> void:
 	)
 
 	Global.scene_runner.loading_complete.connect(_on_loading_complete)
+	# Periodic memory snapshots dumped to logcat as JSON. Survives a
+	# stuck load (no need to wait for loading_complete) so we can see
+	# how the heap / VRAM / scene tree grow over time and pinpoint
+	# duplication.
+	_kick_memory_snapshots()
 	_set_phase("waiting_for_explorer")
+
+
+func _kick_memory_snapshots() -> void:
+	for delay in [10.0, 20.0, 40.0, 80.0, 160.0]:
+		var t = Timer.new()
+		t.one_shot = true
+		t.wait_time = delay
+		t.autostart = true
+		var tag = "T+%ds" % int(delay)
+		t.timeout.connect(_memory_snapshot.bind(tag))
+		add_child(t)
+
+
+func _memory_snapshot(tag: String) -> void:
+	var s = {
+		"tag": tag,
+		"static_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
+		"static_max_mb": Performance.get_monitor(Performance.MEMORY_STATIC_MAX) / 1048576.0,
+		"vram_total_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+		"vram_tex_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
+		"vram_buf_mb": Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0,
+		"node_count": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		"resource_count": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
+		"orphan_nodes": int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
+		"objects_total": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		"render_objects": int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+	}
+	var by_class = {}
+	var mesh_by_path = {}  # path -> array of instance_ids
+	var tex_by_path = {}
+	var mat_unique_ids = {}
+	var meshes_no_path = 0
+	var stats = {"miss_mesh": 0, "miss_mat": 0, "miss_tex": 0}
+	_walk_for_dedup(get_tree().root, by_class, mesh_by_path, tex_by_path, mat_unique_ids, stats)
+
+	# Find the worst dupes — same path loaded as N distinct instances.
+	var mesh_dups = []
+	for p in mesh_by_path:
+		var arr: Array = mesh_by_path[p]
+		var unique_ids: Dictionary = {}
+		for id in arr:
+			unique_ids[id] = true
+		if arr.size() > 1 and unique_ids.size() > 1:
+			mesh_dups.append([p.substr(p.length() - 60), arr.size(), unique_ids.size()])
+	mesh_dups.sort_custom(func(a, b): return a[1] > b[1])
+	var tex_dups = []
+	for p in tex_by_path:
+		var arr2: Array = tex_by_path[p]
+		var unique_ids2: Dictionary = {}
+		for id2 in arr2:
+			unique_ids2[id2] = true
+		if arr2.size() > 1 and unique_ids2.size() > 1:
+			tex_dups.append([p.substr(p.length() - 60), arr2.size(), unique_ids2.size()])
+	tex_dups.sort_custom(func(a, b): return a[1] > b[1])
+
+	# Class counts top-20
+	var class_arr = []
+	for k in by_class:
+		class_arr.append([k, by_class[k]])
+	class_arr.sort_custom(func(a, b): return a[1] > b[1])
+
+	s["by_class_top20"] = class_arr.slice(0, 20)
+	s["meshes_with_unique_path"] = mesh_by_path.size()
+	s["meshes_no_resource_path"] = meshes_no_path
+	s["materials_unique_instances"] = mat_unique_ids.size()
+	s["textures_with_unique_path"] = tex_by_path.size()
+	s["mesh_dups_top10 (path, refs, unique_instances)"] = mesh_dups.slice(0, 10)
+	s["tex_dups_top10 (path, refs, unique_instances)"] = tex_dups.slice(0, 10)
+	s["misses"] = stats
+
+	_log("MEMORY %s: %s" % [tag, JSON.stringify(s)])
+
+
+func _walk_for_dedup(
+	n: Node,
+	by_class: Dictionary,
+	mesh_by_path: Dictionary,
+	tex_by_path: Dictionary,
+	mat_ids: Dictionary,
+	stats: Dictionary
+) -> void:
+	by_class[n.get_class()] = by_class.get(n.get_class(), 0) + 1
+	if n is MeshInstance3D:
+		var mi := n as MeshInstance3D
+		var mesh = mi.mesh
+		if mesh != null:
+			var p = str(mesh.resource_path)
+			if p == "":
+				stats["miss_mesh"] += 1
+			else:
+				if not mesh_by_path.has(p):
+					mesh_by_path[p] = []
+				mesh_by_path[p].append(mesh.get_instance_id())
+			# Walk surface materials.
+			for si in range(mesh.get_surface_count()):
+				var mat = mi.get_active_material(si)
+				if mat == null:
+					stats["miss_mat"] += 1
+					continue
+				mat_ids[mat.get_instance_id()] = true
+				if mat is BaseMaterial3D:
+					var bm := mat as BaseMaterial3D
+					var tex = bm.albedo_texture
+					if tex != null:
+						var tp = str(tex.resource_path)
+						if tp == "":
+							stats["miss_tex"] += 1
+						else:
+							if not tex_by_path.has(tp):
+								tex_by_path[tp] = []
+							tex_by_path[tp].append(tex.get_instance_id())
+	for c in n.get_children():
+		_walk_for_dedup(c, by_class, mesh_by_path, tex_by_path, mat_ids, stats)
 
 
 func _on_loading_complete(session_id: int) -> void:
@@ -551,6 +669,11 @@ func _finish() -> void:
 	# the PNG encode (~200-500 ms zlib on 1080p) doesn't contaminate the
 	# preceding sample window in profiles.
 	_save_screenshot()
+	# bench-keep-running=true (deeplink) → don't quit so the user can
+	# walk around in the captured state for visual debugging.
+	if bool(config.get("keep_running", false)):
+		_log("keep_running=true — skipping force-quit, free-roam now")
+		return
 	_async_force_quit(0)
 
 
@@ -756,7 +879,6 @@ func _load_config() -> Dictionary:
 ##   bench-disable-transforms=true|false
 ##   bench-warmup=<seconds>
 ##   bench-sample=<seconds>
-##   rs-gltf-direct=true|false  -- GLTF→RenderingServer migration toggle
 func _apply_deeplink_overrides() -> void:
 	if Global.deep_link_obj == null:
 		return
@@ -783,6 +905,25 @@ func _apply_deeplink_overrides() -> void:
 	var sample: String = params.get("bench-sample", "")
 	if not sample.is_empty() and sample.is_valid_int():
 		config["sample_seconds"] = sample.to_int()
+	var settling: String = params.get("bench-settling-timeout", "")
+	if not settling.is_empty() and settling.is_valid_int():
+		config["settling_timeout_seconds"] = settling.to_int()
+	# bench-force-settling=true disables the early-exit on still_loading==0
+	# (which fires before child MIs land in the scene tree — the gltf_container
+	# LoadingState transitions out of LOADING before propagate_ready completes
+	# on its children). Forces the full settling_timeout window so the scene
+	# fully materializes before sampling.
+	var force_settling: String = params.get("bench-force-settling", "")
+	if not force_settling.is_empty():
+		config["force_settling"] = force_settling.to_lower() in ["true", "1", "yes"]
+
+	# bench-keep-running=true skips the post-bench force-quit so you
+	# can keep walking around in the captured scene state after the
+	# JSON+screenshot have been written. Handy when visually
+	# verifying impostor / culling work.
+	var keep_running: String = params.get("bench-keep-running", "")
+	if not keep_running.is_empty():
+		config["keep_running"] = keep_running.to_lower() in ["true", "1", "yes"]
 
 	# Force a graphic profile for the bench. Index matches GraphicSettings
 	# PROFILE_NAMES: 0=Very Low, 1=Low, 2=Medium, 3=High, 4=Custom. Stashed

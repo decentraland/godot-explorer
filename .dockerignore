@@ -15,4 +15,9 @@ bench-results/
 *.aar
 *.apk
 *.so
+# Keep the prebuilt libs the production Dockerfile COPYs from the build
+# context (Dockerfile.build-local builds its own .so inside the image, so the
+# broad *.so ignore above is fine for it — but prod copies these in).
+!libdclgodot.so
+!libsentry.linux.debug.x86_64.so
 *.dylib
