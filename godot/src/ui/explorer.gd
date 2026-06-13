@@ -45,6 +45,8 @@ var _session_hide_main_hud: bool = false
 var _session_hide_view_profile: bool = true
 var _session_hide_world_interactions: bool = true
 var _session_hide_player_names: bool = true
+var _session_hide_scene_ui: bool = true
+var _mobile_controls_hidden_for_hide_ui: bool = false
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -69,6 +71,8 @@ var _debug_panel_from_settings: bool = false
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
 @onready var mobile_ui = %MobileUI
+@onready var mobile_camera_input: Control = %MobileCameraInput
+@onready var left_right_safe_container_mobile: MarginContainer = %LeftRightSafeContainerMobile
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
@@ -1061,11 +1065,32 @@ func _is_ui_hud_mode_exception(node: Node) -> bool:
 		or node == control_menu
 		or node == margin_container_show_ui
 		or node == profile_container
+		or node == left_right_safe_container_mobile
+		or node == mobile_camera_input
 	)
+
+
+func _apply_mobile_controls_hide_ui(hidden: bool) -> void:
+	if not Global.is_mobile():
+		return
+	_mobile_controls_hidden_for_hide_ui = hidden
+	if hidden:
+		joypad.hide()
+		virtual_joystick.modulate.a = 0.0
+	else:
+		joypad.show()
+		virtual_joystick.modulate.a = 1.0
+
+
+func _show_joypad() -> void:
+	if _mobile_controls_hidden_for_hide_ui:
+		return
+	joypad.show()
 
 
 func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 	ui_root.show()
+	_apply_mobile_controls_hide_ui(not full_hud)
 	if full_hud:
 		for node in _ui_children_hidden_for_hud_mode:
 			if is_instance_valid(node):
@@ -1223,7 +1248,7 @@ func _on_profile_container_visibility_changed() -> void:
 		# Avoid forcing hide/show here to prevent visibility_changed re-entrancy loops.
 		return
 	if not profile_container.visible:
-		joypad.show()
+		_show_joypad()
 
 
 func _open_friends_panel() -> void:
@@ -1436,9 +1461,10 @@ func _on_loading_started() -> void:
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
 	_session_hide_player_names = true
+	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, true)
+	Global.session_hide_ui_options_sync.emit(true, true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 
 
@@ -1479,38 +1505,38 @@ func _async_run_ban_check() -> void:
 
 func _on_orientation_changed(is_portrait: bool) -> void:
 	if is_portrait:
-		# Portrait: hide all HUD and scene UI, only chat visible
 		mobile_ui.hide()
 		emote_wheel.hide()
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		# Landscape: restore all UI
 		if Global.is_mobile():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
 		navbar._on_size_changed()
-		_set_scene_ui_visible(true)
+		_set_scene_ui_visible(_should_show_scene_ui())
 
 
 func _on_chat_write_mode_changed(is_writing: bool) -> void:
 	if Global.is_orientation_portrait():
-		return  # Portrait hides everything already
+		return
 	if is_writing:
-		# Landscape writing: hide all UI
 		mobile_ui.hide()
 		emote_wheel.hide()
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		# Landscape reading: restore all UI
 		if Global.is_mobile():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
 		navbar._on_size_changed()
-		_set_scene_ui_visible(true)
+		_set_scene_ui_visible(_should_show_scene_ui())
+
+
+func _should_show_scene_ui() -> bool:
+	return not (_session_hide_main_hud and _session_hide_scene_ui)
 
 
 func _set_scene_ui_visible(is_visible: bool) -> void:
@@ -1586,6 +1612,10 @@ func _on_emote_wheel_emote_wheel_opened() -> void:
 
 
 func _update_virtual_controls_visibility() -> void:
+	if _mobile_controls_hidden_for_hide_ui:
+		joypad.hide()
+		virtual_joystick.modulate.a = 0.0
+		return
 	var panel_open := (
 		friends_panel.visible
 		or notifications_panel.visible
@@ -1593,7 +1623,7 @@ func _update_virtual_controls_visibility() -> void:
 		or profile_container.visible
 	)
 	if not panel_open:
-		joypad.show()
+		_show_joypad()
 	virtual_joystick.show()
 
 
@@ -1610,12 +1640,12 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	joypad.show()
+	_show_joypad()
 
 
 func _on_discover_open():
 	navbar.collapse()
-	joypad.show()
+	_show_joypad()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
@@ -1712,9 +1742,11 @@ func _on_button_show_ui_pressed() -> void:
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
 	_session_hide_player_names = true
+	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
+	_set_scene_ui_visible(true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, true)
+	Global.session_hide_ui_options_sync.emit(true, true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 
 
@@ -1725,9 +1757,11 @@ func set_hide_main_hud_from_settings(minimized: bool) -> void:
 		_session_hide_view_profile = true
 		_session_hide_world_interactions = true
 		_session_hide_player_names = true
+		_session_hide_scene_ui = true
 		set_visible_ui(true, true)
+		_set_scene_ui_visible(true)
 		_apply_hide_ui_to_avatar_nicks(false)
-		Global.session_hide_ui_options_sync.emit(true, true, true)
+		Global.session_hide_ui_options_sync.emit(true, true, true, true)
 
 
 func set_hide_view_profile(value: bool) -> void:
@@ -1740,6 +1774,12 @@ func set_hide_world_interactions(value: bool) -> void:
 
 func set_hide_player_names(value: bool) -> void:
 	_session_hide_player_names = value
+
+
+func set_hide_scene_ui(value: bool) -> void:
+	_session_hide_scene_ui = value
+	if _session_hide_main_hud:
+		_set_scene_ui_visible(not value)
 
 
 func is_session_hide_main_hud() -> bool:
@@ -1758,11 +1798,17 @@ func is_session_hide_player_names() -> bool:
 	return _session_hide_player_names
 
 
+func is_session_hide_scene_ui() -> bool:
+	return _session_hide_scene_ui
+
+
 func apply_deferred_hide_ui() -> void:
 	if not _session_hide_main_hud:
 		return
 	set_visible_ui(false, true)
 	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
+	if _session_hide_scene_ui:
+		_set_scene_ui_visible(false)
 
 
 func _on_avatar_added_apply_hide_ui(avatar = null) -> void:
