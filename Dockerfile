@@ -6,7 +6,7 @@ RUN apt-get install -y --no-install-recommends \
     xvfb libasound2-dev libudev-dev \
     clang curl pkg-config \
     libssl-dev libx11-dev libgl1-mesa-dev libxext-dev \
-    libgl1-mesa-dri libglx-mesa0 libegl1 mesa-utils \
+    libgl1-mesa-dri libglx-mesa0 libegl1 mesa-utils x11-utils \
     libxcursor1 libxinerama1 libxrandr2 libxi6 libwayland-cursor0 \
     libdbus-1-3 libxrender1 libxkbcommon0 libfontconfig1 \
     nodejs npm \
