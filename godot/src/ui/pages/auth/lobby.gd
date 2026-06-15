@@ -267,6 +267,9 @@ func async_close_sign_in():
 # gdlint:ignore = async-function-name
 func _ready():
 	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
+	# Back on a clean screen — release the sign-out re-entrancy guard so a future
+	# logout can run (no-op on normal startup, where it is already false).
+	Global._signing_out = false
 	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_disposable_account.visible = false
 

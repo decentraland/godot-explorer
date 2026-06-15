@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 use godot::{classes::PhysicsServer3D, obj::Singleton, prelude::*};
@@ -28,7 +28,12 @@ use crate::{
     },
 };
 
+// Collision layers (mirrors decentraland.sdk.components.ColliderLayer).
 const CL_PLAYER: u32 = 4;
+const CL_MAIN_PLAYER: u32 = 8;
+/// Bits used to tag an avatar collider. The local (main) player carries both
+/// CL_PLAYER and CL_MAIN_PLAYER; remote avatars carry only CL_PLAYER.
+const PLAYER_LAYERS: u32 = CL_PLAYER | CL_MAIN_PLAYER;
 
 // ============================================================================
 // Global Monitor Registry for PhysicsServer3D Callbacks
@@ -120,22 +125,25 @@ fn handle_body_monitor_event(
             return;
         }
 
-        // Check if this is an avatar (has CL_PLAYER layer)
-        let is_avatar = object
+        // Read the collider's layer bits. Avatars carry CL_PLAYER (and the local
+        // player additionally CL_MAIN_PLAYER); scene entities do not.
+        let avatar_layers = object
             .clone()
             .try_cast::<godot::classes::CollisionObject3D>()
             .ok()
-            .map(|co| (co.get_collision_layer() & CL_PLAYER) != 0)
-            .unwrap_or(false);
+            .map(|co| co.get_collision_layer() & PLAYER_LAYERS)
+            .unwrap_or(0);
 
-        if is_avatar {
+        if avatar_layers != 0 {
             // Avatar detection (local player or remote avatar)
             // AvatarShapes (scene NPCs) don't have trigger detection enabled, so they can't reach here
             if !object.has_meta("dcl_entity_id") {
                 return;
             }
             let dcl_entity_id = object.get_meta("dcl_entity_id").to::<i32>();
-            (SceneEntityId::from_i32(dcl_entity_id), CL_PLAYER)
+            // Report the avatar's actual layers so scenes can distinguish the main
+            // player (CL_PLAYER | CL_MAIN_PLAYER) from remote avatars (CL_PLAYER).
+            (SceneEntityId::from_i32(dcl_entity_id), avatar_layers)
         } else if object.has_meta("dcl_entity_id") {
             // Regular DCL scene entity (not avatar)
             let dcl_entity_id = object.get_meta("dcl_entity_id").to::<i32>();
@@ -185,8 +193,11 @@ fn handle_body_monitor_event(
 pub struct TriggerAreaInstance {
     pub area_rid: Rid,
     pub shape_rid: Rid,
-    /// Set of entities physically overlapping this trigger area (tracked by physics)
-    pub entities_inside: HashSet<SceneEntityId>,
+    /// Entities physically overlapping this trigger area (tracked by physics),
+    /// mapped to the collider layer bits captured when they entered. Storing the
+    /// layer lets STAY/EXIT events report the same layers as the ENTER event
+    /// (e.g. CL_MAIN_PLAYER for the local player).
+    pub entities_inside: HashMap<SceneEntityId, u32>,
     pub mesh_type: TriggerAreaMeshType,
     pub collision_mask: u32,
     /// Whether this trigger area is active (player is in this scene)
@@ -346,7 +357,7 @@ fn check_scene_active(scene: &mut Scene, current_parcel_scene_id: &SceneId) {
 
         for (trigger_entity, instance) in &mut scene.trigger_areas.instances {
             // Generate EXIT for everyone inside
-            for entity in instance.entities_inside.drain() {
+            for (entity, collider_layer) in instance.entities_inside.drain() {
                 let trigger_transform = scene
                     .godot_dcl_scene
                     .get_node_or_null_3d(trigger_entity)
@@ -358,12 +369,6 @@ fn check_scene_active(scene: &mut Scene, current_parcel_scene_id: &SceneId) {
                     .get_node_or_null_3d(&entity)
                     .map(|n| n.get_global_transform())
                     .unwrap_or(Transform3D::IDENTITY);
-
-                let collider_layer = if entity == SceneEntityId::PLAYER {
-                    CL_PLAYER
-                } else {
-                    instance.collision_mask
-                };
 
                 let result = build_trigger_result(
                     trigger_entity,
@@ -434,7 +439,9 @@ fn process_callback_events(scene: &mut Scene) {
             .unwrap_or(Transform3D::IDENTITY);
 
         if event.is_enter {
-            instance.entities_inside.insert(event.collider_entity);
+            instance
+                .entities_inside
+                .insert(event.collider_entity, event.collider_layer);
 
             let result = build_trigger_result(
                 &event.trigger_entity,
@@ -449,7 +456,11 @@ fn process_callback_events(scene: &mut Scene) {
             scene
                 .trigger_area_results
                 .push((event.trigger_entity, result));
-        } else if instance.entities_inside.remove(&event.collider_entity) {
+        } else if instance
+            .entities_inside
+            .remove(&event.collider_entity)
+            .is_some()
+        {
             let result = build_trigger_result(
                 &event.trigger_entity,
                 &event.collider_entity,
@@ -485,7 +496,7 @@ fn generate_stay_events(scene: &mut Scene) {
             let entities: Vec<_> = instance
                 .entities_inside
                 .iter()
-                .map(|e| (*e, instance.collision_mask))
+                .map(|(entity, layer)| (*entity, *layer))
                 .collect();
 
             let trigger_transform = scene
@@ -500,18 +511,12 @@ fn generate_stay_events(scene: &mut Scene) {
 
     // Generate STAY events
     for (trigger_entity, entities, trigger_transform) in stay_data {
-        for (collider_entity, collision_mask) in entities {
+        for (collider_entity, collider_layer) in entities {
             let collider_transform = scene
                 .godot_dcl_scene
                 .get_node_or_null_3d(&collider_entity)
                 .map(|n| n.get_global_transform())
                 .unwrap_or(Transform3D::IDENTITY);
-
-            let collider_layer = if collider_entity == SceneEntityId::PLAYER {
-                CL_PLAYER
-            } else {
-                collision_mask
-            };
 
             let result = build_trigger_result(
                 &trigger_entity,
@@ -612,7 +617,7 @@ fn create_or_update_trigger_area(
             TriggerAreaInstance {
                 area_rid,
                 shape_rid,
-                entities_inside: HashSet::new(),
+                entities_inside: HashMap::new(),
                 mesh_type,
                 collision_mask,
                 is_active,

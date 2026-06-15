@@ -147,6 +147,18 @@ func stop_polling() -> void:
 		_poll_timer.stop()
 
 
+## Clear the in-memory server notification history and pending toast queue.
+## Used on sign-out so a previous account's notifications don't leak into the
+## next session (issue #2104). NotificationsManager is an autoload that survives
+## the lobby scene swap, so without this the cached list persists across accounts.
+## Emitting notifications_updated refreshes the open panel and the bell badge.
+func clear_notification_history() -> void:
+	_notifications.clear()
+	_notification_queue.clear()
+	_previous_notification_ids.clear()
+	notifications_updated.emit()
+
+
 ## Get currently cached notifications sorted by timestamp descending (newest first)
 func get_notifications() -> Array:
 	var sorted = _notifications.duplicate()
@@ -829,6 +841,21 @@ func force_queue_sync() -> void:
 	_sync_notification_queue()
 
 
+## Clear account-scoped event reminder notifications (used on sign-out).
+##
+## Only removes "event_"-prefixed entries — the per-account attended-event
+## reminders, which are derived from whoever was signed in. The per-install
+## "day1_welcome" notification is intentionally preserved (it belongs to the
+## device/install, not the session). This both cancels the pending OS
+## notification and deletes the database row, so a signed-out account's
+## reminders can no longer fire on the device.
+func clear_event_local_notifications() -> void:
+	for notif in get_queued_local_notifications():
+		var notif_id: String = notif.get("id", "")
+		if notif_id.begins_with("event_"):
+			cancel_queued_local_notification(notif_id)
+
+
 ## Check if local notifications version has changed and clear all if needed
 ## Returns true if notifications were cleared due to version mismatch
 func _check_and_handle_version_change() -> bool:
@@ -899,7 +926,12 @@ func async_sync_attended_events() -> void:
 	# _on_permission_changed. Trigger day1 here instead — its own guards handle dedup.
 	async_schedule_day1_notification.call_deferred()
 
-	var url = DclUrls.mobile_events_api() + "/?only_attendee=true"
+	# Use the canonical events service (events.decentraland.org/api/events): when
+	# signed it reports a correct per-user `attending` flag on each event — the same
+	# source the REMIND ME button reads/writes. The mobile-bff `?only_attendee=true`
+	# endpoint ignores the param and always returns `attending=false`, so the sync
+	# never restored reminders.
+	var url = DclUrls.events_api()
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:
@@ -913,8 +945,9 @@ func async_sync_attended_events() -> void:
 
 	var all_events: Array = json.get("data", [])
 
-	# Filter locally to only use events where attending=true
-	# This is a workaround until the API's only_attendee parameter is fixed
+	# Keep only events the signed user is attending. events_api() populates a correct
+	# per-user `attending` flag when the request is signed (unlike the mobile-bff
+	# `only_attendee` endpoint, which always returns false).
 	var events: Array = []
 	for event_data in all_events:
 		if event_data.get("attending", false) == true:
