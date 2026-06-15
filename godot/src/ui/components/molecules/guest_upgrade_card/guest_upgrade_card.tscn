@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://b07fppc2l5exm"]
+
+[ext_resource type="Script" uid="uid://cbtqrhj5g41wx" path="res://src/ui/components/molecules/guest_upgrade_card/guest_upgrade_card.gd" id="1"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_kf0lf"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="3_dheir"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="3_jl1ld"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qvy7f"]
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_dheir"]
+font = ExtResource("2_kf0lf")
+font_size = 40
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_qvy7f"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_vwd20"]
+font = ExtResource("3_dheir")
+font_size = 30
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vwd20"]
+
+[node name="GuestUpgradeCard" type="PanelContainer" unique_id=1116982919]
+offset_right = 561.0
+offset_bottom = 349.0
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_qvy7f")
+script = ExtResource("1")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=544216275]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1115461114]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer" unique_id=25987838]
+layout_mode = 2
+text = "Finish account set up"
+label_settings = SubResource("LabelSettings_dheir")
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer" unique_id=2055727825]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_qvy7f")
+
+[node name="Label2" type="Label" parent="MarginContainer/VBoxContainer" unique_id=167207626]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+text = "Add your email to keep your account safe and unlock all features."
+label_settings = SubResource("LabelSettings_vwd20")
+autowrap_mode = 2
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer" unique_id=296273571]
+layout_mode = 2
+theme_override_constants/separation = 32
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vwd20")
+
+[node name="Button_AddEmail" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1052501712]
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+theme = ExtResource("3_jl1ld")
+theme_override_font_sizes/font_size = 24
+text = "ADD EMAIL"

@@ -20,6 +20,7 @@ const LONG_PRESS_DURATION := 0.5
 @export var validate_date: bool = false
 @export var validate_no_symbols: bool = false
 @export var validate_no_edge_spaces: bool = false
+@export var validate_email: bool = false
 
 var length_error: bool = false
 var error: bool = false
@@ -101,6 +102,12 @@ func _has_edge_spaces(value: String) -> bool:
 	return regex.search(value) != null
 
 
+func _is_valid_email(value: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+	return regex.search(value) != null
+
+
 func _check_error() -> void:
 	var errors: Array[String] = []
 	var text := text_edit.text
@@ -122,6 +129,9 @@ func _check_error() -> void:
 
 	if validate_no_edge_spaces and text.length() > 0 and _has_edge_spaces(text):
 		errors.append("No leading or trailing spaces")
+
+	if validate_email and text.length() > 0 and !_is_valid_email(text):
+		errors.append("Enter a valid email")
 
 	error = errors.size() > 0
 
