@@ -11,6 +11,13 @@ export DISPLAY=:99
 # what the asset-server bake needs (SubViewport readback for impostors,
 # ETC2 compression staying in CPU memory for PCT2 serialization).
 export LIBGL_ALWAYS_SOFTWARE=1
+# Pin the driver name explicitly. Without it, Mesa tries pci-id detection
+# against /dev/dri first; in a sandboxed container without /dev/dri this
+# falls through to a no-op driver and Godot's opengl3 init fails, dropping
+# the engine into the dummy renderer (texture_2d_get returns null, every
+# SubViewport readback comes back blank → impostor bakes all fail with
+# `fail_blank_albedo`).
+export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
 
 # Asset Server Mode
 # Usage: docker run -p 8080:8080 -e ASSET_SERVER=true [-e ASSET_SERVER_PORT=8080] image
