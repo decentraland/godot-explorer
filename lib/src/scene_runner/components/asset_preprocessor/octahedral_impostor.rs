@@ -343,6 +343,23 @@ pub fn drain_bake_queue_on_main(parent: &mut Gd<godot::classes::Node>) {
         Err(_) => return,
     };
     let mut survivors: Vec<InFlightRequest> = Vec::with_capacity(in_flight.len());
+    // Track whether any request will read back this tick. Under llvmpipe
+    // (CPU GL on the asset-server, no presentable surface), queued
+    // SubViewport render commands aren't guaranteed to have executed by
+    // the time `process()` returns — the readback then reads uninitialized
+    // GPU memory and the impostor atlas comes back as per-allocation
+    // noise. Forcing a synchronous draw flushes the queue before we sample
+    // the textures.
+    let mut needs_force_draw = false;
+    for req in in_flight.iter() {
+        if req.frames_remaining <= 1 {
+            needs_force_draw = true;
+            break;
+        }
+    }
+    if needs_force_draw {
+        godot::classes::RenderingServer::singleton().force_draw();
+    }
     for mut req in in_flight {
         req.frames_remaining = req.frames_remaining.saturating_sub(1);
         if req.frames_remaining > 0 {
