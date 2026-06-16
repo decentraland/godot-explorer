@@ -99,6 +99,13 @@ const _OUTCOME_DEFERRED := 3
 const _POST_PURCHASE_POLL_ATTEMPTS := 12
 const _POST_PURCHASE_POLL_INTERVAL_SEC := 5.0
 
+# "Option D" hybrid environment, applied when StoreKit reports a `sandbox`
+# environment (see _apply_storekit_env). Scenes and comms stay on .org; identity,
+# credits, profile and the marketplace catalog go to .zone (default zone, with
+# catalyst/comms/events/mobilebff pinned back to org). This is the dclenv config
+# verified cross-device for the IAP sandbox flow.
+const _SANDBOX_DCLENV := "catalyst::org,comms::org,events::org,mobilebff::org,profile::zone,zone"
+
 # Total + daily credit caps are enforced server-side by the IAP backend
 # (POST /credits/iap/quote). The client no longer holds these limits.
 
@@ -116,6 +123,10 @@ var _env_sync_value: String = ""
 # ms-since-startup when the synchronous read above was taken (same clock the
 # `[Startup]` logs use: Time.get_ticks_msec() - Global._startup_time).
 var _env_sync_at_ms: int = 0
+# Set true once the authoritative environment has resolved AND any resulting
+# Option D switch has been applied. Lets env-dependent callers (session restore)
+# block on async_await_env_resolved() until the backend choice is final.
+var _env_resolved: bool = false
 var _products: Array = []
 # Local cache of the server-authoritative balance, reconciled from
 # GET /users/:address/credits. Server is the source of truth.
@@ -188,23 +199,81 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 			]
 		)
 	)
-	if Global.metrics == null:
+	if Global.metrics != null:
+		# One atomic event with BOTH readings + resolve latency + the startup-relative
+		# times each reading was taken + agreement. flush() ships it immediately so a
+		# short session can't drop it (it respects the EULA consent gate, so
+		# pre-consent it stays queued until consent opens). dcl_environment is the
+		# launch env (recorded before the sandbox switch below).
+		Global.metrics.track_ios_storekit_environment(
+			environment,
+			_env_sync_value,
+			source,
+			resolve_ms,
+			_env_sync_at_ms,
+			env_at_ms,
+			str(DclGlobal.get_dcl_environment()),
+			_store_kit.can_make_payments()
+		)
+		Global.metrics.flush()
+
+	# Route identity/credits/catalog to .zone when StoreKit is sandbox (Option D).
+	# After tracking, so the analytics event records the launch env, not the switch.
+	_apply_storekit_env(environment)
+
+	# Unblock any caller awaiting the env decision (session restore) — set AFTER the
+	# switch so they observe the final env, never an intermediate one.
+	_env_resolved = true
+
+
+# Switches the app to the Option D hybrid environment when StoreKit reports a
+# `sandbox` environment (TestFlight, Apple App Review, or Xcode), so credits,
+# profile and the marketplace catalog transact against .zone while scenes/comms
+# stay on .org. A `production` environment (real App Store install) needs no
+# change — it stays on the .org default.
+#
+# Keys off the AUTHORITATIVE environment only (never the synchronous receipt
+# read): Apple's reviewer device reports authoritative=sandbox but receipt=
+# production, and it must reach the zone backend or every purchase fails. Callers
+# that depend on the result gate on async_await_env_resolved() so they never run
+# before this has applied.
+#
+# Only switches away from the untouched org default, so an explicit --dclenv flag
+# or deeplink dclenv (dev/QA override) always wins. Runtime-only: not persisted,
+# since StoreKit re-reports the ground-truth environment on every launch.
+func _apply_storekit_env(environment: String) -> void:
+	if environment != "sandbox":
 		return
-	# One atomic event with BOTH readings + resolve latency + the startup-relative
-	# times each reading was taken + agreement. flush() ships it immediately so a
-	# short session can't drop it (it respects the EULA consent gate, so
-	# pre-consent it stays queued until consent opens).
-	Global.metrics.track_ios_storekit_environment(
-		environment,
-		_env_sync_value,
-		source,
-		resolve_ms,
-		_env_sync_at_ms,
-		env_at_ms,
-		str(DclGlobal.get_dcl_environment()),
-		_store_kit.can_make_payments()
-	)
-	Global.metrics.flush()
+	var current := str(DclGlobal.get_dcl_environment())
+	if current != "org":
+		print("[IAP] StoreKit sandbox, but dclenv already '", current, "' — leaving as-is")
+		return
+	print("[IAP] StoreKit sandbox → switching to Option D hybrid env: ", _SANDBOX_DCLENV)
+	DclGlobal.set_dcl_environment(_SANDBOX_DCLENV)
+
+
+# Blocks the caller until the AUTHORITATIVE StoreKit environment has resolved and
+# any resulting Option D switch is applied — so an env-dependent fetch (chiefly
+# session restore's profile/credits load) never races the switch. Returns at once
+# when there's nothing to wait for: non-iOS, StoreKit unavailable, or already
+# resolved. In the common case the env resolved during the boot/version-gate
+# round-trip, so this returns without ever yielding.
+#
+# `timeout_sec` is a safety valve: the Swift side hard-caps the resolve at 10s,
+# but a network-bound AppTransaction could still stall the loading screen, so we
+# proceed with the current env past the timeout. On iOS the resolve signal always
+# fires, so this only ever waits when the resolve is genuinely slow.
+# gdlint:ignore = async-function-name
+func async_await_env_resolved(timeout_sec: float = 5.0) -> void:
+	if _env_resolved or not _store_kit.is_available():
+		return
+	var timer := get_tree().create_timer(timeout_sec)
+	while not _env_resolved and timer.time_left > 0.0:
+		await get_tree().process_frame
+	if not _env_resolved:
+		printerr(
+			"[IAP] env resolve timed out after ", timeout_sec, "s; proceeding with current env"
+		)
 
 
 # Idempotent. Called from _ready on iOS. Performs the StoreKit wiring (signal
