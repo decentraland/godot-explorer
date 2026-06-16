@@ -271,6 +271,17 @@ pub fn marketplace_catalog_api() -> String {
         suffix(ServiceGroup::Profile)
     )
 }
+// Owned-NFTs marketplace API (subgraph-backed) — the same source the web "My
+// Assets" uses. Follows the marketplace env (ServiceGroup::Marketplace) so it
+// matches where the user browses/buys. Reflects a mint in ~seconds (vs the
+// catalyst lambda's minutes), so it's the fast source for detecting a just-bought
+// wearable. Base host only; callers append /v1/nfts?... .
+pub fn marketplace_api() -> String {
+    format!(
+        "https://marketplace-api.decentraland.{}",
+        suffix(ServiceGroup::Marketplace)
+    )
+}
 pub fn marketplace_claim_name() -> String {
     format!(
         "https://decentraland.{}/marketplace/names/claim",

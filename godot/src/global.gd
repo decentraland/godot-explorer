@@ -297,7 +297,6 @@ func _ready():
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
 
-
 	# Start the unified log stream as early as possible (works pre-login, unlike
 	# explorer.gd which only runs in-world). Source: baked deeplink or --log-stream.
 	var log_stream_target: String = deep_link_obj.params.get("log-stream", "")

@@ -212,6 +212,11 @@ func _ready():
 	# Listen for notifications that may indicate new wearables (e.g. rewards)
 	NotificationsManager.new_notifications.connect(self._on_new_notifications)
 
+	# Refresh the inventory live when a marketplace purchase is detected as owned
+	# (MarketplaceTracker polls for it after returning from the web checkout).
+	MarketplaceTracker.wearable_arrived.connect(self._on_wearable_arrived)
+	print("[BackpackRefresh] connected to MarketplaceTracker.wearable_arrived")
+
 	# responsive
 	if get_window() != null:
 		get_window().size_changed.connect(self._on_size_changed)
@@ -809,17 +814,78 @@ func _on_new_notifications(notifications: Array) -> void:
 			return
 
 
+func _on_wearable_arrived(urn: String) -> void:
+	# A marketplace purchase just landed (MarketplaceTracker detected it via the fast
+	# marketplace API). Inject that exact wearable directly instead of re-fetching the
+	# catalyst lambda, which lags minutes behind.
+	print("[BackpackRefresh] wearable_arrived received: ", urn)
+	_async_inject_wearable(urn)
+
+
+# gdlint:ignore = async-function-name
+func _async_inject_wearable(urn: String) -> void:
+	if urn.is_empty() or wearable_data.has(urn):
+		return
+	var wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		var promise = Global.content_provider.fetch_wearables(
+			[urn], Global.realm.get_profile_content_url()
+		)
+		await PromiseUtils.async_all(promise)
+		wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		printerr("[BackpackRefresh] could not load arrived wearable ", urn)
+		return
+
+	# Insert at the front so the just-arrived wearable shows first in the grid.
+	var reordered := {urn: wearable}
+	for k in wearable_data:
+		if k != urn:
+			reordered[k] = wearable_data[k]
+	wearable_data = reordered
+	var cat: String = wearable.get_category()
+	print(
+		(
+			"[BackpackRefresh] injected %s (cat=%s) current_filter='%s' avatar=%s"
+			% [urn, cat, current_filter, str(Global.player_identity.get_mutable_avatar() != null)]
+		)
+	)
+
+	# Reload the current view; if the new item isn't visible under the active filter
+	# (different category, or no filter set), switch to its category so it shows.
+	if not current_filter.is_empty():
+		_load_filtered_data(current_filter)
+	if current_filter.is_empty() or not filtered_data.has(urn):
+		_load_filtered_data(cat)
+	print(
+		(
+			"[BackpackRefresh] inject view: filter='%s' filtered=%d shown=%s"
+			% [current_filter, filtered_data.size(), str(filtered_data.has(urn))]
+		)
+	)
+
+
 func _async_refresh_owned_wearables() -> void:
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
 	if remote_wearables == null:
+		print("[BackpackRefresh] refresh: catalog fetch returned NULL")
 		return
 
-	var new_keys: Array[String] = []
+	# Untyped Array: content_provider.fetch_wearables() expects an untyped array
+	# (like the initial load's wearable_data.keys()). Passing a typed Array[String]
+	# makes the Rust binding panic with BadArrayType and crashes the app.
+	var new_keys: Array = []
 	for wearable_item in remote_wearables.elements:
 		if not wearable_data.has(wearable_item.urn):
 			wearable_data[wearable_item.urn] = null
 			new_keys.append(wearable_item.urn)
 
+	print(
+		(
+			"[BackpackRefresh] refresh: fetched=%d new=%d current_filter='%s'"
+			% [remote_wearables.elements.size(), new_keys.size(), current_filter]
+		)
+	)
 	if new_keys.is_empty():
 		return
 
@@ -834,9 +900,26 @@ func _async_refresh_owned_wearables() -> void:
 		if wearable == null:
 			printerr("Error loading new wearable_id ", wearable_id)
 
-	# Refresh the current view to show newly available wearables
+	# Show the just-arrived wearables first: rebuild wearable_data with the new keys
+	# at the front. Grid order follows wearable_data insertion order (via
+	# _load_filtered_data → _show_wearables), and the new keys were appended last.
+	var reordered := {}
+	for k in new_keys:
+		reordered[k] = wearable_data[k]
+	for k in wearable_data:
+		if not reordered.has(k):
+			reordered[k] = wearable_data[k]
+	wearable_data = reordered
+
+	# Refresh the current view to show newly available wearables. Fall back to
+	# rebuilding the visible categories when no explicit filter is set, so the new
+	# item shows up regardless of how the grid was last populated.
 	if not current_filter.is_empty():
+		print("[BackpackRefresh] refresh: reloading filter '", current_filter, "'")
 		_load_filtered_data(current_filter)
+	else:
+		print("[BackpackRefresh] refresh: no current_filter — rebuilding categories")
+		_update_visible_categories()
 
 
 func _exit_tree():
@@ -847,6 +930,9 @@ func _exit_tree():
 
 	if NotificationsManager.new_notifications.is_connected(self._on_new_notifications):
 		NotificationsManager.new_notifications.disconnect(self._on_new_notifications)
+
+	if MarketplaceTracker.wearable_arrived.is_connected(self._on_wearable_arrived):
+		MarketplaceTracker.wearable_arrived.disconnect(self._on_wearable_arrived)
 
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
