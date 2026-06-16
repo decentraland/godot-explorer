@@ -52,6 +52,11 @@ const _SLOW_INTERVAL_SEC := 5.0
 # on-chain mint can take several minutes on testnet (observed 2–5+ min); past this
 # we give up the live watch (reopening the backpack still fetches fresh).
 const _MAX_TOTAL_POLL_SEC := 900.0
+# Give-up window when no purchase signal appears. A web checkout spends credits,
+# which marketplace-api/balance reflect within ~a minute; if no credit drop is seen
+# by the end of the medium phase the user almost certainly didn't buy, so we stop
+# rather than poll the safety cap for nothing. A confirmed spend keeps polling.
+const _NO_PURCHASE_GIVEUP_SEC := _FAST_PHASE_SEC + _MEDIUM_PHASE_SEC
 # The wearable baseline must be a reliable snapshot — comparisons are meaningless
 # without it — so retry the initial fetch a few times before giving up.
 const _BASELINE_FETCH_ATTEMPTS := 5
@@ -78,7 +83,6 @@ var _use_webview_signal: bool = false
 
 
 func _ready() -> void:
-	print(_LOG, " ready")
 	# iOS: the in-app SFSafariViewController fires no reliable focus/lifecycle
 	# notification on dismissal, so hook the native dismissal signal. Other platforms
 	# open an external browser where app focus works → fall back to _notification.
@@ -87,23 +91,18 @@ func _ready() -> void:
 		if ios.has_signal("webview_closed"):
 			ios.connect("webview_closed", _on_webview_closed)
 			_use_webview_signal = true
-			print(_LOG, " using native webview_closed signal")
 		else:
-			print(
+			printerr(
 				_LOG,
 				" WARNING: DclGodotiOS has no webview_closed (rebuild plugin) — focus fallback"
 			)
-	if not _use_webview_signal:
-		print(_LOG, " using app-focus fallback for return detection")
 
 
 # Native dismissal of the in-app browser (iOS). Fires for every open_webview_url
 # dismissal regardless of how it was closed; we only act if we armed it.
 func _on_webview_closed() -> void:
-	print(_LOG, " webview_closed (state=", _state_name(_state), ")")
 	if _state == State.ARMED:
 		_state = State.POLLING
-		print(_LOG, " → POLLING (returned from marketplace webview)")
 		_async_poll(_token)
 
 
@@ -111,7 +110,6 @@ func _on_webview_closed() -> void:
 # open the web marketplace in the in-app browser. `raw_url` is a plain marketplace
 # URL — the mobile-IAP view flag is appended here so every entry point matches.
 func open_and_track(raw_url: String) -> void:
-	print(_LOG, " open_and_track url=", raw_url)
 	_arm()
 	Global.open_webview_url(MarketplaceUrl.with_mobile_iap(raw_url))
 
@@ -123,31 +121,17 @@ func _arm() -> void:
 	if Global.player_identity != null:
 		wallet = Global.player_identity.get_address_str()
 	if wallet.is_empty():
-		print(_LOG, " _arm: NO WALLET — not arming (identity=", Global.player_identity, ")")
 		return
 	_token += 1
 	_state = State.ARMED
 	_baseline_ready = false
 	_credits_consumed_notified = false
-	print(_LOG, " ARMED token=", _token, " wallet=", wallet)
 	_async_capture_baseline(_token)
 
 
 func stop() -> void:
 	_token += 1
 	_state = State.IDLE
-	print(_LOG, " stopped (token=", _token, ")")
-
-
-func _state_name(s: State) -> String:
-	match s:
-		State.IDLE:
-			return "IDLE"
-		State.ARMED:
-			return "ARMED"
-		State.POLLING:
-			return "POLLING"
-	return "?"
 
 
 # App-focus fallback for non-iOS (external browser): the native webview_closed
@@ -157,7 +141,6 @@ func _notification(what: int) -> void:
 		return
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN and _state == State.ARMED:
 		_state = State.POLLING
-		print(_LOG, " → POLLING (focus return, fallback)")
 		_async_poll(_token)
 
 
@@ -166,7 +149,6 @@ func _async_capture_baseline(token: int) -> void:
 	_baseline_credits = await Iap.async_refresh_balance()
 	if token != _token:
 		return
-	print(_LOG, " baseline credits=", _baseline_credits)
 	# Retry the wearable snapshot until it succeeds; a failed (null) baseline would
 	# make every existing wearable look "new" on the first poll. Bounded by the
 	# token (re-arm/stop) so it can't spin forever.
@@ -177,9 +159,7 @@ func _async_capture_baseline(token: int) -> void:
 		if urns != null:
 			_baseline_urns = urns
 			_baseline_ready = true
-			print(_LOG, " baseline ready: ", urns.size(), " owned items (wearables + emotes)")
 			return
-		print(_LOG, " baseline wearable fetch failed (attempt ", _attempt + 1, "); retrying")
 		await get_tree().create_timer(_BASELINE_RETRY_SEC).timeout
 		if token != _token:
 			return
@@ -188,7 +168,6 @@ func _async_capture_baseline(token: int) -> void:
 
 # gdlint:ignore = async-function-name
 func _async_poll(token: int) -> void:
-	print(_LOG, " poll: first check in ", _INITIAL_DELAY_SEC, "s")
 	await get_tree().create_timer(_INITIAL_DELAY_SEC).timeout
 	if token != _token:
 		return
@@ -200,8 +179,14 @@ func _async_poll(token: int) -> void:
 		if arrived:
 			stop()
 			return
+		# No credit drop by the end of the medium phase ⇒ almost certainly no purchase
+		# (a web checkout spends credits, reflected within ~a minute via marketplace-api).
+		# Give up early rather than polling the safety cap for nothing. A confirmed spend
+		# keeps polling up to _MAX_TOTAL_POLL_SEC, since the on-chain mint can lag minutes.
+		if not _credits_consumed_notified and elapsed >= _NO_PURCHASE_GIVEUP_SEC:
+			stop()
+			return
 		if elapsed >= _MAX_TOTAL_POLL_SEC:
-			print(_LOG, " no delivery within %.0fs; stopping" % _MAX_TOTAL_POLL_SEC)
 			stop()
 			return
 		var interval := _interval_for(elapsed)
@@ -227,20 +212,15 @@ func _interval_for(elapsed: float) -> float:
 # gdlint:ignore = async-function-name
 func _async_check(token: int) -> bool:
 	if not _baseline_ready:
-		print(_LOG, " check: baseline not ready yet, skipping")
 		return false
 
 	var urns = await _async_fetch_owned_urns()
 	if token != _token:
 		return false
-	if urns == null:
-		print(_LOG, " check: owned-items fetch returned NULL (transport error)")
-	else:
-		print(_LOG, " check: owned=", urns.size(), " baseline=", _baseline_urns.size())
+	if urns != null:
 		for urn in urns:
 			if not _baseline_urns.has(urn):
 				var category: String = urns[urn]
-				print(_LOG, " NEW ", category, " detected: ", urn, " → 'arrived' toast")
 				var kind := "emote" if category == "emote" else "wearable"
 				NotificationsManager.show_system_toast(
 					_TOAST_ARRIVED_TITLE_FMT % kind, _TOAST_ARRIVED_BODY, _TOAST_TYPE
@@ -252,10 +232,8 @@ func _async_check(token: int) -> bool:
 		var credits: int = await Iap.async_refresh_balance()
 		if token != _token:
 			return false
-		print(_LOG, " check: credits=", credits, " baseline=", _baseline_credits)
 		if credits < _baseline_credits:
 			_credits_consumed_notified = true
-			print(_LOG, " credits consumed → 'on the way' toast")
 			NotificationsManager.show_system_toast(
 				_TOAST_ON_THE_WAY_TITLE, _TOAST_ON_THE_WAY_BODY, _TOAST_TYPE
 			)

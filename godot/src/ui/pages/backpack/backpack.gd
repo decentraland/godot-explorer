@@ -156,7 +156,6 @@ func _ready():
 	for urn in await MarketplaceTracker.async_fetch_recent_owned("wearable"):
 		if not wearable_data.has(urn):
 			wearable_data[urn] = null
-			print("[BackpackRefresh] recent owned wearable from marketplace-api: ", urn)
 
 	# Load all remote wearables that you own...
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
@@ -204,7 +203,6 @@ func _ready():
 	# Refresh the inventory live when a marketplace purchase is detected as owned
 	# (MarketplaceTracker polls for it after returning from the web checkout).
 	MarketplaceTracker.item_arrived.connect(self._on_item_arrived)
-	print("[BackpackRefresh] connected to MarketplaceTracker.item_arrived")
 
 	# responsive
 	if get_window() != null:
@@ -745,7 +743,6 @@ func _on_item_arrived(urn: String, category: String) -> void:
 	# marketplace API). Inject that exact item directly instead of re-fetching the
 	# catalyst lambda, which lags minutes behind. Emotes live in the emote editor, not
 	# the wearables grid, so route by category.
-	print("[BackpackRefresh] item_arrived received: ", urn, " category=", category)
 	if category == "emote":
 		emote_editor.inject_owned_emote(urn)
 	else:
@@ -774,12 +771,6 @@ func _async_inject_wearable(urn: String) -> void:
 			reordered[k] = wearable_data[k]
 	wearable_data = reordered
 	var cat: String = wearable.get_category()
-	print(
-		(
-			"[BackpackRefresh] injected %s (cat=%s) current_filter='%s' avatar=%s"
-			% [urn, cat, current_filter, str(Global.player_identity.get_mutable_avatar() != null)]
-		)
-	)
 
 	# Reload the current view; if the new item isn't visible under the active filter
 	# (different category, or no filter set), switch to its category so it shows.
@@ -787,18 +778,11 @@ func _async_inject_wearable(urn: String) -> void:
 		_load_filtered_data(current_filter)
 	if current_filter.is_empty() or not filtered_data.has(urn):
 		_load_filtered_data(cat)
-	print(
-		(
-			"[BackpackRefresh] inject view: filter='%s' filtered=%d shown=%s"
-			% [current_filter, filtered_data.size(), str(filtered_data.has(urn))]
-		)
-	)
 
 
 func _async_refresh_owned_wearables() -> void:
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
 	if remote_wearables == null:
-		print("[BackpackRefresh] refresh: catalog fetch returned NULL")
 		return
 
 	# Untyped Array: content_provider.fetch_wearables() expects an untyped array
@@ -810,12 +794,6 @@ func _async_refresh_owned_wearables() -> void:
 			wearable_data[wearable_item.urn] = null
 			new_keys.append(wearable_item.urn)
 
-	print(
-		(
-			"[BackpackRefresh] refresh: fetched=%d new=%d current_filter='%s'"
-			% [remote_wearables.elements.size(), new_keys.size(), current_filter]
-		)
-	)
 	if new_keys.is_empty():
 		return
 
@@ -845,10 +823,8 @@ func _async_refresh_owned_wearables() -> void:
 	# rebuilding the visible categories when no explicit filter is set, so the new
 	# item shows up regardless of how the grid was last populated.
 	if not current_filter.is_empty():
-		print("[BackpackRefresh] refresh: reloading filter '", current_filter, "'")
 		_load_filtered_data(current_filter)
 	else:
-		print("[BackpackRefresh] refresh: no current_filter — rebuilding categories")
 		_update_visible_categories()
 
 

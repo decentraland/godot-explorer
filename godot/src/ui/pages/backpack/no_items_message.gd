@@ -13,8 +13,6 @@ func _ready():
 
 
 func _on_rich_text_box_meta_clicked(_meta):
-	Global.open_url(
-		MarketplaceUrl.with_mobile_iap(
-			DclUrls.marketplace() + "/browse?section=" + marketplace_section
-		)
+	MarketplaceTracker.open_and_track(
+		DclUrls.marketplace() + "/browse?section=" + marketplace_section
 	)

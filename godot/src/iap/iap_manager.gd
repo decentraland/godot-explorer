@@ -371,7 +371,7 @@ func purchase(product_id: String) -> void:
 
 
 # gdlint:ignore = async-function-name
-func _async_begin_purchase(product_id: String, _wallet: String) -> void:
+func _async_begin_purchase(product_id: String, wallet: String) -> void:
 	# Pre-purchase gate. Enforces the daily + total caps BEFORE StoreKit charges
 	# (a consumable cannot be un-charged, so limits must run before the charge).
 	# On `allowed` the server also registers this wallet's appAccountToken so the
@@ -400,7 +400,7 @@ func _async_begin_purchase(product_id: String, _wallet: String) -> void:
 	# appAccountToken from the wallet (== data.appAccountToken the server registered),
 	# and /verify is signed with this same wallet, so the server's token check passes.
 	# Overlay stays up until the purchase resolves via the StoreKit handlers.
-	_store_kit.purchase(product_id, _wallet)
+	_store_kit.purchase(product_id, wallet)
 
 
 func _show_quote_denied_modal(code: String, reason: String) -> void:
