@@ -148,10 +148,13 @@ const CELL_SIZE_PADDING: f32 = 1.08;
 /// override can flip it without rebuilding the shader.
 const HEMI_SPHERE_MODE: bool = false;
 
-/// Frames between SubViewport spawn and texture readback. `UPDATE_ALWAYS`
-/// schedules a draw every frame; 4 ticks reliably gives the renderer
-/// the chance to rasterize the viewport contents on Vulkan + llvmpipe.
-const FRAMES_TO_WAIT: u32 = 4;
+/// Frames between SubViewport spawn and texture readback. With the
+/// explicit `RenderingServer::force_draw()` call in
+/// `drain_bake_queue_on_main` synchronously flushing the render queue
+/// before sampling, a single tick is enough — the previous 4-frame wait
+/// was paranoia for the pre-force_draw era where llvmpipe could leave
+/// commands queued indefinitely. 1 tick keeps the bake ~4× faster.
+const FRAMES_TO_WAIT: u32 = 1;
 
 /// Cap blocked worker threads. With godot_single_thread already
 /// serializing to 1, only one worker is ever waiting — but keep a
