@@ -91,6 +91,10 @@ paranoid-android = "0.2.1"
 [target.'cfg(target_os = "ios")'.dependencies]
 oslog = "0.2"
 
+# stdout/stderr capture for the `--log-stream` debug feature (see tools/log_stream.rs)
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [features]
 default = ["use_livekit", "use_deno"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
