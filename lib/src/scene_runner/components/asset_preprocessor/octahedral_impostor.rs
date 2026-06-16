@@ -49,13 +49,11 @@ use std::time::Duration;
 use godot::classes::base_material_3d::Transparency;
 use godot::classes::camera_3d::{KeepAspect, ProjectionType};
 use godot::classes::geometry_instance_3d::VisibilityRangeFadeMode;
-use godot::classes::image::CompressMode;
 use godot::classes::sub_viewport::{ClearMode, UpdateMode};
 use godot::classes::{
-    ArrayMesh, BaseMaterial3D, Camera3D, Image, ImageTexture, MeshInstance3D, QuadMesh, Shader,
-    ShaderMaterial, SubViewport, Texture2D, World3D,
+    ArrayMesh, BaseMaterial3D, Camera3D, Image, ImageTexture, MeshInstance3D,
+    PortableCompressedTexture2D, QuadMesh, Shader, ShaderMaterial, SubViewport, Texture2D, World3D,
 };
-use godot::global::Error;
 use godot::obj::NewAlloc;
 use godot::prelude::*;
 use once_cell::sync::Lazy;
@@ -692,14 +690,17 @@ fn read_baked_image_raw(subviewport: &Gd<SubViewport>, check_coverage: bool) -> 
 }
 
 /// Stitch albedo (top half) + normal+ORM (bottom half) into one
-/// `ATLAS_DIM × PACKED_ATLAS_H` ETC2 `ImageTexture`. The ETC2 image is
-/// wrapped in a plain `ImageTexture` (not a `PortableCompressedTexture2D`):
-/// on a real device GPU this round-trips correctly through the `.scn`
-/// cache (`save_node_as_scene` → reload), whereas a PCT2 baked on the
-/// asset server reloads as solid magenta on Mali — the same failure that
-/// hit avatar-mesh textures (see `content::texture::create_compressed_texture`).
-/// One sub-resource per impostor — two separate atlases dropped the
-/// albedo on .scn load (white impostors).
+/// `ATLAS_DIM × PACKED_ATLAS_H` ETC2 `PortableCompressedTexture2D`. PCT2
+/// compresses to ETC2 and serializes its CPU buffer directly (with
+/// `set_keep_compressed_buffer(true)`). A plain `ImageTexture` round-trips
+/// through a GPU readback that **corrupts ETC2 on llvmpipe** — every
+/// impostor's atlas comes back as unique per-allocation noise, visible
+/// on the client as random colored quads at the swap distance. The
+/// asset-server binary must carry the godot fork's PCT2 serialization
+/// fix (godot 4.6.2.gh.9ee6af7ab+) for the compressed bytes to survive
+/// `save_node_as_scene` → device reload without rendering as magenta on
+/// Mali. One sub-resource per impostor — two separate atlases dropped
+/// the albedo on .scn load (white impostors).
 fn stitch_atlas_texture(albedo: &Gd<Image>, normal: &Gd<Image>) -> Option<Gd<Texture2D>> {
     let w = ATLAS_DIM;
     if albedo.get_width() != w
@@ -722,17 +723,13 @@ fn stitch_atlas_texture(albedo: &Gd<Image>, normal: &Gd<Image>) -> Option<Gd<Tex
     packed.blit_rect(albedo, src_rect, godot::builtin::Vector2i::new(0, 0));
     packed.blit_rect(normal, src_rect, godot::builtin::Vector2i::new(0, w));
     let _ = packed.generate_mipmaps();
-    let result = packed.compress(CompressMode::ETC2);
-    if result != Error::OK {
-        // Fall through with the uncompressed image — create_from_image
-        // still yields a valid (if heavier) atlas rather than a magenta
-        // placeholder.
-        tracing::warn!(
-            "impostor atlas ETC2 compression failed ({:?}), using uncompressed",
-            result
-        );
-    }
-    ImageTexture::create_from_image(&packed).map(|t| t.upcast::<Texture2D>())
+    let mut pct2 = PortableCompressedTexture2D::new_gd();
+    pct2.set_keep_compressed_buffer(true);
+    pct2.create_from_image(
+        &packed,
+        godot::classes::portable_compressed_texture_2d::CompressionMode::ETC2,
+    );
+    Some(pct2.upcast::<Texture2D>())
 }
 
 fn image_is_blank(image: &Gd<Image>) -> bool {
