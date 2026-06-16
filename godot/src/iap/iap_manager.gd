@@ -102,9 +102,9 @@ const _POST_PURCHASE_POLL_INTERVAL_SEC := 5.0
 # Total + daily credit caps are enforced server-side by the IAP backend
 # (POST /credits/iap/quote). The client no longer holds these limits.
 
-# Gates all IAP behavior. Default false — must be turned on via the
-# `decentraland://open?iap_enabled=true` launch deeplink. Until enable() is
-# called, _ready is a no-op: no signal subscriptions, no product load,
+# Gates all IAP behavior. Enabled by default on iOS — the only platform with
+# StoreKit — and left off everywhere else (see _ready). Until enable() is
+# called, _ready is a no-op: no signal subscriptions, no product load, and
 # is_available() returns false (which hides the credits UI entry point).
 var enabled: bool = false
 
@@ -136,13 +136,16 @@ var _purchase_in_flight: bool = false
 
 
 func _ready() -> void:
-	# IAP starts disabled. DeepLinkRouter calls enable() when the launch
-	# deeplink carries iap_enabled=true.
-	pass
+	# IAP is enabled by default on iOS — the only platform with StoreKit. On
+	# every other platform there's no native backend, so we leave it disabled
+	# (enable() would no-op anyway via is_available(), and the credits UI entry
+	# points stay hidden).
+	if Global.is_ios():
+		enable()
 
 
 # Reports the StoreKit environment (production / sandbox / xcode) to analytics.
-# Runs unconditionally on iOS at startup — independent of enable() / iap_enabled
+# Runs unconditionally on iOS at startup — independent of enable()
 # — so we collect production telemetry from real App Store installs and validate
 # the environment-detection mechanism BEFORE wiring it to backend selection.
 # StoreKit's environment is fixed by how the binary was distributed and can't be
@@ -204,8 +207,8 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 	Global.metrics.flush()
 
 
-# Idempotent. Called by DeepLinkRouter when iap_enabled=true is present in
-# the launch deeplink. Performs the StoreKit wiring originally in _ready.
+# Idempotent. Called from _ready on iOS. Performs the StoreKit wiring (signal
+# subscriptions, product load, wallet hookup).
 func enable() -> void:
 	if enabled:
 		return

@@ -68,7 +68,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
-const FORCE_DEEPLINK = "decentraland://open?iap_enabled=true&dclenv=zone"
+const FORCE_DEEPLINK = "decentraland://open?dclenv=zone"
 #const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
@@ -276,9 +276,6 @@ func _ready():
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
-
-		if deep_link_obj.iap_enabled:
-			Iap.enable()
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():

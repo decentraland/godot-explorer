@@ -55,9 +55,6 @@ func process_deep_link(url: String) -> void:
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
 
-	if Global.deep_link_obj.iap_enabled:
-		Iap.enable()
-
 	# Deep link urn=<urn> from the marketplace webview: open the backpack and
 	# equip the wearable as if owned. Profile deploys are disabled because the
 	# wallet doesn't actually own it (the urn was also added to fake-owned).

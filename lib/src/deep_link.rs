@@ -42,8 +42,6 @@ pub struct DeepLinkResult {
     pub gp_benchmark: bool,
     /// Show a transparent safe-area debug overlay on every screen
     pub safe_margin_debug: bool,
-    /// Enable IAP UI and StoreKit listening (deep link param: iap_enabled=true)
-    pub iap_enabled: bool,
     /// Dev/testing: a wearable URN to open in the backpack and auto-equip
     /// (deep link param: urn=<urn>). It is also pushed into
     /// `fake_owned_wearables`, so it shows up as owned and profile deploys stay
@@ -194,9 +192,6 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "safemargindebug" => {
                 result.safe_margin_debug = value.eq_ignore_ascii_case("true") || value == "1";
-            }
-            "iap_enabled" => {
-                result.iap_enabled = value.eq_ignore_ascii_case("true") || value == "1";
             }
             "urn" => {
                 let urn = value.trim().to_string();
@@ -573,24 +568,6 @@ mod tests {
     fn safe_margin_debug_default_off() {
         let r = parse("decentraland://open");
         assert!(!r.safe_margin_debug);
-    }
-
-    #[test]
-    fn iap_enabled_true() {
-        let r = parse("decentraland://open?iap_enabled=true");
-        assert!(r.iap_enabled);
-    }
-
-    #[test]
-    fn iap_enabled_one() {
-        let r = parse("decentraland://open?iap_enabled=1");
-        assert!(r.iap_enabled);
-    }
-
-    #[test]
-    fn iap_enabled_default_off() {
-        let r = parse("decentraland://open");
-        assert!(!r.iap_enabled);
     }
 
     // ---- Edge cases ---------------------------------------------------------

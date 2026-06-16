@@ -81,10 +81,6 @@ pub struct DclParseDeepLink {
     #[var]
     safe_margin_debug: bool,
 
-    /// Enable IAP UI and StoreKit listening (deep link param: iap_enabled=true)
-    #[var]
-    iap_enabled: bool,
-
     /// Dev/testing: wearable URN to open in the backpack and auto-equip as owned
     /// (deep link param: urn=<urn>).
     #[var]
@@ -121,7 +117,6 @@ impl DclParseDeepLink {
             low_spec_warning: false,
             gp_benchmark: false,
             safe_margin_debug: false,
-            iap_enabled: false,
             urn: GString::new(),
         }
     }
@@ -156,7 +151,6 @@ impl DclParseDeepLink {
             low_spec_warning: r.low_spec_warning,
             gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
-            iap_enabled: r.iap_enabled,
             urn: GString::from(&r.urn),
         }
     }
