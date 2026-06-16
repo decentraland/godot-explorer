@@ -622,6 +622,16 @@ func refresh_history() -> void:
 	_async_fetch_history()
 
 
+# Public: re-fetch the balance from the server and return the fresh value. Used by
+# the marketplace return tracker to poll for credit consumption after a purchase.
+# Falls back to the cached balance if the fetch fails (so callers never read 0 on
+# a transient error). Also refreshes any balance UI via the balance_changed emit.
+# gdlint:ignore = async-function-name
+func async_refresh_balance() -> int:
+	await _async_fetch_balance()
+	return _balance
+
+
 # gdlint:ignore = async-function-name
 func _async_register_token() -> void:
 	# Register this wallet's appAccountToken so the Apple webhook can resolve the

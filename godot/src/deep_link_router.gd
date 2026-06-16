@@ -55,13 +55,14 @@ func process_deep_link(url: String) -> void:
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
 
-	# Deep link urn=<urn> from the marketplace webview: open the backpack and
-	# equip the wearable as if owned. Profile deploys are disabled because the
-	# wallet doesn't actually own it (the urn was also added to fake-owned).
+	# Deep link urn=<urn> from the marketplace webview: open the backpack and equip
+	# the wearable optimistically as owned. Profile deploys are NOT disabled — the
+	# wearable just shows on the avatar locally until it is genuinely owned on-chain,
+	# at which point normal deploys reference it validly. MarketplaceTracker (armed
+	# when the marketplace browser opened) toasts when it arrives.
 	var equip_urn: String = Global.deep_link_obj.urn
 	if not equip_urn.is_empty():
 		print("[DEEPLINK] equip wearable urn: ", equip_urn)
-		ProfileService.set_deploy_disabled(true)
 		Global.deeplink_equip_wearable.emit(equip_urn)
 		# Stop here: this deep link only equips a wearable. Falling through would
 		# hit the "/open" path routing below and pop the jump-in panel.
