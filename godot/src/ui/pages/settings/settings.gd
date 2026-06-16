@@ -45,9 +45,11 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var check_button_hide_view_profile: CheckButton = %CheckButton_HideViewProfile
 @onready var check_button_hide_world_interactions: CheckButton = %CheckButton_HideWorldInteractions
 @onready var check_button_hide_player_names: CheckButton = %CheckButton_HidePlayerNames
+@onready var check_button_hide_scene_ui: CheckButton = %CheckButton_HideSceneUI
 @onready var hide_view_profile_row: HBoxContainer = %HideViewProfile
 @onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
+@onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 @onready var container_interface: MarginContainer = %Container_Interface
@@ -477,26 +479,35 @@ func _on_check_button_hide_player_names_toggled(toggled_on: bool) -> void:
 		explorer.set_hide_player_names(toggled_on)
 
 
+func _on_check_button_hide_scene_ui_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_hide_scene_ui(toggled_on)
+
+
 func _on_session_hide_ui_toggle_sync(pressed: bool) -> void:
 	check_button_hide_explorer_ui.set_pressed_no_signal(pressed)
 	_update_hide_ui_sub_toggles(pressed)
 
 
 func _on_session_hide_ui_options_sync(
-	hide_view_profile: bool, hide_interactions: bool, hide_labels: bool
+	hide_view_profile: bool, hide_interactions: bool, hide_labels: bool, hide_scene_ui: bool
 ) -> void:
 	check_button_hide_view_profile.set_pressed_no_signal(hide_view_profile)
 	check_button_hide_world_interactions.set_pressed_no_signal(hide_interactions)
 	check_button_hide_player_names.set_pressed_no_signal(hide_labels)
+	check_button_hide_scene_ui.set_pressed_no_signal(hide_scene_ui)
 
 
 func _update_hide_ui_sub_toggles(hide_ui_on: bool) -> void:
 	check_button_hide_view_profile.disabled = not hide_ui_on
 	check_button_hide_world_interactions.disabled = not hide_ui_on
 	check_button_hide_player_names.disabled = not hide_ui_on
+	check_button_hide_scene_ui.disabled = not hide_ui_on
 	hide_view_profile_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_world_interactions_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_player_names_row.modulate.a = 1.0 if hide_ui_on else 0.5
+	hide_scene_ui_row.modulate.a = 1.0 if hide_ui_on else 0.5
 
 
 func _refresh_hide_explorer_ui_row() -> void:
@@ -515,12 +526,14 @@ func _refresh_hide_explorer_ui_row() -> void:
 		check_button_hide_player_names.set_pressed_no_signal(
 			explorer.is_session_hide_player_names()
 		)
+		check_button_hide_scene_ui.set_pressed_no_signal(explorer.is_session_hide_scene_ui())
 		_update_hide_ui_sub_toggles(hide_on)
 	else:
 		check_button_hide_explorer_ui.set_pressed_no_signal(false)
 		check_button_hide_view_profile.set_pressed_no_signal(true)
 		check_button_hide_world_interactions.set_pressed_no_signal(true)
 		check_button_hide_player_names.set_pressed_no_signal(true)
+		check_button_hide_scene_ui.set_pressed_no_signal(true)
 		_update_hide_ui_sub_toggles(false)
 
 
