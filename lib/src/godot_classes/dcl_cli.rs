@@ -100,11 +100,6 @@ pub struct DclCli {
     pub scene_inspector: GString,
     #[var(get)]
     pub scene_inspector_file: bool,
-    /// Unified log streaming target: `ws://host:port` of a desktop `log-server`.
-    /// Empty = off. Captured stdout/stderr (Rust + GDScript + native) is streamed
-    /// out to that endpoint. See tools/log_stream.rs.
-    #[var(get)]
-    pub log_stream: GString,
     #[var(get)]
     pub low_spec_warning: bool,
     #[var(get)]
@@ -670,12 +665,6 @@ impl INode for DclCli {
             })
             .unwrap_or_default();
         let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
-        // --log-stream=ws://host:port — empty when absent or bare (a URL is required).
-        let log_stream = args_map
-            .get("--log-stream")
-            .and_then(|v| v.as_ref())
-            .map(GString::from)
-            .unwrap_or_default();
         let low_spec_warning = args_map.contains_key("--low-spec-warning");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
@@ -804,7 +793,6 @@ impl INode for DclCli {
             asset_server,
             scene_inspector,
             scene_inspector_file,
-            log_stream,
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,

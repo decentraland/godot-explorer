@@ -207,7 +207,6 @@ async fn op_fetch_custom(
         }
     };
 
-    tracing::info!("[HTTP] {} {} (scene)", method.as_str(), url);
     let result = request.send().await;
     let mut state = op_state.borrow_mut();
     let fetch_request = state.borrow_mut::<FetchRequestsState>();

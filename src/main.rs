@@ -11,7 +11,6 @@ use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir
 
 mod android_godot_lib;
 mod avatar_impostor_benchmark;
-mod build_config;
 mod check_gdscript;
 mod consts;
 mod copy_files;
@@ -26,7 +25,6 @@ mod image_comparison;
 mod install_dependency;
 mod ios_xcode;
 mod keystore;
-mod log_server;
 mod path;
 mod platform;
 mod run;
@@ -369,39 +367,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Port for asset optimization server (default: 8080)")
                         .takes_value(true)
                         .default_value("8080"),
-                ).arg(
-                    Arg::new("log-stream")
-                        .long("log-stream")
-                        .help("Stream all app logs (Rust+GDScript+native) to a local collector; auto-starts the collector and injects the connect-back URL")
-                        .takes_value(false),
-                ).arg(
-                    Arg::new("log-stream-port")
-                        .long("log-stream-port")
-                        .help("Port for the --log-stream collector (default: 9231)")
-                        .takes_value(true)
-                        .default_value("9231"),
-                ).arg(
-                    Arg::new("deeplink")
-                        .long("deeplink")
-                        .help("Bake a deeplink into the build (e.g. 'decentraland://open?location=10,20&rust-log=debug'); applied at startup with no CLI args needed (mobile/TestFlight)")
-                        .takes_value(true),
-                ),
-        ).subcommand(
-            Command::new("log-server")
-                .about("Run a local WebSocket collector that prints logs streamed from a mobile build")
-                .arg(
-                    Arg::new("port")
-                        .long("port")
-                        .help("Port to listen on (default: 9231)")
-                        .takes_value(true)
-                        .default_value("9231"),
-                )
-                .arg(
-                    Arg::new("bind")
-                        .long("bind")
-                        .help("Bind address (default: 0.0.0.0)")
-                        .takes_value(true)
-                        .default_value("0.0.0.0"),
                 ),
         ).subcommand(
             Command::new("get-metrics")
@@ -546,22 +511,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Space-separated list of features to activate")
                         .takes_value(true)
                         .multiple_values(true),
-                ).arg(
-                    Arg::new("deeplink")
-                        .long("deeplink")
-                        .help("Bake a deeplink into the build (applied at startup with no CLI args needed)")
-                        .takes_value(true),
-                ).arg(
-                    Arg::new("log-stream")
-                        .long("log-stream")
-                        .help("Bake a --log-stream connect-back URL into the build (run `cargo run -- log-server` separately to receive it)")
-                        .takes_value(false),
-                ).arg(
-                    Arg::new("log-stream-port")
-                        .long("log-stream-port")
-                        .help("Port for the baked --log-stream URL (default: 9231)")
-                        .takes_value(true)
-                        .default_value("9231"),
                 ),
         );
     let matches = cli.get_matches();
@@ -608,14 +557,6 @@ fn main() -> Result<(), anyhow::Error> {
             compare_images_folders(snapshot_folder, result_folder, 0.995)
                 .map_err(|e| anyhow::anyhow!(e))
         }
-        ("log-server", sm) => {
-            let port: u16 = sm
-                .value_of("port")
-                .and_then(|p| p.parse().ok())
-                .unwrap_or(9231);
-            let bind = sm.value_of("bind").unwrap_or("0.0.0.0");
-            log_server::run_blocking(bind, port)
-        }
         ("run", sm) => {
             // Check dependencies first
             dependencies::check_command_dependencies("run", None)?;
@@ -658,41 +599,6 @@ fn main() -> Result<(), anyhow::Error> {
             let is_only_lib = sm.is_present("only-lib");
             let is_skip_export = sm.is_present("skip-export");
 
-            // --log-stream: start a local collector and inject the connect-back URL
-            // so the app streams all logs to it (mobile dials over LAN, desktop over
-            // loopback). The collector binds 0.0.0.0 so a device can reach it.
-            let is_device_target = target == Some("ios") || target == Some("android");
-            let log_stream_ws: Option<String> = if sm.is_present("log-stream") {
-                let port: u16 = sm
-                    .value_of("log-stream-port")
-                    .and_then(|p| p.parse().ok())
-                    .unwrap_or(9231);
-                log_server::spawn_background("0.0.0.0".to_string(), port);
-                let url = log_server::ws_url(port, is_device_target);
-                print_message(
-                    MessageType::Info,
-                    &format!("Log stream enabled — app will connect to {url}"),
-                );
-                Some(url)
-            } else {
-                None
-            };
-            let log_stream_arg: Option<String> =
-                log_stream_ws.as_ref().map(|u| format!("--log-stream={u}"));
-
-            // Bake --deeplink (merged with --log-stream) into the generated GDScript
-            // so it also applies on builds that can't receive CLI args (tap-to-open,
-            // TestFlight). Overwritten on every run; empty when nothing was passed.
-            let baked_deeplink =
-                build_config::resolve_deeplink(sm.value_of("deeplink"), log_stream_ws.as_deref());
-            build_config::write_build_config(&baked_deeplink)?;
-            if !baked_deeplink.is_empty() {
-                print_message(
-                    MessageType::Info,
-                    &format!("Baked deeplink into build: {baked_deeplink}"),
-                );
-            }
-
             // For android/ios targets, check if we should deploy to device
             let should_deploy = target.is_some()
                 && (target == Some("android") || target == Some("ios"))
@@ -721,13 +627,10 @@ fn main() -> Result<(), anyhow::Error> {
                     )?;
 
                     // Get extras to pass to the app
-                    let mut extras: Vec<String> = sm
+                    let extras: Vec<String> = sm
                         .values_of("extras")
                         .map(|v| v.map(|it| it.into()).collect())
                         .unwrap_or_default();
-                    if let Some(arg) = &log_stream_arg {
-                        extras.push(arg.clone());
-                    }
 
                     // Push the .so file to device
                     run::hotreload_android(extras)?;
@@ -744,13 +647,10 @@ fn main() -> Result<(), anyhow::Error> {
                     );
 
                     // Just deploy to device
-                    let mut device_extras: Vec<String> = sm
+                    let device_extras: Vec<String> = sm
                         .values_of("extras")
                         .map(|v| v.map(|it| it.into()).collect())
                         .unwrap_or_default();
-                    if let Some(arg) = &log_stream_arg {
-                        device_extras.push(arg.clone());
-                    }
                     run::deploy_and_run_on_device(
                         platform,
                         sm.is_present("release"),
@@ -789,13 +689,10 @@ fn main() -> Result<(), anyhow::Error> {
 
                     if result.is_ok() {
                         // 4. Install and run on device
-                        let mut device_extras: Vec<String> = sm
+                        let device_extras: Vec<String> = sm
                             .values_of("extras")
                             .map(|v| v.map(|it| it.into()).collect())
                             .unwrap_or_default();
-                        if let Some(arg) = &log_stream_arg {
-                            device_extras.push(arg.clone());
-                        }
                         run::deploy_and_run_on_device(
                             platform,
                             sm.is_present("release"),
@@ -831,11 +728,6 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
-            // Inject --log-stream connect-back URL for the desktop run path too.
-            if let Some(arg) = &log_stream_arg {
-                extras.push(arg.clone());
-            }
-
             run::run(
                 sm.is_present("editor"),
                 sm.is_present("itest"),
@@ -848,33 +740,6 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("build", sm) => {
             let target = sm.value_of("target");
-
-            // Bake --deeplink / --log-stream into the generated GDScript (overwritten
-            // each build). For --log-stream, run `cargo run -- log-server` separately
-            // to receive the stream.
-            {
-                let log_stream_ws = if sm.is_present("log-stream") {
-                    let port: u16 = sm
-                        .value_of("log-stream-port")
-                        .and_then(|p| p.parse().ok())
-                        .unwrap_or(9231);
-                    let is_device_target = target == Some("ios") || target == Some("android");
-                    Some(log_server::ws_url(port, is_device_target))
-                } else {
-                    None
-                };
-                let baked = build_config::resolve_deeplink(
-                    sm.value_of("deeplink"),
-                    log_stream_ws.as_deref(),
-                );
-                build_config::write_build_config(&baked)?;
-                if !baked.is_empty() {
-                    print_message(
-                        MessageType::Info,
-                        &format!("Baked deeplink into build: {baked}"),
-                    );
-                }
-            }
 
             // Run version check first
             version_check::run_version_check()?;
