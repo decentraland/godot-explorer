@@ -18,9 +18,6 @@ signal open_notifications_panel
 signal open_settings
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
-## Deep link `urn=<urn>` (from the marketplace webview): open the backpack and
-## auto-equip the wearable as if owned. Routed by deep_link_router → menu → backpack.
-signal deeplink_equip_wearable(urn: String)
 signal open_discover
 signal open_credits
 signal open_own_profile
@@ -71,8 +68,7 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
-const FORCE_DEEPLINK = "decentraland://open?dclenv=zone"
-#const FORCE_DEEPLINK = ""
+const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
@@ -114,10 +110,6 @@ var previous_height_2: int = -1
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
-
-## Wearable urn from a `urn=` deep link, consumed by the backpack on its next
-## (forced fresh) load to auto-equip it as owned — see deep_link_router/menu/backpack.
-var pending_backpack_equip_urn: String = ""
 
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON

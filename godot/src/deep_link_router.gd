@@ -55,17 +55,13 @@ func process_deep_link(url: String) -> void:
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
 
-	# Deep link urn=<urn> from the marketplace webview: open the backpack and equip
-	# the wearable optimistically as owned. Profile deploys are NOT disabled — the
-	# wearable just shows on the avatar locally until it is genuinely owned on-chain,
-	# at which point normal deploys reference it validly. MarketplaceTracker (armed
-	# when the marketplace browser opened) toasts when it arrives.
-	var equip_urn: String = Global.deep_link_obj.urn
-	if not equip_urn.is_empty():
-		print("[DEEPLINK] equip wearable urn: ", equip_urn)
-		Global.deeplink_equip_wearable.emit(equip_urn)
-		# Stop here: this deep link only equips a wearable. Falling through would
-		# hit the "/open" path routing below and pop the jump-in panel.
+	# Returning from the in-app marketplace webview: the web fires a
+	# decentraland://...?urn=<urn> deep link to bring the app back. We don't act on
+	# the urn anymore (the MarketplaceTracker detects the purchase on return), but we
+	# must still swallow it here — otherwise it falls through to the "/open" routing
+	# below and pops the jump-in panel (scene title + placeholders).
+	if not Global.deep_link_obj.params.get("urn", "").is_empty():
+		print("[DEEPLINK] marketplace return (urn=...) — swallowed, no routing")
 		_clear_deep_link()
 		return
 

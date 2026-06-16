@@ -16,15 +16,19 @@ extends Node
 # Emitted when a purchased wearable is detected as genuinely owned (the "arrived"
 # moment). The backpack connects to this to refresh its inventory live, since the
 # mint can land ~2 min after the purchase, well after the user left the webview.
-signal wearable_arrived(urn: String)
+# `category` is the marketplace category of the arrived item ("wearable" or
+# "emote"), so the backpack can route it to the right list (wearable grid vs the
+# emote editor) instead of dumping every arrival into the wearables grid.
+signal item_arrived(urn: String, category: String)
 
 enum State { IDLE, ARMED, POLLING }
 
 # In-app toast copy. Kept as constants so the wording (and language) is easy to
 # tweak in one place.
-const _TOAST_ON_THE_WAY_TITLE := "Your wearable is on the way"
+const _TOAST_ON_THE_WAY_TITLE := "Your purchase is on the way"
 const _TOAST_ON_THE_WAY_BODY := "We're processing your purchase."
-const _TOAST_ARRIVED_TITLE := "Your wearable has arrived"
+# %s is the item kind ("wearable"/"emote"), filled in once we know what arrived.
+const _TOAST_ARRIVED_TITLE_FMT := "Your %s has arrived"
 const _TOAST_ARRIVED_BODY := "It's now available in your backpack."
 const _TOAST_TYPE := "marketplace_iap"
 
@@ -52,6 +56,11 @@ const _MAX_TOTAL_POLL_SEC := 900.0
 # without it — so retry the initial fetch a few times before giving up.
 const _BASELINE_FETCH_ATTEMPTS := 5
 const _BASELINE_RETRY_SEC := 2.0
+# A just-bought item is always the newest in its category, so we only need the top
+# of each "recently added" list to spot it — no point pulling the whole inventory.
+const _OWNED_FETCH_LIMIT := 20
+# Categories the IAP marketplace can deliver into the backpack.
+const _OWNED_CATEGORIES: PackedStringArray = ["wearable", "emote"]
 
 var _state: State = State.IDLE
 # Bumped on every arm()/stop() so a stale baseline capture or polling loop, which
@@ -168,7 +177,7 @@ func _async_capture_baseline(token: int) -> void:
 		if urns != null:
 			_baseline_urns = urns
 			_baseline_ready = true
-			print(_LOG, " baseline ready: ", urns.size(), " owned wearables")
+			print(_LOG, " baseline ready: ", urns.size(), " owned items (wearables + emotes)")
 			return
 		print(_LOG, " baseline wearable fetch failed (attempt ", _attempt + 1, "); retrying")
 		await get_tree().create_timer(_BASELINE_RETRY_SEC).timeout
@@ -208,12 +217,13 @@ func _interval_for(elapsed: float) -> float:
 	return _SLOW_INTERVAL_SEC
 
 
-# Returns true once a wearable has arrived (terminal). Wearable arrival is checked
-# first so it takes precedence over the credit-drop signal when both land on the
-# same tick. Fires the "on the way" toast the first time credits drop.
+# Returns true once an item has arrived (terminal). Arrival is checked first so it
+# takes precedence over the credit-drop signal when both land on the same tick.
+# Fires the "on the way" toast the first time credits drop.
 #
-# "Arrived" = a genuinely-owned wearable that wasn't owned at baseline (the one
-# bought on the web, incl. a deeplink urn= equip once it mints on-chain).
+# "Arrived" = a genuinely-owned wearable or emote that wasn't owned at baseline (the
+# one bought on the web, once it mints on-chain). The detected category is passed
+# along so the backpack routes it to the right list.
 # gdlint:ignore = async-function-name
 func _async_check(token: int) -> bool:
 	if not _baseline_ready:
@@ -224,16 +234,18 @@ func _async_check(token: int) -> bool:
 	if token != _token:
 		return false
 	if urns == null:
-		print(_LOG, " check: wearable fetch returned NULL (transport error)")
+		print(_LOG, " check: owned-items fetch returned NULL (transport error)")
 	else:
 		print(_LOG, " check: owned=", urns.size(), " baseline=", _baseline_urns.size())
 		for urn in urns:
 			if not _baseline_urns.has(urn):
-				print(_LOG, " NEW wearable detected: ", urn, " → 'arrived' toast")
+				var category: String = urns[urn]
+				print(_LOG, " NEW ", category, " detected: ", urn, " → 'arrived' toast")
+				var kind := "emote" if category == "emote" else "wearable"
 				NotificationsManager.show_system_toast(
-					_TOAST_ARRIVED_TITLE, _TOAST_ARRIVED_BODY, _TOAST_TYPE
+					_TOAST_ARRIVED_TITLE_FMT % kind, _TOAST_ARRIVED_BODY, _TOAST_TYPE
 				)
-				wearable_arrived.emit(urn)
+				item_arrived.emit(urn, category)
 				return true
 
 	if not _credits_consumed_notified:
@@ -250,14 +262,28 @@ func _async_check(token: int) -> bool:
 	return false
 
 
-# Returns the set (Dictionary keyed by urn) of owned wearable urns, or null on a
-# fetch failure — callers must treat null as "unknown", never as "empty".
-#
-# Uses the marketplace API (subgraph-backed) the web's "My Assets" uses — it
-# reflects a mint in ~seconds, vs the catalyst lambda's minutes. No auth needed for
-# a public owner read. The API returns item-level urns + tokenId separately; we
-# rebuild the catalyst/backpack token-instance urn (`<item_urn>:<tokenId>`) so the
-# urn matches what the backpack/avatar use.
+# Public: the most-recently-obtained owned urns of one category ("wearable"/"emote"),
+# as a Dictionary keyed by token-instance urn, or an empty dict on failure / no wallet.
+# The backpack and emote editor call this to surface a just-bought item on open — fast
+# (marketplace API, top _OWNED_FETCH_LIMIT), without waiting for the catalyst lambda.
+# Augments the lambda list; never the sole source.
+# gdlint:ignore = async-function-name
+func async_fetch_recent_owned(category: String) -> Dictionary:
+	var wallet := ""
+	if Global.player_identity != null:
+		wallet = Global.player_identity.get_address_str()
+	if wallet.is_empty():
+		return {}
+	var result = await _async_fetch_owned_urns_for(wallet, category)
+	return result if result != null else {}
+
+
+# Returns a Dictionary of the player's most-recently-added owned wearables + emotes,
+# keyed by token-instance urn with the marketplace category ("wearable"/"emote") as
+# the value, or null on a fetch failure — callers must treat null as "unknown", never
+# as "empty". A failure in ANY category fails the whole snapshot, since a missing
+# category would otherwise look like "nothing owned there" and break the baseline
+# comparison.
 # gdlint:ignore = async-function-name
 func _async_fetch_owned_urns():
 	var wallet := ""
@@ -265,13 +291,35 @@ func _async_fetch_owned_urns():
 		wallet = Global.player_identity.get_address_str()
 	if wallet.is_empty():
 		return null
+	var owned := {}
+	for category in _OWNED_CATEGORIES:
+		var partial = await _async_fetch_owned_urns_for(wallet, category)
+		if partial == null:
+			return null
+		owned.merge(partial)
+	return owned
+
+
+# Fetches the _OWNED_FETCH_LIMIT most-recently-added owned NFTs of one category, as a
+# Dictionary keyed by token-instance urn with `category` as the value, or null on a
+# transport/shape error.
+#
+# Uses the marketplace API (subgraph-backed) the web's "My Assets" uses — it
+# reflects a mint in ~seconds, vs the catalyst lambda's minutes. No auth needed for
+# a public owner read. The API returns item-level urns + tokenId separately; we
+# rebuild the catalyst/backpack token-instance urn (`<item_urn>:<tokenId>`) so the
+# urn matches what the backpack/avatar use. `sortBy=newest` orders by creation date
+# (most recent first), so the just-bought item lands at the top.
+# gdlint:ignore = async-function-name
+func _async_fetch_owned_urns_for(wallet: String, category: String):
 	var url := (
-		DclUrls.marketplace_api() + "/v1/nfts?first=1000&skip=0&category=wearable&owner=" + wallet
+		"%s/v1/nfts?first=%d&skip=0&sortBy=newest&category=%s&owner=%s"
+		% [DclUrls.marketplace_api(), _OWNED_FETCH_LIMIT, category, wallet]
 	)
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
-		printerr(_LOG, " owned-nfts fetch error: ", result.get_error())
+		printerr(_LOG, " owned-nfts fetch error (", category, "): ", result.get_error())
 		return null
 	var json = result.get_string_response_as_json()
 	if not (json is Dictionary):
@@ -291,5 +339,5 @@ func _async_fetch_owned_urns():
 			continue
 		var token_id := str(nft.get("tokenId", ""))
 		var urn := item_urn + ":" + token_id if not token_id.is_empty() else item_urn
-		owned[urn] = true
+		owned[urn] = category
 	return owned

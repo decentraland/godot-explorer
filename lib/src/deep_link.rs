@@ -42,11 +42,6 @@ pub struct DeepLinkResult {
     pub gp_benchmark: bool,
     /// Show a transparent safe-area debug overlay on every screen
     pub safe_margin_debug: bool,
-    /// Dev/testing: a wearable URN to open in the backpack and auto-equip
-    /// (deep link param: urn=<urn>). It is also pushed into
-    /// `fake_owned_wearables`, so it shows up as owned and profile deploys stay
-    /// disabled (the wallet doesn't actually own it).
-    pub urn: String,
 }
 
 impl DeepLinkResult {
@@ -192,17 +187,6 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "safemargindebug" => {
                 result.safe_margin_debug = value.eq_ignore_ascii_case("true") || value == "1";
-            }
-            "urn" => {
-                let urn = value.trim().to_string();
-                if !urn.is_empty() {
-                    result.urn = urn.clone();
-                    // Treat it as owned so the backpack lists it; the block below
-                    // then disables profile deploys for the fake-owned set.
-                    if !result.fake_owned_wearables.contains(&urn) {
-                        result.fake_owned_wearables.push(urn);
-                    }
-                }
             }
             _ => {}
         }

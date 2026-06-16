@@ -80,11 +80,6 @@ pub struct DclParseDeepLink {
     /// Show transparent safe-area debug overlay (deep link param: safemargindebug=true)
     #[var]
     safe_margin_debug: bool,
-
-    /// Dev/testing: wearable URN to open in the backpack and auto-equip as owned
-    /// (deep link param: urn=<urn>).
-    #[var]
-    urn: GString,
 }
 
 #[godot_api]
@@ -117,7 +112,6 @@ impl DclParseDeepLink {
             low_spec_warning: false,
             gp_benchmark: false,
             safe_margin_debug: false,
-            urn: GString::new(),
         }
     }
 
@@ -151,7 +145,6 @@ impl DclParseDeepLink {
             low_spec_warning: r.low_spec_warning,
             gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
-            urn: GString::from(&r.urn),
         }
     }
 }

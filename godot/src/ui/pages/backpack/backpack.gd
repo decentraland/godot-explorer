@@ -149,6 +149,15 @@ func _ready():
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
+	# Surface the most-recently-obtained owned wearables from the fast marketplace API
+	# first (added only if not already listed), so an item just bought on the web shows
+	# up immediately instead of waiting for the catalyst lambda below (which lags
+	# minutes). Augments the lambda list — never the sole source.
+	for urn in await MarketplaceTracker.async_fetch_recent_owned("wearable"):
+		if not wearable_data.has(urn):
+			wearable_data[urn] = null
+			print("[BackpackRefresh] recent owned wearable from marketplace-api: ", urn)
+
 	# Load all remote wearables that you own...
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
 	if remote_wearables != null:
@@ -161,12 +170,6 @@ func _ready():
 		if not wearable_data.has(fake_urn):
 			wearable_data[fake_urn] = null
 			print("[BACKPACK] Injected fake-owned wearable: ", fake_urn)
-
-	# Inject the deep link equip urn as owned (the deep link was already cleared, so
-	# it's no longer in fake_owned_wearables). Equipped below before the load render.
-	if not Global.pending_backpack_equip_urn.is_empty():
-		if not wearable_data.has(Global.pending_backpack_equip_urn):
-			wearable_data[Global.pending_backpack_equip_urn] = null
 
 	# Add base wearables last
 	for wearable_id in Wearables.BASE_WEARABLES:
@@ -186,20 +189,6 @@ func _ready():
 			printerr("Error loading wearable_id ", wearable_id)
 	_update_visible_categories()
 
-	# Auto-equip a deep link wearable (urn=... from the marketplace webview) as part
-	# of this single first-load avatar render below, so the equip can't race a later
-	# refresh (which left it equipped in data but not shown on the preview).
-	if not Global.pending_backpack_equip_urn.is_empty():
-		var deeplink_urn: String = Global.pending_backpack_equip_urn
-		Global.pending_backpack_equip_urn = ""
-		var deeplink_wearable = wearable_data.get(deeplink_urn)
-		if deeplink_wearable != null and Global.player_identity.get_mutable_avatar() != null:
-			_select_category_for(deeplink_wearable.get_category())
-			_on_wearable_equip(deeplink_urn)
-			print("[BACKPACK] deeplink urn equipped as owned: ", deeplink_urn)
-		else:
-			printerr("[BACKPACK] deeplink urn: could not equip wearable ", deeplink_urn)
-
 	request_update_avatar = true
 
 	container_backpack.show()
@@ -214,8 +203,8 @@ func _ready():
 
 	# Refresh the inventory live when a marketplace purchase is detected as owned
 	# (MarketplaceTracker polls for it after returning from the web checkout).
-	MarketplaceTracker.wearable_arrived.connect(self._on_wearable_arrived)
-	print("[BackpackRefresh] connected to MarketplaceTracker.wearable_arrived")
+	MarketplaceTracker.item_arrived.connect(self._on_item_arrived)
+	print("[BackpackRefresh] connected to MarketplaceTracker.item_arrived")
 
 	# responsive
 	if get_window() != null:
@@ -572,69 +561,6 @@ func _on_wearable_unequip(wearable_id: String):
 	request_update_avatar = true
 
 
-## Deep link entry point (urn=<urn> from the marketplace webview): inject the
-## wearable as owned, select its category and equip it on the avatar. Runs hot,
-## so it works whether or not the backpack was already instantiated. The caller
-## (deep_link_router) has already disabled profile deploys — the wallet doesn't
-## actually own this wearable.
-func async_add_and_equip_owned(urn: String) -> void:
-	print("[BACKPACK] async_add_and_equip_owned START urn=", urn)
-	if urn.is_empty():
-		return
-
-	# Ensure the wearable definition is loaded.
-	var wearable = Global.content_provider.get_wearable(urn)
-	if wearable == null:
-		var promise = Global.content_provider.fetch_wearables(
-			[urn], Global.realm.get_profile_content_url()
-		)
-		await PromiseUtils.async_all(promise)
-		wearable = Global.content_provider.get_wearable(urn)
-	if wearable == null:
-		printerr("[BACKPACK] deeplink urn: failed to fetch wearable ", urn)
-		return
-
-	# Add it to the owned set so it lists as owned and can be equipped.
-	wearable_data[urn] = wearable
-
-	# Select its category, equip it on the avatar, and refresh the owned grid.
-	# The caller (menu) rebuilds the backpack fresh before this runs, so the equip
-	# is applied during a clean first-load avatar render (the cached path raced it).
-	_select_category_for(wearable.get_category())
-	_on_wearable_equip(urn)
-	request_show_wearables = true
-	print("[BACKPACK] deeplink urn equipped as owned: ", urn, " (", wearable.get_category(), ")")
-
-
-## Selects the main category (and its sub-filter) that contains `category`, so
-## the backpack opens focused on the just-equipped wearable.
-func _select_category_for(category: String) -> void:
-	var preferred: Array = [
-		Wearables.Categories.CLOTHING,
-		Wearables.Categories.HEAD,
-		Wearables.Categories.BODY,
-		Wearables.Categories.EXTRAS,
-		Wearables.Categories.FACE,
-	]
-	var main_cat: String = Wearables.Categories.ALL
-	for candidate in preferred:
-		var subs: Array = Wearables.Categories.MAIN_CATEGORIES.get(candidate, [])
-		if subs.has(category):
-			main_cat = candidate
-			break
-	main_category_selected = main_cat
-	_update_visible_categories()
-	# Press the exact sub-category button if it's visible after the main switch.
-	for wearable_filter_button in wearable_filter_buttons:
-		if (
-			wearable_filter_button.get_category_name() == category
-			and wearable_filter_button.visible
-		):
-			wearable_filter_button.set_pressed(true)
-			_on_wearable_filter_button_filter_type(category)
-			return
-
-
 func _async_on_marketplace_equip(urn: String):
 	if urn.is_empty():
 		return
@@ -814,12 +740,16 @@ func _on_new_notifications(notifications: Array) -> void:
 			return
 
 
-func _on_wearable_arrived(urn: String) -> void:
+func _on_item_arrived(urn: String, category: String) -> void:
 	# A marketplace purchase just landed (MarketplaceTracker detected it via the fast
-	# marketplace API). Inject that exact wearable directly instead of re-fetching the
-	# catalyst lambda, which lags minutes behind.
-	print("[BackpackRefresh] wearable_arrived received: ", urn)
-	_async_inject_wearable(urn)
+	# marketplace API). Inject that exact item directly instead of re-fetching the
+	# catalyst lambda, which lags minutes behind. Emotes live in the emote editor, not
+	# the wearables grid, so route by category.
+	print("[BackpackRefresh] item_arrived received: ", urn, " category=", category)
+	if category == "emote":
+		emote_editor.inject_owned_emote(urn)
+	else:
+		_async_inject_wearable(urn)
 
 
 # gdlint:ignore = async-function-name
@@ -931,8 +861,8 @@ func _exit_tree():
 	if NotificationsManager.new_notifications.is_connected(self._on_new_notifications):
 		NotificationsManager.new_notifications.disconnect(self._on_new_notifications)
 
-	if MarketplaceTracker.wearable_arrived.is_connected(self._on_wearable_arrived):
-		MarketplaceTracker.wearable_arrived.disconnect(self._on_wearable_arrived)
+	if MarketplaceTracker.item_arrived.is_connected(self._on_item_arrived):
+		MarketplaceTracker.item_arrived.disconnect(self._on_item_arrived)
 
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)

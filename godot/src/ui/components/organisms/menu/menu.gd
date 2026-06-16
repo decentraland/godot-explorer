@@ -91,7 +91,6 @@ func _ready():
 	Global.deep_link_router.deep_link_open_place.connect(_async_on_deep_link_open_place)
 	Global.open_settings.connect(async_show_settings)
 	Global.open_backpack.connect(async_show_backpack)
-	Global.deeplink_equip_wearable.connect(_async_on_deeplink_equip_wearable)
 	Global.open_discover.connect(async_show_discover)
 	Global.open_credits.connect(async_show_credits)
 	Global.open_own_profile.connect(async_show_own_profile)
@@ -184,19 +183,6 @@ func async_show_backpack(on_emotes := false):
 	if on_emotes:
 		await control_backpack.instance.async_show_emotes()
 	_open()
-
-
-## Deep link `urn=<urn>` from the marketplace webview: open the backpack and
-## equip the wearable as if owned (see Global.deeplink_equip_wearable).
-func _async_on_deeplink_equip_wearable(urn: String) -> void:
-	print("[MENU] deeplink_equip_wearable urn=", urn)
-	# Hand the urn to the backpack and rebuild it from scratch: it auto-equips the
-	# wearable inside its single first-load avatar render, so the equip can't race a
-	# later refresh (which left it equipped in data but not shown on the preview).
-	Global.pending_backpack_equip_urn = urn
-	if is_instance_valid(control_backpack.instance):
-		control_backpack.queue_free_instance()
-	await async_show_backpack(false)
 
 
 func async_show_settings():

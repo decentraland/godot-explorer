@@ -99,6 +99,12 @@ func _async_load_remote_emotes():
 			if count % 10 == 0:
 				await get_tree().process_frame
 
+	# Surface the most-recently-obtained owned emotes from the fast marketplace API
+	# (added only if not already listed via inject_owned_emote's dedupe), so a just-
+	# bought emote shows immediately instead of waiting for the catalyst lambda above.
+	for urn in await MarketplaceTracker.async_fetch_recent_owned("emote"):
+		inject_owned_emote(urn)
+
 	if not _only_collectibles:
 		_add_default_emotes()
 	_update_grid_equipped_state()
@@ -115,6 +121,30 @@ func _async_load_emotes():
 	await _async_load_remote_emotes()
 	_update_empty_state()
 	_sync_grid_selection()
+
+
+## Injects a single just-purchased owned emote at the front of the grid, mirroring
+## _async_load_remote_emotes' per-item setup. Called by the backpack when the
+## MarketplaceTracker detects an emote arrival, so it shows immediately instead of
+## waiting for the catalyst lambda to catch up. No-op if already listed.
+func inject_owned_emote(urn: String) -> void:
+	if urn.is_empty():
+		return
+	for item in all_emote_items:
+		if item.emote_urn == urn:
+			return
+	var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
+	emote_item.button_group = button_group_all_emotes
+	# Fire-and-forget before add_child (same as the remote load): the await inside
+	# resumes only after the item is in the tree and its @onready nodes exist.
+	emote_item.async_load_from_urn(urn)
+	emote_item.play_emote.connect(self._on_emote_item_play_emote.bind(emote_item))
+	emote_item.emote_name_ready.connect(self.emote_grid_selected.emit)
+	container_all_emotes.add_child(emote_item)
+	container_all_emotes.move_child(emote_item, 0)
+	all_emote_items.push_front(emote_item)
+	_update_empty_state()
+	_update_grid_equipped_state()
 
 
 func _update_empty_state():
