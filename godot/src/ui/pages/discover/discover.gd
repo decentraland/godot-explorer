@@ -189,7 +189,7 @@ func set_search_filter_text(new_text: String) -> void:
 		friends_online.visible = friends_online.has_items()
 		last_visited.visible = last_visited.has_items()
 		places_featured.show()
-		places_favorites.show()
+		places_favorites.visible = places_favorites.has_items()
 		places_my_places.visible = places_my_places.has_items()
 		places_most_active.title = "Most Actives"
 	else:
@@ -327,6 +327,10 @@ func _on_error_loading_notification() -> void:
 
 func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, container) -> void:
 	_generator_statuses[container] = status
+	# Re-hide carousels that the search filter turned off — the carousel's own
+	# _on_report_loading_status may have called show() on itself after we hid it.
+	if not search_text.is_empty() and container not in _get_active_carousels():
+		container.hide()
 	_update_global_messages()
 
 

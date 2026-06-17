@@ -103,6 +103,7 @@ mouse_filter = 1
 theme = ExtResource("4_2vs87")
 
 [node name="MobileCameraInput" type="Control" parent="UI" unique_id=435960516]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -110,6 +111,77 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_mcinput")
+
+[node name="LeftRightSafeContainerMobile" type="MarginContainer" parent="UI" unique_id=1539864391]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 0
+script = ExtResource("5_c8ksg")
+use_top = false
+use_bottom = false
+
+[node name="MobileUI" type="Control" parent="UI/LeftRightSafeContainerMobile" unique_id=1539864390]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Joypad" parent="UI/LeftRightSafeContainerMobile/MobileUI" unique_id=275799521 instance=ExtResource("7_admxk")]
+unique_name_in_owner = true
+editor_description = "Action buttons, to jump and interact."
+layout_mode = 1
+
+[node name="VirtualJoystick_Left" parent="UI/LeftRightSafeContainerMobile/MobileUI" unique_id=858042680 node_paths=PackedStringArray("margin_control") instance=ExtResource("9_lxw33")]
+unique_name_in_owner = true
+editor_description = "Virtual joystick to control avatar movement."
+layout_mode = 1
+deadzone_size = 0.0
+margin_control = NodePath("../..")
+
+[node name="Label_Crosshair" type="Label" parent="UI" unique_id=2000293560]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -13.0
+offset_top = -14.0
+offset_right = 13.0
+offset_bottom = 12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("16_karsc")
+theme_override_font_sizes/font_size = 20
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Control_PointerTooltip" parent="UI" unique_id=944970499 instance=ExtResource("11_qjs00")]
+unique_name_in_owner = true
+z_index = -4096
+layout_mode = 1
+metadata/_edit_lock_ = true
+
+[node name="SceneUIContainer" type="Control" parent="UI" unique_id=1950684600]
+unique_name_in_owner = true
+editor_description = "Single container for all per-scene SDK UI (built at runtime under 'scenes_ui'). INPUT LAYERING: Godot picks GUI input by tree order and IGNORES z_index — scanning siblings from last child to first, the first mouse_filter=STOP control under the point wins. So UI siblings AFTER this node (shown BELOW it in the Scene tree) receive input before scene UI, while siblings BEFORE it (shown ABOVE) are blocked by scene UI wherever it has a STOP control. Keep movement/camera catch-areas (joystick, MobileCameraInput) before this node, and interactive app UI (HUD panels, navbar, menus) after it."
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="MarginContainer_ShowUI" type="MarginContainer" parent="UI" unique_id=1783716233]
 unique_name_in_owner = true
@@ -152,35 +224,6 @@ icon = ExtResource("27_u4dfr")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Label_Crosshair" type="Label" parent="UI" unique_id=2000293560]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -13.0
-offset_top = -14.0
-offset_right = 13.0
-offset_bottom = 12.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 1
-theme_override_fonts/font = ExtResource("16_karsc")
-theme_override_font_sizes/font_size = 20
-text = "+"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Control_PointerTooltip" parent="UI" unique_id=944970499 instance=ExtResource("11_qjs00")]
-unique_name_in_owner = true
-z_index = -4096
-layout_mode = 1
-metadata/_edit_lock_ = true
-
 [node name="LeftRightSafeContainer" type="MarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
 layout_mode = 1
@@ -198,28 +241,6 @@ use_bottom = false
 [node name="InteractableHUD" type="Control" parent="UI/LeftRightSafeContainer" unique_id=1898741314]
 layout_mode = 2
 mouse_filter = 2
-
-[node name="MobileUI" type="Control" parent="UI/LeftRightSafeContainer/InteractableHUD" unique_id=1539864390]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Joypad" parent="UI/LeftRightSafeContainer/InteractableHUD/MobileUI" unique_id=275799521 instance=ExtResource("7_admxk")]
-unique_name_in_owner = true
-editor_description = "Action buttons, to jump and interact."
-layout_mode = 1
-
-[node name="VirtualJoystick_Left" parent="UI/LeftRightSafeContainer/InteractableHUD/MobileUI" unique_id=858042680 node_paths=PackedStringArray("margin_control") instance=ExtResource("9_lxw33")]
-unique_name_in_owner = true
-editor_description = "Virtual joystick to control avatar movement."
-layout_mode = 1
-deadzone_size = 0.0
-margin_control = NodePath("../../..")
 
 [node name="TopBottomSafeContainer" type="MarginContainer" parent="UI/LeftRightSafeContainer/InteractableHUD" unique_id=1437253374]
 layout_mode = 1
@@ -351,16 +372,6 @@ vertical_alignment = 1
 [node name="EmoteWheel" parent="UI/LeftRightSafeContainer/InteractableHUD" unique_id=228992295 instance=ExtResource("21_pows0")]
 unique_name_in_owner = true
 layout_mode = 1
-
-[node name="SceneUIContainer" type="Control" parent="UI" unique_id=1950684600]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI" unique_id=926156601]
 autostart = true

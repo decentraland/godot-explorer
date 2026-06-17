@@ -95,7 +95,7 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.event.inputs.ref }}
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
           toolchain: "1.90"
           targets: aarch64-apple-ios
@@ -135,7 +135,7 @@ jobs:
         timeout-minutes: 5
         run: cargo run -- export --target ios
 
-      # Deploy to godot-mobile-deploy-pipeline
+      # Deploy to the deploy pipeline repo (configured via DEPLOY_REPO secret)
       - name: Install Git LFS
         run: |
           brew install git-lfs
@@ -199,7 +199,7 @@ jobs:
           # This avoids downloading potentially GBs of LFS data
           mkdir deploy-repo && cd deploy-repo
           git init
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:decentraland/godot-mobile-deploy-pipeline.git
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:${{ secrets.DEPLOY_REPO }}.git
 
           # Configure git
           git config user.name "github-actions[bot]"
@@ -430,7 +430,7 @@ jobs:
           REF="${{ inputs.ref || github.event.inputs.ref }}"
           BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
+          DEPLOY_REPO_URL="https://github.com/${{ secrets.DEPLOY_REPO }}/tree/${BRANCH_NAME}"
 
           COMMENT_BODY="---
 
@@ -440,7 +440,7 @@ jobs:
 
           🔗 **iOS Workflow**: [View build](${WORKFLOW_URL})
 
-          📦 **Artifacts**: [godot-mobile-deploy-pipeline](${DEPLOY_REPO_URL})
+          📦 **Artifacts**: [deploy pipeline](${DEPLOY_REPO_URL})
 
           📍 **Branch**: \`${BRANCH_NAME}\`
 
