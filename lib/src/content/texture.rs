@@ -7,8 +7,9 @@ use super::{
 use godot::{
     builtin::{GString, PackedByteArray, Variant, Vector2i},
     classes::{
-        image::CompressMode, image::Format as GodotFormat, AnimatedTexture, DirAccess, Image,
-        ImageTexture, ResourceLoader, Texture2D,
+        image::CompressMode, image::Format as GodotFormat, portable_compressed_texture_2d,
+        AnimatedTexture, DirAccess, Image, ImageTexture, PortableCompressedTexture2D,
+        ResourceLoader, Texture2D,
     },
     global::Error,
     meta::ToGodot,
@@ -421,12 +422,21 @@ fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
 /// Creates a texture from a compressed image, resizing if needed.
 /// Uses ETC2 compression for better memory usage on mobile platforms.
 ///
-/// The ETC2 image is wrapped in a plain `ImageTexture` (not a
-/// `PortableCompressedTexture2D`): on a real device GPU this round-trips
-/// correctly through the `.scn` cache (`save_node_as_scene` → reload), whereas a
-/// `PortableCompressedTexture2D` baked on-device reloads as a solid-magenta
-/// texture. The asset-server's separate bake (`process_texture`) saves a raw
-/// ETC2 `Image` instead, for its own llvmpipe reasons.
+/// The ETC2 image is wrapped in a `PortableCompressedTexture2D` with
+/// `set_keep_compressed_buffer(true)`. PCT2 ships its compressed CPU
+/// buffer verbatim through `save_node_as_scene`, bypassing the GPU
+/// readback that `ImageTexture::create_from_image` triggers on the
+/// asset-server's llvmpipe stack — that readback corrupts the ETC2
+/// bytes, so every mesh material baked into the optimized `.scn`
+/// shipped from prod renders as per-allocation noise on device (every
+/// mesh surface looks like static). PCT2 round-trips cleanly under
+/// `--rendering-driver opengl3` once the DCL Godot fork's PCT2
+/// serialization fix is in (PR decentraland/godotengine#14, merged
+/// 2026-06-03 as `4.6.2.stable.gh.9ee6af7ab`). Older fork binaries
+/// (`stable.gh.7e5bfa428` and earlier) ship PCT2 with no compressed
+/// buffer and would render magenta on device — confirm the container's
+/// `decentraland.godot.client.x86_64 --version` is `gh.9ee6af7ab` or
+/// newer before deploying.
 ///
 /// Falls back to uncompressed texture if compression fails.
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
@@ -446,17 +456,21 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
         }
     }
 
-    match ImageTexture::create_from_image(&*image) {
-        Some(texture) => texture.upcast(),
-        None => {
-            tracing::error!(
-                "Failed to create ImageTexture ({}x{}), using placeholder",
-                image.get_width(),
-                image.get_height()
-            );
-            create_placeholder_texture()
-        }
+    let mut pct2 = PortableCompressedTexture2D::new_gd();
+    pct2.set_keep_compressed_buffer(true);
+    pct2.create_from_image(
+        &*image,
+        portable_compressed_texture_2d::CompressionMode::ETC2,
+    );
+    if pct2.get_width() == 0 || pct2.get_height() == 0 {
+        tracing::error!(
+            "Failed to create PCT2 from image ({}x{}), using placeholder",
+            image.get_width(),
+            image.get_height()
+        );
+        return create_placeholder_texture();
     }
+    pct2.upcast()
 }
 
 /// Hard cap on any single dimension, regardless of pixel budget.

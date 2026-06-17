@@ -63,3 +63,12 @@ RUN chmod 644 /app/libdclgodot.so
 # queue on this build.
 COPY exports/decentraland-godot-client-linux.pck /app/decentraland.godot.client.pck
 RUN chmod 644 /app/decentraland.godot.client.pck
+
+# Overlay our entry-point.sh (Mesa DRI override + Xvfb xdpyinfo wait + no
+# `--headless`) — without it, the base image's older entry-point falls
+# back to the dummy renderer and every impostor bake fails.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1-mesa-dri libglx-mesa0 libegl1 mesa-utils x11-utils \
+    && rm -rf /var/lib/apt/lists/*
+COPY entry-point.sh /app/entry-point.sh
+RUN chmod +x /app/entry-point.sh

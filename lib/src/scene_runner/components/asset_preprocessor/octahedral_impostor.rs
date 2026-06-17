@@ -691,16 +691,19 @@ fn read_baked_image_raw(subviewport: &Gd<SubViewport>, check_coverage: bool) -> 
 
 /// Stitch albedo (top half) + normal+ORM (bottom half) into one
 /// `ATLAS_DIM × PACKED_ATLAS_H` ETC2 `PortableCompressedTexture2D`. PCT2
-/// compresses to ETC2 and serializes its CPU buffer directly (with
-/// `set_keep_compressed_buffer(true)`). A plain `ImageTexture` round-trips
-/// through a GPU readback that **corrupts ETC2 on llvmpipe** — every
-/// impostor's atlas comes back as unique per-allocation noise, visible
-/// on the client as random colored quads at the swap distance. The
-/// asset-server binary must carry the godot fork's PCT2 serialization
-/// fix (godot 4.6.2.gh.9ee6af7ab+) for the compressed bytes to survive
-/// `save_node_as_scene` → device reload without rendering as magenta on
-/// Mali. One sub-resource per impostor — two separate atlases dropped
-/// the albedo on .scn load (white impostors).
+/// compresses to ETC2 once and ships its CPU buffer verbatim through
+/// `save_node_as_scene` (`set_keep_compressed_buffer(true)`), bypassing
+/// the GPU readback that corrupts `ImageTexture + image.compress(ETC2)`
+/// on the asset-server's llvmpipe stack. **Requires the DCL Godot fork's
+/// PCT2 serialization fix** (PR
+/// decentraland/godotengine#14, merged 2026-06-03 as
+/// `4.6.2.stable.gh.9ee6af7ab`). Older fork binaries
+/// (`stable.gh.7e5bfa428` and earlier) ship PCT2 with no compressed
+/// buffer — on reload `tex.get_image()` returns null and impostors render
+/// as per-allocation noise. If you see noise on device, check the
+/// container's `decentraland.godot.client.x86_64 --version` string — it
+/// must be `gh.9ee6af7ab` or newer. One sub-resource per impostor — two
+/// separate atlases dropped the albedo on .scn load (white impostors).
 fn stitch_atlas_texture(albedo: &Gd<Image>, normal: &Gd<Image>) -> Option<Gd<Texture2D>> {
     let w = ATLAS_DIM;
     if albedo.get_width() != w
