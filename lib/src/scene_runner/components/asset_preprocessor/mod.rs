@@ -3,7 +3,6 @@
 //! pay for at runtime (vertex count, vertex stream bytes, draw cost
 //! behind occluders).
 pub mod mesh_occluder;
-pub mod octahedral_impostor;
 pub mod vertex_strip;
 
 pub mod metrics;

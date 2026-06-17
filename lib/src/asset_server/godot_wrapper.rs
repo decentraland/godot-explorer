@@ -7,7 +7,6 @@ use godot::classes::Node;
 use godot::prelude::*;
 
 use super::server::start_server;
-use crate::scene_runner::components::asset_preprocessor::octahedral_impostor;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 /// Godot wrapper for the asset optimization server.
@@ -27,15 +26,6 @@ impl INode for DclAssetServer {
             port: 8080,
             is_running: false,
         }
-    }
-
-    /// Per-frame drain of the impostor bake queue. Worker threads
-    /// (running GLTF imports) enqueue bake requests; this main-thread
-    /// hook is the only place SubViewports get created, advanced, and
-    /// their pixel buffers read back.
-    fn process(&mut self, _dt: f64) {
-        let mut parent: Gd<Node> = self.base().clone().upcast();
-        octahedral_impostor::drain_bake_queue_on_main(&mut parent);
     }
 }
 

@@ -5,17 +5,13 @@ pub struct PreprocStats {
     pub meshes_stripped: u32,
     pub stripped_bytes_total: u64,
     pub occluders_added: u32,
-    pub impostors_baked: u32,
 }
 
 impl PreprocStats {
     pub fn to_summary_string(&self) -> String {
         format!(
-            "stripped={} bytes_saved={} occluders={} impostors={}",
-            self.meshes_stripped,
-            self.stripped_bytes_total,
-            self.occluders_added,
-            self.impostors_baked,
+            "stripped={} bytes_saved={} occluders={}",
+            self.meshes_stripped, self.stripped_bytes_total, self.occluders_added,
         )
     }
 }
@@ -24,7 +20,6 @@ static GLOBAL: Mutex<PreprocStats> = Mutex::new(PreprocStats {
     meshes_stripped: 0,
     stripped_bytes_total: 0,
     occluders_added: 0,
-    impostors_baked: 0,
 });
 
 pub fn record_stripped(bytes: u64) {
@@ -37,15 +32,6 @@ pub fn record_stripped(bytes: u64) {
 pub fn record_occluder() {
     if let Ok(mut g) = GLOBAL.lock() {
         g.occluders_added = g.occluders_added.saturating_add(1);
-    }
-}
-
-pub fn record_impostors(count: u32) {
-    if count == 0 {
-        return;
-    }
-    if let Ok(mut g) = GLOBAL.lock() {
-        g.impostors_baked = g.impostors_baked.saturating_add(count);
     }
 }
 
