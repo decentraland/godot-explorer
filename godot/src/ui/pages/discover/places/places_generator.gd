@@ -161,7 +161,10 @@ func async_request_from_api(offset: int, limit: int) -> void:
 	if only_featured:
 		query += "&tag=featured"
 
-	if order_by != OrderBy.NONE:
+	# When searching, don't apply order_by=most_active: the destinations BFF drops
+	# zero-activity worlds/scenes under that ordering, so quiet results (e.g. "pepino")
+	# would never appear. Let the API rank search results by relevance instead.
+	if order_by != OrderBy.NONE and search_param.length() == 0:
 		query += "&order_by=" + ("like_score" if order_by == OrderBy.LIKE_SCORE else "most_active")
 
 	if Global.is_ios_or_emulating():
