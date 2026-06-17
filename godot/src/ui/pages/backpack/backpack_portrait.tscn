@@ -28,7 +28,7 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hpvfb"]
 shader = ExtResource("17_4j6ii")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_5q7io"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_oh4je"]
 atlas = ExtResource("18_wp3bp")
 region = Rect2(0, 0, 343, 580)
 
@@ -150,7 +150,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("AtlasTexture_5q7io")
+texture = SubResource("AtlasTexture_oh4je")
 stretch_mode = 3
 script = ExtResource("19_ku1si")
 atlas = ExtResource("18_wp3bp")

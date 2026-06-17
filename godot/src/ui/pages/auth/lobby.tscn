@@ -17,6 +17,7 @@
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
 [ext_resource type="PackedScene" uid="uid://fc5fxcmfp4pq" path="res://src/ui/components/atoms/inputs/dcl_line_edit.tscn" id="13_vcjym"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="15_n5dun"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="15_vtvnx"]
 [ext_resource type="LabelSettings" uid="uid://d1jnlk6vnxej7" path="res://assets/themes/lobby_title_60.tres" id="16_vqtgj"]
 [ext_resource type="LabelSettings" uid="uid://cfetemr2rr0am" path="res://assets/themes/lobby_subtitle_38.tres" id="17_s1tin"]
 [ext_resource type="PackedScene" uid="uid://bi3eesytuc1tr" path="res://src/ui/pages/auth/login.tscn" id="17_vcjym"]
@@ -29,6 +30,26 @@
 [ext_resource type="Texture2D" uid="uid://c55bxhde80ljl" path="res://assets/ui/sign-in/back-chevron.svg" id="back_chevron"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8mib7"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_65md3"]
+bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+shadow_color = Color(0, 0, 0, 0.2509804)
+shadow_size = 5
+shadow_offset = Vector2(0, -2)
+
+[sub_resource type="Gradient" id="Gradient_vtvnx"]
+colors = PackedColorArray(0.27450982, 0.05882353, 0.43529412, 1, 0.20784314, 0.03137255, 0.32941177, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_65md3"]
+gradient = SubResource("Gradient_vtvnx")
+fill_to = Vector2(0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_l114c"]
+font = ExtResource("15_vtvnx")
+font_size = 36
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rqbts"]
 content_margin_left = 8.0
@@ -71,6 +92,7 @@ expand_mode = 3
 
 [node name="DiscoverBg" type="TextureRect" parent="." unique_id=2015604038]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -243,6 +265,7 @@ text = "NOT NOW"
 
 [node name="Start" type="Control" parent="Main" unique_id=1437503699]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(425, 450)
 layout_mode = 2
 
@@ -355,6 +378,132 @@ text = "By continuing, you agree to Decentraland’s [color=#FF2D55][url=\"https
 fit_content = true
 scroll_active = false
 horizontal_alignment = 1
+
+[node name="AvatarCreate" type="Control" parent="Main" unique_id=183269475]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/AvatarCreate" unique_id=1238803761]
+custom_minimum_size = Vector2(425, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+alignment = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="Main/AvatarCreate/VBoxContainer" unique_id=119530954]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 100
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 86
+
+[node name="AvatarPreviewContainer_AvatarCreate" type="Control" parent="Main/AvatarCreate/VBoxContainer/MarginContainer" unique_id=1328626525]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AvatarPreview" parent="Main/AvatarCreate/VBoxContainer/MarginContainer/AvatarPreviewContainer_AvatarCreate" unique_id=1871875129 instance=ExtResource("15_n5dun")]
+layout_mode = 1
+size_flags_horizontal = 3
+size_flags_vertical = 3
+focus_mode = 0
+mouse_filter = 2
+stretch = true
+hide_name = true
+can_move = false
+preview_margin_top = 10
+preview_margin_bottom = 60
+
+[node name="PanelContainer" type="PanelContainer" parent="Main/AvatarCreate/VBoxContainer" unique_id=1452091367]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_65md3")
+
+[node name="MarginContainer_Background" type="MarginContainer" parent="Main/AvatarCreate/VBoxContainer/PanelContainer" unique_id=1161109915]
+layout_mode = 2
+theme_override_constants/margin_top = 24
+
+[node name="TextureRect" type="TextureRect" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/MarginContainer_Background" unique_id=1786896160]
+layout_mode = 2
+texture = SubResource("GradientTexture2D_65md3")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/AvatarCreate/VBoxContainer/PanelContainer" unique_id=1420118090]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="MarginContainer_Title" type="MarginContainer" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer" unique_id=1154434758]
+custom_minimum_size = Vector2(0, 118)
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 44
+
+[node name="Label_Title" type="Label" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer_Title" unique_id=172447248]
+layout_mode = 2
+size_flags_vertical = 0
+text = "Choose your look"
+label_settings = SubResource("LabelSettings_l114c")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MarginContainer_Looks" type="MarginContainer" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer" unique_id=278411995]
+custom_minimum_size = Vector2(0, 394)
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_bottom = 30
+
+[node name="Label_Title" type="Label" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer_Looks" unique_id=1078116320]
+layout_mode = 2
+size_flags_vertical = 0
+text = "Looks"
+label_settings = SubResource("LabelSettings_l114c")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MarginContainer_Footer" type="MarginContainer" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer" unique_id=609060886]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 40
+
+[node name="AvatarCreateFooter" type="HBoxContainer" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer_Footer" unique_id=1546483082]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 16
+
+[node name="Button_Edit" type="Button" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer_Footer/AvatarCreateFooter" unique_id=348266844]
+custom_minimum_size = Vector2(206, 96)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_type_variation = &"SecondaryButton"
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("15_vtvnx")
+theme_override_font_sizes/font_size = 30
+disabled = true
+text = "EDIT"
+icon_alignment = 2
+
+[node name="Button_Next" type="Button" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer_Footer/AvatarCreateFooter" unique_id=1796377866]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("15_vtvnx")
+theme_override_font_sizes/font_size = 30
+disabled = true
+text = "NEXT"
+icon_alignment = 2
 
 [node name="BackpackContainer" type="Control" parent="Main" unique_id=1314744326]
 unique_name_in_owner = true
@@ -864,6 +1013,8 @@ expand_icon = true
 [connection signal="pressed" from="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer/Button_NotNow" to="." method="_on_button_not_now_pressed"]
 [connection signal="pressed" from="Main/Start/MarginContainer/VBoxFixed/VBoxContainer/Button_PlayAsGuest" to="." method="_on_button_play_as_guest_pressed"]
 [connection signal="pressed" from="Main/Start/MarginContainer/VBoxFixed/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
+[connection signal="gui_input" from="Main/AvatarCreate/VBoxContainer/MarginContainer/AvatarPreviewContainer_AvatarCreate/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
+[connection signal="pressed" from="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer/MarginContainer_Footer/AvatarCreateFooter/Button_Next" to="." method="_on_button_next_pressed"]
 [connection signal="pressed" from="Main/BackpackContainer/MarginContainer/VBoxContainer/Button_Continue" to="." method="_on_button_continue_pressed"]
 [connection signal="pressed" from="Main/ChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer2/Button_Back" to="." method="_on_button_back_pressed"]
 [connection signal="dcl_line_edit_changed" from="Main/ChooseName/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer/DclLineEdit" to="." method="_on_dcl_line_edit_dcl_line_edit_changed"]
