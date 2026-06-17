@@ -84,14 +84,11 @@ pub fn try_spawn_for(
     occluder_instance.set_position(center_local);
 
     mi.add_child(&occluder_instance.clone().upcast::<godot::classes::Node>());
-
-    // DIAG: skip set_owner so PackedScene drops the occluder from
-    // the .scn. The set_owner-corrected version was over-culling
-    // foliage (bushes vanished) — the BoxOccluder3D footprints are
-    // too aggressive for non-rectangular geometry. Bushes-missing
-    // is a separate issue from impostors; once we tune box insets
-    // or switch to ArrayOccluder3D, we can re-enable the save.
-    let _ = scene_root;
+    // PackedScene::pack only serializes descendants whose owner is in
+    // the saved subtree. Without an owner the OccluderInstance3D gets
+    // dropped on save_node_as_scene, so the device never sees the
+    // baked BoxOccluder. Anchor on the scene root explicitly.
+    occluder_instance.set_owner(scene_root);
 
     mi.set_meta("dcl_preproc_occluder", &true.to_variant());
     true
