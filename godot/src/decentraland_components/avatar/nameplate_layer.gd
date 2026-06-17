@@ -15,17 +15,21 @@ const FADE_START := 10.0
 const FADE_END := 15.0
 # Alpha units/sec for smooth occlusion fade in/out.
 const FADE_SPEED := 6.0
-# Occlude against solid world geometry (CL_PHYSICS) and avatar bodies (CL_AVATAR /
-# layer 30, the remote click_areas, an Area3D — hence collide_with_areas). The own
-# click_area is excluded per-ray so a tag never self-occludes. NOTE: the local player
-# frees its click_area, so its own body does not occlude others yet (follow-up).
+# Occlude against solid world geometry (CL_PHYSICS), avatar bodies (CL_AVATAR / layer
+# 30 — remote click_areas) and the body/trigger layer (4 — avatar TriggerDetectors +
+# the local player's CharacterBody, which frees its click_area so this is its only
+# occluder). Own colliders + the camera-mode area (also on layer 4, wraps the camera
+# and would otherwise occlude everything past the player) are excluded per-ray.
 const CL_PHYSICS := 2
+const CL_BODY := 4
 const CL_AVATAR := 536870912
-const OCCLUSION_MASK := CL_PHYSICS | CL_AVATAR
+const OCCLUSION_MASK := CL_PHYSICS | CL_BODY | CL_AVATAR
 # Frames between occlusion raycasts per avatar (staggered) — not every frame.
 const OCCLUSION_PERIOD := 6
 
 static var _root: Control = null
+# Cached camera-mode area (player child) — excluded from every occlusion ray.
+static var _camera_area: Node = null
 
 
 ## The Control to parent nameplates under (screen-space). Created on first use.
@@ -128,9 +132,32 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 		return false
 	var query := PhysicsRayQueryParameters3D.create(from, to)
 	query.collision_mask = OCCLUSION_MASK
-	# Avatar bodies (click_area) are Area3D; exclude this avatar's own so it never
-	# occludes its own tag (in first person the ray starts inside it → no hit).
+	# click_area is an Area3D, so areas too; bodies (TriggerDetector / player) are on by default.
 	query.collide_with_areas = true
+	# Exclude this avatar's own colliders (so it never occludes its own tag) and the
+	# camera-mode area that wraps the camera.
+	var excludes: Array = []
 	if is_instance_valid(avatar.click_area):
-		query.exclude = [avatar.click_area.get_rid()]
+		excludes.append(avatar.click_area.get_rid())
+	if is_instance_valid(avatar.trigger_detector):
+		excludes.append(avatar.trigger_detector.get_rid())
+	if avatar.is_local_player:
+		var body = avatar.get_parent()
+		if body is CollisionObject3D:
+			excludes.append(body.get_rid())
+	var cam_area := _get_camera_area()
+	if cam_area != null:
+		excludes.append(cam_area.get_rid())
+	query.exclude = excludes
 	return not space.intersect_ray(query).is_empty()
+
+
+## The player's camera-mode area detector (cached). It sits on the occlusion layer
+## and wraps the camera, so it must be excluded or it occludes everything beyond the
+## player.
+static func _get_camera_area() -> CollisionObject3D:
+	if not is_instance_valid(_camera_area):
+		var explorer := Global.get_explorer()
+		if explorer != null and is_instance_valid(explorer.player):
+			_camera_area = explorer.player.get_node_or_null("camera_mode_area_detector")
+	return _camera_area as CollisionObject3D
