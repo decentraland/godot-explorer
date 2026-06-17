@@ -37,6 +37,17 @@ pub fn try_spawn_for(
     mesh: &Gd<ArrayMesh>,
     scene_root: &Gd<godot::classes::Node>,
 ) -> bool {
+    // Auto-occluder spawn disabled. The per-mesh BoxOccluder3D produced
+    // by the size/opacity filter below over-culls in real DCL scenes
+    // (signs, decals, foliage near walls disappear at runtime — Godot
+    // sees them as fully occluded by the wall's BoxOccluder even with
+    // the per-axis inset tuning). Remove this short-circuit once we
+    // either tighten the filter further or switch to ArrayOccluder3D
+    // built from the actual mesh hull.
+    let _ = (mi, mesh, scene_root);
+    return false;
+
+    #[allow(unreachable_code)]
     if mi.has_meta("dcl_preproc_occluder") {
         return false;
     }
