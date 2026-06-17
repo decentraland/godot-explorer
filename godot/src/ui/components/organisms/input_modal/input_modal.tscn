@@ -68,74 +68,71 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.63529414)
 
-[node name="PanelContainer2" type="PanelContainer" parent="Blur" unique_id=1032389535]
+[node name="VBoxContainer" type="VBoxContainer" parent="Blur" unique_id=387469396]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -244.80002
-offset_top = -222.5
-offset_right = 244.79999
-offset_bottom = 222.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="PanelContainer2" type="PanelContainer" parent="Blur/VBoxContainer" unique_id=1032389535]
+layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ap1g7")
 script = ExtResource("2_fasoj")
 portrait_width = 0.85
 portrait_min_height = 0.1
 landscape_min_height = 0.1
 
-[node name="PanelContainer_Background" type="PanelContainer" parent="Blur/PanelContainer2" unique_id=599553400]
+[node name="PanelContainer_Background" type="PanelContainer" parent="Blur/VBoxContainer/PanelContainer2" unique_id=599553400]
 clip_children = 1
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fasoj")
 
-[node name="TextureRect" type="TextureRect" parent="Blur/PanelContainer2/PanelContainer_Background" unique_id=2054279500]
+[node name="TextureRect" type="TextureRect" parent="Blur/VBoxContainer/PanelContainer2/PanelContainer_Background" unique_id=2054279500]
 layout_mode = 2
 texture = ExtResource("2_5r5ws")
 expand_mode = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="Blur/PanelContainer2" unique_id=755220687]
+[node name="MarginContainer" type="MarginContainer" parent="Blur/VBoxContainer/PanelContainer2" unique_id=755220687]
 layout_mode = 2
 theme_override_constants/margin_left = 56
 theme_override_constants/margin_top = 64
 theme_override_constants/margin_right = 56
 theme_override_constants/margin_bottom = 60
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Blur/PanelContainer2/MarginContainer" unique_id=18486340]
+[node name="VBoxContainer" type="VBoxContainer" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer" unique_id=18486340]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1851632747]
+[node name="Label_Title" type="Label" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1851632747]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Add Email"
 label_settings = SubResource("LabelSettings_5r5ws")
 horizontal_alignment = 1
 
-[node name="HSeparator_Title" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=88206464]
+[node name="HSeparator_Title" type="HSeparator" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=88206464]
 layout_mode = 2
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
 
-[node name="Label_Subtitle" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1587798915]
+[node name="Label_Subtitle" type="Label" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1587798915]
 unique_name_in_owner = true
 layout_mode = 2
 text = "My Email"
 label_settings = SubResource("LabelSettings_fasoj")
 
-[node name="HSeparator_Content" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1607643053]
+[node name="HSeparator_Content" type="HSeparator" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1607643053]
 layout_mode = 2
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
 
-[node name="Container" type="Control" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1746900337]
+[node name="Container" type="Control" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1746900337]
 custom_minimum_size = Vector2(20, 130)
 layout_mode = 2
 
-[node name="DclTextEdit" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container" unique_id=512872621 instance=ExtResource("2")]
+[node name="DclTextEdit" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer/Container" unique_id=512872621 instance=ExtResource("2")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 10
@@ -148,12 +145,12 @@ has_max_length = false
 is_optional = false
 validate_email = true
 
-[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=32111112]
+[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=32111112]
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 theme_override_constants/separation = 32
 
-[node name="Button_Cancel" type="Button" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons" unique_id=1569227466]
+[node name="Button_Cancel" type="Button" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons" unique_id=1569227466]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
@@ -163,7 +160,7 @@ theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 24
 text = "CANCEL"
 
-[node name="Button_Confirm" type="Button" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons" unique_id=2019121179]
+[node name="Button_Confirm" type="Button" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons" unique_id=2019121179]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
@@ -173,13 +170,13 @@ theme_override_font_sizes/font_size = 24
 disabled = true
 text = "ADD"
 
-[node name="HSeparator_Keyboard" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=852531597]
+[node name="HSeparator_Keyboard" type="HSeparator" parent="Blur/VBoxContainer" unique_id=852531597]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="dcl_text_edit_changed" from="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container/DclTextEdit" to="." method="_on_dcl_text_edit_changed"]
-[connection signal="pressed" from="Blur/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Cancel" to="." method="_on_button_cancel_pressed"]
-[connection signal="pressed" from="Blur/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Confirm" to="." method="_on_button_confirm_pressed"]
+[connection signal="dcl_text_edit_changed" from="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer/Container/DclTextEdit" to="." method="_on_dcl_text_edit_changed"]
+[connection signal="pressed" from="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Cancel" to="." method="_on_button_cancel_pressed"]
+[connection signal="pressed" from="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons/Button_Confirm" to="." method="_on_button_confirm_pressed"]

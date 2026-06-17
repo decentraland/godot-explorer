@@ -73,8 +73,12 @@ theme_override_constants/separation = 32
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vwd20")
 
 [node name="Button_AddEmail" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1052501712]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
+focus_mode = 0
 theme = ExtResource("3_jl1ld")
 theme_override_font_sizes/font_size = 24
 text = "ADD EMAIL"
+
+[connection signal="pressed" from="MarginContainer/VBoxContainer/Button_AddEmail" to="." method="_on_button_add_email_pressed"]

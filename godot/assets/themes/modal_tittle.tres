@@ -1,4 +1,4 @@
-[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://b4jgney45syyy"]
+[gd_resource type="LabelSettings" format=3 uid="uid://b4jgney45syyy"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="1_osmqd"]
 

@@ -11,7 +11,7 @@ var _validation_callable: Callable
 @onready var dcl_text_edit: DclTextEdit = %DclTextEdit
 @onready var button_confirm: Button = %Button_Confirm
 @onready var button_cancel: Button = %Button_Cancel
-@onready var keyboard_separator: HSeparator = %HSeparator_Keyboard
+@onready var _modal_panel: ResponsiveContainer = $Blur/VBoxContainer/PanelContainer2
 
 
 func _ready() -> void:
@@ -73,18 +73,15 @@ func _on_button_cancel_pressed() -> void:
 
 
 func _on_visibility_changed() -> void:
-	if not visible and keyboard_separator != null:
-		keyboard_separator.visible = false
-		keyboard_separator.custom_minimum_size.y = 0
+	if not visible and _modal_panel != null:
+		_modal_panel.vertical_offset = 0.0
 
 
 func _on_virtual_keyboard_changed(keyboard_height: int) -> void:
 	if keyboard_height == 0:
-		keyboard_separator.visible = false
-		keyboard_separator.custom_minimum_size.y = 0
+		_modal_panel.vertical_offset = 0.0
 	else:
 		var viewport_size = get_viewport().get_visible_rect().size
 		var window_size = Vector2(DisplayServer.window_get_size())
 		var y_factor = viewport_size.y / window_size.y
-		keyboard_separator.custom_minimum_size.y = keyboard_height * y_factor
-		keyboard_separator.visible = true
+		_modal_panel.vertical_offset = -keyboard_height * y_factor * 0.5
