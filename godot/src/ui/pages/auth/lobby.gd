@@ -572,13 +572,6 @@ func _on_button_continue_pressed():
 	show_avatar_naming_screen()
 
 
-func _on_button_start_pressed():
-	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	sign_in_title.text = "Create your account"
-	is_creating_account = true
-	show_auth_home_screen()
-
-
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
 	Global.metrics.track_click_button("next", current_screen_name, "")
@@ -815,3 +808,10 @@ func _async_run_version_gate() -> String:
 	elif result == "soft":
 		gate.show_overlay(true)
 	return result
+
+
+func _on_button_play_as_guest_pressed() -> void:
+	Global.metrics.track_click_button("create_account", current_screen_name, "")
+	sign_in_title.text = "Create your account"
+	is_creating_account = true
+	show_auth_home_screen()

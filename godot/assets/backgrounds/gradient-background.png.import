@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cuw8urbbfnias"
-path.s3tc="res://.godot/imported/profile-background-corner24.png-a2742b1e96f5afea837c07f047b5d42a.s3tc.ctex"
-path.etc2="res://.godot/imported/profile-background-corner24.png-a2742b1e96f5afea837c07f047b5d42a.etc2.ctex"
+uid="uid://djhqqgo0jyq4t"
+path.s3tc="res://.godot/imported/gradient-background.png-908d2300bcbd2aab823e3d4210e2def2.s3tc.ctex"
+path.etc2="res://.godot/imported/gradient-background.png-908d2300bcbd2aab823e3d4210e2def2.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://src/ui/pages/profile/profile-background-corner24.png"
-dest_files=["res://.godot/imported/profile-background-corner24.png-a2742b1e96f5afea837c07f047b5d42a.s3tc.ctex", "res://.godot/imported/profile-background-corner24.png-a2742b1e96f5afea837c07f047b5d42a.etc2.ctex"]
+source_file="res://assets/backgrounds/gradient-background.png"
+dest_files=["res://.godot/imported/gradient-background.png-908d2300bcbd2aab823e3d4210e2def2.s3tc.ctex", "res://.godot/imported/gradient-background.png-908d2300bcbd2aab823e3d4210e2def2.etc2.ctex"]
 
 [params]
 

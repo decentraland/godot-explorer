@@ -65,9 +65,11 @@
 [ext_resource type="StyleBox" uid="uid://dtmqafi614027" path="res://assets/themes/secondary_outlined_normal_small.tres" id="46_s5chg"]
 [ext_resource type="StyleBox" uid="uid://djspketxj6yml" path="res://assets/themes/wearable_secondary.tres" id="47_ls4j2"]
 [ext_resource type="StyleBox" uid="uid://h6dr7o31osb3" path="res://assets/themes/secondary_outlined_pressed_small.tres" id="47_s5chg"]
+[ext_resource type="StyleBox" uid="uid://b710k2wnilt8k" path="res://assets/themes/secondary_outlined_disabled.tres" id="48_4mmh5"]
 [ext_resource type="StyleBox" uid="uid://bjtof22i81o4x" path="res://assets/themes/wearable_secondary_press_hover.tres" id="48_ec0gy"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="51_adyvx"]
 [ext_resource type="StyleBox" uid="uid://bk5rtvwf5rno4" path="res://assets/themes/dcl_theme/touchable_disabled.tres" id="51_b8nvg"]
+[ext_resource type="StyleBox" uid="uid://dkykkgjyku6h1" path="res://assets/themes/secondary_outlined_normal.tres" id="51_x5msw"]
 [ext_resource type="StyleBox" uid="uid://b66geet5bo5yf" path="res://assets/themes/dcl_theme/touchable_normal.tres" id="52_adyvx"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="52_kypl7"]
 [ext_resource type="StyleBox" uid="uid://cvducxvis7n6e" path="res://assets/themes/dcl_theme/touchable_pressed.tres" id="53_f0x44"]
@@ -787,11 +789,11 @@ SecondaryOutlinedButton/constants/h_separation = 8
 SecondaryOutlinedButton/constants/icon_max_width = 32
 SecondaryOutlinedButton/font_sizes/font_size = 30
 SecondaryOutlinedButton/fonts/font = ExtResource("51_adyvx")
-SecondaryOutlinedButton/styles/disabled = ExtResource("45_s5chg")
-SecondaryOutlinedButton/styles/hover = ExtResource("46_s5chg")
-SecondaryOutlinedButton/styles/hover_pressed = ExtResource("47_s5chg")
-SecondaryOutlinedButton/styles/normal = ExtResource("46_s5chg")
-SecondaryOutlinedButton/styles/pressed = ExtResource("47_s5chg")
+SecondaryOutlinedButton/styles/disabled = ExtResource("48_4mmh5")
+SecondaryOutlinedButton/styles/hover = ExtResource("51_x5msw")
+SecondaryOutlinedButton/styles/hover_pressed = ExtResource("51_x5msw")
+SecondaryOutlinedButton/styles/normal = ExtResource("51_x5msw")
+SecondaryOutlinedButton/styles/pressed = ExtResource("51_x5msw")
 SecondaryOutlinedSmall/base_type = &"Button"
 SecondaryOutlinedSmall/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 SecondaryOutlinedSmall/colors/font_disabled_color = Color(0.627451, 0.60784316, 0.65882355, 0.5019608)
