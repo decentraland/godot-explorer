@@ -33,7 +33,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DEPLOY_REPO="decentraland/godot-mobile-deploy-pipeline"
+          DEPLOY_REPO="${{ secrets.DEPLOY_REPO }}"
           SOURCE_REPO="${{ github.repository }}"
 
           echo "🔍 Fetching branches from deploy repo: $DEPLOY_REPO"
