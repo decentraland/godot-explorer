@@ -888,6 +888,7 @@ dependencies = [
  "image",
  "jni",
  "json5",
+ "libc",
  "livekit",
  "log-panics",
  "modular-bitfield",
