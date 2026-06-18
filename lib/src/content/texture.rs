@@ -536,7 +536,7 @@ fn assert_pct2_serialization_ok() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
         // 4x4 RGBA8 (ETC2's block size) — smallest valid input
-        let pixels = PackedByteArray::from_vec(&vec![255u8; 4 * 4 * 4]);
+        let pixels = PackedByteArray::from_vec(&[255u8; 4 * 4 * 4]);
         let Some(mut img) = Image::create_from_data(4, 4, false, GodotFormat::RGBA8, &pixels)
         else {
             tracing::error!("[pct2-selfcheck] failed to build probe image; skipping");

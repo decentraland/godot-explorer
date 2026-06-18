@@ -5,8 +5,8 @@ use godot::{
         base_material_3d::{CullMode, ShadingMode, Transparency},
         geometry_instance_3d::ShadowCastingSetting,
         node::ProcessMode,
-        ArrayMesh, BaseMaterial3D, CollisionShape3D, ConcavePolygonShape3D, MeshInstance3D, Node,
-        Node3D, StandardMaterial3D, StaticBody3D,
+        BaseMaterial3D, CollisionShape3D, ConcavePolygonShape3D, MeshInstance3D, Node, Node3D,
+        StandardMaterial3D, StaticBody3D,
     },
     prelude::*,
 };
