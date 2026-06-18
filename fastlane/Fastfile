@@ -1,0 +1,125 @@
+require "securerandom"
+
+default_platform(:ios)
+
+# fastlane runs from the repo root, so these resolve against it.
+EXPORTS_DIR = File.expand_path("exports", Dir.pwd)
+XCODEPROJ   = File.join(EXPORTS_DIR, "decentraland-godot-client.xcodeproj")
+BUILD_DIR   = File.join(EXPORTS_DIR, "build")
+XCARCHIVE   = File.join(BUILD_DIR, "decentraland-godot-client.xcarchive")
+IPA_NAME    = "decentraland-godot-client.ipa"
+SCHEME      = "decentraland-godot-client"
+BUNDLE_ID   = "org.decentraland.godotexplorer"
+TEAM_ID     = "8T73XM973P"
+
+def present?(value)
+  !value.to_s.strip.empty?
+end
+
+platform :ios do
+  desc "Archive + sign the iOS app and (optionally) upload to TestFlight."
+  desc "Modes auto-detected from env: full upload | dry-run (upload:false) | signing-only (no ASC key)."
+  lane :testflight do |options|
+    # The App Store Connect API key is ONLY needed to (a) query the latest build
+    # number and (b) upload. Without it we can still build + sign + produce the
+    # .ipa — useful to validate everything locally / in CI before the key exists.
+    have_asc = present?(ENV["ASC_KEY_ID"]) && present?(ENV["ASC_ISSUER_ID"]) &&
+               present?(ENV["ASC_API_KEY_PATH"]) && File.exist?(ENV["ASC_API_KEY_PATH"].to_s)
+    do_upload = options.fetch(:upload, true) && have_asc
+    UI.important("No App Store Connect API key → signing/build only (no build-number query, no upload).") unless have_asc
+
+    api_key = nil
+    api_key = app_store_connect_api_key(
+      key_id:       ENV.fetch("ASC_KEY_ID"),
+      issuer_id:    ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV.fetch("ASC_API_KEY_PATH"),
+      duration:     1200,
+      in_house:     false,
+    ) if have_asc
+
+    # --- Code signing ---
+    # CI sets IOS_DIST_CERT_PATH → import the .p12 into a throwaway keychain.
+    # Local runs leave it unset → use the Apple Distribution cert already in the login keychain.
+    cert_path = ENV["IOS_DIST_CERT_PATH"].to_s
+    if present?(cert_path)
+      keychain_name = "dcl-ci.keychain-db"
+      keychain_pw   = SecureRandom.base64
+      create_keychain(
+        name: keychain_name, password: keychain_pw, default_keychain: true,
+        unlock: true, timeout: 3600, lock_when_sleeps: false,
+      )
+      import_certificate(
+        certificate_path: cert_path,
+        certificate_password: ENV.fetch("IOS_DIST_CERT_PASSWORD"),
+        keychain_name: keychain_name, keychain_password: keychain_pw,
+      )
+    else
+      UI.message("IOS_DIST_CERT_PATH unset → using the distribution cert already in the keychain (local run).")
+    end
+
+    # The provisioning profile's display Name (manual signing maps to it). In CI the
+    # workflow extracts it; locally export it yourself, e.g. IOS_PROFILE_NAME="Decentraland Godot App Store".
+    profile_name = ENV.fetch("IOS_PROFILE_NAME")
+
+    # --- Build number ---
+    if have_asc
+      next_build = latest_testflight_build_number(
+        api_key: api_key, app_identifier: BUNDLE_ID, initial_build_number: 0,
+      ) + 1
+    else
+      next_build = (ENV["GITHUB_RUN_NUMBER"] || "1").to_i
+    end
+    UI.message("Using CFBundleVersion #{next_build}")
+
+    info_plist = Dir.glob(File.join(EXPORTS_DIR, "**", "*Info.plist"))
+                    .reject { |p| p.include?("#{File::SEPARATOR}build#{File::SEPARATOR}") }
+                    .reject { |p| p.include?("Pods") }
+                    .min_by(&:length)
+    UI.user_error!("Could not locate the exported Info.plist under #{EXPORTS_DIR}") unless info_plist
+    UI.message("Patching #{info_plist}")
+    set_info_plist_value(path: info_plist, key: "CFBundleVersion", value: next_build.to_s)
+
+    # --- Archive + export a signed App Store .ipa (manual signing) ---
+    build_app(
+      project:          XCODEPROJ,
+      scheme:           SCHEME,
+      configuration:    "Release",
+      clean:            true,
+      output_directory: BUILD_DIR,
+      output_name:      IPA_NAME,
+      archive_path:     XCARCHIVE,
+      export_method:    "app-store",
+      export_team_id:   TEAM_ID,
+      export_options:   {
+        signingStyle:         "manual",
+        teamID:               TEAM_ID,
+        provisioningProfiles: { BUNDLE_ID => profile_name },
+      },
+      xcargs: [
+        "DEVELOPMENT_TEAM=#{TEAM_ID}",
+        "CODE_SIGN_STYLE=Manual",
+        "PROVISIONING_PROFILE_SPECIFIER=#{profile_name.shellescape}",
+        "CODE_SIGN_IDENTITY=Apple\\ Distribution",
+      ].join(" "),
+    )
+
+    # Expose the archive path so the workflow can ship its dSYMs to Sentry.
+    if ENV["GITHUB_ENV"]
+      File.open(ENV["GITHUB_ENV"], "a") { |f| f.puts("XCARCHIVE_PATH=#{XCARCHIVE}") }
+    end
+
+    unless do_upload
+      UI.important("Built & signed the .ipa — skipping TestFlight upload (upload:false or no ASC key).")
+      next
+    end
+
+    upload_to_testflight(
+      api_key:                           api_key,
+      app_identifier:                    BUNDLE_ID,
+      ipa:                               File.join(BUILD_DIR, IPA_NAME),
+      changelog:                         ENV["WHATS_NEW"],
+      skip_waiting_for_build_processing: true,
+      distribute_external:               false,
+    )
+  end
+end
