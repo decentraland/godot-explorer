@@ -199,6 +199,16 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         || new_value.current_time.is_some();
                     if reset_tween {
                         existing_tween.start_time = now - offset_time;
+                        // Force re-emission of TweenState on the next tick.
+                        // The "emit only on state transition" optimization
+                        // below keys off `last_emitted_state` — without
+                        // clearing it on reset, a tween that just finished
+                        // (last_emitted_state = TsCompleted) and is then
+                        // restarted with a new mode/current_time would stay
+                        // observed as TsCompleted in the CRDT until it
+                        // completes again, breaking SDK consumers that
+                        // re-arm the same entity.
+                        existing_tween.last_emitted_state = None;
                     }
 
                     // copy new tween values
