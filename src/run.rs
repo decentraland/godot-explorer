@@ -816,21 +816,20 @@ fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result
         "org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher".to_string(),
     ];
 
-    // Forward CLI flags as Android intent extras. Godot's Android launcher maps
-    // an extra `foo=true` to the `--foo` command-line arg picked up by DclCli.
-    // For example `--skip-lobby` / `--clear-cache-startup` / `--debug-ws`.
-    for extra in &extras {
-        let arg = extra.trim_start_matches('-');
-        if !arg.is_empty() {
-            launch_args.push("-e".to_string());
-            launch_args.push(arg.to_string());
-            launch_args.push("true".to_string());
-        }
-    }
+    // Forward CLI flags via Godot's Android launcher convention: the launcher
+    // splits the `command_line_params` string extra on whitespace and feeds
+    // the tokens to the engine's argv. The previous per-flag `-e foo true`
+    // form was a no-op — Godot's GodotApp.java only reads
+    // `command_line_params`, so any other `--es`/`-e` keys are dropped on
+    // the floor and the requested flags never reach DclCli.
     if !extras.is_empty() {
+        let joined = extras.join(" ");
+        launch_args.push("--es".to_string());
+        launch_args.push("command_line_params".to_string());
+        launch_args.push(joined.clone());
         print_message(
             MessageType::Info,
-            &format!("Launching with extras: {:?}", extras),
+            &format!("Launching with command_line_params: {:?}", joined),
         );
     }
 

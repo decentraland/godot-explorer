@@ -312,16 +312,28 @@ impl INode for ContentProvider {
         // on the main thread, because load_resource_pack mutates Godot's
         // virtual filesystem and deadlocks against the render thread when
         // called from tokio workers. See MAIN_THREAD_PACK_QUEUE.
-        let queued: Vec<(String, oneshot::Sender<bool>)> = match MAIN_THREAD_PACK_QUEUE.lock() {
-            Ok(mut q) => std::mem::take(&mut *q),
-            Err(_) => Vec::new(),
-        };
-        for (zip_path, reply) in queued {
-            let ok = godot::classes::ProjectSettings::singleton()
-                .load_resource_pack_ex(&zip_path)
-                .replace_files(false)
-                .done();
-            let _ = reply.send(ok);
+        //
+        // Serialize against concurrent worker Godot calls: load_resource_pack
+        // mutates ProjectSettings (the global vfs lookup table), so a
+        // worker that's holding `godot_single_thread` and executing another
+        // Godot API can race against the mount. `try_acquire_owned()` skips
+        // this tick when a worker is mid-godot-call — `process()` runs
+        // every frame so we'll get another shot next tick once the worker
+        // releases. We can't `await` here (main thread is sync), and a
+        // blocking acquire would deadlock the engine while workers wait
+        // for it.
+        if let Ok(_permit) = self.godot_single_thread.clone().try_acquire_owned() {
+            let queued: Vec<(String, oneshot::Sender<bool>)> = match MAIN_THREAD_PACK_QUEUE.lock() {
+                Ok(mut q) => std::mem::take(&mut *q),
+                Err(_) => Vec::new(),
+            };
+            for (zip_path, reply) in queued {
+                let ok = godot::classes::ProjectSettings::singleton()
+                    .load_resource_pack_ex(&zip_path)
+                    .replace_files(false)
+                    .done();
+                let _ = reply.send(ok);
+            }
         }
 
         // Update resource download tracking
