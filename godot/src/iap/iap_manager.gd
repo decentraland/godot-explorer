@@ -46,15 +46,15 @@ signal transaction_history_updated
 # on the server (IAP_PRODUCT_CATALOG); this map is only used for the optimistic
 # success modal and must stay in sync with the server catalog.
 const PRODUCT_IDS: PackedStringArray = [
-	"credits_10",
-	"credits_20",
-	"credits_50",
+	"credits_tier1",
+	"credits_tier2",
+	"credits_tier3",
 ]
 
 const _CREDITS_BY_PRODUCT := {
-	"credits_10": 10,
-	"credits_20": 20,
-	"credits_50": 50,
+	"credits_tier1": 30,
+	"credits_tier2": 100,
+	"credits_tier3": 225,
 }
 
 # Bound how long the purchase overlay stays up. StoreKit prompt + validation
