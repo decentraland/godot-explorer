@@ -1,5 +1,4 @@
 pub mod animator;
-pub mod asset_preprocessor;
 pub mod audio_source;
 pub mod audio_stream;
 pub mod avatar_attach;

@@ -11,8 +11,6 @@ use godot::{
     prelude::*,
 };
 
-use crate::godot_classes::dcl_global::DclGlobal;
-
 /// Shared material override for shadow-proxy colliders: cull FRONT faces so
 /// only the inner (back) faces rasterize into the shadow map. Because DCL
 /// colliders are slightly larger than the visible mesh they wrap, leaving
@@ -33,48 +31,6 @@ use super::super::{
     scene_saver::{get_scene_path_for_hash, save_node_as_scene},
 };
 use super::common::{count_nodes, load_gltf_pipeline};
-
-use crate::scene_runner::components::asset_preprocessor::{mesh_occluder, metrics};
-
-struct AssetServerPreprocCounts {
-    occluders: u32,
-}
-
-fn apply_asset_server_optimizations(root: &Gd<Node3D>, hash: &str) {
-    let mut counts = AssetServerPreprocCounts { occluders: 0 };
-    let root_node: Gd<Node> = root.clone().upcast();
-    walk_and_preprocess(&root_node, &root_node, &mut counts);
-
-    if counts.occluders > 0 {
-        godot::global::godot_print!(
-            "[asset-server-preproc] {}: occluders={}",
-            hash,
-            counts.occluders,
-        );
-    }
-}
-
-fn walk_and_preprocess(
-    node: &Gd<Node>,
-    scene_root: &Gd<Node>,
-    counts: &mut AssetServerPreprocCounts,
-) {
-    if let Ok(mut mi) = node.clone().try_cast::<MeshInstance3D>() {
-        if mi.is_visible_in_tree() && mi.get_layer_mask() == 1 {
-            if let Some(mesh) = mi.get_mesh() {
-                if let Ok(array_mesh) = mesh.try_cast::<ArrayMesh>() {
-                    if mesh_occluder::try_spawn_for(&mut mi, &array_mesh, scene_root) {
-                        metrics::record_occluder();
-                        counts.occluders = counts.occluders.saturating_add(1);
-                    }
-                }
-            }
-        }
-    }
-    for child in node.get_children().iter_shared() {
-        walk_and_preprocess(&child, scene_root, counts);
-    }
-}
 
 /// Load and save a scene GLTF to disk.
 ///
@@ -104,23 +60,6 @@ pub async fn load_and_save_scene_gltf(
             let root_node = node.clone();
 
             create_scene_colliders(node.clone().upcast(), root_node.clone());
-
-            // Auto-attach `OccluderInstance3D` siblings on big opaque
-            // meshes so Godot's culler can early-out everything behind
-            // them at runtime. Baked into the saved `.scn` so the
-            // device pays zero generation cost.
-            //
-            // Gated on `--asset-server`: this code path also runs when
-            // the cliente loads a fresh GLTF (no cache yet), and
-            // re-applying it on device duplicates the occluders that
-            // are already baked in the optimized `.scn`. Limiting to
-            // asset-server mode keeps the device-side path lean.
-            let in_asset_server_mode = DclGlobal::try_singleton()
-                .map(|g| g.bind().cli.bind().asset_server)
-                .unwrap_or(false);
-            if in_asset_server_mode {
-                apply_asset_server_optimizations(&root_node, hash);
-            }
 
             // Save the processed scene to disk (in the same cache folder as other content)
             let scene_path = get_scene_path_for_hash(&ctx.content_folder, hash);
