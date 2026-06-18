@@ -139,6 +139,21 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.event.inputs.ref }}
 
+      # The project's min_ios_version is 18.0, which needs the iOS 18 SDK → Xcode 16+.
+      # The runner defaults to Xcode 15.4, so select 16.x explicitly (via DEVELOPER_DIR,
+      # honored by xcrun/clang/gym for all later steps — no sudo needed).
+      - name: Select Xcode 16 (iOS 18 SDK)
+        run: |
+          echo "Installed Xcodes:"; ls -d /Applications/Xcode*.app 2>/dev/null
+          XCODE_APP="/Applications/Xcode_16.2.app"
+          [ -d "$XCODE_APP" ] || XCODE_APP="$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$XCODE_APP" ] || [ ! -d "$XCODE_APP" ]; then
+            echo "❌ No Xcode 16.x found on the runner — cannot build the iOS 18 SDK."; exit 1
+          fi
+          echo "Using $XCODE_APP"
+          echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
+          "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
+
       - name: Build MacOS
         timeout-minutes: 20
         run: cargo run -- build --release ${{ env.PROD_FLAG }}
