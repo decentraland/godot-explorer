@@ -64,6 +64,8 @@ platform :ios do
     profile_name = ENV.fetch("IOS_PROFILE_NAME")
 
     # --- Build number ---
+    # TODO: optionally support an arbitrary/date-based build number scheme (e.g. YYMMDDHHMM).
+    # Must stay a strictly-increasing integer < 2^32. For now we auto-continue from TestFlight.
     if have_asc
       next_build = latest_testflight_build_number(
         api_key: api_key, app_identifier: BUNDLE_ID, initial_build_number: 0,
@@ -79,7 +81,11 @@ platform :ios do
                     .min_by(&:length)
     UI.user_error!("Could not locate the exported Info.plist under #{EXPORTS_DIR}") unless info_plist
     UI.message("Patching #{info_plist}")
+    # Version string (e.g. "1.9") comes from the Godot export — we don't override it,
+    # only read it so the workflow can map build number ⇄ version in the Slack message.
+    version_string = get_info_plist_value(path: info_plist, key: "CFBundleShortVersionString")
     set_info_plist_value(path: info_plist, key: "CFBundleVersion", value: next_build.to_s)
+    UI.success("Version #{version_string} (build #{next_build})")
 
     # --- Archive + export a signed App Store .ipa (manual signing) ---
     build_app(
@@ -105,9 +111,13 @@ platform :ios do
       ].join(" "),
     )
 
-    # Expose the archive path so the workflow can ship its dSYMs to Sentry.
+    # Expose archive path + the version⇄build mapping to the workflow (dSYMs + Slack).
     if ENV["GITHUB_ENV"]
-      File.open(ENV["GITHUB_ENV"], "a") { |f| f.puts("XCARCHIVE_PATH=#{XCARCHIVE}") }
+      File.open(ENV["GITHUB_ENV"], "a") do |f|
+        f.puts("XCARCHIVE_PATH=#{XCARCHIVE}")
+        f.puts("IOS_VERSION_STRING=#{version_string}")
+        f.puts("IOS_BUILD_NUMBER=#{next_build}")
+      end
     end
 
     unless do_upload

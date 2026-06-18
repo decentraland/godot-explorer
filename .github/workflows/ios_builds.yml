@@ -142,15 +142,14 @@ jobs:
       # The project's min_ios_version is 18.0, which needs the iOS 18 SDK → Xcode 16+.
       # The runner defaults to Xcode 15.4, so select 16.x explicitly (via DEVELOPER_DIR,
       # honored by xcrun/clang/gym for all later steps — no sudo needed).
-      - name: Select Xcode 16 (iOS 18 SDK)
+      - name: Select Xcode 16.2 (iOS 18 SDK)
         run: |
-          echo "Installed Xcodes:"; ls -d /Applications/Xcode*.app 2>/dev/null
           XCODE_APP="/Applications/Xcode_16.2.app"
-          [ -d "$XCODE_APP" ] || XCODE_APP="$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)"
-          if [ -z "$XCODE_APP" ] || [ ! -d "$XCODE_APP" ]; then
-            echo "❌ No Xcode 16.x found on the runner — cannot build the iOS 18 SDK."; exit 1
+          if [ ! -d "$XCODE_APP" ]; then
+            echo "❌ $XCODE_APP not found on the runner. Installed Xcodes:"
+            ls -d /Applications/Xcode*.app 2>/dev/null
+            exit 1
           fi
-          echo "Using $XCODE_APP"
           echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
           "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
 
@@ -233,7 +232,7 @@ jobs:
           if [ -z "${XCARCHIVE_PATH:-}" ] || [ ! -d "$XCARCHIVE_PATH/dSYMs" ]; then
             echo "⚠️  No dSYMs at ${XCARCHIVE_PATH:-<unset>}/dSYMs — skipping"; exit 0
           fi
-          curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
+          command -v sentry-cli >/dev/null 2>&1 || curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
           sentry-cli upload-dif --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
             --auth-token "$SENTRY_AUTH_TOKEN" --wait "$XCARCHIVE_PATH/dSYMs"
 
@@ -260,7 +259,7 @@ jobs:
           fi
 
           # Install sentry-cli
-          curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
+          command -v sentry-cli >/dev/null 2>&1 || curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
 
           # Find libdclgodot.dylib
           LIBDCLGODOT_PATH="lib/target/libdclgodot_ios/libdclgodot.dylib"
@@ -316,6 +315,7 @@ jobs:
               {
                 \"type\": \"section\",
                 \"fields\": [
+                  { \"type\": \"mrkdwn\", \"text\": \"*Version:*\n\`${IOS_VERSION_STRING}\` (build \`${IOS_BUILD_NUMBER}\`)\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_NAME}\`\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
