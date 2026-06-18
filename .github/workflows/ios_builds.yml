@@ -110,7 +110,7 @@ jobs:
           fi
           echo "✅ Required secrets present"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ inputs.ref || github.event.inputs.ref }}
 
@@ -175,10 +175,12 @@ jobs:
           cp "$RUNNER_TEMP/signing/profile.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
           echo "Prepared signing for profile: $PROFILE_NAME"
 
-      - name: Install fastlane
+      - name: Install fastlane (pinned 2.228.0)
         run: |
-          if ! command -v fastlane >/dev/null 2>&1; then gem install fastlane -v 2.227.2 --no-document; fi
-          fastlane --version
+          # The runner ships a pre-installed fastlane, so install + invoke our exact
+          # version explicitly (the `fastlane _x.y.z_` selector forces it).
+          gem install fastlane -v 2.228.0 --no-document
+          fastlane _2.228.0_ --version
 
       - name: Build, sign & upload to TestFlight
         timeout-minutes: 25
@@ -199,7 +201,7 @@ jobs:
           UPLOAD=true
           if [ "${{ inputs.dry_run || github.event.inputs.dry_run }}" = "true" ]; then UPLOAD=false; fi
           echo "Upload to TestFlight: $UPLOAD"
-          fastlane ios testflight upload:$UPLOAD
+          fastlane _2.228.0_ ios testflight upload:$UPLOAD
 
       # The app dSYMs live inside the archive produced by fastlane (XCARCHIVE_PATH).
       # The libdclgodot dSYM is uploaded by the existing step below.
@@ -216,7 +218,7 @@ jobs:
           if [ -z "${XCARCHIVE_PATH:-}" ] || [ ! -d "$XCARCHIVE_PATH/dSYMs" ]; then
             echo "⚠️  No dSYMs at ${XCARCHIVE_PATH:-<unset>}/dSYMs — skipping"; exit 0
           fi
-          curl -sL https://sentry.io/get-cli/ | bash
+          curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
           sentry-cli upload-dif --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
             --auth-token "$SENTRY_AUTH_TOKEN" --wait "$XCARCHIVE_PATH/dSYMs"
 
@@ -243,7 +245,7 @@ jobs:
           fi
 
           # Install sentry-cli
-          curl -sL https://sentry.io/get-cli/ | bash
+          curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
 
           # Find libdclgodot.dylib
           LIBDCLGODOT_PATH="lib/target/libdclgodot_ios/libdclgodot.dylib"

@@ -2,8 +2,10 @@ require "securerandom"
 
 default_platform(:ios)
 
-# fastlane runs from the repo root, so these resolve against it.
-EXPORTS_DIR = File.expand_path("exports", Dir.pwd)
+# fastlane sets its working dir to the `fastlane/` folder, so the exported Xcode
+# project lives one level up at <repo>/exports. Resolve to the repo root robustly.
+REPO_ROOT   = File.basename(Dir.pwd) == "fastlane" ? File.expand_path("..", Dir.pwd) : Dir.pwd
+EXPORTS_DIR = File.join(REPO_ROOT, "exports")
 XCODEPROJ   = File.join(EXPORTS_DIR, "decentraland-godot-client.xcodeproj")
 BUILD_DIR   = File.join(EXPORTS_DIR, "build")
 XCARCHIVE   = File.join(BUILD_DIR, "decentraland-godot-client.xcarchive")
