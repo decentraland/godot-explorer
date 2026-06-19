@@ -199,18 +199,6 @@ func _populate_cards(items: Array):
 
 func _setup_card(card: WearableItem, item_data: Dictionary):
 	var urn = item_data.get("urn", "")
-	var bs := ""
-	if Global.player_identity != null and Global.player_identity.get_mutable_avatar() != null:
-		bs = Global.player_identity.get_mutable_avatar().get_body_shape()
-	print(
-		"[BodyShape] carousel card urn=",
-		urn,
-		" my_body_shape=",
-		bs,
-		" item_keys=",
-		item_data.keys()
-	)
-
 	_set_rarity_background(card, item_data.get("rarity", "common"))
 
 	var price = _parse_price(item_data.get("minPrice", item_data.get("price", "0")))

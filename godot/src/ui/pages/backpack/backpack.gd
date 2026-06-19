@@ -416,13 +416,6 @@ func _load_filtered_data(filter: String):
 				var is_equipable = Wearables.can_equip(
 					wearable, Global.player_identity.get_mutable_avatar().get_body_shape()
 				)
-				if not is_equipable and not is_body_shape:
-					print(
-						"[BodyShape] grid FILTERED-OUT (no representation) urn=",
-						wearable_id,
-						" cat=",
-						wearable.get_category()
-					)
 				var is_base_wearable = Wearables.is_base_wearable(wearable_id)
 				var can_use = (
 					(is_equipable and (!is_base_wearable or !only_collectibles))
@@ -431,14 +424,6 @@ func _load_filtered_data(filter: String):
 				if can_use:
 					filtered_data.push_back(wearable_id)
 
-	print(
-		"[Dedup] filter=",
-		filter,
-		" wearable_data=",
-		wearable_data.size(),
-		" filtered_data=",
-		filtered_data.size()
-	)
 	request_show_wearables = true
 
 
@@ -652,18 +637,6 @@ func _async_marketplace_preview_equip(urn: String, wearable: DclItemEntityDefini
 	if mutable_avatar == null:
 		return
 
-	print(
-		"[BodyShape] preview-equip urn=",
-		urn,
-		" category=",
-		wearable.get_category(),
-		" body_shape=",
-		mutable_avatar.get_body_shape(),
-		" has_representation=",
-		wearable.has_representation(mutable_avatar.get_body_shape()),
-		" (false => avatar renders NAKED for this slot)"
-	)
-
 	# Save original wearables on first preview
 	if _marketplace_preview_urn.is_empty():
 		_marketplace_saved_wearables = mutable_avatar.get_wearables().duplicate()
@@ -812,16 +785,13 @@ func _on_item_arrived(urn: String, category: String) -> void:
 	# then inject that exact item directly instead of re-fetching the catalyst lambda,
 	# which lags minutes behind. Emotes live in the emote editor, not the wearables
 	# grid, so route by category.
-	print("[MktTracker] backpack RECEIVED item_arrived urn=", urn, " category=", category)
 	apply_marketplace_arrival_view(category)
 	if category == "emote":
 		emote_editor.inject_owned_emote(urn)
 	else:
 		_async_inject_wearable(urn)
 	# A marketplace buy consumes credits, but nothing else re-fetches the balance after a
-	# (non-IAP) marketplace purchase — so the displayed credits stay stale. Refresh here
-	# (also logs the post-purchase buckets so we can see expiring vs nonExpiring).
-	print("[IAP] refreshing balance after marketplace arrival")
+	# (non-IAP) marketplace purchase — so the displayed credits stay stale. Refresh here.
 	Iap.async_refresh_balance()
 
 
@@ -915,25 +885,15 @@ func _to_item_urn(urn: String, token_id: String) -> String:
 
 # gdlint:ignore = async-function-name
 func _async_inject_wearable(urn: String) -> void:
-	print("[Inject] START urn=", urn, " already_in_data=", wearable_data.has(urn))
 	if urn.is_empty() or wearable_data.has(urn):
-		print("[Inject] EARLY RETURN (empty or already present)")
 		return
 	var wearable = Global.content_provider.get_wearable(urn)
-	print("[Inject] cache get_wearable(urn) -> ", "FOUND" if wearable != null else "null")
 	if wearable == null:
 		var content_url := Global.realm.get_profile_content_url()
-		print("[Inject] fetch_wearables([urn]) from content_url=", content_url)
 		var promise = Global.content_provider.fetch_wearables([urn], content_url)
 		await PromiseUtils.async_all(promise)
 		wearable = Global.content_provider.get_wearable(urn)
-		print("[Inject] post-fetch get_wearable(urn) -> ", "FOUND" if wearable != null else "null")
 	if wearable == null:
-		print(
-			"[Inject] FAILED: could not load arrived wearable urn=",
-			urn,
-			" (definition not found — likely urn/tokenId format mismatch)"
-		)
 		return
 
 	# A live arrival is brand-new — tag it (#2300).
@@ -946,14 +906,6 @@ func _async_inject_wearable(urn: String) -> void:
 			reordered[k] = wearable_data[k]
 	wearable_data = reordered
 	var cat: String = wearable.get_category()
-	print(
-		"[Inject] injected; category=",
-		cat,
-		" current_filter=",
-		current_filter,
-		" only_collectibles=",
-		only_collectibles
-	)
 
 	# Reload the current view; if the new item isn't visible under the active filter
 	# (different category, or no filter set), switch to its category so it shows.
@@ -961,12 +913,6 @@ func _async_inject_wearable(urn: String) -> void:
 		_load_filtered_data(current_filter)
 	if current_filter.is_empty() or not filtered_data.has(urn):
 		_load_filtered_data(cat)
-	print(
-		"[Inject] DONE: filtered_data.has(urn)=",
-		filtered_data.has(urn),
-		" filtered_data.size=",
-		filtered_data.size()
-	)
 
 
 func _async_refresh_owned_wearables() -> void:
