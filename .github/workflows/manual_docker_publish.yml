@@ -1,0 +1,39 @@
+name: 🐳📤 Manual Docker Publish to Quay
+# Manually build the Linux artifacts and push the Docker image to quay.io.
+#
+# The normal CI (runner.yml) only pushes to quay.io when:
+#   - pushing to the `release` branch, or
+#   - a PR carries the `publish-docker` label.
+# There is no automatic push from `main`. This workflow fills that gap: run it
+# from the GitHub Actions UI (or `gh`) on `main` (the default) — or any branch —
+# to publish on demand.
+#
+# Image tags follow the same logic as docker_build_test.yml:
+#   - <git-sha>  (always)
+#   - main    -> `staging`
+#   - release -> `latest`
+#   - other   -> `next`
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: manual-docker-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Build the Linux artifacts (decentraland-godot-linux + libdclgodot_linux)
+  # that the Docker image is assembled from.
+  linux-build:
+    name: 🐧 Linux
+    uses: ./.github/workflows/linux_builds.yml
+
+  # Build the Docker image and force the push to quay.io via publish_docker.
+  docker-publish:
+    name: 🐳 Docker build & push to quay.io
+    needs: linux-build
+    uses: ./.github/workflows/docker_build_test.yml
+    with:
+      publish_docker: true
+    secrets:
+      QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}

@@ -27,6 +27,7 @@ var _first_time_refresh_warning = true
 var _last_parcel_position: Vector2i = Vector2i.MAX
 var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
+var _last_outlined_entity: Node3D = null
 var _is_loading: bool = true  # Start as loading
 var _ban_check_generation: int = 0
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
@@ -652,6 +653,16 @@ func change_tooltips():
 	if _avatar_under_crosshair != _last_outlined_avatar:
 		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
 		_last_outlined_avatar = _avatar_under_crosshair
+
+	# Handle the highlight (outline) for scene objects with show_highlight=true
+	var highlighted_entity: Node3D = Global.scene_runner.highlighted_entity
+	if not is_instance_valid(highlighted_entity):
+		highlighted_entity = null
+	if _session_hide_main_hud and _session_hide_world_interactions:
+		highlighted_entity = null
+	if highlighted_entity != _last_outlined_entity:
+		player.outline_system.set_outlined_entity(highlighted_entity)
+		_last_outlined_entity = highlighted_entity
 
 	# Filter tooltips based on hide UI sub-toggles
 	if _session_hide_main_hud and (_session_hide_view_profile or _session_hide_world_interactions):
