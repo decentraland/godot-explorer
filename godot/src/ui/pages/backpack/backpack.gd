@@ -12,7 +12,12 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 	"bid_accepted",
 ]
 
-@export var hide_background: bool = false
+@export var hide_background: bool = false:
+	set(value):
+		hide_background = value
+		if is_node_ready():
+			color_rect_background.visible = not value
+			texture_rect_background.visible = not value
 @export var hide_navbar: bool = false
 @export var default_main_category: String = Wearables.Categories.ALL
 ## When true, locks the embedded AvatarPreview to rotation only —

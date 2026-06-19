@@ -3,16 +3,15 @@ extends Control
 ## Lobby entry flow controller.
 ##
 ## Panel mapping (Figma screen -> Godot node):
-##   EULA               -> %Eula                 (checkbox + accept)
 ##   VERSION_UPGRADE     -> %VersionUpgrade       (update / not now)
-##   ACCOUNT_HOME        -> %Start                (create account / sign in)
+##   ACCOUNT_HOME        -> %AccountHome           (play as guest / sign in)
 ##   AUTH_HOME           -> %SignIn step1          (auth provider buttons)
 ##   AUTH_BROWSER_OPEN   -> %SignIn step2          (spinner + cancel)
-##   AVATAR_CREATE       -> %BackpackContainer     (backpack avatar editor)
-##   AVATAR_NAMING       -> %RestoreAndChooseName  (choose-name mode)
+##   AVATAR_CUSTOMIZE    -> %AvatarCustomize        (backpack avatar editor)
+##   AVATAR_NAMING       -> %AvatarNaming           (choose-name mode)
 ##   COMEBACK            -> %RestoreAndChooseName  (restore mode: welcome back)
-##   LOBBY_LOADING       -> %Loading               (spinner)
-##   FTUE                -> $Main/FTUE              (first time user experience)
+##   DCL_SPLASH          -> %DclSplash              (spinner)
+##   DISCOVER_FTUE       -> %DiscoverFtue            (first time user experience)
 ##
 ## Auth flow (Create Account / Sign In only changes the label):
 ##   EULA -> ACCOUNT_HOME -> AUTH_HOME -> (auth)
@@ -26,6 +25,8 @@ signal change_scene(new_scene_path: String)
 
 const FTUE_PLACE_ID: String = "780f04dd-eba1-41a8-b109-74896c87e98b"
 const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
+const BG_GRADIENT = preload("res://assets/backgrounds/gradient-background.png")
+const BG_DISCOVER = preload("res://assets/backgrounds/photo-background.png")
 
 var is_creating_account: bool = false
 
@@ -44,23 +45,25 @@ var _last_panel: Control = null
 var _playing: String
 var _logo_tap_count: int = 0
 var _logo_tap_timer: float = 0.0
+var _avatar_preview_defaults: Dictionary = {}
+var _discard_edit_confirmed = false
 
 @onready var control_main = %Main
 
 @onready var dcl_line_edit: VBoxContainer = %DclLineEdit
 
-@onready var control_loading = %Loading
-@onready var control_eula = %Eula
+@onready var control_dcl_splash = %DclSplash
 @onready var control_version_upgrade = %VersionUpgrade
 @onready var control_signin = %SignIn
-@onready var control_start = %Start
-@onready var control_backpack = %BackpackContainer
-@onready var control_choose_name: Control = %ChooseName
+@onready var control_account_home = %AccountHome
+@onready var control_account_home_loading = %AccountHomeLoading
+@onready var control_avatar_create = %AvatarCreate
+@onready var preset_carousel: PresetAvatarCarousel = %PresetAvatarCarousel
+@onready var control_avatar_customize = %AvatarCustomize
+@onready var control_avatar_naming: Control = %AvatarNaming
 @onready var control_comeback: Control = %Comeback
 
-@onready var loading_solid_bg: ColorRect = %LoadingSolidBg
-@onready var default_bg: TextureRect = %DefaultBg
-@onready var discover_bg: TextureRect = $DiscoverBg
+@onready var background: TextureRect = %Background
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
@@ -74,45 +77,44 @@ var _logo_tap_timer: float = 0.0
 @onready
 var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain
 
+@onready var avatar_preview_container_avatar_create: Control = %AvatarPreviewContainer_AvatarCreate
 @onready var avatar_preview_container_comeback: Control = %AvatarPreviewContainer_Comeback
-@onready var avatar_preview_container_choose_name: Control = %AvatarPreviewContainer_ChooseName
+@onready var avatar_preview_container_avatar_naming: Control = %AvatarPreviewContainer_AvatarNaming
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
-@onready var button_next = %Button_Next
+@onready var button_lets_go = %Button_LetsGo
 
 @onready var backpack = %Backpack
 @onready
 var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/RestoreNameHead/Label_SignedAsName
 
-@onready var button_continue_as_guest: Button = %Button_ContinueAsGuest
+@onready
+var button_play_as_guest: Button = $Main/AccountHome/MarginContainer/VBoxFixed/VBoxContainer/Button_PlayAsGuest
+
 @onready var button_enter_as_disposable_account: Button = %Button_EnterAsDisposableAccount
 @onready var button_back: Button = %Button_Back
 @onready var sign_in_title: Label = %SignInTitle
 @onready var sign_in_logo: TextureRect = %SignInLogo
 
-@onready var checkbox_eula: CheckBox = %CheckBox_Eula
-@onready var button_accept_eula: Button = %Button_AcceptEula
-
 @onready var label_version = %Label_Version
 
-@onready var control_ftue = %FTUE
-@onready var ftue_screen = %FTUE/FTUE
+@onready var control_discover_ftue = %DiscoverFtue
+@onready var ftue_screen = %DiscoverFtue/FTUE
 
-@onready var backgrounds = [loading_solid_bg, default_bg, discover_bg]
-@onready var control_with_discover_bg = [
-	control_ftue, control_comeback, control_choose_name, control_backpack
-]
+@onready var control_with_discover_bg = [control_account_home, control_account_home_loading]
+
+
+func set_background(texture: Texture2D) -> void:
+	background.texture = texture
+	background.show()
 
 
 func show_panel(child_node: Control, subpanel: Control = null):
-	for bg in backgrounds:
-		bg.hide()
-
-	if child_node == control_loading:
-		loading_solid_bg.show()
+	if child_node == control_dcl_splash:
+		set_background(BG_GRADIENT)
 	elif control_with_discover_bg.has(child_node):
-		discover_bg.show()
+		set_background(BG_DISCOVER)
 	else:
-		default_bg.show()
+		set_background(BG_GRADIENT)
 
 	for child in control_main.get_children():
 		child.hide()
@@ -139,27 +141,25 @@ func show_comeback_screen():
 	button_back.hide()
 	show_panel(control_comeback)
 	avatar_preview.reparent(avatar_preview_container_comeback)
+	_restore_avatar_preview_defaults()
 
 
+# gdlint:ignore = async-function-name
 func show_avatar_naming_screen():
 	track_lobby_screen("AVATAR_NAMING")
+	button_back.show()
+	show_panel(control_avatar_naming)
+	avatar_preview.reparent(avatar_preview_container_avatar_naming)
+	_restore_avatar_preview_defaults()
+	if current_profile:
+		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
+	_show_avatar_preview()
+
+
+func show_dcl_splash_screen():
+	current_screen_name = "DCL_SPLASH"
 	button_back.hide()
-	show_panel(control_choose_name)
-	avatar_preview.reparent(avatar_preview_container_choose_name)
-
-
-func show_loading_screen():
-	current_screen_name = "LOBBY_LOADING"
-	button_back.hide()
-	show_panel(control_loading)
-	loading_solid_bg.show()
-	default_bg.hide()
-
-
-func show_eula_screen():
-	track_lobby_screen("EULA")
-	button_back.hide()
-	show_panel(control_eula)
+	show_panel(control_dcl_splash)
 
 
 func show_version_upgrade_screen():
@@ -168,11 +168,24 @@ func show_version_upgrade_screen():
 	show_panel(control_version_upgrade)
 
 
+func _accept_eula() -> void:
+	if Global.analytics_controller != null:
+		Global.analytics_controller.on_eula_accepted_locally()
+	Global.get_config().terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
+	Global.get_config().save_to_settings_file()
+
+
 func show_account_home_screen():
 	track_lobby_screen("ACCOUNT_HOME")
 	button_back.hide()
 	_request_notification_permission_if_needed()
-	show_panel(control_start)
+	show_panel(control_account_home)
+
+
+func show_account_home_loading_screen():
+	track_lobby_screen("ACCOUNT_HOME_LOADING")
+	button_back.hide()
+	show_panel(control_account_home_loading)
 
 
 func _request_notification_permission_if_needed():
@@ -237,19 +250,82 @@ func show_auth_browser_open_screen(
 	button_try_again.hide()
 
 
-func show_control_ftue():
+func show_discover_ftue_screen():
 	current_screen_name = "DISCOVER_FTUE"
 	button_back.hide()
 	if current_profile:
 		ftue_screen.set_username(current_profile.get_name())
-	show_panel(control_ftue)
+	show_panel(control_discover_ftue)
 	ftue_screen.load_places()
 
 
 func show_avatar_create_screen():
 	track_lobby_screen("AVATAR_CREATE")
-	button_back.hide()
-	show_panel(control_backpack)
+	button_back.show()
+	show_panel(control_avatar_create)
+	avatar_preview.reparent(avatar_preview_container_avatar_create)
+	_set_avatar_preview_centered()
+	avatar_preview.anchors_preset = Control.PRESET_FULL_RECT
+	avatar_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	avatar_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var profile = Global.player_identity.get_mutable_profile()
+	if profile:
+		current_profile = profile
+		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
+	_show_avatar_preview()
+
+
+# gdlint:ignore = async-function-name
+func show_avatar_edit_screen():
+	track_lobby_screen("AVATAR_CUSTOMIZE")
+	button_back.show()
+	backpack.hide_background = false
+	show_panel(control_avatar_customize)
+	if current_profile:
+		Global.player_identity.set_profile(current_profile)
+		await get_tree().process_frame
+		await get_tree().process_frame
+	backpack.request_update_avatar = true
+	backpack.request_show_wearables = true
+
+
+func _on_button_edit_avatar_pressed():
+	Global.metrics.track_click_button("edit", current_screen_name, "")
+	show_avatar_edit_screen()
+
+
+func _on_button_avatar_create_next_pressed():
+	Global.metrics.track_click_button("next", current_screen_name, "")
+	show_avatar_naming_screen()
+
+
+# gdlint:ignore = async-function-name
+func _on_preset_selected(preset_data: Dictionary) -> void:
+	if preset_data.is_empty() or current_profile == null:
+		return
+
+	var avatar = current_profile.get_avatar()
+	avatar.set_body_shape(preset_data.get("body_shape", ""))
+
+	var wearables = PackedStringArray()
+	for w in preset_data.get("wearables", []):
+		wearables.append(w)
+	avatar.set_wearables(wearables)
+
+	var skin = preset_data.get("skin_color", {})
+	if not skin.is_empty():
+		avatar.set_skin_color(Color(skin.r, skin.g, skin.b, skin.get("a", 1.0)))
+
+	var hair = preset_data.get("hair_color", {})
+	if not hair.is_empty():
+		avatar.set_hair_color(Color(hair.r, hair.g, hair.b, hair.get("a", 1.0)))
+
+	var eyes = preset_data.get("eye_color", {})
+	if not eyes.is_empty():
+		avatar.set_eyes_color(Color(eyes.r, eyes.g, eyes.b, eyes.get("a", 1.0)))
+
+	current_profile.set_avatar(avatar)
+	await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
 
 
 # ADR-290: Snapshots no longer uploaded
@@ -270,19 +346,24 @@ func _ready():
 	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_disposable_account.visible = false
 
-	# The backpack ships with top_node_margin pointing at its own navbar (hidden
-	# via hide_navbar=true here), which leaves the preview without a real top
-	# reference. Wire the embedded preview to the lobby's "Create your avatar"
-	# label so the camera-fit overlap math has a properly-positioned anchor,
-	# and snap the avatar to the viewport top so it shows full-height behind
-	# the editor overlay instead of being sized into the uncovered slice.
-	var create_avatar_label: Label = $Main/BackpackContainer/MarginContainer/VBoxContainer/Label_Name
+	_avatar_preview_defaults = {
+		"margin_top": avatar_preview.preview_margin_top,
+		"margin_bottom": avatar_preview.preview_margin_bottom,
+		"margin_left": avatar_preview.preview_margin_left,
+		"margin_right": avatar_preview.preview_margin_right,
+		"snap_top": avatar_preview.snap_top_to_viewport,
+		"top_node": avatar_preview.top_node_margin,
+		"bottom_node": avatar_preview.bottom_node_margin,
+		"anchors_preset": avatar_preview.anchors_preset,
+		"size_flags_h": avatar_preview.size_flags_horizontal,
+		"size_flags_v": avatar_preview.size_flags_vertical,
+	}
+
 	backpack.avatar_preview.snap_top_to_viewport = true
-	backpack.avatar_preview.preview_margin_top = 30
-	backpack.avatar_preview.set_top_margin_node(create_avatar_label)
 
 	# Secret guest mode: double-tap logo when not in prod
 	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
+	preset_carousel.preset_selected.connect(_on_preset_selected)
 
 	# Lobby fires onboarding/auth events one at a time — ship them on a snappy 2s cadence.
 	# Menu/Explorer restore the default 10s when leaving the lobby.
@@ -298,9 +379,9 @@ func _ready():
 	login.set_lobby(self)
 	login.show()
 
-	show_loading_screen()
+	show_dcl_splash_screen()
 	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
-	print("[Startup] lobby.show_loading_screen: %dms" % startup_time_ms)
+	print("[Startup] lobby.show_dcl_splash_screen: %dms" % startup_time_ms)
 
 	if Global.is_mobile():
 		var gate_decision := await _async_run_version_gate()
@@ -359,27 +440,17 @@ func _ready():
 	var recovered := Global.player_identity.try_recover_account(session_account)
 	if recovered:
 		loading_first_profile = true
-		show_loading_screen()
+		show_dcl_splash_screen()
 	elif _skip_lobby:
-		show_loading_screen()
+		show_dcl_splash_screen()
 		go_to_explorer.call_deferred()
 	elif _skip_lobby_to_menu:
-		show_loading_screen()
+		show_dcl_splash_screen()
 		get_tree().change_scene_to_file.call_deferred(
 			"res://src/ui/components/organisms/menu/menu.tscn"
 		)
 	else:
-		var current_eula_version: int = Global.get_config().terms_and_conditions_version
-		# Force show EULA when benchmarking (even if already accepted)
-		if (
-			Global.cli.benchmark_report
-			or current_eula_version != Global.TERMS_AND_CONDITIONS_VERSION
-		):
-			if Global.cli.benchmark_report:
-				print("✓ Forcing EULA for benchmark flow")
-			show_eula_screen()
-		else:
-			show_account_home_screen()
+		show_account_home_screen()
 
 
 func _notification(what: int) -> void:
@@ -482,6 +553,7 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 
 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
+	_accept_eula()
 	Global.metrics.update_identity(address, is_guest)
 	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
 	Global.metrics.flush.call_deferred()
@@ -499,32 +571,6 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> vo
 	# Initialize social service early so Discover can show friends before entering explorer
 	if not is_guest:
 		Global.social_service.initialize_from_player_identity(Global.player_identity)
-
-
-func _on_check_box_eula_toggled(toggled_on: bool) -> void:
-	button_accept_eula.disabled = !toggled_on
-
-
-func _on_eula_check_area_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			checkbox_eula.button_pressed = !checkbox_eula.button_pressed
-
-
-func _on_eula_meta_clicked(meta: Variant) -> void:
-	Global.open_webview_url(meta)
-
-
-func _on_button_accept_eula_pressed() -> void:
-	Global.metrics.track_screen_viewed("ACCEPT_EULA", "")
-	Global.metrics.track_click_button("accept", "ACCEPT_EULA", "")
-	# Opens the consent gate (auto-flushes queued pre-consent events) and fires Firebase
-	# `eula_accepted` Key Event. All Firebase/Segment orchestration lives in the controller.
-	if Global.analytics_controller != null:
-		Global.analytics_controller.on_eula_accepted_locally()
-	Global.get_config().terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
-	Global.get_config().save_to_settings_file()
-	show_account_home_screen()
 
 
 func _on_button_update_pressed() -> void:
@@ -567,19 +613,19 @@ func _on_button_different_account_pressed():
 
 
 func _on_button_continue_pressed():
-	Global.metrics.track_click_button("next", current_screen_name, "")
-	_async_on_profile_changed(Global.player_identity.get_mutable_profile())
+	Global.metrics.track_click_button("done", current_screen_name, "")
+	current_profile = Global.player_identity.get_mutable_profile()
 	show_avatar_naming_screen()
 
 
 # gdlint:ignore = async-function-name
-func _on_button_next_pressed():
+func _on_button_lets_go_pressed():
 	Global.metrics.track_click_button("next", current_screen_name, "")
 	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
 	avatar_preview.hide()
-	show_loading_screen()
+	show_dcl_splash_screen()
 	current_profile.set_name(dcl_line_edit.line_edit.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
@@ -596,7 +642,7 @@ func _on_button_next_pressed():
 		Global.metrics.track_screen_viewed("AUTH_DEPLOY_SUCCESS", "")
 		Global.metrics.flush.call_deferred()
 
-	show_control_ftue()
+	show_discover_ftue_screen()
 
 
 func _on_button_random_name_pressed():
@@ -610,26 +656,66 @@ func _on_button_go_to_sign_in_pressed():
 	show_auth_home_screen()
 
 
+# gdlint:ignore = async-function-name
 func _on_button_back_pressed():
 	Global.metrics.track_click_button("back", current_screen_name, "")
+	if current_screen_name == "AVATAR_CUSTOMIZE":
+		await _async_confirm_discard_edit()
+		return
 	match current_screen_name:
-		"ACCOUNT_HOME":
-			show_eula_screen()
+		"AVATAR_CREATE":
+			show_account_home_screen()
 		"AVATAR_NAMING":
 			show_avatar_create_screen()
 		_:
 			show_account_home_screen()
 
 
+# gdlint:ignore = async-function-name
+func _async_confirm_discard_edit() -> void:
+	var modal = await Global.modal_manager._async_create_modal()
+	if not modal:
+		return
+	modal.set_title("Discard changes?")
+	modal.set_body("Your avatar changes won't be saved.")
+	modal.set_primary_button_text("DISCARD")
+	modal.set_secondary_button_text("CANCEL")
+	modal.hide_url()
+	modal.hide_icon()
+	modal.blocker = true
+	modal.show()
+
+	_discard_edit_confirmed = false
+	modal.button_primary.pressed.connect(_on_discard_confirmed)
+	modal.button_secondary.pressed.connect(_on_discard_cancelled)
+
+	await modal.tree_exited
+
+	if _discard_edit_confirmed:
+		Global.player_identity.set_profile(current_profile)
+		show_avatar_create_screen()
+
+
+func _on_discard_confirmed() -> void:
+	_discard_edit_confirmed = true
+	Global.modal_manager.close_current_modal()
+
+
+func _on_discard_cancelled() -> void:
+	Global.modal_manager.close_current_modal()
+
+
 func _handle_back_action():
 	match current_screen_name:
 		"ACCOUNT_HOME":
-			show_eula_screen()
+			show_account_home_screen()
 		"AUTH_HOME_ANDROID", "AUTH_HOME_IOS", "AUTH_HOME_DESKTOP":
 			show_account_home_screen()
 		"AUTH_BROWSER_OPEN":
 			_on_button_cancel_pressed()
-		"AVATAR_NAMING":
+		"AVATAR_CREATE":
+			show_account_home_screen()
+		"AVATAR_CUSTOMIZE", "AVATAR_NAMING":
 			show_avatar_create_screen()
 
 
@@ -722,27 +808,45 @@ func _get_device_anchor_id() -> String:
 
 
 # gdlint:ignore = async-function-name
-func _on_button_continue_as_guest_pressed():
-	Global.metrics.track_click_button("continue_as_guest", current_screen_name, "")
-	button_continue_as_guest.disabled = true
+func _on_button_play_as_guest_pressed():
+	Global.metrics.track_click_button("PLAY_GUEST", "ACCOUNT_HOME", "")
+	_accept_eula()
+	show_account_home_loading_screen()
 
-	# Mirror the social-login flow: flag `waiting_for_new_wallet` so the
-	# wallet_connected → async_fetch_profile → profile_changed chain routes
-	# us to comeback screen (existing profile) or avatar create (new wallet)
-	# instead of forcing one or the other manually.
 	waiting_for_new_wallet = true
 
 	var anchor: String = _get_device_anchor_id()
 	var promise: Promise = Global.player_identity.async_create_guest_account(anchor)
 	var result = await PromiseUtils.async_awaiter(promise)
 
-	button_continue_as_guest.disabled = false
-
 	if result is PromiseError:
 		waiting_for_new_wallet = false
 		var error_text: String = result.get_error()
 		push_error("Guest login failed: " + error_text)
 		_show_auth_error("Could not start guest session: " + error_text)
+
+
+func _set_avatar_preview_centered() -> void:
+	avatar_preview.preview_margin_top = 0
+	avatar_preview.preview_margin_bottom = 0
+	avatar_preview.preview_margin_left = 0
+	avatar_preview.preview_margin_right = 0
+	avatar_preview.snap_top_to_viewport = false
+	avatar_preview.top_node_margin = null
+	avatar_preview.bottom_node_margin = null
+
+
+func _restore_avatar_preview_defaults() -> void:
+	avatar_preview.preview_margin_top = _avatar_preview_defaults.get("margin_top", 0)
+	avatar_preview.preview_margin_bottom = _avatar_preview_defaults.get("margin_bottom", 0)
+	avatar_preview.preview_margin_left = _avatar_preview_defaults.get("margin_left", 0)
+	avatar_preview.preview_margin_right = _avatar_preview_defaults.get("margin_right", 0)
+	avatar_preview.snap_top_to_viewport = _avatar_preview_defaults.get("snap_top", false)
+	avatar_preview.top_node_margin = _avatar_preview_defaults.get("top_node", null)
+	avatar_preview.bottom_node_margin = _avatar_preview_defaults.get("bottom_node", null)
+	avatar_preview.anchors_preset = _avatar_preview_defaults.get("anchors_preset", 0)
+	avatar_preview.size_flags_horizontal = _avatar_preview_defaults.get("size_flags_h", 0)
+	avatar_preview.size_flags_vertical = _avatar_preview_defaults.get("size_flags_v", 0)
 
 
 func _show_avatar_preview():
@@ -772,14 +876,14 @@ func _on_deep_link_received():
 
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
-	button_next.disabled = dcl_line_edit.error
+	button_lets_go.disabled = dcl_line_edit.error
 	if dcl_line_edit.error:
 		if not avatar_preview.avatar.emote_controller.is_playing() or _playing != "shrug":
 			avatar_preview.avatar.emote_controller.async_play_emote("shrug")
 			_playing = "shrug"
 	else:
 		if (
-			!button_next.disabled and not avatar_preview.avatar.emote_controller.is_playing()
+			!button_lets_go.disabled and not avatar_preview.avatar.emote_controller.is_playing()
 			or _playing != "fistpump"
 		):
 			avatar_preview.avatar.emote_controller.async_play_emote("fistpump")
@@ -808,10 +912,3 @@ func _async_run_version_gate() -> String:
 	elif result == "soft":
 		gate.show_overlay(true)
 	return result
-
-
-func _on_button_play_as_guest_pressed() -> void:
-	Global.metrics.track_click_button("create_account", current_screen_name, "")
-	sign_in_title.text = "Create your account"
-	is_creating_account = true
-	show_auth_home_screen()

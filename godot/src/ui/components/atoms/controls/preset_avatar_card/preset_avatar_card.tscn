@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://bgto6sb7rteeh"]
+
+[ext_resource type="Script" uid="uid://bambedk7nni8n" path="res://src/ui/components/atoms/controls/preset_avatar_card/preset_avatar_card.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uvcbl"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.2)
+shadow_size = 5
+shadow_offset = Vector2(0, 3)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pak11"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0, 0, 0, 0.69803923)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.7764706, 0.2509804, 0.8039216, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.2)
+shadow_size = 5
+shadow_offset = Vector2(0, 3)
+
+[node name="PresetAvatarCard" type="Button" unique_id=1943433021]
+custom_minimum_size = Vector2(160, 360)
+offset_right = 160.0
+offset_bottom = 360.0
+focus_mode = 0
+mouse_filter = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_uvcbl")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pak11")
+theme_override_styles/hover = SubResource("StyleBoxFlat_uvcbl")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pak11")
+toggle_mode = true
+script = ExtResource("1_script")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1010188716]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 3
+stretch_mode = 6

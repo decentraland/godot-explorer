@@ -9,8 +9,8 @@ signal items_loaded(places: Array[Dictionary])
 
 enum Mode { FTUE, BANNER }
 
-const FTUE_SELECTED_SIZE = Vector2(600, 480)
-const FTUE_UNSELECTED_SIZE = Vector2(550, 440)
+const FTUE_SELECTED_SIZE = Vector2(624, 350)
+const FTUE_UNSELECTED_SIZE = Vector2(530, 300)
 const BANNER_SELECTED_SIZE = Vector2(624, 350)
 const BANNER_UNSELECTED_SIZE = Vector2(530, 300)
 const CARD_SCENE_PATH = "res://src/ui/components/molecules/snap_carousel/snap_carousel_card.tscn"
