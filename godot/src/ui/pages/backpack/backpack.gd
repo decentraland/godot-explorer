@@ -187,9 +187,12 @@ func _ready():
 	if remote_wearables != null:
 		remote_wearables.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
 		for wearable_item in remote_wearables.elements:
-			wearable_data[wearable_item.urn] = null
-			if not _wearable_acquired_at.has(wearable_item.urn):
-				_wearable_acquired_at[wearable_item.urn] = int(wearable_item.transferet_at)
+			# The lambda yields the token-instance urn; collapse to the ITEM urn so it
+			# dedupes against the recent-owned API / live inject (see _to_item_urn).
+			var item_urn := _to_item_urn(wearable_item.urn, wearable_item.token_id)
+			wearable_data[item_urn] = null
+			if not _wearable_acquired_at.has(item_urn):
+				_wearable_acquired_at[item_urn] = int(wearable_item.transferet_at)
 
 	# Dev/testing: inject fake-owned wearables from deeplink (see FORCE_DEEPLINK in global.gd).
 	for fake_urn in Global.deep_link_obj.fake_owned_wearables:
@@ -428,6 +431,14 @@ func _load_filtered_data(filter: String):
 				if can_use:
 					filtered_data.push_back(wearable_id)
 
+	print(
+		"[Dedup] filter=",
+		filter,
+		" wearable_data=",
+		wearable_data.size(),
+		" filtered_data=",
+		filtered_data.size()
+	)
 	request_show_wearables = true
 
 
@@ -889,6 +900,19 @@ func _persist_backpack_seen() -> void:
 	Global.get_config().save_to_settings_file()
 
 
+# Owned collectibles enter wearable_data from two sources with different urn forms: the
+# catalyst lambda yields the token-instance urn (…:<itemId>:<tokenId>, from
+# individualData[].id) while the fast recent-owned API and the live inject yield the ITEM
+# urn (…:<itemId>). Keying by both forms lists the same wearable twice — every item shows
+# duplicated. Collapse to the ITEM urn, the canonical form get_wearable/can_equip/the
+# avatar profile all use, so the two sources dedupe and equipped collectibles match the
+# profile's item urns. token_id is the parsed tokenId; base/off-chain items have none.
+func _to_item_urn(urn: String, token_id: String) -> String:
+	if not token_id.is_empty() and urn.ends_with(":" + token_id):
+		return urn.trim_suffix(":" + token_id)
+	return urn
+
+
 # gdlint:ignore = async-function-name
 func _async_inject_wearable(urn: String) -> void:
 	print("[Inject] START urn=", urn, " already_in_data=", wearable_data.has(urn))
@@ -955,10 +979,13 @@ func _async_refresh_owned_wearables() -> void:
 	# makes the Rust binding panic with BadArrayType and crashes the app.
 	var new_keys: Array = []
 	for wearable_item in remote_wearables.elements:
-		if not wearable_data.has(wearable_item.urn):
-			wearable_data[wearable_item.urn] = null
-			new_keys.append(wearable_item.urn)
-			_wearable_acquired_at[wearable_item.urn] = int(wearable_item.transferet_at)
+		# Collapse the lambda's token-instance urn to the ITEM urn (see _to_item_urn) so it
+		# dedupes against entries already added by the recent-owned API / live inject.
+		var item_urn := _to_item_urn(wearable_item.urn, wearable_item.token_id)
+		if not wearable_data.has(item_urn):
+			wearable_data[item_urn] = null
+			new_keys.append(item_urn)
+			_wearable_acquired_at[item_urn] = int(wearable_item.transferet_at)
 
 	if new_keys.is_empty():
 		return
