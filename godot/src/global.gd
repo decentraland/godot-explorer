@@ -19,6 +19,7 @@ signal open_settings
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover
+signal open_credits
 signal open_own_profile
 signal open_profile_editor
 signal open_navbar_silently
@@ -27,11 +28,15 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal upgrade_to_otp
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
-## Sync settings "Hide View Profile" / "Hide World Interactions" checkboxes.
+## Sync settings "Hide View Profile" / "Hide World Interactions" / etc. checkboxes.
 signal session_hide_ui_options_sync(
-	hide_view_profile: bool, hide_world_interactions: bool, hide_player_names: bool
+	hide_view_profile: bool,
+	hide_world_interactions: bool,
+	hide_player_names: bool,
+	hide_scene_ui: bool
 )
 signal camera_mode_set(camera_mode: Global.CameraMode)
 signal camera_mode_block_changed(blocked: bool)
@@ -116,6 +121,10 @@ var session_id: String
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
 
+# Seeds Sentry user / context / tags from realm / scene_fetcher /
+# player_identity / comms signals. Instantiated alongside scene_fetcher.
+var sentry_seeder: SentrySeeder = null
+
 # Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
 # token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
 # see attestation_service.gd. Other code obtains a token via
@@ -135,13 +144,45 @@ var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
 
+# Guards sign_out() against re-entrancy. comms.disconnect(true) emits the
+# player_identity.logout signal deferred, which can route back into sign_out() a
+# frame later; without this the whole teardown + scene swap would run twice.
+# Cleared in lobby._ready once we're back on a clean screen.
+var _signing_out: bool = false
+
+# Guards return_to_discover() against re-entrancy (e.g. a double tap on the Dev
+# Tools button before the deferred scene swap runs). Cleared in menu._ready once
+# we're back on the standalone Discover screen.
+var _returning_to_discover: bool = false
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
 
 
 func is_emulating_safe_area() -> bool:
-	return cli.emulate_ios or cli.emulate_android
+	return should_emulate_ios() or should_emulate_android()
+
+
+## Emulation flags are desktop-preview only; ignore them on a real device (the
+## editor forwards its run args to one-click device deploys, which would
+## otherwise force the emulated window size on the phone).
+func _is_native_mobile() -> bool:
+	return is_android() or is_ios()
+
+
+func should_emulate_ios() -> bool:
+	return cli.emulate_ios and not _is_native_mobile()
+
+
+func should_emulate_android() -> bool:
+	return cli.emulate_android and not _is_native_mobile()
+
+
+## True when GP benchmark was triggered, either via desktop CLI (`--gp-benchmark`)
+## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
+func is_gp_benchmark() -> bool:
+	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
 func _get_safe_area_presets() -> GDScript:
@@ -151,10 +192,10 @@ func _get_safe_area_presets() -> GDScript:
 
 
 func get_safe_area() -> Rect2i:
-	if cli.emulate_ios:
+	if should_emulate_ios():
 		var presets := _get_safe_area_presets()
 		return presets.get_ios_safe_area(is_orientation_portrait(), get_window().size)
-	if cli.emulate_android:
+	if should_emulate_android():
 		var presets := _get_safe_area_presets()
 		return presets.get_android_safe_area(is_orientation_portrait(), get_window().size)
 	return DisplayServer.get_display_safe_area()
@@ -181,14 +222,14 @@ func _ready():
 		_set_is_mobile(true)
 
 	# Handle safe area emulation (enables mobile mode and resizes window)
-	if cli.emulate_ios:
+	if should_emulate_ios():
 		_set_is_mobile(true)
 		var presets := _get_safe_area_presets()
 		var target_size: Vector2i = presets.get_ios_window_size(is_orientation_portrait())
 		get_window().size = target_size
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
-	elif cli.emulate_android:
+	elif should_emulate_android():
 		_set_is_mobile(true)
 		var presets := _get_safe_area_presets()
 		var target_size: Vector2i = presets.get_android_window_size(is_orientation_portrait())
@@ -196,7 +237,7 @@ func _ready():
 		get_window().move_to_center()
 		_instantiate_phone_frame_overlay()
 
-	if cli.landscape and (cli.emulate_ios or cli.emulate_android):
+	if cli.landscape and (should_emulate_ios() or should_emulate_android()):
 		set_orientation_landscape()
 
 	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
@@ -224,9 +265,16 @@ func _ready():
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
+		# Toggle the loopback debug WS server from the fake deeplink (desktop/CLI
+		# testing). Same handling as runtime deeplinks in DeepLinkRouter.
+		deep_link_router.apply_debug_ws_param(deep_link_obj.params.get("debug-ws", ""))
+
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
+
+		if deep_link_obj.iap_enabled:
+			Iap.enable()
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -326,6 +374,15 @@ func _ready():
 		get_tree().root.add_child.call_deferred(fi_runner)
 		return
 
+	# Genesis Plaza profiling benchmark (issue #1862). Lives alongside the full
+	# explorer flow: it primes realm/parcel, then samples once the scene loads.
+	# Skip if the deeplink path already spawned the runner (mobile cold-start race).
+	if is_gp_benchmark() and get_node_or_null("GPBenchmarkRunner") == null:
+		print("Running Genesis Plaza Benchmark...")
+		var gp_runner = load("res://src/tools/gp_benchmark_runner.gd").new()
+		gp_runner.set_name("GPBenchmarkRunner")
+		add_child(gp_runner)
+
 	session_id = DclConfig.generate_uuid_v4()
 	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
 	# telemetry is disabled at build time (CI desktop builds use the
@@ -338,15 +395,16 @@ func _ready():
 		self.metrics.set_debug_level(0)  # 0 off - 1 on
 		self.metrics.set_name("metrics")
 
-	# Sentry user / session tagging
-	if telemetry_enabled:
-		var sentry_user = SentryUser.new()
-		sentry_user.id = self.config.analytics_user_id
-		SentrySDK.set_tag("dcl_session_id", session_id)
-
 	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
+
+	# RefCounted, kept alive by this strong reference. Seeds Sentry user /
+	# context / tags from the runtime signals exposed by the subsystems
+	# created above. No scene-tree presence.
+	if telemetry_enabled:
+		self.sentry_seeder = SentrySeeder.new()
+		self.sentry_seeder.setup()
 
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
@@ -384,6 +442,16 @@ func _ready():
 		# spawns a transient Timer under Global only while polling for first_move_in_world.
 		self.analytics_controller = AnalyticsController.new()
 		self.analytics_controller.setup()
+
+		# iOS only: report the StoreKit environment (production/sandbox) to
+		# analytics once at startup. StoreKit's environment is fixed by how the
+		# binary was distributed and can't be chosen by the app, so this is the
+		# ground truth for which IAP backend a device will hit. We ship this
+		# BEFORE any purchase flow to validate in prod that real App Store
+		# installs report `production`. Deferred so it runs after every autoload
+		# (incl. Iap) is in the tree. See docs/iap-zone-submission/.
+		if self.is_ios():
+			Iap.report_environment_to_analytics.call_deferred()
 	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The
 	# service self-gates on EULA acceptance and caches the issued session token on disk.
 	self.attestation = AttestationService.new()
@@ -450,8 +518,12 @@ func _dcl_swift_lib_smoke_test() -> void:
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
-## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI
+## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI.
+## Skipped in bench mode: HardwareBenchmark calls viewport_set_measure_render_time and
+## can clobber the gp_benchmark_runner's measurement state mid-bench.
 func should_run_first_launch_benchmark() -> bool:
+	if cli.bench_mode:
+		return false
 	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
 
 
@@ -487,6 +559,13 @@ func _async_clear_cache_if_needed() -> void:
 
 
 func _init_dynamic_graphics_manager() -> void:
+	# In bench mode, skip DG init entirely: the bench runner pins force-graphic-profile,
+	# disables thermal cap, and disconnects DG's signal handlers anyway — initializing
+	# DG just adds startup CPU noise and queues thermal_fps_cap signals that race the
+	# bench setup.
+	if cli.bench_mode:
+		print("[DynamicGraphics] skipped (bench_mode=true)")
+		return
 	# Initialize with config values and connect signals
 	dynamic_graphics_manager.initialize(
 		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps
@@ -626,8 +705,40 @@ func get_explorer() -> Explorer:
 	return null
 
 
+## Single canonical sign-out / logout entry point. Tears down the live session —
+## explorer signals & timers, social streams, every running DCL scene, comms,
+## realm, scene-fetcher state and the Rust player identity — then returns to a
+## fresh lobby so the next login starts as if the app had restarted. Every UI
+## logout button and the disconnect handler funnel through here.
 func sign_out() -> void:
+	if _signing_out:
+		return
+	_signing_out = true
+
+	# 1. Tear down the live Explorer first, while it is still in the tree, so its
+	#    autoload-signal callbacks and retry timers are severed before the steps
+	#    below re-emit any of those signals (orientation, realm clear, scene kill)
+	#    or free the Explorer node.
+	var explorer := get_explorer()
+	if explorer != null:
+		explorer.prepare_for_logout()
+
+	# 2. Stop session pollers and tear down the social gRPC streams.
 	NotificationsManager.stop_polling()
+	# Wipe the previous account's in-memory notification history so it can't leak
+	# into the next session's panel/bell badge (issue #2104).
+	NotificationsManager.clear_notification_history()
+	# Drop the previous account's event reminders so they can't fire on the
+	# device after sign-out. Only "event_" entries (per-account attended-event
+	# reminders) are cleared; the per-install day1 welcome is preserved. The
+	# sync-on-next-login REMOVE pass only runs for an authenticated account, so
+	# without this a signed-out/guest session keeps the old reminders scheduled.
+	NotificationsManager.clear_event_local_notifications()
+	# The analytics first-move poll (a Timer under this autoload) reads
+	# scene_runner.player_body_node; left running it would poll the freed Player
+	# after the swap, panicking the #[var] getter. It restarts on the next login.
+	if analytics_controller != null:
+		analytics_controller.cancel_first_move_poll()
 	social_service.unsubscribe_from_updates()
 	social_service.unsubscribe_from_connectivity_updates()
 	social_service.unsubscribe_from_block_updates()
@@ -637,12 +748,111 @@ func sign_out() -> void:
 	social_service.disconnect()
 	social_blacklist.clear_blocked()
 	social_blacklist.clear_muted()
+
+	# 3. Kill every running DCL scene. kill_all_scenes() marks them ToKill; the
+	#    SceneManager reaps them in the background (reap_dying_scenes runs even
+	#    while the lobby pauses the runner), tearing down their V8/Deno threads.
+	scene_runner.kill_all_scenes()
+
+	# 4. Reset realm and scene-fetcher state so nothing from the old session leaks
+	#    into the next login. async_clear_realm() runs synchronously here (it only
+	#    zeroes realm fields and kills scenes — no network await before returning).
+	realm.async_clear_realm()
+	scene_fetcher.reset_for_logout()
+
+	# 5. Close comms (MainRoom / SceneRoom / LiveKit) AND clear the Rust player
+	#    identity (wallet + ephemeral keys). disconnect(true) is idempotent: a
+	#    second logout() no-ops once the address is already cleared.
+	comms.disconnect(true)
+
+	# 6. Erase the persisted session (ephemeral keys / wallet bytes) from disk.
+	#    Everything else (graphics, last realm, content cache) is intentionally
+	#    kept — this is a sign-out, not a factory reset.
+	#
+	#    Note: the scene_runner's player-node handles (and base_ui) are deliberately
+	#    left as-is — once the Explorer is freed they report is_instance_valid()==false
+	#    and the SceneManager's existing guards skip them; explorer._ready() reassigns
+	#    them on the next login.
 	get_config().session_account = {}
+	# Forget the previous identity so the next account starts fresh — otherwise
+	# the prior profile/avatar lingers in memory and leaks into the new account's
+	# avatar editor (issue #1658). Also drop the saved guest look on explicit
+	# sign-out to close the guest->guest leak vector.
+	get_config().guest_profile = {}
+	player_identity.reset_identity()
 	get_config().save_to_settings_file()
+
 	# Lobby/login is portrait-only; reset orientation so logging out from a
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
-	get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
+
+	# 8. Swap to a fresh lobby on the next frame, after the current signal/await
+	#    stack fully unwinds (sign_out may have been reached via the deferred
+	#    logout signal). lobby._ready clears _signing_out.
+	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
+
+
+## Soft sign-out used by the Dev Tools "RETURN TO DISCOVER" button. Leaves the
+## current world and drops the user back on the standalone Discover menu WHILE
+## staying signed in: it tears down the live Explorer, every running DCL scene,
+## comms world rooms and realm / scene-fetcher state, but deliberately KEEPS the
+## player identity, the persisted session, the social gRPC streams and the
+## notification polling intact.
+##
+## This mirrors the world-teardown half of [sign_out]; the two intentionally
+## differ — sign_out additionally drops the social streams, wipes the
+## session/identity and returns to the sign-in lobby. When adding a new
+## world/scene subsystem to tear down, update BOTH paths.
+func return_to_discover() -> void:
+	if _returning_to_discover or _signing_out:
+		return
+	_returning_to_discover = true
+
+	# 1. Tear down the live Explorer first, while it is still in the tree, so its
+	#    autoload-signal callbacks and retry timers are severed before the steps
+	#    below re-emit any of those signals or free the Explorer node. No-op when
+	#    the button is pressed from the standalone Discover menu (no Explorer yet).
+	var explorer := get_explorer()
+	if explorer != null:
+		explorer.prepare_for_logout()
+
+	# 2. Stop the analytics first-move poll: it reads scene_runner.player_body_node,
+	#    which is freed once the Explorer goes away — left running, its #[var]
+	#    getter would panic on the freed Player. It re-arms on the next
+	#    loading_finished (i.e. when the user jumps into a world again).
+	if analytics_controller != null:
+		analytics_controller.cancel_first_move_poll()
+
+	# 3. Kill every running DCL scene. The SceneManager reaps them in the
+	#    background (reap_dying_scenes runs even while Discover pauses the runner).
+	scene_runner.kill_all_scenes()
+
+	# 4. Reset realm and scene-fetcher state so nothing from the world we just left
+	#    leaks into the next jump-in. This matches the post-login Discover state,
+	#    where no realm is joined yet.
+	realm.async_clear_realm()
+	scene_fetcher.reset_for_logout()
+
+	# 5. Close comms world rooms (MainRoom / SceneRoom / LiveKit). Pass `false` so
+	#    the Rust player identity (wallet + ephemeral keys) is KEPT — this is the
+	#    key difference from sign_out, which passes `true` to also log out.
+	comms.disconnect(false)
+
+	# NOTE: unlike sign_out we deliberately DO NOT stop NotificationsManager
+	# polling, drop the social gRPC streams, clear the blacklist, or wipe the
+	# persisted session — the session stays alive and the Discover screen's
+	# friends/notifications keep working.
+
+	# Discover/menu is portrait-only; reset orientation so returning from a
+	# landscape in-world screen (settings) doesn't strand the user in landscape.
+	set_orientation_portrait()
+
+	# Swap to the standalone Discover menu on the next frame, after the current
+	# call stack (the settings button handler) fully unwinds. menu._ready clears
+	# _returning_to_discover.
+	get_tree().change_scene_to_file.call_deferred(
+		"res://src/ui/components/organisms/menu/menu.tscn"
+	)
 
 
 func explorer_has_focus() -> bool:
@@ -784,11 +994,11 @@ func set_orientation_landscape():
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
-	elif cli.emulate_ios:
+	elif should_emulate_ios():
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(false)
 		get_window().move_to_center()
-	elif cli.emulate_android:
+	elif should_emulate_android():
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_android_window_size(false)
 		get_window().move_to_center()
@@ -807,11 +1017,11 @@ func set_orientation_portrait():
 	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
-	elif cli.emulate_ios:
+	elif should_emulate_ios():
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_ios_window_size(true)
 		get_window().move_to_center()
-	elif cli.emulate_android:
+	elif should_emulate_android():
 		var presets := _get_safe_area_presets()
 		get_window().size = presets.get_android_window_size(true)
 		get_window().move_to_center()
@@ -939,7 +1149,7 @@ func async_join_world(world_realm: String) -> void:
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func http_method_to_string(method: int) -> String:
+func _http_method_to_string(method: int) -> String:
 	match method:
 		HTTPClient.METHOD_GET:
 			return "GET"
@@ -965,7 +1175,7 @@ func http_method_to_string(method: int) -> String:
 
 func async_signed_fetch(url: String, method: int, _body: String = ""):
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, _body, http_method_to_string(method)
+		url, _body, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 
@@ -1089,3 +1299,24 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 		return
 	camera_mode_blocked = blocked
 	camera_mode_block_changed.emit(blocked)
+
+
+# Stable per-install device anchor used to derive the thirdweb guest session.
+# Android: SSAID via the native plugin; iOS: Keychain UUID; desktop: empty
+# (Rust falls back to the `user://device_anchor.txt` UUID). Shared by the lobby
+# guest-login flow and the "Upgrade to OTP" modal so both derive the same wallet.
+#
+# Android note: `has_method()` always returns false for JNISingleton methods
+# (Object.has_method consults ClassDB, the Android plugin method_map is
+# separate). Don't guard the Android call with has_method or it silently no-ops.
+# See: https://github.com/godotengine/godot/issues/106436
+func get_device_anchor_id() -> String:
+	if self.is_android():
+		var plugin = Engine.get_singleton("dcl-godot-android")
+		if plugin != null:
+			return plugin.getDeviceAnchorId()
+	elif self.is_ios():
+		var plugin = Engine.get_singleton("DclGodotiOS")
+		if plugin != null and plugin.has_method("get_device_anchor_id"):
+			return plugin.get_device_anchor_id()
+	return ""

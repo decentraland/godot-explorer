@@ -60,13 +60,14 @@
 [ext_resource type="StyleBox" uid="uid://bknvp87n5bpcq" path="res://assets/themes/wearable_disabled.tres" id="42_t5yfb"]
 [ext_resource type="StyleBox" uid="uid://d0clnpkagvv6p" path="res://assets/themes/wearable_normal.tres" id="43_xl2gf"]
 [ext_resource type="StyleBox" uid="uid://u0fvwsl85ccd" path="res://assets/themes/wearable_pressed.tres" id="44_xl2gf"]
-[ext_resource type="StyleBox" uid="uid://ckqgf0uht1qam" path="res://assets/themes/secondary_outlined_disabled_small.tres" id="45_s5chg"]
 [ext_resource type="StyleBox" uid="uid://dos4er8sw2ap6" path="res://assets/themes/wearable_secondary_disabled.tres" id="46_jqsp7"]
 [ext_resource type="StyleBox" uid="uid://dtmqafi614027" path="res://assets/themes/secondary_outlined_normal_small.tres" id="46_s5chg"]
 [ext_resource type="StyleBox" uid="uid://djspketxj6yml" path="res://assets/themes/wearable_secondary.tres" id="47_ls4j2"]
 [ext_resource type="StyleBox" uid="uid://h6dr7o31osb3" path="res://assets/themes/secondary_outlined_pressed_small.tres" id="47_s5chg"]
 [ext_resource type="StyleBox" uid="uid://b710k2wnilt8k" path="res://assets/themes/secondary_outlined_disabled.tres" id="48_4mmh5"]
 [ext_resource type="StyleBox" uid="uid://bjtof22i81o4x" path="res://assets/themes/wearable_secondary_press_hover.tres" id="48_ec0gy"]
+[ext_resource type="StyleBox" path="res://assets/themes/secondary_outlined_medium_disabled.tres" id="48_vyto1"]
+[ext_resource type="StyleBox" path="res://assets/themes/secondary_outlined_medium.tres" id="48_x5msw"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="51_adyvx"]
 [ext_resource type="StyleBox" uid="uid://bk5rtvwf5rno4" path="res://assets/themes/dcl_theme/touchable_disabled.tres" id="51_b8nvg"]
 [ext_resource type="StyleBox" uid="uid://dkykkgjyku6h1" path="res://assets/themes/secondary_outlined_normal.tres" id="51_x5msw"]
@@ -774,6 +775,23 @@ SecondaryLittle/styles/normal = ExtResource("37_k33ds")
 SecondaryLittle/styles/normal_mirrored = ExtResource("37_k33ds")
 SecondaryLittle/styles/pressed = ExtResource("35_aywie")
 SecondaryLittle/styles/pressed_mirrored = ExtResource("35_aywie")
+SecondaryMediumOutlined/base_type = &"Button"
+SecondaryMediumOutlined/colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryMediumOutlined/colors/font_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.49803922)
+SecondaryMediumOutlined/colors/font_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+SecondaryMediumOutlined/font_sizes/font_size = 24
+SecondaryMediumOutlined/fonts/font = ExtResource("51_adyvx")
+SecondaryMediumOutlined/styles/disabled = ExtResource("48_vyto1")
+SecondaryMediumOutlined/styles/disabled_mirrored = ExtResource("48_vyto1")
+SecondaryMediumOutlined/styles/focus = ExtResource("48_4mmh5")
+SecondaryMediumOutlined/styles/hover = ExtResource("48_4mmh5")
+SecondaryMediumOutlined/styles/hover_mirrored = ExtResource("48_4mmh5")
+SecondaryMediumOutlined/styles/hover_pressed = ExtResource("48_4mmh5")
+SecondaryMediumOutlined/styles/hover_pressed_mirrored = ExtResource("48_4mmh5")
+SecondaryMediumOutlined/styles/normal = ExtResource("48_x5msw")
+SecondaryMediumOutlined/styles/normal_mirrored = ExtResource("48_x5msw")
+SecondaryMediumOutlined/styles/pressed = ExtResource("48_4mmh5")
+SecondaryMediumOutlined/styles/pressed_mirrored = ExtResource("48_4mmh5")
 SecondaryOutlinedButton/base_type = &"Button"
 SecondaryOutlinedButton/colors/font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
 SecondaryOutlinedButton/colors/font_disabled_color = Color(0.627451, 0.60784316, 0.65882355, 0.5019608)
@@ -805,7 +823,7 @@ SecondaryOutlinedSmall/constants/h_separation = 10
 SecondaryOutlinedSmall/constants/icon_max_width = 24
 SecondaryOutlinedSmall/font_sizes/font_size = 24
 SecondaryOutlinedSmall/fonts/font = ExtResource("51_adyvx")
-SecondaryOutlinedSmall/styles/disabled = ExtResource("45_s5chg")
+SecondaryOutlinedSmall/styles/disabled = ExtResource("48_vyto1")
 SecondaryOutlinedSmall/styles/normal = ExtResource("46_s5chg")
 SecondaryOutlinedSmall/styles/pressed = ExtResource("47_s5chg")
 SectionsButtonBackpack/base_type = &"Button"

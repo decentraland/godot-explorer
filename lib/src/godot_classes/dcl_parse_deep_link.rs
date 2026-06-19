@@ -72,9 +72,18 @@ pub struct DclParseDeepLink {
     #[var]
     low_spec_warning: bool,
 
+    /// Genesis Plaza profiling benchmark trigger (gp-benchmark=true).
+    /// Mobile alternative to the desktop `--gp-benchmark` CLI flag.
+    #[var]
+    gp_benchmark: bool,
+
     /// Show transparent safe-area debug overlay (deep link param: safemargindebug=true)
     #[var]
     safe_margin_debug: bool,
+
+    /// Enable IAP UI and StoreKit listening (deep link param: iap_enabled=true)
+    #[var]
+    iap_enabled: bool,
 }
 
 #[godot_api]
@@ -105,7 +114,9 @@ impl DclParseDeepLink {
             scene_inspector: GString::new(),
             scene_inspector_file: false,
             low_spec_warning: false,
+            gp_benchmark: false,
             safe_margin_debug: false,
+            iap_enabled: false,
         }
     }
 
@@ -137,7 +148,9 @@ impl DclParseDeepLink {
             scene_inspector: GString::from(&r.scene_inspector),
             scene_inspector_file: r.scene_inspector_file,
             low_spec_warning: r.low_spec_warning,
+            gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
+            iap_enabled: r.iap_enabled,
         }
     }
 }

@@ -343,6 +343,9 @@ func async_close_sign_in():
 # gdlint:ignore = async-function-name
 func _ready():
 	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
+	# Back on a clean screen — release the sign-out re-entrancy guard so a future
+	# logout can run (no-op on normal startup, where it is already false).
+	Global._signing_out = false
 	label_version.set_text(DclGlobal.get_version_with_env())
 	button_enter_as_disposable_account.visible = false
 
@@ -411,6 +414,8 @@ func _ready():
 		_skip_lobby = true
 	if Global.cli.skip_lobby_to_menu:
 		_skip_lobby_to_menu = true
+	if Global.is_gp_benchmark():
+		_skip_lobby = true
 
 	# Preview deeplink: create guest and skip lobby for hot reload development
 	if not Global.deep_link_obj.preview.is_empty():
@@ -418,7 +423,11 @@ func _ready():
 
 	var session_account: Dictionary = Global.get_config().session_account
 
-	if Global.cli.guest_profile or not Global.deep_link_obj.preview.is_empty():
+	if (
+		Global.cli.guest_profile
+		or Global.is_gp_benchmark()
+		or not Global.deep_link_obj.preview.is_empty()
+	):
 		# Mark session as ephemeral so guest data is never persisted to disk,
 		# preserving any previously saved wallet session.
 		Global.get_config().session_is_ephemeral = true
@@ -427,7 +436,12 @@ func _ready():
 		# copy loop in save_to_settings_file() to lose the saved wallet session.
 		session_account = {}
 		Global.player_identity.create_disposable_account()
-		Global.player_identity.set_random_profile()
+		if Global.is_gp_benchmark():
+			var fixed_profile := DclUserProfile.randomized_with_seed(1862)
+			fixed_profile.set_ethereum_address(Global.player_identity.get_address_str())
+			Global.player_identity.set_profile(fixed_profile)
+		else:
+			Global.player_identity.set_random_profile()
 		var random_profile = Global.player_identity.get_profile_or_null()
 		if random_profile != null:
 			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
@@ -790,21 +804,8 @@ func _on_button_enter_as_disposable_account_pressed():
 # on iOS) used to derive a deterministic thirdweb guest wallet. Empty string
 # means "no native anchor available" — Rust falls back to a UUID stored in
 # user:// so desktop still works.
-#
-# Android note: `has_method()` always returns false for JNISingleton methods
-# (Object.has_method consults ClassDB, the Android plugin method_map is
-# separate). Don't guard the call with has_method or it silently no-ops.
-# See: https://github.com/godotengine/godot/issues/106436
 func _get_device_anchor_id() -> String:
-	if Global.is_android():
-		var plugin = Engine.get_singleton("dcl-godot-android")
-		if plugin != null:
-			return plugin.getDeviceAnchorId()
-	elif Global.is_ios():
-		var plugin = Engine.get_singleton("DclGodotiOS")
-		if plugin != null and plugin.has_method("get_device_anchor_id"):
-			return plugin.get_device_anchor_id()
-	return ""
+	return Global.get_device_anchor_id()
 
 
 # gdlint:ignore = async-function-name

@@ -1,0 +1,289 @@
+[gd_scene load_steps=12 format=3 uid="uid://b8wupgotppopup"]
+
+[ext_resource type="Script" uid="uid://dxq8wupgotppop" path="res://src/ui/components/organisms/menu/upgrade_otp_popup.gd" id="1_otp01"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_otp01"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_otp01"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_otp01"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="5_otp01"]
+
+[sub_resource type="Gradient" id="Gradient_otp01"]
+offsets = PackedFloat32Array(0.00296736, 1)
+colors = PackedColorArray(0.776471, 0.25098, 0.803922, 1, 0.411765, 0.121569, 0.662745, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_otp01"]
+gradient = SubResource("Gradient_otp01")
+fill_to = Vector2(0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font = ExtResource("2_otp01")
+font_size = 48
+
+[sub_resource type="LabelSettings" id="LabelSettings_sub"]
+font = ExtResource("3_otp01")
+font_size = 33
+
+[sub_resource type="LabelSettings" id="LabelSettings_err"]
+font = ExtResource("3_otp01")
+font_size = 26
+font_color = Color(1, 0.32549, 0.32549, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_sep"]
+
+[node name="UpgradeOtpPopUp" type="TextureRect" unique_id=1900000001]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_otp01")
+script = ExtResource("1_otp01")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1900000002]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 150
+theme_override_constants/margin_top = 100
+theme_override_constants/margin_right = 150
+theme_override_constants/margin_bottom = 100
+
+[node name="EmailStep" type="VBoxContainer" parent="MarginContainer" unique_id=1900000003]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/EmailStep" unique_id=1900000004]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Label" type="Label" parent="MarginContainer/EmailStep/VBoxContainer2" unique_id=1900000005]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Add Email Recovery"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Label2" type="Label" parent="MarginContainer/EmailStep/VBoxContainer2" unique_id=1900000006]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Link an email to recover this account. Your wallet address stays the same."
+label_settings = SubResource("LabelSettings_sub")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LineEdit_Email" type="LineEdit" parent="MarginContainer/EmailStep/VBoxContainer2" unique_id=1900000007]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(500, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("4_otp01")
+theme_override_font_sizes/font_size = 30
+placeholder_text = "you@example.com"
+keep_editing_on_text_submit = true
+
+[node name="Label_EmailError" type="Label" parent="MarginContainer/EmailStep/VBoxContainer2" unique_id=1900000008]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+label_settings = SubResource("LabelSettings_err")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/EmailStep" unique_id=1900000009]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+theme_override_constants/separation = 20
+alignment = 2
+
+[node name="Button_SendCode" type="Button" parent="MarginContainer/EmailStep/VBoxContainer" unique_id=1900000010]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme = ExtResource("4_otp01")
+theme_override_font_sizes/font_size = 30
+text = "SEND CODE"
+
+[node name="Button_Cancel" type="Button" parent="MarginContainer/EmailStep/VBoxContainer" unique_id=1900000011]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme = ExtResource("4_otp01")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 30
+text = "CANCEL"
+
+[node name="ProcessingScreen" type="VBoxContainer" parent="MarginContainer" unique_id=1900000012]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="Label" type="Label" parent="MarginContainer/ProcessingScreen" unique_id=1900000013]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Processing"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="TextureProgressBar" parent="MarginContainer/ProcessingScreen" unique_id=1900000014 instance=ExtResource("5_otp01")]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="CodeStep" type="VBoxContainer" parent="MarginContainer" unique_id=1900000015]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/CodeStep" unique_id=1900000016]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Label" type="Label" parent="MarginContainer/CodeStep/VBoxContainer2" unique_id=1900000017]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Enter Code"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Label_CodeSubtitle" type="Label" parent="MarginContainer/CodeStep/VBoxContainer2" unique_id=1900000018]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "We sent a code to your email"
+label_settings = SubResource("LabelSettings_sub")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LineEdit_Code" type="LineEdit" parent="MarginContainer/CodeStep/VBoxContainer2" unique_id=1900000019]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(500, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+theme = ExtResource("4_otp01")
+theme_override_font_sizes/font_size = 30
+alignment = 1
+max_length = 8
+placeholder_text = "123456"
+keep_editing_on_text_submit = true
+
+[node name="Label_CodeError" type="Label" parent="MarginContainer/CodeStep/VBoxContainer2" unique_id=1900000020]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+label_settings = SubResource("LabelSettings_err")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/CodeStep" unique_id=1900000021]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+theme_override_constants/separation = 20
+alignment = 2
+
+[node name="Button_Verify" type="Button" parent="MarginContainer/CodeStep/VBoxContainer" unique_id=1900000022]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme = ExtResource("4_otp01")
+theme_override_font_sizes/font_size = 30
+text = "VERIFY"
+
+[node name="Button_Resend" type="Button" parent="MarginContainer/CodeStep/VBoxContainer" unique_id=1900000023]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme = ExtResource("4_otp01")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 30
+text = "RESEND CODE"
+
+[node name="Button_CancelCode" type="Button" parent="MarginContainer/CodeStep/VBoxContainer" unique_id=1900000024]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme = ExtResource("4_otp01")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 30
+text = "CANCEL"
+
+[node name="DoneDialog" type="VBoxContainer" parent="MarginContainer" unique_id=1900000025]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 5
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/DoneDialog" unique_id=1900000026]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+size_flags_horizontal = 5
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Label" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=1900000027]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Email Linked"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Label2" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=1900000028]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Your email is linked. You can now recover this account."
+label_settings = SubResource("LabelSettings_sub")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=1900000029]
+layout_mode = 2
+theme_override_constants/separation = 20
+theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
+
+[node name="Button_Done" type="Button" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=1900000030]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme = ExtResource("4_otp01")
+theme_override_font_sizes/font_size = 30
+text = "OK"
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="pressed" from="MarginContainer/EmailStep/VBoxContainer/Button_SendCode" to="." method="_on_button_send_code_pressed"]
+[connection signal="pressed" from="MarginContainer/EmailStep/VBoxContainer/Button_Cancel" to="." method="_on_button_cancel_pressed"]
+[connection signal="pressed" from="MarginContainer/CodeStep/VBoxContainer/Button_Verify" to="." method="_on_button_verify_pressed"]
+[connection signal="pressed" from="MarginContainer/CodeStep/VBoxContainer/Button_Resend" to="." method="_on_button_resend_pressed"]
+[connection signal="pressed" from="MarginContainer/CodeStep/VBoxContainer/Button_CancelCode" to="." method="_on_button_cancel_pressed"]
+[connection signal="pressed" from="MarginContainer/DoneDialog/VBoxContainer2/Button_Done" to="." method="_on_button_done_pressed"]

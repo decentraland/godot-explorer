@@ -866,6 +866,149 @@ impl AvatarScene {
         Array::from_iter(self.avatar_godot_scene.values().cloned())
     }
 
+    /// Debug: list every avatar currently tracked by `AvatarScene`, plus the
+    /// local player avatar (if present). Each entry is a Dictionary with
+    /// `entity_id`, `alias`, `address`, `name`, `position` (Vector3),
+    /// `instance_id`, and `is_local` (bool). Used by the debug WS `avatars`
+    /// command. The avatar tree lives outside per-scene CRDT state so it
+    /// gets its own commands rather than overloading `scene`/`entity`.
+    ///
+    /// Note: `avatar_godot_scene` only tracks remote players (filled by
+    /// `add_avatar` from comms). The local player is held separately on
+    /// `SceneManager.player_avatar_node` with its profile under
+    /// `last_updated_profile[PLAYER]`; we synthesize a row for it here so
+    /// solo-debugging sessions still see "yourself".
+    #[func]
+    fn debug_list_avatars(&self) -> Array<VarDictionary> {
+        let mut out = Array::new();
+
+        // Local player first (so the row order is stable: yourself, then
+        // remote players by entity_id).
+        if let Some(d) = self.debug_local_player_row() {
+            out.push(&d);
+        }
+
+        // Build entity_id → alias and alias → &H160 reverse maps so we can
+        // resolve identity from the entity_id we iterate.
+        let entity_to_alias: HashMap<SceneEntityId, AvatarAlias> =
+            self.avatar_entity.iter().map(|(&a, &e)| (e, a)).collect();
+        let alias_to_address: HashMap<AvatarAlias, &H160> = self
+            .avatar_address
+            .iter()
+            .map(|(addr, &a)| (a, addr))
+            .collect();
+
+        for (entity_id, avatar) in self.avatar_godot_scene.iter() {
+            let alias = entity_to_alias.get(entity_id).copied().unwrap_or(0);
+            let address_str = alias_to_address
+                .get(&alias)
+                .map(|h| format!("{:?}", h))
+                .unwrap_or_default();
+            let name = self
+                .last_updated_profile
+                .get(entity_id)
+                .map(|p| p.content.name.clone())
+                .unwrap_or_default();
+            let pos = avatar.get_global_position();
+
+            let mut d = VarDictionary::new();
+            d.set("entity_id", entity_id.as_i32());
+            d.set("alias", alias as i64);
+            d.set("address", address_str);
+            d.set("name", name);
+            d.set("position", pos);
+            d.set("instance_id", avatar.instance_id().to_i64());
+            d.set("is_local", false);
+            out.push(&d);
+        }
+        out
+    }
+
+    /// Builds the local player row for `debug_list_avatars`. Identity comes
+    /// from `last_updated_profile[PLAYER]`; transform comes from
+    /// `SceneManager.player_avatar_node`. Returns None if either is missing
+    /// (e.g. between session-close and the next sign-in).
+    fn debug_local_player_row(&self) -> Option<VarDictionary> {
+        let player = SceneEntityId::PLAYER;
+        let profile = self.last_updated_profile.get(&player)?;
+        let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        let player_node = scene_runner.bind().get_player_avatar_node();
+        if !player_node.is_instance_valid() {
+            return None;
+        }
+        let pos = player_node.get_global_position();
+
+        let mut d = VarDictionary::new();
+        d.set("entity_id", player.as_i32());
+        // The local player has no comms-side alias; expose 0 so the field is
+        // always present and the WS protocol stays homogeneous.
+        d.set("alias", 0_i64);
+        d.set("address", profile.content.eth_address.clone());
+        d.set("name", profile.content.name.clone());
+        d.set("position", pos);
+        d.set("instance_id", player_node.instance_id().to_i64());
+        d.set("is_local", true);
+        Some(d)
+    }
+
+    /// Debug: returns the Godot `InstanceId` of the *local* player's avatar
+    /// node, or `-1` if it's been freed (e.g. just signed out). Pairs with
+    /// the `avatar` command's `by: "local"` mode.
+    #[func]
+    fn debug_get_local_player_instance_id(&self) -> i64 {
+        let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        let player_node = scene_runner.bind().get_player_avatar_node();
+        if !player_node.is_instance_valid() {
+            return -1;
+        }
+        player_node.instance_id().to_i64()
+    }
+
+    /// Debug: returns the Godot `InstanceId` (as i64) of the avatar matching
+    /// `address`, or `-1` if no avatar has that address.
+    #[func]
+    fn debug_get_avatar_instance_id_by_address(&self, address: GString) -> i64 {
+        let Some(addr) = address.to_string().as_h160() else {
+            return -1;
+        };
+        let Some(&alias) = self.avatar_address.get(&addr) else {
+            return -1;
+        };
+        let Some(entity_id) = self.avatar_entity.get(&alias) else {
+            return -1;
+        };
+        match self.avatar_godot_scene.get(entity_id) {
+            Some(avatar) => avatar.instance_id().to_i64(),
+            None => -1,
+        }
+    }
+
+    /// Debug: returns the Godot `InstanceId` (as i64) of the avatar matching
+    /// `alias`, or `-1` if not found.
+    #[func]
+    fn debug_get_avatar_instance_id_by_alias(&self, alias: i64) -> i64 {
+        let alias = alias as u32;
+        let Some(entity_id) = self.avatar_entity.get(&alias) else {
+            return -1;
+        };
+        match self.avatar_godot_scene.get(entity_id) {
+            Some(avatar) => avatar.instance_id().to_i64(),
+            None => -1,
+        }
+    }
+
+    /// Debug: returns the Godot `InstanceId` (as i64) of the avatar matching
+    /// `entity_id` (in the avatar-internal SceneEntityId space), or `-1` if
+    /// not found.
+    #[func]
+    fn debug_get_avatar_instance_id_by_entity(&self, entity_id: i32) -> i64 {
+        let entity_id = SceneEntityId::from_i32(entity_id);
+        match self.avatar_godot_scene.get(&entity_id) {
+            Some(avatar) => avatar.instance_id().to_i64(),
+            None => -1,
+        }
+    }
+
     #[func]
     pub fn get_avatars_count(&self) -> i32 {
         self.avatar_godot_scene.len() as i32
@@ -928,40 +1071,68 @@ impl AvatarScene {
         // maybe it's better to cache the last parcel here instead of using prev_scene_id
         // the state of to what parcel the avatar belongs is stored in the avatar_scene
 
+        // Cached component values for this avatar, used to (re)populate the scene
+        // being entered. `@dcl/sdk/players` derives onEnterScene from an entity having
+        // both PlayerIdentityData and AvatarBase, and onLeaveScene from AvatarBase
+        // being removed — so scene membership must add/remove these components.
+        let avatar_base = SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt_state)
+            .get(&avatar_entity_id)
+            .and_then(|v| v.value.clone());
+        let player_identity_data =
+            SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt_state)
+                .get(&avatar_entity_id)
+                .and_then(|v| v.value.clone());
+        let avatar_equipped_data =
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt_state)
+                .get(&avatar_entity_id)
+                .and_then(|v| v.value.clone());
+
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
+
+        // Leaving the previous scene: clear the avatar's components there so the SDK's
+        // onLeaveScene fires and the player drops from getEntitiesWith(PlayerIdentityData).
+        // Routed through `deleted_entities`, which sets these components to None — the
+        // departure cannot be communicated as an entity death (the renderer→scene path
+        // never carries entity deaths). See `update_avatar_scene_updates`.
         if let Some(prev_scene) = scene_runner.get_scene_mut(&prev_scene_id) {
             prev_scene
                 .avatar_scene_updates
-                .transform
-                .insert(avatar_entity_id, None);
-            prev_scene
-                .avatar_scene_updates
-                .internal_player_data
-                .insert(avatar_entity_id, InternalPlayerData { inside: false });
+                .deleted_entities
+                .insert(avatar_entity_id);
         }
 
+        // Entering the new scene: (re)populate the avatar's components so onEnterScene
+        // fires and the player appears in getEntitiesWith(PlayerIdentityData, AvatarBase).
         if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
             let dcl_transform = DclTransformAndParent::default(); // TODO: get real transform with scene_offset
-
-            let mut avatar_scene_transform = dcl_transform.clone();
-            avatar_scene_transform.translation.x -=
-                (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
-
-            // TODO: I think this is working fine but
-            //   Should it be added instead of subtracted? (z is inverted in godot and dcl)
-            avatar_scene_transform.translation.z -=
-                (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
 
             scene
                 .avatar_scene_updates
                 .transform
-                .insert(avatar_entity_id, Some(dcl_transform.clone()));
-
+                .insert(avatar_entity_id, Some(dcl_transform));
             scene
                 .avatar_scene_updates
                 .internal_player_data
                 .insert(avatar_entity_id, InternalPlayerData { inside: true });
+            if let Some(avatar_base) = avatar_base {
+                scene
+                    .avatar_scene_updates
+                    .avatar_base
+                    .insert(avatar_entity_id, avatar_base);
+            }
+            if let Some(player_identity_data) = player_identity_data {
+                scene
+                    .avatar_scene_updates
+                    .player_identity_data
+                    .insert(avatar_entity_id, player_identity_data);
+            }
+            if let Some(avatar_equipped_data) = avatar_equipped_data {
+                scene
+                    .avatar_scene_updates
+                    .avatar_equipped_data
+                    .insert(avatar_entity_id, avatar_equipped_data);
+            }
         }
     }
 

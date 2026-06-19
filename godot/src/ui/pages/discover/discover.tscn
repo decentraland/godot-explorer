@@ -9,8 +9,11 @@
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/pages/discover/places/places_generator.tscn" id="4_q55yj"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="6_b1byu"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_73ifx"]
+[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="9_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/pages/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/atoms/controls/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="10_q2sj0"]
+[ext_resource type="Texture2D" uid="uid://v10kj2je18ti" path="res://assets/ui/iap/purchase-history.svg" id="11_o7fsu"]
 [ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/pages/discover/icons/not-found.svg" id="12_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://b07fppc2l5exm" path="res://src/ui/components/molecules/guest_upgrade_card/guest_upgrade_card.tscn" id="13_7josf"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="13_73ifx"]
@@ -24,6 +27,53 @@
 [ext_resource type="PackedScene" uid="uid://c7n3k8p2xq4rf" path="res://src/ui/pages/discover/friends/friend_jump_in.tscn" id="20_fjump"]
 [ext_resource type="PackedScene" uid="uid://bk7m3n5xp2qrf" path="res://src/ui/pages/discover/friends/friend_discover_skeleton.tscn" id="21_fskel"]
 [ext_resource type="PackedScene" uid="uid://byp4n7u2145fx" path="res://src/ui/components/molecules/snap_carousel/snap_carousel.tscn" id="22_snap"]
+[ext_resource type="PackedScene" uid="uid://bk0bh2bgdycxx" path="res://src/ui/components/organisms/credits_shop/credits_shop.tscn" id="24_qr6ir"]
+[ext_resource type="PackedScene" uid="uid://c7m54lyhw5fwp" path="res://src/ui/components/organisms/credits_history/credits_history.tscn" id="27_ritxv"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/credits_balance_button/credits_balance_button.tscn" id="30_crbtn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cwrnu"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(1, 0.176471, 0.333333, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ritxv"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vsmw3"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ksqvs"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
@@ -86,6 +136,7 @@ use_bottom = false
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer" unique_id=2084974317]
+custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 14
@@ -95,6 +146,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 focus_mode = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_cwrnu")
 icon = ExtResource("4_edk0s")
 flat = true
 expand_icon = true
@@ -102,6 +154,7 @@ expand_icon = true
 [node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=711539979]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("3_17slp")
 theme_override_font_sizes/font_size = 28
 text = "Discover"
@@ -111,6 +164,13 @@ label_settings = ExtResource("5_q2sj0")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_stretch_ratio = 20.0
+
+[node name="Button_Credits" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=532861808 instance=ExtResource("30_crbtn")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 5
 
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer" unique_id=921349866]
 layout_mode = 2
@@ -120,6 +180,7 @@ theme_override_constants/margin_bottom = 24
 
 [node name="ScrollContainer_Content" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1734613381]
 unique_name_in_owner = true
+visible = false
 clip_contents = true
 layout_mode = 2
 script = ExtResource("10_q2sj0")
@@ -323,6 +384,7 @@ layout_mode = 2
 
 [node name="SearchSugestionsContainer" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1120422632 instance=ExtResource("14_5g6gd")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=485396354]

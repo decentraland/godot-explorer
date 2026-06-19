@@ -34,8 +34,29 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	# Toggle the loopback debug WS server from the deeplink. Lets it be enabled
+	# before reaching Settings (e.g. on the login/lobby screens).
+	apply_debug_ws_param(Global.deep_link_obj.params.get("debug-ws", ""))
+
+	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
+	# runner from Global._ready, but on mobile the deep link is not parsed by
+	# then — spawn here once the deeplink lands and only if no runner exists.
+	if Global.deep_link_obj.gp_benchmark and Global.get_node_or_null("GPBenchmarkRunner") == null:
+		# Flip bench_mode BEFORE spawning the runner: this fires earlier than
+		# DG's deferred _init_dynamic_graphics_manager (07.4xx vs 07.7xx on A54)
+		# and before lobby.gd's first-launch HW bench trigger, so both honor it.
+		Global.cli.bench_mode = true
+		print("[DEEPLINK] bench_mode=true (gp-benchmark deeplink)")
+		print("[DEEPLINK] Spawning GP benchmark runner")
+		var gp_runner = load("res://src/tools/gp_benchmark_runner.gd").new()
+		gp_runner.set_name("GPBenchmarkRunner")
+		Global.add_child(gp_runner)
+
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
+
+	if Global.deep_link_obj.iap_enabled:
+		Iap.enable()
 
 	# Trigger avatar impostor benchmark
 	var bench_param = Global.deep_link_obj.params.get("benchmark", "")
@@ -137,6 +158,35 @@ func _route_teleport() -> void:
 		Global.async_teleport_to(Global.deep_link_obj.location, realm)
 	elif not realm.is_empty():
 		Global.async_teleport_to(Vector2i.ZERO, realm)
+
+
+## Start/stop the developer debug WS server from a deeplink `debug-ws` param.
+## Mirrors the Settings → Developer → "Debug WS Server" toggle, but reachable
+## before Settings exists (login/lobby). Developer-only: ignored in production,
+## same as the hidden Settings toggle.
+##
+## Accepted values: empty -> no-op; "0"/"false"/"off"/"stop"/"disable" -> stop;
+## a port number (e.g. "9300") -> start on that port; anything else
+## ("1"/"true"/"on") -> start on the default port.
+func apply_debug_ws_param(value: String) -> void:
+	if value.is_empty():
+		return
+	if Global.is_production():
+		print("[DEEPLINK] Ignoring debug-ws param in production build")
+		return
+
+	if value.to_lower() in ["0", "false", "off", "stop", "disable"]:
+		DebugWs.stop()
+		print("[DEEPLINK] Debug WS server stopped")
+		return
+
+	var port: int = DebugWs.DEFAULT_PORT
+	if value.is_valid_int() and int(value) > 1:
+		port = int(value)
+	if DebugWs.start(port):
+		print("[DEEPLINK] Debug WS server listening on port ", DebugWs.get_port())
+	else:
+		printerr("[DEEPLINK] Failed to start debug WS server on port ", port)
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:

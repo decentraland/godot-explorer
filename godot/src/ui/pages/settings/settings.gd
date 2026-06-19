@@ -13,7 +13,6 @@ enum SceneLogLevel {
 
 const _SECTION_TITLE_SCRIPT = preload("res://src/ui/pages/settings/section_title.gd")
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
-const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 
 ## When true, settings operates as a side panel inside the explorer:
 ## orientation is not changed and the background texture is hidden.
@@ -31,6 +30,7 @@ const MIN_GAMEPAD_CAMERA_SENSITIVITY: float = 1.0
 @onready var container_advanced: VBoxContainer = %VBoxContainer_Advanced
 @onready var container_audio: VBoxContainer = %VBoxContainer_Audio
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
+@onready var button_upgrade_to_otp: CustomButton = %Button_UpgradeToOtp
 @onready var container_storage: VBoxContainer = %VBoxContainer_Storage
 @onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
 
@@ -46,10 +46,11 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var check_button_hide_view_profile: CheckButton = %CheckButton_HideViewProfile
 @onready var check_button_hide_world_interactions: CheckButton = %CheckButton_HideWorldInteractions
 @onready var check_button_hide_player_names: CheckButton = %CheckButton_HidePlayerNames
+@onready var check_button_hide_scene_ui: CheckButton = %CheckButton_HideSceneUI
 @onready var hide_view_profile_row: HBoxContainer = %HideViewProfile
 @onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
-@onready var gamepad_camera_sensitivity: SettingsSlider = %GamepadCameraSensitivity
+@onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
 @onready var preview_camera_3d: Camera3D = %PreviewCamera3D
 @onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 @onready var container_interface: MarginContainer = %Container_Interface
@@ -77,6 +78,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var check_button_debug_server: CheckButton = %CheckButton_DebugServer
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
 @onready var button_graphics: Button = %Button_Graphics
@@ -89,7 +91,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
-@onready var container_gamepad: MarginContainer = %Container_Gamepad
 
 @onready var button_sign_out: CustomButton = %CustomButton_SignOut
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
@@ -98,6 +99,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	button_developer.visible = !Global.is_production()
+	_refresh_upgrade_to_otp_visibility()
 	button_graphics.set_pressed_no_signal(true)
 	_on_button_graphics_pressed()
 
@@ -122,11 +124,6 @@ func _ready():
 	if not Global.session_hide_ui_options_sync.is_connected(_on_session_hide_ui_options_sync):
 		Global.session_hide_ui_options_sync.connect(_on_session_hide_ui_options_sync)
 	_refresh_hide_explorer_ui_row()
-
-	# gamepad
-	_init_gamepad_sensitivity.call_deferred()
-	container_gamepad.visible = Input.get_connected_joypads().size() > 0
-	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 	dropdown_list_max_cache_size.add_item("1 GB", 0)
 	dropdown_list_max_cache_size.add_item("2 GB", 1)
@@ -358,6 +355,9 @@ func refresh_values():
 	process_tick_quota.value = Global.get_config().process_tick_quota_ms
 	if is_instance_valid(Global.raycast_debugger):
 		check_button_raycast_debugger.set_pressed_no_signal(true)
+	# Reflect the real server state: it may have been started from a deeplink
+	# (debug-ws param) before Settings was ever opened.
+	check_button_debug_server.set_pressed_no_signal(DebugWs.is_running())
 
 
 func _on_button_connect_preview_pressed():
@@ -483,26 +483,35 @@ func _on_check_button_hide_player_names_toggled(toggled_on: bool) -> void:
 		explorer.set_hide_player_names(toggled_on)
 
 
+func _on_check_button_hide_scene_ui_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_hide_scene_ui(toggled_on)
+
+
 func _on_session_hide_ui_toggle_sync(pressed: bool) -> void:
 	check_button_hide_explorer_ui.set_pressed_no_signal(pressed)
 	_update_hide_ui_sub_toggles(pressed)
 
 
 func _on_session_hide_ui_options_sync(
-	hide_view_profile: bool, hide_interactions: bool, hide_labels: bool
+	hide_view_profile: bool, hide_interactions: bool, hide_labels: bool, hide_scene_ui: bool
 ) -> void:
 	check_button_hide_view_profile.set_pressed_no_signal(hide_view_profile)
 	check_button_hide_world_interactions.set_pressed_no_signal(hide_interactions)
 	check_button_hide_player_names.set_pressed_no_signal(hide_labels)
+	check_button_hide_scene_ui.set_pressed_no_signal(hide_scene_ui)
 
 
 func _update_hide_ui_sub_toggles(hide_ui_on: bool) -> void:
 	check_button_hide_view_profile.disabled = not hide_ui_on
 	check_button_hide_world_interactions.disabled = not hide_ui_on
 	check_button_hide_player_names.disabled = not hide_ui_on
+	check_button_hide_scene_ui.disabled = not hide_ui_on
 	hide_view_profile_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_world_interactions_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_player_names_row.modulate.a = 1.0 if hide_ui_on else 0.5
+	hide_scene_ui_row.modulate.a = 1.0 if hide_ui_on else 0.5
 
 
 func _refresh_hide_explorer_ui_row() -> void:
@@ -521,12 +530,14 @@ func _refresh_hide_explorer_ui_row() -> void:
 		check_button_hide_player_names.set_pressed_no_signal(
 			explorer.is_session_hide_player_names()
 		)
+		check_button_hide_scene_ui.set_pressed_no_signal(explorer.is_session_hide_scene_ui())
 		_update_hide_ui_sub_toggles(hide_on)
 	else:
 		check_button_hide_explorer_ui.set_pressed_no_signal(false)
 		check_button_hide_view_profile.set_pressed_no_signal(true)
 		check_button_hide_world_interactions.set_pressed_no_signal(true)
 		check_button_hide_player_names.set_pressed_no_signal(true)
+		check_button_hide_scene_ui.set_pressed_no_signal(true)
 		_update_hide_ui_sub_toggles(false)
 
 
@@ -560,7 +571,22 @@ func _on_button_audio_pressed():
 
 func _on_button_account_pressed() -> void:
 	show_control(container_account)
+	_refresh_upgrade_to_otp_visibility()
 	_async_scroll_to_tab_button(button_account)
+
+
+# The "Upgrade to OTP" button is only meaningful for a thirdweb guest wallet —
+# the persistent silent account that has no email/social recovery yet. Hidden
+# for real wallets, disposable LocalWallets, or when there's no identity.
+func _refresh_upgrade_to_otp_visibility() -> void:
+	button_upgrade_to_otp.visible = (
+		Global.player_identity != null and Global.player_identity.is_thirdweb_guest()
+	)
+
+
+func _on_button_upgrade_to_otp_pressed() -> void:
+	Global.metrics.track_click_button("upgrade_to_otp", "settings_account", "")
+	Global.upgrade_to_otp.emit()
 
 
 func _on_button_delete_account_pressed() -> void:
@@ -804,6 +830,12 @@ func _on_button_discord_pressed() -> void:
 	Global.open_url(DISCORD_URL)
 
 
+func _on_button_marketplace_pressed() -> void:
+	# SFSafariViewController on iOS (same webview as Apple Sign In) and
+	# Chrome Custom Tabs on Android. Desktop falls back to shell_open.
+	Global.open_webview_url(DclUrls.marketplace())
+
+
 func _on_button_storage_pressed() -> void:
 	show_control(container_storage)
 	_async_scroll_to_tab_button(%Button_Storage)
@@ -846,6 +878,16 @@ func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
 	Global.set_raycast_debugger_enable(toggled_on)
 
 
+func _on_check_button_debug_server_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		var ok: bool = DebugWs.start()
+		if not ok:
+			# Bind failed (port in use or permission). Snap the toggle back.
+			check_button_debug_server.set_pressed_no_signal(false)
+	else:
+		DebugWs.stop()
+
+
 func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:
 	request_debug_panel.emit(toggled_on)
 
@@ -871,25 +913,11 @@ func _on_avatar_and_emotes_volume_value_changed(value: float) -> void:
 	Global.get_config().save_to_settings_file()
 
 
-func _init_gamepad_sensitivity() -> void:
-	gamepad_camera_sensitivity.min_value = MIN_GAMEPAD_CAMERA_SENSITIVITY
-	var clamped_sensitivity := maxf(
-		Global.get_config().gamepad_camera_sensitivity, MIN_GAMEPAD_CAMERA_SENSITIVITY
-	)
-	gamepad_camera_sensitivity.value = clamped_sensitivity
-	if clamped_sensitivity != Global.get_config().gamepad_camera_sensitivity:
-		Global.get_config().gamepad_camera_sensitivity = clamped_sensitivity
-		Global.get_config().save_to_settings_file()
-
-
-func _on_gamepad_camera_sensitivity_value_changed(value: float) -> void:
-	Global.get_config().gamepad_camera_sensitivity = maxf(value, MIN_GAMEPAD_CAMERA_SENSITIVITY)
-	Global.get_config().save_to_settings_file()
-
-
-func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	container_gamepad.visible = Input.get_connected_joypads().size() > 0
-
-
 func _on_custom_button_sign_out_pressed() -> void:
 	Global.sign_out()
+
+
+func _on_button_return_to_discover_pressed() -> void:
+	# Dev Tools: leave the current world and return to the Discover menu while
+	# staying signed in (soft sign-out). See Global.return_to_discover().
+	Global.return_to_discover()

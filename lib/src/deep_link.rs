@@ -37,8 +37,13 @@ pub struct DeepLinkResult {
     pub scene_inspector_file: bool,
     /// Simulate low-spec iPhone warnings (for testing)
     pub low_spec_warning: bool,
+    /// Genesis Plaza profiling benchmark trigger (issue #1862). Mirrors `--gp-benchmark`
+    /// for mobile, where deep links are the only practical way to pass launch flags.
+    pub gp_benchmark: bool,
     /// Show a transparent safe-area debug overlay on every screen
     pub safe_margin_debug: bool,
+    /// Enable IAP UI and StoreKit listening (deep link param: iap_enabled=true)
+    pub iap_enabled: bool,
 }
 
 impl DeepLinkResult {
@@ -179,8 +184,14 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             "low_spec_warning" => {
                 result.low_spec_warning = value.eq_ignore_ascii_case("true") || value == "1";
             }
+            "gp-benchmark" => {
+                result.gp_benchmark = value.eq_ignore_ascii_case("true") || value == "1";
+            }
             "safemargindebug" => {
                 result.safe_margin_debug = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "iap_enabled" => {
+                result.iap_enabled = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
@@ -546,6 +557,24 @@ mod tests {
     fn safe_margin_debug_default_off() {
         let r = parse("decentraland://open");
         assert!(!r.safe_margin_debug);
+    }
+
+    #[test]
+    fn iap_enabled_true() {
+        let r = parse("decentraland://open?iap_enabled=true");
+        assert!(r.iap_enabled);
+    }
+
+    #[test]
+    fn iap_enabled_one() {
+        let r = parse("decentraland://open?iap_enabled=1");
+        assert!(r.iap_enabled);
+    }
+
+    #[test]
+    fn iap_enabled_default_off() {
+        let r = parse("decentraland://open");
+        assert!(!r.iap_enabled);
     }
 
     // ---- Edge cases ---------------------------------------------------------

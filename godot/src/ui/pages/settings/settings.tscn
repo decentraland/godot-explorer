@@ -392,7 +392,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Hide UI"
+text = "Hide Interface"
 label_settings = ExtResource("17_67hd5")
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/VBoxContainer" unique_id=271447150]
@@ -519,14 +519,30 @@ title = "GAMEPAD"
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Gamepad/SectionGamepad/VBoxContainer" unique_id=1195534256]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 44
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="GamepadCameraSensitivity" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Gamepad/SectionGamepad/VBoxContainer" unique_id=1354992146 instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Gamepad Camera Sensitivity"
-is_percentage = true
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideSceneUI" unique_id=1041295819]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Hide Scene Interface"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_HideSceneUI" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideSceneUI" unique_id=1747745546]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+button_pressed = true
+disabled = true
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1380535543]
 layout_mode = 2

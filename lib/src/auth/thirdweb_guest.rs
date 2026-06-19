@@ -66,6 +66,34 @@ struct SignMessageResponse {
     signature: String,
 }
 
+#[derive(Debug, Serialize)]
+struct EmailInitiateRequest<'a> {
+    method: &'a str,
+    email: &'a str,
+}
+
+#[derive(Debug, Serialize)]
+struct EmailCompleteRequest<'a> {
+    method: &'a str,
+    email: &'a str,
+    code: &'a str,
+}
+
+#[derive(Debug, Deserialize)]
+struct EmailCompleteResponse {
+    /// The EMAIL identity JWT — this is the only field we consume; it becomes
+    /// `accountAuthTokenToConnect` in the `/link` call. The `walletAddress`
+    /// returned alongside is the email identity's OWN address (not the final
+    /// one), so it is deliberately ignored.
+    token: String,
+}
+
+#[derive(Debug, Serialize)]
+struct LinkAccountRequest<'a> {
+    #[serde(rename = "accountAuthTokenToConnect")]
+    account_auth_token_to_connect: &'a str,
+}
+
 #[derive(Debug, Clone)]
 pub struct ThirdwebGuestSession {
     pub token: String,
@@ -250,6 +278,140 @@ pub async fn sign_message(
         parsed.signature.len()
     );
     Ok(parsed.signature)
+}
+
+/// Refreshes the guest JWT by re-deriving the `sessionId` from the device
+/// anchor and re-running `guest_login`. This is idempotent — the same anchor
+/// always yields the same wallet — so it's safe to call at Upgrade time to
+/// guarantee a non-expired token for the `/link` call (the persisted one may
+/// have aged out). Returns the full session so the caller can persist the
+/// fresh token.
+pub async fn refresh_guest_session(
+    device_anchor_id: &str,
+) -> Result<ThirdwebGuestSession, anyhow::Error> {
+    let anchor = super::device_anchor::resolve_anchor(device_anchor_id);
+    let session_id = super::device_anchor::compute_session_id(&anchor);
+    guest_login(&session_id).await
+}
+
+/// Call A — sends a one-time code to `email`. No auth token required; the
+/// project is identified by `x-client-id` alone. A `429` means the address is
+/// rate-limited (surface it; don't auto-retry).
+pub async fn email_initiate(email: &str) -> Result<(), anyhow::Error> {
+    let url = format!("{}/v1/auth/initiate", THIRDWEB_API_BASE);
+    let body = EmailInitiateRequest {
+        method: "email",
+        email,
+    };
+
+    tracing::debug!("thirdweb email_initiate: url={}", url);
+
+    let response = reqwest::Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .build()?
+        .post(&url)
+        .header("x-client-id", THIRDWEB_CLIENT_ID)
+        .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let text = response.text().await.unwrap_or_default();
+        return Err(anyhow::anyhow!(
+            "thirdweb email_initiate failed: status={}, body={}",
+            status,
+            text
+        ));
+    }
+
+    tracing::info!("thirdweb email_initiate: code sent");
+    Ok(())
+}
+
+/// Call B — verifies the OTP and returns the EMAIL identity JWT. That token is
+/// fed to `link_email` as `accountAuthTokenToConnect`. The `walletAddress`
+/// returned by this endpoint is the email identity's own address and is NOT
+/// the final wallet — it is intentionally not parsed.
+pub async fn email_complete(email: &str, code: &str) -> Result<String, anyhow::Error> {
+    let url = format!("{}/v1/auth/complete", THIRDWEB_API_BASE);
+    let body = EmailCompleteRequest {
+        method: "email",
+        email,
+        code,
+    };
+
+    tracing::debug!("thirdweb email_complete: url={}", url);
+
+    let response = reqwest::Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .build()?
+        .post(&url)
+        .header("x-client-id", THIRDWEB_CLIENT_ID)
+        .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let text = response.text().await.unwrap_or_default();
+        return Err(anyhow::anyhow!(
+            "thirdweb email_complete failed: status={}, body={}",
+            status,
+            text
+        ));
+    }
+
+    let parsed: EmailCompleteResponse = response.json().await?;
+    tracing::info!(
+        "thirdweb email_complete: success, email_jwt_len={}",
+        parsed.token.len()
+    );
+    Ok(parsed.token)
+}
+
+/// Call C — links the email identity (`email_jwt`) into the existing guest
+/// account identified by `guest_jwt`. The bearer token identifies the
+/// surviving account, so the guest's wallet address is preserved. Address
+/// preservation only holds when the email is new; if it already owns a
+/// thirdweb wallet the API rejects the link with a message — surfaced here as
+/// an error, not retried.
+pub async fn link_email(guest_jwt: &str, email_jwt: &str) -> Result<(), anyhow::Error> {
+    let url = format!("{}/v1/auth/link", THIRDWEB_API_BASE);
+    let body = LinkAccountRequest {
+        account_auth_token_to_connect: email_jwt,
+    };
+
+    tracing::debug!("thirdweb link_email: url={}", url);
+
+    let response = reqwest::Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .build()?
+        .post(&url)
+        .header("x-client-id", THIRDWEB_CLIENT_ID)
+        .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
+        .header("Authorization", format!("Bearer {}", guest_jwt))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let text = response.text().await.unwrap_or_default();
+        return Err(anyhow::anyhow!(
+            "thirdweb link_email failed: status={}, body={}",
+            status,
+            text
+        ));
+    }
+
+    tracing::info!("thirdweb link_email: email linked to guest wallet");
+    Ok(())
 }
 
 #[cfg(test)]
