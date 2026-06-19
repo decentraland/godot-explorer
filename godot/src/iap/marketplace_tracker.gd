@@ -102,20 +102,40 @@ func _on_webview_closed() -> void:
 		" baseline_ready=",
 		_baseline_ready
 	)
+	_handle_marketplace_return("webview_closed")
+
+
+# Drives the post-return flow from the marketplace-return deep link
+# (decentraland://...?urn=...). The web fires it to bring the app back and the native side
+# dismisses the in-app SFSafariViewController directly (see emit_deeplink_received in the
+# iOS plugin) — a programmatic dismissal that does NOT trigger the delegate callbacks, so
+# `webview_closed` never fires. Without this the tracker stays ARMED and never polls nor
+# refreshes the balance: the user only got an update by re-opening + manually closing the
+# webview, which re-armed the baseline to already include the purchase, hiding it from the
+# poll forever. Idempotent: only acts while ARMED, so a later real webview close (or a
+# duplicate deeplink) is a no-op.
+func notify_marketplace_return() -> void:
+	print(_LOG, " notify_marketplace_return; state=", _state, " token=", _token)
+	_handle_marketplace_return("deeplink")
+
+
+# Shared return handler for both the native webview-closed signal and the marketplace
+# return deep link. Restores orientation and, if armed, begins polling + refreshes credits.
+func _handle_marketplace_return(source: String) -> void:
 	# Restore landscape if we forced portrait for the webview (#2305).
 	if _restore_landscape_on_close:
 		_restore_landscape_on_close = false
 		Global.set_orientation_landscape()
 	if _state == State.ARMED:
 		_state = State.POLLING
-		print(_LOG, " -> POLLING (baseline_size=", _baseline_urns.size(), ")")
+		print(_LOG, " -> POLLING (", source, ", baseline_size=", _baseline_urns.size(), ")")
 		# A marketplace buy spends credits, but nothing else re-fetches the balance after a
 		# (non-IAP) marketplace purchase — so the credits UI stays stale. Refresh on every
 		# tracked return so it reflects the spend regardless of whether a new item is found.
 		Iap.async_refresh_balance()
 		_async_poll(_token)
 	else:
-		print(_LOG, " webview_closed but state != ARMED -> NOT polling")
+		print(_LOG, " return (", source, ") but state != ARMED -> NOT polling")
 
 
 # Single entry point: arm the tracker (snapshot the pre-purchase baseline) and
