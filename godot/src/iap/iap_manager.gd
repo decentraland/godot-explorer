@@ -348,17 +348,32 @@ func accept_terms() -> void:
 	config.save_to_settings_file()
 
 
+# Diagnostic logger that reaches BOTH the editor/desktop console (print) and the
+# on-device --log-stream. On iOS GDScript print() goes to os_log and never reaches the
+# stream, so we also bridge through DclGlobal.log_to_stream (Rust stderr → fd capture).
+func _log(msg: String) -> void:
+	print("[IAP] ", msg)
+	DclGlobal.log_to_stream("[IAP] " + msg)
+
+
 func purchase(product_id: String) -> void:
+	_log(
+		(
+			"purchase() product_id=%s store_kit_available=%s in_flight=%s"
+			% [product_id, str(_store_kit_available), str(_purchase_in_flight)]
+		)
+	)
 	if not _store_kit_available:
-		print("[IAP] not available; ignoring purchase(", product_id, ")")
+		_log("ABORT: StoreKit not available; ignoring purchase")
 		return
 	if _purchase_in_flight:
-		print("[IAP] purchase already in flight; ignoring re-entry for ", product_id)
+		_log("ABORT: purchase already in flight; ignoring re-entry")
 		Global.modal_manager.async_show_purchase_in_flight_modal()
 		return
 	var wallet := _wallet_address()
+	_log("wallet resolved: '%s' (empty=%s)" % [wallet, str(wallet.is_empty())])
 	if wallet.is_empty():
-		printerr("[IAP] cannot purchase without wallet (sign in first)")
+		_log("ABORT: cannot purchase without wallet (sign in first)")
 		purchase_failed.emit(product_id, "not signed in")
 		return
 	# Take the overlay + in-flight lock up-front so the button can't be
@@ -377,10 +392,12 @@ func _async_begin_purchase(product_id: String, wallet: String) -> void:
 	# On `allowed` the server also registers this wallet's appAccountToken so the
 	# webhook can resolve who to credit.
 	var body := JSON.stringify({"productId": product_id})
+	_log("quote → POST /credits/iap/quote body=%s wallet=%s" % [body, wallet])
 	var envelope = await _async_signed_iap("/credits/iap/quote", HTTPClient.METHOD_POST, body)
+	_log("quote ← envelope=%s" % [str(envelope)])
 	# null == transport/auth failure (non-2xx, timeout). Fail closed: do NOT charge.
 	if envelope == null:
-		printerr("[IAP] quote transport error; aborting purchase of ", product_id)
+		_log("ABORT: quote transport/auth error (null envelope); not charging")
 		_finish_purchase_flow()
 		Global.modal_manager.async_show_purchase_failed_modal()
 		purchase_failed.emit(product_id, "quote failed")
@@ -391,7 +408,7 @@ func _async_begin_purchase(product_id: String, wallet: String) -> void:
 	if not envelope.get("ok", false):
 		var code := str(envelope.get("code", ""))
 		var reason := str(envelope.get("reason", ""))
-		print("[IAP] quote denied for ", product_id, " code=", code, " reason=", reason)
+		_log("ABORT: quote denied code=%s reason=%s" % [code, reason])
 		_finish_purchase_flow()
 		_show_quote_denied_modal(code, reason)
 		purchase_failed.emit(product_id, "not allowed: " + code)
@@ -400,6 +417,7 @@ func _async_begin_purchase(product_id: String, wallet: String) -> void:
 	# appAccountToken from the wallet (== data.appAccountToken the server registered),
 	# and /verify is signed with this same wallet, so the server's token check passes.
 	# Overlay stays up until the purchase resolves via the StoreKit handlers.
+	_log("quote ALLOWED → StoreKit.purchase(%s)" % product_id)
 	_store_kit.purchase(product_id, wallet)
 
 
@@ -662,6 +680,17 @@ func _async_fetch_balance() -> void:
 	if not (totals is Dictionary):
 		return
 	_balance = int(round(float(totals.get("nonExpiring", 0)) / _WEI_PER_MANA))
+	print(
+		"[IAP] balance fetched -> DISPLAYED=",
+		_balance,
+		" | nonExpiring=",
+		totals.get("nonExpiring", 0),
+		" expiring=",
+		totals.get("expiring", 0),
+		" totalCredits=",
+		envelope.get("totalCredits", 0),
+		" (app shows nonExpiring only)"
+	)
 	balance_changed.emit(_balance)
 
 
@@ -735,13 +764,14 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 	# the fields they expect themselves.
 	# Resolve the base URL per call so a runtime environment switch is picked up.
 	var url := DclUrls.credits_server() + path
+	_log("signed-fetch → %s (method=%d)" % [url, method])
 	var response = await Global.async_signed_fetch(url, method, body)
 	if response is PromiseError:
-		printerr("[IAP] ", path, " transport error: ", response.get_error())
+		_log("signed-fetch ✗ %s transport/auth error: %s" % [path, str(response.get_error())])
 		return null
 	var json = response.get_string_response_as_json()
 	if not (json is Dictionary):
-		printerr("[IAP] ", path, " unparseable response")
+		_log("signed-fetch ✗ %s response not a JSON object" % path)
 		return null
 	return json
 

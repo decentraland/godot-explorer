@@ -769,4 +769,16 @@ impl DclGlobal {
         godot_print!("[log-stream] starting client -> {}", url);
         crate::tools::log_stream::start_client(url);
     }
+
+    /// Write a line straight to the unified log stream from GDScript.
+    ///
+    /// On iOS, GDScript `print()` goes to `os_log` and never reaches the stream's
+    /// stdout/stderr fd capture, so `print` is invisible over `--log-stream`. This routes
+    /// the message through Rust's stderr, which the fd capture DOES tee into the hub — so
+    /// it shows up on the device stream. On desktop it just lands on stderr. Use for
+    /// on-device GDScript diagnostics that must be visible over `--log-stream`.
+    #[func]
+    pub fn log_to_stream(message: GString) {
+        eprintln!("{}", message);
+    }
 }

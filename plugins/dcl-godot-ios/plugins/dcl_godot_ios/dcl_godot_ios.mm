@@ -133,17 +133,39 @@ const char* DCLGODOTIOS_VERSION = "1.0";
 // terms, etc.). Emits `webview_closed` to GDScript on dismissal — the only
 // reliable "user returned from the webview" signal on iOS, since the in-app
 // SFSafariViewController does NOT trigger app focus/lifecycle notifications.
-@interface WebviewDelegate : NSObject <SFSafariViewControllerDelegate>
+// Guards against emitting `webview_closed` twice for one presentation: tapping "Done" can
+// fire BOTH the Safari delegate and the presentation delegate. Reset on each
+// open_webview_url so the next round-trip emits again.
+static BOOL g_webviewDismissEmitted = NO;
+
+@interface WebviewDelegate : NSObject <SFSafariViewControllerDelegate, UIAdaptivePresentationControllerDelegate>
 @end
 
 @implementation WebviewDelegate
 
-- (void)safariViewControllerDidFinish:(SFSafariViewController *)controller {
-    NSLog(@"[WEBVIEW] SFSafariViewController dismissed by user");
+- (void)emitWebviewClosed {
+    if (g_webviewDismissEmitted) {
+        return;
+    }
+    g_webviewDismissEmitted = YES;
     DclGodotiOS *singleton = DclGodotiOS::get_singleton();
     if (singleton != nullptr) {
         singleton->emit_signal("webview_closed");
     }
+}
+
+// Tapping the "Done" button on the SFSafariViewController.
+- (void)safariViewControllerDidFinish:(SFSafariViewController *)controller {
+    NSLog(@"[WEBVIEW] SFSafariViewController dismissed (Done)");
+    [self emitWebviewClosed];
+}
+
+// Interactive swipe-down of the page sheet. Crucially this does NOT trigger
+// safariViewControllerDidFinish, so without this callback a swipe-to-dismiss (how most
+// users actually close it) never tells the tracker the user returned from the marketplace.
+- (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+    NSLog(@"[WEBVIEW] SFSafariViewController dismissed (swipe)");
+    [self emitWebviewClosed];
 }
 
 @end
@@ -352,7 +374,11 @@ void DclGodotiOS::open_webview_url(String url) {
         if (g_webviewDelegate == nil) {
             g_webviewDelegate = [[WebviewDelegate alloc] init];
         }
+        g_webviewDismissEmitted = NO;
         safariVC.delegate = g_webviewDelegate;
+        // Also catch the interactive swipe-down dismissal (which does NOT call the Safari
+        // delegate's didFinish) via the presentation controller delegate.
+        safariVC.presentationController.delegate = g_webviewDelegate;
 
         // Get the top-most view controller
         UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;

@@ -34,6 +34,7 @@ var marketplace_url: String = ""
 @onready var panel_container_price: PanelContainer = %PanelContainer_Price
 @onready var label_price: Label = %Label_Price
 @onready var button_action: Button = %Button_Action
+@onready var panel_new_badge: PanelContainer = %PanelContainer_NewBadge
 
 
 func _ready():
@@ -131,6 +132,11 @@ func set_equiped(is_equiped: bool):
 		else:
 			texture_rect_equiped.hide()
 	effect_toggle()
+
+
+## Shows the "NEW" tag (top-right corner) for a recently-acquired wearable (#2300).
+func set_new_badge(is_new: bool) -> void:
+	panel_new_badge.visible = is_new
 
 
 func setup_marketplace(price: int, url: String):

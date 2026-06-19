@@ -47,6 +47,12 @@ var _marketplace_restore_pending: bool = false
 var _avatar_update_retries: int = 0
 var _is_currently_narrow: bool = false
 
+# "NEW" tag (#2300): urn -> unix seconds the wearable was acquired (transferet_at from the
+# lambda, or "now" for live arrivals). An item is tagged new when it was acquired after the
+# per-wallet threshold (see the static _new_tag_* session state declared near the top).
+var _wearable_acquired_at: Dictionary = {}
+var _backpack_last_seen_ts: int = 0
+
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
@@ -88,6 +94,13 @@ var _is_currently_narrow: bool = false
 @onready var canary_content: Control = get_node_or_null("%ControlContent_Canary")
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
 @onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
+
+# "NEW" tag (#2300) session state: the unix-seconds threshold an item must beat to be
+# tagged new, and whether we've already captured it this app session. Static so they
+# survive the backpack being freed/recreated on orientation switches (rotation must not
+# wipe the tags mid-session).
+static var _new_tag_threshold_ts: int = 0
+static var _new_tag_session_captured: bool = false
 
 
 # gdlint:ignore = async-function-name
@@ -155,6 +168,10 @@ func _ready():
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
+	# Capture the NEW-tag threshold (#2300) once per session before deciding which items
+	# are new (this also advances the persisted per-wallet "last seen" marker).
+	_init_new_tag_threshold()
+
 	# Surface the most-recently-obtained owned wearables from the fast marketplace API
 	# first (added only if not already listed), so an item just bought on the web shows
 	# up immediately instead of waiting for the catalyst lambda below (which lags
@@ -162,6 +179,8 @@ func _ready():
 	for urn in await MarketplaceTracker.async_fetch_recent_owned("wearable"):
 		if not wearable_data.has(urn):
 			wearable_data[urn] = null
+		# Items from the fast "recently owned" API are by definition just-acquired.
+		_wearable_acquired_at[urn] = _now_seconds()
 
 	# Load all remote wearables that you own...
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
@@ -169,6 +188,8 @@ func _ready():
 		remote_wearables.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
 		for wearable_item in remote_wearables.elements:
 			wearable_data[wearable_item.urn] = null
+			if not _wearable_acquired_at.has(wearable_item.urn):
+				_wearable_acquired_at[wearable_item.urn] = int(wearable_item.transferet_at)
 
 	# Dev/testing: inject fake-owned wearables from deeplink (see FORCE_DEEPLINK in global.gd).
 	for fake_urn in Global.deep_link_obj.fake_owned_wearables:
@@ -426,6 +447,7 @@ func _show_wearables():
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = wearable_button_group_per_category.get(wearable.get_category())
 		wearable_item.async_set_wearable(wearable)
+		wearable_item.set_new_badge(_is_wearable_new(wearable_id))
 
 		# Connect signals
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
@@ -760,11 +782,17 @@ func _on_item_arrived(urn: String, category: String) -> void:
 	# then inject that exact item directly instead of re-fetching the catalyst lambda,
 	# which lags minutes behind. Emotes live in the emote editor, not the wearables
 	# grid, so route by category.
+	print("[MktTracker] backpack RECEIVED item_arrived urn=", urn, " category=", category)
 	apply_marketplace_arrival_view(category)
 	if category == "emote":
 		emote_editor.inject_owned_emote(urn)
 	else:
 		_async_inject_wearable(urn)
+	# A marketplace buy consumes credits, but nothing else re-fetches the balance after a
+	# (non-IAP) marketplace purchase — so the displayed credits stay stale. Refresh here
+	# (also logs the post-purchase buckets so we can see expiring vs nonExpiring).
+	print("[IAP] refreshing balance after marketplace arrival")
+	Iap.async_refresh_balance()
 
 
 # Force the backpack into the view that surfaces a just-arrived marketplace item:
@@ -788,20 +816,85 @@ func apply_marketplace_arrival_view(category: String) -> void:
 				btn.set_pressed_no_signal(btn.get_category_name() == Wearables.Categories.ALL)
 
 
+# --- "NEW" tag helpers (#2300) ---
+
+
+func _now_seconds() -> int:
+	return int(Time.get_unix_time_from_system())
+
+
+func _current_wallet_lower() -> String:
+	if Global.player_identity == null:
+		return ""
+	return Global.player_identity.get_address_str().to_lower()
+
+
+# Captures, once per app session, the timestamp an item must beat to be tagged "NEW", and
+# advances the persisted per-wallet marker to now so the tags clear on the next session.
+# The static state keeps the threshold stable across the backpack being freed/recreated
+# (e.g. on orientation switches), so rotating the device doesn't wipe the tags mid-session.
+func _init_new_tag_threshold() -> void:
+	if _new_tag_session_captured:
+		_backpack_last_seen_ts = _new_tag_threshold_ts
+		return
+	_new_tag_session_captured = true
+	var now := _now_seconds()
+	var wallet := _current_wallet_lower()
+	if wallet.is_empty():
+		_new_tag_threshold_ts = now
+		_backpack_last_seen_ts = now
+		return
+	var seen_map: Dictionary = Global.get_config().backpack_seen_at
+	# Default to "now" so a wallet's first-ever visit doesn't flood the grid with tags.
+	# The persisted marker is advanced on teardown (see _persist_backpack_seen), NOT here,
+	# so wearables that arrive mid-session are still covered (cleared) next session.
+	_new_tag_threshold_ts = int(seen_map.get(wallet, now))
+	_backpack_last_seen_ts = _new_tag_threshold_ts
+
+
+func _is_wearable_new(urn: String) -> bool:
+	return int(_wearable_acquired_at.get(urn, 0)) > _backpack_last_seen_ts
+
+
+# Advances the persisted per-wallet "last seen" marker to now, so wearables acquired up to
+# this point stop being tagged on the next app session. Called on teardown — including the
+# inner backpack being freed on an orientation switch, which is harmless: the threshold is
+# captured once per session (static) and stays fixed, so the tags don't clear mid-session.
+func _persist_backpack_seen() -> void:
+	var wallet := _current_wallet_lower()
+	if wallet.is_empty():
+		return
+	var seen_map: Dictionary = Global.get_config().backpack_seen_at
+	seen_map[wallet] = _now_seconds()
+	Global.get_config().backpack_seen_at = seen_map
+	Global.get_config().save_to_settings_file()
+
+
 # gdlint:ignore = async-function-name
 func _async_inject_wearable(urn: String) -> void:
+	print("[Inject] START urn=", urn, " already_in_data=", wearable_data.has(urn))
 	if urn.is_empty() or wearable_data.has(urn):
+		print("[Inject] EARLY RETURN (empty or already present)")
 		return
 	var wearable = Global.content_provider.get_wearable(urn)
+	print("[Inject] cache get_wearable(urn) -> ", "FOUND" if wearable != null else "null")
 	if wearable == null:
-		var promise = Global.content_provider.fetch_wearables(
-			[urn], Global.realm.get_profile_content_url()
-		)
+		var content_url := Global.realm.get_profile_content_url()
+		print("[Inject] fetch_wearables([urn]) from content_url=", content_url)
+		var promise = Global.content_provider.fetch_wearables([urn], content_url)
 		await PromiseUtils.async_all(promise)
 		wearable = Global.content_provider.get_wearable(urn)
+		print("[Inject] post-fetch get_wearable(urn) -> ", "FOUND" if wearable != null else "null")
 	if wearable == null:
-		printerr("[BackpackRefresh] could not load arrived wearable ", urn)
+		print(
+			"[Inject] FAILED: could not load arrived wearable urn=",
+			urn,
+			" (definition not found — likely urn/tokenId format mismatch)"
+		)
 		return
+
+	# A live arrival is brand-new — tag it (#2300).
+	_wearable_acquired_at[urn] = _now_seconds()
 
 	# Insert at the front so the just-arrived wearable shows first in the grid.
 	var reordered := {urn: wearable}
@@ -810,6 +903,14 @@ func _async_inject_wearable(urn: String) -> void:
 			reordered[k] = wearable_data[k]
 	wearable_data = reordered
 	var cat: String = wearable.get_category()
+	print(
+		"[Inject] injected; category=",
+		cat,
+		" current_filter=",
+		current_filter,
+		" only_collectibles=",
+		only_collectibles
+	)
 
 	# Reload the current view; if the new item isn't visible under the active filter
 	# (different category, or no filter set), switch to its category so it shows.
@@ -817,6 +918,12 @@ func _async_inject_wearable(urn: String) -> void:
 		_load_filtered_data(current_filter)
 	if current_filter.is_empty() or not filtered_data.has(urn):
 		_load_filtered_data(cat)
+	print(
+		"[Inject] DONE: filtered_data.has(urn)=",
+		filtered_data.has(urn),
+		" filtered_data.size=",
+		filtered_data.size()
+	)
 
 
 func _async_refresh_owned_wearables() -> void:
@@ -832,6 +939,7 @@ func _async_refresh_owned_wearables() -> void:
 		if not wearable_data.has(wearable_item.urn):
 			wearable_data[wearable_item.urn] = null
 			new_keys.append(wearable_item.urn)
+			_wearable_acquired_at[wearable_item.urn] = int(wearable_item.transferet_at)
 
 	if new_keys.is_empty():
 		return
@@ -868,6 +976,9 @@ func _async_refresh_owned_wearables() -> void:
 
 
 func _exit_tree():
+	# Mark everything currently acquired as "seen" so the NEW tags clear next session (#2300).
+	_persist_backpack_seen()
+
 	# Clean up timer and disconnect signals
 	if blacklist_deploy_timer:
 		blacklist_deploy_timer.stop()

@@ -66,9 +66,15 @@ var _baseline_ready: bool = false
 # no reliable focus notification (especially on a swipe-to-dismiss of the page
 # sheet), so the native dismissal callback is the source of truth.
 var _use_webview_signal: bool = false
+# Set when we forced portrait for the in-app webview (iOS): true if the backpack was in
+# landscape when the marketplace opened, so we restore landscape once it closes (#2305).
+var _restore_landscape_on_close: bool = false
 
 
 func _ready() -> void:
+	# Deploy-freshness marker: a unique string absent from any prior build. If this line
+	# shows on the --log-stream, the iOS deploy carried the local (dirty) working tree.
+	print("[DEPLOY-CHECK] marketplace_tracker build-marker-7X9Q2 loaded")
 	# iOS: the in-app SFSafariViewController fires no reliable focus/lifecycle
 	# notification on dismissal, so hook the native dismissal signal. Other platforms
 	# open an external browser where app focus works → fall back to _notification.
@@ -87,16 +93,47 @@ func _ready() -> void:
 # Native dismissal of the in-app browser (iOS). Fires for every open_webview_url
 # dismissal regardless of how it was closed; we only act if we armed it.
 func _on_webview_closed() -> void:
+	print(
+		_LOG,
+		" webview_closed; state=",
+		_state,
+		" token=",
+		_token,
+		" baseline_ready=",
+		_baseline_ready
+	)
+	# Restore landscape if we forced portrait for the webview (#2305).
+	if _restore_landscape_on_close:
+		_restore_landscape_on_close = false
+		Global.set_orientation_landscape()
 	if _state == State.ARMED:
 		_state = State.POLLING
+		print(_LOG, " -> POLLING (baseline_size=", _baseline_urns.size(), ")")
+		# A marketplace buy spends credits, but nothing else re-fetches the balance after a
+		# (non-IAP) marketplace purchase — so the credits UI stays stale. Refresh on every
+		# tracked return so it reflects the spend regardless of whether a new item is found.
+		Iap.async_refresh_balance()
 		_async_poll(_token)
+	else:
+		print(_LOG, " webview_closed but state != ARMED -> NOT polling")
 
 
 # Single entry point: arm the tracker (snapshot the pre-purchase baseline) and
 # open the web marketplace in the in-app browser. `raw_url` is a plain marketplace
 # URL — the mobile-IAP view flag is appended here so every entry point matches.
 func open_and_track(raw_url: String) -> void:
+	print(_LOG, " open_and_track: ", raw_url)
 	_arm()
+	# The mobile-IAP marketplace view is portrait-only. Opening it from a landscape
+	# backpack otherwise leaves the app — and the iOS SFSafariViewController it presents —
+	# locked to landscape, so the user can't rotate to read it (#2305). Force portrait
+	# while the webview is up and restore the prior orientation when it closes. Gated on
+	# the native iOS webview (the embedded Safari case); other platforms open an external
+	# browser where the host orientation doesn't matter.
+	if _use_webview_signal:
+		_restore_landscape_on_close = not Global.is_orientation_portrait()
+		if _restore_landscape_on_close:
+			Global.set_orientation_portrait()
 	Global.open_webview_url(MarketplaceUrl.with_mobile_iap(raw_url))
 
 
@@ -107,10 +144,12 @@ func _arm() -> void:
 	if Global.player_identity != null:
 		wallet = Global.player_identity.get_address_str()
 	if wallet.is_empty():
+		print(_LOG, " _arm SKIPPED: no wallet (sign in first)")
 		return
 	_token += 1
 	_state = State.ARMED
 	_baseline_ready = false
+	print(_LOG, " ARMED token=", _token, " wallet=", wallet)
 	_async_capture_baseline(_token)
 
 
@@ -141,6 +180,7 @@ func _async_capture_baseline(token: int) -> void:
 		if urns != null:
 			_baseline_urns = urns
 			_baseline_ready = true
+			print(_LOG, " baseline captured: ", urns.size(), " urns (token=", token, ")")
 			return
 		await get_tree().create_timer(_BASELINE_RETRY_SEC).timeout
 		if token != _token:
@@ -150,17 +190,21 @@ func _async_capture_baseline(token: int) -> void:
 
 # gdlint:ignore = async-function-name
 func _async_poll(token: int) -> void:
+	print(_LOG, " poll loop START token=", token)
 	await get_tree().create_timer(_INITIAL_DELAY_SEC).timeout
 	if token != _token:
+		print(_LOG, " poll aborted before first tick (token ", token, " != current ", _token, ")")
 		return
 	var elapsed := 0.0
 	while token == _token:
 		await _async_check(token)
 		if token != _token:
+			print(_LOG, " poll loop exit (token changed) token=", token)
 			return
 		# Keep polling the full window regardless of arrivals — more items may still be
 		# minting. We only stop at the safety cap.
 		if elapsed >= _MAX_TOTAL_POLL_SEC:
+			print(_LOG, " poll reached cap ", _MAX_TOTAL_POLL_SEC, "s -> stop")
 			stop()
 			return
 		await get_tree().create_timer(_POLL_INTERVAL_SEC).timeout
@@ -174,21 +218,35 @@ func _async_poll(token: int) -> void:
 # gdlint:ignore = async-function-name
 func _async_check(token: int) -> void:
 	if not _baseline_ready:
+		print(_LOG, " tick SKIP: baseline not ready")
 		return
 
 	var urns = await _async_fetch_owned_urns()
 	if token != _token:
 		return
 	if urns == null:
+		print(_LOG, " tick: fetch returned null (transport error)")
 		return
+	var new_count := 0
 	for urn in urns:
 		if not _baseline_urns.has(urn):
 			var category: String = urns[urn]
 			# Fold into the baseline so the next tick doesn't re-report it.
 			_baseline_urns[urn] = category
+			new_count += 1
+			print(_LOG, " NEW ITEM: ", urn, " (", category, ") -> emit item_arrived")
 			# MARKETPLACE-IAP-TOAST: a clickable arrival toast was shown here (see the
 			# marker near the top of this file). Removed pending a portrait-aware toast.
 			item_arrived.emit(urn, category)
+	print(
+		_LOG,
+		" tick: fetched=",
+		urns.size(),
+		" new=",
+		new_count,
+		" baseline=",
+		_baseline_urns.size()
+	)
 
 
 # Public: the most-recently-obtained owned urns of one category ("wearable"/"emote"),
@@ -230,20 +288,22 @@ func _async_fetch_owned_urns():
 
 
 # Fetches the _OWNED_FETCH_LIMIT most-recently-added owned NFTs of one category, as a
-# Dictionary keyed by token-instance urn with `category` as the value, or null on a
+# Dictionary keyed by item urn with `category` as the value, or null on a
 # transport/shape error.
 #
 # Uses the marketplace API (subgraph-backed) the web's "My Assets" uses — it
 # reflects a mint in ~seconds, vs the catalyst lambda's minutes. No auth needed for
-# a public owner read. The API returns item-level urns + tokenId separately; we
-# rebuild the catalyst/backpack token-instance urn (`<item_urn>:<tokenId>`) so the
-# urn matches what the backpack/avatar use. `sortBy=newest` orders by creation date
+# a public owner read. We key by the item urn — the form the catalyst lambda,
+# content_provider and the backpack/avatar use. `sortBy=newest` orders by creation date
 # (most recent first), so the just-bought item lands at the top.
 # gdlint:ignore = async-function-name
 func _async_fetch_owned_urns_for(wallet: String, category: String):
+	# Cache-bust: the poll hits this identical URL every 5s; a CDN cache would otherwise
+	# keep serving a stale snapshot that never includes the just-bought item. A unique `t`
+	# forces a fresh response each call (keeping baseline vs poll comparable).
 	var url := (
-		"%s/v1/nfts?first=%d&skip=0&sortBy=newest&category=%s&owner=%s"
-		% [DclUrls.marketplace_api(), _OWNED_FETCH_LIMIT, category, wallet]
+		"%s/v1/nfts?first=%d&skip=0&sortBy=newest&category=%s&owner=%s&t=%d"
+		% [DclUrls.marketplace_api(), _OWNED_FETCH_LIMIT, category, wallet, Time.get_ticks_msec()]
 	)
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -266,7 +326,9 @@ func _async_fetch_owned_urns_for(wallet: String, category: String):
 		var item_urn := str(nft.get("urn", ""))
 		if item_urn.is_empty():
 			continue
-		var token_id := str(nft.get("tokenId", ""))
-		var urn := item_urn + ":" + token_id if not token_id.is_empty() else item_urn
-		owned[urn] = category
+		# Key by the ITEM urn (urn:…:collections-v2:<contract>:<itemId>). That is the key the
+		# catalyst lambda, content_provider and the backpack/avatar use; the token-instance
+		# form (…:<itemId>:<tokenId>) does NOT resolve in get_wearable(), so appending the
+		# tokenId here was breaking the live inject of a just-bought item.
+		owned[item_urn] = category
 	return owned

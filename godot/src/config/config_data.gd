@@ -159,6 +159,12 @@ var terms_and_conditions_version: int = 0
 # IapManager.are_terms_accepted / accept_terms.
 var iap_terms_accepted_wallet: String = ""
 
+# Per-wallet map (lowercased address -> unix seconds) of when the user last had the
+# backpack grid open. Drives the "NEW" tag on recently-acquired wearables (#2300): an
+# item is tagged new if it was transferred in after this time. Captured once per app
+# session (see Backpack._init_new_tag_threshold).
+var backpack_seen_at: Dictionary = {}
+
 # Unix timestamp until which the soft version-upgrade overlay is snoozed
 # (set when the user presses "Later"; ignored for required-minimum blocks).
 var version_gate_snooze_until: int = 0
@@ -446,6 +452,10 @@ func load_from_settings_file():
 		"user", "iap_terms_accepted_wallet", data_default.iap_terms_accepted_wallet
 	)
 
+	self.backpack_seen_at = settings_file.get_value(
+		"user", "backpack_seen_at", data_default.backpack_seen_at
+	)
+
 	self.version_gate_snooze_until = settings_file.get_value(
 		"user", "version_gate_snooze_until", data_default.version_gate_snooze_until
 	)
@@ -532,6 +542,7 @@ func save_to_settings_file():
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
 	new_settings_file.set_value("user", "iap_terms_accepted_wallet", self.iap_terms_accepted_wallet)
+	new_settings_file.set_value("user", "backpack_seen_at", self.backpack_seen_at)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
