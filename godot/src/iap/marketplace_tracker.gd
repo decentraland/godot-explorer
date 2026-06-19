@@ -1,10 +1,14 @@
 extends Node
 
-# Tracks a round-trip to the web marketplace (opened in an in-app browser) and,
-# on return, polls the credits balance and the owned-wearables catalog to surface
-# the result of a purchase made on the web:
-#   - credits went DOWN  → the purchase went through → "your wearable is on the way"
-#   - a NEW wearable urn  → it has been delivered to the inventory → "it has arrived"
+# Tracks a round-trip to the web marketplace (opened in an in-app browser) and, on
+# return, polls the owned-wearables catalog to detect a purchase delivered to the
+# inventory: a NEW owned urn (vs the pre-purchase baseline) means the item minted, and
+# we emit `item_arrived` so the backpack can surface it live.
+#
+# NOTE: an in-app toast used to be shown on arrival (tap → open backpack + filter).
+# It was removed because the toast UI isn't laid out for portrait. See the
+# MARKETPLACE-IAP-TOAST markers here + in notifications_manager.gd / menu.gd for where
+# to re-hook a portrait-aware toast. `item_arrived` still fires for the live auto-focus.
 #
 # Driven by open_and_track(), which arms the tracker right before the browser
 # opens so we capture the pre-purchase baseline. Return is detected on iOS via the
@@ -23,40 +27,24 @@ signal item_arrived(urn: String, category: String)
 
 enum State { IDLE, ARMED, POLLING }
 
-# In-app toast copy. Kept as constants so the wording (and language) is easy to
-# tweak in one place.
-const _TOAST_ON_THE_WAY_TITLE := "Your purchase is on the way"
-const _TOAST_ON_THE_WAY_BODY := "We're processing your purchase."
-# %s is the item kind ("wearable"/"emote"), filled in once we know what arrived.
-const _TOAST_ARRIVED_TITLE_FMT := "Your %s has arrived"
-const _TOAST_ARRIVED_BODY := "It's now available in your backpack."
-const _TOAST_TYPE := "marketplace_iap"
+# MARKETPLACE-IAP-TOAST (removed — pending a portrait-compatible toast):
+# On each arrival we used to call NotificationsManager.show_system_toast(title, body,
+# "marketplace_iap", "default", {"category": category, "urn": urn}); a tap routed to
+# the backpack with the right tab + Collectibles filter (see menu.gd). We also showed
+# an "on the way" toast on the first credit drop. To restore: re-add the toast call in
+# _async_check where item_arrived is emitted, and the click routing in menu.gd.
 
 # Log prefix; all lines grep-able as `[MktTracker]` on the --log-stream.
 const _LOG := "[MktTracker]"
 
 # Polling schedule, measured from when polling starts (1s after returning):
-#   - every 2s for the first 15s
-#   - then every 5s thereafter (until a new wearable arrives or the safety cap)
-# The data-source lag (the lambda indexer catching up to the on-chain mint) is the
-# dominant wait — usually minutes — so the interval mainly bounds how quickly we
-# notice once the catalog finally updates; 5s keeps that tail tight.
+# Once armed we poll at a STEADY 5s cadence for the full window and do NOT stop on
+# the first arrival — several items can still be minting — nor give up early when no
+# credit drop is seen. The on-chain mint can lag minutes on testnet, so the window is
+# kept generous (5 min). Each new urn fires its own toast + item_arrived as it lands.
 const _INITIAL_DELAY_SEC := 1.0
-const _FAST_INTERVAL_SEC := 2.0
-const _FAST_PHASE_SEC := 15.0
-const _MEDIUM_INTERVAL_SEC := 5.0
-const _MEDIUM_PHASE_SEC := 60.0
-const _SLOW_INTERVAL_SEC := 5.0
-# Safety cap: the open-ended slow phase would otherwise poll forever if the user
-# browsed without buying (no credit drop, no new wearable). Generous because an
-# on-chain mint can take several minutes on testnet (observed 2–5+ min); past this
-# we give up the live watch (reopening the backpack still fetches fresh).
-const _MAX_TOTAL_POLL_SEC := 900.0
-# Give-up window when no purchase signal appears. A web checkout spends credits,
-# which marketplace-api/balance reflect within ~a minute; if no credit drop is seen
-# by the end of the medium phase the user almost certainly didn't buy, so we stop
-# rather than poll the safety cap for nothing. A confirmed spend keeps polling.
-const _NO_PURCHASE_GIVEUP_SEC := _FAST_PHASE_SEC + _MEDIUM_PHASE_SEC
+const _POLL_INTERVAL_SEC := 5.0
+const _MAX_TOTAL_POLL_SEC := 300.0
 # The wearable baseline must be a reliable snapshot — comparisons are meaningless
 # without it — so retry the initial fetch a few times before giving up.
 const _BASELINE_FETCH_ATTEMPTS := 5
@@ -71,10 +59,8 @@ var _state: State = State.IDLE
 # Bumped on every arm()/stop() so a stale baseline capture or polling loop, which
 # can't be cancelled mid-await, becomes a no-op when it resumes.
 var _token: int = 0
-var _baseline_credits: int = 0
 var _baseline_urns: Dictionary = {}
 var _baseline_ready: bool = false
-var _credits_consumed_notified: bool = false
 # True once we've hooked the native DclGodotiOS.webview_closed signal (iOS). When
 # set, the app-focus fallback in _notification is ignored — the in-app Safari fires
 # no reliable focus notification (especially on a swipe-to-dismiss of the page
@@ -125,7 +111,6 @@ func _arm() -> void:
 	_token += 1
 	_state = State.ARMED
 	_baseline_ready = false
-	_credits_consumed_notified = false
 	_async_capture_baseline(_token)
 
 
@@ -146,9 +131,6 @@ func _notification(what: int) -> void:
 
 # gdlint:ignore = async-function-name
 func _async_capture_baseline(token: int) -> void:
-	_baseline_credits = await Iap.async_refresh_balance()
-	if token != _token:
-		return
 	# Retry the wearable snapshot until it succeeds; a failed (null) baseline would
 	# make every existing wearable look "new" on the first poll. Bounded by the
 	# token (re-arm/stop) so it can't spin forever.
@@ -173,71 +155,40 @@ func _async_poll(token: int) -> void:
 		return
 	var elapsed := 0.0
 	while token == _token:
-		var arrived := await _async_check(token)
+		await _async_check(token)
 		if token != _token:
 			return
-		if arrived:
-			stop()
-			return
-		# No credit drop by the end of the medium phase ⇒ almost certainly no purchase
-		# (a web checkout spends credits, reflected within ~a minute via marketplace-api).
-		# Give up early rather than polling the safety cap for nothing. A confirmed spend
-		# keeps polling up to _MAX_TOTAL_POLL_SEC, since the on-chain mint can lag minutes.
-		if not _credits_consumed_notified and elapsed >= _NO_PURCHASE_GIVEUP_SEC:
-			stop()
-			return
+		# Keep polling the full window regardless of arrivals — more items may still be
+		# minting. We only stop at the safety cap.
 		if elapsed >= _MAX_TOTAL_POLL_SEC:
 			stop()
 			return
-		var interval := _interval_for(elapsed)
-		await get_tree().create_timer(interval).timeout
-		elapsed += interval
+		await get_tree().create_timer(_POLL_INTERVAL_SEC).timeout
+		elapsed += _POLL_INTERVAL_SEC
 
 
-func _interval_for(elapsed: float) -> float:
-	if elapsed < _FAST_PHASE_SEC:
-		return _FAST_INTERVAL_SEC
-	if elapsed < _FAST_PHASE_SEC + _MEDIUM_PHASE_SEC:
-		return _MEDIUM_INTERVAL_SEC
-	return _SLOW_INTERVAL_SEC
-
-
-# Returns true once an item has arrived (terminal). Arrival is checked first so it
-# takes precedence over the credit-drop signal when both land on the same tick.
-# Fires the "on the way" toast the first time credits drop.
-#
-# "Arrived" = a genuinely-owned wearable or emote that wasn't owned at baseline (the
-# one bought on the web, once it mints on-chain). The detected category is passed
-# along so the backpack routes it to the right list.
+# Detects every newly-owned item since the baseline and emits item_arrived for each
+# one exactly once. Non-terminal: it never stops the poll, so multiple items minting
+# over several minutes are all caught. Each detected urn is folded into the baseline so
+# it isn't re-reported on the next tick.
 # gdlint:ignore = async-function-name
-func _async_check(token: int) -> bool:
+func _async_check(token: int) -> void:
 	if not _baseline_ready:
-		return false
+		return
 
 	var urns = await _async_fetch_owned_urns()
 	if token != _token:
-		return false
-	if urns != null:
-		for urn in urns:
-			if not _baseline_urns.has(urn):
-				var category: String = urns[urn]
-				var kind := "emote" if category == "emote" else "wearable"
-				NotificationsManager.show_system_toast(
-					_TOAST_ARRIVED_TITLE_FMT % kind, _TOAST_ARRIVED_BODY, _TOAST_TYPE
-				)
-				item_arrived.emit(urn, category)
-				return true
-
-	if not _credits_consumed_notified:
-		var credits: int = await Iap.async_refresh_balance()
-		if token != _token:
-			return false
-		if credits < _baseline_credits:
-			_credits_consumed_notified = true
-			NotificationsManager.show_system_toast(
-				_TOAST_ON_THE_WAY_TITLE, _TOAST_ON_THE_WAY_BODY, _TOAST_TYPE
-			)
-	return false
+		return
+	if urns == null:
+		return
+	for urn in urns:
+		if not _baseline_urns.has(urn):
+			var category: String = urns[urn]
+			# Fold into the baseline so the next tick doesn't re-report it.
+			_baseline_urns[urn] = category
+			# MARKETPLACE-IAP-TOAST: a clickable arrival toast was shown here (see the
+			# marker near the top of this file). Removed pending a portrait-aware toast.
+			item_arrived.emit(urn, category)
 
 
 # Public: the most-recently-obtained owned urns of one category ("wearable"/"emote"),

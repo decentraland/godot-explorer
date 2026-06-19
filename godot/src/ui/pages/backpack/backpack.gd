@@ -740,13 +740,36 @@ func _on_new_notifications(notifications: Array) -> void:
 
 func _on_item_arrived(urn: String, category: String) -> void:
 	# A marketplace purchase just landed (MarketplaceTracker detected it via the fast
-	# marketplace API). Inject that exact item directly instead of re-fetching the
-	# catalyst lambda, which lags minutes behind. Emotes live in the emote editor, not
-	# the wearables grid, so route by category.
+	# marketplace API). Force the matching view + Collectibles filter so it's visible,
+	# then inject that exact item directly instead of re-fetching the catalyst lambda,
+	# which lags minutes behind. Emotes live in the emote editor, not the wearables
+	# grid, so route by category.
+	apply_marketplace_arrival_view(category)
 	if category == "emote":
 		emote_editor.inject_owned_emote(urn)
 	else:
 		_async_inject_wearable(urn)
+
+
+# Force the backpack into the view that surfaces a just-arrived marketplace item:
+# wearable → ALL tab; emote → emotes view; both with the Collectibles filter on so the
+# purchased NFT shows. Reused by the live arrival handler and by the toast-click path
+# (via BackpackResponsive). Also refreshes the relevant list.
+func apply_marketplace_arrival_view(category: String) -> void:
+	only_collectibles = true
+	filter_indicator.visible = true
+	emote_editor.async_set_only_collectibles(true)
+	if category == "emote":
+		show_emotes()
+		press_button_emotes()
+	else:
+		_on_button_wearables_pressed()
+		_on_main_category_filter_type(Wearables.Categories.ALL)
+		# Reflect ALL as the selected main-category tab; otherwise the tab the user was
+		# previously on stays visually highlighted even though ALL is now active.
+		for btn in container_main_categories.get_children():
+			if btn is WearableFilterButton:
+				btn.set_pressed_no_signal(btn.get_category_name() == Wearables.Categories.ALL)
 
 
 # gdlint:ignore = async-function-name
