@@ -110,6 +110,11 @@ pub struct SceneManager {
     #[var]
     pointer_tooltips: VarArray,
 
+    // Entity under the crosshair that should show the hover highlight (outline),
+    // or null. Read from GDScript on the pointer_tooltip_changed signal.
+    #[var]
+    highlighted_entity: Option<Gd<Node3D>>,
+
     // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
     // between physics ticks (despawn, scene unload, teleport).
     last_avatar_under_crosshair: Option<InstanceId>,
@@ -2216,6 +2221,7 @@ impl INode for SceneManager {
             last_raycast_result: None,
             last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
+            highlighted_entity: None,
             interactable_area: Rect2i::from_components(
                 0,
                 0,
@@ -2384,7 +2390,9 @@ impl INode for SceneManager {
         );
 
         let mut tooltips = VarArray::new();
+        let mut new_highlighted: Option<Gd<Node3D>> = None;
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
+            let mut should_highlight = false;
             if let Some(pointer_events) =
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
@@ -2398,6 +2406,12 @@ impl INode for SceneManager {
                         let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
                         if !show_feedback || raycast.hit.length > max_distance {
                             continue;
+                        }
+
+                        // show_highlight (default true) gates the hover outline. show_feedback
+                        // was already checked above, so disabling it suppresses the highlight too.
+                        if *info.show_highlight.as_ref().unwrap_or(&true) {
+                            should_highlight = true;
                         }
 
                         let input_action =
@@ -2443,6 +2457,17 @@ impl INode for SceneManager {
                             }
                         }
                     }
+                }
+            }
+
+            // Resolve the entity's Node3D after the pointer_events borrow ends.
+            if should_highlight {
+                if let Some(node) = self.scenes.get(&raycast.scene_id).and_then(|scene| {
+                    scene
+                        .godot_dcl_scene
+                        .get_node_or_null_3d(&raycast.entity_id)
+                }) {
+                    new_highlighted = Some(node.clone());
                 }
             }
         }
@@ -2505,8 +2530,15 @@ impl INode for SceneManager {
             }
         }
 
-        if self.pointer_tooltips != tooltips {
+        let tooltips_changed = self.pointer_tooltips != tooltips;
+        let highlight_changed = self.highlighted_entity != new_highlighted;
+        if tooltips_changed {
             self.pointer_tooltips = tooltips;
+        }
+        if highlight_changed {
+            self.highlighted_entity = new_highlighted;
+        }
+        if tooltips_changed || highlight_changed {
             self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
