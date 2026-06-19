@@ -112,7 +112,7 @@ jobs:
 
       # Build section
       - name: Cargo install
-        timeout-minutes: 8
+        timeout-minutes: 15
         run: cargo run -- install --targets ios
 
       - name: Set prod flag
