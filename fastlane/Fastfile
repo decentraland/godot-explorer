@@ -91,11 +91,8 @@ platform :ios do
     end
     UI.user_error!("Could not locate the app Info.plist (#{SCHEME}-Info.plist) under #{EXPORTS_DIR}") unless info_plist && File.exist?(info_plist)
     UI.message("Patching #{info_plist}")
-    # Version string (e.g. "1.9") comes from the Godot export — we don't override it,
-    # only read it so the workflow can map build number ⇄ version in the Slack message.
-    version_string = get_info_plist_value(path: info_plist, key: "CFBundleShortVersionString")
     set_info_plist_value(path: info_plist, key: "CFBundleVersion", value: next_build.to_s)
-    UI.success("Version #{version_string} (build #{next_build})")
+    UI.message("Set CFBundleVersion #{next_build}")
 
     # --- Archive + export a signed App Store .ipa (manual signing) ---
     build_app(
@@ -120,6 +117,20 @@ platform :ios do
         "CODE_SIGN_IDENTITY=Apple\\ Distribution",
       ].join(" "),
     )
+
+    # Resolve the marketing version (CFBundleShortVersionString) for the Slack/Sentry
+    # mapping. Godot's exported *source* Info.plist stores it as the literal build
+    # variable "$(MARKETING_VERSION)" — Xcode only expands it into the built app — so
+    # read it back from the archived .app's (binary) Info.plist. Fall back to the
+    # pbxproj literal, then "unknown", and never surface the unexpanded "$(...)".
+    archive_app_plist = Dir.glob(File.join(XCARCHIVE, "Products", "Applications", "*.app", "Info.plist")).first
+    version_string = archive_app_plist ? get_info_plist_value(path: archive_app_plist, key: "CFBundleShortVersionString").to_s : ""
+    if version_string.strip.empty? || version_string.include?("$(")
+      pbxproj = File.join(XCODEPROJ, "project.pbxproj")
+      mv = File.exist?(pbxproj) ? File.read(pbxproj)[/MARKETING_VERSION\s*=\s*"?([^";]+)"?;/, 1] : nil
+      version_string = (mv && !mv.strip.empty?) ? mv.strip : "unknown"
+    end
+    UI.success("Version #{version_string} (build #{next_build})")
 
     # Expose archive path + the version⇄build mapping to the workflow (dSYMs + Slack).
     if ENV["GITHUB_ENV"]

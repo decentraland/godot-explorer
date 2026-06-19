@@ -170,6 +170,20 @@ jobs:
         timeout-minutes: 20
         run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
 
+      # lib/build.rs writes the rich build version to .build.version during the lib
+      # build (format: <pkg>-<short_sha>[-debug]-<dev|prod>, e.g. 0.71.0-e456a72-prod).
+      # Capture it now so the Slack success message can show it alongside Apple's 1.9.
+      - name: Capture Rust build version
+        run: |
+          VERSION_FILE="$GITHUB_WORKSPACE/.build.version"
+          if [ -f "$VERSION_FILE" ]; then
+            RUST_BUILD_VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
+            echo "RUST_BUILD_VERSION=$RUST_BUILD_VERSION" >> "$GITHUB_ENV"
+            echo "Rust build version: $RUST_BUILD_VERSION"
+          else
+            echo "⚠️  $VERSION_FILE not found — Rust build version unavailable"
+          fi
+
       - name: Import Assets
         uses: ./.github/actions/import-assets
 
@@ -297,6 +311,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then echo "⚠️  SLACK_WEBHOOK_URL not set, skipping"; exit 0; fi
+          RUST_BUILD_VERSION="${RUST_BUILD_VERSION:-unknown}"
           PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
           REF="${{ inputs.ref || github.event.inputs.ref }}"
           if [ -n "$PR_NUMBER" ]; then
@@ -325,6 +340,7 @@ jobs:
                 \"type\": \"section\",
                 \"fields\": [
                   { \"type\": \"mrkdwn\", \"text\": \"*Version:*\n\`${IOS_VERSION_STRING}\` (build \`${IOS_BUILD_NUMBER}\`)\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Build version:*\n\`${RUST_BUILD_VERSION}\`\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_NAME}\`\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
