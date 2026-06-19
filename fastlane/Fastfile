@@ -75,11 +75,21 @@ platform :ios do
     end
     UI.message("Using CFBundleVersion #{next_build}")
 
-    info_plist = Dir.glob(File.join(EXPORTS_DIR, "**", "*Info.plist"))
-                    .reject { |p| p.include?("#{File::SEPARATOR}build#{File::SEPARATOR}") }
-                    .reject { |p| p.include?("Pods") }
-                    .min_by(&:length)
-    UI.user_error!("Could not locate the exported Info.plist under #{EXPORTS_DIR}") unless info_plist
+    # Patch the APP's Info.plist specifically. Godot exports it at
+    # <export>/<scheme>/<scheme>-Info.plist. The export tree also holds many other
+    # *Info.plist files from bundled frameworks (MoltenVK.xcframework/Info.plist,
+    # godot_apple_embedded-Info.plist, dSYMs) — a blind shortest-path glob picks one
+    # of those, so the app's real CFBundleVersion never got bumped and the upload was
+    # rejected with "bundle version must be higher than the previously uploaded".
+    # Target the app plist by its scheme-derived name; fall back to a name-scoped glob.
+    info_plist = File.join(EXPORTS_DIR, SCHEME, "#{SCHEME}-Info.plist")
+    unless File.exist?(info_plist)
+      info_plist = Dir.glob(File.join(EXPORTS_DIR, "**", "#{SCHEME}-Info.plist"))
+                      .reject { |p| p.include?("#{File::SEPARATOR}build#{File::SEPARATOR}") }
+                      .reject { |p| p.include?("Pods") }
+                      .min_by(&:length)
+    end
+    UI.user_error!("Could not locate the app Info.plist (#{SCHEME}-Info.plist) under #{EXPORTS_DIR}") unless info_plist && File.exist?(info_plist)
     UI.message("Patching #{info_plist}")
     # Version string (e.g. "1.9") comes from the Godot export — we don't override it,
     # only read it so the workflow can map build number ⇄ version in the Slack message.
