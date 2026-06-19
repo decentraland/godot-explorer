@@ -15,7 +15,7 @@ static func is_valid_email(text: String) -> bool:
 
 
 func _ready() -> void:
-	$MarginContainer/VBoxContainer/Button_AddEmail.pressed.connect(_on_button_add_email_pressed)
+	$MarginContainer/VBoxContainer/Button_AddEmail.pressed.connect(_async_on_add_email_pressed)
 	visibility_changed.connect(_on_visibility_changed)
 
 
@@ -32,7 +32,7 @@ func _on_visibility_changed() -> void:
 		)
 
 
-func _on_button_add_email_pressed() -> void:
+func _async_on_add_email_pressed() -> void:
 	Global.metrics.track_click_button(
 		"UPGRADE_NOTICE_TAP", "UPGRADE_NOTICE_SHOW", JSON.stringify({"shown_in": _get_shown_in()})
 	)
@@ -49,17 +49,17 @@ func _on_button_add_email_pressed() -> void:
 		)
 	)
 	if modal:
-		modal.confirmed.connect(_on_email_confirmed)
+		modal.confirmed.connect(_async_on_email_confirmed)
 
 
-func _on_email_confirmed(email: String) -> void:
+func _async_on_email_confirmed(email: String) -> void:
 	var is_valid = await _async_validate_email(email)
 	if not is_valid:
 		return
 
 	var code_modal = await Global.modal_manager.async_show_code_modal()
 	if code_modal:
-		code_modal.confirmed.connect(_on_code_confirmed.bind(email))
+		code_modal.confirmed.connect(_async_on_code_confirmed.bind(email))
 		code_modal.cancelled.connect(Global.modal_manager.close_code_modal)
 
 
@@ -67,17 +67,17 @@ func _async_validate_email(_email: String) -> bool:
 	return true
 
 
-func _on_code_confirmed(code: String, email: String) -> void:
+func _async_on_code_confirmed(code: String, email: String) -> void:
 	Global.modal_manager.close_code_modal()
 	# TODO: replace mock with backend validation
 	if code == "111111":
-		await _show_email_in_use_modal()
+		await _async_show_email_in_use_modal()
 	else:
-		await _show_success_modal()
+		await _async_show_success_modal()
 		email_added.emit(email)
 
 
-func _show_success_modal() -> void:
+func _async_show_success_modal() -> void:
 	var modal = await Global.modal_manager._async_create_modal()
 	if not modal:
 		return
@@ -93,7 +93,7 @@ func _show_success_modal() -> void:
 	Global.modal_manager.close_current_modal()
 
 
-func _show_email_in_use_modal() -> void:
+func _async_show_email_in_use_modal() -> void:
 	var modal = await Global.modal_manager._async_create_modal()
 	if not modal:
 		return

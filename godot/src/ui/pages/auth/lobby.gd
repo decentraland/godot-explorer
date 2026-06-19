@@ -259,7 +259,7 @@ func show_discover_ftue_screen():
 	ftue_screen.load_places()
 
 
-func show_avatar_create_screen():
+func async_async_show_avatar_create_screen():
 	track_lobby_screen("AVATAR_CREATE")
 	button_back.show()
 	show_panel(control_avatar_create)
@@ -554,7 +554,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			# No profile yet: go to avatar customization + naming
 			create_guest_account_if_needed()
 			_show_avatar_preview()
-			show_avatar_create_screen()
+			async_show_avatar_create_screen()
 	else:
 		ready_for_redirect_by_deep_link = true
 		if _should_go_to_explorer_from_deeplink():
@@ -680,7 +680,7 @@ func _on_button_back_pressed():
 		"AVATAR_CREATE":
 			show_account_home_screen()
 		"AVATAR_NAMING":
-			show_avatar_create_screen()
+			async_show_avatar_create_screen()
 		_:
 			show_account_home_screen()
 
@@ -707,7 +707,7 @@ func _async_confirm_discard_edit() -> void:
 
 	if _discard_edit_confirmed:
 		Global.player_identity.set_profile(current_profile)
-		show_avatar_create_screen()
+		async_show_avatar_create_screen()
 
 
 func _on_discard_confirmed() -> void:
@@ -730,7 +730,7 @@ func _handle_back_action():
 		"AVATAR_CREATE":
 			show_account_home_screen()
 		"AVATAR_CUSTOMIZE", "AVATAR_NAMING":
-			show_avatar_create_screen()
+			async_show_avatar_create_screen()
 
 
 func _on_button_cancel_pressed():
@@ -797,7 +797,7 @@ func _on_button_enter_as_disposable_account_pressed():
 	Global.player_identity.set_default_profile()
 	guest_account_created = true
 	_show_avatar_preview()
-	show_avatar_create_screen()
+	async_show_avatar_create_screen()
 
 
 # Resolves the platform-native device anchor (SSAID on Android, Keychain UUID

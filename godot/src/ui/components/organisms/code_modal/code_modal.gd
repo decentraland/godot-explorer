@@ -71,7 +71,7 @@ func _on_hidden_input_changed(new_text: String) -> void:
 	_update_focus_style(new_text.length())
 
 	if new_text.length() == 6:
-		_submit_code()
+		_async_submit_code()
 
 
 func _on_hidden_input_gui_input(event: InputEvent) -> void:
@@ -93,7 +93,7 @@ func _update_focus_style(filled_count: int) -> void:
 			_code_inputs[i].add_theme_stylebox_override("read_only", _read_only_style)
 
 
-func _submit_code() -> void:
+func _async_async_submit_code() -> void:
 	var code = get_code()
 	if code.length() == 6:
 		_hidden_input.editable = false
