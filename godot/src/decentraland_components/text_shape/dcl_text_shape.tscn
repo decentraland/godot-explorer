@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://ds1mlssgb6mnk"]
+
+[ext_resource type="Script" path="res://src/decentraland_components/text_shape/dcl_text_shape.gd" id="1_dcltextshape"]
+
+[node name="DclTextShape" type="Node3D"]
+script = ExtResource("1_dcltextshape")
