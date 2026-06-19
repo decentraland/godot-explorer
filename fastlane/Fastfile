@@ -118,25 +118,15 @@ platform :ios do
       ].join(" "),
     )
 
-    # Resolve the marketing version (CFBundleShortVersionString) for the Slack/Sentry
-    # mapping. Godot's exported *source* Info.plist stores it as the literal build
-    # variable "$(MARKETING_VERSION)" — Xcode only expands it into the built app — so
-    # read it back from the archived .app's (binary) Info.plist. Fall back to the
-    # pbxproj literal, then "unknown", and never surface the unexpanded "$(...)".
-    archive_app_plist = Dir.glob(File.join(XCARCHIVE, "Products", "Applications", "*.app", "Info.plist")).first
-    version_string = archive_app_plist ? get_info_plist_value(path: archive_app_plist, key: "CFBundleShortVersionString").to_s : ""
-    if version_string.strip.empty? || version_string.include?("$(")
-      pbxproj = File.join(XCODEPROJ, "project.pbxproj")
-      mv = File.exist?(pbxproj) ? File.read(pbxproj)[/MARKETING_VERSION\s*=\s*"?([^";]+)"?;/, 1] : nil
-      version_string = (mv && !mv.strip.empty?) ? mv.strip : "unknown"
-    end
-    UI.success("Version #{version_string} (build #{next_build})")
+    UI.success("Build #{next_build} archived & signed")
 
-    # Expose archive path + the version⇄build mapping to the workflow (dSYMs + Slack).
+    # Expose archive path + build number to the workflow (dSYMs + Slack). The rich
+    # human version is the Rust .build.version captured by the workflow itself; the
+    # Apple marketing version (CFBundleShortVersionString) lives only as the build
+    # variable $(MARKETING_VERSION) in Godot's export, so we don't surface it here.
     if ENV["GITHUB_ENV"]
       File.open(ENV["GITHUB_ENV"], "a") do |f|
         f.puts("XCARCHIVE_PATH=#{XCARCHIVE}")
-        f.puts("IOS_VERSION_STRING=#{version_string}")
         f.puts("IOS_BUILD_NUMBER=#{next_build}")
       end
     end

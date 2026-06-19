@@ -339,7 +339,7 @@ jobs:
               {
                 \"type\": \"section\",
                 \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*Version:*\n\`${IOS_VERSION_STRING}\` (build \`${IOS_BUILD_NUMBER}\`)\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Build Number:*\n\`${IOS_BUILD_NUMBER}\`\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Build version:*\n\`${RUST_BUILD_VERSION}\`\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_NAME}\`\" },
                   { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
