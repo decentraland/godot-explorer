@@ -413,6 +413,13 @@ func _load_filtered_data(filter: String):
 				var is_equipable = Wearables.can_equip(
 					wearable, Global.player_identity.get_mutable_avatar().get_body_shape()
 				)
+				if not is_equipable and not is_body_shape:
+					print(
+						"[BodyShape] grid FILTERED-OUT (no representation) urn=",
+						wearable_id,
+						" cat=",
+						wearable.get_category()
+					)
 				var is_base_wearable = Wearables.is_base_wearable(wearable_id)
 				var can_use = (
 					(is_equipable and (!is_base_wearable or !only_collectibles))
@@ -633,6 +640,18 @@ func _async_marketplace_preview_equip(urn: String, wearable: DclItemEntityDefini
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()
 	if mutable_avatar == null:
 		return
+
+	print(
+		"[BodyShape] preview-equip urn=",
+		urn,
+		" category=",
+		wearable.get_category(),
+		" body_shape=",
+		mutable_avatar.get_body_shape(),
+		" has_representation=",
+		wearable.has_representation(mutable_avatar.get_body_shape()),
+		" (false => avatar renders NAKED for this slot)"
+	)
 
 	# Save original wearables on first preview
 	if _marketplace_preview_urn.is_empty():

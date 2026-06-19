@@ -116,6 +116,13 @@ func _build_catalog_url(category: String, skip: int = 0, first: int = 3) -> Stri
 		wearable_cat = "hands"
 	if not wearable_cat.is_empty():
 		url += "&wearableCategory=%s" % wearable_cat
+	# Only surface items that have a representation for the player's body shape;
+	# otherwise equipping them renders the avatar naked for that slot. The catalog
+	# API's `wearableGender=male|female` returns items with that representation
+	# (male/female-exclusive + unisex), excluding the opposite-only ones.
+	var gender := MarketplaceUrl.current_player_gender()
+	if not gender.is_empty():
+		url += "&wearableGender=%s" % gender
 	return url
 
 
@@ -192,6 +199,17 @@ func _populate_cards(items: Array):
 
 func _setup_card(card: WearableItem, item_data: Dictionary):
 	var urn = item_data.get("urn", "")
+	var bs := ""
+	if Global.player_identity != null and Global.player_identity.get_mutable_avatar() != null:
+		bs = Global.player_identity.get_mutable_avatar().get_body_shape()
+	print(
+		"[BodyShape] carousel card urn=",
+		urn,
+		" my_body_shape=",
+		bs,
+		" item_keys=",
+		item_data.keys()
+	)
 
 	_set_rarity_background(card, item_data.get("rarity", "common"))
 

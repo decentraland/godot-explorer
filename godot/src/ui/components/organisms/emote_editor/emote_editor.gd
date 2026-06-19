@@ -62,6 +62,12 @@ func _setup_ios_marketplace_section():
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
 		return
+	# Surface purchaseable emotes at the TOP of the list, above the owned-emotes grid, for
+	# discoverability (#2299) — mirrors the wearable carousel move in backpack.gd. The
+	# section is the last child of VBoxContainer_EmotesAndSuggestions; move it to the front.
+	var section_parent := _ios_marketplace_section.get_parent()
+	if section_parent:
+		section_parent.move_child(_ios_marketplace_section, 0)
 	_ios_marketplace_section.item_selected.connect(_on_marketplace_emote_selected)
 	_ios_marketplace_section.update_category("emotes")
 
