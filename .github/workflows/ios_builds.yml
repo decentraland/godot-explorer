@@ -63,7 +63,10 @@ jobs:
     environment: ${{ ((inputs.ref || github.event.inputs.ref) == 'main' || (inputs.ref || github.event.inputs.ref) == 'release') && 'ios-releases' || 'ios-pr-testflight' }}
     strategy:
       fail-fast: false
-    runs-on: warp-macos-14-arm64-6x
+    # macOS 26 runner: Apple now rejects any TestFlight/App Store upload not built
+    # with the iOS 26 SDK (Xcode 26+), which needs macOS 15+ — the macOS 14 image
+    # tops out at Xcode 16. The Xcode 26 toolchain is selected in "Select Xcode" below.
+    runs-on: warp-macos-26-arm64-6x
     timeout-minutes: 45
     steps:
       - name: Validate required secrets
@@ -139,17 +142,23 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.event.inputs.ref }}
 
-      # The project's min_ios_version is 18.0, which needs the iOS 18 SDK → Xcode 16+.
-      # The runner defaults to Xcode 15.4, so select 16.x explicitly (via DEVELOPER_DIR,
-      # honored by xcrun/clang/gym for all later steps — no sudo needed).
-      - name: Select Xcode 16.2 (iOS 18 SDK)
+      # Apple requires the iOS 26 SDK (Xcode 26+) for every TestFlight/App Store upload.
+      # Select it explicitly via DEVELOPER_DIR (honored by xcrun/clang/gym for all later
+      # steps — no sudo needed). Deployment target stays at the project's min_ios_version
+      # 18.0; building with a newer SDK does not raise the minimum OS. Pin a stable
+      # Xcode 26, falling back to the newest Xcode 26 on the runner if the image rotates.
+      - name: Select Xcode 26 (iOS 26 SDK)
         run: |
-          XCODE_APP="/Applications/Xcode_16.2.app"
+          XCODE_APP="/Applications/Xcode_26.4.1.app"
           if [ ! -d "$XCODE_APP" ]; then
-            echo "❌ $XCODE_APP not found on the runner. Installed Xcodes:"
+            XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
+          fi
+          if [ -z "$XCODE_APP" ] || [ ! -d "$XCODE_APP" ]; then
+            echo "❌ No Xcode 26 found on the runner. Installed Xcodes:"
             ls -d /Applications/Xcode*.app 2>/dev/null
             exit 1
           fi
+          echo "Using $XCODE_APP"
           echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
           "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
 
