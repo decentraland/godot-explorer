@@ -209,19 +209,8 @@ impl HttpQueueRequester {
             error_message: e.to_string(),
         };
 
-        tracing::info!(
-            "[HTTP] {} {}",
-            request_option.method.as_str(),
-            request_option.url
-        );
         let response = request.send().await.map_err(map_err_func)?;
         let status_code = response.status();
-        tracing::info!(
-            "[HTTP] {} {} -> {}",
-            request_option.method.as_str(),
-            request_option.url,
-            status_code.as_u16()
-        );
 
         let headers = if network_inspector_id.is_valid() {
             let headers = response
