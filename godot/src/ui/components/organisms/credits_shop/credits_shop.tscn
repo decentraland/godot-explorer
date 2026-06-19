@@ -144,7 +144,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 layout_mode = 2
 size_flags_horizontal = 1
 title = "What are Credits?"
-description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since."
+description = "Credits are a limited digital in-app utility bought with real money via Apple In-App Purchases. You can use them to acquire digital content like Wearables and Emotes in the iOS App."
 
 [node name="HSeparator2" type="HSeparator" parent="CreditsFaq" unique_id=895173665]
 layout_mode = 2
@@ -156,7 +156,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 layout_mode = 2
 size_flags_horizontal = 1
 title = "Do Credits expire?"
-description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since."
+description = "Credits do not expire. However, the Foundation may set expiration dates or discontinue them in the future by providing at least 30 days of prior notice."
 
 [node name="HSeparator3" type="HSeparator" parent="CreditsFaq" unique_id=1758333132]
 layout_mode = 2
@@ -168,7 +168,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 unique_name_in_owner = true
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
-text = "I agree I am purchasing a limited license to use Credits governed by the Terms of the License. By purchasing Credits, you agree to our Terms of Use and Privacy Policy, including the arbitration clause and revocation policy. You consent to the immediate performance of the contract and acknowledge that you thereby lose your right of withdrawal."
+text = "I agree I am purchasing a limited license to use Credits governed by the Credits Terms. By purchasing Credits, you agree to Decentraland's Terms of Use and Privacy Policy, including the arbitration clause and revocation policy. You consent to the immediate performance of the contract and acknowledge that you thereby lose your right of withdrawal."
 label_settings = SubResource("LabelSettings_4pofo")
 autowrap_mode = 2
 

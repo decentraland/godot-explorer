@@ -33,6 +33,12 @@ const WEARABLE_CATEGORIES: Array = [
 ## Categories that have no marketplace suggestions.
 const HIDDEN_CATEGORIES: Array = ["body_shape", "all", "all_extras"]
 
+## Hide items priced above the largest credits tier (tier3 = 225 credits): they can't
+## be afforded with a single In-App Purchase, so surfacing them is misleading (#2298).
+## The catalog API takes `maxPrice` in whole MANA/credits — the SAME unit as the existing
+## `minPrice=1` below, inclusive. NOT wei (the price is parsed server-side).
+const _MAX_PRICE_CREDITS := "225"
+
 @export var asset_type: String = "wearables"
 
 var _current_category: String = ""
@@ -94,15 +100,15 @@ func _build_catalog_url(category: String, skip: int = 0, first: int = 3) -> Stri
 		return (
 			DclUrls.marketplace_catalog_api()
 			+ (
-				"?first=%d&skip=%d&category=emote&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
-				% [first, skip]
+				"?first=%d&skip=%d&category=emote&isOnSale=true&minPrice=1&maxPrice=%s&onlyMinting=true&sortBy=recently_listed"
+				% [first, skip, _MAX_PRICE_CREDITS]
 			)
 		)
 	var url = (
 		DclUrls.marketplace_catalog_api()
 		+ (
-			"?first=%d&skip=%d&category=wearable&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
-			% [first, skip]
+			"?first=%d&skip=%d&category=wearable&isOnSale=true&minPrice=1&maxPrice=%s&onlyMinting=true&sortBy=recently_listed"
+			% [first, skip, _MAX_PRICE_CREDITS]
 		)
 	)
 	var wearable_cat = category if category in WEARABLE_CATEGORIES else ""

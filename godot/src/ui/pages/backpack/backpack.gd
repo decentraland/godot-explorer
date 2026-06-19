@@ -103,6 +103,12 @@ func _ready():
 
 	if hide_navbar:
 		container_navbar.hide()
+		# The lobby/FTUE "Create your avatar" flow reuses this backpack but must not
+		# surface the IAP credits affordances (#2303): hide the credits balance here and
+		# skip the marketplace suggestions setup below (see _setup_ios_marketplace_section).
+		var credits_button := get_node_or_null("%Button_Credits")
+		if credits_button:
+			credits_button.hide()
 
 	if size_canary != null:
 		size_canary.show()
@@ -435,12 +441,22 @@ func _show_wearables():
 
 
 func _setup_ios_marketplace_section():
+	# Not shown in the lobby/FTUE "Create your avatar" flow (same context that hides the
+	# navbar): only the in-world backpack surfaces purchaseable suggestions (#2303).
+	if hide_navbar:
+		return
 	if not Iap.is_available():
 		return
 
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
 		return
+	# Surface purchaseable items at the TOP of the items list, above the owned-wearables
+	# grid, for better discoverability (#2299). The section is the last child of
+	# VBoxContainer_ItemsAndSuggestions in the scene; move it to the front.
+	var section_parent := _ios_marketplace_section.get_parent()
+	if section_parent:
+		section_parent.move_child(_ios_marketplace_section, 0)
 	_ios_marketplace_section.item_equip.connect(_async_on_marketplace_equip)
 	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
 
