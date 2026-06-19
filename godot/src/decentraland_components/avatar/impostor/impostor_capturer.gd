@@ -124,6 +124,11 @@ func _take_next(queue: Array, in_frustum_only: bool):
 		if a == null or not is_instance_valid(a):
 			queue.remove_at(i)
 		i -= 1
+	# Drop dedup entries for avatars freed while queued — their iid is gone from
+	# the queue compaction above, so erase it here to keep _enqueued bounded.
+	for iid in _enqueued.keys():
+		if not is_instance_id_valid(iid):
+			_enqueued.erase(iid)
 	for a in queue:
 		entries.append(
 			{"distance": cam.distance_to(a.global_position), "off_frustum": a._off_frustum}
