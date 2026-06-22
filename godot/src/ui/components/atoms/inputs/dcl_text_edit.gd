@@ -13,7 +13,14 @@ const LONG_PRESS_DURATION := 0.5
 @export var has_max_length: bool = true
 @export var max_length: int = 15
 @export var is_optional: bool = true
-@export var wrap_text: bool = true
+@export var wrap_text: bool = true:
+	set(value):
+		wrap_text = value
+		if text_edit:
+			if wrap_text:
+				text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+			else:
+				text_edit.wrap_mode = TextEdit.LINE_WRAPPING_NONE
 
 @export_group("Validation")
 @export var validate_url: bool = false

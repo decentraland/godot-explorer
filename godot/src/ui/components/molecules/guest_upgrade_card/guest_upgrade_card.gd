@@ -73,6 +73,7 @@ func _async_on_add_email_pressed() -> void:
 		)
 	)
 	if modal:
+		modal.dcl_text_edit.wrap_text = false
 		modal.confirmed.connect(_async_on_email_confirmed)
 
 

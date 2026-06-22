@@ -61,9 +61,9 @@ alignment = 1
 [node name="MarginContainer" type="MarginContainer" parent="FTUE" unique_id=1657604065]
 custom_minimum_size = Vector2(0, 514)
 layout_mode = 2
-theme_override_constants/margin_left = 20
+theme_override_constants/margin_left = 32
 theme_override_constants/margin_top = 198
-theme_override_constants/margin_right = 20
+theme_override_constants/margin_right = 32
 
 [node name="Label_Welcome" type="RichTextLabel" parent="FTUE/MarginContainer" unique_id=584024232]
 unique_name_in_owner = true
