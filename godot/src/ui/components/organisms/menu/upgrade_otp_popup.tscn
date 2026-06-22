@@ -1,6 +1,6 @@
-[gd_scene load_steps=12 format=3 uid="uid://b8wupgotppopup"]
+[gd_scene format=3 uid="uid://b7wwfp7f38typ"]
 
-[ext_resource type="Script" uid="uid://dxq8wupgotppop" path="res://src/ui/components/organisms/menu/upgrade_otp_popup.gd" id="1_otp01"]
+[ext_resource type="Script" uid="uid://b262yv1mq8pf8" path="res://src/ui/components/organisms/menu/upgrade_otp_popup.gd" id="1_otp01"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_otp01"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_otp01"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_otp01"]
@@ -149,7 +149,6 @@ size_flags_horizontal = 4
 
 [node name="CodeStep" type="VBoxContainer" parent="MarginContainer" unique_id=1900000015]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 5
@@ -188,9 +187,9 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme = ExtResource("4_otp01")
 theme_override_font_sizes/font_size = 30
+placeholder_text = "123456"
 alignment = 1
 max_length = 8
-placeholder_text = "123456"
 keep_editing_on_text_submit = true
 
 [node name="Label_CodeError" type="Label" parent="MarginContainer/CodeStep/VBoxContainer2" unique_id=1900000020]

@@ -981,11 +981,11 @@ func _remove_input_modal() -> void:
 		_input_canvas_layer = null
 
 
-func async_show_code_modal() -> CodeModal:
+func async_show_code_modal(email: String = "") -> CodeModal:
 	var modal = await _async_create_code_modal()
 	if not modal:
 		return null
-	modal.open()
+	modal.open(email)
 	return modal
 
 

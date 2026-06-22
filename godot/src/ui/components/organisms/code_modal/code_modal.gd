@@ -17,6 +17,7 @@ var _verify_callable: Callable
 
 @onready var hbox_verifying: HBoxContainer = %HBoxContainer_Verifying
 @onready var _label_error: Label = %Label_Error
+@onready var _label_subtitle: RichTextLabel = %Label_Subtitle
 @onready var _modal_panel: ResponsiveContainer = $Blur/PanelContainer2
 
 
@@ -54,9 +55,15 @@ func _ready() -> void:
 	for line_edit in _code_inputs:
 		line_edit.gui_input.connect(_on_display_input_tapped)
 
+	%TextureButton_Close.pressed.connect(_on_close_pressed)
+
 
 func _on_display_input_tapped(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed:
+	var is_tap = (
+		(event is InputEventScreenTouch and event.pressed)
+		or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT)
+	)
+	if is_tap:
 		if _hidden_input.has_focus():
 			return
 		if _label_error.visible:
@@ -155,10 +162,15 @@ func _set_verifying_children_visible(value: bool) -> void:
 		child.visible = value
 
 
-func open() -> void:
+func open(email: String = "") -> void:
 	_clear_inputs()
 	_hidden_input.editable = true
 	_set_verifying_children_visible(false)
+	if email != "" and _label_subtitle:
+		_label_subtitle.text = (
+			"One time password sent to [b]%s[/b]. Please enter the code below to complete verification."
+			% email
+		)
 	show()
 	_hidden_input.grab_focus()
 
@@ -166,6 +178,11 @@ func open() -> void:
 func close() -> void:
 	_clear_inputs()
 	hide()
+
+
+func _on_close_pressed() -> void:
+	cancelled.emit()
+	close()
 
 
 func _clear_inputs() -> void:

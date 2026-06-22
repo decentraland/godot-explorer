@@ -9,15 +9,21 @@ var _touch_active = false
 var _scroll_detected = false
 
 @onready var _texture_rect: TextureRect = $TextureRect
+@onready var _skeleton: RectangleSkeleton = $RectangleSkeleton
 
 
 func _ready() -> void:
 	toggle_mode = true
+	self_modulate = Color.TRANSPARENT
+	disabled = true
 
 
 func setup(image: Texture2D, data: Dictionary) -> void:
 	preset_data = data
 	_texture_rect.texture = image
+	_skeleton.hide()
+	self_modulate = Color.WHITE
+	disabled = false
 
 
 func _input(event: InputEvent) -> void:

@@ -1,11 +1,12 @@
 class_name GuestUpgradeCard
-extends PanelContainer
+extends MarginContainer
 
 signal email_added(email: String)
 
 ## Screen location for metrics tracking. "discover" auto-differentiates between
 ## discover_pregame and discover_ingame based on whether explorer is active.
 @export_enum("discover", "settings") var shown_in = "discover"
+@onready var button_add_email: Button = %Button_AddEmail
 
 static var _email_regex: RegEx = RegEx.create_from_string("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
@@ -15,7 +16,7 @@ static func is_valid_email(text: String) -> bool:
 
 
 func _ready() -> void:
-	$MarginContainer/VBoxContainer/Button_AddEmail.pressed.connect(_async_on_add_email_pressed)
+	button_add_email.pressed.connect(_async_on_add_email_pressed)
 	visibility_changed.connect(_on_visibility_changed)
 	_async_update_visibility()
 
@@ -28,6 +29,8 @@ func _ready() -> void:
 # gdlint:ignore = async-function-name
 func _async_update_visibility() -> void:
 	visible = false
+	if not Global.is_orientation_portrait():
+		return
 	if Global.player_identity == null or not Global.player_identity.is_thirdweb_guest():
 		return
 
@@ -90,7 +93,7 @@ func _async_on_email_confirmed(email: String) -> void:
 		await _async_show_error_modal("Couldn't send code", _friendly_error(result.get_error()))
 		return
 
-	var code_modal = await Global.modal_manager.async_show_code_modal()
+	var code_modal = await Global.modal_manager.async_show_code_modal(email)
 	if code_modal:
 		# The code modal owns the spinner + inline error UI; it calls back into
 		# _async_verify_code and only emits `confirmed` once verification succeeds.

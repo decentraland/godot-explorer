@@ -121,6 +121,7 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("3_eofxm")
 expand_mode = 3
+stretch_mode = 6
 
 [node name="Label_Version" type="Label" parent="." unique_id=292290744]
 unique_name_in_owner = true
@@ -318,6 +319,7 @@ text = "NOT NOW"
 
 [node name="AccountHome" type="Control" parent="Main" unique_id=1437503699]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(425, 450)
 layout_mode = 2
 
@@ -599,7 +601,6 @@ icon_alignment = 2
 
 [node name="AvatarNaming" type="Control" parent="Main" unique_id=1478473587]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="Main/AvatarNaming" unique_id=1314152331]
@@ -812,6 +813,23 @@ hide_name = true
 can_move = false
 preview_margin_top = 10
 preview_margin_bottom = 60
+
+[node name="AvatarLoadingContainer" type="MarginContainer" parent="Main/Comeback/MarginContainer/VBoxContainer/AvatarPreviewContainer_Comeback" unique_id=1217587524]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="Main/Comeback/MarginContainer/VBoxContainer/AvatarPreviewContainer_Comeback/AvatarLoadingContainer" unique_id=1956132638]
+layout_mode = 2
+
+[node name="AvatarLoading" parent="Main/Comeback/MarginContainer/VBoxContainer/AvatarPreviewContainer_Comeback/AvatarLoadingContainer/CenterContainer" unique_id=1414098980 instance=ExtResource("11_7iulh")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
 
 [node name="RestoreNameFooter" type="VBoxContainer" parent="Main/Comeback/MarginContainer/VBoxContainer" unique_id=862068117]
 custom_minimum_size = Vector2(425, 0)

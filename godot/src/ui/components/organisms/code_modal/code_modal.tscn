@@ -186,6 +186,7 @@ theme_override_constants/separation = 22
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
 
 [node name="Label_Subtitle" type="RichTextLabel" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1085977058]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 size_flags_vertical = 3

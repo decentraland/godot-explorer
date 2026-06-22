@@ -88,6 +88,7 @@ var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContai
 @onready var avatar_preview_container_comeback: Control = %AvatarPreviewContainer_Comeback
 @onready var avatar_preview_container_avatar_naming: Control = %AvatarPreviewContainer_AvatarNaming
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
+@onready var avatar_loading: MarginContainer = %AvatarLoadingContainer
 @onready var button_lets_go = %Button_LetsGo
 
 @onready var backpack = %Backpack
@@ -159,6 +160,7 @@ func show_avatar_naming_screen():
 	avatar_preview.reparent(avatar_preview_container_avatar_naming)
 	_restore_avatar_preview_defaults()
 	if current_profile:
+		_show_avatar_loading()
 		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
 	_show_avatar_preview()
 
@@ -278,6 +280,7 @@ func async_show_avatar_create_screen():
 	var profile = Global.player_identity.get_mutable_profile()
 	if profile:
 		current_profile = profile
+		_show_avatar_loading()
 		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
 	_show_avatar_preview()
 
@@ -332,7 +335,9 @@ func _on_preset_selected(preset_data: Dictionary) -> void:
 		avatar.set_eyes_color(Color(eyes.r, eyes.g, eyes.b, eyes.get("a", 1.0)))
 
 	current_profile.set_avatar(avatar)
+	_show_avatar_loading()
 	await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
+	_show_avatar_preview()
 
 
 # ADR-290: Snapshots no longer uploaded
@@ -370,6 +375,9 @@ func _ready():
 	}
 
 	backpack.avatar_preview.snap_top_to_viewport = true
+
+	avatar_loading.hide()
+	avatar_preview.avatar.avatar_loaded.connect(_on_avatar_preview_loaded)
 
 	# Secret guest mode: double-tap logo when not in prod
 	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
@@ -918,8 +926,35 @@ func _restore_avatar_preview_defaults() -> void:
 
 
 func _show_avatar_preview():
+	avatar_loading.hide()
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.async_play_emote("wave")
+
+
+func _show_avatar_loading():
+	avatar_preview.hide()
+	avatar_loading.reparent(avatar_preview.get_parent())
+	avatar_loading.anchors_preset = Control.PRESET_FULL_RECT
+	avatar_loading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	avatar_loading.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	avatar_loading.add_theme_constant_override(
+		"margin_top", avatar_preview.preview_margin_top
+	)
+	avatar_loading.add_theme_constant_override(
+		"margin_bottom", avatar_preview.preview_margin_bottom
+	)
+	avatar_loading.add_theme_constant_override(
+		"margin_left", avatar_preview.preview_margin_left
+	)
+	avatar_loading.add_theme_constant_override(
+		"margin_right", avatar_preview.preview_margin_right
+	)
+	avatar_loading.show()
+
+
+func _on_avatar_preview_loaded():
+	avatar_loading.hide()
+	avatar_preview.show()
 
 
 # gdlint:ignore = async-function-name

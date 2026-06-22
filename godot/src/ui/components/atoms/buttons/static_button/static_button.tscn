@@ -14,6 +14,7 @@ toggle_mode = true
 
 [node name="Badge_Container" type="PanelContainer" parent="." unique_id=829810557]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
