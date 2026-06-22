@@ -106,26 +106,14 @@ mod ios {
     pub fn init_logger() {
         let pipe_to_godot = should_pipe_to_godot();
         let filter_layer = create_reload_filter("info");
-        // Feed all Rust log levels (incl. WARN/ERROR) into the log-stream hub
-        // directly — Godot's console output never reaches stdout on iOS, and the
-        // custom Godot logger only sees `print`/`log_message`, not errors.
-        let hub_layer = crate::tools::log_stream::LogHubLayer::new();
 
         if pipe_to_godot {
-            registry()
-                .with(filter_layer)
-                .with(GodotTracingLayer)
-                .with(hub_layer)
-                .init();
+            registry().with(filter_layer).with(GodotTracingLayer).init();
         } else {
             let oslog_layer = IosOsLogLayer {
                 logger: oslog::OsLog::new(env!("CARGO_PKG_NAME"), "default"),
             };
-            registry()
-                .with(filter_layer)
-                .with(oslog_layer)
-                .with(hub_layer)
-                .init();
+            registry().with(filter_layer).with(oslog_layer).init();
         }
     }
 }
@@ -282,19 +270,6 @@ pub struct DclGlobal {
 #[godot_api]
 impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
-        // Install stdout/stderr log capture as early as possible when --log-stream
-        // is set, so boot logs are retained in the ring buffer before the client
-        // connects. Cheap and tokio-free; the WebSocket client is started later
-        // from GDScript via `start_log_stream` (see explorer.gd / deep_link_router).
-        if crate::tools::godot_logger::find_arg_value(
-            &crate::tools::godot_logger::get_godot_args(),
-            "--log-stream",
-        )
-        .is_some()
-        {
-            crate::tools::log_stream::install_capture();
-        }
-
         #[cfg(feature = "use_deno")]
         crate::dcl::js::init_runtime();
 
@@ -754,31 +729,5 @@ impl DclGlobal {
             Ok(()) => godot_print!("Rust log filter updated to: {}", filter),
             Err(e) => godot_error!("Failed to update Rust log filter: {}", e),
         }
-    }
-
-    /// Start (or re-target) the unified log stream: capture stdout/stderr
-    /// (Rust + GDScript + native logs) and stream it to a desktop `log-server`
-    /// over WebSocket. `url` is `ws://host:port`. Opt-in; called from GDScript
-    /// when `--log-stream` / `?log-stream=` is set. Safe to call repeatedly.
-    #[func]
-    pub fn start_log_stream(url: GString) {
-        let url = url.to_string();
-        if url.is_empty() {
-            return;
-        }
-        godot_print!("[log-stream] starting client -> {}", url);
-        crate::tools::log_stream::start_client(url);
-    }
-
-    /// Write a line straight to the unified log stream from GDScript.
-    ///
-    /// On iOS, GDScript `print()` goes to `os_log` and never reaches the stream's
-    /// stdout/stderr fd capture, so `print` is invisible over `--log-stream`. This routes
-    /// the message through Rust's stderr, which the fd capture DOES tee into the hub — so
-    /// it shows up on the device stream. On desktop it just lands on stderr. Use for
-    /// on-device GDScript diagnostics that must be visible over `--log-stream`.
-    #[func]
-    pub fn log_to_stream(message: GString) {
-        eprintln!("{}", message);
     }
 }

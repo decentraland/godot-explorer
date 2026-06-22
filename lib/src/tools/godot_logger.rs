@@ -114,7 +114,7 @@ fn print_warning_with_source(msg: &str, metadata: &tracing::Metadata<'_>) {
 
 /// Collects Godot cmdline args (both regular and user args after `--`).
 /// Works on all platforms including Android deeplinks and iOS.
-pub fn get_godot_args() -> Vec<String> {
+fn get_godot_args() -> Vec<String> {
     let cmdline_args = Os::singleton().get_cmdline_args();
     let user_args = Os::singleton().get_cmdline_user_args();
 
@@ -133,7 +133,7 @@ pub fn get_godot_args() -> Vec<String> {
 }
 
 /// Find the value for a `--key value` or `--key=value` arg from Godot cmdline args.
-pub fn find_arg_value(args: &[String], name: &str) -> Option<String> {
+fn find_arg_value(args: &[String], name: &str) -> Option<String> {
     let prefix = format!("{}=", name);
     for (i, arg) in args.iter().enumerate() {
         if let Some(val) = arg.strip_prefix(&prefix) {

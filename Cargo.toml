@@ -19,8 +19,6 @@ reqwest = { version = "0.11", default-features = false, features = ["json", "rus
 serde_json = { version = "1.0.92", features = ["raw_value"] }
 glob = "*"
 tokio = { version = "1.26.0", features = ["sync", "rt-multi-thread", "net"] }
-tokio-tungstenite = "0.20"
-futures-util = "0.3"
 directories = "5.0.1"
 image = "0.24.9"
 cargo_metadata = "0.19.2"
