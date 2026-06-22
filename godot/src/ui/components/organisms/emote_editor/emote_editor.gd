@@ -90,8 +90,19 @@ func _add_default_emotes():
 
 func _async_load_remote_emotes():
 	var remote_emotes = await WearableRequest.async_request_all_emotes()
+	var emote_new := {}
 	if remote_emotes != null:
 		remote_emotes.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
+		# NEW tag (#2300): count owned copies per item urn, then evaluate against the persisted
+		# per-wallet snapshot (shared with the wearable grid, no endpoint timestamps).
+		var counts := {}
+		for emote in remote_emotes.elements:
+			var item_urn := Backpack.newtag_item_urn(emote.urn, emote.token_id)
+			counts[item_urn] = int(counts.get(item_urn, 0)) + 1
+		var wallet := ""
+		if Global.player_identity != null:
+			wallet = Global.player_identity.get_address_str().to_lower()
+		emote_new = Backpack.newtag_evaluate("emote", wallet, counts)
 		var count := 0
 		for emote in remote_emotes.elements:
 			var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
@@ -100,9 +111,9 @@ func _async_load_remote_emotes():
 			emote_item.play_emote.connect(self._on_emote_item_play_emote.bind(emote_item))
 			emote_item.emote_name_ready.connect(self.emote_grid_selected.emit)
 			container_all_emotes.add_child(emote_item)
-			# Tag recently-acquired emotes (#2300), same per-session threshold the
-			# wearable grid uses (captured once in Backpack._init_new_tag_threshold).
-			emote_item.set_new_badge(int(emote.transferet_at) > Backpack._new_tag_threshold_ts)
+			# Tag emotes whose owned count grew vs the snapshot (#2300).
+			var item_urn := Backpack.newtag_item_urn(emote.urn, emote.token_id)
+			emote_item.set_new_badge(bool(emote_new.get(item_urn, false)))
 			all_emote_items.push_back(emote_item)
 			count += 1
 			if count % 10 == 0:

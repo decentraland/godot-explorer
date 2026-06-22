@@ -1228,8 +1228,16 @@ func _http_method_to_string(method: int) -> String:
 
 
 func async_signed_fetch(url: String, method: int, _body: String = ""):
+	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
+	# x-identity-metadata header. The server verifier requires it to be a JSON
+	# object: a bodyless request would otherwise be signed as `null`, which the
+	# credits-server crypto-middleware (>=4.0.0) now rejects with
+	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
+	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
+	# body untouched.
+	var metadata := _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, _body, _http_method_to_string(method)
+		url, metadata, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 

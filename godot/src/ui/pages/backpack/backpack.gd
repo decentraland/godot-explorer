@@ -47,11 +47,11 @@ var _marketplace_restore_pending: bool = false
 var _avatar_update_retries: int = 0
 var _is_currently_narrow: bool = false
 
-# "NEW" tag (#2300): urn -> unix seconds the wearable was acquired (transferet_at from the
-# lambda, or "now" for live arrivals). An item is tagged new when it was acquired after the
-# per-wallet threshold (see the static _new_tag_* session state declared near the top).
-var _wearable_acquired_at: Dictionary = {}
-var _backpack_last_seen_ts: int = 0
+# "NEW" tag (#2300): item_urn -> current owned count for this load, and item_urn -> bool of
+# whether it is tagged new (count grew vs the persisted per-wallet snapshot). No endpoint
+# timestamps — see newtag_evaluate.
+var _wearable_owned_counts: Dictionary = {}
+var _wearable_is_new: Dictionary = {}
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
@@ -95,12 +95,13 @@ var _backpack_last_seen_ts: int = 0
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
 @onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
 
-# "NEW" tag (#2300) session state: the unix-seconds threshold an item must beat to be
-# tagged new, and whether we've already captured it this app session. Static so they
-# survive the backpack being freed/recreated on orientation switches (rotation must not
-# wipe the tags mid-session).
-static var _new_tag_threshold_ts: int = 0
-static var _new_tag_session_captured: bool = false
+# "NEW" tag (#2300) session state. Per category ("wearable"/"emote"): the baseline snapshot
+# (item_urn -> count) each item must exceed to be tagged new, captured once per app session
+# from the persisted config, plus whether it has been captured. Static so they survive the
+# backpack being freed/recreated on orientation switches (rotation must not wipe the tags
+# mid-session).
+static var _newtag_session_baseline: Dictionary = {}
+static var _newtag_session_captured: Dictionary = {}
 
 
 # gdlint:ignore = async-function-name
@@ -168,19 +169,20 @@ func _ready():
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
-	# Capture the NEW-tag threshold (#2300) once per session before deciding which items
-	# are new (this also advances the persisted per-wallet "last seen" marker).
-	_init_new_tag_threshold()
+	# NEW tag (#2300): owned counts are rebuilt below from the owned list, then evaluated
+	# against the persisted per-wallet snapshot.
+	_wearable_owned_counts.clear()
 
 	# Surface the most-recently-obtained owned wearables from the fast marketplace API
 	# first (added only if not already listed), so an item just bought on the web shows
 	# up immediately instead of waiting for the catalyst lambda below (which lags
 	# minutes). Augments the lambda list — never the sole source.
+	var fast_owned_urns: Array = []
 	for urn in await MarketplaceTracker.async_fetch_recent_owned("wearable"):
 		if not wearable_data.has(urn):
 			wearable_data[urn] = null
-		# Items from the fast "recently owned" API are by definition just-acquired.
-		_wearable_acquired_at[urn] = _now_seconds()
+		# Surfaced before the lambda; counted as one below if the lambda doesn't list it yet.
+		fast_owned_urns.append(urn)
 
 	# Load all remote wearables that you own...
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
@@ -191,8 +193,18 @@ func _ready():
 			# dedupes against the recent-owned API / live inject (see _to_item_urn).
 			var item_urn := _to_item_urn(wearable_item.urn, wearable_item.token_id)
 			wearable_data[item_urn] = null
-			if not _wearable_acquired_at.has(item_urn):
-				_wearable_acquired_at[item_urn] = int(wearable_item.transferet_at)
+			# Count owned token instances per item for the NEW tag (#2300).
+			_wearable_owned_counts[item_urn] = int(_wearable_owned_counts.get(item_urn, 0)) + 1
+	# Fast-API items the lambda hasn't listed yet (just bought) count as one.
+	for urn in fast_owned_urns:
+		if not _wearable_owned_counts.has(urn):
+			_wearable_owned_counts[urn] = 1
+	# Evaluate NEW tags only when the owned list actually loaded, so an early/transient/failed
+	# load never seeds a bogus baseline.
+	if remote_wearables != null:
+		_wearable_is_new = newtag_evaluate(
+			"wearable", _current_wallet_lower(), _wearable_owned_counts
+		)
 
 	# Dev/testing: inject fake-owned wearables from deeplink (see FORCE_DEEPLINK in global.gd).
 	for fake_urn in Global.deep_link_obj.fake_owned_wearables:
@@ -817,10 +829,11 @@ func apply_marketplace_arrival_view(category: String) -> void:
 
 
 # --- "NEW" tag helpers (#2300) ---
-
-
-func _now_seconds() -> int:
-	return int(Time.get_unix_time_from_system())
+#
+# Endpoint-timestamp-free: we keep a per-wallet snapshot of owned item COUNTS (item_urn ->
+# count) in the config and tag an item NEW when its current count exceeds the snapshot (a new
+# urn, or one extra copy). The first load for a wallet just seeds the snapshot and tags
+# nothing. Shared by the wearable grid and the emote grid (category "wearable" / "emote").
 
 
 func _current_wallet_lower() -> String:
@@ -829,45 +842,61 @@ func _current_wallet_lower() -> String:
 	return Global.player_identity.get_address_str().to_lower()
 
 
-# Captures, once per app session, the timestamp an item must beat to be tagged "NEW", and
-# advances the persisted per-wallet marker to now so the tags clear on the next session.
-# The static state keeps the threshold stable across the backpack being freed/recreated
-# (e.g. on orientation switches), so rotating the device doesn't wipe the tags mid-session.
-func _init_new_tag_threshold() -> void:
-	if _new_tag_session_captured:
-		_backpack_last_seen_ts = _new_tag_threshold_ts
-		return
-	_new_tag_session_captured = true
-	var now := _now_seconds()
-	var wallet := _current_wallet_lower()
-	if wallet.is_empty():
-		_new_tag_threshold_ts = now
-		_backpack_last_seen_ts = now
-		return
-	var seen_map: Dictionary = Global.get_config().backpack_seen_at
-	# Default to "now" so a wallet's first-ever visit doesn't flood the grid with tags.
-	# The persisted marker is advanced on teardown (see _persist_backpack_seen), NOT here,
-	# so wearables that arrive mid-session are still covered (cleared) next session.
-	_new_tag_threshold_ts = int(seen_map.get(wallet, now))
-	_backpack_last_seen_ts = _new_tag_threshold_ts
+# Collapses a token-instance urn (…:<itemId>:<tokenId>) to its ITEM urn so multiple copies of
+# the same item count together. Static so the emote grid can share it. token_id is the parsed
+# tokenId; base/off-chain items have none and pass through unchanged.
+static func newtag_item_urn(urn: String, token_id: String) -> String:
+	if not token_id.is_empty() and urn.ends_with(":" + token_id):
+		return urn.trim_suffix(":" + token_id)
+	return urn
+
+
+# Evaluates the NEW tags for a category from the current owned counts and persists the
+# snapshot so tags clear next session. Returns { item_urn: bool }. The comparison baseline is
+# captured once per app session per category (static), so it stays stable across the grid
+# being rebuilt (filter changes, orientation switches). Persists on every load rather than on
+# teardown, so killing the app can't strand a stale snapshot. Returns {} without a wallet or
+# with empty counts, so an early/transient load never seeds a bogus baseline.
+static func newtag_evaluate(
+	category: String, wallet: String, current_counts: Dictionary
+) -> Dictionary:
+	if wallet.is_empty() or current_counts.is_empty():
+		return {}
+	var stored: Dictionary = _newtag_stored_for(category)
+	if not _newtag_session_captured.get(category, false):
+		_newtag_session_captured[category] = true
+		# First load this session: the baseline is the previously-persisted snapshot, or — on a
+		# wallet's first-ever visit — the current inventory itself (so nothing is tagged).
+		if stored.has(wallet):
+			_newtag_session_baseline[category] = (stored[wallet] as Dictionary).duplicate()
+		else:
+			_newtag_session_baseline[category] = current_counts.duplicate()
+	# Advance the persisted snapshot to the current counts (next session's baseline).
+	_newtag_persist(category, wallet, current_counts)
+	var baseline: Dictionary = _newtag_session_baseline.get(category, {})
+	var flags := {}
+	for urn in current_counts:
+		flags[urn] = int(current_counts[urn]) > int(baseline.get(urn, 0))
+	return flags
+
+
+# The persisted { wallet_lower: { item_urn: count } } map for a category.
+static func _newtag_stored_for(category: String) -> Dictionary:
+	var all: Dictionary = Global.get_config().backpack_owned_counts
+	return all.get(category, {})
+
+
+static func _newtag_persist(category: String, wallet: String, counts: Dictionary) -> void:
+	var all: Dictionary = Global.get_config().backpack_owned_counts
+	var per_category: Dictionary = all.get(category, {})
+	per_category[wallet] = counts.duplicate()
+	all[category] = per_category
+	Global.get_config().backpack_owned_counts = all
+	Global.get_config().save_to_settings_file()
 
 
 func _is_wearable_new(urn: String) -> bool:
-	return int(_wearable_acquired_at.get(urn, 0)) > _backpack_last_seen_ts
-
-
-# Advances the persisted per-wallet "last seen" marker to now, so wearables acquired up to
-# this point stop being tagged on the next app session. Called on teardown — including the
-# inner backpack being freed on an orientation switch, which is harmless: the threshold is
-# captured once per session (static) and stays fixed, so the tags don't clear mid-session.
-func _persist_backpack_seen() -> void:
-	var wallet := _current_wallet_lower()
-	if wallet.is_empty():
-		return
-	var seen_map: Dictionary = Global.get_config().backpack_seen_at
-	seen_map[wallet] = _now_seconds()
-	Global.get_config().backpack_seen_at = seen_map
-	Global.get_config().save_to_settings_file()
+	return bool(_wearable_is_new.get(urn, false))
 
 
 # Owned collectibles enter wearable_data from two sources with different urn forms: the
@@ -878,9 +907,7 @@ func _persist_backpack_seen() -> void:
 # avatar profile all use, so the two sources dedupe and equipped collectibles match the
 # profile's item urns. token_id is the parsed tokenId; base/off-chain items have none.
 func _to_item_urn(urn: String, token_id: String) -> String:
-	if not token_id.is_empty() and urn.ends_with(":" + token_id):
-		return urn.trim_suffix(":" + token_id)
-	return urn
+	return newtag_item_urn(urn, token_id)
 
 
 # gdlint:ignore = async-function-name
@@ -896,8 +923,9 @@ func _async_inject_wearable(urn: String) -> void:
 	if wearable == null:
 		return
 
-	# A live arrival is brand-new — tag it (#2300).
-	_wearable_acquired_at[urn] = _now_seconds()
+	# A live arrival is brand-new — bump its count and re-evaluate so the grid tags it (#2300).
+	_wearable_owned_counts[urn] = int(_wearable_owned_counts.get(urn, 0)) + 1
+	_wearable_is_new = newtag_evaluate("wearable", _current_wallet_lower(), _wearable_owned_counts)
 
 	# Insert at the front so the just-arrived wearable shows first in the grid.
 	var reordered := {urn: wearable}
@@ -924,14 +952,17 @@ func _async_refresh_owned_wearables() -> void:
 	# (like the initial load's wearable_data.keys()). Passing a typed Array[String]
 	# makes the Rust binding panic with BadArrayType and crashes the app.
 	var new_keys: Array = []
+	# Rebuild owned counts from the authoritative full list, then re-evaluate the NEW tags.
+	_wearable_owned_counts.clear()
 	for wearable_item in remote_wearables.elements:
 		# Collapse the lambda's token-instance urn to the ITEM urn (see _to_item_urn) so it
 		# dedupes against entries already added by the recent-owned API / live inject.
 		var item_urn := _to_item_urn(wearable_item.urn, wearable_item.token_id)
+		_wearable_owned_counts[item_urn] = int(_wearable_owned_counts.get(item_urn, 0)) + 1
 		if not wearable_data.has(item_urn):
 			wearable_data[item_urn] = null
 			new_keys.append(item_urn)
-			_wearable_acquired_at[item_urn] = int(wearable_item.transferet_at)
+	_wearable_is_new = newtag_evaluate("wearable", _current_wallet_lower(), _wearable_owned_counts)
 
 	if new_keys.is_empty():
 		return
@@ -968,9 +999,6 @@ func _async_refresh_owned_wearables() -> void:
 
 
 func _exit_tree():
-	# Mark everything currently acquired as "seen" so the NEW tags clear next session (#2300).
-	_persist_backpack_seen()
-
 	# Clean up timer and disconnect signals
 	if blacklist_deploy_timer:
 		blacklist_deploy_timer.stop()
