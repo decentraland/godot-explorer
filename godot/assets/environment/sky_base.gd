@@ -118,10 +118,18 @@ func _process(_delta: float) -> void:
 	# No early-out: the Curve sample above runs every frame anyway, so gating gradient
 	# samples doesn't save anything and risks falling out of sync.
 	if directional_light_gradient:
-		main_light.light_color = directional_light_gradient.sample(skybox_time)
+		var sun_col := directional_light_gradient.sample(skybox_time)
+		main_light.light_color = sun_col
+		# Mirror to a global shader param so unshaded materials (e.g. the
+		# octahedral impostor) can match the day/night cycle.
+		RenderingServer.global_shader_parameter_set(
+			"sun_color", Vector3(sun_col.r, sun_col.g, sun_col.b)
+		)
 	if ambient_light_gradient:
-		world_environment.environment.ambient_light_color = ambient_light_gradient.sample(
-			skybox_time
+		var amb_col := ambient_light_gradient.sample(skybox_time)
+		world_environment.environment.ambient_light_color = amb_col
+		RenderingServer.global_shader_parameter_set(
+			"ambient_color", Vector3(amb_col.r, amb_col.g, amb_col.b)
 		)
 	if fog_color_gradient:
 		world_environment.environment.fog_light_color = fog_color_gradient.sample(skybox_time)

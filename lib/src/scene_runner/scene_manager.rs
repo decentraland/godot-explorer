@@ -110,6 +110,11 @@ pub struct SceneManager {
     #[var]
     pointer_tooltips: VarArray,
 
+    // Entity under the crosshair that should show the hover highlight (outline),
+    // or null. Read from GDScript on the pointer_tooltip_changed signal.
+    #[var]
+    highlighted_entity: Option<Gd<Node3D>>,
+
     // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
     // between physics ticks (despawn, scene unload, teleport).
     last_avatar_under_crosshair: Option<InstanceId>,
@@ -826,6 +831,54 @@ impl SceneManager {
             return scene.scene_entity_definition.id.clone().to_godot();
         }
         GString::default()
+    }
+
+    /// Resolve a scene-emote URN (`urn:decentraland:off-chain:scene-emote:{scene_id}-{glb_hash}-{loop}`)
+    /// against the currently loaded scenes. The URN payload cannot be dash-split:
+    /// preview ids/hashes look like `b64-<base64>` and contain `-` themselves. Matching
+    /// the payload against each loaded scene's entity id (exact prefix) is unambiguous.
+    /// This is the path for emotes that arrive *without* local context — broadcast from
+    /// remote players over comms, or AvatarShape expression triggers — where the
+    /// per-avatar content registry used by triggerSceneEmote was never populated.
+    /// Returns `{scene_id, glb_hash, base_url, audio_hash, looping}` or `{}`.
+    #[func]
+    pub fn resolve_scene_emote_urn(&self, emote_urn: GString) -> VarDictionary {
+        const URN_PREFIX: &str = "urn:decentraland:off-chain:scene-emote:";
+        let urn = emote_urn.to_string();
+        let Some(payload) = urn.strip_prefix(URN_PREFIX) else {
+            return VarDictionary::new();
+        };
+        let (payload, looping) = if let Some(p) = payload.strip_suffix("-true") {
+            (p, true)
+        } else if let Some(p) = payload.strip_suffix("-false") {
+            (p, false)
+        } else {
+            return VarDictionary::new();
+        };
+
+        for scene in self.scenes.values() {
+            let scene_entity_id = scene.scene_entity_definition.id.as_str();
+            let Some(glb_hash) = payload
+                .strip_prefix(scene_entity_id)
+                .and_then(|rest| rest.strip_prefix('-'))
+            else {
+                continue;
+            };
+            let audio_hash = scene
+                .content_mapping
+                .get_scene_emote_hash_by_glb_hash(glb_hash)
+                .and_then(|hash| hash.audio_hash)
+                .unwrap_or_default();
+
+            let mut dict = VarDictionary::new();
+            dict.set("scene_id", scene_entity_id);
+            dict.set("glb_hash", glb_hash);
+            dict.set("base_url", scene.content_mapping.base_url.as_str());
+            dict.set("audio_hash", audio_hash);
+            dict.set("looping", looping);
+            return dict;
+        }
+        VarDictionary::new()
     }
 
     #[func]
@@ -2168,6 +2221,7 @@ impl INode for SceneManager {
             last_raycast_result: None,
             last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
+            highlighted_entity: None,
             interactable_area: Rect2i::from_components(
                 0,
                 0,
@@ -2336,7 +2390,9 @@ impl INode for SceneManager {
         );
 
         let mut tooltips = VarArray::new();
+        let mut new_highlighted: Option<Gd<Node3D>> = None;
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
+            let mut should_highlight = false;
             if let Some(pointer_events) =
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
@@ -2350,6 +2406,12 @@ impl INode for SceneManager {
                         let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
                         if !show_feedback || raycast.hit.length > max_distance {
                             continue;
+                        }
+
+                        // show_highlight (default true) gates the hover outline. show_feedback
+                        // was already checked above, so disabling it suppresses the highlight too.
+                        if *info.show_highlight.as_ref().unwrap_or(&true) {
+                            should_highlight = true;
                         }
 
                         let input_action =
@@ -2395,6 +2457,17 @@ impl INode for SceneManager {
                             }
                         }
                     }
+                }
+            }
+
+            // Resolve the entity's Node3D after the pointer_events borrow ends.
+            if should_highlight {
+                if let Some(node) = self.scenes.get(&raycast.scene_id).and_then(|scene| {
+                    scene
+                        .godot_dcl_scene
+                        .get_node_or_null_3d(&raycast.entity_id)
+                }) {
+                    new_highlighted = Some(node.clone());
                 }
             }
         }
@@ -2457,8 +2530,15 @@ impl INode for SceneManager {
             }
         }
 
-        if self.pointer_tooltips != tooltips {
+        let tooltips_changed = self.pointer_tooltips != tooltips;
+        let highlight_changed = self.highlighted_entity != new_highlighted;
+        if tooltips_changed {
             self.pointer_tooltips = tooltips;
+        }
+        if highlight_changed {
+            self.highlighted_entity = new_highlighted;
+        }
+        if tooltips_changed || highlight_changed {
             self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 

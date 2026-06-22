@@ -72,7 +72,13 @@ func _ready() -> void:
 	# manual toggle. Release/exported builds stay off until the Settings →
 	# Developer toggle. Never in production.
 	if OS.is_debug_build() and not Global.is_production():
-		start()
+		# DCL_DEBUG_WS_PORT lets a second local instance get its own inspector
+		# (the default port can only be bound by one process).
+		var port := DEFAULT_PORT
+		var env_port := OS.get_environment("DCL_DEBUG_WS_PORT")
+		if env_port.is_valid_int():
+			port = env_port.to_int()
+		start(port)
 
 
 func is_running() -> bool:

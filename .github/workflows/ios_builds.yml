@@ -17,9 +17,12 @@ on:
         required: false
         type: string
         default: ''
+      dry_run:
+        description: 'Build & sign but skip the TestFlight upload (validation only)'
+        required: false
+        type: boolean
+        default: false
     secrets:
-      DEPLOY_SSH_KEY:
-        required: true
       SENTRY_AUTH_TOKEN:
         required: false
       SENTRY_ORG:
@@ -29,18 +32,20 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch to build'
+        description: 'Branch to build — main, release, or any feature branch (for dry-run validation)'
         required: true
-        type: choice
+        type: string
         default: 'main'
-        options:
-          - main
-          - release
       whats_new:
         description: 'TestFlight "What to Test" notes (optional; auto-generated from the commit when empty)'
         required: false
         type: string
         default: ''
+      dry_run:
+        description: 'Build & sign but skip the TestFlight upload (validation only)'
+        required: false
+        type: boolean
+        default: false
 permissions:
   pull-requests: write
   contents: read
@@ -52,46 +57,63 @@ concurrency:
 jobs:
   build:
     name: Build iOS
+    # main/release → ios-releases (auto, branch-restricted). Anything else (PR-label
+    # builds) → ios-pr-testflight (reviewer-gated, prevent_self_review). The branch
+    # policy on ios-releases is the safety net keeping the no-reviewer env limited.
+    environment: ${{ ((inputs.ref || github.event.inputs.ref) == 'main' || (inputs.ref || github.event.inputs.ref) == 'release') && 'ios-releases' || 'ios-pr-testflight' }}
     strategy:
       fail-fast: false
-    runs-on: warp-macos-14-arm64-6x
+    # macOS 26 runner: Apple now rejects any TestFlight/App Store upload not built
+    # with the iOS 26 SDK (Xcode 26+), which needs macOS 15+ — the macOS 14 image
+    # tops out at Xcode 16. The Xcode 26 toolchain is selected in "Select Xcode" below.
+    runs-on: warp-macos-26-arm64-6x
     timeout-minutes: 45
     steps:
       - name: Validate required secrets
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          IOS_DIST_CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          DRY_RUN: ${{ inputs.dry_run || github.event.inputs.dry_run }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          echo "Validating required secrets..."
+          # Apple secrets come from the environment (ios-releases / ios-pr-testflight).
+          # Only check presence — never echo a value (public repo, logs are world-readable).
           MISSING=""
-
-          # Required secrets (build will fail without these)
-          if [ -z "$DEPLOY_SSH_KEY" ]; then
-            MISSING="$MISSING DEPLOY_SSH_KEY"
+          # Signing material is always required (needed to build & sign the .ipa).
+          for V in IOS_DIST_CERT_P12 IOS_DIST_CERT_PASSWORD IOS_PROVISIONING_PROFILE; do
+            eval "VAL=\${$V:-}"
+            [ -z "$VAL" ] && MISSING="$MISSING $V"
+          done
+          # ASC_* are only needed for the actual upload, so a dry_run doesn't require them.
+          if [ "${DRY_RUN:-}" != "true" ]; then
+            for V in ASC_KEY_ID ASC_ISSUER_ID ASC_API_KEY_P8; do
+              eval "VAL=\${$V:-}"
+              [ -z "$VAL" ] && MISSING="$MISSING $V"
+            done
+          else
+            echo "ℹ️  dry_run: skipping ASC_* requirement (build + sign only, no upload)."
           fi
-
           if [ -n "$MISSING" ]; then
-            echo "❌ Missing required secrets:$MISSING"
-            echo "Please configure these secrets in the repository settings."
+            echo "❌ Missing required environment secrets:$MISSING"
+            echo "   Load them into the environment used by this run — see docs/IOS_TESTFLIGHT_ACCOUNT_HOLDER_SETUP.md"
             exit 1
           fi
-
-          # Optional secrets (build will continue but some features disabled)
-          if [ -z "$SENTRY_AUTH_TOKEN" ] || [ -z "$SENTRY_ORG" ] || [ -z "$SENTRY_PROJECT" ]; then
-            echo "⚠️  Sentry secrets not configured (SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT)"
-            echo "   libdclgodot upload will be skipped."
+          if [ -z "${SENTRY_AUTH_TOKEN:-}" ] || [ -z "${SENTRY_ORG:-}" ] || [ -z "${SENTRY_PROJECT:-}" ]; then
+            echo "⚠️  Sentry secrets not configured — dSYM upload will be skipped."
           fi
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured"
-            echo "   Slack notifications will be skipped."
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "⚠️  SLACK_WEBHOOK_URL not configured — Slack notifications skipped."
           fi
+          echo "✅ Required secrets present"
 
-          echo "✅ Required secrets validated"
-
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ inputs.ref || github.event.inputs.ref }}
 
@@ -112,13 +134,33 @@ jobs:
 
       # Build section
       - name: Cargo install
-        timeout-minutes: 8
+        timeout-minutes: 15
         run: cargo run -- install --targets ios
 
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
         with:
           ref: ${{ inputs.ref || github.event.inputs.ref }}
+
+      # Apple requires the iOS 26 SDK (Xcode 26+) for every TestFlight/App Store upload.
+      # Select it explicitly via DEVELOPER_DIR (honored by xcrun/clang/gym for all later
+      # steps — no sudo needed). Deployment target stays at the project's min_ios_version
+      # 18.0; building with a newer SDK does not raise the minimum OS. Pin a stable
+      # Xcode 26, falling back to the newest Xcode 26 on the runner if the image rotates.
+      - name: Select Xcode 26 (iOS 26 SDK)
+        run: |
+          XCODE_APP="/Applications/Xcode_26.4.1.app"
+          if [ ! -d "$XCODE_APP" ]; then
+            XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
+          fi
+          if [ -z "$XCODE_APP" ] || [ ! -d "$XCODE_APP" ]; then
+            echo "❌ No Xcode 26 found on the runner. Installed Xcodes:"
+            ls -d /Applications/Xcode*.app 2>/dev/null
+            exit 1
+          fi
+          echo "Using $XCODE_APP"
+          echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
+          "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
 
       - name: Build MacOS
         timeout-minutes: 20
@@ -128,6 +170,20 @@ jobs:
         timeout-minutes: 20
         run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
 
+      # lib/build.rs writes the rich build version to .build.version during the lib
+      # build (format: <pkg>-<short_sha>[-debug]-<dev|prod>, e.g. 0.71.0-e456a72-prod).
+      # Capture it now so the Slack success message can show it alongside Apple's 1.9.
+      - name: Capture Rust build version
+        run: |
+          VERSION_FILE="$GITHUB_WORKSPACE/.build.version"
+          if [ -f "$VERSION_FILE" ]; then
+            RUST_BUILD_VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
+            echo "RUST_BUILD_VERSION=$RUST_BUILD_VERSION" >> "$GITHUB_ENV"
+            echo "Rust build version: $RUST_BUILD_VERSION"
+          else
+            echo "⚠️  $VERSION_FILE not found — Rust build version unavailable"
+          fi
+
       - name: Import Assets
         uses: ./.github/actions/import-assets
 
@@ -135,131 +191,84 @@ jobs:
         timeout-minutes: 5
         run: cargo run -- export --target ios
 
-      # Deploy to godot-mobile-deploy-pipeline
-      - name: Install Git LFS
-        run: |
-          brew install git-lfs
-          git lfs install
-
-      - name: Setup SSH for deployment
+      # --- Code signing material from the environment secrets ---
+      - name: Prepare iOS signing
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          IOS_DIST_CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          set -eu
+          mkdir -p "$RUNNER_TEMP/signing"
+          echo "$IOS_DIST_CERT_P12" | base64 --decode > "$RUNNER_TEMP/signing/dist.p12"
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > "$RUNNER_TEMP/signing/profile.mobileprovision"
+          printf '%s' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/signing/asc_key.p8"
+          # Decode the profile to read its display Name + UUID (no secrets in here).
+          security cms -D -i "$RUNNER_TEMP/signing/profile.mobileprovision" > "$RUNNER_TEMP/signing/profile.plist"
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$RUNNER_TEMP/signing/profile.plist")
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$RUNNER_TEMP/signing/profile.plist")
+          echo "IOS_PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RUNNER_TEMP/signing/profile.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          echo "Prepared signing for profile: $PROFILE_NAME"
 
-      - name: Deploy iOS exports to mobile deploy pipeline
-        timeout-minutes: 10
+      - name: Install fastlane (pinned 2.228.0)
+        run: |
+          # The runner ships a pre-installed fastlane, so install + invoke our exact
+          # version explicitly (the `fastlane _x.y.z_` selector forces it).
+          gem install fastlane -v 2.228.0 --no-document
+          fastlane _2.228.0_ --version
+
+      - name: Build, sign & upload to TestFlight
+        timeout-minutes: 25
         env:
-          # Passed via env (not inline) so free-text notes can't break/inject the script
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_PATH: ${{ runner.temp }}/signing/asc_key.p8
+          IOS_DIST_CERT_PATH: ${{ runner.temp }}/signing/dist.p12
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          # Free-text notes via env (never interpolated into the script).
           WHATS_NEW: ${{ inputs.whats_new || github.event.inputs.whats_new }}
         run: |
-          # Use PR-{number}-{branch} format for PR builds, otherwise use the ref name
-          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
-          REF="${{ inputs.ref || github.event.inputs.ref }}"
-          if [ -n "$PR_NUMBER" ]; then
-            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
-          else
-            BRANCH_NAME="${REF}"
+          set -eu
+          if [ -z "${WHATS_NEW:-}" ]; then
+            WHATS_NEW="$(git log -1 --pretty=%B | head -c 4000)"
+            export WHATS_NEW
           fi
-          echo "Deploying to branch: $BRANCH_NAME"
+          UPLOAD=true
+          if [ "${{ inputs.dry_run || github.event.inputs.dry_run }}" = "true" ]; then UPLOAD=false; fi
+          echo "Upload to TestFlight: $UPLOAD"
+          fastlane _2.228.0_ ios testflight upload:$UPLOAD
 
-          # Add ci_scripts for Xcode Cloud to upload dSYMs to Sentry
-          mkdir -p exports/ci_scripts
-          cp .github/scripts/ci_post_xcodebuild.sh exports/ci_scripts/
-          chmod +x exports/ci_scripts/ci_post_xcodebuild.sh
-
-          # Add TestFlight "What to Test" notes. Xcode Cloud auto-attaches the
-          # contents of TestFlight/WhatToTest.<locale>.txt (next to the Xcode
-          # project) as the build description when distributing to TestFlight.
-          # Use the manual notes if provided, otherwise generate from the commit.
-          mkdir -p exports/TestFlight
-          if [ -n "$WHATS_NEW" ]; then
-            printf '%s\n' "$WHATS_NEW" > exports/TestFlight/WhatToTest.en-US.txt
-          else
-            {
-              echo "Branch: ${{ github.head_ref || github.ref_name }}"
-              echo "Commit: ${{ github.sha }}"
-              echo "PR: ${PR_NUMBER:-N/A}"
-              echo "Triggered by: ${{ github.actor }}"
-              echo ""
-              echo "Latest changes:"
-              git log -1 --pretty=%B
-            } > exports/TestFlight/WhatToTest.en-US.txt
+      # The app dSYMs live inside the archive produced by fastlane (XCARCHIVE_PATH).
+      # The libdclgodot dSYM is uploaded by the existing step below.
+      - name: Upload app dSYMs to Sentry
+        if: success()
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          if [ -z "${SENTRY_AUTH_TOKEN:-}" ] || [ -z "${SENTRY_ORG:-}" ] || [ -z "${SENTRY_PROJECT:-}" ]; then
+            echo "⚠️  Sentry secrets not set, skipping app dSYM upload"; exit 0
           fi
-          # TestFlight notes are capped at 4000 characters.
-          head -c 4000 exports/TestFlight/WhatToTest.en-US.txt > exports/TestFlight/WhatToTest.en-US.txt.tmp
-          mv exports/TestFlight/WhatToTest.en-US.txt.tmp exports/TestFlight/WhatToTest.en-US.txt
-          echo "Generated TestFlight/WhatToTest.en-US.txt:"
-          cat exports/TestFlight/WhatToTest.en-US.txt
-
-          # Initialize fresh repo (no need to clone since we create orphan branch anyway)
-          # This avoids downloading potentially GBs of LFS data
-          mkdir deploy-repo && cd deploy-repo
-          git init
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:decentraland/godot-mobile-deploy-pipeline.git
-
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Setup git lfs
-          git lfs install
-
-          # Create a fresh orphan branch (no history, fresh start)
-          git checkout --orphan temp-branch
-
-          # Remove all existing files from git
-          git rm -rf . 2>/dev/null || true
-
-          # Setup git lfs tracking BEFORE adding files
-          git lfs track "*.dylib"
-          git lfs track "*.ipa"
-          git lfs track "*.app"
-          git lfs track "*.framework/**"
-          git lfs track "*.xcframework/**"
-          git lfs track "*.a"
-          git lfs track "*.pck"
-          git lfs track "*.so"
-          git add .gitattributes
-
-          # Move exports contents to root (not inside a folder)
-          if [ -d "../exports" ]; then
-            mv ../exports/* .
-            mv ../exports/.* . 2>/dev/null || true
-          else
-            echo "Warning: exports folder not found"
-            exit 1
+          if [ -z "${XCARCHIVE_PATH:-}" ] || [ ! -d "$XCARCHIVE_PATH/dSYMs" ]; then
+            echo "⚠️  No dSYMs at ${XCARCHIVE_PATH:-<unset>}/dSYMs — skipping"; exit 0
           fi
+          command -v sentry-cli >/dev/null 2>&1 || curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
+          sentry-cli upload-dif --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
+            --auth-token "$SENTRY_AUTH_TOKEN" --wait "$XCARCHIVE_PATH/dSYMs"
 
-          # Add all files (now tracked by LFS)
-          git add .
-          git commit -m "Deploy iOS artifacts
-
-          Source: ${{ github.repository }}
-          Commit: ${{ github.sha }}
-          Deploy Branch: $BRANCH_NAME
-          Source Branch: ${{ github.head_ref || github.ref_name }}
-          Triggered by: ${{ github.actor }}
-          Build time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
-
-          # Force push orphan branch to target branch (replaces all history with single commit)
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git push --force origin temp-branch:$BRANCH_NAME
-
-          # Cleanup
-          cd ..
-          rm -rf deploy-repo
-
-      - name: Cleanup SSH key
+      - name: Cleanup signing material
         if: always()
         run: |
-          rm -f ~/.ssh/deploy_key
+          rm -rf "$RUNNER_TEMP/signing" || true
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision || true
+          security delete-keychain dcl-ci.keychain-db 2>/dev/null || true
 
       # Upload libdclgodot debug symbols to Sentry
-      # Note: Only libdclgodot is uploaded here since it's built by CI and UUID matches
-      # The main app dSYM is uploaded by Xcode Cloud via ci_post_xcodebuild.sh
+      # Note: app dSYMs are uploaded by the "Upload app dSYMs to Sentry" step above
+      # (from the fastlane archive); this uploads the CI-built libdclgodot.dylib dSYM.
       - name: Upload libdclgodot to Sentry
         if: success()
         env:
@@ -273,7 +282,7 @@ jobs:
           fi
 
           # Install sentry-cli
-          curl -sL https://sentry.io/get-cli/ | bash
+          command -v sentry-cli >/dev/null 2>&1 || curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
 
           # Find libdclgodot.dylib
           LIBDCLGODOT_PATH="lib/target/libdclgodot_ios/libdclgodot.dylib"
@@ -295,6 +304,58 @@ jobs:
             echo "⚠️  libdclgodot not found at $LIBDCLGODOT_PATH"
             find lib/target -name "libdclgodot*" -type f 2>/dev/null || true
           fi
+
+      - name: Notify Slack on Success (TestFlight)
+        if: success() && inputs.dry_run != true && github.event.inputs.dry_run != 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then echo "⚠️  SLACK_WEBHOOK_URL not set, skipping"; exit 0; fi
+          RUST_BUILD_VERSION="${RUST_BUILD_VERSION:-unknown}"
+          PR_NUMBER="${{ inputs.pr_number || github.event.inputs.pr_number }}"
+          REF="${{ inputs.ref || github.event.inputs.ref }}"
+          if [ -n "$PR_NUMBER" ]; then
+            BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
+          else
+            BRANCH_NAME="${REF}"
+          fi
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_SHA:0:7}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${COMMIT_SHA}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TRIGGERED_BY="${{ github.actor }}"
+          ASC_URL="https://appstoreconnect.apple.com/apps"
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"blocks\": [
+              {
+                \"type\": \"header\",
+                \"text\": { \"type\": \"plain_text\", \"text\": \"🍏 iOS Build → TestFlight\", \"emoji\": true }
+              },
+              {
+                \"type\": \"section\",
+                \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Decentraland Mobile Client*\niOS build uploaded to TestFlight (${BRANCH_NAME})\" }
+              },
+              {
+                \"type\": \"section\",
+                \"fields\": [
+                  { \"type\": \"mrkdwn\", \"text\": \"*Build Number:*\n\`${IOS_BUILD_NUMBER}\`\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Build version:*\n\`${RUST_BUILD_VERSION}\`\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_NAME}\`\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
+                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
+                ]
+              },
+              {
+                \"type\": \"actions\",
+                \"elements\": [
+                  { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"🍏 Open App Store Connect\", \"emoji\": true }, \"style\": \"primary\", \"url\": \"${ASC_URL}\" },
+                  { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"View Build Report\", \"emoji\": true }, \"url\": \"${WORKFLOW_URL}\" }
+                ]
+              }
+            ]
+          }" "$SLACK_WEBHOOK_URL"
+          echo "✅ Slack notification sent (iOS → TestFlight)"
 
       - name: Notify Slack on Failure
         if: failure() && !cancelled()
@@ -430,17 +491,16 @@ jobs:
           REF="${{ inputs.ref || github.event.inputs.ref }}"
           BRANCH_NAME="PR-${PR_NUMBER}-${REF}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          DEPLOY_REPO_URL="https://github.com/decentraland/godot-mobile-deploy-pipeline/tree/${BRANCH_NAME}"
 
           COMMENT_BODY="---
 
           ### 🍏 iOS Build Complete
 
-          ✅ **Status**: Success
+          ✅ **Status**: Success — signed & uploaded to TestFlight
 
           🔗 **iOS Workflow**: [View build](${WORKFLOW_URL})
 
-          📦 **Artifacts**: [godot-mobile-deploy-pipeline](${DEPLOY_REPO_URL})
+          🍏 **TestFlight**: [App Store Connect](https://appstoreconnect.apple.com/apps) — appears once Apple finishes processing the build
 
           📍 **Branch**: \`${BRANCH_NAME}\`
 

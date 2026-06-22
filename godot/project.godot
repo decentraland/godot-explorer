@@ -53,10 +53,12 @@ DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 
 file_logging/enable_file_logging=true
 settings/gdscript/always_track_call_stacks=true
+memory/limits/message_queue/max_size_mb=64
 gdscript/warnings/unused_variable=2
 gdscript/warnings/unused_signal=0
 gdscript/warnings/shadowed_variable=2
 gdscript/warnings/redundant_await=false
+memory/limits/message_queue/max_size_mb=64
 
 [display]
 
@@ -64,11 +66,12 @@ window/size/viewport_width=1600
 window/size/viewport_height=720
 window/size/window_width_override=720
 window/size/window_height_override=1280
+window/frame_pacing/android/enable_frame_pacing=false
 window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--emulate-ios"
+run/main_run_args=""
 
 [editor_plugins]
 
@@ -230,10 +233,17 @@ limits/debugger/max_chars_per_second=3276800
 
 [rendering]
 
+occlusion_culling/bvh_build_quality=1
 rendering_device/vulkan/max_descriptors_per_pool=256
 rendering_device/driver.ios="vulkan"
 rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
+; No baked OccluderInstance3D in any .scn (the auto-spawn pipeline was
+; removed). With zero occluders the BVH traversal + per-thread ray
+; budget is pure overhead, so keep the runtime culler off too.
+occlusion_culling/use_occlusion_culling=false
+occlusion_culling/occlusion_rays_per_thread=512
+occlusion_culling/bvh_build_quality=1
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=512
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
@@ -243,6 +253,7 @@ environment/ssao/quality=0
 environment/ssil/quality=0
 environment/glow/upscale_mode=0
 environment/subsurface_scattering/subsurface_scattering_quality=0
+occlusion_culling/use_occlusion_culling=false
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 environment/screen_space_reflection/roughness_quality=0
@@ -279,6 +290,14 @@ sun_size={
 moon_mask_size={
 "type": "float",
 "value": 0.0
+}
+sun_color={
+"type": "vec3",
+"value": Vector3(1.05, 1, 0.92)
+}
+ambient_color={
+"type": "vec3",
+"value": Vector3(0.35, 0.36, 0.4)
 }
 
 [xr]
