@@ -754,9 +754,7 @@ pub fn deploy_and_run_on_device(
 }
 
 /// Deploy and run on Android device using adb
-fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Result<()> {
-    // TODO: wire `_extras` into the `am start` intent via --esa args. For now
-    // keep the behaviour identical to the pre-extras code path.
+fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result<()> {
     // The APK name is always the same regardless of release/debug mode
     let apk_name = "decentraland.godot.client.apk";
     let apk_path = format!("{}/{}", EXPORTS_FOLDER, apk_name);
@@ -806,16 +804,37 @@ fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Resul
 
     // Launch the app
     let spinner = create_spinner("Launching application...");
+    let mut launch_args = vec![
+        "-s".to_string(),
+        device_id.clone(),
+        "shell".to_string(),
+        "am".to_string(),
+        "start".to_string(),
+        "-n".to_string(),
+        // GodotAppLauncher is the exported launcher activity; GodotApp itself
+        // is not exported, so `am start -n .../GodotApp` is denied from shell.
+        "org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher".to_string(),
+    ];
+
+    // Forward CLI flags via Godot's Android launcher convention: the launcher
+    // splits the `command_line_params` string extra on whitespace and feeds
+    // the tokens to the engine's argv. The previous per-flag `-e foo true`
+    // form was a no-op — Godot's GodotApp.java only reads
+    // `command_line_params`, so any other `--es`/`-e` keys are dropped on
+    // the floor and the requested flags never reach DclCli.
+    if !extras.is_empty() {
+        let joined = extras.join(" ");
+        launch_args.push("--es".to_string());
+        launch_args.push("command_line_params".to_string());
+        launch_args.push(joined.clone());
+        print_message(
+            MessageType::Info,
+            &format!("Launching with command_line_params: {:?}", joined),
+        );
+    }
+
     let launch_status = std::process::Command::new("adb")
-        .args([
-            "-s",
-            &device_id,
-            "shell",
-            "am",
-            "start",
-            "-n",
-            "org.decentraland.godotexplorer/com.godot.game.GodotApp",
-        ])
+        .args(&launch_args)
         .status()?;
     spinner.finish();
 

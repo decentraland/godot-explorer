@@ -6,17 +6,25 @@ extends Node
 
 signal benchmark_completed(profile: int, gpu_score: float, ram_gb: float)
 
-# Profile thresholds (GPU score is render time in ms - lower is better)
-# Selects the HIGHEST profile where ALL metrics meet requirements
+# Profile thresholds (GPU score is render time in ms — lower is better).
+# Selects the HIGHEST profile where ALL metrics meet requirements.
+#
+# These were calibrated against an A54 (Mali-G68): HW bench score ≈ 12 ms
+# corresponded to ≈ 47 ms in Genesis Plaza (~21x complexity multiplier
+# vs the synthetic scene, but Mali-G68 fragment cost from MSAA + shadows
+# at Medium dominates). Empirical mapping ≈ 4× from synthetic to real.
+# Targeting 30 FPS sustained → ≤ 33 ms in-game → ≤ 8 ms HW score for Low.
 const PROFILE_THRESHOLDS: Array[Dictionary] = [
-	# Very Low (0) - No requirements, always available
+	# Very Low (0) — fallback when no other tier qualifies. scale 0.5,
+	# AA off, shadows off. ~30 FPS on Mali-G68.
 	{"gpu_max_ms": INF, "ram_min_gb": 0.0, "name": "Very Low"},
-	# Low (1)
-	{"gpu_max_ms": 25.0, "ram_min_gb": 2.0, "name": "Low"},
-	# Medium (2)
-	{"gpu_max_ms": 15.0, "ram_min_gb": 4.0, "name": "Medium"},
-	# High (3)
-	{"gpu_max_ms": 8.0, "ram_min_gb": 6.0, "name": "High"},
+	# Low (1) — scale 0.75, AA off, shadows off. ~22 FPS on A54.
+	{"gpu_max_ms": 8.0, "ram_min_gb": 2.0, "name": "Low"},
+	# Medium (2) — scale 1.0, AA + shadows on. Demands real GPU headroom.
+	# At ≤ 4 ms synthetic, in-game GPU stays under 17 ms → 60 FPS.
+	{"gpu_max_ms": 4.0, "ram_min_gb": 4.0, "name": "Medium"},
+	# High (3) — only for top-tier mobile / desktop class.
+	{"gpu_max_ms": 2.0, "ram_min_gb": 6.0, "name": "High"},
 ]
 
 # Benchmark configuration
