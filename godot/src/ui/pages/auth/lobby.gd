@@ -25,6 +25,9 @@ signal change_scene(new_scene_path: String)
 
 const FTUE_PLACE_ID: String = "780f04dd-eba1-41a8-b109-74896c87e98b"
 const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
+# Guest-login (thirdweb) can hang on a flaky network and leave the user stuck on
+# the "Getting you ready..." screen forever. Cap the wait and surface a retry.
+const GUEST_LOGIN_TIMEOUT_SEC: float = 20.0
 const BG_GRADIENT = preload("res://assets/backgrounds/gradient-background.png")
 const BG_DISCOVER = preload("res://assets/backgrounds/photo-background.png")
 
@@ -47,6 +50,10 @@ var _logo_tap_count: int = 0
 var _logo_tap_timer: float = 0.0
 var _avatar_preview_defaults: Dictionary = {}
 var _discard_edit_confirmed = false
+
+# Monotonic token for the guest-login watchdog. Bumped on every attempt (and on
+# failure) so a stale watchdog can't clobber a newer attempt. See the watchdog.
+var _guest_login_attempt: int = 0
 
 @onready var control_main = %Main
 
@@ -259,7 +266,7 @@ func show_discover_ftue_screen():
 	ftue_screen.load_places()
 
 
-func async_async_show_avatar_create_screen():
+func async_show_avatar_create_screen():
 	track_lobby_screen("AVATAR_CREATE")
 	button_back.show()
 	show_panel(control_avatar_create)
@@ -816,15 +823,75 @@ func _on_button_play_as_guest_pressed():
 
 	waiting_for_new_wallet = true
 
+	# The login is only "done" once the wallet_connected → profile_changed chain
+	# navigates us OFF the loading screen — and that whole chain (request, profile
+	# fetch, avatar load) can hang on a flaky network. Awaiting the create-guest
+	# promise alone doesn't cover that, so arm a screen-state watchdog instead: if
+	# we're still on ACCOUNT_HOME_LOADING after the timeout, bail and offer a retry.
+	# A per-attempt token stops a stale watchdog from clobbering a fresh attempt.
+	_guest_login_attempt += 1
+	var attempt := _guest_login_attempt
+	get_tree().create_timer(GUEST_LOGIN_TIMEOUT_SEC).timeout.connect(
+		func(): _on_guest_login_watchdog_timeout(attempt)
+	)
+
 	var anchor: String = _get_device_anchor_id()
-	var promise: Promise = Global.player_identity.async_create_guest_account(anchor)
-	var result = await PromiseUtils.async_awaiter(promise)
+	var guest_promise: Promise = Global.player_identity.async_create_guest_account(anchor)
+	var result = await PromiseUtils.async_awaiter(guest_promise)
+
+	# Superseded by a newer attempt, or the watchdog already failed this one.
+	if attempt != _guest_login_attempt:
+		return
 
 	if result is PromiseError:
-		waiting_for_new_wallet = false
-		var error_text: String = result.get_error()
-		push_error("Guest login failed: " + error_text)
-		_show_auth_error("Could not start guest session: " + error_text)
+		await _fail_guest_login(attempt, result.get_error())
+	# On success the profile_changed chain navigates away; the watchdog stays armed
+	# and only fires if that never happens.
+
+
+# Fires GUEST_LOGIN_TIMEOUT_SEC after a guest-login attempt. If we're still stuck
+# on the loading screen (navigation never happened), abort and show the retry.
+# gdlint:ignore = async-function-name
+func _on_guest_login_watchdog_timeout(attempt: int) -> void:
+	if attempt != _guest_login_attempt:
+		return  # superseded / already handled
+	if current_screen_name != "ACCOUNT_HOME_LOADING":
+		return  # navigation succeeded — nothing to do
+	push_error("Guest login watchdog: stuck on loading screen after %ss" % GUEST_LOGIN_TIMEOUT_SEC)
+	await _fail_guest_login(attempt, "Guest login timed out")
+
+
+# Aborts a stuck/failed guest login: returns to Account Home and shows the retry
+# prompt. Bumps the attempt token so neither the watchdog nor the awaited request
+# can act on this attempt again. No-op if the attempt was already superseded.
+# gdlint:ignore = async-function-name
+func _fail_guest_login(attempt: int, reason: String) -> void:
+	if attempt != _guest_login_attempt:
+		return
+	if current_screen_name != "ACCOUNT_HOME_LOADING":
+		return
+	_guest_login_attempt += 1
+	waiting_for_new_wallet = false
+	push_error("Guest login failed: " + reason)
+	show_account_home_screen()
+	await _async_show_guest_login_error()
+
+
+# gdlint:ignore = async-function-name
+func _async_show_guest_login_error() -> void:
+	var modal = await Global.modal_manager._async_create_modal()
+	if not modal:
+		return
+	modal.set_title("Something went wrong")
+	modal.set_body("We couldn't start your guest session. Please try again.")
+	modal.set_primary_button_text("TRY AGAIN")
+	modal.show_icon(Modal.MODAL_ALERT_ICON)
+	modal.button_secondary.hide()
+	modal.hide_url()
+	modal.blocker = true
+	modal.show()
+	await modal.button_primary.pressed
+	Global.modal_manager.close_current_modal()
 
 
 func _set_avatar_preview_centered() -> void:

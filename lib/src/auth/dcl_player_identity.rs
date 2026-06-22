@@ -55,6 +55,15 @@ pub struct DclPlayerIdentity {
     /// account switch.
     is_thirdweb_guest: bool,
 
+    /// `true` when the active thirdweb guest has at least one linked auth method
+    /// beyond the silent `guest` login (email/social/passkey) — i.e. it has
+    /// already been upgraded. Best-effort cache refreshed from thirdweb via
+    /// `async_refresh_thirdweb_upgrade_state` (and set on a successful link).
+    /// Only meaningful while `is_thirdweb_guest` is `true`; cleared on every
+    /// account switch so it never leaks. Lets the UI hide the Upgrade affordance
+    /// for guests that are already linked.
+    is_thirdweb_guest_upgraded: bool,
+
     base: Base<Node>,
 }
 
@@ -68,6 +77,7 @@ impl INode for DclPlayerIdentity {
             base,
             is_guest: false,
             is_thirdweb_guest: false,
+            is_thirdweb_guest_upgraded: false,
             try_connect_account_handle: None,
             pending_mobile_auth: None,
         }
@@ -146,6 +156,7 @@ impl DclPlayerIdentity {
         // Default for any remote connect (WalletConnect / social). The thirdweb
         // guest path re-sets this to `true` via a deferred setter right after.
         self.is_thirdweb_guest = false;
+        self.is_thirdweb_guest_upgraded = false;
     }
 
     /// Deferred setter for the thirdweb-guest marker. Run on the main thread
@@ -162,6 +173,23 @@ impl DclPlayerIdentity {
     #[func]
     fn is_thirdweb_guest(&self) -> bool {
         self.is_thirdweb_guest
+    }
+
+    /// Deferred setter for the upgraded marker. Called from the thirdweb thread
+    /// after a profiles query (`async_refresh_thirdweb_upgrade_state`) or a
+    /// successful email link, so the write lands on the main thread.
+    #[func]
+    fn _set_thirdweb_guest_upgraded_flag(&mut self, value: bool) {
+        self.is_thirdweb_guest_upgraded = value;
+    }
+
+    /// Whether the active thirdweb guest has already linked a non-`guest` auth
+    /// method (email/social). Best-effort cache — call
+    /// `async_refresh_thirdweb_upgrade_state` to confirm against thirdweb. Lets
+    /// the UI hide the Upgrade affordance for already-upgraded guests.
+    #[func]
+    fn is_thirdweb_guest_upgraded(&self) -> bool {
+        self.is_thirdweb_guest_upgraded
     }
 
     fn _update_local_wallet(
@@ -193,6 +221,7 @@ impl DclPlayerIdentity {
         );
         self.is_guest = true;
         self.is_thirdweb_guest = false;
+        self.is_thirdweb_guest_upgraded = false;
         self.profile = None;
     }
 
@@ -339,6 +368,7 @@ impl DclPlayerIdentity {
         device_anchor_id: GString,
     ) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
+        let instance_id = self.base().instance_id();
 
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             let mut promise_clone = promise.clone();
@@ -361,6 +391,17 @@ impl DclPlayerIdentity {
 
             match result {
                 Ok(address) => {
+                    // The guest now has an email linked — it's upgraded. Update
+                    // the cached marker so the UI hides the affordance without a
+                    // round trip to re-query profiles.
+                    if let Ok(mut identity) =
+                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                    {
+                        identity.call_deferred(
+                            "_set_thirdweb_guest_upgraded_flag",
+                            &[true.to_variant()],
+                        );
+                    }
                     promise
                         .bind_mut()
                         .resolve_with_data(format!("{:#x}", address).to_variant());
@@ -370,6 +411,65 @@ impl DclPlayerIdentity {
                     promise
                         .bind_mut()
                         .reject(GString::from(&format!("Could not verify code: {}", e)));
+                }
+            }
+        });
+
+        promise
+    }
+
+    /// Queries thirdweb for the account's linked auth methods and refreshes the
+    /// cached `is_thirdweb_guest_upgraded` flag. Resolves with `true` when the
+    /// guest already has a non-`guest` profile (email/social), `false` when it
+    /// only has the silent id-login. Re-derives a fresh guest token from the
+    /// device anchor so the query is authorized even if the persisted token aged
+    /// out. Rejects on network error — the caller should keep the last-known
+    /// state rather than assume "not upgraded".
+    #[func]
+    fn async_refresh_thirdweb_upgrade_state(&mut self, device_anchor_id: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let instance_id = self.base().instance_id();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let anchor_input = device_anchor_id.to_string();
+
+        handle.spawn(async move {
+            let result = async {
+                let session = thirdweb_guest::refresh_guest_session(&anchor_input).await?;
+                let types = thirdweb_guest::get_linked_profile_types(&session.token).await?;
+                Ok::<bool, anyhow::Error>(thirdweb_guest::account_is_upgraded(&types))
+            }
+            .await;
+
+            let Some(mut promise) = get_promise() else {
+                return;
+            };
+
+            match result {
+                Ok(upgraded) => {
+                    if let Ok(mut identity) =
+                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                    {
+                        identity.call_deferred(
+                            "_set_thirdweb_guest_upgraded_flag",
+                            &[upgraded.to_variant()],
+                        );
+                    }
+                    promise.bind_mut().resolve_with_data(upgraded.to_variant());
+                }
+                Err(e) => {
+                    tracing::warn!("thirdweb refresh upgrade state failed: {:?}", e);
+                    promise.bind_mut().reject(GString::from(&format!(
+                        "Could not check upgrade state: {}",
+                        e
+                    )));
                 }
             }
         });
@@ -959,6 +1059,7 @@ impl DclPlayerIdentity {
         self.ephemeral_auth_chain = None;
         self.profile = None;
         self.is_thirdweb_guest = false;
+        self.is_thirdweb_guest_upgraded = false;
         self.base_mut()
             .call_deferred("emit_signal", &["logout".to_variant()]);
     }

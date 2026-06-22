@@ -10,6 +10,11 @@ var _read_only_style: StyleBox
 var _focus_style: StyleBox
 var _error_style: StyleBox
 
+# Optional async verifier injected by the caller. Receives the entered code and
+# must return "" on success or a friendly error string to show inline. When unset
+# the modal behaves as a plain collector and emits `confirmed` for any 6 digits.
+var _verify_callable: Callable
+
 @onready var hbox_verifying: HBoxContainer = %HBoxContainer_Verifying
 @onready var _label_error: Label = %Label_Error
 @onready var _modal_panel: ResponsiveContainer = $Blur/PanelContainer2
@@ -93,22 +98,36 @@ func _update_focus_style(filled_count: int) -> void:
 			_code_inputs[i].add_theme_stylebox_override("read_only", _read_only_style)
 
 
-func _async_async_submit_code() -> void:
+func set_verifier(verifier: Callable) -> void:
+	_verify_callable = verifier
+
+
+# gdlint:ignore = async-function-name
+func _async_submit_code() -> void:
 	var code = get_code()
-	if code.length() == 6:
-		_hidden_input.editable = false
-		_set_verifying_children_visible(true)
-		await get_tree().create_timer(2.0).timeout
-		# TODO: replace mock with backend validation
-		if code == "222222":
-			_show_error()
-		else:
-			_set_verifying_children_visible(false)
-			confirmed.emit(code)
+	if code.length() != 6:
+		return
+
+	_hidden_input.editable = false
+	_set_verifying_children_visible(true)
+
+	if not _verify_callable.is_valid():
+		_set_verifying_children_visible(false)
+		confirmed.emit(code)
+		return
+
+	var error_message: String = await _verify_callable.call(code)
+	if error_message.is_empty():
+		_set_verifying_children_visible(false)
+		confirmed.emit(code)
+	else:
+		_show_error(error_message)
 
 
-func _show_error() -> void:
+func _show_error(message: String = "") -> void:
 	_set_verifying_children_visible(false)
+	if not message.is_empty():
+		_label_error.text = message
 	_label_error.show()
 	for input in _code_inputs:
 		input.add_theme_stylebox_override("read_only", _error_style)

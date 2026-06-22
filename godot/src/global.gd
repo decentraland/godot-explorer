@@ -73,6 +73,13 @@ const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
+# DEBUG ONLY — MUST stay "" for any shipped build. When non-empty, get_device_anchor_id()
+# returns this fixed user_id instead of the platform device anchor (Android SSAID /
+# iOS Keychain UUID / desktop user:// UUID). Lets you derive the SAME thirdweb guest
+# wallet on any device/desktop/simulator for testing the guest login + email-upgrade
+# flow. A push_warning fires whenever it is active so it can't ship unnoticed.
+const DEBUG_GUEST_ANCHOR_OVERRIDE: String = "dcl-debug-user-001"
+
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
@@ -1369,6 +1376,16 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 # separate). Don't guard the Android call with has_method or it silently no-ops.
 # See: https://github.com/godotengine/godot/issues/106436
 func get_device_anchor_id() -> String:
+	# DEBUG override (see DEBUG_GUEST_ANCHOR_OVERRIDE): force a fixed user_id so the
+	# same guest wallet is derived everywhere. Inert while the constant is "".
+	if not DEBUG_GUEST_ANCHOR_OVERRIDE.is_empty():
+		push_warning(
+			(
+				"[guest] DEBUG_GUEST_ANCHOR_OVERRIDE active — using fixed anchor: "
+				+ DEBUG_GUEST_ANCHOR_OVERRIDE
+			)
+		)
+		return DEBUG_GUEST_ANCHOR_OVERRIDE
 	if self.is_android():
 		var plugin = Engine.get_singleton("dcl-godot-android")
 		if plugin != null:

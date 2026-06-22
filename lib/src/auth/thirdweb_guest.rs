@@ -414,6 +414,72 @@ pub async fn link_email(guest_jwt: &str, email_jwt: &str) -> Result<(), anyhow::
     Ok(())
 }
 
+#[derive(Debug, Deserialize)]
+struct WalletsMeResponse {
+    result: WalletsMeResult,
+}
+
+#[derive(Debug, Deserialize)]
+struct WalletsMeResult {
+    #[serde(default)]
+    profiles: Vec<LinkedProfile>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LinkedProfile {
+    #[serde(rename = "type")]
+    profile_type: String,
+}
+
+/// Lists the auth-method types linked to the account behind `token` — e.g.
+/// `["guest"]` for a never-upgraded guest, `["guest", "email"]` after an OTP
+/// upgrade. Hits the unified v1 API `GET /v1/wallets/me`, which returns
+/// `{ result: { profiles: [{ type, ... }] } }`. Auth is the plain guest JWT as a
+/// Bearer (no enclave prefix), same scheme as `link_email`. Lets the client
+/// detect whether a guest has anything linked beyond the silent id-login.
+pub async fn get_linked_profile_types(token: &str) -> Result<Vec<String>, anyhow::Error> {
+    let url = format!("{}/v1/wallets/me", THIRDWEB_API_BASE);
+
+    tracing::debug!("thirdweb get_linked_profile_types: url={}", url);
+
+    let response = reqwest::Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .build()?
+        .get(&url)
+        .header("x-client-id", THIRDWEB_CLIENT_ID)
+        .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
+        .header("Authorization", format!("Bearer {}", token))
+        .send()
+        .await?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let text = response.text().await.unwrap_or_default();
+        return Err(anyhow::anyhow!(
+            "thirdweb get_linked_profile_types failed: status={}, body={}",
+            status,
+            text
+        ));
+    }
+
+    let parsed: WalletsMeResponse = response.json().await?;
+    let types: Vec<String> = parsed
+        .result
+        .profiles
+        .into_iter()
+        .map(|p| p.profile_type)
+        .collect();
+    tracing::info!("thirdweb get_linked_profile_types: {:?}", types);
+    Ok(types)
+}
+
+/// `true` when the account has any auth method beyond the silent `guest` login —
+/// i.e. an email/social/passkey identity is linked, so it has already been
+/// "upgraded" and the Upgrade affordance should be hidden.
+pub fn account_is_upgraded(profile_types: &[String]) -> bool {
+    profile_types.iter().any(|t| t != "guest")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,6 +490,20 @@ mod tests {
             "dcl-godot-itest-{}",
             hex::encode(keccak256(seed.as_bytes()))
         )
+    }
+
+    #[test]
+    fn account_is_upgraded_detects_non_guest_profiles() {
+        // Never-upgraded guest: only the silent id-login.
+        assert!(!account_is_upgraded(&["guest".to_string()]));
+        // No profiles at all (e.g. query couldn't enumerate) → treat as not upgraded.
+        assert!(!account_is_upgraded(&[]));
+        // Any linked email/social means it has been upgraded.
+        assert!(account_is_upgraded(&[
+            "guest".to_string(),
+            "email".to_string()
+        ]));
+        assert!(account_is_upgraded(&["google".to_string()]));
     }
 
     #[tokio::test]
