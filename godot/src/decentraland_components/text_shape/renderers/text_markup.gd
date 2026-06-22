@@ -2,12 +2,14 @@
 ## Unity TextMeshPro markup handling for the TextShape renderers, ported from the
 ## Rust reference in `lib/src/dcl/ui_text_tags.rs` so every renderer agrees on tag
 ## semantics. Supports <b>, <i>, <color=...> (named / #RGB / #RRGGBB / #RRGGBBAA,
-## quoted or spaced) and <size=N>; unknown tags (<cspace>, ...) are stripped.
+## quoted or spaced) and <size=...> with TMP units (bare = font units * TMP->Godot factor,
+## N px, N em, N %, and a leading +/- for relative), all resolved to px since BBCode only
+## takes px; unknown tags (<cspace>, ...) are stripped.
 ##
-## Three consumers:
-##   - to_bbcode(s)     -> RichTextLabel BBCode (Viewport renderer)
-##   - parse_spans(s)   -> styled runs for the glyph layout (MultiMesh renderer)
-##   - strip_to_plain(s)-> { text, color } plain text + first color (Label3D)
+## Consumers:
+##   - to_bbcode(s, base_size) -> RichTextLabel/Label3D BBCode (the live render path)
+##   - strip_to_plain(s)       -> { text, color } plain text + first color
+##   - parse_spans(s, ...)     -> styled runs for glyph layout (legacy helper)
 class_name TextMarkup
 extends RefCounted
 
@@ -61,7 +63,7 @@ static func parse_spans(s: String, default_color: Color, default_size: int) -> A
 				col = default_color
 				has_col = false
 			"size_open":
-				siz = int(tok.value) if tok.value.is_valid_int() else default_size
+				siz = _resolve_size_px(tok.value, default_size)
 			"size_close":
 				siz = default_size
 	if buf != "":
@@ -75,8 +77,9 @@ static func parse_spans(s: String, default_color: Color, default_size: int) -> A
 	return spans
 
 
-## Convert Unity markup to RichTextLabel BBCode.
-static func to_bbcode(s: String) -> String:
+## Convert Unity markup to RichTextLabel BBCode. `base_size` (the resolved font size in px) is
+## needed to turn percentage `<size=N%>` tags into the absolute px BBCode only understands.
+static func to_bbcode(s: String, base_size: int = 0) -> String:
 	var out := ""
 	for tok in _tokenize(s):
 		match tok.kind:
@@ -95,10 +98,59 @@ static func to_bbcode(s: String) -> String:
 			"color_close":
 				out += "[/color]"
 			"size_open":
-				out += "[font_size=%s]" % tok.value
+				out += "[font_size=%d]" % _resolve_size_px(tok.value, base_size)
 			"size_close":
 				out += "[/font_size]"
 	return out
+
+
+## Resolve a Unity <size=...> value to absolute pixels (what BBCode/Label3D need). Mirrors TMP:
+## optional sign (+/-) then a number then an optional unit:
+##   - bare number / N px -> font-size units (TMP fontSize ~= px), scaled by the TMP->Godot factor
+##   - N em               -> multiples of the current size (base_size)
+##   - N %                -> percentage of base_size; sign ignored (<size=+50%> == 50% == smaller)
+## For bare/px/em a leading +/- is relative (base_size +/- the value); no sign = absolute.
+## Unparseable values fall back to base_size; the result is clamped to >= 1 px.
+static func _resolve_size_px(value: String, base_size: int) -> int:
+	var v := value.strip_edges().to_lower()
+	if v.is_empty():
+		return base_size
+	var sign := 0
+	if v.begins_with("+"):
+		sign = 1
+		v = v.substr(1)
+	elif v.begins_with("-"):
+		sign = -1
+		v = v.substr(1)
+	var unit := "fu"  # font units (TMP default)
+	if v.ends_with("px"):
+		unit = "px"
+		v = v.substr(0, v.length() - 2)
+	elif v.ends_with("em"):
+		unit = "em"
+		v = v.substr(0, v.length() - 2)
+	elif v.ends_with("%"):
+		unit = "pct"
+		v = v.substr(0, v.length() - 1)
+	v = v.strip_edges()
+	if not v.is_valid_float():
+		return base_size
+	var num := v.to_float()
+	# Percentage is always an absolute fraction of the base size; TMP ignores the +/- sign
+	# (so <size=+50%> is just 50% of base, i.e. smaller — not base + 50%).
+	if unit == "pct":
+		return maxi(1, int(round(num / 100.0 * float(base_size))))
+	# px and bare numbers are both "font-size units" in TMP (fontSize is ~points = px at the
+	# default scale), so both go through the TMP->Godot font factor; em multiplies the base.
+	var contribution := (
+		num * float(base_size) if unit == "em" else TextLayout.unity_to_godot_font_size(num)
+	)
+	var result := contribution
+	if sign == 1:
+		result = float(base_size) + contribution
+	elif sign == -1:
+		result = float(base_size) - contribution
+	return maxi(1, int(round(result)))
 
 
 ## Strip every tag, returning { "text": String, "color": Variant }. `color` is the

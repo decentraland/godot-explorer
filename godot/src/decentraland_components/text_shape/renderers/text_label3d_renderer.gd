@@ -87,7 +87,9 @@ func apply(resolved: Dictionary) -> void:
 	# Rich markup when the fork supports it (per-line edge-trimmed so trailing spaces don't
 	# skew alignment, matching the other tiers); plain stripped text otherwise.
 	if _bbcode_supported:
-		_label.text = _trim_line_edges(TextMarkup.to_bbcode(resolved.raw_text))
+		_label.text = _trim_line_edges(
+			TextMarkup.to_bbcode(resolved.raw_text, resolved.godot_font_size)
+		)
 	else:
 		_label.text = _trim_line_edges(resolved.plain_text)
 	_label.modulate = resolved.fill_color
