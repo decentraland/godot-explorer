@@ -51,6 +51,12 @@ func process_deep_link(url: String) -> void:
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
 
+	# Start/retarget the unified log stream from deeplink params (hot-reconnect).
+	var log_stream_value = Global.deep_link_obj.params.get("log-stream", "")
+	if not log_stream_value.is_empty():
+		print("[DEEPLINK] Found log-stream param: ", log_stream_value)
+		DclGlobal.start_log_stream(log_stream_value)
+
 	# Toggle the loopback debug WS server from the deeplink. Lets it be enabled
 	# before reaching Settings (e.g. on the login/lobby screens).
 	apply_debug_ws_param(Global.deep_link_obj.params.get("debug-ws", ""))

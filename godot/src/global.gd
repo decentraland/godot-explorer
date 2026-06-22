@@ -220,6 +220,18 @@ func _get_safe_area_presets() -> GDScript:
 	return _safe_area_presets
 
 
+func _generated_deeplink() -> String:
+	# Baked launch params from `cargo run -- run/build --deeplink|--log-stream`.
+	# Gitignored and optional; absent on a fresh checkout until the first build.
+	var gen_path := "res://src/generated/build_config.gd"
+	if not ResourceLoader.exists(gen_path):
+		return ""
+	var gen_script: GDScript = load(gen_path)
+	if gen_script == null:
+		return ""
+	return gen_script.get_script_constant_map().get("DEEPLINK", "")
+
+
 func get_safe_area() -> Rect2i:
 	if should_emulate_ios():
 		var presets := _get_safe_area_presets()
@@ -276,8 +288,13 @@ func _ready():
 	if cli.landscape and (should_emulate_ios() or should_emulate_android()):
 		set_orientation_landscape()
 
-	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
+	# Handle fake deep link. Precedence: --fake-deeplink CLI arg > generated
+	# build_config (baked by `cargo run -- run/build --deeplink|--log-stream`) >
+	# FORCE_DEEPLINK constant. The generated path works on mobile/TestFlight where
+	# no CLI args are available.
 	var fake_deeplink = cli.fake_deeplink
+	if fake_deeplink.is_empty():
+		fake_deeplink = _generated_deeplink()
 	if fake_deeplink.is_empty() and not FORCE_DEEPLINK.is_empty():
 		fake_deeplink = FORCE_DEEPLINK
 	if not fake_deeplink.is_empty():
@@ -310,6 +327,14 @@ func _ready():
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
+
+	# Start the unified log stream as early as possible (works pre-login, unlike
+	# explorer.gd which only runs in-world). Source: baked deeplink or --log-stream.
+	var log_stream_target: String = deep_link_obj.params.get("log-stream", "")
+	if log_stream_target.is_empty():
+		log_stream_target = cli.log_stream
+	if log_stream_target.begins_with("ws://") or log_stream_target.begins_with("wss://"):
+		DclGlobal.start_log_stream(log_stream_target)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():

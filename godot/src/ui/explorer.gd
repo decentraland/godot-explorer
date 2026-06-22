@@ -246,6 +246,15 @@ func _ready():
 	if scene_inspector_file:
 		Global.scene_inspector_dispatcher.set_file_logging(true)
 
+	# Log streaming: connect out to a desktop `log-server` if --log-stream= or
+	# ?log-stream= is set. Captures Rust + GDScript + native logs over a single
+	# stdout/stderr pipe (iOS debugging, no adb logcat equivalent).
+	var log_stream_target: String = Global.deep_link_obj.params.get("log-stream", "")
+	if log_stream_target.is_empty():
+		log_stream_target = Global.cli.log_stream
+	if log_stream_target.begins_with("ws://") or log_stream_target.begins_with("wss://"):
+		DclGlobal.start_log_stream(log_stream_target)
+
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
 	Global.deep_link_router._clear_deep_link()
 
