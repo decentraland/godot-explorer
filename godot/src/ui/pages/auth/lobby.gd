@@ -155,6 +155,7 @@ func show_avatar_naming_screen():
 	show_panel(control_avatar_naming)
 	avatar_preview.reparent(avatar_preview_container_avatar_naming)
 	_restore_avatar_preview_defaults()
+	_on_button_random_name_pressed()
 	if current_profile:
 		_show_avatar_loading()
 		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
