@@ -873,7 +873,6 @@ static func newtag_evaluate(
 	if wallet.is_empty() or current_counts.is_empty():
 		return {}
 	var stored: Dictionary = _newtag_stored_for(category)
-	var first_session = not _newtag_session_captured.get(category, false)
 	if not _newtag_session_captured.get(category, false):
 		_newtag_session_captured[category] = true
 		# First load this session: the baseline is the previously-persisted snapshot, or — on a
