@@ -68,9 +68,7 @@ var _discard_edit_confirmed = false
 var _guest_login_attempt: int = 0
 
 @onready var control_main = %Main
-
 @onready var dcl_line_edit: VBoxContainer = %DclLineEdit
-
 @onready var control_dcl_splash = %DclSplash
 @onready var control_version_upgrade = %VersionUpgrade
 @onready var control_signin = %SignIn
@@ -81,9 +79,7 @@ var _guest_login_attempt: int = 0
 @onready var control_avatar_customize = %AvatarCustomize
 @onready var control_avatar_naming: Control = %AvatarNaming
 @onready var control_comeback: Control = %Comeback
-
 @onready var background: TextureRect = %Background
-
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
 @onready var auth_spinner_container = %VBoxContainer_AuthSpinner
@@ -91,34 +87,23 @@ var _guest_login_attempt: int = 0
 @onready var auth_error_label_main = %AuthErrorLabel
 @onready var auth_error_label_code = %AuthErrorCodeLabel
 @onready var button_cancel = %Button_Cancel
-@onready var label_step2_title: Label = %VBoxContainer_SignInStep2/Label_Title
-
-@onready
-var button_try_again: Button = $Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain
-
+@onready var label_step2_title: Label = %Label_Step2_Title
+@onready var button_try_again: Button = %Button_TryAgain
 @onready var avatar_preview_container_avatar_create: Control = %AvatarPreviewContainer_AvatarCreate
 @onready var avatar_preview_container_comeback: Control = %AvatarPreviewContainer_Comeback
 @onready var avatar_preview_container_avatar_naming: Control = %AvatarPreviewContainer_AvatarNaming
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var avatar_loading: MarginContainer = %AvatarLoadingContainer
 @onready var button_lets_go = %Button_LetsGo
-
 @onready var backpack = %Backpack
-@onready
-var label_signed_as_name: Label = $Main/Comeback/MarginContainer/VBoxContainer/RestoreNameHead/Label_SignedAsName
-
-@onready
-var button_play_as_guest: Button = $Main/AccountHome/MarginContainer/VBoxFixed/VBoxContainer/Button_PlayAsGuest
-
+@onready var label_signed_as_name: Label = %Label_SignedAsName
+@onready var button_play_as_guest: Button = %Button_PlayAsGuest
 @onready var button_enter_as_disposable_account: Button = %Button_EnterAsDisposableAccount
 @onready var button_back: Button = %Button_Back
 @onready var sign_in_title: Label = %SignInTitle
-
 @onready var label_version = %Label_Version
-
 @onready var control_discover_ftue = %DiscoverFtue
 @onready var ftue_screen = %DiscoverFtue/FTUE
-
 @onready var control_with_discover_bg = [control_account_home, control_account_home_loading]
 
 

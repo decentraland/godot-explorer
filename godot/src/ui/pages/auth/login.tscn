@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://cbukvmu67blst" path="res://src/ui/pages/auth/images/discord.svg" id="7_apdvw"]
 [ext_resource type="Texture2D" uid="uid://b1wknyg6nwrwo" path="res://src/ui/pages/auth/images/x.svg" id="8_8hgbb"]
 [ext_resource type="Texture2D" uid="uid://kxlueau7wo2u" path="res://src/ui/pages/auth/images/apple.svg" id="9_tuhne"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="11_jikst"]
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_stkud"]
 color = Color(1, 1, 1, 1)
@@ -200,6 +201,7 @@ theme_override_styles/separator = SubResource("StyleBoxLine_stkud")
 
 [node name="Label" type="Label" parent="Separator" unique_id=408878744]
 layout_mode = 2
+theme_override_fonts/font = ExtResource("11_jikst")
 theme_override_font_sizes/font_size = 24
 text = "or"
 

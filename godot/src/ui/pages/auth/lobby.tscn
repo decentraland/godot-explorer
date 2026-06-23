@@ -114,6 +114,7 @@ grow_vertical = 2
 theme = ExtResource("1_t2lj5")
 script = ExtResource("2_fu4v6")
 metadata/mobile_preview_orientation = "portrait"
+metadata/_edit_horizontal_guides_ = [1360.0, 404.0]
 
 [node name="Background" type="TextureRect" parent="." unique_id=31448416]
 unique_name_in_owner = true
@@ -391,6 +392,7 @@ theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Button_PlayAsGuest" type="Button" parent="Main/AccountHome/MarginContainer/VBoxFixed/VBoxContainer" unique_id=1554863919]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 focus_mode = 0
@@ -792,6 +794,7 @@ label_settings = SubResource("LabelSettings_vtvnx")
 horizontal_alignment = 1
 
 [node name="Label_SignedAsName" type="Label" parent="Main/Comeback/MarginContainer/VBoxContainer/RestoreNameHead" unique_id=1203727920]
+unique_name_in_owner = true
 layout_mode = 2
 text = "You're signed in as"
 label_settings = ExtResource("17_s1tin")
@@ -887,19 +890,20 @@ grow_vertical = 2
 theme_override_constants/margin_left = 64
 theme_override_constants/margin_top = 330
 theme_override_constants/margin_right = 64
-theme_override_constants/margin_bottom = 80
+theme_override_constants/margin_bottom = 142
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn/MarginContainer" unique_id=672284959]
 layout_mode = 2
 
 [node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=1737794804]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
 
 [node name="SignInTitle" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=1367673419]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(425, 0)
+custom_minimum_size = Vector2(425, 176)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
@@ -908,10 +912,9 @@ label_settings = SubResource("LabelSettings_dkwv7")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HSeparator5" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=1329444166]
+[node name="HSeparator5" type="Control" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=2052500559]
 layout_mode = 2
-theme_override_constants/separation = 194
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+size_flags_vertical = 3
 
 [node name="Login" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=253264104 instance=ExtResource("17_vcjym")]
 unique_name_in_owner = true
@@ -938,6 +941,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 0
 theme_override_constants/table_h_separation = 3
 theme_override_fonts/normal_font = ExtResource("5_g62s5")
 theme_override_font_sizes/normal_font_size = 30
@@ -953,12 +957,14 @@ horizontal_alignment = 1
 
 [node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=1774682901]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=417353643]
-custom_minimum_size = Vector2(425, 196)
+[node name="Label_Step2_Title" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=417353643]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 176)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
@@ -970,7 +976,6 @@ autowrap_mode = 2
 
 [node name="VBoxContainer_AuthSpinner" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=2112578708]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 258)
 layout_mode = 2
 size_flags_vertical = 3
 alignment = 1
@@ -984,7 +989,6 @@ size_flags_horizontal = 4
 [node name="VBoxContainer_AuthError" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=1655242297]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(0, 258)
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -1008,26 +1012,27 @@ autowrap_mode = 2
 
 [node name="Button_Cancel" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=1467291633]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 112)
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_type_variation = &"SecondaryButton"
 theme_override_constants/icon_max_width = 40
 theme_override_fonts/font = ExtResource("12_s6a2k")
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 30
 text = "CANCEL"
 expand_icon = true
 
 [node name="Button_TryAgain" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=69373175]
+unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(0, 112)
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("4_ghcwt")
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 30
 text = "TRY AGAIN"
 icon_alignment = 2
 
