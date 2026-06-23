@@ -73,12 +73,12 @@ const PURCHASE_PROCESSING_TITLE = "Almost there"
 const PURCHASE_PROCESSING_BODY = "Your purchase went through and your credits will be added shortly."
 const PURCHASE_PROCESSING_PRIMARY = "OK"
 
-const IAP_TERMS_TITLE = "Terms of use"
-# TODO: replace placeholder URLs with final ones
+const IAP_TERMS_TITLE = "Terms of Use"
 const IAP_TERMS_CHECKBOX_BBCODE = (
-	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms/"]Terms of Service[/url][/color], '
-	+ '[color=#E8B9FF][url="https://decentraland.org/privacy/"]Privacy Policy[/url][/color] and '
-	+ '[color=#E8B9FF][url="https://decentraland.org/content/"]Content Policy[/url][/color].'
+	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms"]Terms of Use[/url][/color], '
+	+ '[color=#E8B9FF][url="https://decentraland.org/privacy"]Privacy Policy[/url][/color], '
+	+ '[color=#E8B9FF][url="https://decentraland.org/content"]Content Policy[/url][/color] and '
+	+ '[color=#E8B9FF][url="https://decentraland.org/credits-terms"]Credits Terms of Use[/url][/color].'
 )
 const IAP_TERMS_PRIMARY = "CONFIRM"
 const IAP_TERMS_SECONDARY = "CANCEL"
