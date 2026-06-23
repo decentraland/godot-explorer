@@ -456,6 +456,7 @@ impl MessageProcessor {
 
         // Handle profile fetch failures
         while let Ok(failure) = self.profile_failure_receiver.try_recv() {
+            let mut fetch_state: Option<(u32, i32, bool)> = None;
             if let Some(peer) = self.peer_identities.get_mut(&failure.address) {
                 peer.profile_fetch_failures += 1;
                 peer.profile_fetch_attempted = false; // Allow retry
@@ -471,6 +472,17 @@ impl MessageProcessor {
                         failure.announced_version
                     );
                 }
+                fetch_state = Some((
+                    peer.alias,
+                    peer.profile_fetch_failures as i32,
+                    peer.profile_fetch_banned_until.is_some(),
+                ));
+            }
+            // Surface the state to the avatar's nameplate (dev shows "Loading"/"Failed").
+            if let Some((alias, failures, banned)) = fetch_state {
+                let mut avatar_scene_ref = self.avatars.clone();
+                let mut avatar_scene = avatar_scene_ref.bind_mut();
+                avatar_scene.set_avatar_profile_fetch_state(alias, failures, banned);
             }
         }
 
