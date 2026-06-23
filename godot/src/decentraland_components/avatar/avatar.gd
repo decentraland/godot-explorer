@@ -913,13 +913,15 @@ func apply_toon_material(node_to_apply: Node):
 		if cached == null or not is_instance_valid(cached):
 			cached = _convert_to_toon(mat)
 			_toon_material_cache[key] = cached
-		node_to_apply.mesh.surface_set_material(surface_idx, cached)
+		node_to_apply.set_surface_override_material(surface_idx, cached)
 
 
 func async_load_wearables():
 	# Safety check: avatar may have been freed during async operations
 	if not is_instance_valid(wearable_loader) or not is_inside_tree():
 		return
+
+	AvatarBuildProfiler.begin()
 
 	# Hide skeleton immediately if show_only_wearables to prevent flash of default body
 	var show_only_wearables = avatar_data.get_show_only_wearables()
@@ -1025,6 +1027,8 @@ func async_load_wearables():
 			Wearables.Categories.SKIN:
 				has_own_skin = true
 
+	AvatarBuildProfiler.mark("load_reparent")
+
 	# Here hidings is an alias
 	var hidings = curated_wearables.hidden_categories
 
@@ -1080,17 +1084,19 @@ func async_load_wearables():
 		if should_hide:
 			child.hide()
 
-	for child in body_shape_skeleton_3d.get_children():
-		if child.visible and child is MeshInstance3D:
-			# Shallow-duplicate the Mesh so per-avatar surface_set_material calls
-			# don't leak across avatars; materials referenced inside stay shared.
-			child.mesh = child.mesh.duplicate_deep(Resource.DEEP_DUPLICATE_NONE)
+	AvatarBuildProfiler.mark("hide")
+
+	AvatarBuildProfiler.mark("mesh_duplicate")
 
 	apply_toon_material(body_shape_skeleton_3d)
 	for child in body_shape_skeleton_3d.get_children():
 		apply_toon_material(child)
 
+	AvatarBuildProfiler.mark("toon")
+
 	apply_color_and_facial()
+
+	AvatarBuildProfiler.mark("color_facial")
 
 	# For show_only_wearables, reset skeleton to T-pose so wearable doesn't animate
 	if show_only_wearables:
@@ -1124,6 +1130,8 @@ func async_load_wearables():
 		Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
 		ImpostorCapturer.request_capture(self)
 
+	AvatarBuildProfiler.mark("emotes_post")
+
 	avatar_ready = true
 	avatar_loaded.emit()
 
@@ -1141,18 +1149,22 @@ func apply_color_and_facial():
 				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
 				var is_skin: bool = mat_name.find("skin") != -1
 				var is_hair: bool = mat_name.find("hair") != -1
-				var material = child.mesh.surface_get_material(i)
+				var material = child.get_surface_override_material(i)
+				if material == null:
+					material = child.mesh.surface_get_material(i)
 
 				if material is ShaderMaterial and (is_skin or is_hair):
-					# Cached materials are shared between avatars. Clone before
-					# writing the per-avatar tint so it doesn't leak.
+					# Per-instance override clone so the shared cached toon material
+					# isn't tinted across avatars; the mesh resource stays shared.
 					material = material.duplicate()
-					child.mesh.surface_set_material(i, material)
+					child.set_surface_override_material(i, material)
 					if is_skin:
 						material.set_shader_parameter("albedo_color", avatar_data.get_skin_color())
 					else:
 						material.set_shader_parameter("albedo_color", avatar_data.get_hair_color())
 				elif material is StandardMaterial3D:
+					material = material.duplicate()
+					child.set_surface_override_material(i, material)
 					material.metallic = 0
 					material.metallic_specular = 0
 					if is_skin:
@@ -1209,7 +1221,7 @@ func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color,
 	else:
 		current_material.set_shader_parameter("mask_texture", null)
 
-	mesh.mesh.surface_set_material(0, current_material)
+	mesh.set_surface_override_material(0, current_material)
 
 
 func _maybe_update_lod() -> void:
