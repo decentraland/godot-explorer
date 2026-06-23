@@ -102,6 +102,7 @@ func _async_send_code(email: String) -> Dictionary:
 		if _is_invalid_email_error(raw):
 			return {"status": InputModal.SUBMIT_INVALID, "message": "Invalid email"}
 		return {"status": InputModal.SUBMIT_ERROR, "message": raw}
+	print("[UpgradeOTP] send_code OK for: ", email)
 	return {"status": InputModal.SUBMIT_OK}
 
 
@@ -145,10 +146,31 @@ func _async_verify_code(code: String, email: String) -> String:
 	var anchor: String = Global.get_device_anchor_id()
 	var promise: Promise = Global.player_identity.async_link_email_verify(email, code, anchor)
 	var result = await PromiseUtils.async_awaiter(promise)
+	print("[UpgradeOTP] verify result: ", result)
 	if result is PromiseError:
-		printerr("Upgrade to OTP - verify failed: ", result.get_error())
-		return _friendly_error(result.get_error())
+		var raw: String = result.get_error()
+		printerr("[UpgradeOTP] verify FAILED: ", raw)
+		if _is_already_linked_error(raw):
+			Global.modal_manager.close_code_modal.call_deferred()
+			_async_show_email_in_use_modal.call_deferred()
+			# Return non-empty so the code modal doesn't emit confirmed
+			# (it will try _show_error but the deferred close frees it first).
+			return " "
+		return _friendly_error(raw)
+	print("[UpgradeOTP] verify OK")
 	return ""
+
+
+func _is_already_linked_error(raw: String) -> bool:
+	var lower := raw.to_lower()
+	return lower.contains("already") or lower.contains("linked") or lower.contains("conflict")
+
+
+func _async_show_email_in_use_modal() -> void:
+	await _async_show_error_modal(
+		"Email already in use",
+		"This email is already linked to another account.\nTry a different email.",
+	)
 
 
 # gdlint:ignore = async-function-name

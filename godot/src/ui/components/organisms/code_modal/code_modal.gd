@@ -124,6 +124,8 @@ func _async_submit_code() -> void:
 		return
 
 	var error_message: String = await _verify_callable.call(code)
+	if not is_instance_valid(self):
+		return
 	if error_message.is_empty():
 		_set_verifying_children_visible(false)
 		confirmed.emit(code)

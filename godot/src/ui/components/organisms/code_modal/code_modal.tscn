@@ -104,9 +104,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -306.0
-offset_top = -408.5
+offset_top = -413.5
 offset_right = 306.0
-offset_bottom = 408.5
+offset_bottom = 413.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ap1g7")
@@ -206,16 +206,13 @@ layout_mode = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
 
-[node name="Container" type="Control" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1746900337]
+[node name="Container" type="VBoxContainer" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=381144657]
 custom_minimum_size = Vector2(20, 162)
 layout_mode = 2
+theme_override_constants/separation = 8
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container" unique_id=1543266366]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 86.0
-grow_horizontal = 2
+layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
@@ -335,14 +332,7 @@ virtual_keyboard_enabled = false
 
 [node name="Label_Error" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container" unique_id=1219482550]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -20.0
-grow_horizontal = 2
-grow_vertical = 0
+layout_mode = 2
 text = "The code is invalid or expired. Please resend code."
 label_settings = SubResource("LabelSettings_6ee1p")
 
