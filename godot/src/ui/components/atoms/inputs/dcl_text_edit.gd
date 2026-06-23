@@ -156,6 +156,19 @@ func _check_error() -> void:
 		label_error.hide()
 
 
+## Shows an externally-supplied error (e.g. a backend validation result) in the
+## same inline label + styling used for local format validation. It is cleared
+## on the next edit by `_check_error`, so the user sees it disappear as they fix
+## the field.
+func show_external_error(message: String) -> void:
+	_touched = true
+	error = true
+	text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
+	text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
+	label_error.text = message
+	label_error.show()
+
+
 func _on_text_edit_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:

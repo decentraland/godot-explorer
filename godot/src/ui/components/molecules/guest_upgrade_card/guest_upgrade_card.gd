@@ -77,22 +77,37 @@ func _async_on_add_email_pressed() -> void:
 	)
 	if modal:
 		modal.dcl_text_edit.wrap_text = false
-		modal.confirmed.connect(_async_on_email_confirmed)
+		# The modal owns the spinner + close timing now: it runs _async_send_code
+		# while showing a spinner, keeps itself open (inline error) for a bad
+		# address, or closes and emits confirmed/failed for the other outcomes.
+		modal.set_submit_handler(_async_send_code)
+		modal.confirmed.connect(_async_on_code_sent)
+		modal.failed.connect(_async_on_send_code_failed)
 
 
+# Submit handler for the Add Email modal. Sends the verification code and maps
+# the outcome to the modal's status contract: a malformed address stays inline
+# as "Invalid email"; any other failure closes the modal and bubbles up via
+# `failed`; success closes the modal and emits `confirmed`.
 # gdlint:ignore = async-function-name
-func _async_on_email_confirmed(email: String) -> void:
+func _async_send_code(email: String) -> Dictionary:
 	Global.metrics.track_click_button("upgrade_to_otp_send_code", "upgrade_otp_modal", "")
 	# async_link_email_start both validates the address server-side and sends the
-	# verification code to the thirdweb guest wallet. Only open the code step on
-	# success; on failure surface a friendly error and let the user retry.
+	# verification code to the thirdweb guest wallet.
 	var promise: Promise = Global.player_identity.async_link_email_start(email)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
-		printerr("Upgrade to OTP - send code failed: ", result.get_error())
-		await _async_show_error_modal("Couldn't send code", _friendly_error(result.get_error()))
-		return
+		var raw: String = result.get_error()
+		printerr("Upgrade to OTP - send code failed: ", raw)
+		if _is_invalid_email_error(raw):
+			return {"status": InputModal.SUBMIT_INVALID, "message": "Invalid email"}
+		return {"status": InputModal.SUBMIT_ERROR, "message": raw}
+	return {"status": InputModal.SUBMIT_OK}
 
+
+# Code was sent successfully (Add Email modal already closed): open the code step.
+# gdlint:ignore = async-function-name
+func _async_on_code_sent(email: String) -> void:
 	var code_modal = await Global.modal_manager.async_show_code_modal(email)
 	if code_modal:
 		# The code modal owns the spinner + inline error UI; it calls back into
@@ -100,6 +115,27 @@ func _async_on_email_confirmed(email: String) -> void:
 		code_modal.set_verifier(_async_verify_code.bind(email))
 		code_modal.confirmed.connect(_async_on_code_confirmed.bind(email))
 		code_modal.cancelled.connect(Global.modal_manager.close_code_modal)
+
+
+# Non-recoverable send-code failure (Add Email modal already closed): show a
+# generic retry-later message.
+# gdlint:ignore = async-function-name
+func _async_on_send_code_failed(_message: String) -> void:
+	await _async_show_error_modal(
+		"Something went wrong", "Something went wrong. Please try again later."
+	)
+
+
+# True only when thirdweb rejected the address itself as malformed (HTTP 400 /
+# Zod email validation), which we surface inline. Network/5xx/rate-limit and
+# every other failure are treated as transient and shown after closing the modal.
+func _is_invalid_email_error(raw: String) -> bool:
+	var lower := raw.to_lower()
+	if lower.contains("invalid email"):
+		return true
+	return (
+		lower.contains("email") and (lower.contains("zoderror") or lower.contains("invalid_string"))
+	)
 
 
 # Returns "" on success, or a friendly error string the code modal shows inline.
