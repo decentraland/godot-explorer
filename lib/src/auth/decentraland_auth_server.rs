@@ -94,7 +94,6 @@ pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityRespons
         url
     );
 
-    tracing::info!("[HTTP] GET {}", url);
     let response = reqwest::Client::builder()
         .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()
@@ -199,7 +198,6 @@ async fn fetch_polling_server(
 
         requested_time = std::time::Instant::now();
         tracing::trace!("fetch_polling_server: sending GET request to {}", url);
-        tracing::info!("[HTTP] GET {}", url);
         let response = reqwest::Client::builder()
             .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
             .build()
@@ -341,7 +339,6 @@ async fn create_new_request(
         body.len()
     );
 
-    tracing::info!("[HTTP] POST {}", endpoint_url);
     let response = reqwest::Client::builder()
         .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()

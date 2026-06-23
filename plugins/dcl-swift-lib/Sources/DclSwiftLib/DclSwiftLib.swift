@@ -10,7 +10,6 @@ import Foundation
 #initSwiftExtension(cdecl: "dcl_swift_lib_init", types: [
     DclSwiftLib.self,
     DclStoreKit.self,
-    DclDevRelay.self,
 ])
 
 /// Smoke-test class so we can confirm the Swift GDExtension actually loads
