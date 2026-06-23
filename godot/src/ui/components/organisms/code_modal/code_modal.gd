@@ -61,7 +61,11 @@ func _ready() -> void:
 func _on_display_input_tapped(event: InputEvent) -> void:
 	var is_tap = (
 		(event is InputEventScreenTouch and event.pressed)
-		or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT)
+		or (
+			event is InputEventMouseButton
+			and event.pressed
+			and event.button_index == MOUSE_BUTTON_LEFT
+		)
 	)
 	if is_tap:
 		if _hidden_input.has_focus():
