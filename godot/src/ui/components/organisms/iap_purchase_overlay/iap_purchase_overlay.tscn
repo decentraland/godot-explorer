@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://bt0tvcuj6fu4q"]
+
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="1_spinr"]
+[ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="1_t50im"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="3_rfadf"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_nr6oi"]
+font = ExtResource("3_rfadf")
+font_size = 44
+
+[node name="IapPurchaseOverlay" type="CanvasLayer" unique_id=442578853]
+layer = 100
+metadata/mobile_preview_orientation = "portrait"
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=1394160856]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Blur" type="ColorRect" parent="Backdrop" unique_id=1156979357]
+material = ExtResource("1_t50im")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Backdrop/Blur" unique_id=123826075]
+layout_mode = 1
+anchors_preset = 13
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -106.0
+offset_right = 106.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="Spinner" parent="Backdrop/Blur/VBoxContainer" unique_id=95632668 instance=ExtResource("1_spinr")]
+layout_mode = 2
+size_flags_horizontal = 4
+show_background = true
+
+[node name="Label" type="Label" parent="Backdrop/Blur/VBoxContainer" unique_id=2133838275]
+layout_mode = 2
+text = "Loading..."
+label_settings = SubResource("LabelSettings_nr6oi")

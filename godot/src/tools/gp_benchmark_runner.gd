@@ -73,7 +73,125 @@ func _ready() -> void:
 	)
 
 	Global.scene_runner.loading_complete.connect(_on_loading_complete)
+	# Periodic memory snapshots dumped to logcat as JSON. Survives a
+	# stuck load (no need to wait for loading_complete) so we can see
+	# how the heap / VRAM / scene tree grow over time and pinpoint
+	# duplication.
+	_kick_memory_snapshots()
 	_set_phase("waiting_for_explorer")
+
+
+func _kick_memory_snapshots() -> void:
+	for delay in [10.0, 20.0, 40.0, 80.0, 160.0]:
+		var t = Timer.new()
+		t.one_shot = true
+		t.wait_time = delay
+		t.autostart = true
+		var tag = "T+%ds" % int(delay)
+		t.timeout.connect(_memory_snapshot.bind(tag))
+		add_child(t)
+
+
+func _memory_snapshot(tag: String) -> void:
+	var s = {
+		"tag": tag,
+		"static_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
+		"static_max_mb": Performance.get_monitor(Performance.MEMORY_STATIC_MAX) / 1048576.0,
+		"vram_total_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+		"vram_tex_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
+		"vram_buf_mb": Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0,
+		"node_count": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		"resource_count": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
+		"orphan_nodes": int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
+		"objects_total": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		"render_objects": int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+	}
+	var by_class = {}
+	var mesh_by_path = {}  # path -> array of instance_ids
+	var tex_by_path = {}
+	var mat_unique_ids = {}
+	var meshes_no_path = 0
+	var stats = {"miss_mesh": 0, "miss_mat": 0, "miss_tex": 0}
+	_walk_for_dedup(get_tree().root, by_class, mesh_by_path, tex_by_path, mat_unique_ids, stats)
+
+	# Find the worst dupes — same path loaded as N distinct instances.
+	var mesh_dups = []
+	for p in mesh_by_path:
+		var arr: Array = mesh_by_path[p]
+		var unique_ids: Dictionary = {}
+		for id in arr:
+			unique_ids[id] = true
+		if arr.size() > 1 and unique_ids.size() > 1:
+			mesh_dups.append([p.substr(p.length() - 60), arr.size(), unique_ids.size()])
+	mesh_dups.sort_custom(func(a, b): return a[1] > b[1])
+	var tex_dups = []
+	for p in tex_by_path:
+		var arr2: Array = tex_by_path[p]
+		var unique_ids2: Dictionary = {}
+		for id2 in arr2:
+			unique_ids2[id2] = true
+		if arr2.size() > 1 and unique_ids2.size() > 1:
+			tex_dups.append([p.substr(p.length() - 60), arr2.size(), unique_ids2.size()])
+	tex_dups.sort_custom(func(a, b): return a[1] > b[1])
+
+	# Class counts top-20
+	var class_arr = []
+	for k in by_class:
+		class_arr.append([k, by_class[k]])
+	class_arr.sort_custom(func(a, b): return a[1] > b[1])
+
+	s["by_class_top20"] = class_arr.slice(0, 20)
+	s["meshes_with_unique_path"] = mesh_by_path.size()
+	s["meshes_no_resource_path"] = meshes_no_path
+	s["materials_unique_instances"] = mat_unique_ids.size()
+	s["textures_with_unique_path"] = tex_by_path.size()
+	s["mesh_dups_top10 (path, refs, unique_instances)"] = mesh_dups.slice(0, 10)
+	s["tex_dups_top10 (path, refs, unique_instances)"] = tex_dups.slice(0, 10)
+	s["misses"] = stats
+
+	_log("MEMORY %s: %s" % [tag, JSON.stringify(s)])
+
+
+func _walk_for_dedup(
+	n: Node,
+	by_class: Dictionary,
+	mesh_by_path: Dictionary,
+	tex_by_path: Dictionary,
+	mat_ids: Dictionary,
+	stats: Dictionary
+) -> void:
+	by_class[n.get_class()] = by_class.get(n.get_class(), 0) + 1
+	if n is MeshInstance3D:
+		var mi := n as MeshInstance3D
+		var mesh = mi.mesh
+		if mesh != null:
+			var p = str(mesh.resource_path)
+			if p == "":
+				stats["miss_mesh"] += 1
+			else:
+				if not mesh_by_path.has(p):
+					mesh_by_path[p] = []
+				mesh_by_path[p].append(mesh.get_instance_id())
+			# Walk surface materials.
+			for si in range(mesh.get_surface_count()):
+				var mat = mi.get_active_material(si)
+				if mat == null:
+					stats["miss_mat"] += 1
+					continue
+				mat_ids[mat.get_instance_id()] = true
+				if mat is BaseMaterial3D:
+					var bm := mat as BaseMaterial3D
+					var tex = bm.albedo_texture
+					if tex != null:
+						var tp = str(tex.resource_path)
+						if tp == "":
+							stats["miss_tex"] += 1
+						else:
+							if not tex_by_path.has(tp):
+								tex_by_path[tp] = []
+							tex_by_path[tp].append(tex.get_instance_id())
+	for c in n.get_children():
+		_walk_for_dedup(c, by_class, mesh_by_path, tex_by_path, mat_ids, stats)
 
 
 func _on_loading_complete(session_id: int) -> void:
@@ -230,6 +348,10 @@ func _process(_delta: float) -> void:
 				# sampling-window numbers aren't polluted by load-time spikes.
 				Global.scene_runner.reset_state_timing()
 				Global.scene_runner.reset_crdt_metrics()
+				if Global.cli.get_skip_gltf_load():
+					_purge_existing_gltfs()
+				if Global.cli.get_kill_sky():
+					_purge_existing_skies()
 				_set_phase("sampling")
 		"sampling":
 			_enforce_pinned_pose()
@@ -337,6 +459,8 @@ func _count_node_types() -> Dictionary:
 	# therefore convertible to RenderingServer-direct, vs UI/logic nodes.
 	var counts := {}
 	var mesh_resource_ids := {}
+	var merge_buckets := {}
+	var unique_materials := {}
 	var skipped := {"animated": 0, "skinned": 0, "shadermat": 0, "no_mesh": 0, "no_material": 0}
 	var stack: Array = [get_tree().root]
 	while not stack.is_empty():
@@ -349,6 +473,7 @@ func _count_node_types() -> Dictionary:
 			if mesh != null:
 				var rid := mesh.get_rid()
 				mesh_resource_ids[rid] = mesh_resource_ids.get(rid, 0) + 1
+				_classify_mesh_mergeable(mi, merge_buckets, unique_materials, skipped)
 			else:
 				skipped.no_mesh += 1
 		for c in n.get_children():
@@ -368,6 +493,8 @@ func _count_node_types() -> Dictionary:
 			dup_buckets.dup_21_plus += 1
 	counts["_unique_meshes"] = mesh_resource_ids.size()
 	counts["_mesh_dup_buckets"] = dup_buckets
+	counts["_merge_buckets"] = merge_buckets
+	counts["_unique_materials"] = unique_materials.size()
 	counts["_merge_skipped"] = skipped
 	return counts
 
@@ -386,6 +513,58 @@ func _count_node_types() -> Dictionary:
 ## Bucket key combines pipeline-state features that MUST match between
 ## merge candidates: alpha_mode + double_sided + vertex format. Texture
 ## sets are handled by the atlas at merge time.
+func _classify_mesh_mergeable(
+	mi: MeshInstance3D, buckets: Dictionary, unique_mats: Dictionary, skipped: Dictionary
+) -> void:
+	if mi.skeleton != NodePath(""):
+		skipped.skinned += 1
+		return
+	var p: Node = mi.get_parent()
+	while p != null:
+		if p is AnimationPlayer or p is Skeleton3D:
+			skipped.animated += 1
+			return
+		var c := p.get_class()
+		if c == "DclAvatar":
+			skipped.animated += 1
+			return
+		# DCL components: any gltf-container with a tween or modifier on
+		# this entity will mutate the subtree per-frame; can't bake.
+		if p.has_meta("dcl_has_tween") or p.has_meta("dcl_has_modifier"):
+			skipped.animated += 1
+			return
+		p = p.get_parent()
+	var mesh := mi.mesh
+	if mesh != null and mesh is ArrayMesh:
+		if (mesh as ArrayMesh).get_blend_shape_count() > 0:
+			skipped.animated += 1
+			return
+	var mat: Material = mi.get_active_material(0)
+	if mat == null:
+		skipped.no_material += 1
+		return
+	if mat is ShaderMaterial:
+		skipped.shadermat += 1
+		return
+	unique_mats[mat.get_rid()] = true
+	# Bucket by pipeline state only — texture atlas resolves per-bucket.
+	var key: String = ""
+	if mat is BaseMaterial3D:
+		var bm := mat as BaseMaterial3D
+		var tex_albedo := 1 if bm.albedo_texture != null else 0
+		var tex_normal := 1 if bm.normal_texture != null else 0
+		var tex_emissive := 1 if bm.emission_texture != null else 0
+		var tex_orm := 1 if bm.orm_texture != null else 0
+		var ds := 1 if bm.cull_mode == BaseMaterial3D.CULL_DISABLED else 0
+		key = (
+			"transp=%d cull=%d alb=%d nrm=%d em=%d orm=%d"
+			% [bm.transparency, ds, tex_albedo, tex_normal, tex_emissive, tex_orm]
+		)
+	else:
+		key = "other_basemat"
+	buckets[key] = buckets.get(key, 0) + 1
+
+
 func _finish() -> void:
 	_log("sampling done: %d samples" % samples.size())
 	_set_phase("done")
@@ -401,6 +580,7 @@ func _finish() -> void:
 	# Per-component-id breakdown of dirty entries on the Rust→V8 path.
 	# Identifies which SDK7 components dominate the round-trip pressure.
 	var crdt_component_breakdown: String = Global.scene_runner.drain_crdt_component_breakdown()
+
 	var result := {
 		"tag": config.get("tag", ""),
 		"genesis_plaza_commit": config.get("genesis_plaza_commit", ""),
@@ -460,6 +640,27 @@ func _finish() -> void:
 			]
 		)
 	)
+	print("[GP Benchmark] unique_materials=%d" % node_types.get("_unique_materials", 0))
+	var skipped: Dictionary = node_types.get("_merge_skipped", {})
+	print(
+		(
+			"[GP Benchmark] merge_skipped animated=%d skinned=%d shadermat=%d no_mat=%d no_mesh=%d"
+			% [
+				skipped.get("animated", 0),
+				skipped.get("skinned", 0),
+				skipped.get("shadermat", 0),
+				skipped.get("no_material", 0),
+				skipped.get("no_mesh", 0),
+			]
+		)
+	)
+	var bk: Dictionary = node_types.get("_merge_buckets", {})
+	var bk_sorted := []
+	for k in bk:
+		bk_sorted.append([k, bk[k]])
+	bk_sorted.sort_custom(func(a, b): return a[1] > b[1])
+	for i in range(min(10, bk_sorted.size())):
+		print("[GP Benchmark] merge_bucket [%s] count=%d" % [bk_sorted[i][0], bk_sorted[i][1]])
 	print("[GP Benchmark] END_RESULT_JSON")
 	# Sanity-check screenshot. Compared against the prior run's image by
 	# scripts/bench/compare_screenshots.py — if it diverges too far the run
@@ -468,6 +669,11 @@ func _finish() -> void:
 	# the PNG encode (~200-500 ms zlib on 1080p) doesn't contaminate the
 	# preceding sample window in profiles.
 	_save_screenshot()
+	# bench-keep-running=true (deeplink) → don't quit so the user can
+	# walk around in the captured state for visual debugging.
+	if bool(config.get("keep_running", false)):
+		_log("keep_running=true — skipping force-quit, free-roam now")
+		return
 	_async_force_quit(0)
 
 
@@ -673,7 +879,6 @@ func _load_config() -> Dictionary:
 ##   bench-disable-transforms=true|false
 ##   bench-warmup=<seconds>
 ##   bench-sample=<seconds>
-##   rs-gltf-direct=true|false  -- GLTF→RenderingServer migration toggle
 func _apply_deeplink_overrides() -> void:
 	if Global.deep_link_obj == null:
 		return
@@ -700,6 +905,25 @@ func _apply_deeplink_overrides() -> void:
 	var sample: String = params.get("bench-sample", "")
 	if not sample.is_empty() and sample.is_valid_int():
 		config["sample_seconds"] = sample.to_int()
+	var settling: String = params.get("bench-settling-timeout", "")
+	if not settling.is_empty() and settling.is_valid_int():
+		config["settling_timeout_seconds"] = settling.to_int()
+	# bench-force-settling=true disables the early-exit on still_loading==0
+	# (which fires before child MIs land in the scene tree — the gltf_container
+	# LoadingState transitions out of LOADING before propagate_ready completes
+	# on its children). Forces the full settling_timeout window so the scene
+	# fully materializes before sampling.
+	var force_settling: String = params.get("bench-force-settling", "")
+	if not force_settling.is_empty():
+		config["force_settling"] = force_settling.to_lower() in ["true", "1", "yes"]
+
+	# bench-keep-running=true skips the post-bench force-quit so you
+	# can keep walking around in the captured scene state after the
+	# JSON+screenshot have been written. Handy when visually
+	# verifying impostor / culling work.
+	var keep_running: String = params.get("bench-keep-running", "")
+	if not keep_running.is_empty():
+		config["keep_running"] = keep_running.to_lower() in ["true", "1", "yes"]
 
 	# Force a graphic profile for the bench. Index matches GraphicSettings
 	# PROFILE_NAMES: 0=Very Low, 1=Low, 2=Medium, 3=High, 4=Custom. Stashed
@@ -711,16 +935,15 @@ func _apply_deeplink_overrides() -> void:
 		if idx >= 0 and idx <= 4:
 			config["force_graphic_profile"] = idx
 
-	# GDScript cell-based visibility culling (visibility_grid.gd). Stored in
-	# config and consumed at loading_complete to build the grid; the per-frame
-	# update runs in warmup/sampling.
-
 	var viewport_scale: String = params.get("viewport-scale-3d", "")
 	if not viewport_scale.is_empty() and viewport_scale.is_valid_float():
 		var s: float = viewport_scale.to_float()
 		if s > 0.1 and s <= 2.0:
 			config["viewport_scale_3d"] = s
 
+	var skipg: String = params.get("skip-gltf", "")
+	if not skipg.is_empty():
+		Global.cli.set_skip_gltf_load(skipg.to_lower() in ["true", "1", "yes"])
 	# Viewport mesh-LOD threshold (pixels). Default in Godot is 1.0 (very
 	# conservative); raising it picks lower-detail LODs sooner and is the
 	# whole point of the LOD bake on mobile. Stash here, apply at
@@ -879,6 +1102,36 @@ func _log(msg: String) -> void:
 	print("[GP Benchmark] %s" % msg)
 
 
+func _purge_existing_gltfs() -> void:
+	var stack: Array = [Global.get_tree().root]
+	var freed: int = 0
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n.is_class("DclGltfContainer"):
+			n.queue_free()
+			freed += 1
+			continue
+		for c in n.get_children():
+			stack.append(c)
+	_log("purged %d existing DclGltfContainer nodes" % freed)
+
+
+func _purge_existing_skies() -> void:
+	var stack: Array = [Global.get_tree().root]
+	var stomped: int = 0
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is WorldEnvironment and n.environment != null:
+			n.environment.background_mode = Environment.BG_COLOR
+			n.environment.background_color = Color.BLACK
+			n.environment.background_energy_multiplier = 0.0
+			n.environment.glow_enabled = false
+			stomped += 1
+		for c in n.get_children():
+			stack.append(c)
+	_log("purged %d WorldEnvironments to BG_COLOR" % stomped)
+
+
 ## Count DclGltfContainer nodes whose `dcl_gltf_loading_state` is still
 ## UNKNOWN (0) or LOADING (1). FINISHED (4), NOT_FOUND (2) and
 ## FINISHED_WITH_ERROR (3) are terminal states. Walks the scene tree
@@ -898,6 +1151,10 @@ func _count_loading_gltf_containers() -> int:
 	return pending
 
 
+## Real process RSS via /proc/self/status — Android. Godot's MEMORY_STATIC tracks
+## the C++ heap only; on Android we also have JNI/Java/native allocations that
+## live outside it. This reads VmRSS (resident set size, kB) so the bench
+## captures the full process footprint, not just Godot's view.
 func _read_process_rss_mb() -> float:
 	if not OS.has_feature("linux") and not OS.has_feature("android"):
 		return 0.0

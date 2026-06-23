@@ -8,7 +8,8 @@ import Foundation
 // (e.g. Sentry). The matching `entry_symbol` is set in
 // `godot/dcl_swift_lib.gdextension`.
 #initSwiftExtension(cdecl: "dcl_swift_lib_init", types: [
-    DclSwiftLib.self
+    DclSwiftLib.self,
+    DclStoreKit.self,
 ])
 
 /// Smoke-test class so we can confirm the Swift GDExtension actually loads

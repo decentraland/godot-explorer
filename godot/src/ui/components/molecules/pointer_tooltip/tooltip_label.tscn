@@ -2,9 +2,7 @@
 
 [ext_resource type="FontFile" uid="uid://cmc7ku5u0efdy" path="res://assets/themes/fonts/lato_family/Lato-Bold.ttf" id="1_1lcoh"]
 [ext_resource type="Script" uid="uid://5u25dqo7og70" path="res://src/ui/components/molecules/pointer_tooltip/tooltip_label.gd" id="1_ut63f"]
-[ext_resource type="Texture2D" uid="uid://dmm6s6ay3iatx" path="res://assets/themes/icons/gamepad/left-bumper.svg" id="2_qd4xu"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_sk4cq"]
-[ext_resource type="Texture2D" uid="uid://bjppxn35ls1rc" path="res://assets/themes/icons/gamepad/a-filled.svg" id="5_sk4cq"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_sk4cq"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_473nw"]
@@ -70,42 +68,6 @@ layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
-
-[node name="HBoxContainer_Gamepad" type="HBoxContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons" unique_id=811244264]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-theme_override_constants/separation = -3
-
-[node name="HBoxContainer_Modifier" type="HBoxContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad" unique_id=216559038]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 3
-
-[node name="TextureRect_GamepadIModifier" type="TextureRect" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad/HBoxContainer_Modifier" unique_id=291825035]
-custom_minimum_size = Vector2(0, 36)
-layout_mode = 2
-size_flags_vertical = 4
-texture = ExtResource("2_qd4xu")
-expand_mode = 3
-stretch_mode = 5
-
-[node name="Label_Text2" type="Label" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad/HBoxContainer_Modifier" unique_id=830748808]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("1_1lcoh")
-text = "+"
-label_settings = SubResource("LabelSettings_i8mwd")
-vertical_alignment = 1
-
-[node name="TextureRect_GamepadButton" type="TextureRect" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/HBoxContainer_Gamepad" unique_id=1598126860]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 48)
-layout_mode = 2
-size_flags_vertical = 4
-texture = ExtResource("5_sk4cq")
-expand_mode = 3
-stretch_mode = 5
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons" unique_id=612962913]
 layout_mode = 2

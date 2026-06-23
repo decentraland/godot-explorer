@@ -24,6 +24,8 @@ extends Node
 ##   app_ui    {filters}                            — Explorer's own UI tree
 ##                                                    (skips per-scene SDK UI
 ##                                                    subtree by default).
+##   eval      {code}                                — run GDScript, return result
+##                                                    (non-production only).
 ##
 ## `ui_scene` / `ui_entity` are identical to their 3D counterparts except the
 ## `godot` block reports the rendered `Control` (rect, anchors, modulate, …)
@@ -43,6 +45,12 @@ const MAX_FRAME_BYTES: int = 65536  ## drop inbound frames larger than this
 ## ERR_OUT_OF_MEMORY and the reply is silently dropped, leaving the client
 ## hanging. 8 MiB comfortably fits expanded scene snapshots.
 const OUTBOUND_BUFFER_BYTES: int = 8 * 1024 * 1024
+## Max focus-change entries retained for the `focus` diagnostic cmd.
+const FOCUS_HISTORY_MAX: int = 64
+## Keywords that mark an `eval` snippet as a statement body, not a bare expression.
+const EVAL_STATEMENT_PREFIXES: Array[String] = [
+	"return", "var", "const", "if", "for", "while", "match", "pass", "print", "assert"
+]
 const Collector := preload("res://src/tool/debug_server/debug_collector.gd")
 
 var _tcp: TCPServer
@@ -50,10 +58,27 @@ var _peers: Array[WebSocketPeer] = []
 var _running: bool = false
 var _port: int = DEFAULT_PORT
 
+## Focus tracking: poll the viewport's keyboard-focus owner each frame and log
+## every change (including release-to-null, which `gui_focus_changed` misses).
+## Exposed via the `focus` cmd. Diagnostic aid for "input stops working" bugs
+## where movement is gated by `ui_root.has_focus()`.
+var _focus_history: Array = []
+var _last_focus_desc: String = "<unset>"
+
 
 func _ready() -> void:
-	# Off by default; settings toggle calls start() / stop().
 	set_process(false)
+	# Debug builds start the server automatically so agents can attach without a
+	# manual toggle. Release/exported builds stay off until the Settings →
+	# Developer toggle. Never in production.
+	if OS.is_debug_build() and not Global.is_production():
+		# DCL_DEBUG_WS_PORT lets a second local instance get its own inspector
+		# (the default port can only be bound by one process).
+		var port := DEFAULT_PORT
+		var env_port := OS.get_environment("DCL_DEBUG_WS_PORT")
+		if env_port.is_valid_int():
+			port = env_port.to_int()
+		start(port)
 
 
 func is_running() -> bool:
@@ -95,6 +120,7 @@ func stop() -> void:
 
 
 func _process(_dt: float) -> void:
+	_poll_focus()
 	if _tcp == null:
 		return
 
@@ -152,6 +178,8 @@ func _handle_message(peer: WebSocketPeer, text: String) -> void:
 	match cmd:
 		"ping":
 			_reply(peer, request_id, true, _build_ping_data(), "")
+		"focus":
+			_reply(peer, request_id, true, _build_focus_data(), "")
 		"scenes":
 			_reply(peer, request_id, true, Collector.collect_scenes_summary(), "")
 		"scene":
@@ -240,8 +268,71 @@ func _handle_message(peer: WebSocketPeer, text: String) -> void:
 				_reply(peer, request_id, false, null, str(av["error"]))
 			else:
 				_reply(peer, request_id, true, av, "")
+		"eval":
+			# Run arbitrary GDScript against the live client and return the
+			# serialized result. Unlike the read-only inspection commands this
+			# can mutate state, so it is hard-gated out of production builds.
+			if Global.is_production():
+				_reply(peer, request_id, false, null, "eval disabled in production builds")
+				return
+			var code: String = str(msg.get("code", ""))
+			if code.is_empty():
+				_reply(peer, request_id, false, null, "missing 'code'")
+				return
+			var res: Dictionary = _eval_gdscript(code)
+			if res.get("ok", false):
+				_reply(peer, request_id, true, res.get("data"), "")
+			else:
+				_reply(peer, request_id, false, null, str(res.get("error", "eval failed")))
 		_:
 			_reply(peer, request_id, false, null, "unknown command: %s" % cmd)
+
+
+func _poll_focus() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	var vp := tree.root
+	if vp == null:
+		return
+	var owner := vp.gui_get_focus_owner()
+	var desc := _describe_focus(owner)
+	if desc == _last_focus_desc:
+		return
+	(
+		_focus_history
+		. append(
+			{
+				"t_ms": Time.get_ticks_msec(),
+				"frame": Engine.get_process_frames(),
+				"from": _last_focus_desc,
+				"to": desc,
+			}
+		)
+	)
+	if _focus_history.size() > FOCUS_HISTORY_MAX:
+		_focus_history = _focus_history.slice(_focus_history.size() - FOCUS_HISTORY_MAX)
+	_last_focus_desc = desc
+
+
+func _describe_focus(node: Control) -> String:
+	if node == null:
+		return "<none>"
+	return "%s [%s]" % [str(node.get_path()), node.get_class()]
+
+
+func _build_focus_data() -> Dictionary:
+	# `explorer_has_focus` (and thus mobile walk/jump) is true iff this matches
+	# the explorer's `ui_root` (%UI). Compare `current` against it.
+	var ui_root_path := "<no explorer>"
+	var explorer := get_node_or_null("/root/explorer")
+	if explorer != null and explorer.get("ui_root") != null:
+		ui_root_path = str(explorer.ui_root.get_path())
+	return {
+		"current": _last_focus_desc,
+		"ui_root_path": ui_root_path,
+		"history": _focus_history,
+	}
 
 
 func _build_ping_data() -> Dictionary:
@@ -254,6 +345,64 @@ func _build_ping_data() -> Dictionary:
 		"engine": Engine.get_version_info().get("string", ""),
 		"scenes_loaded": loaded.size(),
 	}
+
+
+# --------------------------------------------------------------------
+# Eval
+
+
+## Compile and run a GDScript snippet, returning {ok, data} or {ok:false, error}.
+## `code` is treated as a function body with three locals available:
+## `tree` (SceneTree), `global` (the Global autoload) and `server` (this node).
+## Use `return X` to send a value back. A bare single-line expression is also
+## accepted and auto-wrapped in `return`. Synchronous only — `await` is not
+## supported, and GDScript runtime errors are logged to the client console while
+## the eval returns null.
+func _eval_gdscript(code: String) -> Dictionary:
+	# Pick the more likely shape first so the common case compiles cleanly; fall
+	# back to the other shape on a compile failure (a misclassified snippet then
+	# self-heals at the cost of one parse error in the client log).
+	var expr_first := _looks_like_expression(code)
+	var first := _compile_and_run(code, expr_first)
+	if first.get("compiled", false):
+		return first
+	var second := _compile_and_run(code, not expr_first)
+	if second.get("compiled", false):
+		return second
+	return {"ok": false, "error": second.get("error", "compile failed")}
+
+
+func _looks_like_expression(code: String) -> bool:
+	var trimmed := code.strip_edges()
+	if trimmed.is_empty() or trimmed.contains("\n"):
+		return false
+	for prefix in EVAL_STATEMENT_PREFIXES:
+		if (
+			trimmed == prefix
+			or trimmed.begins_with(prefix + " ")
+			or trimmed.begins_with(prefix + "(")
+		):
+			return false
+	return true
+
+
+func _compile_and_run(code: String, as_expression: bool) -> Dictionary:
+	var body := ""
+	if as_expression:
+		body = "\treturn (%s)\n" % code
+	else:
+		for line in code.split("\n"):
+			body += "\t" + line + "\n"
+	var script := GDScript.new()
+	script.source_code = "extends RefCounted\n\n\nfunc _run(tree, global, server):\n" + body
+	var err := script.reload()
+	if err != OK:
+		return {"compiled": false, "ok": false, "error": "compile failed (err=%d)" % err}
+	var instance: Object = script.new()
+	if instance == null or not instance.has_method("_run"):
+		return {"compiled": true, "ok": false, "error": "internal: eval runner missing _run()"}
+	var result: Variant = instance.call("_run", get_tree(), Global, self)
+	return {"compiled": true, "ok": true, "data": Collector._variant_to_json(result)}
 
 
 # --------------------------------------------------------------------

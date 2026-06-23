@@ -110,6 +110,11 @@ pub struct SceneManager {
     #[var]
     pointer_tooltips: VarArray,
 
+    // Entity under the crosshair that should show the hover highlight (outline),
+    // or null. Read from GDScript on the pointer_tooltip_changed signal.
+    #[var]
+    highlighted_entity: Option<Gd<Node3D>>,
+
     // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
     // between physics ticks (despawn, scene unload, teleport).
     last_avatar_under_crosshair: Option<InstanceId>,
@@ -828,6 +833,54 @@ impl SceneManager {
         GString::default()
     }
 
+    /// Resolve a scene-emote URN (`urn:decentraland:off-chain:scene-emote:{scene_id}-{glb_hash}-{loop}`)
+    /// against the currently loaded scenes. The URN payload cannot be dash-split:
+    /// preview ids/hashes look like `b64-<base64>` and contain `-` themselves. Matching
+    /// the payload against each loaded scene's entity id (exact prefix) is unambiguous.
+    /// This is the path for emotes that arrive *without* local context — broadcast from
+    /// remote players over comms, or AvatarShape expression triggers — where the
+    /// per-avatar content registry used by triggerSceneEmote was never populated.
+    /// Returns `{scene_id, glb_hash, base_url, audio_hash, looping}` or `{}`.
+    #[func]
+    pub fn resolve_scene_emote_urn(&self, emote_urn: GString) -> VarDictionary {
+        const URN_PREFIX: &str = "urn:decentraland:off-chain:scene-emote:";
+        let urn = emote_urn.to_string();
+        let Some(payload) = urn.strip_prefix(URN_PREFIX) else {
+            return VarDictionary::new();
+        };
+        let (payload, looping) = if let Some(p) = payload.strip_suffix("-true") {
+            (p, true)
+        } else if let Some(p) = payload.strip_suffix("-false") {
+            (p, false)
+        } else {
+            return VarDictionary::new();
+        };
+
+        for scene in self.scenes.values() {
+            let scene_entity_id = scene.scene_entity_definition.id.as_str();
+            let Some(glb_hash) = payload
+                .strip_prefix(scene_entity_id)
+                .and_then(|rest| rest.strip_prefix('-'))
+            else {
+                continue;
+            };
+            let audio_hash = scene
+                .content_mapping
+                .get_scene_emote_hash_by_glb_hash(glb_hash)
+                .and_then(|hash| hash.audio_hash)
+                .unwrap_or_default();
+
+            let mut dict = VarDictionary::new();
+            dict.set("scene_id", scene_entity_id);
+            dict.set("glb_hash", glb_hash);
+            dict.set("base_url", scene.content_mapping.base_url.as_str());
+            dict.set("audio_hash", audio_hash);
+            dict.set("looping", looping);
+            return dict;
+        }
+        VarDictionary::new()
+    }
+
     #[func]
     fn get_scene_is_paused(&self, scene_id: i32) -> bool {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
@@ -1144,6 +1197,13 @@ impl SceneManager {
     }
 
     fn scene_runner_update(&mut self, delta: f64) {
+        // Scene teardown must always make progress, even when the runner is paused
+        // (the lobby pauses it) or the player avatar is gone (post sign-out). The
+        // early-returns below would otherwise skip the kill state machine, leaving
+        // scenes marked ToKill on sign-out / realm change alive forever with live
+        // V8/Deno threads. Reaping here guarantees background teardown either way.
+        self.reap_dying_scenes();
+
         if self.pause {
             return;
         }
@@ -1239,11 +1299,10 @@ impl SceneManager {
         //     tracing::info!("next_update: {next_update_vec:#?}");
         // }
 
-        let mut current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for scene_id in self.sorted_scene_ids.iter() {
             let scene: &mut Scene = self.scenes.get_mut(scene_id).unwrap();
 
-            current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+            let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
             if scene.next_tick_us > current_time_us {
                 break;
             }
@@ -1307,8 +1366,42 @@ impl SceneManager {
         // Process loading session updates from all scenes
         self.update_loading_session_from_scenes();
 
+        // Explicitly-killed scenes are advanced by reap_dying_scenes() at the top
+        // of this function (so they tear down even while paused). Here we only
+        // collect scenes that exited while still Alive (thread finished without a
+        // kill signal); they are freed by the drain loop below.
+
+        // Periodic pool health check and stats logging (handled by PoolManager)
+        self.pool_manager.borrow_mut().tick();
+
+        for scene_id in scene_to_remove.iter() {
+            self.finalize_scene_removal(scene_id);
+        }
+    }
+
+    /// Advance the kill state machine for every dying scene and free those that
+    /// have finished. Runs every frame from the top of `scene_runner_update`,
+    /// unconditionally — before the `pause` / avatar-validity early-returns — so
+    /// scenes killed on sign-out or realm change are guaranteed to be torn down
+    /// (V8/Deno threads joined, Godot nodes freed) even after the lobby pauses the
+    /// runner. Without this, killed scenes would linger forever as ToKill.
+    fn reap_dying_scenes(&mut self) {
+        if self.dying_scene_ids.is_empty() {
+            return;
+        }
+
+        let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+        let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
+        let mut stale_scene_ids: Vec<SceneId> = Vec::new();
+
         for scene_id in self.dying_scene_ids.iter() {
-            let scene = self.scenes.get_mut(scene_id).unwrap();
+            let Some(scene) = self.scenes.get_mut(scene_id) else {
+                // The scene was already removed from the map (e.g. its nodes were
+                // freed with the Explorer during sign-out before we reaped it).
+                // Drop the dangling id below instead of unwrap()-panicking on it.
+                stale_scene_ids.push(*scene_id);
+                continue;
+            };
             match scene.state {
                 SceneState::ToKill => {
                     match scene
@@ -1378,63 +1471,83 @@ impl SceneManager {
             }
         }
 
-        // Periodic pool health check and stats logging (handled by PoolManager)
-        self.pool_manager.borrow_mut().tick();
+        // Drop any dangling ids whose scenes are already gone, so we don't retry
+        // (and re-panic) on them every frame.
+        if !stale_scene_ids.is_empty() {
+            self.sorted_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+            self.dying_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+            self.global_scene_ids
+                .retain(|x| !stale_scene_ids.contains(x));
+        }
 
         for scene_id in scene_to_remove.iter() {
-            let mut scene = self.scenes.remove(scene_id).unwrap();
-            let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+            self.finalize_scene_removal(scene_id);
+        }
+    }
 
-            // Cleanup trigger areas and release RIDs back to pool
-            scene
-                .trigger_areas
-                .cleanup(self.pool_manager.borrow_mut().physics_area());
+    /// Remove a single dead scene: free its Godot nodes, drop bookkeeping, join the
+    /// thread and emit scene_killed / scene_crashed. Shared by the normal update
+    /// path (scenes that exited while Alive) and reap_dying_scenes().
+    fn finalize_scene_removal(&mut self, scene_id: &SceneId) {
+        // Prune bookkeeping FIRST so that even if a later step (e.g. freeing an
+        // already-freed Godot node) were to fail, the id can't get stuck in
+        // dying_scene_ids and spam reap_dying_scenes() every frame.
+        self.sorted_scene_ids.retain(|x| x != scene_id);
+        self.dying_scene_ids.retain(|x| x != scene_id);
+        self.global_scene_ids.retain(|x| x != scene_id);
 
-            // Cleanup Rust references first (doesn't free nodes yet)
-            scene.cleanup();
+        let Some(mut scene) = self.scenes.remove(scene_id) else {
+            return;
+        };
+        let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
 
-            // Free root nodes - queue_free handles both removal from tree and freeing
-            // This is safer than manually calling remove_child + queue_free separately
-            // because queue_free schedules everything atomically for end of frame
-            scene.godot_dcl_scene.free_root_nodes();
+        // Cleanup trigger areas and release RIDs back to pool
+        scene
+            .trigger_areas
+            .cleanup(self.pool_manager.borrow_mut().physics_area());
 
-            self.sorted_scene_ids.retain(|x| x != scene_id);
-            self.dying_scene_ids.retain(|x| x != scene_id);
-            self.global_scene_ids.retain(|x| x != scene_id);
+        // Cleanup Rust references first (doesn't free nodes yet)
+        scene.cleanup();
 
-            // Clean up VM_HANDLES entry
-            #[cfg(feature = "use_deno")]
-            {
-                if let Ok(mut handles) = crate::dcl::js::VM_HANDLES.lock() {
-                    handles.remove(scene_id);
-                }
+        // Free root nodes - queue_free handles both removal from tree and freeing
+        // This is safer than manually calling remove_child + queue_free separately
+        // because queue_free schedules everything atomically for end of frame
+        scene.godot_dcl_scene.free_root_nodes();
+
+        // Clean up VM_HANDLES entry
+        #[cfg(feature = "use_deno")]
+        {
+            if let Ok(mut handles) = crate::dcl::js::VM_HANDLES.lock() {
+                handles.remove(scene_id);
             }
+        }
 
-            if scene.dcl_scene.thread_join_handle.is_finished() {
-                if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
-                    let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
-                        format!("Thread panicked with: {}", panic_info)
-                    } else if let Some(panic_info) = err.downcast_ref::<String>() {
-                        format!("Thread panicked with: {}", panic_info)
-                    } else {
-                        "Thread panicked with an unknown payload".to_string()
-                    };
-                    tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
-                }
+        if scene.dcl_scene.thread_join_handle.is_finished() {
+            if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
+                let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
+                    format!("Thread panicked with: {}", panic_info)
+                } else if let Some(panic_info) = err.downcast_ref::<String>() {
+                    format!("Thread panicked with: {}", panic_info)
+                } else {
+                    "Thread panicked with an unknown payload".to_string()
+                };
+                tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
             }
+        }
 
+        self.base_mut().emit_signal(
+            "scene_killed",
+            &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+        );
+
+        if self.crashed_scene_ids.contains(scene_id) {
+            self.crashed_scene_ids.retain(|x| x != scene_id);
             self.base_mut().emit_signal(
-                "scene_killed",
+                "scene_crashed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
-
-            if self.crashed_scene_ids.contains(scene_id) {
-                self.crashed_scene_ids.retain(|x| x != scene_id);
-                self.base_mut().emit_signal(
-                    "scene_crashed",
-                    &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
-                );
-            }
         }
     }
 
@@ -2108,6 +2221,7 @@ impl INode for SceneManager {
             last_raycast_result: None,
             last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
+            highlighted_entity: None,
             interactable_area: Rect2i::from_components(
                 0,
                 0,
@@ -2276,7 +2390,9 @@ impl INode for SceneManager {
         );
 
         let mut tooltips = VarArray::new();
+        let mut new_highlighted: Option<Gd<Node3D>> = None;
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
+            let mut should_highlight = false;
             if let Some(pointer_events) =
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
@@ -2290,6 +2406,12 @@ impl INode for SceneManager {
                         let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
                         if !show_feedback || raycast.hit.length > max_distance {
                             continue;
+                        }
+
+                        // show_highlight (default true) gates the hover outline. show_feedback
+                        // was already checked above, so disabling it suppresses the highlight too.
+                        if *info.show_highlight.as_ref().unwrap_or(&true) {
+                            should_highlight = true;
                         }
 
                         let input_action =
@@ -2335,6 +2457,17 @@ impl INode for SceneManager {
                             }
                         }
                     }
+                }
+            }
+
+            // Resolve the entity's Node3D after the pointer_events borrow ends.
+            if should_highlight {
+                if let Some(node) = self.scenes.get(&raycast.scene_id).and_then(|scene| {
+                    scene
+                        .godot_dcl_scene
+                        .get_node_or_null_3d(&raycast.entity_id)
+                }) {
+                    new_highlighted = Some(node.clone());
                 }
             }
         }
@@ -2397,8 +2530,15 @@ impl INode for SceneManager {
             }
         }
 
-        if self.pointer_tooltips != tooltips {
+        let tooltips_changed = self.pointer_tooltips != tooltips;
+        let highlight_changed = self.highlighted_entity != new_highlighted;
+        if tooltips_changed {
             self.pointer_tooltips = tooltips;
+        }
+        if highlight_changed {
+            self.highlighted_entity = new_highlighted;
+        }
+        if tooltips_changed || highlight_changed {
             self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 

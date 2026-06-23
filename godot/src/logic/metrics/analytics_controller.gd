@@ -114,6 +114,13 @@ func _stop_first_move_poller() -> void:
 	_first_move_poll_timer = null
 
 
+## Public entry for sign-out: stop polling the player's first move so the timer
+## doesn't read scene_runner.player_body_node after the Player is freed. The poll
+## restarts on the next login via _on_wallet_connected_track_login().
+func cancel_first_move_poll() -> void:
+	_stop_first_move_poller()
+
+
 func _on_first_move_poll_tick() -> void:
 	if Services.scene_runner == null:
 		return

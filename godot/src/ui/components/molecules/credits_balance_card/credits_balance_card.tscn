@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://p3ggpd773fvm"]
+
+[ext_resource type="Script" uid="uid://bdqo325fk1snd" path="res://src/ui/components/molecules/credits_balance_card/credits_balance_card.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_ehtta"]
+[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="3_vahx0"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fagdn"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="LabelSettings" id="LabelSettings_6wsqp"]
+font = ExtResource("2_ehtta")
+font_size = 26
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_l18yj"]
+font = ExtResource("2_ehtta")
+font_size = 56
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="CreditsBalanceCard" type="PanelContainer" unique_id=1170369070]
+custom_minimum_size = Vector2(600, 100)
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_fagdn")
+script = ExtResource("1_script")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=651156488]
+layout_mode = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 39
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 32
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1469834969]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer" unique_id=454099315]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/MarginContainer" unique_id=1652610989]
+layout_mode = 2
+text = "My Credits"
+label_settings = SubResource("LabelSettings_6wsqp")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1980946219]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=977949302]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+texture = ExtResource("3_vahx0")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="Label_Balance" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1590138690]
+unique_name_in_owner = true
+layout_mode = 2
+text = "20"
+label_settings = SubResource("LabelSettings_l18yj")

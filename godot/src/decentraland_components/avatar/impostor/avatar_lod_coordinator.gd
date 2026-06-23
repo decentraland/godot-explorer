@@ -50,7 +50,15 @@ func _process(_delta: float) -> void:
 			_avatars.remove_at(i)
 			continue
 		avatar._off_frustum = false
-		if avatar.is_local_player or avatar.hidden or not avatar.visible or not avatar.avatar_ready:
+		# is_visible_in_tree() (not the node's own `visible`) so avatars hidden by
+		# a parent entity's VisibilityComponent — e.g. podium AvatarShapes — don't
+		# consume FULL/MID rank budget or get an impostor slot.
+		if (
+			avatar.is_local_player
+			or avatar.hidden
+			or not avatar.is_visible_in_tree()
+			or not avatar.avatar_ready
+		):
 			avatar._lod_rank_cap = Avatar.LODState.FULL
 			avatar._use_overflow_impostor = false
 			continue

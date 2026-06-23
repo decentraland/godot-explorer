@@ -21,7 +21,7 @@ var _generator_statuses: Dictionary = {}
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 @onready var friend_jump_in: SidePanelWrapper = %FriendJumpIn
-#@onready var discover_content: VBoxContainer = %DiscoverContent
+@onready var button_credits: CreditsBalanceButton = get_node_or_null("%Button_Credits")
 
 static var _low_spec_warning_shown: bool = false
 
@@ -168,6 +168,8 @@ func _on_search_bar_opened() -> void:
 	container_content.hide()
 	search_container.set_keyword_search_text("")
 	Services.metrics.track_click_button("SEARCH_SELECT_INPUT", "SEARCH_CLICK", "")
+	if button_credits:
+		button_credits.hide()
 
 
 func _on_search_bar_cleared() -> void:
@@ -177,6 +179,8 @@ func _on_search_bar_cleared() -> void:
 	search_container.show()
 	search_container.set_keyword_search_text("")
 	Services.metrics.track_click_button("SEARCH_ERASE", "SEARCH_CLICK", "")
+	if button_credits:
+		button_credits.visible = Iap.is_available()
 
 
 func set_search_filter_text(new_text: String) -> void:
@@ -185,7 +189,7 @@ func set_search_filter_text(new_text: String) -> void:
 		friends_online.visible = friends_online.has_items()
 		last_visited.visible = last_visited.has_items()
 		places_featured.show()
-		places_favorites.show()
+		places_favorites.visible = places_favorites.has_items()
 		places_my_places.visible = places_my_places.has_items()
 		places_most_active.title = "Most Actives"
 	else:
@@ -323,6 +327,10 @@ func _on_error_loading_notification() -> void:
 
 func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, container) -> void:
 	_generator_statuses[container] = status
+	# Re-hide carousels that the search filter turned off — the carousel's own
+	# _on_report_loading_status may have called show() on itself after we hid it.
+	if not search_text.is_empty() and container not in _get_active_carousels():
+		container.hide()
 	_update_global_messages()
 
 
@@ -493,9 +501,12 @@ func _on_button_back_to_explorer_pressed() -> void:
 		search_container.hide()
 		container_content.show()
 		label_title.show()
+		if button_credits:
+			button_credits.visible = Iap.is_available()
 		if not Global.get_explorer():
 			button_back_to_explorer.hide()
 		return
+
 	if Global.get_explorer():
 		if Services.modal_manager.ban_pre_check_active:
 			Services.modal_manager.async_show_ban_pre_check_modal()

@@ -284,6 +284,16 @@ func bootstrap() -> void:
 		analytics_controller = AnalyticsController.new()
 		analytics_controller.setup()
 
+		# iOS only: report the StoreKit environment (production/sandbox) to
+		# analytics once at startup. StoreKit's environment is fixed by how the
+		# binary was distributed and can't be chosen by the app, so this is the
+		# ground truth for which IAP backend a device will hit. We ship this
+		# BEFORE any purchase flow to validate in prod that real App Store
+		# installs report `production`. Deferred so it runs after every autoload
+		# (incl. Iap) is in the tree. See docs/iap-zone-submission/.
+		if Global.is_ios():
+			Iap.report_environment_to_analytics.call_deferred()
+
 	# Platform attestation: needs to be a Node (uses timers + native plugin signals).
 	# The service self-gates on EULA acceptance and caches the issued session token on disk.
 	attestation = AttestationService.new()

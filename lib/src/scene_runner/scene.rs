@@ -273,6 +273,7 @@ pub struct Scene {
     pub gltf_node_modifier_states: HashMap<SceneEntityId, GltfNodeModifierState>,
     // Entities pending GltfNodeModifiers re-application after GLTF loads
     pub gltf_node_modifiers_pending: HashSet<SceneEntityId>,
+
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,

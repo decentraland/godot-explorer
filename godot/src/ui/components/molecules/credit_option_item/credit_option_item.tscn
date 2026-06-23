@@ -1,0 +1,59 @@
+[gd_scene format=3 uid="uid://cxyvv774su2j2"]
+
+[ext_resource type="Script" uid="uid://d1svh7aeoa8qn" path="res://src/ui/components/molecules/credit_option_item/credit_option_item.gd" id="1_xgw18"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_xgw18"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c5avl"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="LabelSettings" id="LabelSettings_c5avl"]
+font = ExtResource("2_xgw18")
+font_size = 56
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="CreditOption" type="PanelContainer" unique_id=1421119342]
+custom_minimum_size = Vector2(0, 212)
+offset_right = 607.0
+offset_bottom = 212.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_c5avl")
+script = ExtResource("1_xgw18")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=679787996]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_right = 40
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=749257498]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer" unique_id=62650532]
+custom_minimum_size = Vector2(179, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+expand_mode = 4
+stretch_mode = 5
+
+[node name="Label_Credits" type="Label" parent="MarginContainer/HBoxContainer" unique_id=1823082458]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("2_xgw18")
+theme_override_font_sizes/font_size = 56
+text = "10"
+label_settings = SubResource("LabelSettings_c5avl")
+
+[node name="Button_Price" type="Button" parent="MarginContainer/HBoxContainer" unique_id=422830307]
+custom_minimum_size = Vector2(132, 54)
+layout_mode = 2
+size_flags_horizontal = 10
+size_flags_vertical = 4
+mouse_filter = 1
+theme_override_font_sizes/font_size = 22
+text = "$59.99"

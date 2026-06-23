@@ -125,6 +125,10 @@ func set_item(index: int, right_direction: bool = true):
 
 
 func set_bg_shader_color(from: Color, to: Color):
+	# Bail if we've left the tree (e.g. sign-out freed the loading screen between
+	# frames): get_tree() would be null and create_tween() would crash.
+	if not is_inside_tree():
+		return
 	var tween = get_tree().create_tween()
 	tween.tween_method(set_shader_background_color, from, to, 0.25)
 
@@ -141,6 +145,10 @@ func set_progress(new_progress: float):
 	progress = new_progress
 
 	loading_progress_label.text = "LOADING %d%%" % floor(progress)
+	# Bail if we've left the tree (e.g. sign-out freed the loading screen between
+	# frames): get_tree() would be null and create_tween() would crash.
+	if not is_inside_tree():
+		return
 	var tween = get_tree().create_tween()
 	var new_width = loading_progress.get_parent().size.x * (progress / 100.0)
 	tween.tween_property(loading_progress, "position:x", new_width, 0.1)

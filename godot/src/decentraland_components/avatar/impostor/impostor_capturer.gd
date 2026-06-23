@@ -1,6 +1,8 @@
 extends Node
 
-const AVATAR_PREVIEW_SCENE = preload("res://src/ui/pages/backpack/avatar_preview.tscn")
+# Number of stock default-avatar profiles the catalyst exposes
+# (profiles/default1 .. profiles/default160).
+const DEFAULT_BODY_COUNT := 160
 
 var _queue: Array = []
 var _enqueued: Dictionary = {}
@@ -51,7 +53,11 @@ func _async_get_image_for(avatar) -> Image:
 		var image := await _async_fetch_catalyst_body(avatar.avatar_id)
 		if image != null:
 			return image
-	return await _async_capture_local(avatar)
+	# Fallback for AvatarShapes / profiles we can't fetch: a stock default body
+	# snapshot. We deliberately never run the old main-thread local bake here —
+	# it blocks the frame. Re-enabling real generation behind an async queue is
+	# tracked in #2206.
+	return await _async_fetch_default_body(avatar)
 
 
 # gdlint:ignore = async-function-name
@@ -64,40 +70,39 @@ func _async_fetch_catalyst_body(user_id: String) -> Image:
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		return null
-	if result is Texture2D:
-		return result.get_image()
+	# fetch_avatar_body_texture resolves a TextureEntry (image + texture + failed),
+	# not a bare Texture2D. The old `is Texture2D` check never matched, so every
+	# catalyst body — even when the download succeeded — was discarded and fell
+	# back to the ~300ms off-screen local bake. Read the image directly and skip
+	# the placeholder that TextureEntry.failed marks.
+	if result != null and result.get("image") != null and not result.get("failed"):
+		return result.image
 	return null
 
 
 # gdlint:ignore = async-function-name
-func _async_capture_local(avatar) -> Image:
-	if avatar == null or not is_instance_valid(avatar) or avatar.avatar_data == null:
+func _async_fetch_default_body(avatar) -> Image:
+	if Global.content_provider == null:
 		return null
-
-	var preview: AvatarPreview = AVATAR_PREVIEW_SCENE.instantiate()
-	preview.show_platform = false
-	preview.hide_name = true
-	preview.can_move = false
-	# Capture without a directional light so the snapshot matches the scene
-	# baseline once we render unshaded; the toon shader still emits its
-	# baked floor color, giving the impostor its visible silhouette.
-	preview.with_light = false
-
-	var root = get_tree().root
-	root.add_child(preview)
-	preview.set_position(root.get_visible_rect().size)
-
-	var avatar_name: String = ""
-	if avatar.has_method("get_avatar_name"):
-		avatar_name = avatar.get_avatar_name()
-
-	await preview.avatar.async_update_avatar(avatar.avatar_data, avatar_name)
-
-	# Texture size is owned by Rust (avatar_scene.rs) and queried at capture
-	# time so GDScript can't drift from the actual Texture2DArray dimensions.
-	var size: Vector2i = (
-		Services.avatars.impostor_texture_size() if Services.avatars != null else Vector2i(256, 512)
+	var promise: Promise = Global.content_provider.fetch_default_avatar_body_texture(
+		_default_body_slot_for(avatar)
 	)
-	var image: Image = await preview.async_get_viewport_image(false, size, 2.5)
-	preview.queue_free()
-	return image
+	if promise == null:
+		return null
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		return null
+	if result != null and result.get("image") != null and not result.get("failed"):
+		return result.image
+	return null
+
+
+# Pick a stock-default slot (1..DEFAULT_BODY_COUNT) stable per visual identity so
+# the same avatar keeps the same default across recaptures instead of flickering
+# between bodies. Falls back to the instance id when there's no cache key.
+func _default_body_slot_for(avatar) -> int:
+	var key: String = (
+		avatar._get_impostor_cache_key() if avatar.has_method("_get_impostor_cache_key") else ""
+	)
+	var slot_seed: int = hash(key) if key != "" else avatar.get_instance_id()
+	return (abs(slot_seed) % DEFAULT_BODY_COUNT) + 1

@@ -19,6 +19,11 @@ var wearable_data: DclItemEntityDefinition
 var panel_container_external_orig_rect: Rect2
 var was_pressed = false
 
+## Marketplace mode fields
+var is_marketplace_item: bool = false
+var marketplace_price: int = 0
+var marketplace_url: String = ""
+
 @onready var panel_container_external = $PanelContainer_External
 
 @onready var texture_rect_equiped = %TextureRect_Equiped
@@ -26,6 +31,9 @@ var was_pressed = false
 @onready var texture_rect_background = %TextureRect_Background
 @onready var texture_rect_preview = %TextureRect_Preview
 @onready var texture_progress_bar_loading = %TextureRect_Skeleton
+@onready var panel_container_price: PanelContainer = %PanelContainer_Price
+@onready var label_price: Label = %Label_Price
+@onready var button_action: Button = %Button_Action
 
 
 func _ready():
@@ -34,6 +42,7 @@ func _ready():
 	panel_container_external.hide()
 	texture_rect_background.hide()
 	texture_progress_bar_loading.show()
+	button_action.pressed.connect(_on_action_pressed)
 
 
 func async_set_wearable(wearable: DclItemEntityDefinition):
@@ -114,11 +123,45 @@ func _on_toggled(_button_pressed):
 
 
 func set_equiped(is_equiped: bool):
-	if is_equiped:
-		texture_rect_equiped.show()
+	if is_marketplace_item:
+		_update_marketplace_state(is_equiped)
 	else:
-		texture_rect_equiped.hide()
+		if is_equiped:
+			texture_rect_equiped.show()
+		else:
+			texture_rect_equiped.hide()
 	effect_toggle()
+
+
+func setup_marketplace(price: int, url: String):
+	is_marketplace_item = true
+	marketplace_price = price
+	marketplace_url = url
+	texture_rect_equiped.hide()
+	panel_container_price.show()
+	label_price.text = "%d" % price
+
+
+func _update_marketplace_state(is_selected: bool):
+	if is_selected:
+		panel_container_price.hide()
+		button_action.show()
+		if Iap.get_balance() >= marketplace_price:
+			button_action.text = "DETAIL"
+		else:
+			button_action.text = "GET CREDITS"
+	else:
+		panel_container_price.show()
+		button_action.hide()
+
+
+func _on_action_pressed():
+	if not is_marketplace_item:
+		return
+	if Iap.get_balance() >= marketplace_price and not marketplace_url.is_empty():
+		Global.open_url(marketplace_url)
+	else:
+		Global.open_credits.emit()
 
 
 func _update_category_icon(wearable: DclItemEntityDefinition):

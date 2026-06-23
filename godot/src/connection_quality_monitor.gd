@@ -6,34 +6,71 @@ extends Node
 ## no realm is set) to assess connection quality. Emits signals consumed by the
 ## toast and modal systems.
 ##
-## Polling:
-##   - Slow (10s): happy path, when the last ping succeeded
-##   - Fast (0.5s): investigation mode, triggered as soon as any ping fails so
-##     consecutive errors get counted quickly without waiting a full slow tick
+## Two decoupled layers:
 ##
-## Thresholds (consecutive failures):
-##   - With explorer UI:    2 → poor connection toast, 4 → connection lost modal
-##   - Without explorer UI: 2 → connection lost modal (no toast stage)
+##   1. Connection health — a truthful, ping-driven 0..1 score with hysteresis bands.
+##      A fail lowers it (a hang/timeout more than a quick refusal); a success raises it
+##      (a slow success heals less than a fast one). The UI NEVER alters this score, so it
+##      always reflects the real network. Separate enter/exit thresholds mean a single lucky
+##      ping cannot move the state out of LOST, so the modal cannot flap.
+##
+##   2. Feedback policy — decides WHEN to show/re-show the toast & modal. The "Retry" button
+##      is cosmetic (it does not reconnect anything — see modal_manager._on_connection_lost_primary),
+##      so here Retry only SNOOZES the modal: it hides it and stays quiet for a window while the
+##      connection stays objectively LOST underneath. The snooze window backs off (grows) on each
+##      successive retry and decays back toward its base during calm; a genuine recovery resets it.
+##      Only real health recovery dismisses the modal for good.
+##
+## Polling:
+##   - Slow (10s): happy path, when health is solidly good
+##   - Fast (0.5s): investigation mode, while degraded or still recovering
+##
+## Feedback (consumes health state):
+##   - With explorer UI:    POOR → poor connection toast, LOST → connection lost modal
+##   - Without explorer UI: POOR → connection lost modal (no toast stage)
 
 enum State { GOOD, POOR, LOST }
 
 const FAST_POLL_SECONDS: float = 0.5
 const SLOW_POLL_SECONDS: float = 10.0
 const REQUEST_TIMEOUT_SECONDS: float = 3.0
-const CONSECUTIVE_ERRORS_FOR_DEGRADED: int = 2
-const CONSECUTIVE_ERRORS_FOR_LOST: int = 4
+
+# --- Health-score tunables (layer 1) ---------------------------------------
+# Defaults give POOR at ~2 and LOST at ~4 accumulated failures (matching the old
+# consecutive-error thresholds) but, unlike a counter, the score also heals on success
+# so intermittent loss does not march straight to LOST.
+const HEALTH_START: float = 1.0
+const HEALTH_W_FAIL: float = 0.23  # quick failure (connection refused, etc.)
+const HEALTH_W_TIMEOUT: float = 0.26  # request hung until REQUEST_TIMEOUT (worse than a quick fail)
+const HEALTH_W_OK: float = 0.34  # heal per fast success (~3 clean pings fully recover)
+
+const BAND_POOR_ENTER: float = 0.55  # GOOD → POOR
+const BAND_POOR_EXIT: float = 0.65  # POOR → GOOD  (exit > enter ⇒ hysteresis)
+const BAND_LOST_ENTER: float = 0.25  # → LOST
+const BAND_LOST_EXIT: float = 0.45  # leave LOST only once health climbs back above this
+
+# --- Snooze tunables (layer 2): exponential backoff with time decay --------
+const SNOOZE_BASE: float = 10.0  # quiet window the first retry buys
+const SNOOZE_GROWTH: float = 2.0  # each further retry multiplies the window
+const SNOOZE_MAX: float = 120.0  # cap on the quiet window
+const SNOOZE_DECAY_HALFLIFE: float = 45.0  # excess-over-base halves every this many seconds of calm
 
 var _state: State = State.GOOD
-var _consecutive_errors: int = 0
+# Truthful connection health in [0, 1]. Driven only by ping outcomes, never by the UI.
+var _health: float = HEALTH_START
 var _poll_timer: Timer = null
 var _is_checking: bool = false
 var _check_generation: int = 0
-var _retrying: bool = false
 var _ios_retry_used: bool = false
 # True while a connection_lost modal opened *by us* is on screen. Used so that
 # _on_connection_restored only dismisses our own modal, not e.g. a teleport modal
 # that the user opened in the meantime.
 var _showing_our_modal: bool = false
+# Feedback snooze: while now < _snooze_until the modal stays hidden even if health is LOST.
+var _snooze_until: float = 0.0
+# Window the NEXT retry will apply (grows on retry, decays toward SNOOZE_BASE during calm).
+var _snooze_next: float = SNOOZE_BASE
+var _snooze_last_update: float = 0.0
 
 
 func _ready() -> void:
@@ -45,6 +82,8 @@ func _ready() -> void:
 # gdlint:ignore = async-function-name
 func initialize_async() -> void:
 	BootInstrumentation.mark("connection_quality_monitor.initialize_async_start")
+	_snooze_last_update = _now()
+
 	_poll_timer = Timer.new()
 	_poll_timer.wait_time = FAST_POLL_SECONDS
 	_poll_timer.timeout.connect(_on_poll_timeout)
@@ -74,6 +113,10 @@ func _connect_signals() -> void:
 	_poll_timer.start()
 
 
+func _now() -> float:
+	return Time.get_ticks_msec() / 1000.0
+
+
 func _on_poll_timeout() -> void:
 	if _is_checking:
 		return
@@ -91,7 +134,13 @@ func _async_check_connection() -> void:
 
 	# HEAD instead of GET: we only care about reachability + status code, not the
 	# /about payload (which is several KB of realm metadata per poll).
-	var promise: Promise = Services.http_requester.request_json(url, HTTPClient.METHOD_HEAD, "", {})
+	# Pass an explicit HTTP timeout slightly above the async_race below so the underlying
+	# request aborts at the HTTP layer (~4s) instead of lingering on the default 60s. Without
+	# this, abandoned requests during an outage hold slots in the shared request queue (limit
+	# 10) and starve recovery checks, so health stays stuck even after connectivity returns.
+	var promise: Promise = Services.http_requester.request_json_with_timeout(
+		url, HTTPClient.METHOD_HEAD, "", {}, REQUEST_TIMEOUT_SECONDS + 1.0
+	)
 	var timeout_promise := _create_timeout_promise(REQUEST_TIMEOUT_SECONDS)
 
 	var start_ms := Time.get_ticks_msec()
@@ -103,75 +152,92 @@ func _async_check_connection() -> void:
 		_is_checking = false
 		return
 
-	# Timeout or error
-	if not promise.is_resolved() or result is PromiseError:
-		_consecutive_errors += 1
-		_set_poll_interval(FAST_POLL_SECONDS)
-		if not promise.is_resolved():
+	var timed_out := not promise.is_resolved()
+	var ok := promise.is_resolved() and not (result is PromiseError)
+	var latency_seconds := elapsed_ms / 1000.0
+
+	if not ok:
+		if timed_out:
 			printerr(
 				(
-					"[ConnectionQualityMonitor] Request timed out after %d ms (%d consecutive errors)"
-					% [elapsed_ms, _consecutive_errors]
+					"[ConnectionQualityMonitor] Request timed out after %d ms (health %.2f)"
+					% [elapsed_ms, _health]
 				)
 			)
 		else:
 			printerr(
 				(
-					"[ConnectionQualityMonitor] Request failed (%d consecutive errors): %s"
-					% [_consecutive_errors, result.get_error()]
+					"[ConnectionQualityMonitor] Request failed (health %.2f): %s"
+					% [_health, result.get_error()]
 				)
 			)
 
-		# A failure right after a retry goes straight to LOST: the user already
-		# acknowledged the problem once and asked us to verify, so a single fresh
-		# failure is enough to bring the modal back without waiting for the threshold.
-		if _retrying:
-			_retrying = false
-			if _state != State.LOST:
-				_state = State.LOST
-				_async_on_connection_lost()
-			_is_checking = false
-			return
-	else:
-		if _consecutive_errors > 0:
-			prints(
-				"[ConnectionQualityMonitor] Connection recovered (was",
-				_consecutive_errors,
-				"errors)"
-			)
-		_consecutive_errors = 0
-		_set_poll_interval(SLOW_POLL_SECONDS)
-		if _state != State.GOOD:
-			_state = State.GOOD
-			_on_connection_restored()
-		_is_checking = false
-		return
+	# Layer 1: update truthful health, then derive the new state.
+	var prev_state := _state
+	_observe_health(ok, latency_seconds, timed_out)
 
-	_update_state()
+	# Investigate fast while degraded or still recovering; slow only when solidly good.
+	if not ok or _health < BAND_POOR_EXIT:
+		_set_poll_interval(FAST_POLL_SECONDS)
+	else:
+		_set_poll_interval(SLOW_POLL_SECONDS)
+
+	# Layer 2: feedback (toast / modal) reacting to the state transition.
+	await _async_update_feedback(prev_state)
 	_is_checking = false
 
 
-func _update_state() -> void:
-	if _state == State.LOST:
-		return
+# --- Layer 1: connection health --------------------------------------------
+func _observe_health(ok: bool, latency_seconds: float, timed_out: bool) -> void:
+	if not ok:
+		_health -= HEALTH_W_TIMEOUT if timed_out else HEALTH_W_FAIL
+	else:
+		var latency_factor := clampf(1.0 - latency_seconds / REQUEST_TIMEOUT_SECONDS, 0.0, 1.0)
+		_health += HEALTH_W_OK * latency_factor
+	_health = clampf(_health, 0.0, 1.0)
+	_state = _classify_state()
 
+
+func _classify_state() -> State:
+	var h := _health
+	if _state == State.LOST:
+		# Hysteresis: leave LOST only once health climbs well past the entry threshold.
+		if h >= BAND_LOST_EXIT:
+			return State.GOOD if h >= BAND_POOR_EXIT else State.POOR
+		return State.LOST
+	if _state == State.POOR:
+		if h < BAND_LOST_ENTER:
+			return State.LOST
+		if h >= BAND_POOR_EXIT:
+			return State.GOOD
+		return State.POOR
+	# GOOD
+	if h < BAND_LOST_ENTER:
+		return State.LOST
+	if h < BAND_POOR_ENTER:
+		return State.POOR
+	return State.GOOD
+
+
+# --- Layer 2: feedback policy ----------------------------------------------
+func _async_update_feedback(prev_state: State) -> void:
 	var has_explorer := Global.get_explorer() != null
 
-	# With explorer: toast at 2, modal at 4
-	# Without explorer: modal at 2 (no toast)
-	if (
-		has_explorer
-		and _state == State.GOOD
-		and _consecutive_errors >= CONSECUTIVE_ERRORS_FOR_DEGRADED
-	):
-		_state = State.POOR
+	# Warn only while degrading (GOOD → POOR); never on the way back up.
+	if _state == State.POOR and prev_state == State.GOOD and has_explorer:
 		_on_poor_connection()
-	elif (
-		_consecutive_errors
-		>= (CONSECUTIVE_ERRORS_FOR_LOST if has_explorer else CONSECUTIVE_ERRORS_FOR_DEGRADED)
-	):
-		_state = State.LOST
-		_async_on_connection_lost()
+
+	# Genuine recovery is the ONLY thing that dismisses the modal for real.
+	if _state == State.GOOD and prev_state != State.GOOD:
+		_on_connection_restored()
+		_snooze_next = SNOOZE_BASE  # clean slate: a later, unrelated problem starts fresh
+		_snooze_last_update = _now()
+		return
+
+	# "Lost enough to alarm": LOST, or POOR when there is no toast stage.
+	var alarm := _state == State.LOST or (_state == State.POOR and not has_explorer)
+	if alarm and not _showing_our_modal and _now() >= _snooze_until:
+		await _async_on_connection_lost()
 
 
 func _create_timeout_promise(timeout_seconds: float) -> Promise:
@@ -217,7 +283,6 @@ func _async_on_connection_lost() -> void:
 
 
 func _on_connection_restored() -> void:
-	_retrying = false
 	_ios_retry_used = false
 	if _showing_our_modal:
 		_showing_our_modal = false
@@ -230,15 +295,28 @@ func _on_exit() -> void:
 
 
 func _on_retry() -> void:
-	_check_generation += 1
-	_consecutive_errors = 0
-	_state = State.GOOD
-	_is_checking = false
-	_retrying = true
+	# Retry is cosmetic w.r.t. the network: it does NOT touch health. It only snoozes the
+	# modal, with the quiet window backing off on each successive retry (and decaying during
+	# calm). Health stays objectively LOST, so if the connection is still down the modal
+	# returns once the snooze expires (buttonless on iOS).
+	var now := _now()
+	_decay_snooze(now)
+	_snooze_until = now + _snooze_next
+	_snooze_next = minf(_snooze_next * SNOOZE_GROWTH, SNOOZE_MAX)
 	# modal_manager._on_connection_lost_primary already closed the modal.
 	_showing_our_modal = false
 	if OS.get_name() == "iOS":
 		_ios_retry_used = true
+
+
+func _decay_snooze(now: float) -> void:
+	# Relax the backoff back toward SNOOZE_BASE for the calm time elapsed since last update.
+	var dt := now - _snooze_last_update
+	_snooze_last_update = now
+	var excess := _snooze_next - SNOOZE_BASE
+	if dt > 0.0 and excess > 0.0:
+		excess *= pow(0.5, dt / SNOOZE_DECAY_HALFLIFE)
+		_snooze_next = SNOOZE_BASE + excess
 
 
 func _on_realm_changing() -> void:
@@ -246,7 +324,7 @@ func _on_realm_changing() -> void:
 	_poll_timer.stop()
 	_check_generation += 1
 	_is_checking = false
-	_consecutive_errors = 0
+	_reset_health()
 
 
 func _on_realm_changed() -> void:
@@ -260,9 +338,18 @@ func _on_realm_change_failed(_new_realm_string: String, _reason: String) -> void
 	_resume_polling()
 
 
-func _resume_polling() -> void:
+func _reset_health() -> void:
+	_health = HEALTH_START
 	_state = State.GOOD
-	_consecutive_errors = 0
-	_retrying = false
+	_snooze_until = 0.0
+	_snooze_next = SNOOZE_BASE
+	_snooze_last_update = _now()
+	if _showing_our_modal:
+		_showing_our_modal = false
+		Services.modal_manager.close_current_modal()
+
+
+func _resume_polling() -> void:
+	_reset_health()
 	_set_poll_interval(FAST_POLL_SECONDS)
 	_poll_timer.start()

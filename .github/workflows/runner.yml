@@ -31,7 +31,7 @@ jobs:
   #   uses: ./.github/workflows/coverage.yml
 
   android-build:
-    name: 🤖 Android (VR and Mobile)
+    name: 🤖 Android
     needs: static-checks
     uses: ./.github/workflows/android_builds.yml
     secrets:
@@ -42,10 +42,16 @@ jobs:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+      MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+      MOBILE_ARTIFACTS_R2_ENDPOINT: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      MOBILE_ARTIFACTS_R2_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
 
-  # iOS builds are triggered separately via:
-  # - Label 'build-ios' on PRs (see ios_label_trigger.yml)
-  # - Manual workflow dispatch (see ios_builds.yml)
+  # Mobile distribution (iOS TestFlight + Android APK-ready Slack notification) is
+  # triggered separately via mobile_distribute.yml:
+  # - Label 'build' (alias 'build-ios') on PRs
+  # - Manual workflow dispatch (ref: main/release)
+  # The signed Android APK is uploaded to R2 by android_builds.yml on every build.
 
   linux-build:
     name: 🐧 Linux

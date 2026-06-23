@@ -80,6 +80,10 @@ pub struct DclParseDeepLink {
     /// Show transparent safe-area debug overlay (deep link param: safemargindebug=true)
     #[var]
     safe_margin_debug: bool,
+
+    /// Enable IAP UI and StoreKit listening (deep link param: iap_enabled=true)
+    #[var]
+    iap_enabled: bool,
 }
 
 #[godot_api]
@@ -112,6 +116,7 @@ impl DclParseDeepLink {
             low_spec_warning: false,
             gp_benchmark: false,
             safe_margin_debug: false,
+            iap_enabled: false,
         }
     }
 
@@ -145,6 +150,7 @@ impl DclParseDeepLink {
             low_spec_warning: r.low_spec_warning,
             gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
+            iap_enabled: r.iap_enabled,
         }
     }
 }

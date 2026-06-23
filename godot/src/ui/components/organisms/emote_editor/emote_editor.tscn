@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://c6t7jqpx38nxd" path="res://src/ui/components/organisms/emote_editor/emote_editor_item.tscn" id="2_3uk1s"]
 [ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/layouts/orientation_container.gd" id="2_7jnql"]
 [ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/pages/backpack/no_items_message.tscn" id="4_noitems"]
+[ext_resource type="PackedScene" uid="uid://e8wxgnrt3ge6" path="res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.tscn" id="5_mktpl"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5ejwy"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -170,7 +171,7 @@ follow_focus = true
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid" unique_id=1960837465]
+[node name="MarginContainer_Emotes" type="MarginContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid" unique_id=1960837465]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -179,16 +180,27 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 38
 
-[node name="GridContainer_Emotes" type="GridContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer" unique_id=614091418]
+[node name="VBoxContainer_EmotesAndSuggestions" type="VBoxContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="GridContainer_Emotes" type="GridContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes/VBoxContainer_EmotesAndSuggestions" unique_id=614091418]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/h_separation = 30
 theme_override_constants/v_separation = 28
 columns = 3
 
-[node name="Control_NoEmotes" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer" unique_id=1677704674 instance=ExtResource("4_noitems")]
+[node name="Control_NoEmotes" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes/VBoxContainer_EmotesAndSuggestions" unique_id=1677704674 instance=ExtResource("4_noitems")]
 unique_name_in_owner = true
 layout_mode = 2
 marketplace_section = "emotes"
+
+[node name="MarketplaceRecommendedSection" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes/VBoxContainer_EmotesAndSuggestions" instance=ExtResource("5_mktpl")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+asset_type = "emotes"
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

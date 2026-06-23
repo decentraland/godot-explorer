@@ -186,7 +186,6 @@ func update_avatar_movement_state(vel: float):
 func _ready():
 	if not Global.is_mobile():
 		add_child(PlayerDesktopInput.new(self))
-	add_child(PlayerGamepadInput.new(self))
 
 	Global.camera_mode_set.connect(_on_global_camera_mode_set)
 

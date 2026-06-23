@@ -1,13 +1,15 @@
 ---
 name: debug-ws-inspector
-description: Use when inspecting the running Decentraland Godot Explorer client over the localhost debug WebSocket (port 9230), writing or interpreting `websocat` queries against `ws://127.0.0.1:9230`, or extending the debug server itself. Covers the JSON protocol, the five trees (`scene`/`entity`, `ui_scene`/`ui_entity`, `avatars`/`avatar`, `app_ui`, `ping`/`scenes`), the shared `filters` dict, and the wiring across `godot/src/tool/debug_server/` and the Rust `SceneManager::debug_*` / `AvatarScene::debug_*` hooks. Trigger when the user mentions the debug WS server, port 9230, `DebugWs`, `debug_collector`, websocat against the client, or asks how to query live scene/UI/avatar state.
+description: Use when inspecting the running Decentraland Godot Explorer client over the localhost debug WebSocket (port 9230), writing or interpreting `websocat` queries against `ws://127.0.0.1:9230`, or extending the debug server itself. Covers the JSON protocol, the five trees (`scene`/`entity`, `ui_scene`/`ui_entity`, `avatars`/`avatar`, `app_ui`, `ping`/`scenes`), the `focus` keyboard-focus tracker, the shared `filters` dict, and the wiring across `godot/src/tool/debug_server/` and the Rust `SceneManager::debug_*` / `AvatarScene::debug_*` hooks. Also covers the `eval` command for running arbitrary GDScript against the live client (non-production only). Trigger when the user mentions the debug WS server, port 9230, `DebugWs`, `debug_collector`, websocat against the client, running/evaluating GDScript against the running client, or asks how to query live scene/UI/avatar/focus state.
 ---
 
 # Debug WebSocket inspector
 
 A localhost-only WS server exposes a JSON inspection protocol for the live
-client state. Off by default; turn on in **Settings → Developer → "Debug WS
-Server"**. Binds to `127.0.0.1:9230`. Hidden in production builds.
+client state, plus an `eval` command that runs arbitrary GDScript. Auto-starts
+in debug builds (editor / debug exports); in release builds it stays off until
+toggled in **Settings → Developer → "Debug WS Server"**. Binds to
+`127.0.0.1:9230`. Hidden — and `eval` hard-disabled — in production builds.
 
 ## Wiring
 
@@ -33,7 +35,7 @@ shape: `{"id":..., "ok":true, "data":{...}}` or
 | `ui_scene` / `ui_entity` | per-scene SDK UI (`UiNode.base_control`) | `(scene_id, entity_id)` |
 | `avatars` / `avatar` | global `AvatarScene` | `by` ∈ {`address`,`alias`,`entity`,`local`} |
 | `app_ui` | Explorer's own UI | auto-detected (`/root/explorer/UI` or `/root/Menu`) |
-| `ping` / `scenes` | — | — |
+| `ping` / `scenes` / `focus` | — | — |
 
 All four data cmds (`scene`, `ui_scene`, `avatar`, `app_ui`) share a `filters` dict:
 - `component: [...]` — OR-match SDK component names (cheap, no proto decode)
@@ -78,7 +80,69 @@ outbound cap with headroom.
 
 # Explorer's own UI hierarchy (lobby in this state, scene UI when loaded)
 ./scripts/debug-ws.sh '{"id":5,"cmd":"app_ui","filters":{"depth":2}}'
+
+# Keyboard-focus tracker — current owner + ui_root + change history
+./scripts/debug-ws.sh '{"id":6,"cmd":"focus"}'
 ```
+
+## Eval — running GDScript
+
+`{"id":N,"cmd":"eval","code":"<gdscript>"}` compiles and runs `code` against the
+live client and returns the serialized result — the agent-facing equivalent of
+the old devtools console. **Non-production only**: in a production build the cmd
+replies `{"ok":false,"error":"eval disabled in production builds"}`.
+
+`code` is a GDScript function body. Use `return X` to send a value back. Three
+locals are in scope:
+
+| local | what |
+|---|---|
+| `tree` | the `SceneTree` (`tree.root`, `tree.get_node(...)`) |
+| `global` | the `Global` autoload |
+| `server` | this `DebugWsServer` node |
+
+Autoloads (`Global`, `DebugWs`, …) and engine singletons (`OS`, `Engine`,
+`Time`, …) are reachable directly too. A bare single-line expression is
+auto-wrapped in `return`, so `"code":"1 + 1"` works without the keyword.
+
+The result passes through the same `_variant_to_json` used elsewhere
+(primitives, `Vector*`, `Color`, `AABB`, `Array`, `Dictionary`; everything else
+— `Object`/`Node`/`Callable` — falls back to `str()`).
+
+```bash
+# Bare expression (auto-wrapped)
+./scripts/debug-ws.sh '{"id":10,"cmd":"eval","code":"Engine.get_frames_per_second()"}'
+
+# Reach into the tree
+./scripts/debug-ws.sh '{"id":11,"cmd":"eval","code":"return tree.get_root().get_child_count()"}'
+
+# Multi-line statement body (\n between lines, \t for indentation)
+./scripts/debug-ws.sh '{"id":12,"cmd":"eval","code":"var names = []\nfor c in tree.get_root().get_children():\n\tnames.append(c.name)\nreturn names"}'
+```
+
+Limitations: **synchronous only** — `await` is not supported (it would return a
+coroutine signal, not the awaited value). GDScript **runtime errors** (e.g. a
+null access) are logged to the client console and the eval returns `null` with
+`ok:true`; only *compile* errors come back as `ok:false`.
+
+## `focus` — keyboard-focus tracker
+
+`focus` takes no args and returns the viewport's current keyboard-focus owner
+plus a timestamped change history (no `filters`). Reply `data`:
+`{"current": "<path> [<class>]", "ui_root_path": "/root/explorer/UI",
+"history": [{"t_ms", "frame", "from", "to"}, ...]}` (last `FOCUS_HISTORY_MAX`
+= 64 changes; `"<none>"` means focus was released to null).
+
+The server polls `get_viewport().gui_get_focus_owner()` every `_process` frame
+(only while running) so the history captures transient changes — including
+release-to-null, which the engine's `gui_focus_changed` signal misses.
+
+Use it for "input stops working" bugs: mobile walk/jump are gated by
+`player.gd` → `explorer_has_focus()` (`== ui_root.has_focus()`), so movement
+silently dies whenever `current` ≠ `ui_root_path`. The history shows which
+control stole focus and on which frame. (This is how the navbar-toggle
+focus-steal bug was found: the gate read true→false when a press landed focus
+on the navbar's full-rect `Button`.)
 
 ## Important notes
 
@@ -90,8 +154,8 @@ outbound cap with headroom.
   large scenes, not a bug in the tool.
 - `app_ui` skips `<root>/SceneUIContainer/scenes_ui` by default to avoid
   shadowing `ui_scene`; pass `include_scene_ui: true` to lift the skip.
-- Read-only. No cmd mutates client state. Loopback bind only — never exposed
-  beyond the local machine.
+- The inspection cmds are read-only; only `eval` can mutate client state.
+  Loopback bind only — never exposed beyond the local machine.
 - Per-peer outbound buffer is 8 MiB. If a reply exceeds it the server returns a
   short `{"ok":false,"error":"reply dropped (err=..., payload=..., buffer=...)"}`
   frame carrying the original `id`, so the client gets an actionable error

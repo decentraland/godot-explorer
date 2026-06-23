@@ -1,7 +1,7 @@
 //! Emote GLTF loading (for ContentProvider emote loading).
 
 use godot::{
-    builtin::{Quaternion, VarArray},
+    builtin::{Basis, Quaternion, VarArray, Vector3},
     classes::{animation::TrackType, Animation, AnimationLibrary, AnimationPlayer, Node, Node3D},
     meta::ToGodot,
     obj::{Gd, NewAlloc},
@@ -86,7 +86,29 @@ pub fn process_emote_animations(
         .and_then(|v| v.clone().try_cast::<Node3D>().ok())
         .map(|mut node| {
             node.set_name(&format!("Armature_Prop_{}", anim_sufix_from_hash));
-            node.rotate_y(std::f32::consts::PI);
+            // The avatar body is rendered 180° flipped relative to the emote GLB's
+            // authoring frame (the flip is baked into avatar.tscn's Skeleton3D). The prop
+            // armature is a sibling of the avatar armature in the GLB, so it needs the SAME
+            // 180° flip about the avatar's vertical axis to stay aligned with the body.
+            //
+            // `rotate_y()` only rotates the basis and leaves the node's translation
+            // untouched, so a prop authored at an offset from the avatar root (e.g. a soccer
+            // ball sitting 1.5m in front of the kicker) keeps that offset un-flipped and ends
+            // up behind the avatar / on the wrong side. Rotate the *whole* transform (origin
+            // included) so the offset pivots about the avatar root. Props anchored at the
+            // root (offset ≈ 0) are unaffected, which is why this only ever mis-placed props
+            // authored away from the avatar origin.
+            let rot = Basis::from_axis_angle(Vector3::UP, std::f32::consts::PI);
+            let mut t = node.get_transform();
+            t.basis = rot * t.basis;
+            t.origin = rot * t.origin;
+            node.set_transform(t);
+            // Stamp the prop so the client can tell a correctly-processed asset from a legacy
+            // one. Assets baked before this fix only had their basis flipped (not their
+            // origin); they lack this flag, so the client applies a load-time hotfix that
+            // completes the flip. This flag (serialized into the .scn) prevents double-fixing
+            // an already-correct asset. See avatar_emote_controller.gd::_load_emote_from_gltf_internal.
+            node.set_meta("prop_origin_corrected", &true.to_variant());
             node
         });
 
