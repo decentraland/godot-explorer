@@ -162,7 +162,9 @@ func inject_owned_emote(urn: String) -> void:
 	emote_item.emote_name_ready.connect(self.emote_grid_selected.emit)
 	container_all_emotes.add_child(emote_item)
 	container_all_emotes.move_child(emote_item, 0)
-	# A live/recent arrival (item_arrived or recent-owned) is brand-new (#2300).
+	# A live/recent arrival (item_arrived or recent-owned) is brand-new (#2300). Mark it
+	# forced-NEW (survives a later grid reload's re-evaluate) and show the badge now.
+	Backpack.newtag_mark_arrived("emote", urn)
 	emote_item.set_new_badge(true)
 	all_emote_items.push_front(emote_item)
 	_update_empty_state()

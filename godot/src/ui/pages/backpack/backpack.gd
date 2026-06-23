@@ -102,6 +102,13 @@ var _wearable_is_new: Dictionary = {}
 # mid-session).
 static var _newtag_session_baseline: Dictionary = {}
 static var _newtag_session_captured: Dictionary = {}
+# Items that arrived LIVE this session (a marketplace purchase). Shape { category: { urn: true } }.
+# OR-ed into every newtag_evaluate so the tag survives later full reloads (which re-run evaluate
+# and would otherwise clear a per-item flag). Needed because on a fresh install the first load is
+# empty, deferring baseline capture to the arrival itself — the count diff then can never tag it.
+# Static (survives the page being recreated) and session-only (never persisted; cleared on app
+# restart, where the persisted snapshot takes over).
+static var _newtag_forced_new: Dictionary = {}
 
 
 # gdlint:ignore = async-function-name
@@ -462,7 +469,10 @@ func _show_wearables():
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = wearable_button_group_per_category.get(wearable.get_category())
 		wearable_item.async_set_wearable(wearable)
-		wearable_item.set_new_badge(_is_wearable_new(wearable_id))
+		var dbg_is_new := _is_wearable_new(wearable_id)
+		if dbg_is_new:
+			print("[NEWTAGDBG] render NEW badge urn=", wearable_id)
+		wearable_item.set_new_badge(dbg_is_new)
 
 		# Connect signals
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
@@ -863,6 +873,7 @@ static func newtag_evaluate(
 	if wallet.is_empty() or current_counts.is_empty():
 		return {}
 	var stored: Dictionary = _newtag_stored_for(category)
+	var first_session = not _newtag_session_captured.get(category, false)
 	if not _newtag_session_captured.get(category, false):
 		_newtag_session_captured[category] = true
 		# First load this session: the baseline is the previously-persisted snapshot, or — on a
@@ -874,9 +885,15 @@ static func newtag_evaluate(
 	# Advance the persisted snapshot to the current counts (next session's baseline).
 	_newtag_persist(category, wallet, current_counts)
 	var baseline: Dictionary = _newtag_session_baseline.get(category, {})
+	var forced: Dictionary = _newtag_forced_new.get(category, {})
 	var flags := {}
+	var new_urns := []
 	for urn in current_counts:
-		flags[urn] = int(current_counts[urn]) > int(baseline.get(urn, 0))
+		# NEW when the owned count grew vs the baseline, OR it arrived live this session (a
+		# purchase the empty-first-load baseline can't tag). forced survives reloads.
+		flags[urn] = int(current_counts[urn]) > int(baseline.get(urn, 0)) or forced.has(urn)
+		if flags[urn]:
+			new_urns.append(urn)
 	return flags
 
 
@@ -884,6 +901,15 @@ static func newtag_evaluate(
 static func _newtag_stored_for(category: String) -> Dictionary:
 	var all: Dictionary = Global.get_config().backpack_owned_counts
 	return all.get(category, {})
+
+
+## Marks an item as NEW for the rest of this app session because it arrived live (a marketplace
+## purchase). Static so it survives the page being recreated; OR-ed into newtag_evaluate so a
+## later full reload can't clear it. Shared by the wearable grid and the emote editor.
+static func newtag_mark_arrived(category: String, urn: String) -> void:
+	var per_category: Dictionary = _newtag_forced_new.get(category, {})
+	per_category[urn] = true
+	_newtag_forced_new[category] = per_category
 
 
 static func _newtag_persist(category: String, wallet: String, counts: Dictionary) -> void:
@@ -923,7 +949,13 @@ func _async_inject_wearable(urn: String) -> void:
 	if wearable == null:
 		return
 
-	# A live arrival is brand-new — bump its count and re-evaluate so the grid tags it (#2300).
+	# A live arrival is a fresh acquisition THIS session, so it must show the NEW tag regardless
+	# of the owned-count baseline. On a fresh install the first backpack load is empty (the wallet
+	# owns nothing yet), so newtag_evaluate bails on its empty-counts guard and never captures the
+	# baseline — deferring it to THIS arrival, which would then seed the item into the baseline and
+	# tag it count==baseline (not new). Mark it forced-NEW (survives later reloads), bump its count
+	# and re-evaluate so the grid tags it. Mirrors the emote path (inject_owned_emote). (#2300)
+	newtag_mark_arrived("wearable", urn)
 	_wearable_owned_counts[urn] = int(_wearable_owned_counts.get(urn, 0)) + 1
 	_wearable_is_new = newtag_evaluate("wearable", _current_wallet_lower(), _wearable_owned_counts)
 
