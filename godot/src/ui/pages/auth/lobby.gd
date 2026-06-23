@@ -28,6 +28,14 @@ const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
 # Guest-login (thirdweb) can hang on a flaky network and leave the user stuck on
 # the "Getting you ready..." screen forever. Cap the wait and surface a retry.
 const GUEST_LOGIN_TIMEOUT_SEC: float = 20.0
+# Debug-only: on-disk guest identity state wiped by the "reset guest wallet"
+# affordance (revealed via the secret logo double-tap in non-prod). These paths
+# are owned by Rust — keep in sync with lib/src/auth/device_anchor.rs (anchor)
+# and lib/src/auth/thirdweb_guest.rs (persisted session).
+const DEBUG_GUEST_STATE_FILES = [
+	"user://device_anchor.txt",
+	"user://thirdweb_session.json",
+]
 const BG_GRADIENT = preload("res://assets/backgrounds/gradient-background.png")
 const BG_DISCOVER = preload("res://assets/backgrounds/photo-background.png")
 
@@ -41,6 +49,10 @@ var ready_for_redirect_by_deep_link: bool = false
 
 var loading_first_profile: bool = false
 var current_screen_name: String = ""
+
+# Debug-only "reset guest wallet" button, created at runtime in non-prod and
+# revealed alongside the disposable-account button by the secret logo double-tap.
+var button_reset_guest_debug: Button = null
 
 var _skip_lobby: bool = false
 var _skip_lobby_to_menu: bool = false
@@ -381,6 +393,7 @@ func _ready():
 
 	# Secret guest mode: double-tap logo when not in prod
 	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
+	_setup_debug_reset_guest_button()
 	preset_carousel.preset_selected.connect(_on_preset_selected)
 
 	# Lobby fires onboarding/auth events one at a time — ship them on a snappy 2s cadence.
@@ -514,6 +527,75 @@ func _on_sign_in_logo_gui_input(event: InputEvent) -> void:
 		if _logo_tap_count >= 2:
 			_logo_tap_count = 0
 			button_enter_as_disposable_account.visible = true
+			if button_reset_guest_debug != null:
+				button_reset_guest_debug.visible = true
+
+
+# Creates the debug-only "reset guest wallet" button (non-prod only) by cloning
+# the disposable-account button so it inherits the SecondaryButton styling. It
+# starts hidden and is revealed by the same secret logo double-tap. Cloned
+# WITHOUT DUPLICATE_SIGNALS so it doesn't inherit the disposable button's
+# pressed → create-disposable-account connection.
+func _setup_debug_reset_guest_button() -> void:
+	# Only meaningful with the rotate flag on — otherwise the anchor is the
+	# device-bound native one and deleting user:// wouldn't change the wallet.
+	if DclGlobal.is_production() or not Global.DEBUG_GUEST_ROTATE_ANCHOR_ID:
+		return
+	if button_reset_guest_debug != null:
+		return
+	var clone: Button = button_enter_as_disposable_account.duplicate(
+		Node.DUPLICATE_GROUPS | Node.DUPLICATE_SCRIPTS
+	)
+	clone.name = "Button_ResetGuestDebug"
+	clone.unique_name_in_owner = false
+	clone.visible = false
+	clone.text = "RESET GUEST WALLET (DEBUG)"
+	clone.pressed.connect(_on_button_reset_guest_debug_pressed)
+	button_enter_as_disposable_account.get_parent().add_child(clone)
+	button_reset_guest_debug = clone
+
+
+# Wipes the on-disk guest identity then confirms. The next "Play as guest"
+# re-derives a brand-new guest wallet from a freshly minted user:// anchor.
+# gdlint:ignore = async-function-name
+func _on_button_reset_guest_debug_pressed() -> void:
+	var removed := _debug_clear_guest_state()
+	push_warning("[guest] debug reset: cleared %d guest state file(s)" % removed)
+	var modal = await Global.modal_manager._async_create_modal()
+	if not modal:
+		return
+	modal.set_title("Guest wallet reset")
+	modal.set_body(
+		(
+			"Cleared the local guest anchor + session. "
+			+ "Tap Play as guest to mint a brand-new guest wallet."
+		)
+	)
+	modal.set_primary_button_text("OK")
+	modal.show_icon(Modal.MODAL_ALERT_ICON)
+	modal.button_secondary.hide()
+	modal.hide_url()
+	modal.show()
+	await modal.button_primary.pressed
+	Global.modal_manager.close_current_modal()
+
+
+# Deletes the on-disk guest identity (anchor + persisted thirdweb session) and
+# clears the cached guest profile so the next "Play as guest" derives a fresh
+# wallet instead of reusing the old one. Returns how many files were removed.
+func _debug_clear_guest_state() -> int:
+	var removed := 0
+	for path in DEBUG_GUEST_STATE_FILES:
+		if FileAccess.file_exists(path):
+			var err := DirAccess.remove_absolute(path)
+			if err == OK:
+				removed += 1
+			else:
+				push_error("[guest] debug reset: failed to delete %s (err %d)" % [path, err])
+	# The cached guest profile would otherwise be reused by the fresh wallet.
+	Global.get_config().guest_profile = {}
+	Global.get_config().save_to_settings_file()
+	return removed
 
 
 func go_to_explorer():
@@ -815,10 +897,10 @@ func _on_button_enter_as_disposable_account_pressed():
 	async_show_avatar_create_screen()
 
 
-# Resolves the platform-native device anchor (SSAID on Android, Keychain UUID
-# on iOS) used to derive a deterministic thirdweb guest wallet. Empty string
-# means "no native anchor available" — Rust falls back to a UUID stored in
-# user:// so desktop still works.
+# Returns the guest anchor used to derive the deterministic thirdweb guest
+# wallet (see Global.get_device_anchor_id for the full resolution order). With
+# DEBUG_GUEST_ROTATE_ANCHOR_ID on it resolves to a resettable per-install UUID in
+# `user://`; with it off it's the device-bound native anchor (SSAID/Keychain).
 func _get_device_anchor_id() -> String:
 	return Global.get_device_anchor_id()
 
@@ -937,18 +1019,12 @@ func _show_avatar_loading():
 	avatar_loading.anchors_preset = Control.PRESET_FULL_RECT
 	avatar_loading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	avatar_loading.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	avatar_loading.add_theme_constant_override(
-		"margin_top", avatar_preview.preview_margin_top
-	)
+	avatar_loading.add_theme_constant_override("margin_top", avatar_preview.preview_margin_top)
 	avatar_loading.add_theme_constant_override(
 		"margin_bottom", avatar_preview.preview_margin_bottom
 	)
-	avatar_loading.add_theme_constant_override(
-		"margin_left", avatar_preview.preview_margin_left
-	)
-	avatar_loading.add_theme_constant_override(
-		"margin_right", avatar_preview.preview_margin_right
-	)
+	avatar_loading.add_theme_constant_override("margin_left", avatar_preview.preview_margin_left)
+	avatar_loading.add_theme_constant_override("margin_right", avatar_preview.preview_margin_right)
 	avatar_loading.show()
 
 

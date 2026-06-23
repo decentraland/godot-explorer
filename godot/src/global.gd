@@ -73,12 +73,25 @@ const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
-# DEBUG ONLY — MUST stay "" for any shipped build. When non-empty, get_device_anchor_id()
-# returns this fixed user_id instead of the platform device anchor (Android SSAID /
-# iOS Keychain UUID / desktop user:// UUID). Lets you derive the SAME thirdweb guest
-# wallet on any device/desktop/simulator for testing the guest login + email-upgrade
-# flow. A push_warning fires whenever it is active so it can't ship unnoticed.
-const DEBUG_GUEST_ANCHOR_OVERRIDE: String = "dcl-debug-user-001"
+# DEBUG ONLY — MUST stay "" for any shipped build. When non-empty,
+# get_device_anchor_id() returns this fixed user_id instead of the per-install
+# user:// anchor, so you can derive the SAME thirdweb guest wallet on any
+# device/desktop/simulator for testing the guest login + email-upgrade flow.
+# A push_warning fires whenever it is active so it can't ship unnoticed.
+# (For a fresh guest, prefer clearing app data / user:// — that resets the
+# anchor only when DEBUG_GUEST_ROTATE_ANCHOR_ID is on, see below.)
+const DEBUG_GUEST_ANCHOR_OVERRIDE: String = ""
+
+# DEBUG ONLY — must be `false` for any shipped build. When `true`,
+# get_device_anchor_id() ignores the platform-native device anchor (Android
+# SSAID / iOS Keychain UUID) and uses the per-install UUID in
+# `user://device_anchor.txt` on EVERY platform, so the guest wallet is tied to
+# the app's user data: deleting `user://` (clear app data / reinstall — or the
+# "RESET GUEST WALLET" debug button in the lobby) mints a fresh anchor and a
+# fresh wallet. When `false` the original shipping behavior returns: the
+# device-bound native anchor that survives reinstall. Ignored while
+# DEBUG_GUEST_ANCHOR_OVERRIDE is set (the override wins).
+const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = true
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -346,7 +359,6 @@ func _ready():
 		log_stream_target = cli.log_stream
 	if log_stream_target.begins_with("ws://") or log_stream_target.begins_with("wss://"):
 		DclGlobal.start_log_stream(log_stream_target)
-
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -1392,18 +1404,24 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 	camera_mode_block_changed.emit(blocked)
 
 
-# Stable per-install device anchor used to derive the thirdweb guest session.
-# Android: SSAID via the native plugin; iOS: Keychain UUID; desktop: empty
-# (Rust falls back to the `user://device_anchor.txt` UUID). Shared by the lobby
+# Anchor used to derive the thirdweb guest session/wallet. Shared by the lobby
 # guest-login flow and the "Upgrade to OTP" modal so both derive the same wallet.
+#
+# Resolution order:
+#   1. DEBUG_GUEST_ANCHOR_OVERRIDE (if set) — a fixed user_id for testing.
+#   2. DEBUG_GUEST_ROTATE_ANCHOR_ID on → return "" so Rust falls back to the
+#      resettable per-install UUID in `user://device_anchor.txt` (delete user://
+#      → fresh guest wallet) on every platform.
+#   3. Otherwise (shipping): the device-bound native anchor (Android SSAID / iOS
+#      Keychain UUID), which survives reinstall. Desktop has none → returns ""
+#      and Rust uses the user:// UUID anyway.
 #
 # Android note: `has_method()` always returns false for JNISingleton methods
 # (Object.has_method consults ClassDB, the Android plugin method_map is
 # separate). Don't guard the Android call with has_method or it silently no-ops.
 # See: https://github.com/godotengine/godot/issues/106436
 func get_device_anchor_id() -> String:
-	# DEBUG override (see DEBUG_GUEST_ANCHOR_OVERRIDE): force a fixed user_id so the
-	# same guest wallet is derived everywhere. Inert while the constant is "".
+	# 1. Fixed override wins (inert while the constant is "").
 	if not DEBUG_GUEST_ANCHOR_OVERRIDE.is_empty():
 		push_warning(
 			(
@@ -1412,6 +1430,10 @@ func get_device_anchor_id() -> String:
 			)
 		)
 		return DEBUG_GUEST_ANCHOR_OVERRIDE
+	# 2. DEBUG rotate mode: resettable user:// anchor on every platform.
+	if DEBUG_GUEST_ROTATE_ANCHOR_ID:
+		return ""
+	# 3. Shipping: device-bound native anchor (persists across reinstall).
 	if self.is_android():
 		var plugin = Engine.get_singleton("dcl-godot-android")
 		if plugin != null:

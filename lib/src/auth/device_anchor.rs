@@ -1,13 +1,15 @@
-//! Device anchor identifier — a stable string keyed to the physical install
-//! that survives uninstall/reinstall on the same device.
+//! Guest anchor identifier — the string used to derive the thirdweb guest
+//! wallet. `compute_session_id` hashes it into the opaque thirdweb `sessionId`
+//! so the raw identifier never leaves the device.
 //!
-//! Platform sources:
-//! - Android: `Settings.Secure.ANDROID_ID` (provided from GDScript via the native plugin)
-//! - iOS: UUID stored in Keychain (provided from GDScript via the native plugin)
-//! - Desktop: UUID stored in `user://device_anchor.txt` (this file is responsible)
-//!
-//! `compute_session_id` hashes whatever anchor the caller provides into the
-//! opaque thirdweb `sessionId` so the raw device identifier never leaves the device.
+//! `resolve_anchor` decides the source:
+//! - a non-empty value passed from GDScript wins. That value is either the
+//!   platform-native device anchor (Android SSAID / iOS Keychain UUID, which
+//!   persists across reinstall) or the fixed `DEBUG_GUEST_ANCHOR_OVERRIDE`.
+//! - otherwise it falls back to a per-install UUID in `user://device_anchor.txt`
+//!   (the desktop source, and what mobile uses when GDScript's
+//!   `DEBUG_GUEST_ROTATE_ANCHOR_ID` flag makes `get_device_anchor_id` return "").
+//!   Deleting `user://` then resets the guest identity to a brand-new wallet.
 
 use ethers_core::utils::{hex, keccak256};
 use godot::classes::file_access::ModeFlags;
@@ -15,14 +17,14 @@ use godot::classes::FileAccess;
 use godot::prelude::GString;
 use uuid::Uuid;
 
-const DESKTOP_ANCHOR_PATH: &str = "user://device_anchor.txt";
+const ANCHOR_PATH: &str = "user://device_anchor.txt";
 const SESSION_ID_PREFIX: &str = "dcl-godot";
 
-/// Reads the desktop UUID anchor from `user://device_anchor.txt`, creating it
-/// on first use. Used when the platform-native source (SSAID / Keychain) is
-/// unavailable (desktop) or returned empty.
-pub fn get_or_create_desktop_anchor() -> String {
-    let path = GString::from(DESKTOP_ANCHOR_PATH);
+/// Reads the per-install UUID anchor from `user://device_anchor.txt`, creating
+/// it on first use. This is the fallback used whenever `resolve_anchor` gets an
+/// empty value (always on desktop; on mobile only when the rotate flag is on).
+pub fn get_or_create_user_anchor() -> String {
+    let path = GString::from(ANCHOR_PATH);
 
     if FileAccess::file_exists(&path) {
         if let Some(mut file) = FileAccess::open(&path, ModeFlags::READ) {
@@ -35,7 +37,7 @@ pub fn get_or_create_desktop_anchor() -> String {
         }
         tracing::warn!(
             "device_anchor: existing file at {} is empty or unreadable, regenerating",
-            DESKTOP_ANCHOR_PATH
+            ANCHOR_PATH
         );
     }
 
@@ -44,30 +46,28 @@ pub fn get_or_create_desktop_anchor() -> String {
         Some(mut file) => {
             file.store_string(&GString::from(&uuid));
             file.close();
-            tracing::info!(
-                "device_anchor: wrote new desktop anchor to {}",
-                DESKTOP_ANCHOR_PATH
-            );
+            tracing::info!("device_anchor: wrote new user anchor to {}", ANCHOR_PATH);
         }
         None => {
             tracing::error!(
                 "device_anchor: failed to open {} for writing — anchor will not persist",
-                DESKTOP_ANCHOR_PATH
+                ANCHOR_PATH
             );
         }
     }
     uuid
 }
 
-/// Resolves the device anchor: returns the caller-provided value if non-empty,
-/// otherwise falls back to the persisted desktop UUID. Centralises the
-/// "platform native value, then desktop file, then freshly minted" decision.
+/// Resolves the guest anchor: returns the caller-provided value if non-empty
+/// (the native device anchor or the debug override), otherwise falls back to
+/// the persisted per-install `user://` UUID. Centralises the "explicit value,
+/// else user:// file, else freshly minted" decision.
 pub fn resolve_anchor(native_anchor: &str) -> String {
     let trimmed = native_anchor.trim();
     if !trimmed.is_empty() {
         return trimmed.to_string();
     }
-    get_or_create_desktop_anchor()
+    get_or_create_user_anchor()
 }
 
 /// Hashes the anchor into the opaque thirdweb `sessionId`. Same anchor →
