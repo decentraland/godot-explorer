@@ -113,7 +113,6 @@ var button_play_as_guest: Button = $Main/AccountHome/MarginContainer/VBoxFixed/V
 @onready var button_enter_as_disposable_account: Button = %Button_EnterAsDisposableAccount
 @onready var button_back: Button = %Button_Back
 @onready var sign_in_title: Label = %SignInTitle
-@onready var sign_in_logo: TextureRect = %SignInLogo
 
 @onready var label_version = %Label_Version
 
@@ -392,7 +391,6 @@ func _ready():
 	avatar_preview.avatar.avatar_loaded.connect(_on_avatar_preview_loaded)
 
 	# Secret guest mode: double-tap logo when not in prod
-	sign_in_logo.gui_input.connect(_on_sign_in_logo_gui_input)
 	_setup_debug_reset_guest_button()
 	preset_carousel.preset_selected.connect(_on_preset_selected)
 
@@ -513,22 +511,6 @@ func _process(delta: float) -> void:
 		if _logo_tap_timer >= LOGO_TAP_TIMEOUT:
 			_logo_tap_count = 0
 			_logo_tap_timer = 0.0
-
-
-func _on_sign_in_logo_gui_input(event: InputEvent) -> void:
-	# Secret guest mode: double-tap logo when not in prod
-	if DclGlobal.is_production():
-		return
-
-	if event is InputEventScreenTouch and event.pressed:
-		_logo_tap_timer = 0.0
-		_logo_tap_count += 1
-
-		if _logo_tap_count >= 2:
-			_logo_tap_count = 0
-			button_enter_as_disposable_account.visible = true
-			if button_reset_guest_debug != null:
-				button_reset_guest_debug.visible = true
 
 
 # Creates the debug-only "reset guest wallet" button (non-prod only) by cloning

@@ -98,7 +98,11 @@ font = ExtResource("15_vtvnx")
 font_size = 64
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_s1tin"]
+[sub_resource type="LabelSettings" id="LabelSettings_dkwv7"]
+line_spacing = 0.0
+font = ExtResource("15_vtvnx")
+font_size = 72
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [node name="Lobby" type="Control" unique_id=756610133]
 layout_mode = 3
@@ -601,6 +605,7 @@ icon_alignment = 2
 
 [node name="AvatarNaming" type="Control" parent="Main" unique_id=1478473587]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="Main/AvatarNaming" unique_id=1314152331]
@@ -870,89 +875,49 @@ font_size = 30
 
 [node name="SignIn" type="Control" parent="Main" unique_id=1717754795]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/SignIn" unique_id=256010208]
 layout_mode = 1
-anchors_preset = -1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 72
-theme_override_constants/margin_top = 0
-theme_override_constants/margin_right = 72
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 330
+theme_override_constants/margin_right = 64
 theme_override_constants/margin_bottom = 80
 
-[node name="VBoxFixed" type="VBoxContainer" parent="Main/SignIn/MarginContainer" unique_id=690038950]
-layout_mode = 2
-alignment = 1
-
-[node name="HSeparator" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed" unique_id=830839733]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_styles/separator = SubResource("StyleBoxEmpty_s1tin")
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed" unique_id=672284959]
-custom_minimum_size = Vector2(425, 1100)
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn/MarginContainer" unique_id=672284959]
 layout_mode = 2
 
-[node name="SignInLogo" type="TextureRect" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer" unique_id=1798363869]
+[node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=1737794804]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-mouse_filter = 0
-texture = ExtResource("3_p5qhj")
-expand_mode = 3
-stretch_mode = 4
-
-[node name="SignInLogoSep" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer" unique_id=2005742749]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 10
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer" unique_id=1737794804]
-unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
-[node name="SignInTitle" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=1367673419]
+[node name="SignInTitle" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=1367673419]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(425, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 text = "Sign in to Decentraland"
-label_settings = ExtResource("18_ypsmd")
-autowrap_mode = 3
+label_settings = SubResource("LabelSettings_dkwv7")
+horizontal_alignment = 1
+autowrap_mode = 2
 
-[node name="HSeparator5" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=1329444166]
+[node name="HSeparator5" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=1329444166]
 layout_mode = 2
-theme_override_constants/separation = 124
+theme_override_constants/separation = 194
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Login" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=253264104 instance=ExtResource("17_vcjym")]
+[node name="Login" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=253264104 instance=ExtResource("17_vcjym")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator6" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=634058006]
-layout_mode = 2
-theme_override_constants/separation = 40
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="Button_ContinueAsGuest" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=204815734]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(320, 80)
-layout_mode = 2
-focus_mode = 0
-theme = ExtResource("9_ypsmd")
-theme_type_variation = &"SecondaryButton"
-theme_override_font_sizes/font_size = 24
-text = "CONTINUE AS GUEST"
-expand_icon = true
-
-[node name="Button_EnterAsDisposableAccount" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1" unique_id=69878849]
+[node name="Button_EnterAsDisposableAccount" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=69878849]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(320, 80)
@@ -964,40 +929,66 @@ theme_override_font_sizes/font_size = 24
 text = "QUICK DIVE (DISPOSABLE ACCOUNT)"
 expand_icon = true
 
-[node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer" unique_id=1774682901]
-unique_name_in_owner = true
-visible = false
+[node name="HSeparator6" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=1674660532]
 layout_mode = 2
+theme_override_constants/separation = 46
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Label_Title" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2" unique_id=417353643]
+[node name="RichTextLabel2" type="RichTextLabel" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=283296243]
+clip_contents = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/table_h_separation = 3
+theme_override_fonts/normal_font = ExtResource("5_g62s5")
+theme_override_font_sizes/normal_font_size = 30
+theme_override_font_sizes/bold_font_size = 30
+theme_override_font_sizes/bold_italics_font_size = 30
+theme_override_font_sizes/italics_font_size = 30
+theme_override_font_sizes/mono_font_size = 30
+bbcode_enabled = true
+text = "By continuing, you agree to Decentraland’s [color=#A0ABFF][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#A0ABFF][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#A0ABFF][url=\"https://decentraland.org/content/\"]Content Policy[/url][/color]."
+fit_content = true
+scroll_active = false
+horizontal_alignment = 1
+
+[node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=1774682901]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="Label_Title" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=417353643]
 custom_minimum_size = Vector2(425, 196)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 64
 text = "Authentication failed"
-label_settings = ExtResource("18_ypsmd")
+label_settings = SubResource("LabelSettings_dkwv7")
+horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="VBoxContainer_AuthSpinner" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2" unique_id=2112578708]
+[node name="VBoxContainer_AuthSpinner" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=2112578708]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(0, 258)
 layout_mode = 2
+size_flags_vertical = 3
 alignment = 1
 
-[node name="AuthSpinner" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer_AuthSpinner" unique_id=1375868267 instance=ExtResource("11_7iulh")]
+[node name="AuthSpinner" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer_AuthSpinner" unique_id=1375868267 instance=ExtResource("11_7iulh")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 150)
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="VBoxContainer_AuthError" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2" unique_id=1655242297]
+[node name="VBoxContainer_AuthError" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=1655242297]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 258)
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="AuthErrorLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer_AuthError" unique_id=987918245]
+[node name="AuthErrorLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer_AuthError" unique_id=987918245]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
@@ -1006,7 +997,7 @@ text = "Ups! Something went wrong"
 label_settings = ExtResource("22_eula")
 autowrap_mode = 2
 
-[node name="AuthErrorCodeLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer_AuthError" unique_id=322009666]
+[node name="AuthErrorCodeLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer_AuthError" unique_id=322009666]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
@@ -1015,14 +1006,8 @@ text = "Magic Error "
 label_settings = ExtResource("21_3tlbd")
 autowrap_mode = 2
 
-[node name="HSeparator4" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2" unique_id=1710027803]
-layout_mode = 2
-theme_override_constants/separation = 12
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="Button_Cancel" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2" unique_id=1467291633]
+[node name="Button_Cancel" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=1467291633]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(0, 112)
 layout_mode = 2
 focus_mode = 0
@@ -1034,7 +1019,8 @@ theme_override_font_sizes/font_size = 36
 text = "CANCEL"
 expand_icon = true
 
-[node name="Button_TryAgain" type="Button" parent="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2" unique_id=69373175]
+[node name="Button_TryAgain" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=69373175]
+visible = false
 custom_minimum_size = Vector2(0, 112)
 layout_mode = 2
 focus_mode = 0
@@ -1044,6 +1030,10 @@ theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 36
 text = "TRY AGAIN"
 icon_alignment = 2
+
+[node name="Control" type="Control" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=2066026985]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
 
 [node name="DiscoverFtue" type="Control" parent="Main" unique_id=1689811901]
 unique_name_in_owner = true
@@ -1100,10 +1090,9 @@ metadata/_edit_lock_ = true
 [connection signal="gui_input" from="Main/Comeback/MarginContainer/VBoxContainer/AvatarPreviewContainer_Comeback/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
 [connection signal="pressed" from="Main/Comeback/MarginContainer/VBoxContainer/RestoreNameFooter/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="pressed" from="Main/Comeback/MarginContainer/VBoxContainer/RestoreNameFooter/UnderlinedButton_DifferentAccount" to="." method="_on_button_different_account_pressed"]
-[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1/Button_ContinueAsGuest" to="." method="_on_button_continue_as_guest_pressed"]
-[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsDisposableAccount" to="." method="_on_button_enter_as_disposable_account_pressed"]
-[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
-[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxFixed/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain" to="." method="_on_button_try_again_pressed"]
+[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsDisposableAccount" to="." method="_on_button_enter_as_disposable_account_pressed"]
+[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
+[connection signal="pressed" from="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/Button_TryAgain" to="." method="_on_button_try_again_pressed"]
 [connection signal="ftue_completed" from="Main/DiscoverFtue/FTUE" to="." method="_on_ftue_ftue_completed"]
 [connection signal="jump_in" from="Main/DiscoverFtue/FTUE" to="." method="_on_ftue_jump_in"]
 [connection signal="jump_in_world" from="Main/DiscoverFtue/FTUE" to="." method="_on_ftue_jump_in_world"]

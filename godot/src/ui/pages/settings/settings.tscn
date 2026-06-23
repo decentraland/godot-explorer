@@ -292,6 +292,7 @@ scroll_deadzone = 100
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer" unique_id=877154138]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 40
 
 [node name="GuestUpgradeCard" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer" unique_id=1116982919 instance=ExtResource("14_sbgvv")]
