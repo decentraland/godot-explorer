@@ -59,10 +59,12 @@ jobs:
           components: clippy, rustfmt
 
       # Cache the Rust build (host + Android target) so the dep tree isn't recompiled from
-      # scratch every push. rust-cache uses the actions/cache (HTTP) backend, which works
-      # inside this Docker container; smart keys (Cargo.lock + rustc) + cleans on save.
+      # scratch every push. Use the WarpBuild-native cache (raw target/, NO cleaning): the v8
+      # crate's prebuilt static lib (librusty_v8.a) lives under target/.../build/v8-*/out, and
+      # rust-cache's cleanup strips it while keeping v8's fingerprint → warm builds then fail to
+      # link. set-up-warp-cache keeps the full target/, so the lib survives (matches the iOS leg).
       - name: Set up build cache
-        uses: ./.github/actions/set-up-cache
+        uses: ./.github/actions/set-up-warp-cache
         with:
           cache-name: android-build
 
