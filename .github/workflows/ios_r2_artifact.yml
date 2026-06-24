@@ -33,6 +33,19 @@ on:
         required: false
         type: string
         default: ''
+      dispatch_deploy:
+        description: 'After the export lands in R2, trigger godot-asc-deploy to sign + upload'
+        required: false
+        type: boolean
+        default: false
+      triggered_by:
+        required: false
+        type: string
+        default: ''
+      whats_new:
+        required: false
+        type: string
+        default: ''
     outputs:
       build_version:
         description: 'Rust .build.version captured during the iOS lib build'
@@ -200,6 +213,43 @@ jobs:
           BUILD_VERSION: ${{ steps.buildver.outputs.build_version }}
         run: |
           python3 .github/scripts/slack-root.py
+
+      # Hand off to the signing/upload pipeline AS SOON as the export is in R2, so the deploy
+      # runs in parallel with the (best-effort) Sentry upload below instead of waiting for it.
+      - name: Dispatch godot-asc-deploy (sign & upload to TestFlight)
+        if: success() && inputs.dispatch_deploy
+        env:
+          GH_TOKEN: ${{ secrets.ASC_DEPLOY_DISPATCH_TOKEN }}
+          REF: ${{ inputs.ref }}
+          SHA: ${{ inputs.sha }}
+          WHATS_NEW: ${{ inputs.whats_new }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          TS: ${{ inputs.slack_ts }}
+          BUILD_VERSION: ${{ steps.buildver.outputs.build_version }}
+          TRIGGERED_BY: ${{ inputs.triggered_by }}
+        run: |
+          set -eu
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "❌ ASC_DEPLOY_DISPATCH_TOKEN not set — cannot hand off to godot-asc-deploy."
+            exit 1
+          fi
+          SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
+          gh workflow run deploy_testflight.yml \
+            --repo decentraland/godot-asc-deploy --ref main \
+            -f branch="$SAFE_BRANCH" -f sha="${SHA:-${{ github.sha }}}" -f whats_new="$WHATS_NEW" \
+            -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
+            -f build_version="$BUILD_VERSION" -f triggered_by="$TRIGGERED_BY"
+          echo "✅ Dispatched godot-asc-deploy for ${SAFE_BRANCH}@${SHA:-${{ github.sha }}}"
+
+      - name: Slack — handed off to signing
+        if: success() && inputs.dispatch_deploy && env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "🤝 iOS — export handed off to the signing pipeline (godot-asc-deploy)"
+
+      - name: Slack — handoff failed
+        if: failure() && inputs.dispatch_deploy && env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "❌ iOS — failed to hand off to the signing pipeline (check ASC_DEPLOY_DISPATCH_TOKEN)"
 
       # libdclgodot.dylib is BUILT here, so its dSYM must be uploaded to Sentry from here
       # (the deploy repo only re-archives the already-built dylib). Best-effort.

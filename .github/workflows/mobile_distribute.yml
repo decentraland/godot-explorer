@@ -224,63 +224,23 @@ jobs:
       sha: ${{ needs.prepare.outputs.sha }}
       pr_number: ${{ needs.prepare.outputs.pr_number }}
       slack_ts: ${{ needs.prepare.outputs.slack_ts }}
+      # Fire the godot-asc-deploy handoff from INSIDE ios-build, right after the export lands
+      # in R2 — so the deploy starts immediately and runs in parallel with the Sentry upload
+      # (instead of a separate job that waits for the whole build incl. Sentry to finish).
+      dispatch_deploy: true
+      triggered_by: ${{ needs.prepare.outputs.triggered_by }}
+      whats_new: ${{ github.event.inputs.whats_new }}
     secrets: inherit
 
-  # iOS leg, step 2: hand the export off to godot-asc-deploy, which signs it and uploads to
-  # TestFlight (it holds all the Apple/ASC credentials; this repo holds none). Triggered via
-  # workflow_dispatch with a fine-grained PAT (Actions:write only — cannot push code).
-  ios-dispatch:
-    name: 🍏 iOS → hand off to signing (godot-asc-deploy)
-    needs: [prepare, ios-build]
-    if: needs.prepare.outputs.should_build == 'true'
-    runs-on: ubuntu-latest
-    env:
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
-      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - name: Dispatch godot-asc-deploy (sign & upload to TestFlight)
-        env:
-          GH_TOKEN: ${{ secrets.ASC_DEPLOY_DISPATCH_TOKEN }}
-          BRANCH: ${{ needs.prepare.outputs.safe_branch }}
-          SHA: ${{ needs.prepare.outputs.sha }}
-          WHATS_NEW: ${{ github.event.inputs.whats_new }}
-          PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
-          TS: ${{ needs.prepare.outputs.slack_ts }}
-          BUILD_VERSION: ${{ needs.ios-build.outputs.build_version }}
-          TRIGGERED_BY: ${{ needs.prepare.outputs.triggered_by }}
-        run: |
-          set -eu
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "❌ ASC_DEPLOY_DISPATCH_TOKEN not set — cannot hand off to godot-asc-deploy."
-            exit 1
-          fi
-          gh workflow run deploy_testflight.yml \
-            --repo decentraland/godot-asc-deploy --ref main \
-            -f branch="$BRANCH" -f sha="$SHA" -f whats_new="$WHATS_NEW" \
-            -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
-            -f build_version="$BUILD_VERSION" -f triggered_by="$TRIGGERED_BY"
-          echo "✅ Dispatched godot-asc-deploy for ${BRANCH}@${SHA}"
-      - name: Slack — handed off to signing
-        if: success() && env.SLACK_CHANNEL != ''
-        run: |
-          bash .github/scripts/slack-reply.sh "🤝 iOS — export handed off to the signing pipeline (godot-asc-deploy)"
-      - name: Slack — handoff failed
-        if: failure() && env.SLACK_CHANNEL != ''
-        run: |
-          bash .github/scripts/slack-reply.sh "❌ iOS — failed to hand off to the signing pipeline (check ASC_DEPLOY_DISPATCH_TOKEN)"
-
-  # If iOS build or the cross-repo handoff fails, godot-asc-deploy never runs, so nothing
-  # would move the root card off BUILDING. This finalizes it to FAILED. It only runs when
-  # deploy was NOT triggered, so it can't clobber the deploy repo's own root update.
+  # ios-build now also fires the deploy handoff. If it fails or is cancelled, godot-asc-deploy
+  # never runs, so nothing would move the root card off BUILDING — this finalizes it. It can't
+  # clobber the deploy repo's own root update (the deploy didn't run).
   root-failed:
     name: 🛑 Finalize root (failed/cancelled)
-    needs: [prepare, ios-build, ios-dispatch]
+    needs: [prepare, ios-build]
     if: >-
       always() && needs.prepare.outputs.should_build == 'true' &&
-      (needs.ios-build.result == 'failure' || needs.ios-build.result == 'cancelled' ||
-       needs.ios-dispatch.result == 'failure' || needs.ios-dispatch.result == 'cancelled')
+      (needs.ios-build.result == 'failure' || needs.ios-build.result == 'cancelled')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -297,10 +257,9 @@ jobs:
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.prepare.outputs.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           IOS_BUILD_RESULT: ${{ needs.ios-build.result }}
-          IOS_DISPATCH_RESULT: ${{ needs.ios-dispatch.result }}
         run: |
           # Don't set ANDROID_LINE — merge-on-read preserves whatever the Android leg wrote.
-          if [ "$IOS_BUILD_RESULT" = "cancelled" ] || [ "$IOS_DISPATCH_RESULT" = "cancelled" ]; then
+          if [ "$IOS_BUILD_RESULT" = "cancelled" ]; then
             export STATUS="cancelled"; export IOS_LINE="⚠️ cancelled"
           else
             export STATUS="failed"; export IOS_LINE="❌ build/handoff failed"
