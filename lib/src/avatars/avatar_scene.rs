@@ -1631,6 +1631,19 @@ impl AvatarScene {
         }
     }
 
+    /// Forward the comms-side profile-fetch state to the avatar so a pending nameplate
+    /// can show "Loading"/"Failed" in dev (see avatar.gd `set_profile_request_state`).
+    pub fn set_avatar_profile_fetch_state(&mut self, alias: u32, failures: i32, banned: bool) {
+        if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
+                avatar.call(
+                    "set_profile_request_state",
+                    &[failures.to_variant(), banned.to_variant()],
+                );
+            }
+        }
+    }
+
     pub fn set_avatar_blocked_by_address(&mut self, address: &H160, blocked: bool) {
         if let Some(alias) = self.avatar_address.get(address) {
             self.set_avatar_blocked(*alias, blocked);

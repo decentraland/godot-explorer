@@ -174,6 +174,14 @@ var _lod_state: int = LODState.FULL
 var _use_2d_nameplate: bool = false
 var _nametag_gate_visible: bool = true
 var _nameplate_occluded: bool = false
+# False until a real profile has been applied (async_update_avatar_from_profile). Until
+# then a remote avatar still shows the NicknameUI scene-default placeholder
+# ("nickname#xxxx"), which we hide in production / replace with a status in dev.
+var _profile_ready: bool = false
+# Comms-side profile-fetch state (pushed from message_processor.rs via AvatarScene). Used
+# for the dev pending nameplate: banned => "Failed", otherwise "Loading".
+var _profile_request_failures: int = 0
+var _profile_request_banned: bool = false
 var _impostor_layer: int = -1
 var _lod_phase: int = 0
 var _mesh_lod_visibility_captured: bool = false
@@ -440,6 +448,7 @@ func _unset_avatar_modifier_area():
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
+	_profile_ready = true
 	var avatar = profile.get_avatar()
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
@@ -629,6 +638,11 @@ func _request_nickname_redraw() -> void:
 func _apply_nickname_visibility() -> void:
 	if nickname_quad == null:
 		return
+	# Profile not received yet: the NicknameUI still shows its scene-default placeholder
+	# ("nickname#xxxx"). Hide it in production; in dev/staging surface the request state.
+	var profile_pending: bool = not _profile_ready and not is_avatar_shape
+	if profile_pending and not Global.is_production():
+		_apply_pending_profile_nameplate()
 	# Hide nickname for AvatarShapes only when the scene didn't set a real name
 	# (the proto default is "NPC", which is noise). Also hide on FAR LOD —
 	# unreadable at impostor distance and each quad is an extra draw call.
@@ -638,7 +652,12 @@ func _apply_nickname_visibility() -> void:
 	)
 	var far_lod: bool = _lod_state == LODState.FAR
 	var should_hide := (
-		avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod or nametag_hidden
+		avatar_shape_has_no_name
+		or hide_name
+		or _force_hide_name
+		or far_lod
+		or nametag_hidden
+		or (profile_pending and Global.is_production())
 	)
 	if _use_2d_nameplate:
 		# _update_nameplate_2d() positions/shows when allowed; hide now if gated off.
@@ -656,6 +675,30 @@ func _apply_nickname_visibility() -> void:
 			# UPDATE_ONCE: redraw one frame here, then the SubViewport idles until
 			# something nickname-related changes (see _request_nickname_redraw).
 			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## Dev/staging only: while the profile is still pending, replace the meaningless
+## "nickname#xxxx" placeholder with the request state so we can see what's happening.
+## (In production the tag is hidden instead — see _apply_nickname_visibility.)
+func _apply_pending_profile_nameplate() -> void:
+	if nickname_ui == null:
+		return
+	nickname_ui.name_claimed = false
+	# banned (>= 2 consecutive fetch failures) => the comms layer gave up for now.
+	var failed: bool = _profile_request_banned
+	nickname_ui.nickname = "Failed" if failed else "Loading"
+	nickname_ui.tag = avatar_id.right(4) if not avatar_id.is_empty() else "…"
+	nickname_ui.nickname_color = Color(0.85, 0.4, 0.4) if failed else Color(0.7, 0.7, 0.7)
+	_request_nickname_redraw()
+
+
+## Pushed from comms (message_processor.rs -> AvatarScene) when a profile fetch fails or
+## gets banned. Refresh the dev pending nameplate so it flips "Loading" -> "Failed".
+func set_profile_request_state(failures: int, banned: bool) -> void:
+	_profile_request_failures = failures
+	_profile_request_banned = banned
+	if not _profile_ready:
+		_apply_nickname_visibility()
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
