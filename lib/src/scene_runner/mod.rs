@@ -2,7 +2,7 @@ pub mod components;
 mod deleted_entities;
 pub mod global_get_node_helper;
 mod godot_dcl_scene;
-pub mod input;
+pub(crate) mod input;
 pub mod loading_session;
 pub mod object_pool;
 pub mod pool_manager;
