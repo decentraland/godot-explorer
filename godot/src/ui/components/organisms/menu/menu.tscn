@@ -12,7 +12,7 @@
 [ext_resource type="Texture2D" uid="uid://cvxfoyvj0kqtw" path="res://src/ui/components/organisms/menu/icons/settings-outlined.svg" id="11_rdch8"]
 [ext_resource type="Texture2D" uid="uid://dp6cvwbfawfsa" path="res://src/ui/components/organisms/menu/icons/settings.svg" id="12_7v87b"]
 [ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/pages/discover/discover_button.gd" id="13_2fqoa"]
-[ext_resource type="PackedScene" path="res://src/ui/components/atoms/controls/upgrade_badge/upgrade_badge.tscn" id="15_o10hj"]
+[ext_resource type="PackedScene" uid="uid://chpydicpuiujx" path="res://src/ui/components/atoms/controls/upgrade_badge/upgrade_badge.tscn" id="15_o10hj"]
 [ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="16_7v87b"]
 [ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/pages/backpack/backpack_button.gd" id="16_p7nyr"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="17_rdch8"]
@@ -36,10 +36,10 @@ shadow_offset = Vector2(0, -4)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_57a8l"]
 bg_color = Color(1, 0.1764706, 0.33333334, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
 border_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
 corner_radius_top_left = 100
 corner_radius_top_right = 100
@@ -178,15 +178,15 @@ stretch_mode = 0
 script = ExtResource("18_3id7u")
 
 [node name="UpgradeBadge" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel/StaticButton_Settings" unique_id=814216259 instance=ExtResource("15_o10hj")]
-custom_minimum_size = Vector2(25, 25)
+custom_minimum_size = Vector2(22, 22)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -34.0
 offset_top = 9.0
-offset_right = -9.0
-offset_bottom = 34.0
+offset_right = -12.0
+offset_bottom = 31.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_57a8l")
 

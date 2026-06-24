@@ -27,6 +27,7 @@
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="21_ypsmd"]
 [ext_resource type="LabelSettings" uid="uid://btf4wblw0y5bf" path="res://assets/themes/lobby_subtitle.tres" id="22_eula"]
 [ext_resource type="PackedScene" uid="uid://d0hixhgq3pfdu" path="res://src/ui/pages/settings/underlined_button.tscn" id="23_65md3"]
+[ext_resource type="Script" uid="uid://ds5fipbkuuh6" path="res://src/ui/components/atoms/labels/text_with_links/text_with_links.gd" id="24_65md3"]
 [ext_resource type="Texture2D" uid="uid://c55bxhde80ljl" path="res://assets/ui/sign-in/back-chevron.svg" id="back_chevron"]
 
 [sub_resource type="Shader" id="Shader_ijrai"]
@@ -114,7 +115,7 @@ grow_vertical = 2
 theme = ExtResource("1_t2lj5")
 script = ExtResource("2_fu4v6")
 metadata/mobile_preview_orientation = "portrait"
-metadata/_edit_horizontal_guides_ = [1360.0, 404.0]
+metadata/_edit_horizontal_guides_ = [1300.0, 404.0]
 
 [node name="Background" type="TextureRect" parent="." unique_id=31448416]
 unique_name_in_owner = true
@@ -324,7 +325,6 @@ text = "NOT NOW"
 
 [node name="AccountHome" type="Control" parent="Main" unique_id=1437503699]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(425, 450)
 layout_mode = 2
 
@@ -338,7 +338,7 @@ grow_vertical = 2
 theme_override_constants/margin_left = 64
 theme_override_constants/margin_top = 220
 theme_override_constants/margin_right = 64
-theme_override_constants/margin_bottom = 165
+theme_override_constants/margin_bottom = 142
 
 [node name="VBoxFixed" type="VBoxContainer" parent="Main/AccountHome/MarginContainer" unique_id=1603470169]
 layout_mode = 2
@@ -422,7 +422,7 @@ layout_mode = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="RichTextLabel2" type="RichTextLabel" parent="Main/AccountHome/MarginContainer/VBoxFixed/VBoxContainer" unique_id=2121928832]
+[node name="RichTextLabel_Terms" type="RichTextLabel" parent="Main/AccountHome/MarginContainer/VBoxFixed/VBoxContainer" unique_id=2121928832]
 clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
@@ -438,6 +438,7 @@ text = "By continuing, you agree to Decentraland’s [color=#A0ABFF][url=\"https
 fit_content = true
 scroll_active = false
 horizontal_alignment = 1
+script = ExtResource("24_65md3")
 
 [node name="AvatarCreate" type="Control" parent="Main" unique_id=183269475]
 unique_name_in_owner = true
@@ -878,6 +879,7 @@ font_size = 30
 
 [node name="SignIn" type="Control" parent="Main" unique_id=1717754795]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/SignIn" unique_id=256010208]
@@ -937,7 +939,7 @@ layout_mode = 2
 theme_override_constants/separation = 46
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="RichTextLabel2" type="RichTextLabel" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=283296243]
+[node name="RichTextLabel_Terms" type="RichTextLabel" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=283296243]
 clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
@@ -954,6 +956,7 @@ text = "By continuing, you agree to Decentraland’s [color=#A0ABFF][url=\"https
 fit_content = true
 scroll_active = false
 horizontal_alignment = 1
+script = ExtResource("24_65md3")
 
 [node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=1774682901]
 unique_name_in_owner = true

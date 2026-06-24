@@ -103,9 +103,9 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -306.0
+offset_left = -304.0
 offset_top = -413.5
-offset_right = 306.0
+offset_right = 304.0
 offset_bottom = 413.5
 grow_horizontal = 2
 grow_vertical = 2
@@ -335,6 +335,7 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "The code is invalid or expired. Please resend code."
 label_settings = SubResource("LabelSettings_6ee1p")
+horizontal_alignment = 1
 
 [node name="HSeparator_Content2" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=296299329]
 layout_mode = 2
@@ -365,7 +366,8 @@ text = "Verifying..."
 label_settings = SubResource("LabelSettings_8bykb")
 autowrap_mode = 2
 
-[node name="Label_Subtitle2" type="RichTextLabel" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer" unique_id=2097791159]
+[node name="RichTextLabel_ResendCode" type="RichTextLabel" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer" unique_id=2097791159]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 size_flags_vertical = 3

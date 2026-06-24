@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="8_wyn32"]
 [ext_resource type="Texture2D" uid="uid://dwd0g63x37e0l" path="res://assets/ui/gameplay.svg" id="9_67hd5"]
 [ext_resource type="Texture2D" uid="uid://cg1jhvnvea4tw" path="res://assets/ui/account.svg" id="11_6mcfd"]
+[ext_resource type="PackedScene" uid="uid://chpydicpuiujx" path="res://src/ui/components/atoms/controls/upgrade_badge/upgrade_badge.tscn" id="12_1byws"]
 [ext_resource type="Texture2D" uid="uid://clha72gfrf4t1" path="res://assets/ui/storage.svg" id="12_6mcfd"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
 [ext_resource type="Texture2D" uid="uid://dftgrrlty2cp5" path="res://assets/ui/settings-background.png" id="13_xewta"]
@@ -134,21 +135,19 @@ label_settings = ExtResource("6_sa1v7")
 [node name="MarginContainer_Nav" type="MarginContainer" parent="VBoxContainer" unique_id=225568042]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_bottom = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_bottom = 14
 
 [node name="TabsScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer_Nav" unique_id=2010556170]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 scroll_deadzone = 100
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Nav/TabsScrollContainer" unique_id=1286322391]
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
-size_flags_vertical = 4
 theme_override_constants/separation = 24
 
 [node name="VSeparator" type="VSeparator" parent="VBoxContainer/MarginContainer_Nav/TabsScrollContainer/HBoxContainer" unique_id=1491672668]
@@ -160,7 +159,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_67hd5")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
@@ -176,7 +175,7 @@ alignment = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
@@ -191,7 +190,7 @@ alignment = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
@@ -206,7 +205,7 @@ alignment = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
@@ -217,11 +216,23 @@ text = "Account"
 icon = ExtResource("11_6mcfd")
 alignment = 0
 
+[node name="UpgradeBadge" parent="VBoxContainer/MarginContainer_Nav/TabsScrollContainer/HBoxContainer/Button_Account" unique_id=1787968848 instance=ExtResource("12_1byws")]
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -18.0
+offset_top = -4.0
+offset_right = 4.0
+offset_bottom = 18.0
+grow_horizontal = 0
+
 [node name="Button_Storage" type="Button" parent="VBoxContainer/MarginContainer_Nav/TabsScrollContainer/HBoxContainer" unique_id=1118326943]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
@@ -236,7 +247,7 @@ alignment = 0
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
@@ -295,10 +306,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 40
 
-[node name="GuestUpgradeCard" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer" unique_id=1116982919 instance=ExtResource("14_sbgvv")]
-layout_mode = 2
-shown_in = "settings"
-
 [node name="MarginContainer_Upgrade" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer" unique_id=681992231]
 unique_name_in_owner = true
 layout_mode = 2
@@ -314,6 +321,7 @@ theme_override_constants/separation = 40
 
 [node name="VBoxContainer_Gameplay" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=911633864]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
@@ -1180,7 +1188,6 @@ text = "RETURN TO DISCOVER"
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -1188,12 +1195,12 @@ theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
 theme_override_constants/separation = 72
 
-[node name="Button_UpgradeToOtp" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account" unique_id=1900100001 instance=ExtResource("22_mwb5b")]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(353, 96)
+[node name="GuestUpgradeCard" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account" unique_id=1116982919 instance=ExtResource("14_sbgvv")]
 layout_mode = 2
-custom_text = "UPGRADE TO OTP"
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+shown_in = "settings"
+full_width = true
 
 [node name="SectionReport" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account" unique_id=936932899]
 layout_mode = 2
@@ -1438,7 +1445,6 @@ font = ExtResource("25_jf4mt")
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_ReturnToDiscover" to="." method="_on_button_return_to_discover_pressed"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/Button_UpgradeToOtp" to="." method="_on_button_upgrade_to_otp_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer/VBoxContainer2/Button_PrivacyPolicy" to="." method="_on_button_privacy_policy_pressed"]

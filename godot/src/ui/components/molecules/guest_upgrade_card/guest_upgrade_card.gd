@@ -1,3 +1,4 @@
+@tool
 class_name GuestUpgradeCard
 extends MarginContainer
 
@@ -6,6 +7,22 @@ signal email_added(email: String)
 ## Screen location for metrics tracking. "discover" auto-differentiates between
 ## discover_pregame and discover_ingame based on whether explorer is active.
 @export_enum("discover", "settings") var shown_in = "discover"
+## When true, removes the left and right margins so the card stretches edge to edge.
+## Use in settings; leave false in discover where lateral margins are needed.
+@export var full_width: bool = false:
+	set(value):
+		full_width = value
+		_apply_full_width()
+## Left and right margin (px) applied when full_width is false.
+@export var side_margin: int = 48:
+	set(value):
+		side_margin = value
+		_apply_full_width()
+
+## True once the network check has been attempted (prevents re-checking every time
+## the parent becomes visible after a successful initial check).
+var _upgrade_checked: bool = false
+
 @onready var button_add_email: Button = %Button_AddEmail
 
 static var _email_regex: RegEx = RegEx.create_from_string("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
@@ -15,9 +32,22 @@ static func is_valid_email(text: String) -> bool:
 	return _email_regex.search(text) != null
 
 
+func _apply_full_width() -> void:
+	if full_width:
+		add_theme_constant_override("margin_left", 0)
+		add_theme_constant_override("margin_right", 0)
+	else:
+		add_theme_constant_override("margin_left", side_margin)
+		add_theme_constant_override("margin_right", side_margin)
+
+
 func _ready() -> void:
+	_apply_full_width()
+	if Engine.is_editor_hint():
+		return
 	button_add_email.pressed.connect(_async_on_add_email_pressed)
 	visibility_changed.connect(_on_visibility_changed)
+	Global.orientation_changed.connect(_on_orientation_changed)
 	_async_update_visibility()
 
 
@@ -26,6 +56,8 @@ func _ready() -> void:
 # guests (email/social linked) must not see it. The "already upgraded" bit can't
 # be known locally — a recovered session doesn't record it — so we ask thirdweb
 # for the linked profiles. Start hidden, then reveal only once confirmed.
+# After the first network check, subsequent calls use the local cached flag so
+# orientation changes (landscape hide / portrait re-show) are instant.
 # gdlint:ignore = async-function-name
 func _async_update_visibility() -> void:
 	visible = false
@@ -34,22 +66,37 @@ func _async_update_visibility() -> void:
 	if Global.player_identity == null or not Global.player_identity.is_thirdweb_guest():
 		return
 
+	if _upgrade_checked:
+		# Already have an authoritative result — use the Rust-cached flag.
+		visible = not Global.player_identity.is_thirdweb_guest_upgraded()
+		return
+
+	_upgrade_checked = true
 	var anchor: String = Global.get_device_anchor_id()
 	var promise: Promise = Global.player_identity.async_refresh_thirdweb_upgrade_state(anchor)
 	var result = await PromiseUtils.async_awaiter(promise)
+	var is_upgraded: bool
 	if result is PromiseError:
 		# Couldn't confirm against thirdweb — fall back to the last-known cached
 		# flag rather than assume "not upgraded" and wrongly offer the upgrade.
-		visible = not Global.player_identity.is_thirdweb_guest_upgraded()
-		return
-	# result is the authoritative upgraded bool.
-	visible = not result
+		is_upgraded = Global.player_identity.is_thirdweb_guest_upgraded()
+	else:
+		# result is the authoritative upgraded bool.
+		is_upgraded = bool(result)
+	visible = not is_upgraded
+	Global.guest_upgrade_state_refreshed.emit(is_upgraded)
 
 
 func _get_shown_in() -> String:
 	if shown_in == "discover":
 		return "discover_ingame" if Global.get_explorer() else "discover_pregame"
 	return shown_in
+
+
+func _on_orientation_changed(_is_portrait: bool) -> void:
+	# Re-evaluate on every orientation change: landscape always hides, portrait
+	# re-shows using the cached result (or does the first network check).
+	_async_update_visibility()
 
 
 func _on_visibility_changed() -> void:
@@ -77,6 +124,7 @@ func _async_on_add_email_pressed() -> void:
 	)
 	if modal:
 		modal.dcl_text_edit.wrap_text = false
+		modal.dcl_text_edit.validate_on_blur = true
 		# The modal owns the spinner + close timing now: it runs _async_send_code
 		# while showing a spinner, keeps itself open (inline error) for a bad
 		# address, or closes and emits confirmed/failed for the other outcomes.
@@ -114,6 +162,7 @@ func _async_on_code_sent(email: String) -> void:
 		# The code modal owns the spinner + inline error UI; it calls back into
 		# _async_verify_code and only emits `confirmed` once verification succeeds.
 		code_modal.set_verifier(_async_verify_code.bind(email))
+		code_modal.set_resend_handler(_async_send_code.bind(email))
 		code_modal.confirmed.connect(_async_on_code_confirmed.bind(email))
 		code_modal.cancelled.connect(Global.modal_manager.close_code_modal)
 
@@ -179,8 +228,10 @@ func _async_on_code_confirmed(_code: String, email: String) -> void:
 	Global.modal_manager.close_code_modal()
 	await _async_show_success_modal()
 	email_added.emit(email)
-	# Now upgraded (Rust set the cached flag on link) — hide the affordance.
+	# Now upgraded (Rust set the cached flag on link) — hide the affordance and
+	# notify other UI (badge) so they also update without a separate network call.
 	visible = false
+	Global.guest_upgrade_state_refreshed.emit(true)
 
 
 # Maps raw thirdweb errors to friendly copy. The raw error is still logged.

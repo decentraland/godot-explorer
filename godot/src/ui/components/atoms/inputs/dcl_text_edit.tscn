@@ -27,6 +27,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 0
 theme_override_constants/separation = 8
 script = ExtResource("1_iibrq")
+validate_on_blur = null
 
 [node name="TextEditContainer" type="Control" parent="." unique_id=1976220458]
 custom_minimum_size = Vector2(0, 68)
@@ -67,6 +68,7 @@ alignment = 2
 
 [node name="ClearButton" type="TextureButton" parent="TextEditContainer/HBoxContainer" unique_id=887865242]
 unique_name_in_owner = true
+visible = false
 self_modulate = Color(0.9098039, 0.7254902, 1, 1)
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 2

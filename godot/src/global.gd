@@ -29,6 +29,9 @@ signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
 signal upgrade_to_otp
+## Fired by GuestUpgradeCard after the thirdweb network check resolves so other
+## UI (e.g. UpgradeBadge) can sync without duplicating the network call.
+signal guest_upgrade_state_refreshed(is_upgraded: bool)
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 ## Sync settings "Hide View Profile" / "Hide World Interactions" / etc. checkboxes.
@@ -80,7 +83,7 @@ const FORCE_DEEPLINK = ""
 # A push_warning fires whenever it is active so it can't ship unnoticed.
 # (For a fresh guest, prefer clearing app data / user:// — that resets the
 # anchor only when DEBUG_GUEST_ROTATE_ANCHOR_ID is on, see below.)
-const DEBUG_GUEST_ANCHOR_OVERRIDE: String = ""
+const DEBUG_GUEST_ANCHOR_OVERRIDE: String = "device-0011"
 
 # DEBUG ONLY — must be `false` for any shipped build. When `true`,
 # get_device_anchor_id() ignores the platform-native device anchor (Android
@@ -241,6 +244,18 @@ func _get_safe_area_presets() -> GDScript:
 	return _safe_area_presets
 
 
+func _generated_deeplink() -> String:
+	# Baked launch params from `cargo run -- run/build --deeplink|--log-stream`.
+	# Gitignored and optional; absent on a fresh checkout until the first build.
+	var gen_path := "res://src/generated/build_config.gd"
+	if not ResourceLoader.exists(gen_path):
+		return ""
+	var gen_script: GDScript = load(gen_path)
+	if gen_script == null:
+		return ""
+	return gen_script.get_script_constant_map().get("DEEPLINK", "")
+
+
 func get_safe_area() -> Rect2i:
 	if should_emulate_ios():
 		var presets := _get_safe_area_presets()
@@ -297,8 +312,13 @@ func _ready():
 	if cli.landscape and (should_emulate_ios() or should_emulate_android()):
 		set_orientation_landscape()
 
-	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
+	# Handle fake deep link. Precedence: --fake-deeplink CLI arg > generated
+	# build_config (baked by `cargo run -- run/build --deeplink|--log-stream`) >
+	# FORCE_DEEPLINK constant. The generated path works on mobile/TestFlight where
+	# no CLI args are available.
 	var fake_deeplink = cli.fake_deeplink
+	if fake_deeplink.is_empty():
+		fake_deeplink = _generated_deeplink()
 	if fake_deeplink.is_empty() and not FORCE_DEEPLINK.is_empty():
 		fake_deeplink = FORCE_DEEPLINK
 	if not fake_deeplink.is_empty():
@@ -334,6 +354,14 @@ func _ready():
 
 		if deep_link_obj.iap_enabled:
 			Iap.enable()
+
+	# Start the unified log stream as early as possible (works pre-login, unlike
+	# explorer.gd which only runs in-world). Source: baked deeplink or --log-stream.
+	var log_stream_target: String = deep_link_obj.params.get("log-stream", "")
+	if log_stream_target.is_empty():
+		log_stream_target = cli.log_stream
+	if log_stream_target.begins_with("ws://") or log_stream_target.begins_with("wss://"):
+		DclGlobal.start_log_stream(log_stream_target)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():

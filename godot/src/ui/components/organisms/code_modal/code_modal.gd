@@ -14,10 +14,15 @@ var _error_style: StyleBox
 # must return "" on success or a friendly error string to show inline. When unset
 # the modal behaves as a plain collector and emits `confirmed` for any 6 digits.
 var _verify_callable: Callable
+# Optional async resend handler injected by the caller. Same contract as the
+# InputModal submit handler: returns {"status": SUBMIT_*, "message": String}.
+var _resend_callable: Callable
+var _resending: bool = false
 
 @onready var hbox_verifying: HBoxContainer = %HBoxContainer_Verifying
 @onready var _label_error: Label = %Label_Error
 @onready var _label_subtitle: RichTextLabel = %Label_Subtitle
+@onready var _label_resend: RichTextLabel = %RichTextLabel_ResendCode
 @onready var _modal_panel: ResponsiveContainer = $Blur/PanelContainer2
 
 
@@ -45,6 +50,7 @@ func _ready() -> void:
 
 	_hidden_input = LineEdit.new()
 	_hidden_input.max_length = 6
+	_hidden_input.virtual_keyboard_type = LineEdit.VirtualKeyboardType.KEYBOARD_TYPE_NUMBER
 	_hidden_input.modulate = Color.TRANSPARENT
 	_hidden_input.custom_minimum_size = Vector2.ZERO
 	_hidden_input.size = Vector2.ZERO
@@ -56,6 +62,7 @@ func _ready() -> void:
 		line_edit.gui_input.connect(_on_display_input_tapped)
 
 	%TextureButton_Close.pressed.connect(_on_close_pressed)
+	_label_resend.gui_input.connect(_on_resend_gui_input)
 
 
 func _on_display_input_tapped(event: InputEvent) -> void:
@@ -113,6 +120,41 @@ func set_verifier(verifier: Callable) -> void:
 	_verify_callable = verifier
 
 
+func set_resend_handler(handler: Callable) -> void:
+	_resend_callable = handler
+
+
+func _on_resend_gui_input(event: InputEvent) -> void:
+	var is_tap = (
+		(event is InputEventScreenTouch and event.pressed)
+		or (
+			event is InputEventMouseButton
+			and event.pressed
+			and event.button_index == MOUSE_BUTTON_LEFT
+		)
+	)
+	if not is_tap or not _resend_callable.is_valid() or _resending:
+		return
+	_async_resend_code()
+
+
+# gdlint:ignore = async-function-name
+func _async_resend_code() -> void:
+	_resending = true
+	_clear_error()
+	_clear_inputs()
+	var result: Dictionary = await _resend_callable.call()
+	if not is_instance_valid(self):
+		return
+	_resending = false
+	var message: String = str(result.get("message", ""))
+	if not message.is_empty():
+		_show_error(message)
+		return
+	_hidden_input.editable = true
+	_hidden_input.grab_focus()
+
+
 # gdlint:ignore = async-function-name
 func _async_submit_code() -> void:
 	var code = get_code()
@@ -144,13 +186,13 @@ func _show_error(message: String = "") -> void:
 	_label_error.show()
 	for input in _code_inputs:
 		input.add_theme_stylebox_override("read_only", _error_style)
-		input.add_theme_color_override("font_read_only_color", Color.RED)
+		input.add_theme_color_override("font_uneditable_color", Color.RED)
 
 
 func _clear_error() -> void:
 	_label_error.hide()
 	for input in _code_inputs:
-		input.remove_theme_color_override("font_read_only_color")
+		input.remove_theme_color_override("font_uneditable_color")
 
 
 func get_code() -> String:

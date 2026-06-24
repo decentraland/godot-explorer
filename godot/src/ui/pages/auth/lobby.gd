@@ -688,7 +688,7 @@ func _on_button_different_account_pressed():
 	Global.social_blacklist.clear_muted()
 
 	Global.get_config().save_to_settings_file()
-	show_account_home_screen()
+	show_auth_home_screen()
 
 
 func _on_button_continue_pressed():

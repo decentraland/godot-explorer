@@ -28,10 +28,15 @@ const LONG_PRESS_DURATION := 0.5
 @export var validate_no_symbols: bool = false
 @export var validate_no_edge_spaces: bool = false
 @export var validate_email: bool = false
+## When true the error label and style are only applied after the field loses
+## focus. The `error` flag is still updated on every change so the confirm
+## button stays disabled until the value is valid.
+@export var validate_on_blur: bool = false
 
 var length_error: bool = false
 var error: bool = false
 var _touched: bool = false
+var _focus_active: bool = false
 var _dragging: bool = false
 var _drag_start_y: float = 0.0
 var _drag_start_scroll: float = 0.0
@@ -65,6 +70,7 @@ func _ready() -> void:
 		label_length.text = "0/" + str(max_length)
 	else:
 		label_length.hide()
+		label_error.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_update_clear_button()
 	_check_error()
 
@@ -142,7 +148,7 @@ func _check_error() -> void:
 
 	error = errors.size() > 0
 
-	if error and _touched:
+	if error and _touched and (not validate_on_blur or not _focus_active):
 		text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
 		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
 		if errors.size() > 1:
@@ -217,10 +223,14 @@ func _on_long_press() -> void:
 
 func _on_text_edit_focus_entered() -> void:
 	_touched = true
+	_focus_active = true
 	_update_clear_button()
 
 
 func _on_text_edit_focus_exited() -> void:
+	_focus_active = false
+	_check_error()
+	emit_signal("dcl_text_edit_changed")
 	call_deferred("_update_clear_button")
 
 

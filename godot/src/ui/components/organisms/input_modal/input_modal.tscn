@@ -144,6 +144,7 @@ place_holder = "name@email.com"
 has_max_length = false
 is_optional = false
 validate_email = true
+validate_on_blur = false
 
 [node name="HBoxContainer_Buttons" type="HBoxContainer" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=32111112]
 custom_minimum_size = Vector2(0, 74)
