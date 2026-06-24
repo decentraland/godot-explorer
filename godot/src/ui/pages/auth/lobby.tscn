@@ -325,6 +325,7 @@ text = "NOT NOW"
 
 [node name="AccountHome" type="Control" parent="Main" unique_id=1437503699]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(425, 450)
 layout_mode = 2
 
@@ -557,7 +558,6 @@ icon_alignment = 2
 
 [node name="AvatarCustomize" type="Control" parent="Main" unique_id=1314744326]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/AvatarCustomize" unique_id=370001754]
@@ -577,6 +577,8 @@ unique_name_in_owner = true
 layout_mode = 2
 hide_background = true
 hide_navbar = true
+show_credits_button = false
+default_main_category = "face"
 
 [node name="PanelContainer2" type="PanelContainer" parent="Main/AvatarCustomize/MarginContainer/VBoxContainer" unique_id=1978857434]
 layout_mode = 2

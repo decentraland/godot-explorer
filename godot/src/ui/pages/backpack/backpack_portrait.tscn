@@ -15,7 +15,6 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_2iqy8"]
 [ext_resource type="Texture2D" uid="uid://b0rnagailiooj" path="res://assets/ui/wearable_categories/upper_body-icon.svg" id="12_6wpew"]
 [ext_resource type="PackedScene" uid="uid://md6xoha44tbf" path="res://src/ui/pages/backpack/emote_name.tscn" id="16_u1xb7"]
-[ext_resource type="Shader" uid="uid://diwdvth6qfad7" path="res://src/ui/pages/backpack/detail_background.gdshader" id="16_yjmsa"]
 [ext_resource type="Shader" uid="uid://c0qbj6cn3eof4" path="res://src/ui/components/utils/addition_shader.gdshader" id="17_4j6ii"]
 [ext_resource type="Texture2D" uid="uid://bv1rkp8bv6h5q" path="res://src/ui/pages/backpack/avatar_change_vfx.png" id="18_wp3bp"]
 [ext_resource type="PackedScene" uid="uid://cf4f5teas815x" path="res://src/ui/components/molecules/color_carrousel/color_carrousel.tscn" id="19_k780d"]
@@ -30,7 +29,7 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hpvfb"]
 shader = ExtResource("17_4j6ii")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_ypiwx"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_q4rkm"]
 atlas = ExtResource("18_wp3bp")
 region = Rect2(0, 0, 343, 580)
 
@@ -69,22 +68,20 @@ resource_name = "CollectiblesFilter"
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yj6kw"]
 
-[sub_resource type="Gradient" id="Gradient_k780d"]
-colors = PackedColorArray(0.27450982, 0.05882353, 0.43529412, 1, 0.20784314, 0.03137255, 0.32941177, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_et6he"]
-gradient = SubResource("Gradient_k780d")
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_k780d"]
-shader = ExtResource("16_yjmsa")
-shader_parameter/tex = SubResource("GradientTexture1D_et6he")
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cq6cy"]
 bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
 shadow_color = Color(0, 0, 0, 0.25)
 shadow_size = 4
+
+[sub_resource type="Gradient" id="Gradient_ypiwx"]
+colors = PackedColorArray(0.20784314, 0.03137255, 0.32941177, 1, 0.27450982, 0.05882353, 0.43529412, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_gdeh7"]
+gradient = SubResource("Gradient_ypiwx")
+fill_from = Vector2(0, 1)
+fill_to = Vector2(0, 0)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_30sbq"]
 resource_local_to_scene = false
@@ -152,7 +149,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("AtlasTexture_ypiwx")
+texture = SubResource("AtlasTexture_q4rkm")
 stretch_mode = 3
 script = ExtResource("19_ku1si")
 atlas = ExtResource("18_wp3bp")
@@ -479,10 +476,19 @@ layout_mode = 2
 
 [node name="WearableEditor" type="PanelContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" unique_id=258215711]
 unique_name_in_owner = true
-material = SubResource("ShaderMaterial_k780d")
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_cq6cy")
+
+[node name="MarginContainer_Background" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor" unique_id=333854456]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 24
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer_Background" unique_id=35097427]
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_gdeh7")
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor" unique_id=907653772]
 layout_mode = 2
