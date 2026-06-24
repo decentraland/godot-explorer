@@ -279,7 +279,6 @@ jobs:
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       # Public R2 domain mapped to the mobile-artifacts bucket root.
       R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
       SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
@@ -305,9 +304,6 @@ jobs:
           if [ -n "$MISSING" ]; then
             echo "❌ Missing required secrets:$MISSING"
             exit 1
-          fi
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured — the 'build ready' Slack notification will be skipped."
           fi
           echo "✅ Required secrets present"
 
@@ -361,63 +357,6 @@ jobs:
           bash .github/scripts/slack-reply.sh "❌ Android — APK not produced for ${SHA} (CI build failed)"
           ANDROID_LINE="❌ CI build failed" python3 .github/scripts/slack-root.py
 
-      - name: Notify Slack - Android build ready
-        if: success()
-        run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
-            exit 0
-          fi
-
-          APK_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
-          COMMIT_SHORT="${SHA:0:7}"
-          TRIGGERED_BY="${{ github.actor }}"
-          if [ -n "$PR_NUMBER" ]; then
-            BRANCH_LABEL="PR-${PR_NUMBER}-${REF}"
-          else
-            BRANCH_LABEL="${REF}"
-          fi
-
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"blocks\": [
-              {
-                \"type\": \"header\",
-                \"text\": { \"type\": \"plain_text\", \"text\": \"🤖 Android Build Ready\", \"emoji\": true }
-              },
-              {
-                \"type\": \"section\",
-                \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Decentraland Mobile Client*\nAndroid APK ready (${BRANCH_LABEL})\" }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_LABEL}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
-                ]
-              },
-              {
-                \"type\": \"actions\",
-                \"elements\": [
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"📱 Download APK\", \"emoji\": true },
-                    \"style\": \"primary\",
-                    \"url\": \"${APK_URL}\"
-                  },
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Build Report\", \"emoji\": true },
-                    \"url\": \"${WORKFLOW_URL}\"
-                  }
-                ]
-              }
-            ]
-          }" "$SLACK_WEBHOOK_URL"
-          echo "✅ Slack notification sent (Android build ready)"
-
       # The AAB (Play Store artifact) is only published for main/release builds, so we
       # surface it for any main/release distribution (manual dispatch, push-to-release,
       # or the weekday main cron). Best-effort: if the AAB isn't in R2 we warn and skip
@@ -446,103 +385,10 @@ jobs:
             sleep 20
           done
 
-      - name: Notify Slack - Android AAB ready
-        if: success() && env.AAB_READY == 'true' && (needs.prepare.outputs.ref == 'main' || needs.prepare.outputs.ref == 'release')
+      - name: Slack — Android AAB ready
+        if: success() && env.AAB_READY == 'true' && env.SLACK_CHANNEL != ''
         run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
-            exit 0
-          fi
-
-          AAB_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
-          COMMIT_SHORT="${SHA:0:7}"
-          TRIGGERED_BY="${{ github.actor }}"
-
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"blocks\": [
-              {
-                \"type\": \"header\",
-                \"text\": { \"type\": \"plain_text\", \"text\": \"📦 Android AAB Ready (Play Store)\", \"emoji\": true }
-              },
-              {
-                \"type\": \"section\",
-                \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Decentraland Mobile Client*\nAndroid AAB ready for Play Store upload (${REF})\" }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${REF}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
-                ]
-              },
-              {
-                \"type\": \"actions\",
-                \"elements\": [
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"📦 Download AAB\", \"emoji\": true },
-                    \"style\": \"primary\",
-                    \"url\": \"${AAB_URL}\"
-                  },
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Build Report\", \"emoji\": true },
-                    \"url\": \"${WORKFLOW_URL}\"
-                  }
-                ]
-              }
-            ]
-          }" "$SLACK_WEBHOOK_URL"
-          echo "✅ Slack notification sent (Android AAB ready)"
-
-      - name: Notify Slack - Android build failed
-        if: failure()
-        run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
-            exit 0
-          fi
-
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
-          COMMIT_SHORT="${SHA:0:7}"
-          TRIGGERED_BY="${{ github.actor }}"
-          if [ -n "$PR_NUMBER" ]; then
-            BRANCH_LABEL="PR-${PR_NUMBER}-${REF}"
-          else
-            BRANCH_LABEL="${REF}"
-          fi
-
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"blocks\": [
-              {
-                \"type\": \"header\",
-                \"text\": { \"type\": \"plain_text\", \"text\": \"❌ Android Build Failed\", \"emoji\": true }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_LABEL}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
-                ]
-              },
-              {
-                \"type\": \"actions\",
-                \"elements\": [
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Logs\", \"emoji\": true },
-                    \"style\": \"danger\",
-                    \"url\": \"${WORKFLOW_URL}\"
-                  }
-                ]
-              }
-            ]
-          }" "$SLACK_WEBHOOK_URL"
+          bash .github/scripts/slack-reply.sh "📦 Android — AAB ready (Play Store): ${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
 
       - name: Update PR comment - Android success
         if: success() && needs.prepare.outputs.pr_number != ''

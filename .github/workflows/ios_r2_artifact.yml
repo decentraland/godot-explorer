@@ -209,7 +209,8 @@ jobs:
       - name: Root — iOS exported
         if: success() && env.SLACK_CHANNEL != ''
         env:
-          IOS_LINE: "✅ exported to R2 (signing…)"
+          # Not done yet → no green tick. The ✅ only appears when it's on TestFlight.
+          IOS_LINE: "📦 exported to R2 · signing…"
           BUILD_VERSION: ${{ steps.buildver.outputs.build_version }}
         run: |
           python3 .github/scripts/slack-root.py
