@@ -14,6 +14,7 @@ pub mod input_modifier;
 pub mod material;
 pub mod mesh_collider;
 pub mod mesh_renderer;
+pub mod mobile_input_controls;
 pub mod nft_shape;
 pub mod physics_combined;
 pub mod pointer_events;

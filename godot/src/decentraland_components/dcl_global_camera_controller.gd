@@ -69,6 +69,19 @@ func _process(delta: float) -> void:
 	else:
 		transition_time = DEFAULT_TRANSITION_TIME
 
+		# Latch guard: no active scene virtual camera, yet the cursor mode is still on while
+		# the transition is already marked complete (last_camera_reached). This happens when
+		# a virtual-camera sub-scene is torn down within the same scene: the target entity is
+		# removed and the `last_camera_reached` short-circuit below returns before the normal
+		# transition-back can reset state, leaving camera rotation frozen and taps moving the
+		# crosshair. raycast_use_cursor_position is only ever set true by an active scene
+		# virtual camera, so seeing it true here (with no such camera) is unambiguously the
+		# latch — force a clean return to the player camera. The normal smooth transition-back
+		# runs with last_camera_reached == false, so this never cuts it short.
+		if last_camera_reached and Global.scene_runner.raycast_use_cursor_position:
+			_force_return_to_player_camera()
+			return
+
 	# if desired_target == null -> it should go to Global.player_camera_node
 	#  - immediately reparent to self conserving the last global transform annotated
 	#  - once is next to Global.player_camera_node, set Global.player_camera_node.make_current()
