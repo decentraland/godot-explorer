@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+#
+# ⚠️ DUPLICATED FILE — keep in sync with the identical copy in the other repo.
+# The mobile build pipeline spans two repos, so this script lives in BOTH
+# decentraland/godot-explorer and decentraland/godot-asc-deploy. Edit both copies together.
+#
 # Post a Slack message as a threaded reply (best-effort).
 #   usage: slack-reply.sh "<text>"
 # Reads SLACK_BOT_TOKEN, SLACK_CHANNEL, SLACK_TS from the environment. No-op (exit 0) if

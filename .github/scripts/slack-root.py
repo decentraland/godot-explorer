@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# ⚠️ DUPLICATED FILE — keep in sync with the identical copy in the other repo.
+# The mobile build pipeline spans two repos, so this script lives in BOTH
+# decentraland/godot-explorer and decentraland/godot-asc-deploy. Edit both copies together.
+#
 """Create or update the Slack "root" status card for the mobile build pipeline.
 
 Merge-on-read: the full card state is stored in the message `metadata`. On update we READ
