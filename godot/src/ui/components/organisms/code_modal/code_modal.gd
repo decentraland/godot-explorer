@@ -4,6 +4,9 @@ extends ColorRect
 signal confirmed(value: String)
 signal cancelled
 
+const RESEND_COOLDOWN_SEC: int = 90
+const _RESEND_BASE_TEXT = "Didn't get an email? [u][color=A0ABFF]Resend email"
+
 var _code_inputs: Array[LineEdit] = []
 var _hidden_input: LineEdit
 var _read_only_style: StyleBox
@@ -18,6 +21,8 @@ var _verify_callable: Callable
 # InputModal submit handler: returns {"status": SUBMIT_*, "message": String}.
 var _resend_callable: Callable
 var _resending: bool = false
+var _resend_cooldown_remaining: int = 0
+var _resend_timer: Timer = null
 
 @onready var hbox_verifying: HBoxContainer = %HBoxContainer_Verifying
 @onready var _label_error: Label = %Label_Error
@@ -63,6 +68,11 @@ func _ready() -> void:
 
 	%TextureButton_Close.pressed.connect(_on_close_pressed)
 	_label_resend.gui_input.connect(_on_resend_gui_input)
+
+	_resend_timer = Timer.new()
+	_resend_timer.wait_time = 1.0
+	_resend_timer.timeout.connect(_on_resend_timer_tick)
+	add_child(_resend_timer)
 
 
 func _on_display_input_tapped(event: InputEvent) -> void:
@@ -133,7 +143,7 @@ func _on_resend_gui_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_LEFT
 		)
 	)
-	if not is_tap or not _resend_callable.is_valid() or _resending:
+	if not is_tap or not _resend_callable.is_valid() or _resending or _resend_cooldown_remaining > 0:
 		return
 	_async_resend_code()
 
@@ -151,8 +161,31 @@ func _async_resend_code() -> void:
 	if not message.is_empty():
 		_show_error(message)
 		return
+	_start_resend_cooldown()
 	_hidden_input.editable = true
 	_hidden_input.grab_focus()
+
+
+func _start_resend_cooldown() -> void:
+	_resend_cooldown_remaining = RESEND_COOLDOWN_SEC
+	_update_resend_label()
+	_resend_timer.start()
+
+
+func _on_resend_timer_tick() -> void:
+	_resend_cooldown_remaining -= 1
+	_update_resend_label()
+	if _resend_cooldown_remaining <= 0:
+		_resend_timer.stop()
+
+
+func _update_resend_label() -> void:
+	if _resend_cooldown_remaining <= 0:
+		_label_resend.text = _RESEND_BASE_TEXT
+		return
+	var minutes: int = _resend_cooldown_remaining / 60
+	var seconds: int = _resend_cooldown_remaining % 60
+	_label_resend.text = "%s (%d:%02d)" % [_RESEND_BASE_TEXT, minutes, seconds]
 
 
 # gdlint:ignore = async-function-name
@@ -217,6 +250,7 @@ func open(email: String = "") -> void:
 			"One time password sent to [b]%s[/b]. Please enter the code below to complete verification."
 			% email
 		)
+	_start_resend_cooldown()
 	show()
 	_hidden_input.grab_focus()
 
