@@ -45,6 +45,12 @@ jobs:
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
+      # WarpBuild's cache action authenticates via this token, which exists on the runner
+      # host but is NOT propagated into the container unless forwarded explicitly. Without
+      # it the cache step is a silent no-op ("Authentication token is invalid"). See:
+      # https://github.com/WarpBuilds/cache#running-inside-a-container
+      env:
+        WARPBUILD_RUNNER_VERIFICATION_TOKEN: ${{ env.WARPBUILD_RUNNER_VERIFICATION_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,6 +69,9 @@ jobs:
       # crate's prebuilt static lib (librusty_v8.a) lives under target/.../build/v8-*/out, and
       # rust-cache's cleanup strips it while keeping v8's fingerprint → warm builds then fail to
       # link. set-up-warp-cache keeps the full target/, so the lib survives (matches the iOS leg).
+      # WarpBuild's cache action shells out to wget; the builder image may not ship it.
+      - name: Ensure wget (WarpCache dependency)
+        run: command -v wget >/dev/null 2>&1 || (apt-get update && apt-get install -y wget)
       - name: Set up build cache
         uses: ./.github/actions/set-up-warp-cache
         with:
