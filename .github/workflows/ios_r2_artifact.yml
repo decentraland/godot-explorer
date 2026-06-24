@@ -9,6 +9,31 @@ name: 🍏 iOS → R2 (unsigned export)
 # to produce an iteration artifact (unlike ios_builds.yml, which routes through the
 # reviewer-gated ios-* environments).
 on:
+  # Called by mobile_distribute.yml (the `build` label / release / cron orchestrator).
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Branch name (drives the prod flag + the R2 key segment)'
+        required: true
+        type: string
+      sha:
+        description: 'Commit SHA to check out and key the R2 upload by'
+        required: false
+        type: string
+        default: ''
+      pr_number:
+        required: false
+        type: string
+        default: ''
+      slack_channel:
+        required: false
+        type: string
+        default: ''
+      slack_ts:
+        required: false
+        type: string
+        default: ''
+  # Manual iteration (registers once this file is on the default branch).
   workflow_dispatch:
     inputs:
       ref:
@@ -16,23 +41,12 @@ on:
         required: true
         type: string
         default: 'main'
-  # Also run on PRs to main that touch iOS-relevant code. workflow_dispatch only registers
-  # once this file is on the default branch, so the PR trigger lets us validate it before
-  # it merges. Scoped by paths to avoid a full iOS build on unrelated PRs.
-  pull_request:
-    branches: [main]
-    paths:
-      - 'lib/**'
-      - 'godot/**'
-      - 'rust-toolchain.toml'
-      - '.github/actions/**'
-      - '.github/workflows/ios_r2_artifact.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ios-r2-${{ github.actor }}-${{ github.event.inputs.ref || github.head_ref }}
+  group: ios-r2-${{ github.actor }}-${{ inputs.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -42,10 +56,19 @@ jobs:
     # dropped for this repo too, swap to the GitHub-hosted `macos-26` image.
     runs-on: warp-macos-26-arm64-6x
     timeout-minutes: 45
+    env:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL:   ${{ inputs.slack_channel }}
+      SLACK_TS:        ${{ inputs.slack_ts }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          ref: ${{ github.event.inputs.ref || github.head_ref }}
+          ref: ${{ inputs.sha || inputs.ref }}
+
+      - name: Slack — iOS build started
+        if: env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "🍏 iOS — building & exporting on CI… (${{ inputs.ref }})"
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
@@ -62,7 +85,7 @@ jobs:
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
         with:
-          ref: ${{ github.event.inputs.ref || github.head_ref }}
+          ref: ${{ inputs.ref }}
 
       # The Godot export is consumed (re-archived) by the deploy repo; build the dylib
       # against the iOS 26 SDK so the final archive there satisfies Apple's SDK floor.
@@ -103,7 +126,8 @@ jobs:
           AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
           AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
           R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
-          REF: ${{ github.event.inputs.ref || github.head_ref }}
+          REF: ${{ inputs.ref }}
+          SHA_INPUT: ${{ inputs.sha }}
         run: |
           set -eu
           if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_S3_BUCKET:-}" ] || [ -z "${AWS_ENDPOINT_URL:-}" ]; then
@@ -131,7 +155,7 @@ jobs:
             brew install awscli
           fi
 
-          SHA="${{ github.sha }}"
+          SHA="${SHA_INPUT:-${{ github.sha }}}"
           SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
           KEY="ios/${SAFE_BRANCH}/${SHA}/export.tar.gz"
           LATEST_KEY="ios/${SAFE_BRANCH}/latest/export.tar.gz"
@@ -142,6 +166,11 @@ jobs:
 
           echo "✅ Unsigned export uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
           echo "🔗 ${R2_PUBLIC_BASE_URL}/${KEY}"
+
+      - name: Slack — iOS export uploaded
+        if: success() && env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "📦 iOS — unsigned export uploaded to R2 ✓ (${{ inputs.ref }})"
 
       # libdclgodot.dylib is BUILT here, so its dSYM must be uploaded to Sentry from here
       # (the deploy repo only re-archives the already-built dylib). Best-effort.

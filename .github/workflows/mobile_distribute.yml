@@ -66,6 +66,8 @@ jobs:
       # Defaults to 'true' for every event except the cron, where the change-detection
       # step below may set it to 'false' when main is unchanged since the last build.
       should_build: ${{ steps.changes.outputs.should_build || 'true' }}
+      slack_channel: ${{ steps.slack.outputs.channel }}
+      slack_ts: ${{ steps.slack.outputs.ts }}
     steps:
       - name: Resolve build context
         id: ctx
@@ -118,6 +120,27 @@ jobs:
             echo "should_build=true" >> "$GITHUB_OUTPUT"
             echo "🆕 main changed (last=${LAST_SHA:-none} current=$CURRENT_SHA) — building."
           fi
+
+      - name: Post Slack root message
+        id: slack
+        if: steps.changes.outputs.should_build != 'false'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          REF: ${{ steps.ctx.outputs.ref }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
+        run: |
+          if [ -z "${SLACK_BOT_TOKEN:-}" ] || [ -z "${SLACK_CHANNEL_ID:-}" ]; then
+            echo "slack: no token/channel — skipping root message"; exit 0
+          fi
+          if [ -n "$PR_NUMBER" ]; then LABEL="PR #${PR_NUMBER} (${REF})"; else LABEL="${REF}"; fi
+          TEXT="🏗️ Mobile build started — ${LABEL} · iOS → TestFlight + Android APK"
+          BODY=$(TEXT="$TEXT" CH="$SLACK_CHANNEL_ID" python3 -c 'import json,os;print(json.dumps({"channel":os.environ["CH"],"text":os.environ["TEXT"]}))')
+          RESP=$(curl -s -X POST https://slack.com/api/chat.postMessage -H "Authorization: Bearer $SLACK_BOT_TOKEN" -H 'Content-type: application/json' --data "$BODY")
+          TS=$(echo "$RESP" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("ts","") if d.get("ok") else "")')
+          echo "channel=$SLACK_CHANNEL_ID" >> "$GITHUB_OUTPUT"
+          echo "ts=$TS" >> "$GITHUB_OUTPUT"
+          echo "root ts: ${TS:-<failed>}"
 
       - name: Remove trigger label
         if: github.event_name == 'pull_request'
@@ -176,17 +199,62 @@ jobs:
             gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -f body="${COMMENT_BODY}"
           fi
 
-  ios:
-    name: 🍏 iOS → TestFlight
+  # iOS leg, step 1: build the unsigned Godot export and publish it to R2 (no Apple creds).
+  ios-build:
+    name: 🍏 iOS → R2 (unsigned export)
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
-    uses: ./.github/workflows/ios_builds.yml
+    uses: ./.github/workflows/ios_r2_artifact.yml
     with:
       ref: ${{ needs.prepare.outputs.ref }}
+      sha: ${{ needs.prepare.outputs.sha }}
       pr_number: ${{ needs.prepare.outputs.pr_number }}
-      # Empty on PR-label triggers (labels carry no text) → ios_builds auto-generates from the commit
-      whats_new: ${{ github.event.inputs.whats_new }}
+      slack_channel: ${{ needs.prepare.outputs.slack_channel }}
+      slack_ts: ${{ needs.prepare.outputs.slack_ts }}
     secrets: inherit
+
+  # iOS leg, step 2: hand the export off to godot-asc-deploy, which signs it and uploads to
+  # TestFlight (it holds all the Apple/ASC credentials; this repo holds none). Triggered via
+  # workflow_dispatch with a fine-grained PAT (Actions:write only — cannot push code).
+  ios-dispatch:
+    name: 🍏 iOS → hand off to signing (godot-asc-deploy)
+    needs: [prepare, ios-build]
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    env:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL:   ${{ needs.prepare.outputs.slack_channel }}
+      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Dispatch godot-asc-deploy (sign & upload to TestFlight)
+        env:
+          GH_TOKEN: ${{ secrets.ASC_DEPLOY_DISPATCH_TOKEN }}
+          BRANCH: ${{ needs.prepare.outputs.safe_branch }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          WHATS_NEW: ${{ github.event.inputs.whats_new }}
+          PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
+          CHANNEL: ${{ needs.prepare.outputs.slack_channel }}
+          TS: ${{ needs.prepare.outputs.slack_ts }}
+        run: |
+          set -eu
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "❌ ASC_DEPLOY_DISPATCH_TOKEN not set — cannot hand off to godot-asc-deploy."
+            exit 1
+          fi
+          gh workflow run deploy_testflight.yml \
+            --repo decentraland/godot-asc-deploy --ref main \
+            -f branch="$BRANCH" -f sha="$SHA" -f whats_new="$WHATS_NEW" \
+            -f pr_number="$PR_NUMBER" -f slack_channel="$CHANNEL" -f slack_ts="$TS"
+          echo "✅ Dispatched godot-asc-deploy for ${BRANCH}@${SHA}"
+      - name: Slack — handed off to signing
+        if: success() && env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "🤝 iOS — export handed off to the signing pipeline (godot-asc-deploy)"
+      - name: Slack — handoff failed
+        if: failure() && env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "❌ iOS — failed to hand off to the signing pipeline (check ASC_DEPLOY_DISPATCH_TOKEN)"
 
   android-notify:
     name: 🤖 Android → APK ready
@@ -202,12 +270,22 @@ jobs:
       # Public R2 domain mapped to the mobile-artifacts bucket root.
       R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL:   ${{ needs.prepare.outputs.slack_channel }}
+      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
       REF: ${{ needs.prepare.outputs.ref }}
       SHA: ${{ needs.prepare.outputs.sha }}
       PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Slack — Android build started
+        if: env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "🤖 Android — waiting for the signed APK from CI… (${REF})"
+
       - name: Validate required secrets
         run: |
           MISSING=""
@@ -254,6 +332,16 @@ jobs:
             echo "⏳ Not ready yet (CI conclusion='${CONCLUSION:-pending}'), retrying in 30s..."
             sleep 30
           done
+
+      - name: Slack — Android APK ready
+        if: success() && env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "✅ Android — APK ready: ${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+
+      - name: Slack — Android failed
+        if: failure() && env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "❌ Android — APK not produced for ${SHA} (CI build failed)"
 
       - name: Notify Slack - Android build ready
         if: success()
