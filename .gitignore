@@ -54,3 +54,6 @@ avatars-output-*/
 binary_cache/
 # Local benchmark env backup
 scripts/bench/.env.bak
+
+.env*
+!.env.example
