@@ -108,7 +108,10 @@ jobs:
 
       # Cache the Rust dep compilation (host + iOS) so we don't rebuild the whole tree every
       # run. WarpBuild-native cache (handles the large iOS target; runner is WarpBuild).
+      # Restore runs on every branch; the save (below) only writes on main, so PRs restore from
+      # main's cache without paying the multi-minute save on each push.
       - name: Set up build cache
+        id: cache
         uses: ./.github/actions/set-up-warp-cache
         with:
           cache-name: ios-r2-build
@@ -149,6 +152,13 @@ jobs:
       - name: Build iOS
         timeout-minutes: 20
         run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
+
+      # Persist the freshly built target/ — no-op off main (see save-warp-cache).
+      - name: Save build cache (main only)
+        uses: ./.github/actions/save-warp-cache
+        with:
+          cargo-key: ${{ steps.cache.outputs.cargo-key }}
+          rust-key: ${{ steps.cache.outputs.rust-key }}
 
       - name: Capture build version
         id: buildver
