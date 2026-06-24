@@ -164,3 +164,48 @@ on the navbar's full-rect `Button`.)
 - `scene` defaults `include_children` and `include_parents` to `false`. Pass
   them as `true` explicitly when you want the tree expanded; `entity` still
   inlines parents/direct children by default.
+
+## Unified channel (debug-hub) — same surface, reachable on any device
+
+The DebugWs server above LISTENS on loopback, so it's only reachable on the
+machine running the client. For **device builds (esp. iOS, which can't be dialed
+into)** use the **unified scene-inspector channel** instead: the device dials OUT
+to a desktop **debug-hub**, and local tools (AI / websocat) connect to the hub.
+
+Same command surface (`ping`/`scenes`/`scene`/`entity`/`ui_scene`/`ui_entity`/
+`avatars`/`avatar`/`app_ui`/`focus`/`eval`), but spoken over the scene-inspector
+CMD protocol — the source-of-truth contract an external inspector app already
+parses, so additions stay backward-compatible.
+
+Wire format (vs the loopback `{id,cmd}` form):
+- request: `{"type":"SCENE_INSPECTOR_CMD","cmd":"<verb>","args":{...},"id":"<id>"}`
+- reply:   `{"type":"SCENE_INSPECTOR_CMD_ACK","id":"<id>","ok":<bool>,"data":...}`
+- streams (push): `{"type":"SCENE_INSPECTOR","payload":{"sessionId":...,"entries":[{type:...}]}}`
+  where `entries[].type` ∈ crdt | op_call_start | op_call_end | scene_lifecycle |
+  perf | **log** | **network** | session_start | session_end.
+
+Bring it up:
+```bash
+cargo run -- debug-hub                       # device port 9231, consumer port 9230
+# launch the client pointed at the hub's device port (LAN IP shown in the banner):
+cargo run -- run -- --scene-inspector=ws://<this-mac>:9231          # desktop
+cargo run -- run --target ios -- --scene-inspector=ws://<this-mac>:9231   # device
+```
+
+Drive it (helpers in `scripts/`):
+```bash
+scripts/unified.sh ping
+scripts/unified.sh scene  '{"scene_id":0,"filters":{"component":["Transform"]}}'
+scripts/unified.sh avatar '{"by":"local"}'
+scripts/unified.sh eval   'Engine.get_frames_per_second()'
+scripts/unified-tail.sh log,network          # subscribe + tail (opt-in streams)
+```
+
+**Capture is connection-gated + opt-in.** With no consumer connected, the device
+captures NOTHING (no buffering) — safe to leave the tool enabled in prod. Classic
+streams (crdt/perf) flow once a consumer connects; `log`/`network` are opt-in via
+`subscribe`. `eval` is hard-gated out of production builds.
+
+**MCP / AI loop:** the hub's consumer port (`ws://127.0.0.1:9230`) is a stable
+local endpoint an MCP server (or the helpers above, called from Bash) can use to
+read all logs and issue `eval`/queries — the same contract the external app uses.

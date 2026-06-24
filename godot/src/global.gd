@@ -330,14 +330,6 @@ func _ready():
 
 		if deep_link_obj.iap_enabled:
 			Iap.enable()
-			
-	# Start the unified log stream as early as possible (works pre-login, unlike
-	# explorer.gd which only runs in-world). Source: baked deeplink or --log-stream.
-	var log_stream_target: String = deep_link_obj.params.get("log-stream", "")
-	if log_stream_target.is_empty():
-		log_stream_target = cli.log_stream
-	if log_stream_target.begins_with("ws://") or log_stream_target.begins_with("wss://"):
-		DclGlobal.start_log_stream(log_stream_target)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():

@@ -282,21 +282,6 @@ pub struct DclGlobal {
 #[godot_api]
 impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
-        // Install stdout/stderr log capture as early as possible when --log-stream
-        // is set, so boot logs are retained in the ring buffer before the client
-        // connects. DEV-ONLY: gated to debug builds, so release/TestFlight/App Store
-        // never installs the capturing logger or the fd redirect (see also
-        // `start_log_stream`). Cheap and tokio-free; the WebSocket client is started
-        // later from GDScript via `start_log_stream` (explorer.gd / deep_link_router).
-        if godot::classes::Os::singleton().is_debug_build()
-            && crate::tools::godot_logger::find_arg_value(
-                &crate::tools::godot_logger::get_godot_args(),
-                "--log-stream",
-            )
-            .is_some()
-        {
-            crate::tools::log_stream::install_capture();
-        }
 
         #[cfg(feature = "use_deno")]
         crate::dcl::js::init_runtime();
@@ -759,38 +744,4 @@ impl DclGlobal {
         }
     }
 
-    /// Start (or re-target) the unified log stream: capture stdout/stderr
-    /// (Rust + GDScript + native logs) and stream it to a desktop `log-server`
-    /// over WebSocket. `url` is `ws://host:port`. Opt-in; called from GDScript
-    /// when `--log-stream` / `?log-stream=` is set. Safe to call repeatedly.
-    #[func]
-    pub fn start_log_stream(url: GString) {
-        // DEV-ONLY: never activate on release/TestFlight/App Store builds. Without
-        // this gate a crafted deeplink (`?log-stream=ws://attacker`) would stream all
-        // app logs out to an arbitrary host in production. Mirrors the debug gate on
-        // the dev localhost relay (godot/src/tool/dev_localhost_relay.gd). Uses a
-        // plain print (not warn/error) so it never reaches Sentry.
-        if !godot::classes::Os::singleton().is_debug_build() {
-            godot_print!("[log-stream] ignored: not a debug build");
-            return;
-        }
-        let url = url.to_string();
-        if url.is_empty() {
-            return;
-        }
-        godot_print!("[log-stream] starting client -> {}", url);
-        crate::tools::log_stream::start_client(url);
-    }
-
-    /// Write a line straight to the unified log stream from GDScript.
-    ///
-    /// On iOS, GDScript `print()` goes to `os_log` and never reaches the stream's
-    /// stdout/stderr fd capture, so `print` is invisible over `--log-stream`. This routes
-    /// the message through Rust's stderr, which the fd capture DOES tee into the hub — so
-    /// it shows up on the device stream. On desktop it just lands on stderr. Use for
-    /// on-device GDScript diagnostics that must be visible over `--log-stream`.
-    #[func]
-    pub fn log_to_stream(message: GString) {
-        eprintln!("{}", message);
-    }
 }

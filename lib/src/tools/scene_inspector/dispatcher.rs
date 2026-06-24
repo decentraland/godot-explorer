@@ -20,8 +20,9 @@ use super::logger::{
 };
 use super::storage::StorageManager;
 use super::{
-    is_bin_payload_included, is_lifecycle_verbose, set_include_bin_payload, set_lifecycle_verbose,
-    take_dropped_count, try_send_entry,
+    is_bin_payload_included, is_consumer_connected, is_lifecycle_verbose, is_stream_logs,
+    is_stream_network, set_consumer_connected, set_include_bin_payload, set_lifecycle_verbose,
+    set_stream_logs, set_stream_network, take_dropped_count, try_send_entry,
 };
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -168,6 +169,60 @@ impl SceneInspectorDispatcher {
     #[func]
     fn is_bin_payload_included(&self) -> bool {
         is_bin_payload_included()
+    }
+
+    /// Master capture gate. The WS bridge calls this on connect / disconnect.
+    /// With no consumer connected, every producer short-circuits (no buffering).
+    /// On disconnect, opt-in streams are reset off so nothing keeps capturing
+    /// once the consumer is gone.
+    #[func]
+    fn set_consumer_connected(&mut self, connected: bool) {
+        set_consumer_connected(connected);
+        if !connected {
+            set_stream_logs(false);
+            set_stream_network(false);
+            crate::tools::network_inspector::NETWORK_INSPECTOR_ENABLE
+                .store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    #[func]
+    fn is_consumer_connected(&self) -> bool {
+        is_consumer_connected()
+    }
+
+    /// Fold captured log lines (Rust / GDScript+engine / native Swift+ObjC) into
+    /// the stream as `"log"` entries. Off by default; the `subscribe` command
+    /// turns it on. High-volume — opt-in only.
+    #[func]
+    fn set_stream_logs(&mut self, enabled: bool) {
+        set_stream_logs(enabled);
+        if enabled {
+            // Register the Godot logger sink (and, on iOS, the native fd capture)
+            // so log lines actually reach the stream. Idempotent; only reached via
+            // an explicit subscribe from a connected consumer.
+            crate::tools::log_stream::install_capture();
+        }
+    }
+
+    #[func]
+    fn is_stream_logs(&self) -> bool {
+        is_stream_logs()
+    }
+
+    /// Fold HTTP traffic into the stream as `"network"` entries. Also flips the
+    /// network inspector's enable flag, since producers only emit events while it
+    /// is active.
+    #[func]
+    fn set_stream_network(&mut self, enabled: bool) {
+        set_stream_network(enabled);
+        crate::tools::network_inspector::NETWORK_INSPECTOR_ENABLE
+            .store(enabled, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    #[func]
+    fn is_stream_network(&self) -> bool {
+        is_stream_network()
     }
 
     /// Returns a JSON array of the current CRDT state snapshot for hot-connect.

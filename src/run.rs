@@ -802,6 +802,37 @@ fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result
 
     print_message(MessageType::Success, "APK installed successfully");
 
+    // If remote-debug is requested, set up the reverse tunnel so the device's
+    // localhost:<port> reaches the editor's debugger on this Mac. This is the
+    // Android counterpart of the iOS `godot_cmdline` + LAN path. Opt-in: only
+    // when `--remote-debug tcp://…:<port>` is among the launch args.
+    if let Some(port) = remote_debug_port(&extras) {
+        print_message(
+            MessageType::Info,
+            &format!("Setting up `adb reverse tcp:{port}` for remote-debug"),
+        );
+        let reverse = std::process::Command::new("adb")
+            .args([
+                "-s",
+                &device_id,
+                "reverse",
+                &format!("tcp:{port}"),
+                &format!("tcp:{port}"),
+            ])
+            .status();
+        if reverse.map(|s| s.success()).unwrap_or(false) {
+            print_message(
+                MessageType::Info,
+                "Open the editor with the debugger listening to attach.",
+            );
+        } else {
+            print_message(
+                MessageType::Warning,
+                "adb reverse failed; remote-debug may not attach",
+            );
+        }
+    }
+
     // Launch the app
     let spinner = create_spinner("Launching application...");
     let mut launch_args = vec![
@@ -859,6 +890,27 @@ fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result
         .status()?;
 
     Ok(())
+}
+
+/// Extract the remote-debug port from launch args, accepting either
+/// `--remote-debug tcp://host:PORT` (two tokens) or `--remote-debug=tcp://host:PORT`
+/// (one token). Returns None when remote-debug isn't requested.
+fn remote_debug_port(extras: &[String]) -> Option<u16> {
+    for (i, a) in extras.iter().enumerate() {
+        let uri = if let Some(v) = a.strip_prefix("--remote-debug=") {
+            Some(v.to_string())
+        } else if a == "--remote-debug" {
+            extras.get(i + 1).cloned()
+        } else {
+            None
+        };
+        if let Some(uri) = uri {
+            if let Some(port) = uri.rsplit(':').next().and_then(|p| p.parse::<u16>().ok()) {
+                return Some(port);
+            }
+        }
+    }
+    None
 }
 
 /// iOS bundle identifier

@@ -19,18 +19,10 @@ use crate::consts::GODOT_PROJECT_FOLDER;
 /// Path (relative to repo root) of the generated file. Gitignored.
 const GENERATED_GD: &str = "src/generated/build_config.gd";
 
-/// Combine an explicit `--deeplink` with a `--log-stream` ws URL into a single
-/// deeplink string. Returns empty when neither is provided.
-pub fn resolve_deeplink(deeplink: Option<&str>, log_stream_ws: Option<&str>) -> String {
-    let mut dl = deeplink.unwrap_or("").trim().to_string();
-    if let Some(ws) = log_stream_ws {
-        if dl.is_empty() {
-            dl = "decentraland://open".to_string();
-        }
-        let sep = if dl.contains('?') { '&' } else { '?' };
-        dl = format!("{dl}{sep}log-stream={ws}");
-    }
-    dl
+/// Normalize an explicit `--deeplink` into the baked deeplink string. Returns
+/// empty when none is provided.
+pub fn resolve_deeplink(deeplink: Option<&str>) -> String {
+    deeplink.unwrap_or("").trim().to_string()
 }
 
 /// Overwrite `godot/src/generated/build_config.gd` with the given deeplink (empty

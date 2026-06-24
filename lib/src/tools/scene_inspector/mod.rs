@@ -14,9 +14,9 @@ pub mod storage;
 pub use config::SceneInspectorConfig;
 pub use dispatcher::SceneInspectorDispatcher;
 pub use logger::{
-    current_timestamp_ms, CrdtDirection, CrdtLogEntry, CrdtOperation, OpCallEndEntry,
-    OpCallStartEntry, SceneInspectorEntry, SceneInspectorSender, SceneLifecycleEntry,
-    SceneLifecycleEvent, SessionEndEntry, SessionStartEntry,
+    current_timestamp_ms, CrdtDirection, CrdtLogEntry, CrdtOperation, LogEntry, NetworkEntry,
+    OpCallEndEntry, OpCallStartEntry, SceneInspectorEntry, SceneInspectorSender,
+    SceneLifecycleEntry, SceneLifecycleEvent, SessionEndEntry, SessionStartEntry,
 };
 pub use storage::StorageManager;
 
@@ -102,6 +102,92 @@ pub fn set_include_bin_payload(enabled: bool) {
 
 pub fn is_bin_payload_included() -> bool {
     INCLUDE_BIN_PAYLOAD.load(Ordering::Relaxed)
+}
+
+/// Whether a debug consumer is currently connected (the WS bridge flips this on
+/// open/close). The master gate for opt-in capture: with no consumer connected,
+/// producers must do NOTHING — no buffering "just in case", even if the tool is
+/// left enabled in a production build. Keeps prod impact ≈ zero until someone
+/// actually connects and subscribes.
+static CONSUMER_CONNECTED: AtomicBool = AtomicBool::new(false);
+
+pub fn set_consumer_connected(connected: bool) {
+    CONSUMER_CONNECTED.store(connected, Ordering::Relaxed);
+}
+
+pub fn is_consumer_connected() -> bool {
+    CONSUMER_CONNECTED.load(Ordering::Relaxed)
+}
+
+/// Whether captured log lines are folded into the scene-inspector stream as
+/// `"log"` entries. Default `false`: opt-in via the `subscribe` command so the
+/// log firehose doesn't flood the channel (which CRDT entries share) unless a
+/// consumer asks for it.
+static STREAM_LOGS: AtomicBool = AtomicBool::new(false);
+
+pub fn set_stream_logs(enabled: bool) {
+    STREAM_LOGS.store(enabled, Ordering::Relaxed);
+}
+
+pub fn is_stream_logs() -> bool {
+    STREAM_LOGS.load(Ordering::Relaxed)
+}
+
+/// Whether HTTP observations are folded into the scene-inspector stream as
+/// `"network"` entries. Default `false`; opt-in via `subscribe`.
+static STREAM_NETWORK: AtomicBool = AtomicBool::new(false);
+
+pub fn set_stream_network(enabled: bool) {
+    STREAM_NETWORK.store(enabled, Ordering::Relaxed);
+}
+
+pub fn is_stream_network() -> bool {
+    STREAM_NETWORK.load(Ordering::Relaxed)
+}
+
+/// Fold a captured log line into the scene-inspector stream. No-op unless log
+/// streaming is enabled (via `subscribe`) AND the dispatcher is initialized.
+///
+/// MUST NOT log via `tracing` / Godot — it is called from inside the log sinks
+/// (tracing layer, Godot logger, fd capture) and would recurse.
+#[allow(clippy::too_many_arguments)]
+pub fn emit_log(
+    source: &str,
+    level: Option<&str>,
+    target: Option<&str>,
+    file: Option<&str>,
+    line: Option<u32>,
+    msg: String,
+) {
+    // Master gate first: no connected consumer → no work, nothing buffered.
+    if !is_consumer_connected() || !is_stream_logs() {
+        return;
+    }
+    if let Some(sender) = get_logger_sender() {
+        try_send_entry(
+            &sender,
+            SceneInspectorEntry::Log(LogEntry {
+                timestamp_ms: current_timestamp_ms(),
+                source: source.to_string(),
+                level: level.map(str::to_string),
+                target: target.map(str::to_string),
+                file: file.map(str::to_string),
+                line,
+                msg,
+            }),
+        );
+    }
+}
+
+/// Fold an HTTP observation into the scene-inspector stream. No-op unless
+/// network streaming is enabled (via `subscribe`) AND the dispatcher exists.
+pub fn emit_network(entry: NetworkEntry) {
+    if !is_consumer_connected() || !is_stream_network() {
+        return;
+    }
+    if let Some(sender) = get_logger_sender() {
+        try_send_entry(&sender, SceneInspectorEntry::Network(entry));
+    }
 }
 
 /// Logs a scene lifecycle event. No-op if the Scene Inspector is not

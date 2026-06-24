@@ -1,79 +1,36 @@
-//! Unified log streaming for mobile debugging (primarily iOS).
+//! Log capture for the unified scene-inspector channel.
 //!
-//! Problem: on iOS there is no convenient `adb logcat` equivalent. Logs live in
-//! several channels — Rust (`tracing`), GDScript (`print`/`push_error`), the Godot
-//! engine, and native Swift/ObjC (`NSLog`/`printf`). Crucially, on iOS Godot does
-//! NOT route its own output (GDScript `print`, `godot_print!`) to the process
-//! stdout/stderr — so a plain fd capture misses the most important logs.
+//! Captures logs from every source and folds them into the scene-inspector
+//! stream as `"log"` entries (`crate::tools::scene_inspector::emit_log`). There
+//! is no separate transport here: the scene-inspector bridge connects out to the
+//! debug-hub, and `emit_log` is connection-gated, so nothing is captured until a
+//! consumer subscribes.
 //!
-//! Capture strategy (two complementary sinks feeding one hub):
-//!  1. A custom Godot `Logger` registered via `OS.add_logger`. Godot calls it for
-//!     every `print` / `push_error` / engine message, so this captures GDScript,
-//!     `godot_print!` (Rust routes through Godot's logger), engine logs and errors
-//!     on every platform — independent of where stdout actually goes.
-//!  2. On iOS only, an stdout/stderr fd redirect to catch native `printf` / Swift
-//!     `print` / `fprintf(stderr)` (which bypass Godot's logger). Captured bytes
-//!     are teed back to the real fds so `--console` keeps working.
-//!
-//! The app acts as a WebSocket **client** that dials out to a desktop collector
-//! (`cargo run -- log-server`), mirroring the Scene Inspector connect-out model.
-//! Activation is opt-in via `--log-stream=ws://host:port` or a baked deeplink,
-//! off by default.
+//! Logs live in several channels — Rust (`tracing`), GDScript (`print` /
+//! `push_error`), the Godot engine, and native Swift/ObjC (`NSLog` / `printf`).
+//! Sinks:
+//!  1. `DclLogHubLogger` — a Godot `Logger` (`OS.add_logger`). Godot calls it for
+//!     every `print` / `push_error` / engine message, capturing GDScript,
+//!     `godot_print!` (Rust routed through Godot's logger) and engine logs on
+//!     every platform.
+//!  2. `LogHubLayer` — a `tracing` layer for structured Rust events (all levels,
+//!     with file/line); the Rust path on iOS, where `godot_print` never reaches
+//!     stdout.
+//!  3. iOS-only fd capture — an stdout/stderr redirect for native `printf` /
+//!     Swift `print` (which bypass Godot's logger), teed back to the real fds so
+//!     `--console` keeps working.
 
-use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, OnceLock};
 
-use futures_util::{SinkExt, StreamExt};
 use godot::classes::{ILogger, Logger, Os};
 use godot::prelude::*;
-use tokio::sync::{broadcast, Notify};
-use tokio_tungstenite::tungstenite::Message;
-
-use crate::scene_runner::tokio_runtime::TokioRuntime;
-
-/// Max lines replayed to a freshly connected client (recent history).
-const RING_CAP: usize = 4096;
-/// Broadcast backlog; under extreme volume the oldest live lines are dropped
-/// (the connected client lags) rather than blocking the producers.
-const BROADCAST_CAP: usize = 8192;
-
-struct Hub {
-    bcast: broadcast::Sender<String>,
-    ring: Mutex<VecDeque<String>>,
-}
-
-fn hub() -> &'static Hub {
-    static HUB: OnceLock<Hub> = OnceLock::new();
-    HUB.get_or_init(|| Hub {
-        bcast: broadcast::channel(BROADCAST_CAP).0,
-        ring: Mutex::new(VecDeque::with_capacity(RING_CAP)),
-    })
-}
-
-/// Push a captured log line into the hub (ring buffer + live broadcast).
-/// MUST NOT log via Godot/tracing — it is called from inside the Godot logger and
-/// would recurse.
-fn push(line: String) {
-    if line.is_empty() {
-        return;
-    }
-    let hub = hub();
-    {
-        let mut ring = hub.ring.lock().unwrap();
-        if ring.len() >= RING_CAP {
-            ring.pop_front();
-        }
-        ring.push_back(line.clone());
-    }
-    let _ = hub.bcast.send(line);
-}
 
 // ---------------------------------------------------------------------------
 // Godot logger sink: captures GDScript + godot_print! + engine + errors.
 // ---------------------------------------------------------------------------
 
-/// A Godot `Logger` that forwards every engine/GDScript/Rust message into the hub.
+/// A Godot `Logger` that folds every engine/GDScript/Rust message into the
+/// scene-inspector stream.
 #[derive(GodotClass)]
 #[class(init, base = Logger)]
 struct DclLogHubLogger {
@@ -82,33 +39,42 @@ struct DclLogHubLogger {
 
 #[godot_api]
 impl ILogger for DclLogHubLogger {
-    fn log_message(&mut self, message: GString, _error: bool) {
-        // A single message may contain several lines (and trailing newline).
+    fn log_message(&mut self, message: GString, error: bool) {
+        // Cross-platform tap: sees GDScript/engine messages and (on desktop /
+        // Android, where LogHubLayer is absent) Rust logs routed via godot_print!.
+        let level = if error { Some("error") } else { None };
+        // A single message may contain several lines (and a trailing newline).
         for line in message.to_string().lines() {
-            // When the tracing LogHubLayer is active (iOS), Rust logs reach the
-            // hub directly with a "[Rust:" prefix; skip the godot_print! copy that
-            // also lands here via GodotTracingLayer to avoid duplicating them.
+            // On iOS the LogHubLayer already emits Rust events (prefixed "[Rust:");
+            // skip the godot_print! copy here to avoid duplicating them.
             if RUST_VIA_LAYER.load(Ordering::Relaxed) && line.starts_with("[Rust:") {
                 continue;
             }
-            push(line.to_string());
+            crate::tools::scene_inspector::emit_log(
+                "godot",
+                level,
+                None,
+                None,
+                None,
+                line.to_string(),
+            );
         }
     }
 
-    // NOTE: `log_error` is intentionally NOT overridden. Its `Array<Gd<ScriptBacktrace>>`
-    // parameter triggers a gdext class-id panic on iOS. Rust errors/warnings are
-    // captured via the tracing `LogHubLayer` instead; GDScript `print` still flows
-    // through `log_message`.
+    // NOTE: `log_error` is intentionally NOT overridden. Its
+    // `Array<Gd<ScriptBacktrace>>` parameter triggers a gdext class-id panic on
+    // iOS. Rust errors/warnings are captured via `LogHubLayer`; GDScript `print`
+    // still flows through `log_message`.
 }
 
-/// True once the tracing `LogHubLayer` is feeding Rust logs into the hub, so
-/// `log_message` can drop the duplicate `godot_print!` copies.
+/// True once `LogHubLayer` is feeding Rust events, so `log_message` can drop the
+/// duplicate `godot_print!` copies on iOS.
 static RUST_VIA_LAYER: AtomicBool = AtomicBool::new(false);
 
-/// A `tracing` Layer that pushes every Rust log event straight into the hub —
-/// independent of where Godot routes its console output (it doesn't reach stdout
-/// on iOS), and covering all levels including WARN/ERROR. Add it to the subscriber
-/// alongside the existing layers (see `dcl_global::*::init_logger`).
+/// A `tracing` layer that folds every Rust event into the scene-inspector stream
+/// as a structured `"rust"` log entry. Added to the subscriber in
+/// `dcl_global::*::init_logger`; on iOS it's the Rust path since `godot_print`
+/// doesn't reach stdout there.
 pub struct LogHubLayer;
 
 impl LogHubLayer {
@@ -142,15 +108,22 @@ where
         let mut visitor = crate::tools::godot_logger::MessageVisitor::default();
         event.record(&mut visitor);
 
-        let prefix = match level {
-            tracing::Level::ERROR => "ERROR ",
-            tracing::Level::WARN => "WARN ",
-            _ => "",
+        let level_str = match level {
+            tracing::Level::ERROR => "error",
+            tracing::Level::WARN => "warn",
+            tracing::Level::INFO => "info",
+            tracing::Level::DEBUG => "debug",
+            tracing::Level::TRACE => "trace",
         };
-        push(format!(
-            "{prefix}[Rust:{target}] {} ({file}:{line})",
-            visitor.message
-        ));
+        // No-op unless a consumer subscribed to logs (connection-gated).
+        crate::tools::scene_inspector::emit_log(
+            "rust",
+            Some(level_str),
+            Some(target),
+            Some(file),
+            Some(line),
+            visitor.message,
+        );
     }
 }
 
@@ -165,127 +138,13 @@ fn register_godot_logger() {
     Os::singleton().add_logger(&logger.upcast::<Logger>());
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/// Install all capture sinks (idempotent, cheap, no tokio). Safe to call early.
+/// Install the capture sinks (idempotent, cheap, no tokio). Called when a
+/// consumer subscribes to logs (`SceneInspectorDispatcher::set_stream_logs`), so
+/// nothing is installed until logs are actually wanted.
 pub fn install_capture() {
     register_godot_logger();
     #[cfg(target_os = "ios")]
     fd_capture::install();
-}
-
-/// Start (or re-target) the outbound WebSocket client that streams captured logs
-/// to `url` (e.g. `ws://192.168.1.5:9231`). Ensures capture is installed first.
-/// Safe to call multiple times — the first call spawns the client; later calls
-/// update the target and trigger a hot-reconnect.
-pub fn start_client(url: String) {
-    install_capture();
-
-    let slot = target_url();
-    {
-        let mut guard = slot.lock().unwrap();
-        *guard = url;
-    }
-    url_changed().notify_waiters();
-
-    if CLIENT_STARTED.swap(true, Ordering::SeqCst) {
-        return;
-    }
-    TokioRuntime::spawn(async move {
-        client_loop().await;
-    });
-}
-
-// ---------------------------------------------------------------------------
-// WebSocket client (connect-out + backoff + ring replay)
-// ---------------------------------------------------------------------------
-
-static CLIENT_STARTED: AtomicBool = AtomicBool::new(false);
-
-fn target_url() -> &'static Mutex<String> {
-    static T: OnceLock<Mutex<String>> = OnceLock::new();
-    T.get_or_init(|| Mutex::new(String::new()))
-}
-
-fn url_changed() -> &'static Notify {
-    static N: OnceLock<Notify> = OnceLock::new();
-    N.get_or_init(Notify::new)
-}
-
-fn current_url() -> String {
-    target_url().lock().unwrap().clone()
-}
-
-async fn client_loop() {
-    use std::time::Duration;
-    let mut backoff = 1.0f64;
-    loop {
-        let url = current_url();
-        if url.is_empty() {
-            url_changed().notified().await;
-            continue;
-        }
-
-        match tokio_tungstenite::connect_async(&url).await {
-            Ok((ws, _)) => {
-                backoff = 1.0;
-                tracing::info!("[log-stream] connected to {}", url);
-                serve_connection(ws).await;
-                tracing::debug!("[log-stream] disconnected from {}", url);
-            }
-            Err(e) => {
-                tracing::debug!("[log-stream] connect to {} failed: {}", url, e);
-            }
-        }
-
-        tokio::select! {
-            _ = tokio::time::sleep(Duration::from_secs_f64(backoff)) => {}
-            _ = url_changed().notified() => { backoff = 1.0; continue; }
-        }
-        backoff = (backoff * 2.0).min(30.0);
-    }
-}
-
-async fn serve_connection<S>(ws: tokio_tungstenite::WebSocketStream<S>)
-where
-    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
-{
-    let hub = hub();
-    // Subscribe BEFORE replaying history so no live line slips through the gap.
-    let mut rx = hub.bcast.subscribe();
-    let (mut write, mut read) = ws.split();
-
-    let backlog: Vec<String> = {
-        let ring = hub.ring.lock().unwrap();
-        ring.iter().cloned().collect()
-    };
-    for line in backlog {
-        if write.send(Message::Text(line)).await.is_err() {
-            return;
-        }
-    }
-
-    loop {
-        tokio::select! {
-            msg = rx.recv() => match msg {
-                Ok(line) => {
-                    if write.send(Message::Text(line)).await.is_err() {
-                        return;
-                    }
-                }
-                Err(broadcast::error::RecvError::Lagged(_)) => continue,
-                Err(broadcast::error::RecvError::Closed) => return,
-            },
-            incoming = read.next() => match incoming {
-                Some(Ok(Message::Close(_))) | None => return,
-                Some(Err(_)) => return,
-                Some(Ok(_)) => {}
-            },
-            _ = url_changed().notified() => return,
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -383,10 +242,12 @@ mod fd_capture {
                 while end > 0 && (line[end - 1] == b'\n' || line[end - 1] == b'\r') {
                     end -= 1;
                 }
-                super::push(String::from_utf8_lossy(&line[..end]).into_owned());
+                let s = String::from_utf8_lossy(&line[..end]).into_owned();
+                crate::tools::scene_inspector::emit_log("native", None, None, None, None, s);
             } else if acc.len() > MAX_LINE {
                 let line: Vec<u8> = std::mem::take(acc);
-                super::push(String::from_utf8_lossy(&line).into_owned());
+                let s = String::from_utf8_lossy(&line).into_owned();
+                crate::tools::scene_inspector::emit_log("native", None, None, None, None, s);
                 break;
             } else {
                 break;
