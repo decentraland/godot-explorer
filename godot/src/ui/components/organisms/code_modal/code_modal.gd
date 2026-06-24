@@ -199,10 +199,8 @@ func get_code() -> String:
 	return _hidden_input.text
 
 
-func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			close()
+func _on_gui_input(_event: InputEvent) -> void:
+	pass
 
 
 func _set_verifying_children_visible(value: bool) -> void:

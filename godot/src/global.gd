@@ -83,7 +83,7 @@ const FORCE_DEEPLINK = ""
 # A push_warning fires whenever it is active so it can't ship unnoticed.
 # (For a fresh guest, prefer clearing app data / user:// — that resets the
 # anchor only when DEBUG_GUEST_ROTATE_ANCHOR_ID is on, see below.)
-const DEBUG_GUEST_ANCHOR_OVERRIDE: String = "device-0011"
+const DEBUG_GUEST_ANCHOR_OVERRIDE: String = "device-0015"
 
 # DEBUG ONLY — must be `false` for any shipped build. When `true`,
 # get_device_anchor_id() ignores the platform-native device anchor (Android
@@ -354,14 +354,6 @@ func _ready():
 
 		if deep_link_obj.iap_enabled:
 			Iap.enable()
-
-	# Start the unified log stream as early as possible (works pre-login, unlike
-	# explorer.gd which only runs in-world). Source: baked deeplink or --log-stream.
-	var log_stream_target: String = deep_link_obj.params.get("log-stream", "")
-	if log_stream_target.is_empty():
-		log_stream_target = cli.log_stream
-	if log_stream_target.begins_with("ws://") or log_stream_target.begins_with("wss://"):
-		DclGlobal.start_log_stream(log_stream_target)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():

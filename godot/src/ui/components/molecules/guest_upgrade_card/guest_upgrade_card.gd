@@ -123,6 +123,7 @@ func _async_on_add_email_pressed() -> void:
 		)
 	)
 	if modal:
+		modal.dismissable = false
 		modal.dcl_text_edit.wrap_text = false
 		modal.dcl_text_edit.validate_on_blur = true
 		# The modal owns the spinner + close timing now: it runs _async_send_code
@@ -242,7 +243,7 @@ func _friendly_error(raw: String) -> String:
 	if lower.contains("already") or lower.contains("linked") or lower.contains("conflict"):
 		return "This email is already linked to another account."
 	if lower.contains("invalid") or lower.contains("code") or lower.contains("400"):
-		return "That code didn't work. Check it and try again."
+		return "The code is invalid or expired. Please resend code."
 	return "Something went wrong. Please try again."
 
 

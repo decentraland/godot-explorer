@@ -23,6 +23,9 @@ const SUBMIT_OK = "ok"
 const SUBMIT_INVALID = "invalid"
 const SUBMIT_ERROR = "error"
 
+## When false, tapping outside the modal does nothing. Default true to preserve
+## existing behaviour for all other use cases.
+var dismissable: bool = true
 var _validation_callable: Callable
 # Optional async handler injected by the caller. Receives the entered value and
 # returns a Dictionary { "status": SUBMIT_*, "message": String }. When unset the
@@ -60,11 +63,10 @@ func _ready() -> void:
 
 
 func _on_gui_input(event: InputEvent) -> void:
-	if _busy:
+	if not dismissable or _busy:
 		return
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			close()
+	if event is InputEventScreenTouch and event.pressed:
+		close()
 
 
 func setup(

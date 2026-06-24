@@ -156,6 +156,8 @@ func _ready():
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_main_category_filter_type)
+			if wearable_filter_button.get_category_name() == default_main_category:
+				wearable_filter_button.button_pressed = true
 
 	for wearable_filter_button in container_sub_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
