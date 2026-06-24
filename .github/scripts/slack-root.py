@@ -1,42 +1,78 @@
 #!/usr/bin/env python3
 """Create or update the Slack "root" status card for the mobile build pipeline.
 
-Best-effort: never fails the build (exits 0 even on Slack errors).
-Reads everything from the environment so it can be reused across repos.
+Merge-on-read: the full card state is stored in the message `metadata`. On update we READ
+the current state (needs channels:history / groups:history), merge in ONLY the fields this
+call provides (non-empty env vars), re-render, and chat.update. So each leg owns its own
+fields (e.g. Android owns ANDROID_LINE/APK_URL, iOS owns IOS_LINE/build number) and no leg
+ever clobbers another's. Best-effort: never fails the build.
 
+Env (only NON-EMPTY values are merged; everything else is preserved):
   SLACK_BOT_TOKEN, SLACK_CHANNEL   required
-  SLACK_TS                         if set -> chat.update that message; else chat.postMessage
-  STATUS                           building | success | failed   (default building)
-  BUILD_VERSION, TRIGGERED_BY      strings
-  PR_NUMBER, PR_URL                PR link
-  COMMIT, COMMIT_URL               commit link
-  IOS_LINE, ANDROID_LINE           per-platform status text (e.g. "✅ TestFlight build 624")
-  APK_URL                          if set -> "Download APK" button
-  TESTFLIGHT_URL, RUN_URL          extra buttons
+  SLACK_TS                         if set -> read+merge+chat.update; else chat.postMessage
+  STATUS                           building | success | failed   (only set it when you mean to)
+  BUILD_VERSION, TRIGGERED_BY
+  PR_NUMBER, PR_URL, COMMIT, COMMIT_URL
+  IOS_LINE, ANDROID_LINE, APK_URL, RUN_URL, TESTFLIGHT_URL
 
-On create it prints `ts=<ts>` and appends ts/channel to $GITHUB_OUTPUT.
+On create prints `ts=<ts>` and appends ts/channel to $GITHUB_OUTPUT.
 """
-import os, sys, json, urllib.request
+import os, sys, json, urllib.request, urllib.parse
+
+API = "https://slack.com/api"
+FIELDS = ["status", "build_version", "triggered_by", "pr_number", "pr_url",
+          "commit", "commit_url", "ios_line", "android_line", "apk_url",
+          "run_url", "testflight_url"]
 
 def env(k, d=""): return os.environ.get(k, d).strip()
 
 token, channel = env("SLACK_BOT_TOKEN"), env("SLACK_CHANNEL")
 if not token or not channel:
     print("slack-root: no token/channel — skipping"); sys.exit(0)
-
 ts = env("SLACK_TS")
-status = env("STATUS", "building").lower()
+
+def slack(method, payload):
+    req = urllib.request.Request(f"{API}/{method}", data=json.dumps(payload).encode(),
+        headers={"Authorization": f"Bearer {token}", "Content-type": "application/json"})
+    return json.load(urllib.request.urlopen(req))
+
+def read_state():
+    """Fetch the current card state from the message metadata (best-effort)."""
+    q = urllib.parse.urlencode({"channel": channel, "latest": ts, "limit": 1,
+                                "inclusive": "true", "include_all_metadata": "true"})
+    req = urllib.request.Request(f"{API}/conversations.history?{q}",
+        headers={"Authorization": f"Bearer {token}"})
+    try:
+        d = json.load(urllib.request.urlopen(req))
+        msgs = d.get("messages", []) if d.get("ok") else []
+        if msgs and msgs[0].get("ts") == ts:
+            return dict(msgs[0].get("metadata", {}).get("event_payload", {}) or {})
+        print(f"slack-root: could not read prior state (ok={d.get('ok')} err={d.get('error')})", file=sys.stderr)
+    except Exception as e:
+        print(f"slack-root: read failed: {e}", file=sys.stderr)
+    return {}
+
+# Fields this call wants to set (non-empty only) — everything else is preserved.
+incoming = {k: env(k.upper()) for k in FIELDS if env(k.upper())}
+
+if ts:
+    state = read_state()
+    state.update(incoming)
+else:
+    state = {"status": "building"}   # baseline for a fresh card
+    state.update(incoming)
+
+status = (state.get("status") or "building").lower()
 emoji = {"building": "⏳", "success": "✅", "failed": "❌"}.get(status, "⏳")
 label = {"building": "BUILDING", "success": "SUCCESS", "failed": "FAILED"}.get(status, status.upper())
-
-bv = env("BUILD_VERSION") or "—"
-trig = env("TRIGGERED_BY") or "—"
-commit, commit_url = env("COMMIT"), env("COMMIT_URL")
-pr_number, pr_url = env("PR_NUMBER"), env("PR_URL")
-ios_line, android_line = env("IOS_LINE"), env("ANDROID_LINE")
-apk_url = env("APK_URL")
-tf_url = env("TESTFLIGHT_URL", "https://appstoreconnect.apple.com/apps")
-run_url = env("RUN_URL")
+bv = state.get("build_version") or "—"
+trig = state.get("triggered_by") or "—"
+commit, commit_url = state.get("commit", ""), state.get("commit_url", "")
+pr_number, pr_url = state.get("pr_number", ""), state.get("pr_url", "")
+ios_line, android_line = state.get("ios_line", ""), state.get("android_line", "")
+apk_url = state.get("apk_url", "")
+tf_url = state.get("testflight_url") or "https://appstoreconnect.apple.com/apps"
+run_url = state.get("run_url", "")
 
 commit_md = f"<{commit_url}|`{commit}`>" if (commit_url and commit) else (f"`{commit}`" if commit else "—")
 pr_md = f"<{pr_url}|#{pr_number}>" if (pr_url and pr_number) else (f"#{pr_number}" if pr_number else "—")
@@ -73,21 +109,18 @@ if run_url:
 if elements:
     blocks.append({"type": "actions", "elements": elements})
 
-payload = {"channel": channel, "blocks": blocks, "text": f"Mobile build pipeline {label}"}
+payload = {"channel": channel, "blocks": blocks, "text": f"Mobile build pipeline {label}",
+           "metadata": {"event_type": "mobile_build_pipeline", "event_payload": state}}
 method = "chat.update" if ts else "chat.postMessage"
 if ts:
     payload["ts"] = ts
 
-req = urllib.request.Request(f"https://slack.com/api/{method}",
-    data=json.dumps(payload).encode(),
-    headers={"Authorization": f"Bearer {token}", "Content-type": "application/json"})
 try:
-    resp = json.load(urllib.request.urlopen(req))
+    resp = slack(method, payload)
 except Exception as e:
-    print(f"slack-root: request failed: {e}", file=sys.stderr); sys.exit(0)
-
+    print(f"slack-root: {method} failed: {e}", file=sys.stderr); sys.exit(0)
 if not resp.get("ok"):
-    print(f"slack-root: error: {resp.get('error')}", file=sys.stderr); sys.exit(0)
+    print(f"slack-root: {method} error: {resp.get('error')}", file=sys.stderr); sys.exit(0)
 
 new_ts = resp.get("ts", "")
 print(f"ts={new_ts}")

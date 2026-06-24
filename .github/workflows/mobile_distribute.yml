@@ -352,6 +352,7 @@ jobs:
 
           # Build CI takes ~35 min; give it headroom but fail fast if CI already failed.
           DEADLINE=$(( $(date +%s) + 50 * 60 ))
+          INPROG=0
           while true; do
             if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
               echo "✅ APK is available in R2"
@@ -372,6 +373,10 @@ jobs:
               echo "   Make sure the Android CI build for this commit succeeded."
               exit 1
             fi
+            if [ "$INPROG" = "0" ] && [ -n "${SLACK_CHANNEL:-}" ]; then
+              bash .github/scripts/slack-reply.sh "🤖 Android — CI build in progress, waiting for the APK to land in R2…"
+              INPROG=1
+            fi
             echo "⏳ Not ready yet (CI conclusion='${CONCLUSION:-pending}'), retrying in 30s..."
             sleep 30
           done
@@ -379,12 +384,15 @@ jobs:
       - name: Slack — Android APK ready
         if: success() && env.SLACK_CHANNEL != ''
         run: |
-          bash .github/scripts/slack-reply.sh "✅ Android — APK ready: ${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          APK="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          bash .github/scripts/slack-reply.sh "✅ Android — APK ready: ${APK}"
+          ANDROID_LINE="✅ APK ready" APK_URL="$APK" python3 .github/scripts/slack-root.py
 
       - name: Slack — Android failed
         if: failure() && env.SLACK_CHANNEL != ''
         run: |
           bash .github/scripts/slack-reply.sh "❌ Android — APK not produced for ${SHA} (CI build failed)"
+          ANDROID_LINE="❌ CI build failed" python3 .github/scripts/slack-root.py
 
       - name: Notify Slack - Android build ready
         if: success()

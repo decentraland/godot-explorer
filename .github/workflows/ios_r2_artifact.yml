@@ -191,6 +191,14 @@ jobs:
         run: |
           bash .github/scripts/slack-reply.sh "📦 iOS — unsigned export uploaded to R2 ✓ (${{ inputs.ref }})"
 
+      - name: Root — iOS exported
+        if: success() && env.SLACK_CHANNEL != ''
+        env:
+          IOS_LINE: "✅ exported to R2 (signing…)"
+          BUILD_VERSION: ${{ steps.buildver.outputs.build_version }}
+        run: |
+          python3 .github/scripts/slack-root.py
+
       # libdclgodot.dylib is BUILT here, so its dSYM must be uploaded to Sentry from here
       # (the deploy repo only re-archives the already-built dylib). Best-effort.
       - name: Upload libdclgodot to Sentry
