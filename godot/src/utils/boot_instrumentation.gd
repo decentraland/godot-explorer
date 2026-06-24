@@ -61,6 +61,13 @@ func mark(step_name: String) -> void:
 	step_marked.emit(step_name, elapsed)
 
 
+## Milliseconds elapsed since boot start (this autoload's script-load time; it
+## registers first in project.godot). Use for startup-relative telemetry timing
+## instead of the removed Global._startup_time.
+func boot_elapsed_ms() -> int:
+	return Time.get_ticks_msec() - _start_time_ms
+
+
 func _install_debug_console() -> void:
 	_layer = CanvasLayer.new()
 	# Above modal_manager (100) and version_gate (99) so the console is never

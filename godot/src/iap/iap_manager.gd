@@ -81,8 +81,8 @@ var _store_kit_available: bool = false
 # Synchronous receipt-read environment captured at startup, held until the
 # authoritative AppTransaction resolves so both go out in one atomic event.
 var _env_sync_value: String = ""
-# ms-since-startup when the synchronous read above was taken (same clock the
-# `[Startup]` logs use: Time.get_ticks_msec() - Global._startup_time).
+# ms-since-startup when the synchronous read above was taken (same boot clock
+# the `[Startup]` logs use, via BootInstrumentation.boot_elapsed_ms()).
 var _env_sync_at_ms: int = 0
 var _products: Array = []
 # In-memory only; resets on relaunch.
@@ -127,7 +127,7 @@ func report_environment_to_analytics() -> void:
 	# signal fires exactly once (hard timeout falls back to the receipt read), so
 	# the event is never missing.
 	_env_sync_value = _store_kit.current_environment()
-	_env_sync_at_ms = Time.get_ticks_msec() - Global._startup_time
+	_env_sync_at_ms = BootInstrumentation.boot_elapsed_ms()
 
 	if not _store_kit.environment_resolved.is_connected(_on_environment_resolved):
 		_store_kit.environment_resolved.connect(_on_environment_resolved, CONNECT_DEFERRED)
@@ -135,7 +135,7 @@ func report_environment_to_analytics() -> void:
 
 
 func _on_environment_resolved(environment: String, source: String, resolve_ms: float) -> void:
-	var env_at_ms := Time.get_ticks_msec() - Global._startup_time
+	var env_at_ms := BootInstrumentation.boot_elapsed_ms()
 	var matched := environment == _env_sync_value
 	print(
 		(
