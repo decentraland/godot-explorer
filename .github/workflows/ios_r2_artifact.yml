@@ -33,6 +33,10 @@ on:
         required: false
         type: string
         default: ''
+    outputs:
+      build_version:
+        description: 'Rust .build.version captured during the iOS lib build'
+        value: ${{ jobs.build.outputs.build_version }}
   # Manual iteration (registers once this file is on the default branch).
   workflow_dispatch:
     inputs:
@@ -56,6 +60,8 @@ jobs:
     # dropped for this repo too, swap to the GitHub-hosted `macos-26` image.
     runs-on: warp-macos-26-arm64-6x
     timeout-minutes: 45
+    outputs:
+      build_version: ${{ steps.buildver.outputs.build_version }}
     env:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       SLACK_CHANNEL:   ${{ inputs.slack_channel }}
@@ -112,12 +118,25 @@ jobs:
         timeout-minutes: 20
         run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
 
+      - name: Capture build version
+        id: buildver
+        run: |
+          V=""
+          [ -f "$GITHUB_WORKSPACE/.build.version" ] && V="$(tr -d '[:space:]' < "$GITHUB_WORKSPACE/.build.version")"
+          echo "build_version=$V" >> "$GITHUB_OUTPUT"
+          echo "build version: ${V:-<none>}"
+
       - name: Import Assets
         uses: ./.github/actions/import-assets
 
       - name: Export
         timeout-minutes: 5
         run: cargo run -- export --target ios
+
+      - name: Slack — iOS packaging
+        if: env.SLACK_CHANNEL != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "📦 iOS — export built, packaging & uploading to R2…"
 
       - name: Package & upload unsigned export to R2
         env:
