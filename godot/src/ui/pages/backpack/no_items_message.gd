@@ -2,12 +2,14 @@ extends VBoxContainer
 
 @export_enum("wearables", "emotes") var marketplace_section: String = "wearables"
 
-@onready var rich_text_box: RichTextLabel = $RichTextBox
+@onready var vbox_content: VBoxContainer = %VBoxContainer_Content
+@onready var label_iap: Label = %Label_Iap
 
 
 func _ready():
-	if Global.is_ios():
-		rich_text_box.hide()
+	var iap_available = Iap.is_available()
+	label_iap.visible = iap_available
+	vbox_content.visible = not iap_available
 
 
 func _on_rich_text_box_meta_clicked(_meta):

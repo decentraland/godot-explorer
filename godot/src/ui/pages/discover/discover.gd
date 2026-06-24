@@ -21,11 +21,7 @@ var _generator_statuses: Dictionary = {}
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 @onready var friend_jump_in: SidePanelWrapper = %FriendJumpIn
-@onready var button_credits: Button = %Button_Credits
-@onready var button_history: Button = %Button_History
-@onready var credits_option = %CreditsOption
-@onready var credits_shop = %CreditsShop
-@onready var credits_history: Container = %CreditsHistory
+@onready var button_credits: CreditsBalanceButton = get_node_or_null("%Button_Credits")
 
 static var _low_spec_warning_shown: bool = false
 
@@ -36,9 +32,6 @@ func _ready():
 	jump_in.hide()
 	event_details.hide()
 	search_bar.close_searchbar()
-
-	_setup_credits_button()
-	Iap.transaction_history_updated.connect(_on_transaction_history_updated)
 
 	jump_in.jump_in.connect(_on_jump_in_jump_in)
 	jump_in.jump_in_world.connect(_on_jump_in_world)
@@ -51,9 +44,6 @@ func _ready():
 	Global.notification_clicked.connect(_on_notification_clicked)
 
 	search_container.hide()
-	credits_option.hide()
-	credits_history.hide()
-	button_history.hide()
 	search_container.keyword_selected.connect(_async_on_keyword_selected)
 	search_container.should_show_container.connect(_on_should_show_suggestions_container)
 	search_bar.cleared.connect(_on_search_bar_cleared)
@@ -178,7 +168,8 @@ func _on_search_bar_opened() -> void:
 	container_content.hide()
 	search_container.set_keyword_search_text("")
 	Global.metrics.track_click_button("SEARCH_SELECT_INPUT", "SEARCH_CLICK", "")
-	button_credits.hide()
+	if button_credits:
+		button_credits.hide()
 
 
 func _on_search_bar_cleared() -> void:
@@ -188,7 +179,8 @@ func _on_search_bar_cleared() -> void:
 	search_container.show()
 	search_container.set_keyword_search_text("")
 	Global.metrics.track_click_button("SEARCH_ERASE", "SEARCH_CLICK", "")
-	_show_credits_button()
+	if button_credits:
+		button_credits.visible = Iap.is_available()
 
 
 func set_search_filter_text(new_text: String) -> void:
@@ -509,27 +501,8 @@ func _on_button_back_to_explorer_pressed() -> void:
 		search_container.hide()
 		container_content.show()
 		label_title.show()
-		if not Global.get_explorer():
-			button_back_to_explorer.hide()
-		_show_credits_button()
-		return
-
-	if credits_history.visible:
-		credits_history.hide()
-		credits_option.show()
-		button_history.show()
-		_show_credits_button()
-		label_title.text = "Credits"
-		return
-
-	if credits_option.visible:
-		search_bar.show()
-		credits_option.hide()
-		button_history.hide()
-		_show_credits_button()
-		container_content.show()
-		label_title.show()
-		label_title.text = "Discover"
+		if button_credits:
+			button_credits.visible = Iap.is_available()
 		if not Global.get_explorer():
 			button_back_to_explorer.hide()
 		return
@@ -540,53 +513,3 @@ func _on_button_back_to_explorer_pressed() -> void:
 			return
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
-
-
-func _on_button_credits_pressed() -> void:
-	Global.metrics.track_click_button("BUTTON_CREDITS", "DISCOVER", "")
-	_open_credits_section()
-
-
-func _open_credits_section() -> void:
-	button_back_to_explorer.show()
-	label_title.text = "Credits"
-	search_container.hide()
-	container_content.hide()
-	_show_credits_button()
-	credits_option.show()
-	credits_history.hide()
-	search_bar.hide()
-	button_history.show()
-	button_history.disabled = Iap.get_transaction_history().size() == 0
-
-
-func _on_button_history_pressed() -> void:
-	credits_option.hide()
-	credits_history.show()
-	button_history.hide()
-	button_credits.hide()
-	label_title.text = "Purchases"
-
-
-func _on_transaction_history_updated() -> void:
-	if credits_option.visible:
-		button_history.show()
-
-
-# Credits / IAP entry. The button doubles as a balance display, so we show it
-# only when StoreKit is wired up (iOS today). On Android/desktop we never
-# offer the entry — there's no payment path behind it.
-func _setup_credits_button() -> void:
-	if not Iap.is_available():
-		button_credits.hide()
-		return
-	button_credits.text = str(Iap.get_balance())
-	Iap.balance_changed.connect(_on_iap_balance_changed)
-
-
-func _show_credits_button() -> void:
-	button_credits.visible = Iap.is_available()
-
-
-func _on_iap_balance_changed(new_balance: int) -> void:
-	button_credits.text = str(new_balance)
