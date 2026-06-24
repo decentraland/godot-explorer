@@ -7,11 +7,6 @@
 [ext_resource type="PackedScene" uid="uid://byp4n7u2145fx" path="res://src/ui/components/molecules/snap_carousel/snap_carousel.tscn" id="6_carousel"]
 [ext_resource type="Texture2D" uid="uid://cytpdlax4ble0" path="res://src/ui/components/organisms/menu/icons/discover-outlined.svg" id="8_maft2"]
 
-[sub_resource type="LabelSettings" id="LabelSettings_bmno1"]
-font = ExtResource("2_font700")
-font_size = 24
-font_color = Color(1, 1, 1, 0.69803923)
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_spacer"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_jumpin"]
@@ -82,15 +77,10 @@ theme_override_constants/margin_bottom = 25
 [node name="CenterContainer" type="CenterContainer" parent="FTUE/MarginContainer3" unique_id=567814309]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="FTUE/MarginContainer3/CenterContainer" unique_id=521900637]
-custom_minimum_size = Vector2(530, 0)
-layout_mode = 2
-text = "RECOMMENDED PLACES"
-label_settings = SubResource("LabelSettings_bmno1")
-
 [node name="SnapCarousel" parent="FTUE" unique_id=1030863920 instance=ExtResource("6_carousel")]
 unique_name_in_owner = true
 layout_mode = 2
+show_title = true
 mode = 0
 fetch_tag = "ftue"
 auto_scroll = true
@@ -191,6 +181,7 @@ theme_override_constants/separation = 8
 alignment = 1
 
 [node name="TextureRect" type="TextureRect" parent="FTUE/MarginContainer2/VBoxContainer/Button_Skip/MarginContainer/HBoxContainer" unique_id=29386402]
+modulate = Color(1, 1, 1, 0.69803923)
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -200,6 +191,7 @@ expand_mode = 3
 
 [node name="Label" type="Label" parent="FTUE/MarginContainer2/VBoxContainer/Button_Skip/MarginContainer/HBoxContainer" unique_id=1632180178]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.69803923)
 text = "Explore more"
 label_settings = SubResource("LabelSettings_g404w")
 horizontal_alignment = 1

@@ -558,6 +558,7 @@ icon_alignment = 2
 
 [node name="AvatarCustomize" type="Control" parent="Main" unique_id=1314744326]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/AvatarCustomize" unique_id=370001754]
@@ -1047,7 +1048,6 @@ layout_mode = 2
 
 [node name="DiscoverFtue" type="Control" parent="Main" unique_id=1689811901]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="FTUE" parent="Main/DiscoverFtue" unique_id=1400018334 instance=ExtResource("5_3tlbd")]

@@ -83,7 +83,7 @@ const FORCE_DEEPLINK = ""
 # A push_warning fires whenever it is active so it can't ship unnoticed.
 # (For a fresh guest, prefer clearing app data / user:// — that resets the
 # anchor only when DEBUG_GUEST_ROTATE_ANCHOR_ID is on, see below.)
-const DEBUG_GUEST_ANCHOR_OVERRIDE: String = "device-0015"
+const DEBUG_GUEST_ANCHOR_OVERRIDE: String = "device-0018"
 
 # DEBUG ONLY — must be `false` for any shipped build. When `true`,
 # get_device_anchor_id() ignores the platform-native device anchor (Android
