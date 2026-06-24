@@ -97,7 +97,7 @@ jobs:
           ref: ${{ inputs.sha || inputs.ref }}
 
       - name: Slack — iOS build started
-        if: env.SLACK_CHANNEL != ''
+        if: env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "🍏 iOS — building & exporting on CI… (${{ inputs.ref }})"
 
@@ -166,7 +166,7 @@ jobs:
         run: cargo run -- export --target ios
 
       - name: Slack — iOS packaging
-        if: env.SLACK_CHANNEL != ''
+        if: env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "📦 iOS — export built, packaging & uploading to R2…"
 
@@ -220,12 +220,12 @@ jobs:
           echo "🔗 ${R2_PUBLIC_BASE_URL}/${KEY}"
 
       - name: Slack — iOS export uploaded
-        if: success() && env.SLACK_CHANNEL != ''
+        if: success() && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "📦 iOS — unsigned export uploaded to R2 ✓ (${{ inputs.ref }})"
 
       - name: Root — iOS exported
-        if: success() && env.SLACK_CHANNEL != ''
+        if: success() && env.SLACK_TS != ''
         env:
           # Not done yet → no green tick. The ✅ only appears when it's on TestFlight.
           IOS_LINE: "📦 exported to R2 · signing…"
@@ -261,12 +261,12 @@ jobs:
           echo "✅ Dispatched godot-asc-deploy for ${SAFE_BRANCH}@${SHA:-${{ github.sha }}}"
 
       - name: Slack — handed off to signing
-        if: success() && inputs.dispatch_deploy && env.SLACK_CHANNEL != ''
+        if: success() && inputs.dispatch_deploy && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "🤝 iOS — export handed off to the signing pipeline (godot-asc-deploy)"
 
       - name: Slack — handoff failed
-        if: failure() && inputs.dispatch_deploy && env.SLACK_CHANNEL != ''
+        if: failure() && inputs.dispatch_deploy && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "❌ iOS — failed to hand off to the signing pipeline (check ASC_DEPLOY_DISPATCH_TOKEN)"
 
