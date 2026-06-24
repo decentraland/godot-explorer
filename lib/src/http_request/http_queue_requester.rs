@@ -209,14 +209,14 @@ impl HttpQueueRequester {
             error_message: e.to_string(),
         };
 
-        tracing::info!(
+        tracing::debug!(
             "[HTTP] {} {}",
             request_option.method.as_str(),
             request_option.url
         );
         let response = request.send().await.map_err(map_err_func)?;
         let status_code = response.status();
-        tracing::info!(
+        tracing::debug!(
             "[HTTP] {} {} -> {}",
             request_option.method.as_str(),
             request_option.url,

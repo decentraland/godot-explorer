@@ -14,10 +14,11 @@ extends Node
 ## Mac side: run the dev server on the LAN (`vite --host`, not just loopback) and
 ## accept the iOS "local network" permission prompt once.
 ##
-## Target defaults to the constants below; override at runtime with the user arg:
+## No host by default — the relay stays OFF unless you pass the host at runtime:
 ##     cargo run -- run --target ios -- --dev-relay=my-mac.local:5173
+## (host[:port]; port falls back to DEFAULT_PORT when omitted).
 
-const DEFAULT_HOST := "Leandros-MacBook-Pro.local"
+const DEFAULT_HOST := ""
 const DEFAULT_PORT := 5173
 
 # Held so the RefCounted relay (and its listener) isn't freed.

