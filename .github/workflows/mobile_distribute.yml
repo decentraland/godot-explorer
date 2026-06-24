@@ -66,7 +66,9 @@ jobs:
       # Defaults to 'true' for every event except the cron, where the change-detection
       # step below may set it to 'false' when main is unchanged since the last build.
       should_build: ${{ steps.changes.outputs.should_build || 'true' }}
-      slack_channel: ${{ steps.slack.outputs.channel }}
+      # Only the dynamic thread ts flows via outputs. The channel ID is a SECRET and GitHub
+      # masks secrets out of job outputs (they arrive empty downstream), so every job reads
+      # SLACK_CHANNEL straight from secrets.SLACK_CHANNEL_ID instead.
       slack_ts: ${{ steps.slack.outputs.ts }}
       triggered_by: ${{ steps.ctx.outputs.triggered_by }}
       pr_url: ${{ steps.ctx.outputs.pr_url }}
@@ -221,7 +223,6 @@ jobs:
       ref: ${{ needs.prepare.outputs.ref }}
       sha: ${{ needs.prepare.outputs.sha }}
       pr_number: ${{ needs.prepare.outputs.pr_number }}
-      slack_channel: ${{ needs.prepare.outputs.slack_channel }}
       slack_ts: ${{ needs.prepare.outputs.slack_ts }}
     secrets: inherit
 
@@ -235,7 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL:   ${{ needs.prepare.outputs.slack_channel }}
+      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
       SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -246,7 +247,6 @@ jobs:
           SHA: ${{ needs.prepare.outputs.sha }}
           WHATS_NEW: ${{ github.event.inputs.whats_new }}
           PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
-          CHANNEL: ${{ needs.prepare.outputs.slack_channel }}
           TS: ${{ needs.prepare.outputs.slack_ts }}
           BUILD_VERSION: ${{ needs.ios-build.outputs.build_version }}
           TRIGGERED_BY: ${{ needs.prepare.outputs.triggered_by }}
@@ -259,7 +259,7 @@ jobs:
           gh workflow run deploy_testflight.yml \
             --repo decentraland/godot-asc-deploy --ref main \
             -f branch="$BRANCH" -f sha="$SHA" -f whats_new="$WHATS_NEW" \
-            -f pr_number="$PR_NUMBER" -f slack_channel="$CHANNEL" -f slack_ts="$TS" \
+            -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
             -f build_version="$BUILD_VERSION" -f triggered_by="$TRIGGERED_BY"
           echo "✅ Dispatched godot-asc-deploy for ${BRANCH}@${SHA}"
       - name: Slack — handed off to signing
@@ -275,28 +275,36 @@ jobs:
   # would move the root card off BUILDING. This finalizes it to FAILED. It only runs when
   # deploy was NOT triggered, so it can't clobber the deploy repo's own root update.
   root-failed:
-    name: 🛑 Mark pipeline failed
+    name: 🛑 Finalize root (failed/cancelled)
     needs: [prepare, ios-build, ios-dispatch]
-    if: always() && needs.prepare.outputs.should_build == 'true' && (needs.ios-build.result == 'failure' || needs.ios-dispatch.result == 'failure')
+    if: >-
+      always() && needs.prepare.outputs.should_build == 'true' &&
+      (needs.ios-build.result == 'failure' || needs.ios-build.result == 'cancelled' ||
+       needs.ios-dispatch.result == 'failure' || needs.ios-dispatch.result == 'cancelled')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - name: Update root → FAILED
+      - name: Update root → failed/cancelled
         if: needs.prepare.outputs.slack_ts != ''
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL: ${{ needs.prepare.outputs.slack_channel }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
           SLACK_TS: ${{ needs.prepare.outputs.slack_ts }}
-          STATUS: failed
           TRIGGERED_BY: ${{ needs.prepare.outputs.triggered_by }}
           PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
           PR_URL: ${{ needs.prepare.outputs.pr_url }}
           COMMIT: ${{ needs.prepare.outputs.commit_short }}
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.prepare.outputs.sha }}
-          IOS_LINE: "❌ build/handoff failed"
-          ANDROID_LINE: "see thread"
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          IOS_BUILD_RESULT: ${{ needs.ios-build.result }}
+          IOS_DISPATCH_RESULT: ${{ needs.ios-dispatch.result }}
         run: |
+          # Don't set ANDROID_LINE — merge-on-read preserves whatever the Android leg wrote.
+          if [ "$IOS_BUILD_RESULT" = "cancelled" ] || [ "$IOS_DISPATCH_RESULT" = "cancelled" ]; then
+            export STATUS="cancelled"; export IOS_LINE="⚠️ cancelled"
+          else
+            export STATUS="failed"; export IOS_LINE="❌ build/handoff failed"
+          fi
           python3 .github/scripts/slack-root.py
 
   android-notify:
@@ -314,7 +322,7 @@ jobs:
       R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL:   ${{ needs.prepare.outputs.slack_channel }}
+      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
       SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
       REF: ${{ needs.prepare.outputs.ref }}
       SHA: ${{ needs.prepare.outputs.sha }}

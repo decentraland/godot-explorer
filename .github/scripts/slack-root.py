@@ -63,8 +63,8 @@ else:
     state.update(incoming)
 
 status = (state.get("status") or "building").lower()
-emoji = {"building": "⏳", "success": "✅", "failed": "❌"}.get(status, "⏳")
-label = {"building": "BUILDING", "success": "SUCCESS", "failed": "FAILED"}.get(status, status.upper())
+emoji = {"building": "⏳", "success": "✅", "failed": "❌", "cancelled": "⚠️"}.get(status, "⏳")
+label = {"building": "BUILDING", "success": "SUCCESS", "failed": "FAILED", "cancelled": "CANCELLED"}.get(status, status.upper())
 bv = state.get("build_version") or "—"
 trig = state.get("triggered_by") or "—"
 commit, commit_url = state.get("commit", ""), state.get("commit_url", "")

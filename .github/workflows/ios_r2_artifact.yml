@@ -64,7 +64,9 @@ jobs:
       build_version: ${{ steps.buildver.outputs.build_version }}
     env:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL:   ${{ inputs.slack_channel }}
+      # Channel ID read straight from the secret (secrets: inherit) — secrets get masked out
+      # of job outputs, so it can't be passed down via inputs. Only the dynamic ts flows.
+      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
       SLACK_TS:        ${{ inputs.slack_ts }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
