@@ -57,6 +57,15 @@ jobs:
         with:
           toolchain: "1.90"
           components: clippy, rustfmt
+
+      # Cache the Rust build (host + Android target) so the dep tree isn't recompiled from
+      # scratch every push. rust-cache uses the actions/cache (HTTP) backend, which works
+      # inside this Docker container; smart keys (Cargo.lock + rustc) + cleans on save.
+      - name: Set up build cache
+        uses: ./.github/actions/set-up-cache
+        with:
+          cache-name: android-build
+
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
