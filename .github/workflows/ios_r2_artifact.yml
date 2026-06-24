@@ -1,0 +1,155 @@
+name: 🍏 iOS → R2 (unsigned export)
+
+# Builds the iOS app (Rust lib + Godot export) and publishes the UNSIGNED export tree to
+# the R2 mobile-artifacts bucket. A separate deploy repo pulls this artifact, signs it,
+# sets the build number and uploads to TestFlight — so this repo holds NO Apple signing
+# material and NO App Store Connect keys.
+#
+# Manual only (workflow_dispatch): NO environment gate, so no reviewer approval is needed
+# to produce an iteration artifact (unlike ios_builds.yml, which routes through the
+# reviewer-gated ios-* environments).
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch to build & publish'
+        required: true
+        type: string
+        default: 'main'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-r2-${{ github.actor }}-${{ github.event.inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build iOS export → R2
+    # iOS can only be compiled on macOS. Matches ios_builds.yml's runner; if WarpBuild is
+    # dropped for this repo too, swap to the GitHub-hosted `macos-26` image.
+    runs-on: warp-macos-26-arm64-6x
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.90"
+          targets: aarch64-apple-ios
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: Cargo install
+        timeout-minutes: 15
+        run: cargo run -- install --targets ios
+
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      # The Godot export is consumed (re-archived) by the deploy repo; build the dylib
+      # against the iOS 26 SDK so the final archive there satisfies Apple's SDK floor.
+      - name: Select Xcode 26 (iOS 26 SDK)
+        run: |
+          XCODE_APP="/Applications/Xcode_26.4.1.app"
+          if [ ! -d "$XCODE_APP" ]; then
+            XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
+          fi
+          if [ -z "$XCODE_APP" ] || [ ! -d "$XCODE_APP" ]; then
+            echo "❌ No Xcode 26 found on the runner. Installed Xcodes:"
+            ls -d /Applications/Xcode*.app 2>/dev/null
+            exit 1
+          fi
+          echo "Using $XCODE_APP"
+          echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
+          "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
+
+      - name: Build MacOS
+        timeout-minutes: 20
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
+
+      - name: Build iOS
+        timeout-minutes: 20
+        run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
+
+      - name: Import Assets
+        uses: ./.github/actions/import-assets
+
+      - name: Export
+        timeout-minutes: 5
+        run: cargo run -- export --target ios
+
+      - name: Package & upload unsigned export to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
+          REF: ${{ github.event.inputs.ref }}
+        run: |
+          set -eu
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_S3_BUCKET:-}" ] || [ -z "${AWS_ENDPOINT_URL:-}" ]; then
+            echo "❌ R2 mobile-artifacts bucket not configured (MOBILE_ARTIFACTS_R2_* secrets)"
+            exit 1
+          fi
+          if [ ! -d exports ]; then
+            echo "❌ exports/ not found — the Godot iOS export did not run"
+            exit 1
+          fi
+
+          # Surface what's in the export so deploy-repo iteration can confirm the embedded
+          # dylib / xcodeproj are present (the pre-fastlane flow shipped exactly exports/).
+          echo "exports/ contents:"; ls -la exports/
+          echo "dylibs found:"; find exports -name "*.dylib" 2>/dev/null || true
+
+          # Tar the export TREE (Xcode project + embedded libdclgodot.dylib + assets). The
+          # deploy repo untars this and runs xcodebuild archive + manual sign.
+          tar -czf export.tar.gz -C exports .
+          echo "Export tarball size: $(du -h export.tar.gz | cut -f1)"
+
+          # The macOS runner may not ship the AWS CLI — install it on demand via Homebrew.
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "Installing AWS CLI via Homebrew..."
+            brew install awscli
+          fi
+
+          SHA="${{ github.sha }}"
+          SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
+          KEY="ios/${SAFE_BRANCH}/${SHA}/export.tar.gz"
+          LATEST_KEY="ios/${SAFE_BRANCH}/latest/export.tar.gz"
+
+          echo "📤 Uploading export to s3://${AWS_S3_BUCKET}/${KEY}"
+          aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+
+          echo "✅ Unsigned export uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
+          echo "🔗 ${R2_PUBLIC_BASE_URL}/${KEY}"
+
+      # libdclgodot.dylib is BUILT here, so its dSYM must be uploaded to Sentry from here
+      # (the deploy repo only re-archives the already-built dylib). Best-effort.
+      - name: Upload libdclgodot to Sentry
+        if: success()
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          if [ -z "${SENTRY_AUTH_TOKEN:-}" ] || [ -z "${SENTRY_ORG:-}" ] || [ -z "${SENTRY_PROJECT:-}" ]; then
+            echo "⚠️  Sentry secrets not configured, skipping libdclgodot dSYM upload"; exit 0
+          fi
+          command -v sentry-cli >/dev/null 2>&1 || curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
+          LIBDCLGODOT_PATH="lib/target/libdclgodot_ios/libdclgodot.dylib"
+          if [ -f "$LIBDCLGODOT_PATH" ]; then
+            sentry-cli upload-dif --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
+              --auth-token "$SENTRY_AUTH_TOKEN" --include-sources --wait "$LIBDCLGODOT_PATH"
+            echo "✅ libdclgodot uploaded to Sentry"
+          else
+            echo "⚠️  libdclgodot not found at $LIBDCLGODOT_PATH"
+          fi
