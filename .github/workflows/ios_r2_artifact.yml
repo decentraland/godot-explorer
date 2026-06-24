@@ -46,6 +46,11 @@ on:
         required: false
         type: string
         default: ''
+      dry_run:
+        description: 'Build only — skip the R2 upload, deploy dispatch and Sentry (for timing)'
+        required: false
+        type: boolean
+        default: false
     outputs:
       build_version:
         description: 'Rust .build.version captured during the iOS lib build'
@@ -58,6 +63,11 @@ on:
         required: true
         type: string
         default: 'main'
+      dry_run:
+        description: 'Build only — skip the R2 upload, deploy dispatch and Sentry (for timing)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -95,6 +105,13 @@ jobs:
         with:
           toolchain: "1.90"
           targets: aarch64-apple-ios
+
+      # Cache the Rust dep compilation (host + iOS) so we don't rebuild the whole tree every
+      # run. WarpBuild-native cache (handles the large iOS target; runner is WarpBuild).
+      - name: Set up build cache
+        uses: ./.github/actions/set-up-warp-cache
+        with:
+          cache-name: ios-r2-build
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
@@ -154,6 +171,7 @@ jobs:
           bash .github/scripts/slack-reply.sh "📦 iOS — export built, packaging & uploading to R2…"
 
       - name: Package & upload unsigned export to R2
+        if: ${{ ! inputs.dry_run }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
@@ -255,7 +273,7 @@ jobs:
       # libdclgodot.dylib is BUILT here, so its dSYM must be uploaded to Sentry from here
       # (the deploy repo only re-archives the already-built dylib). Best-effort.
       - name: Upload libdclgodot to Sentry
-        if: success()
+        if: success() && ! inputs.dry_run
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
