@@ -16,12 +16,23 @@ on:
         required: true
         type: string
         default: 'main'
+  # Also run on PRs to main that touch iOS-relevant code. workflow_dispatch only registers
+  # once this file is on the default branch, so the PR trigger lets us validate it before
+  # it merges. Scoped by paths to avoid a full iOS build on unrelated PRs.
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'godot/**'
+      - 'rust-toolchain.toml'
+      - '.github/actions/**'
+      - '.github/workflows/ios_r2_artifact.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ios-r2-${{ github.actor }}-${{ github.event.inputs.ref }}
+  group: ios-r2-${{ github.actor }}-${{ github.event.inputs.ref || github.head_ref }}
   cancel-in-progress: true
 
 jobs:
@@ -34,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          ref: ${{ github.event.inputs.ref }}
+          ref: ${{ github.event.inputs.ref || github.head_ref }}
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
@@ -51,7 +62,7 @@ jobs:
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
         with:
-          ref: ${{ github.event.inputs.ref }}
+          ref: ${{ github.event.inputs.ref || github.head_ref }}
 
       # The Godot export is consumed (re-archived) by the deploy repo; build the dylib
       # against the iOS 26 SDK so the final archive there satisfies Apple's SDK floor.
@@ -92,7 +103,7 @@ jobs:
           AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
           AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
           R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
-          REF: ${{ github.event.inputs.ref }}
+          REF: ${{ github.event.inputs.ref || github.head_ref }}
         run: |
           set -eu
           if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_S3_BUCKET:-}" ] || [ -z "${AWS_ENDPOINT_URL:-}" ]; then
