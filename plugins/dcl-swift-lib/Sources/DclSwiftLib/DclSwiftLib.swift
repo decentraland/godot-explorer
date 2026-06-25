@@ -1,5 +1,6 @@
 import SwiftGodotRuntime
 import Foundation
+import os
 
 // Entry point for the DclSwiftLib GDExtension.
 //
@@ -30,5 +31,27 @@ class DclSwiftLib: RefCounted {
     func version() -> String {
         NSLog("[DclSwiftLib] version() called")
         return "0.1.0"
+    }
+
+    /// Logging self-test for the **Swift stack**: emit at every level via every
+    /// Swift logging form, so the unified channel + Sentry pipeline can be
+    /// verified end-to-end. Invoked from GDScript's `_run_logging_selftest()` via
+    /// `DclSwiftLibPlugin.test_logging()` (registered snake_case as `test_logging`).
+    /// `print`/`NSLog`/`fputs` reach the iOS fd capture; `os.Logger` exercises the
+    /// unified logging system (`.error`/`.fault` are the Sentry-relevant levels).
+    @Callable(autoSnakeCase: true)
+    func testLogging() -> String {
+        print("[LOGTEST][swift] info via print() (stdout)")
+        NSLog("[LOGTEST][swift] info via NSLog")
+        let log = Logger(subsystem: "org.decentraland.godotexplorer", category: "logtest")
+        log.debug("[LOGTEST][swift] debug via Logger.debug")
+        log.info("[LOGTEST][swift] info via Logger.info")
+        log.notice("[LOGTEST][swift] notice via Logger.notice")
+        log.warning("[LOGTEST][swift] warning via Logger.warning")
+        log.error("[LOGTEST][swift] error via Logger.error (expect Sentry)")
+        log.fault("[LOGTEST][swift] fault via Logger.fault (expect Sentry)")
+        fputs("[LOGTEST][swift] stderr via fputs\n", stderr)
+        GD.print("[LOGTEST][swift] info via GD.print (Godot logger)")
+        return "swift-logtest-done"
     }
 }

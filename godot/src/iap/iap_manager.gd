@@ -102,9 +102,9 @@ var _purchase_in_flight: bool = false
 
 
 func _ready() -> void:
+	print("[INIT] Iap")
 	# IAP starts disabled. DeepLinkRouter calls enable() when the launch
 	# deeplink carries iap_enabled=true.
-	pass
 
 
 # Reports the StoreKit environment (production / sandbox / xcode) to analytics.

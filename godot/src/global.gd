@@ -136,6 +136,9 @@ var _is_portrait: bool = true
 # Scene Inspector bridge, created lazily at boot when a target is configured.
 var _scene_inspector_bridge: Node = null
 
+# Guard so the logging self-test runs at most once (cli or deeplink trigger).
+var _selftest_done: bool = false
+
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
@@ -221,6 +224,57 @@ func _activate_scene_inspector_from_config() -> void:
 	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
 	_scene_inspector_bridge.setup.call_deferred(target)
 	print("SceneInspectorBridge: activating from boot -> ", target)
+
+
+## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
+## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
+## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
+## to verify. The ERROR/WARN forms (push_error/push_warning, tracing error/warn,
+## NSLog/os_log faults, Log.e) also exercise the Sentry pipeline.
+## Run the logging self-test if requested (via `--test-logging` cli flag or a
+## `?test-logging=true` deeplink), at most once. Called at _ready (covers the cli
+## flag, e.g. iOS's baked arg) and on `deep_link_received` (Android delivers the
+## deeplink async, after _ready — and its launcher strips command-line args).
+func _maybe_run_logging_selftest() -> void:
+	if _selftest_done:
+		return
+	var requested := cli.test_logging
+	if not requested and deep_link_obj != null:
+		requested = str(deep_link_obj.params.get("test-logging", "")).to_lower() == "true"
+	if requested:
+		_selftest_done = true
+		_run_logging_selftest.call_deferred()
+
+
+func _run_logging_selftest() -> void:
+	print("[LOGTEST] ===== logging self-test start =====")
+
+	# --- GDScript stack: every logging form ---
+	print("[LOGTEST][gdscript] info via print()")
+	prints("[LOGTEST][gdscript]", "info", "via", "prints()")
+	print_rich("[LOGTEST][gdscript] info via print_rich() [color=yellow]rich[/color]")
+	printraw("[LOGTEST][gdscript] raw via printraw() (no newline)\n")
+	printerr("[LOGTEST][gdscript] error via printerr() (stderr)")
+	push_warning("[LOGTEST][gdscript] warn via push_warning() (expect Sentry)")
+	push_error("[LOGTEST][gdscript] error via push_error() (expect Sentry)")
+
+	# --- Rust stack: all tracing levels + raw println!/eprintln! (DclGlobal) ---
+	test_logging()
+
+	# --- Native stacks: gated by per-platform availability ---
+	if DclSwiftLibPlugin.is_available():
+		print("[LOGTEST][swift] DclSwiftLib.test_logging() -> ", DclSwiftLibPlugin.test_logging())
+	if DclAndroidPlugin.is_available():
+		DclAndroidPlugin.test_logging()
+		print("[LOGTEST][kotlin] invoked DclAndroidPlugin.test_logging()")
+	# has_singleton first: get_singleton logs an ERROR (→ Sentry) when absent.
+	if Engine.has_singleton("DclGodotiOS"):
+		var dcl_ios = Engine.get_singleton("DclGodotiOS")
+		if dcl_ios != null and dcl_ios.has_method("test_logging"):
+			dcl_ios.test_logging()
+			print("[LOGTEST][objc] invoked DclGodotiOS.test_logging()")
+
+	print("[LOGTEST] ===== logging self-test end =====")
 
 
 ## Forward the optimized-content-base-url deeplink param into DclCli so the
@@ -612,6 +666,13 @@ func _ready():
 		open_network_inspector_ui()
 	else:
 		self.network_inspector.set_is_active(false)
+
+	# Logging self-test (debug aid). When --test-logging / ?test-logging=true is
+	# set, exercise every logging form in every stack so we can confirm each pipes
+	# into the unified channel + Sentry. Checked here (cli, e.g. iOS baked arg) AND
+	# on deeplink arrival (Android delivers it async, after _ready), run once.
+	_maybe_run_logging_selftest()
+	deep_link_router.deep_link_received.connect(_maybe_run_logging_selftest)
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
