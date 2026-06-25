@@ -10,11 +10,11 @@ config_version=5
 
 [_mobile_preview]
 
-active=false
+active=true
 is_ios=false
-is_portrait=true
-viewport_width=720
-viewport_height=1600
+is_portrait=false
+viewport_width=1600
+viewport_height=720
 
 [animation]
 
@@ -61,16 +61,12 @@ memory/limits/message_queue/max_size_mb=64
 
 [display]
 
-window/size/viewport_width=720
-window/size/viewport_height=1600
+window/size/viewport_width=1600
+window/size/viewport_height=720
 window/size/window_width_override=720
 window/size/window_height_override=1280
 window/frame_pacing/android/enable_frame_pacing=false
 window/handheld/orientation=6
-
-[editor]
-
-run/main_run_args="--emulate-ios"
 
 [editor_plugins]
 
