@@ -244,6 +244,7 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 
 [node name="TextureProgressBar" parent="Control_DeployingProfile/PanelContainer/MarginContainer/VBoxContainer" unique_id=1110742010 instance=ExtResource("17_tc0me")]
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
 size_flags_horizontal = 4
 show_background = true

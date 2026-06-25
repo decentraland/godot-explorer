@@ -27,6 +27,7 @@ _data = {
 }
 
 [node name="TextureProgressBar" type="TextureProgressBar" unique_id=1364957813]
+custom_minimum_size = Vector2(40, 40)
 offset_right = 128.0
 offset_bottom = 128.0
 value = 100.0

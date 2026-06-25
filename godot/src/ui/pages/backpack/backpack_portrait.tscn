@@ -30,7 +30,7 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hpvfb"]
 shader = ExtResource("17_4j6ii")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_gdeh7"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_ypiwx"]
 atlas = ExtResource("18_wp3bp")
 region = Rect2(0, 0, 343, 580)
 
@@ -142,7 +142,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("AtlasTexture_gdeh7")
+texture = SubResource("AtlasTexture_ypiwx")
 stretch_mode = 3
 script = ExtResource("19_ku1si")
 atlas = ExtResource("18_wp3bp")
@@ -418,6 +418,7 @@ mouse_filter = 2
 
 [node name="TextureProgressBar_AvatarLoading" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=2011223973 instance=ExtResource("4_saosw")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -900,6 +901,7 @@ size_flags_horizontal = 3
 [node name="TextureProgressBar_BackpackLoading" parent="." unique_id=1912826069 instance=ExtResource("4_saosw")]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5

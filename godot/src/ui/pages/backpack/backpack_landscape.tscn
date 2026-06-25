@@ -321,6 +321,7 @@ expand_icon = true
 
 [node name="TextureProgressBar_AvatarLoading" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=897938659 instance=ExtResource("15_623dt")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -919,6 +920,7 @@ color = Color(1, 1, 1, 0.40392157)
 [node name="TextureProgressBar_BackpackLoading" parent="." unique_id=10614915 instance=ExtResource("15_623dt")]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
