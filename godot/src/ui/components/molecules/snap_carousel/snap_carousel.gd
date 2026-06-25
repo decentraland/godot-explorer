@@ -184,7 +184,9 @@ func _layout_cards() -> void:
 
 	# Align title left edge with the selected card (use base center_x, not drag offset).
 	if is_instance_valid(_title_container):
-		_title_container.add_theme_constant_override("margin_left", int((area_w - sel_size.x) / 2.0))
+		_title_container.add_theme_constant_override(
+			"margin_left", int((area_w - sel_size.x) / 2.0)
+		)
 
 	# Selected card (center)
 	var sel_card = _cards[selected_index]

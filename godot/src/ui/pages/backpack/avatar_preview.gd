@@ -186,7 +186,11 @@ func focus_camera_on(type, instant: bool = false):
 	if aabb_key not in _cached_aabbs:
 		return
 	var new_margin: int = _focus_extra_margin()
-	if not instant and _stable_aabb() == _last_fit_stable_aabb and new_margin == _last_fit_extra_margin:
+	if (
+		not instant
+		and _stable_aabb() == _last_fit_stable_aabb
+		and new_margin == _last_fit_extra_margin
+	):
 		_update_fit_limits(_cached_aabbs[aabb_key], new_margin)
 		return
 	_user_has_panned = false
@@ -411,7 +415,9 @@ func async_on_avatar_loaded():
 			if fit_avatar and _camera_focus == "overall":
 				_fit_to_overall()
 			else:
-				_fit_camera_to_aabb.call_deferred(_cached_aabbs[aabb_key], _focus_extra_margin(), true)
+				_fit_camera_to_aabb.call_deferred(
+					_cached_aabbs[aabb_key], _focus_extra_margin(), true
+				)
 		else:
 			_update_fit_limits(_cached_aabbs[aabb_key], _focus_extra_margin())
 

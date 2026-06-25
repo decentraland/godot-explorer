@@ -14,24 +14,29 @@ shadow_color = Color(0, 0, 0, 0.2)
 shadow_size = 5
 shadow_offset = Vector2(0, 3)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pak11"]
-content_margin_left = 10.0
-content_margin_top = 10.0
-content_margin_right = 10.0
-content_margin_bottom = 10.0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3fjwa"]
 bg_color = Color(0, 0, 0, 0.69803923)
 border_width_left = 4
 border_width_top = 4
 border_width_right = 4
 border_width_bottom = 4
-border_color = Color(0.7764706, 0.2509804, 0.8039216, 1)
+border_color = Color(1, 0.1764706, 0.33333334, 1)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
-shadow_color = Color(0, 0, 0, 0.2)
-shadow_size = 5
-shadow_offset = Vector2(0, 3)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hrf3s"]
+bg_color = Color(0, 0, 0, 0.5019608)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8745098, 0.6117647, 1, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [node name="PresetAvatarCard" type="Button" unique_id=1943433021]
 custom_minimum_size = Vector2(160, 360)
@@ -39,12 +44,11 @@ offset_right = 160.0
 offset_bottom = 360.0
 focus_mode = 0
 mouse_filter = 1
-theme_override_styles/normal = SubResource("StyleBoxFlat_uvcbl")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_pak11")
-theme_override_styles/hover = SubResource("StyleBoxFlat_uvcbl")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pak11")
 toggle_mode = true
 script = ExtResource("1_script")
+style_normal = SubResource("StyleBoxFlat_uvcbl")
+style_selected = SubResource("StyleBoxFlat_3fjwa")
+style_tapping = SubResource("StyleBoxFlat_hrf3s")
 metadata/_edit_horizontal_guides_ = [36.0, 324.0]
 
 [node name="RectangleSkeleton" parent="." unique_id=1994501016 instance=ExtResource("2_skel")]
