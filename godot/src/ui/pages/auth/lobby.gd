@@ -38,6 +38,7 @@ const DEBUG_GUEST_STATE_FILES = [
 ]
 const BG_GRADIENT = preload("res://assets/backgrounds/gradient-background.png")
 const BG_DISCOVER = preload("res://assets/backgrounds/photo-background.png")
+const BG_AVATAR = preload("res://assets/backgrounds/avatar-background.svg")
 
 var is_creating_account: bool = false
 
@@ -117,6 +118,8 @@ func show_panel(child_node: Control, subpanel: Control = null):
 		set_background(BG_GRADIENT)
 	elif control_with_discover_bg.has(child_node):
 		set_background(BG_DISCOVER)
+	elif child_node == control_avatar_naming or child_node == control_avatar_create:
+		set_background(BG_AVATAR)
 	else:
 		set_background(BG_GRADIENT)
 
