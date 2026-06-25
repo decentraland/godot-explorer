@@ -2,11 +2,16 @@ use crate::ui::{print_message, print_section, MessageType};
 use std::fs;
 use std::path::Path;
 
-/// Check that version codes across Cargo.toml and export_presets.cfg match
+/// Check that the marketing version (SemVer) is consistent across the places that ship it:
+/// `lib/Cargo.toml` `version`, Android `version/name`, and iOS `application/short_version`.
+///
+/// The store BUILD NUMBER (Android `version/code` / iOS `application/version`) is intentionally
+/// NOT checked here: it is stamped at export time by the `build_number` module (days-since-2020),
+/// so the committed values are placeholders and would never match the marketing SemVer.
 pub fn run_version_check() -> anyhow::Result<()> {
     print_section("Version Consistency Check");
 
-    // Parse Cargo.toml version
+    // Marketing SemVer source of truth: lib/Cargo.toml `version`.
     let cargo_toml_path = Path::new("lib/Cargo.toml");
     let cargo_toml_content =
         fs::read_to_string(cargo_toml_path).expect("Failed to read Cargo.toml");
@@ -19,35 +24,21 @@ pub fn run_version_check() -> anyhow::Result<()> {
         .nth(1)
         .expect("Failed to parse version")
         .trim()
-        .trim_matches('"');
+        .trim_matches('"')
+        .to_string();
 
     print_message(
         MessageType::Info,
-        &format!("Cargo.toml version: {}", cargo_version),
+        &format!("Cargo.toml version (marketing SemVer): {}", cargo_version),
     );
 
-    // Extract the minor version number (e.g., "0.32.0" -> 32)
-    let version_parts: Vec<&str> = cargo_version.split('.').collect();
-    let expected_version_code = version_parts
-        .get(1)
-        .expect("Version should have at least 2 parts")
-        .parse::<u32>()
-        .expect("Failed to parse version code");
-
-    print_message(
-        MessageType::Info,
-        &format!("Expected version code: {}", expected_version_code),
-    );
-
-    // Parse export_presets.cfg
+    // Parse export_presets.cfg marketing strings (Android version/name, iOS short_version).
     let export_presets_path = Path::new("godot/export_presets.cfg");
-
     let export_presets_content =
         fs::read_to_string(export_presets_path).expect("Failed to read export_presets.cfg");
 
-    // Find all version/code entries (Android and iOS)
-    let mut android_version_code = None;
-    let mut ios_version = None;
+    let mut android_version_name = None;
+    let mut ios_short_version = None;
 
     let mut in_android_preset = false;
     let mut in_ios_preset = false;
@@ -65,62 +56,50 @@ pub fn run_version_check() -> anyhow::Result<()> {
             in_ios_preset = false;
         }
 
-        if in_android_preset && line.starts_with("version/code=") && android_version_code.is_none()
+        if in_android_preset && line.starts_with("version/name=") && android_version_name.is_none()
         {
-            android_version_code = Some(
-                line.split('=')
-                    .nth(1)
-                    .expect("Failed to parse Android version/code")
-                    .trim()
-                    .parse::<u32>()
-                    .expect("Failed to parse Android version/code as u32"),
-            );
-        } else if in_ios_preset && line.starts_with("application/version=") && ios_version.is_none()
+            android_version_name = Some(parse_quoted_value(line));
+        } else if in_ios_preset
+            && line.starts_with("application/short_version=")
+            && ios_short_version.is_none()
         {
-            ios_version = Some(
-                line.split('=')
-                    .nth(1)
-                    .expect("Failed to parse iOS application/version")
-                    .trim()
-                    .trim_matches('"')
-                    .parse::<u32>()
-                    .expect("Failed to parse iOS application/version as u32"),
-            );
+            ios_short_version = Some(parse_quoted_value(line));
         }
     }
 
-    let android_version_code = android_version_code.expect("Failed to find Android version/code");
-    let ios_version = ios_version.expect("Failed to find iOS application/version");
+    let android_version_name = android_version_name.expect("Failed to find Android version/name");
+    let ios_short_version =
+        ios_short_version.expect("Failed to find iOS application/short_version");
 
     print_message(
         MessageType::Info,
-        &format!("Android version/code: {}", android_version_code),
+        &format!("Android version/name: {}", android_version_name),
     );
     print_message(
         MessageType::Info,
-        &format!("iOS application/version: {}", ios_version),
+        &format!("iOS application/short_version: {}", ios_short_version),
     );
 
-    // Compare versions
+    // Compare marketing versions
     let mut all_match = true;
 
-    if android_version_code != expected_version_code {
+    if android_version_name != cargo_version {
         print_message(
             MessageType::Error,
             &format!(
-                "Android version/code ({}) does not match Cargo.toml version code ({})",
-                android_version_code, expected_version_code
+                "Android version/name ({}) does not match Cargo.toml version ({})",
+                android_version_name, cargo_version
             ),
         );
         all_match = false;
     }
 
-    if ios_version != expected_version_code {
+    if ios_short_version != cargo_version {
         print_message(
             MessageType::Error,
             &format!(
-                "iOS application/version ({}) does not match Cargo.toml version code ({})",
-                ios_version, expected_version_code
+                "iOS application/short_version ({}) does not match Cargo.toml version ({})",
+                ios_short_version, cargo_version
             ),
         );
         all_match = false;
@@ -130,12 +109,22 @@ pub fn run_version_check() -> anyhow::Result<()> {
         print_message(
             MessageType::Success,
             &format!(
-                "✓ All versions match: Cargo.toml={}, Android={}, iOS={}",
-                expected_version_code, android_version_code, ios_version
+                "✓ Marketing version matches: Cargo.toml={}, Android version/name={}, iOS short_version={}",
+                cargo_version, android_version_name, ios_short_version
             ),
         );
         Ok(())
     } else {
         Err(anyhow::anyhow!("Version mismatch detected"))
     }
+}
+
+/// Extract the value from a `key="value"` (or `key=value`) cfg line.
+fn parse_quoted_value(line: &str) -> String {
+    line.split('=')
+        .nth(1)
+        .expect("Failed to parse cfg value")
+        .trim()
+        .trim_matches('"')
+        .to_string()
 }

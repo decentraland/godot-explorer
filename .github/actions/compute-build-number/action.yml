@@ -1,0 +1,27 @@
+name: Compute build number
+description: >
+  Compute the store build number (days-since-2020-01-01 UTC * 100000 + seconds-of-day) and export
+  it as the DCL_BUILD_NUMBER environment variable. Every `cargo run -- export` later in the job
+  reads DCL_BUILD_NUMBER and stamps the same monotonic Android versionCode / iOS CFBundleVersion.
+  Mirrors `src/build_number.rs` exactly. Also exposes the value as a step output.
+
+outputs:
+  build-number:
+    description: The computed build number.
+    value: ${{ steps.compute.outputs.build_number }}
+
+runs:
+  using: composite
+  steps:
+    - id: compute
+      shell: bash
+      run: |
+        set -eu
+        EPOCH=1577836800              # 2020-01-01T00:00:00Z (midnight-aligned, like the Unix epoch)
+        NOW=$(date -u +%s)
+        DAYS=$(( (NOW - EPOCH) / 86400 ))   # whole days since 2020-01-01 UTC
+        SECS=$(( NOW % 86400 ))             # seconds since the most recent UTC midnight
+        BUILD=$(( DAYS * 100000 + SECS ))
+        echo "DCL_BUILD_NUMBER=$BUILD" >> "$GITHUB_ENV"
+        echo "build_number=$BUILD" >> "$GITHUB_OUTPUT"
+        echo "🔢 build number: $BUILD (day $DAYS, second-of-day $SECS)"

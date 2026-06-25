@@ -103,6 +103,11 @@ jobs:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
       
+      # Compute the date-based store build number once; both the APK and AAB exports below
+      # read DCL_BUILD_NUMBER and stamp the same versionCode.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release

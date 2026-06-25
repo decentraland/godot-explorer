@@ -271,7 +271,12 @@ pub fn import_assets() -> ExitStatus {
         .expect("Failed to run Godot")
 }
 
-pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), anyhow::Error> {
+pub fn export(
+    target: Option<&str>,
+    format: &str,
+    release: bool,
+    build_number: Option<u64>,
+) -> Result<(), anyhow::Error> {
     print_section("Exporting Project");
 
     let program = get_godot_path();
@@ -330,9 +335,18 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     // This should reflect the correct relative path from the Godot project directory
     let output_path_godot_param = format!("./../exports/{output_file_name}");
 
-    // For Android/Quest AAB format, we need to update export_presets.cfg
-    let export_presets_backup = if (target == "android" || target == "quest") && format == "aab" {
-        update_export_presets_for_aab()?
+    // Store targets get the build number (Android versionCode / iOS CFBundleVersion) stamped
+    // into export_presets.cfg at export time, then restored afterward so the working tree keeps
+    // its committed placeholder values. AAB additionally needs format/architecture/signing tweaks.
+    let is_store_target = matches!(target.as_str(), "android" | "quest" | "ios");
+    let aab_tweaks = (target == "android" || target == "quest") && format == "aab";
+    let export_presets_backup = if is_store_target {
+        let build_number = crate::build_number::resolve(build_number);
+        print_message(
+            MessageType::Info,
+            &format!("Build number (versionCode / CFBundleVersion): {build_number}"),
+        );
+        Some(patch_export_presets_for_store(build_number, aab_tweaks)?)
     } else {
         None
     };
@@ -514,25 +528,94 @@ pub fn strip_ios_templates() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn update_export_presets_for_aab() -> Result<Option<String>, anyhow::Error> {
+/// Stamp the build number into `export_presets.cfg` for a store export and return the original
+/// content so the caller can restore it afterward. Rewrites the build-number fields (Android
+/// `version/code`, iOS `application/version`); when `aab` is set, also flips the AAB-specific
+/// format/architecture/signing flags. The marketing strings (`version/name`,
+/// `application/short_version`) are left as committed — they are the SemVer source of truth.
+fn patch_export_presets_for_store(build_number: u64, aab: bool) -> Result<String, anyhow::Error> {
     let export_presets_path = format!("{}/export_presets.cfg", GODOT_PROJECT_FOLDER);
-
-    // Read current content
     let original_content = fs::read_to_string(&export_presets_path)?;
 
-    // Update for AAB format
-    let updated_content = original_content
-        .replace(
-            "gradle_build/export_format=0",
-            "gradle_build/export_format=1",
-        )
-        .replace("architectures/x86_64=true", "architectures/x86_64=false")
-        .replace("package/signed=true", "package/signed=false");
+    // Robust line-prefix rewrite (not literal `.replace`, which breaks once the value isn't 72).
+    let mut updated = rewrite_cfg_value(
+        &original_content,
+        "version/code=",
+        &build_number.to_string(),
+    );
+    updated = rewrite_cfg_value(
+        &updated,
+        "application/version=",
+        &format!("\"{build_number}\""),
+    );
 
-    // Write updated content
-    fs::write(&export_presets_path, updated_content)?;
+    if aab {
+        updated = updated
+            .replace(
+                "gradle_build/export_format=0",
+                "gradle_build/export_format=1",
+            )
+            .replace("architectures/x86_64=true", "architectures/x86_64=false")
+            .replace("package/signed=true", "package/signed=false");
+    }
 
-    Ok(Some(original_content))
+    fs::write(&export_presets_path, updated)?;
+    Ok(original_content)
+}
+
+/// Replace the value of every line starting with `prefix` (ignoring leading whitespace) with
+/// `{prefix}{new_value}`, preserving indentation and any trailing newline.
+fn rewrite_cfg_value(content: &str, prefix: &str, new_value: &str) -> String {
+    let trailing_newline = content.ends_with('\n');
+    let mut out = content
+        .lines()
+        .map(|line| {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with(prefix) {
+                let indent = &line[..line.len() - trimmed.len()];
+                format!("{indent}{prefix}{new_value}")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    if trailing_newline {
+        out.push('\n');
+    }
+    out
+}
+
+#[cfg(test)]
+mod build_number_patch_tests {
+    use super::rewrite_cfg_value;
+
+    #[test]
+    fn rewrites_android_value_preserving_others_and_trailing_newline() {
+        let cfg = "version/code=72\nversion/name=\"1.10.0\"\napplication/version=\"72\"\n";
+        let out = rewrite_cfg_value(cfg, "version/code=", "236786399");
+        assert_eq!(
+            out,
+            "version/code=236786399\nversion/name=\"1.10.0\"\napplication/version=\"72\"\n"
+        );
+    }
+
+    #[test]
+    fn ios_version_does_not_clobber_short_version() {
+        // `application/version=` must NOT match `application/short_version=`.
+        let cfg = "application/short_version=\"1.10.0\"\napplication/version=\"72\"";
+        let out = rewrite_cfg_value(cfg, "application/version=", "\"236786399\"");
+        assert_eq!(
+            out,
+            "application/short_version=\"1.10.0\"\napplication/version=\"236786399\""
+        );
+    }
+
+    #[test]
+    fn no_match_is_identity() {
+        let cfg = "a=1\nb=2\n";
+        assert_eq!(rewrite_cfg_value(cfg, "c=", "9"), cfg);
+    }
 }
 
 fn restore_export_presets(original_content: String) -> Result<(), anyhow::Error> {
