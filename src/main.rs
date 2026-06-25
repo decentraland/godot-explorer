@@ -374,6 +374,11 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("deeplink")
                         .help("Bake a deeplink into the build (e.g. 'decentraland://open?location=10,20&rust-log=debug'); applied at startup with no CLI args needed (mobile/TestFlight)")
                         .takes_value(true),
+                ).arg(
+                    Arg::new("no-hub")
+                        .long("no-hub")
+                        .help("For android/ios device deploys: don't auto-start the debug-hub or wire the scene-inspector. Falls back to plain device-log streaming (adb logcat / iOS --console)")
+                        .takes_value(false),
                 ),
         ).subcommand(
             Command::new("debug-hub")
@@ -667,8 +672,55 @@ fn main() -> Result<(), anyhow::Error> {
             // Both --prod and --staging require release profile
             let production_or_staging = sm.is_present("prod") || sm.is_present("staging");
 
+            // The unified debug-hub (default on for device deploys). One command
+            // does build + deploy + hub: the device dials out to it (iOS bakes
+            // the address via the export plugin; Android is wired below + via
+            // `adb reverse`). `--no-hub` opts out → plain device-log streaming.
+            let hub_enabled = should_deploy && !sm.is_present("no-hub");
+            const HUB_DEVICE_PORT: u16 = 9231;
+            const HUB_CONSUMER_PORT: u16 = 9230;
+
             if should_deploy {
                 let platform = target.unwrap();
+
+                if hub_enabled {
+                    // Reuses an existing hub if one is already up; non-fatal. The
+                    // hub itself stays quiet — the viewer below (a consumer) does
+                    // the on-screen printing.
+                    log_server::spawn_hub_background(
+                        "0.0.0.0",
+                        HUB_DEVICE_PORT,
+                        HUB_CONSUMER_PORT,
+                        log_server::HubOutput::Quiet,
+                    );
+                    // On iOS, also attach a log viewer (a consumer on the hub's
+                    // loopback port) so this terminal shows the GDScript/Rust logs
+                    // os_log hides from `--console`. It works whether we started
+                    // the hub or reused one. Android's `adb logcat` already shows
+                    // everything, so no viewer there.
+                    if platform == "ios" {
+                        log_server::spawn_log_viewer(HUB_CONSUMER_PORT);
+                    }
+                } else if platform == "ios" {
+                    // No hub: tell the iOS export plugin to bake NO connect-out
+                    // arg (sentinel), so the app doesn't idle-retry a dead hub —
+                    // pure old-style `--console` log streaming.
+                    std::env::set_var("DCL_IOS_GODOT_CMDLINE", "none");
+                }
+
+                // Android dials the hub through `adb reverse` (set up in
+                // deploy_and_run_android when it sees a loopback scene-inspector
+                // arg). Inject it unless the user already passed one.
+                let inject_scene_inspector = |extras: &mut Vec<String>| {
+                    if hub_enabled
+                        && platform == "android"
+                        && !extras.iter().any(|a| a.starts_with("--scene-inspector"))
+                    {
+                        extras.push(format!(
+                            "--scene-inspector=ws://127.0.0.1:{HUB_DEVICE_PORT}"
+                        ));
+                    }
+                };
 
                 if is_only_lib && platform == "android" {
                     // Hotreload mode: build and push .so file only
@@ -707,10 +759,11 @@ fn main() -> Result<(), anyhow::Error> {
                     );
 
                     // Just deploy to device
-                    let device_extras: Vec<String> = sm
+                    let mut device_extras: Vec<String> = sm
                         .values_of("extras")
                         .map(|v| v.map(|it| it.into()).collect())
                         .unwrap_or_default();
+                    inject_scene_inspector(&mut device_extras);
                     run::deploy_and_run_on_device(
                         platform,
                         sm.is_present("release"),
@@ -749,10 +802,11 @@ fn main() -> Result<(), anyhow::Error> {
 
                     if result.is_ok() {
                         // 4. Install and run on device
-                        let device_extras: Vec<String> = sm
+                        let mut device_extras: Vec<String> = sm
                             .values_of("extras")
                             .map(|v| v.map(|it| it.into()).collect())
                             .unwrap_or_default();
+                        inject_scene_inspector(&mut device_extras);
                         run::deploy_and_run_on_device(
                             platform,
                             sm.is_present("release"),

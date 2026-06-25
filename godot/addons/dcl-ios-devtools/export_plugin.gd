@@ -76,6 +76,10 @@ class DclIosDevExportPlugin:
 	## connection-gated) captures nothing until a consumer subscribes.
 	func _godot_cmdline_lines() -> Array:
 		var raw := OS.get_environment("DCL_IOS_GODOT_CMDLINE").strip_edges()
+		# Sentinel: an explicit "none"/"-" injects nothing (the xtask sets this for
+		# `run --target ios --no-hub` → plain `--console` log streaming, no hub).
+		if raw.to_lower() == "none" or raw == "-":
+			return []
 		if raw.is_empty():
 			var host := _lan_ip()
 			if host.is_empty():

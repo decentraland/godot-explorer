@@ -833,7 +833,42 @@ fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result
         }
     }
 
-    // Launch the app
+    // The unified debug-hub: when launched with a loopback scene-inspector arg
+    // (auto-injected by `run --target android`, unless `--no-hub`), tunnel the
+    // device's connect-out to the desktop hub via `adb reverse`. A LAN-IP arg
+    // would reach the Mac directly and needs no tunnel.
+    if let Some(port) = loopback_scene_inspector_port(&extras) {
+        let reverse = std::process::Command::new("adb")
+            .args([
+                "-s",
+                &device_id,
+                "reverse",
+                &format!("tcp:{port}"),
+                &format!("tcp:{port}"),
+            ])
+            .status();
+        if reverse.map(|s| s.success()).unwrap_or(false) {
+            print_message(
+                MessageType::Info,
+                &format!("adb reverse tcp:{port} → debug-hub (scene-inspector)"),
+            );
+        } else {
+            print_message(
+                MessageType::Warning,
+                "adb reverse for scene-inspector failed; the device won't reach the debug-hub",
+            );
+        }
+    }
+
+    // Launch the app.
+    //
+    // Engine args can't be forwarded via `command_line_params`: Godot's Android
+    // launcher SANITIZES that extra off intents sent to EXPORTED activities (a
+    // security guard — see `GodotActivity.sanitizeLaunchIntent`), and we can only
+    // `am start` the exported `GodotAppLauncher` (GodotApp itself isn't exported).
+    // So forward the args as a DEEPLINK (ACTION_VIEW data URI, which is NOT
+    // stripped); `deep_link_router` parses it on startup. Each `--key[=value]`
+    // extra becomes a `key=value` query param (bare flag → `key=true`).
     let spinner = create_spinner("Launching application...");
     let mut launch_args = vec![
         "-s".to_string(),
@@ -841,28 +876,21 @@ fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result
         "shell".to_string(),
         "am".to_string(),
         "start".to_string(),
-        "-n".to_string(),
-        // GodotAppLauncher is the exported launcher activity; GodotApp itself
-        // is not exported, so `am start -n .../GodotApp` is denied from shell.
-        "org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher".to_string(),
     ];
-
-    // Forward CLI flags via Godot's Android launcher convention: the launcher
-    // splits the `command_line_params` string extra on whitespace and feeds
-    // the tokens to the engine's argv. The previous per-flag `-e foo true`
-    // form was a no-op — Godot's GodotApp.java only reads
-    // `command_line_params`, so any other `--es`/`-e` keys are dropped on
-    // the floor and the requested flags never reach DclCli.
-    if !extras.is_empty() {
-        let joined = extras.join(" ");
-        launch_args.push("--es".to_string());
-        launch_args.push("command_line_params".to_string());
-        launch_args.push(joined.clone());
+    if let Some(deeplink) = extras_to_deeplink(&extras) {
+        launch_args.push("-a".to_string());
+        launch_args.push("android.intent.action.VIEW".to_string());
+        launch_args.push("-d".to_string());
+        // Single-quote: the deeplink's `&` param separators would otherwise be
+        // interpreted by the device shell (adb concatenates argv + re-parses).
+        launch_args.push(format!("'{deeplink}'"));
         print_message(
             MessageType::Info,
-            &format!("Launching with command_line_params: {:?}", joined),
+            &format!("Launching via deeplink: {deeplink}"),
         );
     }
+    launch_args.push("-n".to_string());
+    launch_args.push("org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher".to_string());
 
     let launch_status = std::process::Command::new("adb")
         .args(&launch_args)
@@ -911,6 +939,78 @@ fn remote_debug_port(extras: &[String]) -> Option<u16> {
         }
     }
     None
+}
+
+/// Extract the port from a *loopback* `--scene-inspector=ws://127.0.0.1:PORT`
+/// launch arg — the marker that the device should be tunneled to the desktop
+/// debug-hub via `adb reverse`. Only loopback hosts (`127.0.0.1`/`localhost`)
+/// qualify; a LAN-IP target reaches the Mac directly and needs no tunnel.
+/// Returns None when absent or non-loopback.
+fn loopback_scene_inspector_port(extras: &[String]) -> Option<u16> {
+    for a in extras {
+        let value = match a.strip_prefix("--scene-inspector=") {
+            Some(v) => v,
+            None => continue,
+        };
+        let rest = match value
+            .strip_prefix("ws://")
+            .or_else(|| value.strip_prefix("wss://"))
+        {
+            Some(r) => r,
+            None => continue,
+        };
+        // `rest` is "host:port[/path]" — drop any path, then split host/port.
+        let host_port = rest.split('/').next().unwrap_or(rest);
+        if let Some((host, port)) = host_port.rsplit_once(':') {
+            if (host == "127.0.0.1" || host == "localhost") && !host.is_empty() {
+                if let Ok(p) = port.parse::<u16>() {
+                    return Some(p);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Build a `decentraland://open?...` deeplink from launcher extras — the channel
+/// Android uses to receive args, since `command_line_params` is sanitized off
+/// intents to exported activities. Each `--key[=value]` becomes a `key=value`
+/// query param (bare flag → `key=true`). Returns None when there are no extras.
+fn extras_to_deeplink(extras: &[String]) -> Option<String> {
+    if extras.is_empty() {
+        return None;
+    }
+    let params: Vec<String> = extras
+        .iter()
+        .map(|a| {
+            let a = a.strip_prefix("--").unwrap_or(a);
+            match a.split_once('=') {
+                Some((k, v)) => format!("{}={}", k, encode_query_value(v)),
+                None => format!("{a}=true"),
+            }
+        })
+        .collect();
+    Some(format!("decentraland://open?{}", params.join("&")))
+}
+
+/// Minimal percent-encoding for a deeplink query value: only the characters that
+/// would break the query or the device shell. `=`/`:`/`,`/`/` are valid in a
+/// value and left literal so common args (`--rust-log=a::b=trace,info`,
+/// `--scene-inspector=ws://h:p`) read naturally (the parser splits a param on its
+/// first `=` and URL-decodes the value).
+fn encode_query_value(v: &str) -> String {
+    let mut out = String::with_capacity(v.len());
+    for c in v.chars() {
+        match c {
+            '%' => out.push_str("%25"),
+            '&' => out.push_str("%26"),
+            '#' => out.push_str("%23"),
+            '?' => out.push_str("%3F"),
+            ' ' => out.push_str("%20"),
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 /// iOS bundle identifier
