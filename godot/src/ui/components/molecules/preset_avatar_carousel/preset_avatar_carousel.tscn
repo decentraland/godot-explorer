@@ -6,7 +6,7 @@
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7igha"]
 
 [node name="PresetAvatarCarousel" type="Control" unique_id=1249837640]
-custom_minimum_size = Vector2(0, 360)
+custom_minimum_size = Vector2(0, 438)
 layout_mode = 3
 anchors_preset = 10
 anchor_right = 1.0
@@ -19,11 +19,10 @@ script = ExtResource("1_script")
 unique_name_in_owner = true
 clip_contents = true
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
+offset_bottom = 395.0
 grow_horizontal = 2
-grow_vertical = 2
 size_flags_vertical = 3
 script = ExtResource("2_wosj1")
 vertical_scroll_mode = 0
@@ -31,24 +30,30 @@ drag = 6.0
 take_hight_from_children = true
 metadata/_custom_type_script = "uid://c3wphp306q0w"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ScrollContainer" unique_id=235768075]
+[node name="VBoxContainer" type="MarginContainer" parent="ScrollContainer" unique_id=118453950]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_top = 44
+theme_override_constants/margin_bottom = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ScrollContainer/VBoxContainer" unique_id=235768075]
 custom_minimum_size = Vector2(0, 365)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="VSeparator" type="VSeparator" parent="ScrollContainer/HBoxContainer" unique_id=285323729]
+[node name="VSeparator" type="VSeparator" parent="ScrollContainer/VBoxContainer/HBoxContainer" unique_id=285323729]
 layout_mode = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxEmpty_7igha")
 
-[node name="HBoxContainerCards" type="HBoxContainer" parent="ScrollContainer/HBoxContainer" unique_id=1814656963]
+[node name="HBoxContainerCards" type="HBoxContainer" parent="ScrollContainer/VBoxContainer/HBoxContainer" unique_id=1814656963]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 24
 
-[node name="VSeparator2" type="VSeparator" parent="ScrollContainer/HBoxContainer" unique_id=1283879784]
+[node name="VSeparator2" type="VSeparator" parent="ScrollContainer/VBoxContainer/HBoxContainer" unique_id=1283879784]
 layout_mode = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxEmpty_7igha")
