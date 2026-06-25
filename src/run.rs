@@ -743,10 +743,11 @@ pub fn deploy_and_run_on_device(
     release: bool,
     extras: Vec<String>,
     stream_device_logs: bool,
+    install_app: bool,
 ) -> anyhow::Result<()> {
     match platform {
-        "android" => deploy_and_run_android(release, extras, stream_device_logs),
-        "ios" => deploy_and_run_ios(release, extras, stream_device_logs),
+        "android" => deploy_and_run_android(release, extras, stream_device_logs, install_app),
+        "ios" => deploy_and_run_ios(release, extras, stream_device_logs, install_app),
         _ => Err(anyhow::anyhow!(
             "Unsupported platform for device deployment: {}",
             platform
@@ -759,16 +760,8 @@ fn deploy_and_run_android(
     _release: bool,
     extras: Vec<String>,
     stream_device_logs: bool,
+    install_app: bool,
 ) -> anyhow::Result<()> {
-    // The APK name is always the same regardless of release/debug mode
-    let apk_name = "decentraland.godot.client.apk";
-    let apk_path = format!("{}/{}", EXPORTS_FOLDER, apk_name);
-
-    // Check if APK exists
-    if !std::path::Path::new(&apk_path).exists() {
-        return Err(anyhow::anyhow!("APK not found at: {}", apk_path));
-    }
-
     // Check if adb is available
     let adb_check = std::process::Command::new("which").arg("adb").output();
 
@@ -794,18 +787,23 @@ fn deploy_and_run_android(
         print_message(MessageType::Info, &format!("Using device: {}", device_id));
     }
 
-    // Install APK
-    let spinner = create_spinner("Installing APK...");
-    let install_status = std::process::Command::new("adb")
-        .args(["-s", &device_id, "install", "-r", &apk_path])
-        .status()?;
-    spinner.finish();
-
-    if !install_status.success() {
-        return Err(anyhow::anyhow!("Failed to install APK"));
+    // Install APK (skipped under --launch-only — relaunch what's already on the
+    // device). The APK name is the same regardless of release/debug mode.
+    if install_app {
+        let apk_path = format!("{}/decentraland.godot.client.apk", EXPORTS_FOLDER);
+        if !std::path::Path::new(&apk_path).exists() {
+            return Err(anyhow::anyhow!("APK not found at: {}", apk_path));
+        }
+        let spinner = create_spinner("Installing APK...");
+        let install_status = std::process::Command::new("adb")
+            .args(["-s", &device_id, "install", "-r", &apk_path])
+            .status()?;
+        spinner.finish();
+        if !install_status.success() {
+            return Err(anyhow::anyhow!("Failed to install APK"));
+        }
+        print_message(MessageType::Success, "APK installed successfully");
     }
-
-    print_message(MessageType::Success, "APK installed successfully");
 
     // If remote-debug is requested, set up the reverse tunnel so the device's
     // localhost:<port> reaches the editor's debugger on this Mac. This is the
@@ -1040,86 +1038,90 @@ fn deploy_and_run_ios(
     release: bool,
     extras: Vec<String>,
     stream_device_logs: bool,
+    install_app: bool,
 ) -> anyhow::Result<()> {
     if std::env::consts::OS != "macos" {
         return Err(anyhow::anyhow!("iOS deployment is only supported on macOS"));
     }
 
-    let xcodeproj = format!("{}decentraland-godot-client.xcodeproj", EXPORTS_FOLDER);
-    if !std::path::Path::new(&xcodeproj).exists() {
-        return Err(anyhow::anyhow!(
-            "Xcode project not found at: {}. Run export first.",
-            xcodeproj
-        ));
-    }
-
-    // Detect connected iOS device
+    // Detect connected iOS device (needed for both install and launch).
     let device_id = get_connected_ios_device()?;
     print_message(MessageType::Info, &format!("Using device: {}", device_id));
 
-    // Build the Xcode project
-    let configuration = if release { "Release" } else { "Debug" };
-    let derived_data = format!("{}build", EXPORTS_FOLDER);
+    // Build + install (skipped under --launch-only — relaunch what's installed).
+    if install_app {
+        let xcodeproj = format!("{}decentraland-godot-client.xcodeproj", EXPORTS_FOLDER);
+        if !std::path::Path::new(&xcodeproj).exists() {
+            return Err(anyhow::anyhow!(
+                "Xcode project not found at: {}. Run export first.",
+                xcodeproj
+            ));
+        }
 
-    let spinner = create_spinner("Building Xcode project...");
-    let build_output = std::process::Command::new("xcodebuild")
-        .args([
-            "-project",
-            &xcodeproj,
-            "-scheme",
-            "decentraland-godot-client",
-            "-configuration",
-            configuration,
-            "-destination",
-            "generic/platform=iOS",
-            "-derivedDataPath",
-            &derived_data,
-            "-allowProvisioningUpdates",
-            "build",
-        ])
-        .output()?;
-    spinner.finish();
+        // Build the Xcode project
+        let configuration = if release { "Release" } else { "Debug" };
+        let derived_data = format!("{}build", EXPORTS_FOLDER);
 
-    if !build_output.status.success() {
-        let stderr = String::from_utf8_lossy(&build_output.stderr);
-        return Err(anyhow::anyhow!("xcodebuild failed:\n{}", stderr));
+        let spinner = create_spinner("Building Xcode project...");
+        let build_output = std::process::Command::new("xcodebuild")
+            .args([
+                "-project",
+                &xcodeproj,
+                "-scheme",
+                "decentraland-godot-client",
+                "-configuration",
+                configuration,
+                "-destination",
+                "generic/platform=iOS",
+                "-derivedDataPath",
+                &derived_data,
+                "-allowProvisioningUpdates",
+                "build",
+            ])
+            .output()?;
+        spinner.finish();
+
+        if !build_output.status.success() {
+            let stderr = String::from_utf8_lossy(&build_output.stderr);
+            return Err(anyhow::anyhow!("xcodebuild failed:\n{}", stderr));
+        }
+
+        print_message(MessageType::Success, "Xcode build succeeded");
+
+        // Find the .app bundle
+        let app_path = format!(
+            "{}/Build/Products/{}-iphoneos/decentraland-godot-client.app",
+            derived_data, configuration
+        );
+        if !std::path::Path::new(&app_path).exists() {
+            return Err(anyhow::anyhow!(".app not found at: {}", app_path));
+        }
+
+        // Install on device
+        let spinner = create_spinner("Installing on iOS device...");
+        let install_output = std::process::Command::new("xcrun")
+            .args([
+                "devicectl",
+                "device",
+                "install",
+                "app",
+                "--device",
+                &device_id,
+                &app_path,
+            ])
+            .output()?;
+        spinner.finish();
+
+        if !install_output.status.success() {
+            let stderr = String::from_utf8_lossy(&install_output.stderr);
+            return Err(anyhow::anyhow!(
+                "Failed to install app on device:\n{}",
+                stderr
+            ));
+        }
+
+        print_message(MessageType::Success, "App installed on device");
     }
-
-    print_message(MessageType::Success, "Xcode build succeeded");
-
-    // Find the .app bundle
-    let app_path = format!(
-        "{}/Build/Products/{}-iphoneos/decentraland-godot-client.app",
-        derived_data, configuration
-    );
-    if !std::path::Path::new(&app_path).exists() {
-        return Err(anyhow::anyhow!(".app not found at: {}", app_path));
-    }
-
-    // Install on device
-    let spinner = create_spinner("Installing on iOS device...");
-    let install_output = std::process::Command::new("xcrun")
-        .args([
-            "devicectl",
-            "device",
-            "install",
-            "app",
-            "--device",
-            &device_id,
-            &app_path,
-        ])
-        .output()?;
-    spinner.finish();
-
-    if !install_output.status.success() {
-        let stderr = String::from_utf8_lossy(&install_output.stderr);
-        return Err(anyhow::anyhow!(
-            "Failed to install app on device:\n{}",
-            stderr
-        ));
-    }
-
-    print_message(MessageType::Success, "App installed on device");
 
     // Launch the app with `--console` so stdout/stderr from the device are
     // streamed back to this terminal (Godot prints, Rust tracing, native

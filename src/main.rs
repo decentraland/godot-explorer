@@ -342,6 +342,11 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Skip build and export steps, deploy existing APK/IPA directly to device")
                         .takes_value(false),
                 ).arg(
+                    Arg::new("launch-only")
+                        .long("launch-only")
+                        .help("Just relaunch the app already installed on the device — no build, export, or install (android/ios). Still starts the hub + wires the scene-inspector")
+                        .takes_value(false),
+                ).arg(
                     Arg::new("no-default-features")
                         .long("no-default-features")
                         .help("Do not activate default features")
@@ -655,7 +660,11 @@ fn main() -> Result<(), anyhow::Error> {
             // Check if target is specified
             let target = sm.value_of("target");
             let is_only_lib = sm.is_present("only-lib");
-            let is_skip_export = sm.is_present("skip-export");
+            let is_launch_only = sm.is_present("launch-only");
+            // launch-only is a stronger skip-export: it also skips the install
+            // (android) / xcodebuild+install (ios) and just relaunches the app
+            // already on the device.
+            let is_skip_export = sm.is_present("skip-export") || is_launch_only;
 
             // Bake --deeplink into the generated GDScript so it also applies on
             // builds that can't receive CLI args (tap-to-open, TestFlight).
@@ -764,16 +773,21 @@ fn main() -> Result<(), anyhow::Error> {
 
                     return Ok(());
                 } else if is_skip_export {
-                    // Skip export mode: deploy existing APK/IPA directly
                     print_message(
                         MessageType::Step,
                         &format!(
-                            "Deploying existing build to {} (skipping build and export)",
-                            platform
+                            "{} on {} (no build/export{})",
+                            if is_launch_only {
+                                "Launching installed app"
+                            } else {
+                                "Deploying existing build"
+                            },
+                            platform,
+                            if is_launch_only { "/install" } else { "" }
                         ),
                     );
 
-                    // Just deploy to device
+                    // Just deploy to device (launch-only skips the install too)
                     let mut device_extras: Vec<String> = sm
                         .values_of("extras")
                         .map(|v| v.map(|it| it.into()).collect())
@@ -784,6 +798,7 @@ fn main() -> Result<(), anyhow::Error> {
                         sm.is_present("release"),
                         device_extras,
                         !hub_viewer,
+                        !is_launch_only,
                     )?;
                     if hub_viewer {
                         log_server::run_log_viewer_blocking(HUB_CONSUMER_PORT, true);
@@ -831,6 +846,7 @@ fn main() -> Result<(), anyhow::Error> {
                             sm.is_present("release"),
                             device_extras,
                             !hub_viewer,
+                            true,
                         )?;
                         if hub_viewer {
                             log_server::run_log_viewer_blocking(HUB_CONSUMER_PORT, true);
