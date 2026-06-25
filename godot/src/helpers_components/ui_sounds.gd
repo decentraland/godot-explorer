@@ -56,7 +56,11 @@ func install_audio(node: Node):
 	if node is WearableItem:
 		node.equip.connect(self.play_sound.bind(&"backpack_item_equip", attenuated))
 	elif node is PresetAvatarCard:
-		node.toggled.connect(func(on): if on: play_sound(&"backpack_item_equip", attenuated))
+		node.toggled.connect(
+			func(on):
+				if on:
+					play_sound(&"backpack_item_equip", attenuated)
+		)
 	elif node is EmoteItemUi:
 		var emote_attenuated = node.has_meta("attenuated_sound")
 		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover", emote_attenuated))

@@ -143,7 +143,12 @@ func _on_resend_gui_input(event: InputEvent) -> void:
 			and event.button_index == MOUSE_BUTTON_LEFT
 		)
 	)
-	if not is_tap or not _resend_callable.is_valid() or _resending or _resend_cooldown_remaining > 0:
+	if (
+		not is_tap
+		or not _resend_callable.is_valid()
+		or _resending
+		or _resend_cooldown_remaining > 0
+	):
 		return
 	_async_resend_code()
 
