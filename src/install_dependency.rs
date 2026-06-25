@@ -30,7 +30,10 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-26196848501.commit-d215ef3.tgz");
+// Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG).
+// Set this to `Some("<tarball-url>")` only to temporarily pin a specific build
+// (e.g. a per-PR protocol tarball); leave it `None` to track @next.
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = None;
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {

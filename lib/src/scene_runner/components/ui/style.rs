@@ -3,35 +3,13 @@ use godot::prelude::Color;
 use crate::dcl::components::{
     proto_components::{
         sdk::components::{
-            PbUiTransform, PointerFilterMode, ShowScrollBar, YgAlign, YgDisplay, YgFlexDirection,
-            YgJustify, YgOverflow, YgPositionType, YgUnit, YgWrap,
+            PbUiTransform, PointerFilterMode, YgAlign, YgDisplay, YgFlexDirection, YgJustify,
+            YgOverflow, YgPositionType, YgUnit, YgWrap,
         },
         WrapToGodot,
     },
     SceneEntityId,
 };
-
-/// Width/height (in pixels) of the visible scrollbar widget AND of the
-/// reserved gutter in the layout. We add this as taffy padding on the axes
-/// where the scrollbar is allowed to appear so that children are always
-/// laid out into the reduced content area — even when the scrollbar widget
-/// itself is auto-hidden because content fits. Trade-off: when content
-/// fits, the gutter stays empty (matches Unity's "entity is 100×100,
-/// content is (100−N)×100" model on the axes where a scrollbar is allowed).
-pub const SCROLLBAR_GUTTER_PX: f32 = 24.0;
-
-/// Adds `extra` pixels to a taffy `LengthPercentage` padding value.
-/// Length(v) becomes Length(v + extra). Percent values are left alone —
-/// taffy 0.5 has no "p% + N px" representation, and percent padding on
-/// Scene UI is rare enough to defer that edge case.
-fn add_px(lp: taffy::style::LengthPercentage, extra: f32) -> taffy::style::LengthPercentage {
-    match lp {
-        taffy::style::LengthPercentage::Length(v) => {
-            taffy::style::LengthPercentage::Length(v + extra)
-        }
-        other => other,
-    }
-}
 
 // v1 only resolves YGU_POINT to pixels. YGU_PERCENT and YGU_AUTO are not yet
 // supported for borders (would need post-layout resolution against parent size).
@@ -290,43 +268,19 @@ impl From<&PbUiTransform> for UiTransform {
                     taffy::style::LengthPercentageAuto::Length(0.0),
                     LengthPercentageAuto
                 ),
-                padding: {
-                    let mut padding = rect_a!(
-                        value,
-                        padding_left_unit,
-                        padding_left,
-                        padding_right_unit,
-                        padding_right,
-                        padding_top_unit,
-                        padding_top,
-                        padding_bottom_unit,
-                        padding_bottom,
-                        taffy::style::LengthPercentage::Length(0.0),
-                        LengthPercentage
-                    );
-                    // Reserve gutter space for the scrollbar(s) this entity
-                    // is allowed to display. The scrollbar widget itself
-                    // auto-hides when content fits (AUTO mode in
-                    // dcl_ui_scroll.rs), but the gutter stays so children
-                    // never overlap the area where the scrollbar may appear.
-                    if value.overflow() == YgOverflow::YgoScroll {
-                        let allow_v = matches!(
-                            value.scroll_visible(),
-                            ShowScrollBar::SsbBoth | ShowScrollBar::SsbOnlyVertical
-                        );
-                        let allow_h = matches!(
-                            value.scroll_visible(),
-                            ShowScrollBar::SsbBoth | ShowScrollBar::SsbOnlyHorizontal
-                        );
-                        if allow_v {
-                            padding.right = add_px(padding.right, SCROLLBAR_GUTTER_PX);
-                        }
-                        if allow_h {
-                            padding.bottom = add_px(padding.bottom, SCROLLBAR_GUTTER_PX);
-                        }
-                    }
-                    padding
-                },
+                padding: rect_a!(
+                    value,
+                    padding_left_unit,
+                    padding_left,
+                    padding_right_unit,
+                    padding_right,
+                    padding_top_unit,
+                    padding_top,
+                    padding_bottom_unit,
+                    padding_bottom,
+                    taffy::style::LengthPercentage::Length(0.0),
+                    LengthPercentage
+                ),
                 // Yoga semantics: border width shrinks the content area, like padding.
                 border: taffy::geometry::Rect {
                     left: taffy::style::LengthPercentage::Length(bw_l),
