@@ -5,13 +5,16 @@ signal confirmed(value: String)
 signal cancelled
 
 const RESEND_COOLDOWN_SEC: int = 90
-const _RESEND_BASE_TEXT = "Didn't get an email? [u][color=A0ABFF]Resend email"
+const _RESEND_PREFIX = "Didn't get an email? "
+const _RESEND_LINK_ACTIVE = "[u][color=#A0ABFF]Resend email[/color][/u]"
+const _RESEND_LINK_DIMMED = "[u][color=#A0ABFFB3]Resend email (%d:%02d)[/color][/u]"
 
 var _code_inputs: Array[LineEdit] = []
 var _hidden_input: LineEdit
-var _read_only_style: StyleBox
-var _focus_style: StyleBox
-var _error_style: StyleBox
+var _default_style: StyleBoxFlat
+var _focus_style: StyleBoxFlat
+var _completed_style: StyleBoxFlat
+var _error_style: StyleBoxFlat
 
 # Optional async verifier injected by the caller. Receives the entered code and
 # must return "" on success or a friendly error string to show inline. When unset
@@ -39,16 +42,11 @@ func _ready() -> void:
 		line_edit.editable = false
 		_code_inputs.append(line_edit)
 
-	_read_only_style = _code_inputs[0].get_theme_stylebox("read_only")
-	_focus_style = _code_inputs[0].get_theme_stylebox("focus")
-
-	var error_sb = _read_only_style.duplicate() as StyleBoxFlat
-	error_sb.border_width_left = 1
-	error_sb.border_width_top = 1
-	error_sb.border_width_right = 1
-	error_sb.border_width_bottom = 1
-	error_sb.border_color = Color.RED
-	_error_style = error_sb
+	var base_style = _code_inputs[0].get_theme_stylebox("read_only") as StyleBoxFlat
+	_default_style = _build_slot_style(base_style, Color(0, 0, 0, 0.4), 0, Color.TRANSPARENT)
+	_focus_style = _build_slot_style(base_style, Color(0, 0, 0, 0.7), 2, Color("#E8B9FF"))
+	_completed_style = _build_slot_style(base_style, Color(0, 0, 0, 0.4), 1, Color("#ECEBED"))
+	_error_style = _build_slot_style(base_style, Color(0, 0, 0, 0.4), 1, Color("#FF2D55"))
 
 	_label_error.hide()
 	_set_verifying_children_visible(false)
@@ -120,10 +118,41 @@ func _on_hidden_input_gui_input(event: InputEvent) -> void:
 
 func _update_focus_style(filled_count: int) -> void:
 	for i in range(_code_inputs.size()):
-		if i == filled_count and i < _code_inputs.size():
-			_code_inputs[i].add_theme_stylebox_override("read_only", _focus_style)
+		var style: StyleBoxFlat
+		var font_color: Color
+		if i < filled_count:
+			style = _completed_style
+			font_color = Color("#FCFCFC")
+		elif i == filled_count:
+			style = _focus_style
+			font_color = Color("#FCFCFC")
 		else:
-			_code_inputs[i].add_theme_stylebox_override("read_only", _read_only_style)
+			style = _default_style
+			font_color = Color("#FCFCFC")
+		_code_inputs[i].add_theme_stylebox_override("read_only", style)
+		_code_inputs[i].add_theme_color_override("font_uneditable_color", font_color)
+
+
+func _build_slot_style(
+	base: StyleBoxFlat, bg_color: Color, border_px: int, border_color: Color
+) -> StyleBoxFlat:
+	var sb = StyleBoxFlat.new()
+	if base:
+		sb.corner_radius_top_left = base.corner_radius_top_left
+		sb.corner_radius_top_right = base.corner_radius_top_right
+		sb.corner_radius_bottom_left = base.corner_radius_bottom_left
+		sb.corner_radius_bottom_right = base.corner_radius_bottom_right
+		sb.content_margin_left = base.content_margin_left
+		sb.content_margin_right = base.content_margin_right
+		sb.content_margin_top = base.content_margin_top
+		sb.content_margin_bottom = base.content_margin_bottom
+	sb.bg_color = bg_color
+	sb.border_width_left = border_px
+	sb.border_width_top = border_px
+	sb.border_width_right = border_px
+	sb.border_width_bottom = border_px
+	sb.border_color = border_color
+	return sb
 
 
 func set_verifier(verifier: Callable) -> void:
@@ -186,11 +215,11 @@ func _on_resend_timer_tick() -> void:
 
 func _update_resend_label() -> void:
 	if _resend_cooldown_remaining <= 0:
-		_label_resend.text = _RESEND_BASE_TEXT
+		_label_resend.text = _RESEND_PREFIX + _RESEND_LINK_ACTIVE
 		return
 	var minutes: int = _resend_cooldown_remaining / 60
 	var seconds: int = _resend_cooldown_remaining % 60
-	_label_resend.text = "%s (%d:%02d)" % [_RESEND_BASE_TEXT, minutes, seconds]
+	_label_resend.text = _RESEND_PREFIX + _RESEND_LINK_DIMMED % [minutes, seconds]
 
 
 # gdlint:ignore = async-function-name
@@ -224,7 +253,7 @@ func _show_error(message: String = "") -> void:
 	_label_error.show()
 	for input in _code_inputs:
 		input.add_theme_stylebox_override("read_only", _error_style)
-		input.add_theme_color_override("font_uneditable_color", Color.RED)
+		input.add_theme_color_override("font_uneditable_color", Color("#FF2D55"))
 
 
 func _clear_error() -> void:

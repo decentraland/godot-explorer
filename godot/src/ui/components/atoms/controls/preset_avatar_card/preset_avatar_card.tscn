@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" path="res://src/ui/components/atoms/controls/rectangle_skeleton/rectangle_skeleton.tscn" id="2_skel"]
 [ext_resource type="Texture2D" uid="uid://cectp2gci1mir" path="res://assets/empty-scenes/body.png" id="3_hrf3s"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uvcbl"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hrf3s"]
 bg_color = Color(0, 0, 0, 0.4)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
@@ -26,7 +26,7 @@ corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hrf3s"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_52xnt"]
 bg_color = Color(0, 0, 0, 0.5019608)
 border_width_left = 1
 border_width_top = 1
@@ -46,9 +46,9 @@ focus_mode = 0
 mouse_filter = 1
 toggle_mode = true
 script = ExtResource("1_script")
-style_normal = SubResource("StyleBoxFlat_uvcbl")
+style_normal = SubResource("StyleBoxFlat_hrf3s")
 style_selected = SubResource("StyleBoxFlat_3fjwa")
-style_tapping = SubResource("StyleBoxFlat_hrf3s")
+style_tapping = SubResource("StyleBoxFlat_52xnt")
 metadata/_edit_horizontal_guides_ = [36.0, 324.0]
 
 [node name="RectangleSkeleton" parent="." unique_id=1994501016 instance=ExtResource("2_skel")]
