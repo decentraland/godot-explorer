@@ -4,32 +4,37 @@ extends RefCounted
 ## Shared screen-space layer + runtime for all avatar nameplates (#2215). Avatars
 ## add their NicknameUI Control here instead of rendering it into a per-avatar
 ## SubViewport texture (which showed uninitialized-VRAM garbage on mobile). The
-## Control is projected onto the head anchor each frame, distance-faded, depth-
-## occluded against world geometry by a throttled raycast, and depth-sorted.
+## Control is projected onto the head anchor each frame, distance-faded by the
+## camera distance (what the camera sees), depth-occluded against world geometry by a
+## throttled raycast, and depth-sorted.
 ## `layer = -1` draws above the 3D world but below the default-layer HUD.
 
-# On-screen size (matches the prior fixed_size Sprite3D) and distance fade
-# (full < FADE_START, fade to FADE_END), per nickname_quad.gd.
-const SCALE := 0.25
+# On-screen size and distance fade (full < FADE_START, fade to FADE_END), per
+# nickname_quad.gd. SCALE is 15% larger than the prior 0.25.
+const SCALE := 0.2875
+# Fraction of the tag height kept ABOVE the head anchor (1.0 = bottom edge sits on the
+# anchor). Below 1.0 nudges the whole tag down toward the head.
+const ANCHOR_HEIGHT_FACTOR := 0.85
 const FADE_START := 10.0
 const FADE_END := 15.0
 # Alpha units/sec for smooth occlusion fade in/out.
 const FADE_SPEED := 6.0
-# Occlude against solid world geometry (CL_PHYSICS), avatar bodies (CL_AVATAR / layer
-# 30 — remote click_areas) and the body/trigger layer (4 — avatar TriggerDetectors +
-# the local player's CharacterBody, which frees its click_area so this is its only
-# occluder). Own colliders + the camera-mode area (also on layer 4, wraps the camera
-# and would otherwise occlude everything past the player) are excluded per-ray.
+# Occlude ONLY against solid world geometry — the same CL_PHYSICS bodies the player
+# physically collides with (Player.collision_mask == CL_PHYSICS), i.e. the walls/floor
+# that "make you no-walk there". We deliberately do NOT occlude against avatars or any
+# Area3D: avatar bodies/trigger detectors and (nodeless, pooled) DCL scene sensor areas
+# are not walls, and one of those layer-4 scene spheres sits right in front of a third-
+# person camera and was hiding every tag. Bodies only, no areas → no phantom occluders.
 const CL_PHYSICS := 2
-const CL_BODY := 4
-const CL_AVATAR := 536870912
-const OCCLUSION_MASK := CL_PHYSICS | CL_BODY | CL_AVATAR
+const OCCLUSION_MASK := CL_PHYSICS
 # Frames between occlusion raycasts per avatar (staggered) — not every frame.
 const OCCLUSION_PERIOD := 6
+# Debug: set true at runtime (e.g. the debug-ws `eval` command, non-production) to bypass
+# the occlusion raycast entirely so tags fade by distance only — confirms whether a
+# vanishing tag is an occlusion artifact. `NameplateLayer.debug_disable_occlusion = true`.
+static var debug_disable_occlusion := false
 
 static var _root: Control = null
-# Cached camera-mode area (player child) — excluded from every occlusion ray.
-static var _camera_area: Node = null
 
 
 ## The Control to parent nameplates under (screen-space). Created on first use.
@@ -88,13 +93,15 @@ static func update(avatar) -> void:
 	var cam = avatar.get_viewport().get_camera_3d()
 	if cam != null and avatar._nametag_gate_visible:
 		var anchor: Vector3 = avatar.nickname_quad.global_transform.origin
+		# Fade by the camera distance — what the camera actually sees.
 		var dist: float = cam.global_position.distance_to(anchor)
 		if dist <= FADE_END and not cam.is_position_behind(anchor):
 			ui.size = ui.get_combined_minimum_size()
 			ui.scale = Vector2(SCALE, SCALE)
 			var screen_size: Vector2 = ui.size * SCALE
 			var pos: Vector2 = (
-				cam.unproject_position(anchor) - Vector2(screen_size.x * 0.5, screen_size.y)
+				cam.unproject_position(anchor)
+				- Vector2(screen_size.x * 0.5, screen_size.y * ANCHOR_HEIGHT_FACTOR)
 			)
 			ui.position = pos
 			# Closer avatars draw on top.
@@ -112,6 +119,9 @@ static func update(avatar) -> void:
 ## Throttled occlusion raycast. MUST run from _physics_process — direct_space_state
 ## crashes when queried from _process (idle frame).
 static func update_occlusion(avatar) -> void:
+	if debug_disable_occlusion:
+		avatar._nameplate_occluded = false
+		return
 	if not avatar._nametag_gate_visible:
 		return
 	if (Engine.get_physics_frames() + int(avatar.unique_id)) % OCCLUSION_PERIOD != 0:
@@ -125,39 +135,14 @@ static func update_occlusion(avatar) -> void:
 	avatar._nameplate_occluded = _occluded(avatar, cam.global_position, anchor)
 
 
-## True if solid world geometry or another avatar's body sits between camera and anchor.
+## True if solid world geometry (a CL_PHYSICS body — the walls/floor the player collides
+## with) sits between camera and anchor. Bodies only: avatars and Area3D sensors don't
+## occlude, so no exclude list is needed (the player/avatar colliders live on other layers).
 static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 	var space = avatar.get_world_3d().direct_space_state
 	if space == null:
 		return false
 	var query := PhysicsRayQueryParameters3D.create(from, to)
 	query.collision_mask = OCCLUSION_MASK
-	# click_area is an Area3D, so areas too; bodies (TriggerDetector / player) are on by default.
-	query.collide_with_areas = true
-	# Exclude this avatar's own colliders (so it never occludes its own tag) and the
-	# camera-mode area that wraps the camera.
-	var excludes: Array = []
-	if is_instance_valid(avatar.click_area):
-		excludes.append(avatar.click_area.get_rid())
-	if is_instance_valid(avatar.trigger_detector):
-		excludes.append(avatar.trigger_detector.get_rid())
-	if avatar.is_local_player:
-		var body = avatar.get_parent()
-		if body is CollisionObject3D:
-			excludes.append(body.get_rid())
-	var cam_area := _get_camera_area()
-	if cam_area != null:
-		excludes.append(cam_area.get_rid())
-	query.exclude = excludes
+	query.collide_with_areas = false
 	return not space.intersect_ray(query).is_empty()
-
-
-## The player's camera-mode area detector (cached). It sits on the occlusion layer
-## and wraps the camera, so it must be excluded or it occludes everything beyond the
-## player.
-static func _get_camera_area() -> CollisionObject3D:
-	if not is_instance_valid(_camera_area):
-		var explorer := Global.get_explorer()
-		if explorer != null and is_instance_valid(explorer.player):
-			_camera_area = explorer.player.get_node_or_null("camera_mode_area_detector")
-	return _camera_area as CollisionObject3D
