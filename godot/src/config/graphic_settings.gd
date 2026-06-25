@@ -1,7 +1,14 @@
 class_name GraphicSettings extends RefCounted
 
 ## Profile definitions as data - easier to tune without code changes
-## Keys: aa, shadow, bloom, skybox, texture, fps, scale
+## Keys: aa, shadow, bloom, skybox, texture, fps, scale, mesh_lod_threshold
+##
+## mesh_lod_threshold (pixels of screen-space error before swapping to a
+## lower-detail LOD). Default Godot=1.0 — very conservative. Genesis Plaza
+## scenes ship a full LOD chain via the Rust import pipeline; raising the
+## threshold makes that chain do real work by swapping farther/smaller MIs
+## to LOD1/2/3 sooner. Tuned per profile so HIGH stays visually crisp
+## while lower profiles trade detail for fragment cost.
 const PROFILE_DEFINITIONS: Array[Dictionary] = [
 	# Very Low (0) - Maximum battery savings
 	{
@@ -11,7 +18,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 0,
 		"texture": 0,
 		"fps": ConfigData.FpsLimitMode.FPS_18,
-		"scale": 0.5
+		"scale": 0.5,
+		"mesh_lod_threshold": 8.0
 	},
 	# Low (1) - Battery savings with better visuals
 	{
@@ -21,27 +29,37 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"skybox": 0,
 		"texture": 0,
 		"fps": ConfigData.FpsLimitMode.FPS_30,
-		"scale": 0.75
+		"scale": 0.75,
+		"mesh_lod_threshold": 6.0
 	},
-	# Medium (2) - Balanced performance and quality
+	# Medium (2) - Balanced performance and quality. AA off (MSAA_DISABLED)
+	# because A/B on Mali-G68 showed it costs ~8ms gpu in Genesis Plaza
+	# without a meaningful look-and-feel change at typical mobile resolution.
 	{
-		"aa": 1,
+		"aa": 0,
 		"shadow": 1,
 		"bloom": 1,
 		"skybox": 1,
 		"texture": 1,
 		"fps": ConfigData.FpsLimitMode.FPS_30,
-		"scale": 1.0
+		"scale": 1.0,
+		"mesh_lod_threshold": 3.0
 	},
-	# High (3) - Best quality
+	# High (3) - Best quality. shadow capped at 1 (Low) because Genesis
+	# Plaza bench on Mali-G68 showed shadow_quality=2 costs ~10ms gpu
+	# vs Low without buying meaningful visual quality at typical mobile
+	# resolution (62% of the geometry goes through the shadow pass; Low
+	# keeps shadows visually present with -22% prim and -36% draws,
+	# recovering ~5 fps over High).
 	{
 		"aa": 1,
-		"shadow": 2,
+		"shadow": 1,
 		"bloom": 2,
 		"skybox": 2,
 		"texture": 2,
 		"fps": ConfigData.FpsLimitMode.FPS_60,
-		"scale": 1.0
+		"scale": 1.0,
+		"mesh_lod_threshold": 2.0
 	},
 ]
 
@@ -56,13 +74,29 @@ const SKYBOX_TIME_NAMES: Array[Dictionary] = [
 
 static func connect_global_signal(root: Window):
 	root.size_changed.connect(GraphicSettings.apply_ui_zoom.bind(root))
+	# Orientation flips swap the base resolution axes, so the scale must be
+	# recomputed. Defer to let the window finish resizing (mobile rotates async).
+	Global.orientation_changed.connect(
+		func(_is_portrait): GraphicSettings.apply_ui_zoom.bind(root).call_deferred()
+	)
+
+
+## Returns the design base resolution from project settings, with axes swapped
+## when the current window is portrait so that the design space follows the
+## screen orientation (e.g. 1600x720 landscape -> 720x1600 portrait).
+static func get_base_resolution(screen_size: Vector2) -> Vector2:
+	var base_width: float = ProjectSettings.get_setting("display/window/size/viewport_width", 1600)
+	var base_height: float = ProjectSettings.get_setting("display/window/size/viewport_height", 720)
+	var base_is_portrait: bool = base_height > base_width
+	var screen_is_portrait: bool = screen_size.y > screen_size.x
+	if base_is_portrait != screen_is_portrait:
+		return Vector2(base_height, base_width)
+	return Vector2(base_width, base_height)
 
 
 static func get_max_ui_zoom(root: Window) -> float:
 	var screen_size: Vector2 = root.size
-
-	var base_resolution: Vector2
-	base_resolution = Vector2(720, 720)
+	var base_resolution: Vector2 = get_base_resolution(screen_size)
 
 	var x_factor: float = screen_size.x / base_resolution.x
 	var y_factor: float = screen_size.y / base_resolution.y
@@ -89,7 +123,7 @@ static func get_ui_zoom_available(root: Window) -> Dictionary:
 # Simple DPI-based scaling without aggressive resolution clamp
 static func apply_ui_zoom(root: Window):
 	var screen_size: Vector2 = root.size
-	var base_resolution: Vector2 = Vector2(720, 720)
+	var base_resolution: Vector2 = get_base_resolution(screen_size)
 	var scale_x = screen_size.x / base_resolution.x
 	var scale_y = screen_size.y / base_resolution.y
 
@@ -207,3 +241,9 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	var viewport := Global.get_tree().root.get_viewport()
 	if viewport:
 		viewport.scaling_3d_scale = config.resolution_3d_scale
+		# Apply per-profile mesh-LOD pixel threshold. Higher value = swap
+		# to lower-detail LOD sooner (more aggressive). LOD chain is
+		# baked at GLTF import time; this is the only knob that decides
+		# how aggressively the renderer picks LOD1/2/3 at distance.
+		var lod_thr: float = profile.get("mesh_lod_threshold", 1.0)
+		viewport.mesh_lod_threshold = lod_thr

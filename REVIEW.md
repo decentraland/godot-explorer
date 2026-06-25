@@ -13,9 +13,9 @@
 These are blocking prerequisites. Resolve each one (or explicitly note its status in your review) before reading the diff.
 
 1. **Branch must be up to date with `main`.** Run `gh pr view <pr> --json mergeStateStatus,headRefOid,baseRefOid` (or check the PR page). If the PR is behind `main`, **request the author update the branch before a substantive review** — CI signals (especially Android/iOS artifacts) are not trustworthy on a stale base, and recently-merged fixes (autoload ordering, mouse-filter changes, skeleton recycling) frequently invalidate older diffs. A one-line "please rebase / merge `main` and I'll re-review" is the right output if the branch is stale.
-2. **iOS build must be present for platform-sensitive changes.** iOS builds are gated on the `build-ios` label and skipped by default. Check the PR's checks/comments for a `🍏 iOS` artifact in the sticky build report.
+2. **iOS build must be present for platform-sensitive changes.** Mobile builds are gated on the `build` label (alias: `build-ios`) and skipped by default. Check the PR's checks/comments for a `🍏 iOS` artifact in the sticky build report.
    - If the PR touches: native iOS plugins (`plugins/dcl-godot-ios/**`), `OS.get_name() == "iOS"` branches, deeplinks, virtual keyboard / safe-area / `UIView` paths, audio/video/livekit interop, or anything under `lib/src/comms/` or `lib/src/av/` → **an iOS build is required**.
-   - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build-ios` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
+   - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
    - If the PR is purely backend / GDScript-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
 3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes under `plugins/dcl-godot-ios/godot` or any submodule and the PR description does not mention it, treat it as accidental and ask the author to confirm.
 
@@ -104,14 +104,19 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 8. **Async / race conditions.** Re-entrant `await` inside resize / rotation / teleport handlers (#1823 needed an `_is_switching` guard). Signals connected on a node that hasn't readied yet. Awaits that the caller doesn't `await` on (missing `await` on a coroutine is a real bug class here — see #1851).
 9. **Resource leaks.** Godot does not auto-free bones, nodes outside the tree, or duplicated resources. Historical incident: spring-bone merge never recycled slots across outfit changes → unbounded `Skeleton3D` growth and stale bones silently binding to new meshes (#1849). When you see "add to skeleton / duplicate skin / instantiate on event", ask how it gets removed.
 10. **Persistence.** Blocked users, friends state, profile deploys, per-user settings. Check that state written to disk survives a restart and that load happens before UI reads it (#1872 was an instance of this breaking).
+11. **Log level discipline & Sentry quota.** Every log a PR *adds* has a cost, and the cost depends on its level. Error- and warning-level logs are routed to Godot's error stream and captured by the Sentry SDK in prod/staging builds — each one consumes the shared Sentry **event and attachment quota**, and a mis-leveled log on a hot path (scene-runner update loop, pointer events, per-entity/per-frame scans) can burst into *thousands* of events and exhaust the quota. The team already runs `_before_send` sampling and a `NOISE_PATTERNS` denylist (`godot/src/project_main_loop.gd`) precisely because over-reporting is a recurring problem — review new logs so that machinery doesn't have to. For **every** added log in the diff, ask: *is this an actionable fault a maintainer would want to see as a Sentry issue, or is it expected/recoverable noise?*
+    - **Rust:** `tracing::error!` → Godot error → **Sentry issue**. `tracing::warn!` → Godot warning → Sentry (lower severity). `info!`/`debug!`/`trace!` → plain `godot_print!`, **never** Sentry (see `lib/src/tools/godot_logger.rs`). Debugging/diagnostic output belongs in `tracing::debug!`. Reserve `tracing::error!` for genuine faults we'd actually want paged on. A *missing texture / wearable / optional asset that already has a fallback* is **not** an error — it's a `warn!` (or `debug!` if routine) with a defined `else` branch.
+    - **GDScript:** `push_error` / `printerr` → Godot error → **Sentry**. `push_warning` → warning. `print` / `prints` → console only, not Sentry. Same rule: don't `push_error` for expected-and-handled conditions; use `push_warning` or `print`, and reserve `push_error`/`printerr` for genuinely actionable failures.
+
+    See Section 5 → "Logging discipline & Sentry quota" for the routing table and examples. Flag any new `error!`/`push_error`/`printerr` whose condition is expected, recoverable, or already handled by a fallback, and ask the author to downgrade it.
 
 ### Tier 3 — Quality
 
-11. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
-12. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
-13. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
-14. **Test plan quality.** PR descriptions in this repo follow `## Summary` + `## Test plan` (bulleted checklist). A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on.
-15. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
+12. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
+13. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
+14. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
+15. **Test plan quality.** PR descriptions in this repo follow `## Summary` + `## Test plan` (bulleted checklist). A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on.
+16. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
 
 ---
 
@@ -152,7 +157,7 @@ The PR-level workflows a reviewer should expect green before approving:
 - `Clippy` — `-D warnings`
 - `🐧 Linux`, `🪟 Windows`, `🍎 macOS` builds
 - `🤖 Android` builds (APK/AAB posted as a sticky comment on the PR)
-- `🍏 iOS` is **opt-in** — gated on the `build-ios` label. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
+- `🍏 iOS` is **opt-in** — gated on the `build` label (alias: `build-ios`), which also posts a Slack "Android build ready" notification with the R2 APK download link. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
 
 ### Release flow
 `release` branch is used for production cuts. PRs titled `Release: merge release into main` / `Merge main into release` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).
@@ -181,8 +186,30 @@ A `Button` inside a panel that appears over a `LineEdit` will steal focus → ke
 ### Virtual keyboard buffer sync
 After programmatically inserting text into a `LineEdit` on mobile, call `DisplayServer.virtual_keyboard_show(text, …)` to re-sync the OS buffer, or backspace will behave as if the inserted text isn't there (#1822).
 
-### Rust logging
-All `tracing` output is routed through Godot's print functions. `RUST_LOG`, `--rust-log`, and `decentraland://open?rust-log=…` all work. Source file/line metadata is preserved for Sentry. Prefer `tracing::warn!` / `error!` over `godot_print!` for anything that should be in Sentry.
+### Logging discipline & Sentry quota
+**This is the highest-leverage thing to scan a diff for that static checks will never catch.** Logs are not free: error- and warning-level logs flow into Godot's error stream, which the Sentry SDK captures and ships in prod/staging builds. Every such log added in a PR consumes the shared Sentry **event/attachment quota** for the lifetime of that code — and one mis-leveled log on a hot path can exhaust it.
+
+How a log reaches (or doesn't reach) Sentry — verified against `lib/src/tools/godot_logger.rs` and `godot/src/project_main_loop.gd`:
+
+| Source | Macro / call | Routes to | In Sentry? |
+|---|---|---|---|
+| Rust | `tracing::error!` | `print_error` (Godot error, real file:line) | **Yes — opens an issue** |
+| Rust | `tracing::warn!` | `print_warning` (Godot warning) | Yes (lower severity) |
+| Rust | `tracing::info!` / `debug!` / `trace!` | plain `godot_print!` | **No** |
+| GDScript | `push_error` / `printerr` | Godot error | **Yes** |
+| GDScript | `push_warning` | Godot warning | Yes (lower severity) |
+| GDScript | `print` / `prints` | console | **No** |
+
+`RUST_LOG`, `--rust-log`, and `decentraland://open?rust-log=…` all work for filtering at runtime; source file/line metadata is preserved for Sentry and the Godot debugger.
+
+The team already pays for over-reporting with machinery in `project_main_loop.gd`: `_before_send` drops all dev-build events, samples log attachments at 1% (`ATTACH_LOG_SAMPLE_RATE`), and runs a `NOISE_PATTERNS` denylist that throws away engine/driver/livekit spam (keeping a 5% canary). **The existence of that denylist is the tell: every error-level log that fires in a loop is a quota problem.** Review new logs so they never have to be added to it.
+
+The rule for any log added in a diff:
+
+- **`error!` / `push_error` / `printerr` → only for genuine, actionable faults** a maintainer would actually want surfaced as a Sentry issue (a broken invariant, a corrupted response we can't recover from, a state that shouldn't be reachable). If the answer to "would we open a ticket for this?" is no, it's not an error.
+- **Expected-and-handled conditions are not errors.** A missing texture / wearable / optional asset, an absent optional field, a network resource that 404s and falls back — these have a defined `else` branch, so they're a **`warn!` / `push_warning`** at most, or **`debug!` / `print`** if routine. The classic anti-pattern: `error!("texture not found: {url}")` next to a line that already substitutes a placeholder. That's a `warn!` or `debug!`, never an `error!`.
+- **Debugging/diagnostic output is `tracing::debug!` (Rust) or `print` (GDScript)** — never error/warn. Things added to trace a problem during development must not ship as Sentry events.
+- **Hot paths multiply everything.** A log inside the scene-runner update loop, pointer-event loop, per-entity scan, or a per-frame `_process` can fire thousands of times per session. Even a `warn!` there is suspect; an `error!` there is a quota incident. Flag it.
 
 ### Unity parity
 When review cites `SkyboxRenderController.cs:183`, `avatar rotation_y wire convention`, `camera FOV 60°`, or similar, the reference is the **Unity Foundation Client**. The reviewer is comparing byte-for-byte / degree-for-degree, and the PR should match unless it explains why not.
@@ -225,6 +252,9 @@ Length:
 A reviewer should `grep` / eyeball the diff for these before reading logic:
 
 - `print(` / `prints(` / `print_verbose(` in non-tool GDScript → likely debug leftover.
+- New `tracing::error!` (Rust) or `push_error(` / `printerr(` (GDScript) in the diff → these ship to Sentry and cost quota. Confirm the condition is a genuine, actionable fault. If it's expected/recoverable or already has a fallback (missing texture/asset, optional absent, 404-then-default), ask to downgrade to `warn!`/`push_warning` or `debug!`/`print`. See Section 5.
+- New `tracing::error!` / `tracing::warn!` (or `push_error`/`printerr`) inside a loop, per-entity/per-frame scan, `_process`, or the scene-runner/pointer-event hot path → potential Sentry quota burst; flag even warnings here.
+- A `tracing::error!` / `push_error` sitting right next to a fallback/`else`/placeholder assignment → mis-leveled; it's a `warn!`/`debug!`, not an error.
 - `.claude/` under the diff path → memory files.
 - `# TODO` / `# FIXME` added in this PR (vs already existed) → ask for an issue link.
 - `await …` inside `_ready` / `_process` / `_input` without guards → re-entrancy risk.

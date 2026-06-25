@@ -40,6 +40,14 @@ impl DclEnvironment {
 }
 
 /// Service groups for per-group environment overrides.
+///
+/// `Attestation` is a sub-group of mobile-bff used exclusively for the
+/// /attest/* endpoints. The base host is identical to `MobileBff`
+/// (mobile-bff.decentraland.{suffix}), but `dclenv=attestation::xxx,...`
+/// lets QA point attestation traffic at a different env from the rest of
+/// mobile-bff (places, destinations, etc.). The override is consumed only
+/// by `attestation_service.gd` in dev builds — release builds resolve via
+/// `MobileBff` and ignore the override (see `DclGlobal::is_dev()`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ServiceGroup {
     Auth,
@@ -48,11 +56,12 @@ pub enum ServiceGroup {
     Events,
     Places,
     MobileBff,
+    Attestation,
     Notifications,
 }
 
 impl ServiceGroup {
-    pub const COUNT: usize = 7;
+    pub const COUNT: usize = 8;
 
     pub fn index(self) -> usize {
         match self {
@@ -62,7 +71,8 @@ impl ServiceGroup {
             Self::Events => 3,
             Self::Places => 4,
             Self::MobileBff => 5,
-            Self::Notifications => 6,
+            Self::Attestation => 6,
+            Self::Notifications => 7,
         }
     }
 
@@ -74,6 +84,7 @@ impl ServiceGroup {
             Self::Events => "events",
             Self::Places => "places",
             Self::MobileBff => "mobilebff",
+            Self::Attestation => "attestation",
             Self::Notifications => "notifications",
         }
     }
@@ -86,6 +97,7 @@ impl ServiceGroup {
             "events" => Some(Self::Events),
             "places" => Some(Self::Places),
             "mobilebff" => Some(Self::MobileBff),
+            "attestation" => Some(Self::Attestation),
             "notifications" => Some(Self::Notifications),
             _ => None,
         }
@@ -98,6 +110,7 @@ impl ServiceGroup {
         Self::Events,
         Self::Places,
         Self::MobileBff,
+        Self::Attestation,
         Self::Notifications,
     ];
 }
@@ -286,6 +299,10 @@ mod tests {
         assert_eq!(
             ServiceGroup::parse("mobilebff"),
             Some(ServiceGroup::MobileBff)
+        );
+        assert_eq!(
+            ServiceGroup::parse("attestation"),
+            Some(ServiceGroup::Attestation)
         );
         assert_eq!(
             ServiceGroup::parse("notifications"),

@@ -53,6 +53,8 @@ pub struct DclCli {
     #[var(get)]
     pub clear_cache_startup: bool,
     #[var(get)]
+    pub debug_ws: bool,
+    #[var(get)]
     pub raycast_debugger: bool,
     #[var(get)]
     pub network_debugger: bool,
@@ -106,6 +108,48 @@ pub struct DclCli {
     pub fi_benchmark_size: i32,
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
+    #[var(get)]
+    pub gp_benchmark: bool,
+    // Bench substrate flag. When true, skip first-launch HardwareBenchmark
+    // and skip DynamicGraphicsManager init. Auto-set by deeplink param
+    // `gp-benchmark=true` (see deep_link_router.gd) so callers don't have to
+    // pass both. Avoids contaminating profile/measurement state with the
+    // startup overhead and viewport_set_measure_render_time toggles those
+    // subsystems do.
+    #[var]
+    pub bench_mode: bool,
+
+    // V8 inspector target. When non-empty AND the build has the
+    // `enable_inspector` feature, the SDK7 scene whose title matches
+    // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
+    // Title-match (instead of hash id) so it works from deeplinks without
+    // having to discover the scene id beforehand.
+    #[var]
+    pub inspect_scene_title: GString,
+
+    // Override the default optimized-content base URL. When set, runtime
+    // fetches `<base_url>/<hash>-mobile.zip` instead of the hardcoded
+    // production endpoint. Empty = use default
+    // (https://optimized-assets.dclregenesislabs.xyz/v4).
+    //
+    // Custom setter mirrors the value into a thread-safe static
+    // (`OPTIMIZED_URL_OVERRIDE` in content_provider.rs) because tokio
+    // workers can't reach `DclGlobal::try_singleton()` — Godot's singleton
+    // registry is main-thread-only.
+    #[var(get, set = set_optimized_content_base_url)]
+    pub optimized_content_base_url: GString,
+
+    // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
+    // set in `update_gltf_container` so the bench can measure the rendering
+    // floor without any scene meshes loaded. Pure perf-debug knob.
+    #[var]
+    pub skip_gltf_load: bool,
+
+    // Diagnostic: force every WorldEnvironment to BG_COLOR (no sky shader,
+    // no procedural sky). Combined with `skip-gltf` measures the renderer
+    // floor without sky fragment cost.
+    #[var]
+    pub kill_sky: bool,
 
     // Arguments with values
     #[var(get)]
@@ -341,6 +385,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Maintenance".to_string(),
             },
+            ArgDefinition {
+                name: "--debug-ws".to_string(),
+                description: "Start the debug WebSocket server on startup (port 9230)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Maintenance".to_string(),
+            },
             // Asset Loading
             ArgDefinition {
                 name: "--only-optimized".to_string(),
@@ -420,6 +470,45 @@ impl DclCli {
                     .to_string(),
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Performance".to_string(),
+            },
+            // Genesis Plaza Benchmark (issue #1862). Trigger only — all knobs
+            // (toggles, durations, output path, tag) live in
+            // godot/bench/genesis_plaza.config.json so the CLI doesn't bloat.
+            ArgDefinition {
+                name: "--gp-benchmark".to_string(),
+                description: "Run Genesis Plaza profiling benchmark (config in godot/bench/genesis_plaza.config.json)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--bench-mode".to_string(),
+                description: "Skip first-launch HardwareBenchmark and DynamicGraphicsManager init. Auto-enabled when --gp-benchmark / gp-benchmark=true deeplink is set. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--optimized-content-base-url".to_string(),
+                description: "Override the default optimized-content base URL (default: https://optimized-assets.dclregenesislabs.xyz/v4). Also accepted as deeplink param.".to_string(),
+                arg_type: ArgType::Value("<url>".to_string()),
+                category: "Performance".to_string(),
+            },
+            ArgDefinition {
+                name: "--skip-gltf".to_string(),
+                description: "Diagnostic: skip every GltfContainer instantiation so the renderer floor (sky+UI+avatar) can be measured. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--kill-sky".to_string(),
+                description: "Diagnostic: force WorldEnvironment background_mode=COLOR everywhere — no sky shader, no procedural sky. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--inspect-scene-title".to_string(),
+                description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
+                arg_type: ArgType::Value("<title>".to_string()),
+                category: "Debugging".to_string(),
             },
             // Authentication
             ArgDefinition {
@@ -587,6 +676,7 @@ impl INode for DclCli {
         let client_test_mode = args_map.contains_key("--client-test");
         let test_runner = args_map.contains_key("--test-runner");
         let clear_cache_startup = args_map.contains_key("--clear-cache-startup");
+        let debug_ws = args_map.contains_key("--debug-ws");
         let raycast_debugger = args_map.contains_key("--raycast-debugger");
         let network_debugger = args_map.contains_key("--network-debugger");
         let spawn_avatars = args_map.contains_key("--spawn-avatars");
@@ -626,6 +716,30 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
             .unwrap_or(-1);
         let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
+        let gp_benchmark = args_map.contains_key("--gp-benchmark");
+        let optimized_content_base_url: GString = args_map
+            .get("--optimized-content-base-url")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
+        // Mirror the CLI-arg value into the thread-safe static so worker
+        // threads see it without going through `DclGlobal::try_singleton()`.
+        if !optimized_content_base_url.is_empty() {
+            crate::content::content_provider::set_optimized_url_override(
+                &optimized_content_base_url.to_string(),
+            );
+        }
+        let skip_gltf_load = args_map.contains_key("--skip-gltf");
+        let kill_sky = args_map.contains_key("--kill-sky");
+        // bench_mode auto-enabled when gp_benchmark is set, so the desktop
+        // CLI doesn't have to pass both. Mobile flips this from
+        // deep_link_router.gd when it sees gp-benchmark=true.
+        let bench_mode = gp_benchmark || args_map.contains_key("--bench-mode");
+        let inspect_scene_title = args_map
+            .get("--inspect-scene-title")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
 
         // Extract arguments with values
         let asset_server_port = args_map
@@ -714,6 +828,7 @@ impl INode for DclCli {
             client_test_mode,
             test_runner,
             clear_cache_startup,
+            debug_ws,
             raycast_debugger,
             network_debugger,
             spawn_avatars,
@@ -741,6 +856,12 @@ impl INode for DclCli {
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
+            gp_benchmark,
+            optimized_content_base_url,
+            skip_gltf_load,
+            kill_sky,
+            bench_mode,
+            inspect_scene_title,
             asset_server_port,
             realm,
             location,
@@ -758,6 +879,13 @@ impl INode for DclCli {
 
 #[godot_api]
 impl DclCli {
+    #[func]
+    pub fn set_optimized_content_base_url(&mut self, url: GString) {
+        let s = url.to_string();
+        crate::content::content_provider::set_optimized_url_override(&s);
+        self.optimized_content_base_url = url;
+    }
+
     #[func]
     pub fn has_arg(&self, arg: GString) -> bool {
         self.args_map.contains_key(&arg.to_string())

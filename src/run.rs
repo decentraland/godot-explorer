@@ -754,9 +754,7 @@ pub fn deploy_and_run_on_device(
 }
 
 /// Deploy and run on Android device using adb
-fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Result<()> {
-    // TODO: wire `_extras` into the `am start` intent via --esa args. For now
-    // keep the behaviour identical to the pre-extras code path.
+fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result<()> {
     // The APK name is always the same regardless of release/debug mode
     let apk_name = "decentraland.godot.client.apk";
     let apk_path = format!("{}/{}", EXPORTS_FOLDER, apk_name);
@@ -806,16 +804,37 @@ fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Resul
 
     // Launch the app
     let spinner = create_spinner("Launching application...");
+    let mut launch_args = vec![
+        "-s".to_string(),
+        device_id.clone(),
+        "shell".to_string(),
+        "am".to_string(),
+        "start".to_string(),
+        "-n".to_string(),
+        // GodotAppLauncher is the exported launcher activity; GodotApp itself
+        // is not exported, so `am start -n .../GodotApp` is denied from shell.
+        "org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher".to_string(),
+    ];
+
+    // Forward CLI flags via Godot's Android launcher convention: the launcher
+    // splits the `command_line_params` string extra on whitespace and feeds
+    // the tokens to the engine's argv. The previous per-flag `-e foo true`
+    // form was a no-op — Godot's GodotApp.java only reads
+    // `command_line_params`, so any other `--es`/`-e` keys are dropped on
+    // the floor and the requested flags never reach DclCli.
+    if !extras.is_empty() {
+        let joined = extras.join(" ");
+        launch_args.push("--es".to_string());
+        launch_args.push("command_line_params".to_string());
+        launch_args.push(joined.clone());
+        print_message(
+            MessageType::Info,
+            &format!("Launching with command_line_params: {:?}", joined),
+        );
+    }
+
     let launch_status = std::process::Command::new("adb")
-        .args([
-            "-s",
-            &device_id,
-            "shell",
-            "am",
-            "start",
-            "-n",
-            "org.decentraland.godotexplorer/com.godot.game.GodotApp",
-        ])
+        .args(&launch_args)
         .status()?;
     spinner.finish();
 
@@ -927,14 +946,22 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
 
     print_message(MessageType::Success, "App installed on device");
 
-    // Launch the app. Positional args after `--` are propagated to the app as
-    // process argv and picked up by Godot's `Os.get_cmdline_user_args()`.
+    // Launch the app with `--console` so stdout/stderr from the device are
+    // streamed back to this terminal (Godot prints, Rust tracing, native
+    // NSLog all surface here). Mirrors the Android flow which runs adb
+    // logcat after starting the activity. Blocks until the app exits or
+    // the user hits Ctrl-C, which is exactly what we want during dev runs.
+    //
+    // Positional args after `--` are propagated to the app as process argv
+    // and picked up by Godot's `Os.get_cmdline_user_args()`.
     let spinner = create_spinner("Launching application...");
     let mut launch_args: Vec<String> = vec![
         "devicectl".into(),
         "device".into(),
         "process".into(),
         "launch".into(),
+        "--console".into(),
+        "--terminate-existing".into(),
         "--device".into(),
         device_id.clone(),
         IOS_BUNDLE_ID.into(),
@@ -943,20 +970,33 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
         launch_args.push("--".into());
         launch_args.extend(extras.iter().cloned());
     }
-    let launch_output = std::process::Command::new("xcrun")
-        .args(&launch_args)
-        .output()?;
     spinner.finish();
+    print_message(
+        MessageType::Info,
+        "Application launched on iOS device — streaming device logs (Ctrl+C to stop):",
+    );
 
-    if !launch_output.status.success() {
-        let stderr = String::from_utf8_lossy(&launch_output.stderr);
-        return Err(anyhow::anyhow!(
-            "Failed to launch app on device:\n{}",
-            stderr
-        ));
+    let launch_status = std::process::Command::new("xcrun")
+        .args(&launch_args)
+        .status()?;
+
+    // A non-zero exit when --console is interrupted by Ctrl-C is the normal
+    // way to stop watching logs, so don't surface that as a build failure.
+    // Real launch failures (bundle missing, signing mismatch) surface in
+    // the streamed stderr above and devicectl exits before we attach.
+    if !launch_status.success() {
+        match launch_status.code() {
+            // 130 = SIGINT (Ctrl-C), 143 = SIGTERM. Both are user-initiated.
+            Some(130) | Some(143) | None => {}
+            Some(code) => {
+                return Err(anyhow::anyhow!(
+                    "devicectl launch --console exited with code {}",
+                    code
+                ));
+            }
+        }
     }
 
-    print_message(MessageType::Success, "Application launched on iOS device");
     Ok(())
 }
 

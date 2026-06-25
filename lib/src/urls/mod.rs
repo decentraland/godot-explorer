@@ -168,6 +168,17 @@ pub fn mobile_bff() -> String {
         suffix(ServiceGroup::MobileBff)
     )
 }
+// Mobile-bff base used by the attestation flow (/attest/* endpoints). Same
+// host template as `mobile_bff()`, but resolves through
+// `ServiceGroup::Attestation` so QA can target a different env per-group via
+// `dclenv=attestation::zone,org`. Dev-only — release clients call
+// `mobile_bff()` and bypass the override (see attestation_service.gd).
+pub fn attestation_bff() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}",
+        suffix(ServiceGroup::Attestation)
+    )
+}
 pub fn destinations_api() -> String {
     format!(
         "https://mobile-bff.decentraland.{}/destinations",
@@ -207,6 +218,12 @@ pub fn host() -> String {
 }
 pub fn marketplace() -> String {
     format!("https://decentraland.{}/marketplace", default_suffix())
+}
+pub fn marketplace_catalog_api() -> String {
+    format!(
+        "https://marketplace-api.decentraland.{}/v2/catalog",
+        default_suffix()
+    )
 }
 pub fn marketplace_claim_name() -> String {
     format!(

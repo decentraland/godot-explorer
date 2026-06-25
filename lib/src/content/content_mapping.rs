@@ -62,6 +62,20 @@ impl ContentMappingAndUrl {
         Some(SceneEmoteHash::new(glb_hash, audio_hash))
     }
 
+    /// Get scene emote data when only the GLB *hash* is known — e.g. a scene-emote
+    /// URN received from a remote player, which carries the hash but not the file path.
+    /// Reverse-looks-up the glb/gltf file for that hash, then resolves its sibling audio.
+    pub fn get_scene_emote_hash_by_glb_hash(&self, glb_hash: &str) -> Option<SceneEmoteHash> {
+        let file = self
+            .content
+            .iter()
+            .find(|(file, hash)| {
+                hash.as_str() == glb_hash && (file.ends_with(".glb") || file.ends_with(".gltf"))
+            })
+            .map(|(file, _)| file.clone())?;
+        self.get_scene_emote_hash(&file)
+    }
+
     /// Find audio file hash for a given base name (without extension).
     /// Searches for .mp3 or .ogg files with the same base name.
     fn find_audio_for_base_name(&self, base_name: &str) -> Option<String> {
@@ -159,5 +173,65 @@ impl DclContentMappingAndUrl {
         Gd::from_init_fn(move |_base| DclContentMappingAndUrl {
             inner: Arc::new(ContentMappingAndUrl::new()),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mapping_with(files: &[(&str, &str)]) -> ContentMappingAndUrl {
+        ContentMappingAndUrl::from_base_url_and_content(
+            "http://localhost:8001/content/contents/".into(),
+            files
+                .iter()
+                .map(|(file, hash)| TypedIpfsRef {
+                    file: file.to_string(),
+                    hash: hash.to_string(),
+                })
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn scene_emote_by_glb_hash_finds_file_and_audio() {
+        // Preview-style hashes contain '-' — the reverse lookup must be exact.
+        let mapping = mapping_with(&[
+            ("assets/models/animations/k_intro_emote.glb", "b64-aGFzaA=="),
+            ("assets/models/animations/k_intro_emote.mp3", "b64-YXVkaW8="),
+            ("assets/models/other.glb", "b64-b3RoZXI="),
+        ]);
+
+        let hash = mapping
+            .get_scene_emote_hash_by_glb_hash("b64-aGFzaA==")
+            .expect("glb hash should resolve");
+        assert_eq!(hash.glb_hash, "b64-aGFzaA==");
+        assert_eq!(hash.audio_hash.as_deref(), Some("b64-YXVkaW8="));
+    }
+
+    #[test]
+    fn scene_emote_by_glb_hash_without_audio() {
+        let mapping = mapping_with(&[("emote.glb", "bafkreihash")]);
+        let hash = mapping
+            .get_scene_emote_hash_by_glb_hash("bafkreihash")
+            .expect("glb hash should resolve");
+        assert_eq!(hash.audio_hash, None);
+    }
+
+    #[test]
+    fn scene_emote_by_glb_hash_unknown_hash() {
+        let mapping = mapping_with(&[("emote.glb", "bafkreihash")]);
+        assert!(mapping
+            .get_scene_emote_hash_by_glb_hash("missing")
+            .is_none());
+    }
+
+    #[test]
+    fn scene_emote_by_glb_hash_ignores_non_gltf_files() {
+        // A hash that belongs to a non-model file must not resolve as an emote.
+        let mapping = mapping_with(&[("emote.mp3", "bafkreiaudio")]);
+        assert!(mapping
+            .get_scene_emote_hash_by_glb_hash("bafkreiaudio")
+            .is_none());
     }
 }

@@ -109,8 +109,23 @@ public:
     uint64_t avPlayerAcquireIOSurfacePtr(int player_id);
     String avPlayerGetInfo(int player_id);
 
+    // App Attest — proves to the server that requests come from a genuine,
+    // un-tampered build of the app on this device. Three async methods +
+    // three completion signals. clientDataHash is computed in GDScript so
+    // the SHA256 chain stays visible alongside the request body.
+    bool attestation_is_supported();
+    void attestation_generate_key();
+    void attestation_attest_key(String key_id, PackedByteArray client_data_hash);
+    void attestation_generate_assertion(String key_id, PackedByteArray client_data_hash);
+
     // Called from Objective-C when a deeplink is received
     static void emit_deeplink_received(String url);
+
+    // Called from DCAppAttestService completion handlers (always marshalled
+    // to the main thread first). `key_id` is Apple's base64-encoded keyId.
+    static void emit_attestation_key_generated(String key_id, String error);
+    static void emit_attestation_attest_completed(String attestation_object_b64u, String error);
+    static void emit_attestation_assertion_completed(String assertion_b64u, String error);
 
     static DclGodotiOS *get_singleton();
 

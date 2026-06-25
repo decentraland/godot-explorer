@@ -125,6 +125,10 @@ func set_item(index: int, right_direction: bool = true):
 
 
 func set_bg_shader_color(from: Color, to: Color):
+	# Bail if we've left the tree (e.g. sign-out freed the loading screen between
+	# frames): get_tree() would be null and create_tween() would crash.
+	if not is_inside_tree():
+		return
 	var tween = get_tree().create_tween()
 	tween.tween_method(set_shader_background_color, from, to, 0.25)
 
@@ -141,6 +145,10 @@ func set_progress(new_progress: float):
 	progress = new_progress
 
 	loading_progress_label.text = "LOADING %d%%" % floor(progress)
+	# Bail if we've left the tree (e.g. sign-out freed the loading screen between
+	# frames): get_tree() would be null and create_tween() would crash.
+	if not is_inside_tree():
+		return
 	var tween = get_tree().create_tween()
 	var new_width = loading_progress.get_parent().size.x * (progress / 100.0)
 	tween.tween_property(loading_progress, "position:x", new_width, 0.1)
@@ -185,7 +193,9 @@ func _on_timer_check_progress_timeout_timeout():
 
 	if should_timeout:
 		# Skip showing modal during tests to avoid affecting screenshots
-		if Global.testing_scene_mode or Global.cli.scene_test_mode:
+		# and during the GP benchmark, where the runner has its own 30 min
+		# hard cap and the modal would force a half-loaded sample.
+		if Global.testing_scene_mode or Global.cli.scene_test_mode or Global.is_gp_benchmark():
 			return
 		Global.modal_manager.async_show_scene_timeout_modal()
 		# LOADING_TIMEOUT metric

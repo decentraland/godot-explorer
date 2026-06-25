@@ -27,6 +27,7 @@ var _first_time_refresh_warning = true
 var _last_parcel_position: Vector2i = Vector2i.MAX
 var _avatar_under_crosshair: Avatar = null
 var _last_outlined_avatar: Avatar = null
+var _last_outlined_entity: Node3D = null
 var _is_loading: bool = true  # Start as loading
 var _ban_check_generation: int = 0
 var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
@@ -35,7 +36,6 @@ var _resubscribe_timer: Timer = null
 ## True between social-service init and player logout. Gates retry loops so they
 ## exit cleanly when the session ends mid-await instead of re-subscribing after sign-out.
 var _session_active: bool = false
-var _gamepad_connected: bool = false
 
 ## Children of %UI hidden while "hide explorer UI" is on; restored when toggled off.
 var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
@@ -46,6 +46,8 @@ var _session_hide_main_hud: bool = false
 var _session_hide_view_profile: bool = true
 var _session_hide_world_interactions: bool = true
 var _session_hide_player_names: bool = true
+var _session_hide_scene_ui: bool = true
+var _mobile_controls_hidden_for_hide_ui: bool = false
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -70,6 +72,8 @@ var _debug_panel_from_settings: bool = false
 @onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
 @onready var mobile_ui = %MobileUI
+@onready var mobile_camera_input: Control = %MobileCameraInput
+@onready var left_right_safe_container_mobile: MarginContainer = %LeftRightSafeContainerMobile
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
@@ -255,9 +259,6 @@ func _ready():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()
-		# Detect physical gamepad to hide virtual controls
-		Input.joy_connection_changed.connect(_on_joy_connection_changed)
-		_gamepad_connected = Input.get_connected_joypads().size() > 0
 		_update_virtual_controls_visibility()
 	else:
 		mobile_ui.hide()
@@ -406,27 +407,57 @@ func _push_scene_interactable_area() -> void:
 
 
 func _on_player_logout():
-	# Mark session inactive first so any in-flight retry awaits exit on next check
-	_session_active = false
+	# Funnel any logout signal (e.g. session expiry) into the single canonical
+	# teardown instead of quitting the app. Global.sign_out() is re-entrancy
+	# guarded, so this is safe even when sign_out() is what emitted the signal.
+	Global.sign_out()
 
-	# Stop re-subscribe timer
+
+## Sever this Explorer from every persistent (autoload / window / Rust singleton)
+## emitter and stop its retry timers, while the node is still in the tree. Called
+## by Global.sign_out() BEFORE it kills scenes / clears realm / changes orientation,
+## so none of those re-emit into this about-to-be-freed Explorer. Idempotent.
+func prepare_for_logout() -> void:
+	# Drain any in-flight subscription retry loops on their next check.
+	_session_active = false
+	_subscription_reconnecting = false
+
 	if _resubscribe_timer != null:
 		_resubscribe_timer.stop()
 		_resubscribe_timer.queue_free()
 		_resubscribe_timer = null
 
-	# Stop notifications polling
-	NotificationsManager.stop_polling()
+	_disconnect_persistent_signals()
 
-	# Clean stored session
-	Global.get_config().session_account = {}
-	Global.get_config().save_to_settings_file()
 
-	# TODO: It's crashing. Logout = exit app
-	#get_tree().change_scene_to_file("res://src/main.tscn")
+## Disconnect this Explorer from persistent emitters (autoloads / Rust singletons).
+## Godot auto-severs any connection whose RECEIVER is freed, so the many
+## Global.* -> _on_*() UI callbacks are cleaned up automatically when this node is
+## freed. We only manually sever the connections Godot would NOT clean up, or that
+## can fire synchronously into this node during the sign-out teardown (before the
+## deferred free): the Global -> Global connection (leaks one callback per login
+## otherwise) and the persistent Rust/autoload emitters used during teardown.
+func _disconnect_persistent_signals() -> void:
+	_safe_disconnect(Global.scene_runner.on_change_scene_id, _on_change_scene_id)
+	_safe_disconnect(Global.scene_runner.pointer_tooltip_changed, _on_pointer_tooltip_changed)
+	_safe_disconnect(Global.change_parcel, _on_change_parcel)
+	_safe_disconnect(Global.orientation_changed, _on_orientation_changed)
+	_safe_disconnect(Global.player_identity.logout, _on_player_logout)
 
-	# TODO: Temporal solution
-	get_tree().quit()
+	if Global.avatars != null:
+		# Global -> Global: not auto-severed, would leak one callback per login.
+		var profile_changed: Signal = Global.player_identity.profile_changed
+		_safe_disconnect(profile_changed, Global.avatars.update_primary_player_profile)
+		_safe_disconnect(Global.avatars.avatar_added, _on_avatar_added_apply_hide_ui)
+
+	if Global.social_service != null:
+		_safe_disconnect(Global.social_service.block_update_received, _on_block_update_received)
+		_safe_disconnect(Global.social_service.subscription_dropped, _async_on_subscription_dropped)
+
+
+func _safe_disconnect(sig: Signal, callable: Callable) -> void:
+	if sig.is_connected(callable):
+		sig.disconnect(callable)
 
 
 func _on_player_profile_changed(_profile: DclUserProfile) -> void:
@@ -622,6 +653,16 @@ func change_tooltips():
 	if _avatar_under_crosshair != _last_outlined_avatar:
 		player.outline_system.set_outlined_avatar(_avatar_under_crosshair)
 		_last_outlined_avatar = _avatar_under_crosshair
+
+	# Handle the highlight (outline) for scene objects with show_highlight=true
+	var highlighted_entity: Node3D = Global.scene_runner.highlighted_entity
+	if not is_instance_valid(highlighted_entity):
+		highlighted_entity = null
+	if _session_hide_main_hud and _session_hide_world_interactions:
+		highlighted_entity = null
+	if highlighted_entity != _last_outlined_entity:
+		player.outline_system.set_outlined_entity(highlighted_entity)
+		_last_outlined_entity = highlighted_entity
 
 	# Filter tooltips based on hide UI sub-toggles
 	if _session_hide_main_hud and (_session_hide_view_profile or _session_hide_world_interactions):
@@ -1035,11 +1076,32 @@ func _is_ui_hud_mode_exception(node: Node) -> bool:
 		or node == control_menu
 		or node == margin_container_show_ui
 		or node == profile_container
+		or node == left_right_safe_container_mobile
+		or node == mobile_camera_input
 	)
+
+
+func _apply_mobile_controls_hide_ui(hidden: bool) -> void:
+	if not Global.is_mobile():
+		return
+	_mobile_controls_hidden_for_hide_ui = hidden
+	if hidden:
+		joypad.hide()
+		virtual_joystick.modulate.a = 0.0
+	else:
+		joypad.show()
+		virtual_joystick.modulate.a = 1.0
+
+
+func _show_joypad() -> void:
+	if _mobile_controls_hidden_for_hide_ui:
+		return
+	joypad.show()
 
 
 func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 	ui_root.show()
+	_apply_mobile_controls_hide_ui(not full_hud)
 	if full_hud:
 		for node in _ui_children_hidden_for_hud_mode:
 			if is_instance_valid(node):
@@ -1196,8 +1258,8 @@ func _on_profile_container_visibility_changed() -> void:
 		# Keep profile visibility controlled by its own open/close flow in Hide UI mode.
 		# Avoid forcing hide/show here to prevent visibility_changed re-entrancy loops.
 		return
-	if not profile_container.visible and not _gamepad_connected:
-		joypad.show()
+	if not profile_container.visible:
+		_show_joypad()
 
 
 func _open_friends_panel() -> void:
@@ -1410,9 +1472,10 @@ func _on_loading_started() -> void:
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
 	_session_hide_player_names = true
+	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, true)
+	Global.session_hide_ui_options_sync.emit(true, true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 
 
@@ -1453,38 +1516,38 @@ func _async_run_ban_check() -> void:
 
 func _on_orientation_changed(is_portrait: bool) -> void:
 	if is_portrait:
-		# Portrait: hide all HUD and scene UI, only chat visible
 		mobile_ui.hide()
 		emote_wheel.hide()
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		# Landscape: restore all UI
 		if Global.is_mobile():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
 		navbar._on_size_changed()
-		_set_scene_ui_visible(true)
+		_set_scene_ui_visible(_should_show_scene_ui())
 
 
 func _on_chat_write_mode_changed(is_writing: bool) -> void:
 	if Global.is_orientation_portrait():
-		return  # Portrait hides everything already
+		return
 	if is_writing:
-		# Landscape writing: hide all UI
 		mobile_ui.hide()
 		emote_wheel.hide()
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		# Landscape reading: restore all UI
 		if Global.is_mobile():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
 		navbar._on_size_changed()
-		_set_scene_ui_visible(true)
+		_set_scene_ui_visible(_should_show_scene_ui())
+
+
+func _should_show_scene_ui() -> bool:
+	return not (_session_hide_main_hud and _session_hide_scene_ui)
 
 
 func _set_scene_ui_visible(is_visible: bool) -> void:
@@ -1552,34 +1615,27 @@ func _on_deep_link_open_place(place_id: String) -> void:
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	if not _gamepad_connected:
-		virtual_joystick.show()
+	virtual_joystick.show()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
 
 
-func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
-	_gamepad_connected = Input.get_connected_joypads().size() > 0
-	_update_virtual_controls_visibility()
-
-
 func _update_virtual_controls_visibility() -> void:
-	if _gamepad_connected:
+	if _mobile_controls_hidden_for_hide_ui:
 		joypad.hide()
-		virtual_joystick.hide()
-	else:
-		# Only restore if no panel is covering them
-		var panel_open := (
-			friends_panel.visible
-			or notifications_panel.visible
-			or settings_panel.visible
-			or profile_container.visible
-		)
-		if not panel_open:
-			joypad.show()
-		virtual_joystick.show()
+		virtual_joystick.modulate.a = 0.0
+		return
+	var panel_open := (
+		friends_panel.visible
+		or notifications_panel.visible
+		or settings_panel.visible
+		or profile_container.visible
+	)
+	if not panel_open:
+		_show_joypad()
+	virtual_joystick.show()
 
 
 func _on_backpack_emote_opened(on_emotes := false) -> void:
@@ -1595,14 +1651,12 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if not _gamepad_connected:
-		joypad.show()
+	_show_joypad()
 
 
 func _on_discover_open():
 	navbar.collapse()
-	if not _gamepad_connected:
-		joypad.show()
+	_show_joypad()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
@@ -1699,9 +1753,11 @@ func _on_button_show_ui_pressed() -> void:
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
 	_session_hide_player_names = true
+	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
+	_set_scene_ui_visible(true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, true)
+	Global.session_hide_ui_options_sync.emit(true, true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 
 
@@ -1712,9 +1768,11 @@ func set_hide_main_hud_from_settings(minimized: bool) -> void:
 		_session_hide_view_profile = true
 		_session_hide_world_interactions = true
 		_session_hide_player_names = true
+		_session_hide_scene_ui = true
 		set_visible_ui(true, true)
+		_set_scene_ui_visible(true)
 		_apply_hide_ui_to_avatar_nicks(false)
-		Global.session_hide_ui_options_sync.emit(true, true, true)
+		Global.session_hide_ui_options_sync.emit(true, true, true, true)
 
 
 func set_hide_view_profile(value: bool) -> void:
@@ -1727,6 +1785,12 @@ func set_hide_world_interactions(value: bool) -> void:
 
 func set_hide_player_names(value: bool) -> void:
 	_session_hide_player_names = value
+
+
+func set_hide_scene_ui(value: bool) -> void:
+	_session_hide_scene_ui = value
+	if _session_hide_main_hud:
+		_set_scene_ui_visible(not value)
 
 
 func is_session_hide_main_hud() -> bool:
@@ -1745,11 +1809,17 @@ func is_session_hide_player_names() -> bool:
 	return _session_hide_player_names
 
 
+func is_session_hide_scene_ui() -> bool:
+	return _session_hide_scene_ui
+
+
 func apply_deferred_hide_ui() -> void:
 	if not _session_hide_main_hud:
 		return
 	set_visible_ui(false, true)
 	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
+	if _session_hide_scene_ui:
+		_set_scene_ui_visible(false)
 
 
 func _on_avatar_added_apply_hide_ui(avatar = null) -> void:

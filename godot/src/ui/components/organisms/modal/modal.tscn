@@ -9,6 +9,9 @@
 [ext_resource type="LabelSettings" uid="uid://cmc7vbpljmiry" path="res://assets/themes/modal_url.tres" id="4_4n1cu"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_bdjpj"]
 [ext_resource type="Texture2D" uid="uid://bpsb828rp2tlt" path="res://assets/ui/modal-alert-icon.svg" id="6_rvkw6"]
+[ext_resource type="Texture2D" uid="uid://cvc54ttopcr3a" path="res://assets/themes/icons/checkbox_2_on.svg" id="8_e7o8b"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="8_ex7vt"]
+[ext_resource type="Texture2D" uid="uid://cbd42ho332sb2" path="res://assets/themes/icons/checkbox_2_off.svg" id="9_1bjt6"]
 
 [sub_resource type="Shader" id="Shader_ijrai"]
 code = "shader_type canvas_item;
@@ -67,10 +70,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 82.600006
-offset_top = 351.5
-offset_right = -82.600006
-offset_bottom = -351.5
+offset_left = 100.79999
+offset_top = 517.5
+offset_right = -100.79999
+offset_bottom = -517.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_figov")
@@ -92,10 +95,10 @@ expand_mode = 1
 [node name="MarginContainer_Content" type="MarginContainer" parent="PanelContainer" unique_id=131929422]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/margin_left = 44
-theme_override_constants/margin_top = 51
-theme_override_constants/margin_right = 44
-theme_override_constants/margin_bottom = 48
+theme_override_constants/margin_left = 56
+theme_override_constants/margin_top = 64
+theme_override_constants/margin_right = 56
+theme_override_constants/margin_bottom = 60
 script = ExtResource("3_146x8")
 height_portrait = 1600.0
 top_portrait = 64.0
@@ -133,6 +136,39 @@ text = "You can reload the experience, or jump in now, it should keep loading in
 label_settings = ExtResource("3_tquji")
 horizontal_alignment = 1
 autowrap_mode = 2
+
+[node name="CheckBox_Container" type="HBoxContainer" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=385323721]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="CheckBox" type="CheckBox" parent="PanelContainer/MarginContainer_Content/VBoxContainer/CheckBox_Container" unique_id=1040422742]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("5_bdjpj")
+theme_override_constants/icon_max_width = 32
+theme_override_icons/checked = ExtResource("8_e7o8b")
+theme_override_icons/unchecked = ExtResource("9_1bjt6")
+icon_alignment = 1
+
+[node name="CheckBox_Text" type="RichTextLabel" parent="PanelContainer/MarginContainer_Content/VBoxContainer/CheckBox_Container" unique_id=1063658887]
+unique_name_in_owner = true
+clip_contents = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("8_ex7vt")
+theme_override_font_sizes/normal_font_size = 26
+theme_override_font_sizes/bold_font_size = 28
+theme_override_font_sizes/bold_italics_font_size = 28
+theme_override_font_sizes/italics_font_size = 28
+theme_override_font_sizes/mono_font_size = 28
+bbcode_enabled = true
+text = "Checkbox Text"
+fit_content = true
+scroll_active = false
+vertical_alignment = 1
 
 [node name="HSeparator_Url" type="HSeparator" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=1834330553]
 unique_name_in_owner = true

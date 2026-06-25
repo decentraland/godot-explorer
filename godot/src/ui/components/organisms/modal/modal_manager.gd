@@ -7,6 +7,10 @@ extends Node
 
 signal connection_lost_retry
 signal connection_lost_exit
+signal iap_terms_accepted
+signal session_ended_sign_in
+signal session_ended_retry
+signal session_ended_exit
 
 const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
@@ -43,6 +47,39 @@ const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
 const LOW_SPEC_IPHONE_TITLE = "Limited performance"
 const LOW_SPEC_IPHONE_BODY = "Your device is below our recommended specs (iPhone 13/SE 2023). You may notice slowdowns, crashes or heating issues while playing."
 const LOW_SPEC_IPHONE_PRIMARY = "OK"
+
+const PURCHASE_FAILED_TITLE = "Something\nwent wrong"
+const PURCHASE_FAILED_BODY = "Your purchase could not be completed"
+const PURCHASE_FAILED_PRIMARY = "OK"
+
+const CREDIT_LIMIT_TITLE = "Limit reached"
+const CREDIT_LIMIT_TOTAL_BODY = "You can't buy more credits because you've reached maximum holding limit. Spend your credits to buy more."
+const CREDIT_LIMIT_DAILY_BODY = "You've reached the maximum amount of credits you can buy today."
+const CREDIT_LIMIT_PRIMARY = "OK"
+
+const PURCHASE_IN_FLIGHT_TITLE = "Purchase in progress"
+const PURCHASE_IN_FLIGHT_BODY = "A purchase is already being processed. Please wait for it to complete before starting a new one."
+const PURCHASE_IN_FLIGHT_PRIMARY = "OK"
+
+const IAP_TERMS_TITLE = "Terms of use"
+# TODO: replace placeholder URLs with final ones
+const IAP_TERMS_CHECKBOX_BBCODE = (
+	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms/"]Terms of Service[/url][/color], '
+	+ '[color=#E8B9FF][url="https://decentraland.org/privacy/"]Privacy Policy[/url][/color] and '
+	+ '[color=#E8B9FF][url="https://decentraland.org/content/"]Content Policy[/url][/color].'
+)
+const IAP_TERMS_PRIMARY = "CONFIRM"
+const IAP_TERMS_SECONDARY = "CANCEL"
+
+const SESSION_ENDED_DUPLICATE_TITLE = "Session Ended"
+const SESSION_ENDED_DUPLICATE_BODY = "Your session was ended because your account logged in from another location."
+const SESSION_ENDED_ROOM_CLOSED_TITLE = "Room Closed"
+const SESSION_ENDED_ROOM_CLOSED_BODY = "The room you were in has been closed."
+const SESSION_ENDED_OTHER_TITLE = "Disconnected"
+const SESSION_ENDED_OTHER_BODY = "You have been disconnected from the server. Please try again later."
+const SESSION_ENDED_SIGN_IN_PRIMARY = "SIGN IN"
+const SESSION_ENDED_RETRY_PRIMARY = "RECONNECT"
+const SESSION_ENDED_SECONDARY = "EXIT"
 
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
@@ -291,6 +328,74 @@ func async_show_ban_kicked_modal() -> void:
 	current_modal.button_primary.pressed.connect(_on_ban_go_to_discover)
 
 
+## Shows the modal for a DuplicateIdentity disconnect (another session signed in with same account).
+## Primary action signs the user out and returns them to the sign-in screen.
+func async_show_session_ended_modal() -> void:
+	await _async_show_disconnect_modal(
+		SESSION_ENDED_DUPLICATE_TITLE,
+		SESSION_ENDED_DUPLICATE_BODY,
+		SESSION_ENDED_SIGN_IN_PRIMARY,
+		_on_session_ended_sign_in
+	)
+
+
+## Shows the modal for a RoomClosed disconnect. Primary action retries the connection.
+func async_show_room_closed_modal() -> void:
+	await _async_show_disconnect_modal(
+		SESSION_ENDED_ROOM_CLOSED_TITLE,
+		SESSION_ENDED_ROOM_CLOSED_BODY,
+		SESSION_ENDED_RETRY_PRIMARY,
+		_on_session_ended_retry
+	)
+
+
+## Shows the modal for a generic/other disconnect (after reconnect attempts are exhausted).
+## Primary action retries the connection.
+func async_show_disconnected_modal() -> void:
+	await _async_show_disconnect_modal(
+		SESSION_ENDED_OTHER_TITLE,
+		SESSION_ENDED_OTHER_BODY,
+		SESSION_ENDED_RETRY_PRIMARY,
+		_on_session_ended_retry
+	)
+
+
+func _async_show_disconnect_modal(
+	title: String, body: String, primary_label: String, primary_handler: Callable
+) -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.blocker = true
+	current_modal.set_title(title)
+	current_modal.set_body(body)
+	current_modal.set_primary_button_text(primary_label)
+	current_modal.set_secondary_button_text(SESSION_ENDED_SECONDARY)
+	current_modal.show_icon(Modal.MODAL_CONNECTION_ICON)
+	current_modal.hide_url()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(primary_handler)
+	current_modal.button_secondary.pressed.connect(_on_session_ended_secondary)
+
+
+func _on_session_ended_sign_in() -> void:
+	session_ended_sign_in.emit()
+	close_current_modal()
+
+
+func _on_session_ended_retry() -> void:
+	session_ended_retry.emit()
+	close_current_modal()
+
+
+func _on_session_ended_secondary() -> void:
+	session_ended_exit.emit()
+	close_current_modal()
+
+
 ## Shows a low-spec iPhone warning modal (lobby popup)
 func async_show_low_spec_iphone_modal() -> void:
 	if not current_modal:
@@ -309,6 +414,123 @@ func async_show_low_spec_iphone_modal() -> void:
 
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a purchase failed modal
+func async_show_purchase_failed_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(PURCHASE_FAILED_TITLE)
+	current_modal.set_body(PURCHASE_FAILED_BODY)
+	current_modal.set_primary_button_text(PURCHASE_FAILED_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a total credit limit reached modal
+func async_show_credit_limit_total_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(CREDIT_LIMIT_TITLE)
+	current_modal.set_body(CREDIT_LIMIT_TOTAL_BODY)
+	current_modal.set_primary_button_text(CREDIT_LIMIT_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a daily credit limit reached modal
+func async_show_credit_limit_daily_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(CREDIT_LIMIT_TITLE)
+	current_modal.set_body(CREDIT_LIMIT_DAILY_BODY)
+	current_modal.set_primary_button_text(CREDIT_LIMIT_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a purchase-in-flight modal when the user tries to buy while another purchase is pending
+func async_show_purchase_in_flight_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(PURCHASE_IN_FLIGHT_TITLE)
+	current_modal.set_body(PURCHASE_IN_FLIGHT_BODY)
+	current_modal.set_primary_button_text(PURCHASE_IN_FLIGHT_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows IAP terms of use modal with a checkbox that must be accepted before confirming
+func async_show_iap_terms_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(IAP_TERMS_TITLE)
+	current_modal.set_body("")
+	current_modal.set_primary_button_text(IAP_TERMS_PRIMARY)
+	current_modal.set_secondary_button_text(IAP_TERMS_SECONDARY)
+	current_modal.hide_icon()
+	current_modal.hide_url()
+	current_modal.blocker = true
+	current_modal.button_primary.disabled = true
+
+	current_modal.show_checkbox(IAP_TERMS_CHECKBOX_BBCODE)
+	current_modal.checkbox.toggled.connect(_on_iap_terms_checkbox_toggled)
+	current_modal.checkbox_text.meta_clicked.connect(_on_iap_terms_link_clicked)
+
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_iap_terms_confirmed)
+	current_modal.button_secondary.pressed.connect(_on_iap_terms_cancelled)
+
+
+func _on_iap_terms_checkbox_toggled(checked: bool) -> void:
+	if current_modal:
+		current_modal.button_primary.disabled = not checked
+
+
+func _on_iap_terms_confirmed() -> void:
+	Iap.accept_terms()
+	close_current_modal()
+	iap_terms_accepted.emit()
+
+
+func _on_iap_terms_cancelled() -> void:
+	close_current_modal()
+
+
+func _on_iap_terms_link_clicked(meta) -> void:
+	Global.open_url(str(meta))
 
 
 ## Clears the suppress flag so the next ban_kicked_modal call is not silenced.
