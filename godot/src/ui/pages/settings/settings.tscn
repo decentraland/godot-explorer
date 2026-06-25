@@ -665,7 +665,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1829650898]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -902,9 +901,9 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer" unique_id=1504030425]
 handle_input_locally = false
-size = Vector2i(2, 351)
+size = Vector2i(480, 351)
 render_target_clear_mode = 2
-render_target_update_mode = 0
+render_target_update_mode = 4
 
 [node name="PreviewCamera3D" type="Camera3D" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer/SubViewport" unique_id=2101831196]
 unique_name_in_owner = true
@@ -1188,6 +1187,7 @@ text = "RETURN TO DISCOVER"
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -1196,6 +1196,7 @@ theme_type_variation = &"2"
 theme_override_constants/separation = 72
 
 [node name="GuestUpgradeCard" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account" unique_id=1116982919 instance=ExtResource("14_sbgvv")]
+visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0

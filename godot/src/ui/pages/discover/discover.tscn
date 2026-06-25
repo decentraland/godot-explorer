@@ -258,11 +258,13 @@ theme_override_constants/separation = 40
 
 [node name="GuestUpgradeCard" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1116982919 instance=ExtResource("13_7josf")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1265686382 instance=ExtResource("22_snap")]
 unique_name_in_owner = true
 layout_mode = 2
+show_title = false
 auto_fetch = true
 auto_scroll = true
 
