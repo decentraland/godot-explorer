@@ -282,7 +282,6 @@ pub struct DclGlobal {
 #[godot_api]
 impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
-
         #[cfg(feature = "use_deno")]
         crate::dcl::js::init_runtime();
 
@@ -743,5 +742,4 @@ impl DclGlobal {
             Err(e) => godot_error!("Failed to update Rust log filter: {}", e),
         }
     }
-
 }
