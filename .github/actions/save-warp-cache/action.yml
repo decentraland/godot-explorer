@@ -1,0 +1,37 @@
+name: Save WarpBuild cache (main only)
+description: >
+  Persist the Rust build + cargo registry caches, but ONLY on a push to main. PR builds
+  restore the cache (via set-up-warp-cache) without paying the multi-minute save on every
+  push; only the less-frequent main build refreshes it, which PRs then restore from. Keys
+  come from set-up-warp-cache's outputs (captured before the build, so generated .rs files
+  under target/ can't shift the key between restore and save).
+inputs:
+  cargo-key:
+    description: cargo-key output from set-up-warp-cache.
+    required: true
+  rust-key:
+    description: rust-key output from set-up-warp-cache.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: WarpCache save - Cargo Registry (main only)
+      if: github.ref == 'refs/heads/main'
+      uses: WarpBuilds/cache/save@v1.4.6
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+        key: ${{ inputs.cargo-key }}
+
+    - name: WarpCache save - Rust Build (main only)
+      if: github.ref == 'refs/heads/main'
+      uses: WarpBuilds/cache/save@v1.4.6
+      with:
+        path: |
+          target/
+          lib/target/
+        key: ${{ inputs.rust-key }}

@@ -46,6 +46,11 @@ on:
         required: false
         type: string
         default: ''
+      dry_run:
+        description: 'Build only — skip the R2 upload, deploy dispatch and Sentry (for timing)'
+        required: false
+        type: boolean
+        default: false
     outputs:
       build_version:
         description: 'Rust .build.version captured during the iOS lib build'
@@ -58,6 +63,11 @@ on:
         required: true
         type: string
         default: 'main'
+      dry_run:
+        description: 'Build only — skip the R2 upload, deploy dispatch and Sentry (for timing)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -87,7 +97,7 @@ jobs:
           ref: ${{ inputs.sha || inputs.ref }}
 
       - name: Slack — iOS build started
-        if: env.SLACK_CHANNEL != ''
+        if: env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "🍏 iOS — building & exporting on CI… (${{ inputs.ref }})"
 
@@ -95,6 +105,16 @@ jobs:
         with:
           toolchain: "1.90"
           targets: aarch64-apple-ios
+
+      # Cache the Rust dep compilation (host + iOS) so we don't rebuild the whole tree every
+      # run. WarpBuild-native cache (handles the large iOS target; runner is WarpBuild).
+      # Restore runs on every branch; the save (below) only writes on main, so PRs restore from
+      # main's cache without paying the multi-minute save on each push.
+      - name: Set up build cache
+        id: cache
+        uses: ./.github/actions/set-up-warp-cache
+        with:
+          cache-name: ios-r2-build
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
@@ -133,6 +153,13 @@ jobs:
         timeout-minutes: 20
         run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
 
+      # Persist the freshly built target/ — no-op off main (see save-warp-cache).
+      - name: Save build cache (main only)
+        uses: ./.github/actions/save-warp-cache
+        with:
+          cargo-key: ${{ steps.cache.outputs.cargo-key }}
+          rust-key: ${{ steps.cache.outputs.rust-key }}
+
       - name: Capture build version
         id: buildver
         run: |
@@ -149,11 +176,12 @@ jobs:
         run: cargo run -- export --target ios
 
       - name: Slack — iOS packaging
-        if: env.SLACK_CHANNEL != ''
+        if: env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "📦 iOS — export built, packaging & uploading to R2…"
 
       - name: Package & upload unsigned export to R2
+        if: ${{ ! inputs.dry_run }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
@@ -202,12 +230,12 @@ jobs:
           echo "🔗 ${R2_PUBLIC_BASE_URL}/${KEY}"
 
       - name: Slack — iOS export uploaded
-        if: success() && env.SLACK_CHANNEL != ''
+        if: success() && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "📦 iOS — unsigned export uploaded to R2 ✓ (${{ inputs.ref }})"
 
       - name: Root — iOS exported
-        if: success() && env.SLACK_CHANNEL != ''
+        if: success() && env.SLACK_TS != ''
         env:
           # Not done yet → no green tick. The ✅ only appears when it's on TestFlight.
           IOS_LINE: "📦 exported to R2 · signing…"
@@ -243,19 +271,19 @@ jobs:
           echo "✅ Dispatched godot-asc-deploy for ${SAFE_BRANCH}@${SHA:-${{ github.sha }}}"
 
       - name: Slack — handed off to signing
-        if: success() && inputs.dispatch_deploy && env.SLACK_CHANNEL != ''
+        if: success() && inputs.dispatch_deploy && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "🤝 iOS — export handed off to the signing pipeline (godot-asc-deploy)"
 
       - name: Slack — handoff failed
-        if: failure() && inputs.dispatch_deploy && env.SLACK_CHANNEL != ''
+        if: failure() && inputs.dispatch_deploy && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "❌ iOS — failed to hand off to the signing pipeline (check ASC_DEPLOY_DISPATCH_TOKEN)"
 
       # libdclgodot.dylib is BUILT here, so its dSYM must be uploaded to Sentry from here
       # (the deploy repo only re-archives the already-built dylib). Best-effort.
       - name: Upload libdclgodot to Sentry
-        if: success()
+        if: success() && ! inputs.dry_run
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}

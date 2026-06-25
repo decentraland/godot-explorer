@@ -291,7 +291,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Slack — Android build started
-        if: env.SLACK_CHANNEL != ''
+        if: env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "🤖 Android — waiting for the signed APK from CI… (${REF})"
 
@@ -345,14 +345,14 @@ jobs:
           done
 
       - name: Slack — Android APK ready
-        if: success() && env.SLACK_CHANNEL != ''
+        if: success() && env.SLACK_TS != ''
         run: |
           APK="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
           bash .github/scripts/slack-reply.sh "✅ Android — APK ready: ${APK}"
           ANDROID_LINE="✅ APK ready" APK_URL="$APK" python3 .github/scripts/slack-root.py
 
       - name: Slack — Android failed
-        if: failure() && env.SLACK_CHANNEL != ''
+        if: failure() && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "❌ Android — APK not produced for ${SHA} (CI build failed)"
           ANDROID_LINE="❌ CI build failed" python3 .github/scripts/slack-root.py
@@ -386,7 +386,7 @@ jobs:
           done
 
       - name: Slack — Android AAB ready
-        if: success() && env.AAB_READY == 'true' && env.SLACK_CHANNEL != ''
+        if: success() && env.AAB_READY == 'true' && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "📦 Android — AAB ready (Play Store): ${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
 
