@@ -903,7 +903,11 @@ fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result
 
     print_message(MessageType::Success, "Application launched on device");
 
-    // Show logs
+    // Show logs. Tags: Godot engine (godot), the launcher (GodotApp), the Rust lib
+    // + GDScript routed through it (dclgodot), the Kotlin plugin (dcl-godot-android
+    // — its [INIT]/Log.* lines), Kotlin println/stderr (System.out/err), and native
+    // crashes (AndroidRuntime:E). Kotlin `Log.*` only reach logcat (not the
+    // scene-inspector/hub channel), so logcat is the complete log view on Android.
     print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
     let _log_status = std::process::Command::new("adb")
         .args([
@@ -914,6 +918,10 @@ fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result
             "godot:V",
             "GodotApp:V",
             "dclgodot:V",
+            "dcl-godot-android:V",
+            "System.out:V",
+            "System.err:V",
+            "AndroidRuntime:E",
         ])
         .status()?;
 
@@ -1356,10 +1364,21 @@ pub fn hotreload_android(extras: Vec<String>) -> anyhow::Result<()> {
         "Application restarted with new library!",
     );
 
-    // Show logs
+    // Show logs (same tag set as the full deploy — incl. the Kotlin plugin
+    // `dcl-godot-android`, System.out/err, and native crashes).
     print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
     std::process::Command::new("adb")
-        .args(["logcat", "-s", "godot:V", "GodotApp:V", "dclgodot:V"])
+        .args([
+            "logcat",
+            "-s",
+            "godot:V",
+            "GodotApp:V",
+            "dclgodot:V",
+            "dcl-godot-android:V",
+            "System.out:V",
+            "System.err:V",
+            "AndroidRuntime:E",
+        ])
         .status()?;
 
     Ok(())
