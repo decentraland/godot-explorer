@@ -200,6 +200,12 @@ func show_account_home_loading_screen():
 func _request_notification_permission_if_needed():
 	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
+	# Only surface the OS notification permission dialog once the EULA has been
+	# accepted. On a fresh install Account Home is shown *before* acceptance
+	# (the EULA is accepted by playing as guest / completing sign-in), and asking
+	# for notifications there is premature.
+	if Global.get_config().terms_and_conditions_version != Global.TERMS_AND_CONDITIONS_VERSION:
+		return
 	if NotificationsManager.has_local_notification_permission():
 		return
 	NotificationsManager.request_local_notification_permission(current_screen_name)
