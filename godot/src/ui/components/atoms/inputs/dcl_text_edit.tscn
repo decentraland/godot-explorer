@@ -21,13 +21,12 @@ font_color = Color(1, 0.1764706, 0.33333334, 1)
 
 [node name="DclTextEdit" type="VBoxContainer" unique_id=1583726089]
 custom_minimum_size = Vector2(100, 0)
-offset_right = 333.0
-offset_bottom = 97.0
+offset_right = 352.0
+offset_bottom = 101.0
 size_flags_horizontal = 3
 size_flags_vertical = 0
 theme_override_constants/separation = 8
 script = ExtResource("1_iibrq")
-validate_on_blur = null
 
 [node name="TextEditContainer" type="Control" parent="." unique_id=1976220458]
 custom_minimum_size = Vector2(0, 68)
@@ -38,10 +37,11 @@ size_flags_vertical = 3
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 1
-anchors_preset = 10
+anchors_preset = 15
 anchor_right = 1.0
-offset_bottom = 32.0
+anchor_bottom = 1.0
 grow_horizontal = 2
+grow_vertical = 2
 size_flags_vertical = 3
 theme = ExtResource("2_tjywf")
 theme_override_colors/selection_color = Color(0.9098039, 0.7254902, 1, 0.69803923)
@@ -66,21 +66,33 @@ mouse_filter = 2
 theme_override_constants/separation = 0
 alignment = 2
 
-[node name="ClearButton" type="TextureButton" parent="TextEditContainer/HBoxContainer" unique_id=887865242]
-unique_name_in_owner = true
-visible = false
-self_modulate = Color(0.9098039, 0.7254902, 1, 1)
-custom_minimum_size = Vector2(22, 22)
-layout_mode = 2
-texture_normal = ExtResource("5_nhry5")
-ignore_texture_size = true
-stretch_mode = 0
-
 [node name="VSeparator" type="VSeparator" parent="TextEditContainer/HBoxContainer" unique_id=1003360044]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ewgm8")
+
+[node name="MarginContainer" type="MarginContainer" parent="TextEditContainer" unique_id=722955294]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 16
+
+[node name="ClearButton" type="TextureButton" parent="TextEditContainer/MarginContainer" unique_id=887865242]
+unique_name_in_owner = true
+self_modulate = Color(0.9098039, 0.7254902, 1, 1)
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture_normal = ExtResource("5_nhry5")
+ignore_texture_size = true
+stretch_mode = 0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=264687002]
 layout_mode = 2
