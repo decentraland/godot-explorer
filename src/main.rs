@@ -379,6 +379,11 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("no-hub")
                         .help("For android/ios device deploys: don't auto-start the debug-hub or wire the scene-inspector. Falls back to plain device-log streaming (adb logcat / iOS --console)")
                         .takes_value(false),
+                ).arg(
+                    Arg::new("hub-viewer")
+                        .long("hub-viewer")
+                        .help("For android/ios device deploys: make the debug-hub the on-screen log view on any platform and turn OFF the device log stream (adb logcat / iOS --console) so it isn't duplicated. Note: Android Kotlin logs only reach logcat, so they won't show")
+                        .takes_value(false),
                 ),
         ).subcommand(
             Command::new("debug-hub")
@@ -677,6 +682,10 @@ fn main() -> Result<(), anyhow::Error> {
             // the address via the export plugin; Android is wired below + via
             // `adb reverse`). `--no-hub` opts out → plain device-log streaming.
             let hub_enabled = should_deploy && !sm.is_present("no-hub");
+            // `--hub-viewer`: force the hub to be the on-screen log view on ANY
+            // platform, and suppress the device log stream (--console / logcat) so
+            // it isn't duplicated. The viewer then blocks after deploy (below).
+            let hub_viewer = hub_enabled && sm.is_present("hub-viewer");
             const HUB_DEVICE_PORT: u16 = 9231;
             const HUB_CONSUMER_PORT: u16 = 9230;
 
@@ -685,21 +694,27 @@ fn main() -> Result<(), anyhow::Error> {
 
                 if hub_enabled {
                     // Reuses an existing hub if one is already up; non-fatal. The
-                    // hub itself stays quiet — the viewer below (a consumer) does
-                    // the on-screen printing.
+                    // hub itself stays quiet — a viewer (a consumer) does the
+                    // on-screen printing.
                     log_server::spawn_hub_background(
                         "0.0.0.0",
                         HUB_DEVICE_PORT,
                         HUB_CONSUMER_PORT,
                         log_server::HubOutput::Quiet,
                     );
-                    // On iOS, also attach a log viewer (a consumer on the hub's
-                    // loopback port) so this terminal shows the GDScript/Rust logs
-                    // os_log hides from `--console`. It works whether we started
-                    // the hub or reused one. Android's `adb logcat` already shows
-                    // everything, so no viewer there.
-                    if platform == "ios" {
-                        log_server::spawn_log_viewer(HUB_CONSUMER_PORT);
+                    // Default (no --hub-viewer): on iOS attach a background log
+                    // viewer so this terminal shows the GDScript/Rust logs os_log
+                    // hides from `--console`; Android's logcat already shows
+                    // everything. Under --hub-viewer the viewer runs blocking AFTER
+                    // deploy (with native shown, device stream off) — see below.
+                    if platform == "ios" && !hub_viewer {
+                        log_server::spawn_log_viewer(HUB_CONSUMER_PORT, false);
+                    }
+                    if hub_viewer && platform == "android" {
+                        print_message(
+                            MessageType::Warning,
+                            "--hub-viewer: Android Kotlin logs (dcl-godot-android) won't show — they reach only logcat, which is now off.",
+                        );
                     }
                 } else if platform == "ios" {
                     // No hub: tell the iOS export plugin to bake NO connect-out
@@ -768,7 +783,11 @@ fn main() -> Result<(), anyhow::Error> {
                         platform,
                         sm.is_present("release"),
                         device_extras,
+                        !hub_viewer,
                     )?;
+                    if hub_viewer {
+                        log_server::run_log_viewer_blocking(HUB_CONSUMER_PORT, true);
+                    }
 
                     return Ok(());
                 } else {
@@ -811,7 +830,11 @@ fn main() -> Result<(), anyhow::Error> {
                             platform,
                             sm.is_present("release"),
                             device_extras,
+                            !hub_viewer,
                         )?;
+                        if hub_viewer {
+                            log_server::run_log_viewer_blocking(HUB_CONSUMER_PORT, true);
+                        }
                     }
 
                     return result;

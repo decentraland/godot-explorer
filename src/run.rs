@@ -742,10 +742,11 @@ pub fn deploy_and_run_on_device(
     platform: &str,
     release: bool,
     extras: Vec<String>,
+    stream_device_logs: bool,
 ) -> anyhow::Result<()> {
     match platform {
-        "android" => deploy_and_run_android(release, extras),
-        "ios" => deploy_and_run_ios(release, extras),
+        "android" => deploy_and_run_android(release, extras, stream_device_logs),
+        "ios" => deploy_and_run_ios(release, extras, stream_device_logs),
         _ => Err(anyhow::anyhow!(
             "Unsupported platform for device deployment: {}",
             platform
@@ -754,7 +755,11 @@ pub fn deploy_and_run_on_device(
 }
 
 /// Deploy and run on Android device using adb
-fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result<()> {
+fn deploy_and_run_android(
+    _release: bool,
+    extras: Vec<String>,
+    stream_device_logs: bool,
+) -> anyhow::Result<()> {
     // The APK name is always the same regardless of release/debug mode
     let apk_name = "decentraland.godot.client.apk";
     let apk_path = format!("{}/{}", EXPORTS_FOLDER, apk_name);
@@ -908,22 +913,28 @@ fn deploy_and_run_android(_release: bool, extras: Vec<String>) -> anyhow::Result
     // — its [INIT]/Log.* lines), Kotlin println/stderr (System.out/err), and native
     // crashes (AndroidRuntime:E). Kotlin `Log.*` only reach logcat (not the
     // scene-inspector/hub channel), so logcat is the complete log view on Android.
-    print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
-    let _log_status = std::process::Command::new("adb")
-        .args([
-            "-s",
-            &device_id,
-            "logcat",
-            "-s",
-            "godot:V",
-            "GodotApp:V",
-            "dclgodot:V",
-            "dcl-godot-android:V",
-            "System.out:V",
-            "System.err:V",
-            "AndroidRuntime:E",
-        ])
-        .status()?;
+    //
+    // Skipped under `--hub-viewer`: the caller streams logs through the hub instead
+    // and blocks on that, so this would only duplicate (and Kotlin `Log.*` won't
+    // show in the hub — see the `--hub-viewer` warning).
+    if stream_device_logs {
+        print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
+        let _log_status = std::process::Command::new("adb")
+            .args([
+                "-s",
+                &device_id,
+                "logcat",
+                "-s",
+                "godot:V",
+                "GodotApp:V",
+                "dclgodot:V",
+                "dcl-godot-android:V",
+                "System.out:V",
+                "System.err:V",
+                "AndroidRuntime:E",
+            ])
+            .status()?;
+    }
 
     Ok(())
 }
@@ -1025,7 +1036,11 @@ fn encode_query_value(v: &str) -> String {
 const IOS_BUNDLE_ID: &str = "org.decentraland.godotexplorer";
 
 /// Deploy and run on iOS device using xcodebuild and xcrun devicectl
-fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> {
+fn deploy_and_run_ios(
+    release: bool,
+    extras: Vec<String>,
+    stream_device_logs: bool,
+) -> anyhow::Result<()> {
     if std::env::consts::OS != "macos" {
         return Err(anyhow::anyhow!("iOS deployment is only supported on macOS"));
     }
@@ -1120,12 +1135,17 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
         "device".into(),
         "process".into(),
         "launch".into(),
-        "--console".into(),
-        "--terminate-existing".into(),
-        "--device".into(),
-        device_id.clone(),
-        IOS_BUNDLE_ID.into(),
     ];
+    // `--console` streams stdout/stderr back here and BLOCKS until exit/Ctrl-C.
+    // Under `--hub-viewer` the caller streams via the hub instead, so omit it —
+    // the launch then returns immediately and the caller blocks on the viewer.
+    if stream_device_logs {
+        launch_args.push("--console".into());
+    }
+    launch_args.push("--terminate-existing".into());
+    launch_args.push("--device".into());
+    launch_args.push(device_id.clone());
+    launch_args.push(IOS_BUNDLE_ID.into());
     if !extras.is_empty() {
         launch_args.push("--".into());
         launch_args.extend(extras.iter().cloned());
@@ -1133,7 +1153,11 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
     spinner.finish();
     print_message(
         MessageType::Info,
-        "Application launched on iOS device — streaming device logs (Ctrl+C to stop):",
+        if stream_device_logs {
+            "Application launched on iOS device — streaming device logs (Ctrl+C to stop):"
+        } else {
+            "Application launched on iOS device (logs via the debug-hub viewer)."
+        },
     );
 
     let launch_status = std::process::Command::new("xcrun")

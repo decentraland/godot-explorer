@@ -144,23 +144,31 @@ pub fn spawn_hub_background(bind: &str, device_port: u16, consumer_port: u16, ou
 /// `--console`). Used by `run --target ios` so the dev sees the GDScript/Rust logs
 /// os_log hides — in the same terminal, whether this process started the hub or
 /// reused one. Retries/reconnects forever (daemon thread; dies with the process).
-pub fn spawn_log_viewer(consumer_port: u16) {
+/// `show_native = false` skips `native` log entries (already shown verbatim in
+/// the device `--console`); `true` shows them too — used by `--hub-viewer`, where
+/// the device log stream (--console / logcat) is OFF so the hub is the sole view.
+pub fn spawn_log_viewer(consumer_port: u16, show_native: bool) {
     std::thread::Builder::new()
         .name("hub-log-viewer".into())
-        .spawn(move || {
-            let rt = match tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-            {
-                Ok(rt) => rt,
-                Err(_) => return,
-            };
-            rt.block_on(log_viewer_loop(consumer_port));
-        })
+        .spawn(move || run_log_viewer_blocking(consumer_port, show_native))
         .ok();
 }
 
-async fn log_viewer_loop(consumer_port: u16) {
+/// Run the log viewer on the CALLING thread (blocks forever). Used by
+/// `--hub-viewer`, where the device log stream is suppressed so this is what keeps
+/// the run alive and prints the logs.
+pub fn run_log_viewer_blocking(consumer_port: u16, show_native: bool) {
+    let rt = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(_) => return,
+    };
+    rt.block_on(log_viewer_loop(consumer_port, show_native));
+}
+
+async fn log_viewer_loop(consumer_port: u16, show_native: bool) {
     let url = format!("ws://127.0.0.1:{consumer_port}");
     let mut announced = false;
     loop {
@@ -181,17 +189,19 @@ async fn log_viewer_loop(consumer_port: u16) {
             if write.send(Message::Text(sub.to_string())).await.is_ok() {
                 if !announced {
                     announced = true;
-                    print_message(
-                        MessageType::Info,
-                        "Log viewer attached (GDScript/Rust logs below; native via --console).",
-                    );
+                    let note = if show_native {
+                        "Log viewer attached (all device logs below)."
+                    } else {
+                        "Log viewer attached (GDScript/Rust logs below; native via --console)."
+                    };
+                    print_message(MessageType::Info, note);
                 }
                 while let Some(Ok(msg)) = read.next().await {
                     if let Message::Text(line) = msg {
                         if line.contains("\"type\":\"session_start\"") {
                             let _ = write.send(Message::Text(sub.to_string())).await;
                         }
-                        print_log_entries(&line);
+                        print_log_entries(&line, show_native);
                     }
                 }
             }
@@ -362,9 +372,10 @@ fn colorize(line: &str) -> String {
 }
 
 /// LogViewer: pull the `log` entries out of a SCENE_INSPECTOR frame and print
-/// them readably (`[source/level] msg`), skipping `native` (already shown
-/// verbatim in the device `--console`) and the CRDT/perf/lifecycle firehose.
-fn print_log_entries(line: &str) {
+/// them readably (`[source/level] msg`), skipping the CRDT/perf/lifecycle
+/// firehose. `native` entries are skipped unless `show_native` (they're otherwise
+/// shown verbatim in the device `--console`, which `--hub-viewer` turns off).
+fn print_log_entries(line: &str, show_native: bool) {
     // Cheap pre-filter: most frames (pure CRDT/perf) carry no log entry, so skip
     // the JSON parse entirely unless a log entry is present.
     if !line.contains("\"type\":\"log\"") {
@@ -387,7 +398,7 @@ fn print_log_entries(line: &str) {
             continue;
         }
         let source = entry.get("source").and_then(|s| s.as_str()).unwrap_or("?");
-        if source == "native" {
+        if source == "native" && !show_native {
             continue;
         }
         let level = entry.get("level").and_then(|l| l.as_str());
