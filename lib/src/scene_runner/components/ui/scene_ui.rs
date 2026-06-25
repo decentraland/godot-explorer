@@ -38,7 +38,9 @@ use crate::{
     },
 };
 
-use super::{ui_dropdown::update_ui_dropdown, ui_input::update_ui_input};
+use super::{
+    ui_dropdown::update_ui_dropdown, ui_input::update_ui_input, ui_scroll::update_ui_scroll,
+};
 
 fn assign_z_index_recursive(
     children: &[(SceneEntityId, i32)],
@@ -63,6 +65,29 @@ fn assign_z_index_recursive(
                 children_by_parent,
                 godot_dcl_scene,
             );
+        }
+
+        // For scrollable entities, place the ScrollContainer's internal
+        // scrollbars above all descendants we just assigned. Without this,
+        // the scrollbars inherit their parent's z via z_as_relative=true
+        // and render BELOW any child UI placed inside the scroll (which
+        // got higher absolute z values from this same counter).
+        if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(entity) {
+            if let Some(mut scroll) = ui_node.scroll_container.clone() {
+                *z_counter += 1;
+                let bar_z = (*z_counter).clamp(
+                    RenderingServer::CANVAS_ITEM_Z_MIN,
+                    RenderingServer::CANVAS_ITEM_Z_MAX,
+                );
+                if let Some(mut v_bar) = scroll.get_v_scroll_bar() {
+                    v_bar.set_z_index(bar_z);
+                    v_bar.set_z_as_relative(false);
+                }
+                if let Some(mut h_bar) = scroll.get_h_scroll_bar() {
+                    h_bar.set_z_index(bar_z);
+                    h_bar.set_z_as_relative(false);
+                }
+            }
         }
 
         if i < last_idx {
@@ -343,6 +368,8 @@ fn update_layout(
 
     // Track which entities are hidden due to having zero size (cascades to children)
     let mut hidden_by_zero_size: HashMap<SceneEntityId, bool> = HashMap::new();
+    // Track max content bounds for scroll containers: entity -> (max_right, max_bottom)
+    let mut scroll_content_bounds: HashMap<SceneEntityId, (f32, f32)> = HashMap::new();
 
     for (entity, key_node) in processed_nodes_sorted.iter() {
         let ui_node = godot_dcl_scene.get_node_or_null_ui(entity).unwrap();
@@ -390,6 +417,32 @@ fn update_layout(
             y: layout.size.height,
         });
 
+        // Explicitly size scroll container to match the entity's Taffy-computed bounds
+        if let Some(scroll) = ui_node.scroll_container.as_mut() {
+            scroll.set_position(godot::prelude::Vector2::ZERO);
+            scroll.set_size(godot::prelude::Vector2::new(
+                layout.size.width,
+                layout.size.height,
+            ));
+        }
+
+        // Track content bounds for scroll container parents
+        let parent_has_scroll = godot_dcl_scene
+            .get_node_or_null_ui(&parent_entity)
+            .map(|p| p.scroll_container.is_some())
+            .unwrap_or(false);
+        if parent_has_scroll {
+            let right = layout.location.x + layout.size.width;
+            let bottom = layout.location.y + layout.size.height;
+            scroll_content_bounds
+                .entry(parent_entity)
+                .and_modify(|(w, h)| {
+                    *w = w.max(right);
+                    *h = h.max(bottom);
+                })
+                .or_insert((right, bottom));
+        }
+
         // Check if parent is hidden by zero size (cascade hidden state down the tree)
         let parent_hidden = hidden_by_zero_size
             .get(&parent_entity)
@@ -410,6 +463,15 @@ fn update_layout(
         let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None
             || is_hidden_by_zero_size;
         control.set_visible(!is_hidden);
+    }
+
+    // Update scroll content minimum sizes so ScrollContainer knows the scrollable area
+    for (entity, (max_right, max_bottom)) in scroll_content_bounds {
+        if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(&entity) {
+            if let Some(scroll) = ui_node.scroll_container.as_mut() {
+                scroll.bind_mut().update_content_size(max_right, max_bottom);
+            }
+        }
     }
 
     // Assign absolute Godot z_index using a z_index-aware DFS traversal.
@@ -540,6 +602,7 @@ pub fn update_scene_ui(
         update_input_result(scene, crdt_state);
     } else {
         update_ui_transform(scene, crdt_state);
+        update_ui_scroll(scene, crdt_state);
         update_ui_background(scene, crdt_state);
         update_ui_text(scene, crdt_state);
         update_ui_input(scene, crdt_state);
