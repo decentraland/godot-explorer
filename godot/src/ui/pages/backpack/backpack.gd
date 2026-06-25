@@ -40,7 +40,6 @@ var wearable_data: Dictionary = {}
 
 var wearable_filter_buttons: Array[WearableFilterButton] = []
 var main_category_selected: String
-var _initial_focus_snapped: bool = false
 var request_update_avatar: bool = false  # debounce
 var request_show_wearables: bool = false  # debounce
 
@@ -57,6 +56,7 @@ var _marketplace_restore_pending: bool = false
 
 var _avatar_update_retries: int = 0
 var _is_currently_narrow: bool = false
+var _initial_focus_snapped: bool = false
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
