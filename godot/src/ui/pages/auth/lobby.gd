@@ -38,7 +38,7 @@ const DEBUG_GUEST_STATE_FILES = [
 ]
 const BG_GRADIENT = preload("res://assets/backgrounds/gradient-background.png")
 const BG_DISCOVER = preload("res://assets/backgrounds/photo-background.png")
-const BG_AVATAR = preload("res://assets/backgrounds/avatar-background.svg")
+const BG_AVATAR = preload("res://assets/backgrounds/gradient-background.tres")
 
 var is_creating_account: bool = false
 

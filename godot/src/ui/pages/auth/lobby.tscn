@@ -443,6 +443,7 @@ script = ExtResource("24_65md3")
 
 [node name="AvatarCreate" type="Control" parent="Main" unique_id=183269475]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/AvatarCreate" unique_id=1238803761]
@@ -551,7 +552,6 @@ icon_alignment = 2
 
 [node name="AvatarCustomize" type="Control" parent="Main" unique_id=1314744326]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/AvatarCustomize" unique_id=370001754]

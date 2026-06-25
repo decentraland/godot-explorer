@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" uid="uid://cf4f5teas815x" path="res://src/ui/components/molecules/color_carrousel/color_carrousel.tscn" id="19_k780d"]
 [ext_resource type="Script" uid="uid://drm7w13o3wggu" path="res://src/ui/components/atoms/images/animated_texture_rect/animated_texture_rect.gd" id="19_ku1si"]
 [ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/pages/discover/icons/back.svg" id="19_t0yet"]
+[ext_resource type="Texture2D" uid="uid://bqeaxvt83xiww" path="res://assets/backgrounds/gradient-background.tres" id="26_ypiwx"]
 [ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/pages/backpack/no_items_message.tscn" id="27_noitems"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/organisms/emote_editor/emote_editor.tscn" id="30_vfwc7"]
 [ext_resource type="PackedScene" uid="uid://e8wxgnrt3ge6" path="res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.tscn" id="31_mktpl"]
@@ -29,7 +30,7 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hpvfb"]
 shader = ExtResource("17_4j6ii")
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_q4rkm"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_gdeh7"]
 atlas = ExtResource("18_wp3bp")
 region = Rect2(0, 0, 343, 580)
 
@@ -91,14 +92,6 @@ resource_local_to_scene = false
 [sub_resource type="ButtonGroup" id="ButtonGroup_meiko"]
 resource_local_to_scene = false
 
-[sub_resource type="Gradient" id="Gradient_v8iop"]
-colors = PackedColorArray(0.58431375, 0.1764706, 0.7764706, 1, 0.19607843, 0.07450981, 0.29803923, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_yjmsa"]
-gradient = SubResource("Gradient_v8iop")
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-
 [node name="BackpackPortrait" type="Control" unique_id=1935067626]
 layout_mode = 3
 anchors_preset = 15
@@ -149,7 +142,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("AtlasTexture_q4rkm")
+texture = SubResource("AtlasTexture_gdeh7")
 stretch_mode = 3
 script = ExtResource("19_ku1si")
 atlas = ExtResource("18_wp3bp")
@@ -462,9 +455,10 @@ size_flags_vertical = 8
 
 [node name="RightEditorContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack" unique_id=1039508584]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 730)
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+size_flags_vertical = 8
 size_flags_stretch_ratio = 1.45
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 10
@@ -943,7 +937,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("GradientTexture2D_yjmsa")
+texture = ExtResource("26_ypiwx")
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]

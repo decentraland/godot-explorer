@@ -40,6 +40,7 @@ var wearable_data: Dictionary = {}
 
 var wearable_filter_buttons: Array[WearableFilterButton] = []
 var main_category_selected: String
+var _initial_focus_snapped: bool = false
 var request_update_avatar: bool = false  # debounce
 var request_show_wearables: bool = false  # debounce
 
@@ -113,7 +114,8 @@ func _ready():
 		wearable_button_group_per_category[category] = button_group
 
 	if hide_navbar:
-		container_navbar.hide()
+		container_navbar.modulate = Color.TRANSPARENT
+		container_navbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	button_credits.visible = show_credits_button
 
@@ -360,6 +362,9 @@ func _async_update_avatar():
 		Global.player_identity.get_mutable_profile()
 	)
 	_unset_avatar_loading(loading_id)
+	if not _initial_focus_snapped and not current_filter.is_empty():
+		_initial_focus_snapped = true
+		avatar_preview.focus_camera_on.call_deferred(current_filter, true)
 
 
 func _load_filtered_data(filter: String):

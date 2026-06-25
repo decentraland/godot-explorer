@@ -161,7 +161,7 @@ func _process(delta: float) -> void:
 	)
 
 
-func focus_camera_on(type):
+func focus_camera_on(type, instant: bool = false):
 	if not can_drag:
 		_camera_focus = "overall"
 	else:
@@ -186,11 +186,11 @@ func focus_camera_on(type):
 	if aabb_key not in _cached_aabbs:
 		return
 	var new_margin: int = _focus_extra_margin()
-	if _stable_aabb() == _last_fit_stable_aabb and new_margin == _last_fit_extra_margin:
+	if not instant and _stable_aabb() == _last_fit_stable_aabb and new_margin == _last_fit_extra_margin:
 		_update_fit_limits(_cached_aabbs[aabb_key], new_margin)
 		return
 	_user_has_panned = false
-	_fit_camera_to_aabb(_cached_aabbs[aabb_key], new_margin)
+	_fit_camera_to_aabb(_cached_aabbs[aabb_key], new_margin, instant)
 
 
 func _min_camera_size() -> float:
@@ -408,10 +408,10 @@ func async_on_avatar_loaded():
 	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 	if aabb_key in _cached_aabbs:
 		if first_load:
-			if fit_avatar:
+			if fit_avatar and _camera_focus == "overall":
 				_fit_to_overall()
 			else:
-				_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
+				_fit_camera_to_aabb.call_deferred(_cached_aabbs[aabb_key], _focus_extra_margin(), true)
 		else:
 			_update_fit_limits(_cached_aabbs[aabb_key], _focus_extra_margin())
 
@@ -673,6 +673,24 @@ func _inner_rect() -> Rect2:
 	return Rect2(r.position + Vector2(float(preview_margin_left), mt), size)
 
 
+## Replace the bottom_node_margin Control after _ready has connected signals.
+func set_bottom_margin_node(node: Control) -> void:
+	if bottom_node_margin == node:
+		return
+	if bottom_node_margin and bottom_node_margin.resized.is_connected(_on_resized):
+		bottom_node_margin.resized.disconnect(_on_resized)
+	bottom_node_margin = node
+	if bottom_node_margin:
+		bottom_node_margin.resized.connect(_on_resized)
+	_pending_camera_fit = true
+	if size.x > 0.0 and size.y > 0.0 and not _cached_aabbs.is_empty():
+		var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
+		if aabb_key in _cached_aabbs:
+			_last_fit_stable_aabb = AABB()
+			_last_fit_extra_margin = -1
+			_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
+
+
 ## Replace the top_node_margin Control after _ready has connected signals.
 ## Hosts use this when their layout puts a different visible control above
 ## the preview (e.g., lobby's create-avatar flow uses its "Create your
@@ -786,7 +804,7 @@ func _fit_to_overall() -> void:
 	_target_camera_size = cam_size
 
 
-func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
+func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0, instant: bool = false) -> void:
 	if not is_inside_tree():
 		return
 	if size.x <= 0.0 or size.y <= 0.0:
@@ -796,22 +814,26 @@ func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
 	var vp_w: float = size.x
 	var eff_top: float = _effective_margin_top()
 	var eff_bottom: float = _effective_margin_bottom()
-	var raw_inner_h: float = vp_h - eff_top - eff_bottom - extra_margin * 2
+	var available_h: float = vp_h - eff_top - eff_bottom
 	var raw_inner_w: float = vp_w - preview_margin_left - preview_margin_right - extra_margin * 2
-	# Defer when margins claim to eat almost the entire viewport — the parent
-	# layout pass hasn't settled sibling positions yet. Without this, the bad
-	# target commits (cam_size in the thousands) and the camera lerps toward
-	# it while later resize events skip the re-fit (_pending_camera_fit=false).
-	if raw_inner_h < 50.0 or raw_inner_w < 50.0:
+	# Defer when the core available space is too small — layout pass hasn't settled yet.
+	# We check available_h (without extra_margin) so that tight-but-valid layouts
+	# (e.g. hide_navbar mode where the panel starts near the top) are not deferred
+	# indefinitely just because the category padding exceeds the remaining gap.
+	if available_h < 50.0 or raw_inner_w < 50.0:
 		_pending_camera_fit = true
 		return
+	# Cap extra_margin so it always leaves a positive inner area, even in contexts
+	# where the panel covers most of the viewport height.
+	var capped_extra: int = mini(extra_margin, int(available_h * 0.5) - 1)
+	var raw_inner_h: float = available_h - capped_extra * 2
 	_pending_camera_fit = false
-	_update_fit_limits(aabb, extra_margin)
+	_update_fit_limits(aabb, capped_extra)
 	var stable: AABB = _stable_aabb()
-	if stable == _last_fit_stable_aabb and extra_margin == _last_fit_extra_margin:
+	if stable == _last_fit_stable_aabb and capped_extra == _last_fit_extra_margin:
 		return
 	_last_fit_stable_aabb = stable
-	_last_fit_extra_margin = extra_margin
+	_last_fit_extra_margin = capped_extra
 	var inner_h: float = maxf(1.0, raw_inner_h)
 	var inner_w: float = maxf(1.0, raw_inner_w)
 	var cam_size: float = maxf(stable.size.y * vp_h / inner_h, stable.size.x * vp_h / inner_w)
@@ -826,6 +848,9 @@ func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0) -> void:
 	center_y = clampf(center_y, minf(pan_min, pan_max), maxf(pan_min, pan_max))
 	_target_camera_center_y = center_y
 	_target_camera_size = cam_size
+	if instant:
+		camera_3d.size = cam_size
+		camera_center.position.y = center_y
 
 
 func _make_aabb_box(aabb: AABB, color: Color) -> MeshInstance3D:
