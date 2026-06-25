@@ -3,9 +3,9 @@
 //! so the raw identifier never leaves the device.
 //!
 //! `resolve_anchor` decides the source:
-//! - a non-empty value passed from GDScript wins. That value is either the
+//! - a non-empty value passed from GDScript wins. That value is the
 //!   platform-native device anchor (Android SSAID / iOS Keychain UUID, which
-//!   persists across reinstall) or the fixed `DEBUG_GUEST_ANCHOR_OVERRIDE`.
+//!   persists across reinstall).
 //! - otherwise it falls back to a per-install UUID in `user://device_anchor.txt`
 //!   (the desktop source, and what mobile uses when GDScript's
 //!   `DEBUG_GUEST_ROTATE_ANCHOR_ID` flag makes `get_device_anchor_id` return "").
