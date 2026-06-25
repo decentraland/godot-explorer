@@ -133,6 +133,9 @@ var attestation: AttestationService = null
 
 var _is_portrait: bool = true
 
+# Scene Inspector bridge, created lazily at boot when a target is configured.
+var _scene_inspector_bridge: Node = null
+
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
@@ -188,6 +191,36 @@ func should_emulate_android() -> bool:
 ## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
 func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
+
+
+## Activate the Scene Inspector bridge from app startup when a target is set via
+## `--scene-inspector=ws://…` (baked into the iOS build / passed on desktop) or
+## `?scene-inspector=` deeplink. Idempotent: the bridge is created at most once;
+## later target changes are handled by the bridge's own deeplink-reconnect.
+##
+## Dialing from boot (instead of in-world) means the channel is up from second 0.
+## In DEBUG builds it also arms the bounded boot-log ring + installs the capture
+## sinks, so startup logs are buffered and flushed on the first `subscribe`. This
+## is gated off production: there, nothing is captured or buffered without a
+## connection (the no-buffering-without-a-peer contract).
+func _activate_scene_inspector_from_config() -> void:
+	if _scene_inspector_bridge != null:
+		return
+	var target := ""
+	if not deep_link_obj.scene_inspector.is_empty():
+		target = deep_link_obj.scene_inspector
+	elif not cli.scene_inspector.is_empty():
+		target = cli.scene_inspector
+	if target.is_empty():
+		return
+	scene_inspector_active = true
+	if OS.is_debug_build():
+		scene_inspector_dispatcher.set_early_log_capture(true)
+	_scene_inspector_bridge = SceneInspectorBridge.new()
+	_scene_inspector_bridge.set_name("scene_inspector_bridge")
+	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
+	_scene_inspector_bridge.setup.call_deferred(target)
+	print("SceneInspectorBridge: activating from boot -> ", target)
 
 
 ## Forward the optimized-content-base-url deeplink param into DclCli so the
@@ -533,6 +566,12 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
 
+	# Scene Inspector: dial the configured hub from app startup (second 0) rather
+	# than in-world, so the channel — and, in debug, boot-log capture — is live
+	# from boot. Also re-checked when a deeplink arrives (idempotent).
+	_activate_scene_inspector_from_config()
+	deep_link_router.deep_link_received.connect(_activate_scene_inspector_from_config)
+
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
 
@@ -583,6 +622,9 @@ func _ready():
 func _dcl_swift_lib_smoke_test() -> void:
 	if not DclSwiftLibPlugin.is_available():
 		return
+	# The Swift class is transient (instantiated per call), so its init log lives
+	# here, where availability is first confirmed, rather than per-instance.
+	print("[INIT] DclSwiftLib (Swift)")
 	print(
 		"[DclSwiftLib] ping() -> ",
 		DclSwiftLibPlugin.ping(),

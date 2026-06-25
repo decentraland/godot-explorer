@@ -20,9 +20,10 @@ use super::logger::{
 };
 use super::storage::StorageManager;
 use super::{
-    is_bin_payload_included, is_consumer_connected, is_lifecycle_verbose, is_stream_logs,
-    is_stream_network, set_consumer_connected, set_include_bin_payload, set_lifecycle_verbose,
-    set_stream_logs, set_stream_network, take_dropped_count, try_send_entry,
+    flush_early_logs, is_bin_payload_included, is_consumer_connected, is_lifecycle_verbose,
+    is_stream_logs, is_stream_network, set_consumer_connected, set_early_log_capture,
+    set_include_bin_payload, set_lifecycle_verbose, set_stream_logs, set_stream_network,
+    take_dropped_count, try_send_entry,
 };
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -201,6 +202,23 @@ impl SceneInspectorDispatcher {
             // Register the Godot logger sink (and, on iOS, the native fd capture)
             // so log lines actually reach the stream. Idempotent; only reached via
             // an explicit subscribe from a connected consumer.
+            crate::tools::log_stream::install_capture();
+            // Deliver any boot-time logs captured before this subscribe so the
+            // most valuable startup lines aren't lost (debug only; the ring is
+            // empty in production since early capture is never armed).
+            flush_early_logs();
+        }
+    }
+
+    /// Arm/disarm the bounded boot-log ring AND install the capture sinks so they
+    /// feed `emit_log` from app startup. The bridge calls this at boot in DEBUG
+    /// builds only, so logs emitted before a consumer subscribes are held
+    /// (bounded) and flushed on subscribe. Never armed in production — there,
+    /// producers do nothing without a connection (no buffering "just in case").
+    #[func]
+    fn set_early_log_capture(&mut self, enabled: bool) {
+        set_early_log_capture(enabled);
+        if enabled {
             crate::tools::log_stream::install_capture();
         }
     }
