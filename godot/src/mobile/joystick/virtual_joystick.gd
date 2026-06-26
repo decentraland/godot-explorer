@@ -17,6 +17,11 @@ enum JoystickMode { FIXED, DYNAMIC }
 ## Visible on touch screens only
 enum VisibilityMode { ALWAYS, TOUCHSCREEN_ONLY }
 
+# Touch indices coming from gui_input are >= 0; this sentinel marks a gesture
+# handed off from scene UI (finger started on a UI element then swiped into the
+# joystick zone) so it never collides with a real gui touch.
+const EXTERNAL_TOUCH_INDEX: int = -2
+
 ## If the input is inside this range, the output is zero.
 @export_range(0, 200, 1) var deadzone_size: float = 0
 
@@ -160,6 +165,39 @@ func _consume_if_not_cinematic() -> void:
 	# explorer.gd can fire ia_pointer for scene click handlers.
 	if not Global.scene_runner.raycast_use_cursor_position:
 		_active_area.accept_event()
+
+
+## Begin a joystick gesture from an arbitrary screen point. Used when a scene-UI
+## press is swiped out into the joystick zone: the base is placed at the original
+## touch position so movement keys engage immediately.
+func external_begin(start_position: Vector2) -> void:
+	if touch_index != -1:
+		return
+	touch_index = EXTERNAL_TOUCH_INDEX
+	_move_base(start_position)
+	_dynamic_material.set_shader_parameter("state", 1)
+	_joystick_visible = true
+	_update_joystick(start_position)
+
+
+func external_update(position: Vector2) -> void:
+	if touch_index != EXTERNAL_TOUCH_INDEX:
+		return
+	_update_joystick(position)
+
+
+func external_end() -> void:
+	if touch_index != EXTERNAL_TOUCH_INDEX:
+		return
+	_reset()
+	if _joystick_visible:
+		_dynamic_material.set_shader_parameter("state", 2)
+		_joystick_visible = false
+	emit_signal("stick_position", Vector2.ZERO)
+
+
+func get_active_area_global_rect() -> Rect2:
+	return _active_area.get_global_rect()
 
 
 func _on_show_joystick_timer() -> void:
