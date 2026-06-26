@@ -47,7 +47,6 @@ func _ready() -> void:
 		return
 	button_add_email.pressed.connect(_async_on_add_email_pressed)
 	visibility_changed.connect(_on_visibility_changed)
-	Global.orientation_changed.connect(_on_orientation_changed)
 	_async_update_visibility()
 
 
@@ -56,13 +55,10 @@ func _ready() -> void:
 # guests (email/social linked) must not see it. The "already upgraded" bit can't
 # be known locally — a recovered session doesn't record it — so we ask thirdweb
 # for the linked profiles. Start hidden, then reveal only once confirmed.
-# After the first network check, subsequent calls use the local cached flag so
-# orientation changes (landscape hide / portrait re-show) are instant.
+# After the first network check, subsequent calls use the local cached flag.
 # gdlint:ignore = async-function-name
 func _async_update_visibility() -> void:
 	visible = false
-	if not Global.is_orientation_portrait():
-		return
 	if Global.player_identity == null or not Global.player_identity.is_thirdweb_guest():
 		return
 
@@ -91,12 +87,6 @@ func _get_shown_in() -> String:
 	if shown_in == "discover":
 		return "discover_ingame" if Global.get_explorer() else "discover_pregame"
 	return shown_in
-
-
-func _on_orientation_changed(_is_portrait: bool) -> void:
-	# Re-evaluate on every orientation change: landscape always hides, portrait
-	# re-shows using the cached result (or does the first network check).
-	_async_update_visibility()
 
 
 func _on_visibility_changed() -> void:
