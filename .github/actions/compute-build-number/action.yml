@@ -1,7 +1,8 @@
 name: Compute build number
 description: >
-  Allocate the monotonic store build number for this commit from mobile-bff (idempotent per commit
-  SHA) and export it as the DCL_BUILD_NUMBER environment variable. Every `cargo run -- export` later
+  Allocate the monotonic store build number for this commit from the Cloudflare Worker allocator
+  (idempotent per commit SHA) and export it as the DCL_BUILD_NUMBER environment variable. Every
+  `cargo run -- export` later
   in the job reads DCL_BUILD_NUMBER and stamps the same Android versionCode / iOS CFBundleVersion, so
   the same commit converges on both stores. When no API key is provided (fork PRs / local), the step
   is skipped and cargo falls back to its local clock-based number (never shipped to a store). Also
@@ -55,7 +56,10 @@ runs:
           exit 1
         fi
         URL="${ENDPOINT%/}/build-numbers/allocate"
-        PAYLOAD=$(jq -nc --arg sha "$SHA" --arg by "$ALLOCATED_BY" '{sha: $sha, allocatedBy: $by}')
+        # Build the JSON payload without jq — the Android build runs inside a Docker
+        # container that doesn't ship jq. sha (git hex) and allocated-by (a literal
+        # label like "android"/"ios") are controlled values, so a printf is safe.
+        PAYLOAD=$(printf '{"sha":"%s","allocatedBy":"%s"}' "$SHA" "$ALLOCATED_BY")
         RESP=""
         for attempt in 1 2 3; do
           if RESP=$(curl -fsS -X POST "$URL" \
@@ -68,7 +72,10 @@ runs:
           RESP=""
           sleep 3
         done
-        BUILD=$(printf '%s' "$RESP" | jq -r '.data.buildNumber // empty')
+        # Extract the (unquoted, integer) buildNumber without jq. `|| true` keeps a
+        # non-matching response (e.g. an error body) from tripping pipefail before the
+        # friendly check below.
+        BUILD=$(printf '%s' "$RESP" | grep -oE '"buildNumber"[[:space:]]*:[[:space:]]*[0-9]+' | tr -dc '0-9' || true)
         case "$BUILD" in
           ''|*[!0-9]*)
             echo "❌ compute-build-number: could not allocate a build number from $URL (last response: ${RESP:-<empty>})"
