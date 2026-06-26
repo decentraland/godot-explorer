@@ -168,6 +168,17 @@ jobs:
           echo "build_version=$V" >> "$GITHUB_OUTPUT"
           echo "build version: ${V:-<none>}"
 
+      # Allocate the store build number from mobile-bff (idempotent per commit SHA, so it matches the
+      # Android versionCode for the same commit); the iOS export below stamps it into CFBundleVersion
+      # (application/version), and it is forwarded to godot-asc-deploy so the signed TestFlight build
+      # keeps the same number instead of an ASC "latest + 1".
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ inputs.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: ios
+
       - name: Import Assets
         uses: ./.github/actions/import-assets
 
@@ -255,6 +266,7 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number }}
           TS: ${{ inputs.slack_ts }}
           BUILD_VERSION: ${{ steps.buildver.outputs.build_version }}
+          BUILD_NUMBER: ${{ env.DCL_BUILD_NUMBER }}
           TRIGGERED_BY: ${{ inputs.triggered_by }}
         run: |
           set -eu
@@ -267,7 +279,7 @@ jobs:
             --repo decentraland/godot-asc-deploy --ref main \
             -f branch="$SAFE_BRANCH" -f sha="${SHA:-${{ github.sha }}}" -f whats_new="$WHATS_NEW" \
             -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
-            -f build_version="$BUILD_VERSION" -f triggered_by="$TRIGGERED_BY"
+            -f build_version="$BUILD_VERSION" -f build_number="$BUILD_NUMBER" -f triggered_by="$TRIGGERED_BY"
           echo "✅ Dispatched godot-asc-deploy for ${SAFE_BRANCH}@${SHA:-${{ github.sha }}}"
 
       - name: Slack — handed off to signing

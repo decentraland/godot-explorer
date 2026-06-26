@@ -26,6 +26,10 @@ on:
         required: false
       MOBILE_ARTIFACTS_R2_BUCKET:
         required: false
+      # API key (bearer) for the mobile-bff build-number allocator. Optional: when unset (e.g. fork
+      # PRs) the build falls back to the local clock-based number.
+      BUILD_NUMBER_SECRET:
+        required: false
 
 permissions:
   pull-requests: write
@@ -103,6 +107,15 @@ jobs:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
       
+      # Allocate the store build number once (from mobile-bff, idempotent per commit SHA); both the
+      # APK and AAB exports below read DCL_BUILD_NUMBER and stamp the same versionCode.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release
