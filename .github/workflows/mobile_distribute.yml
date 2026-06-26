@@ -145,6 +145,7 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
           STATUS: building
+          BRANCH: ${{ steps.ctx.outputs.ref }}
           TRIGGERED_BY: ${{ steps.ctx.outputs.triggered_by }}
           PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
           PR_URL: ${{ steps.ctx.outputs.pr_url }}
