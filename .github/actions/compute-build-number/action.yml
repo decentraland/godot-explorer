@@ -5,8 +5,8 @@ description: >
   `cargo run -- export` later
   in the job reads DCL_BUILD_NUMBER and stamps the same Android versionCode / iOS CFBundleVersion, so
   the same commit converges on both stores. When no API key is provided (fork PRs / local), the step
-  is skipped and cargo falls back to its local clock-based number (never shipped to a store). Also
-  exposes the value as a step output.
+  is skipped and the committed placeholder versionCode / CFBundleVersion is kept (never shipped to a
+  store). Also exposes the value as a step output.
 
 inputs:
   sha:
@@ -19,9 +19,13 @@ inputs:
     required: false
     default: ''
   endpoint:
-    description: Build-number allocator base URL (the Cloudflare Worker).
+    description: >
+      Build-number allocator base URL (the Cloudflare Worker). CI uses the workers.dev route, which
+      is not behind the zone's Bot Fight Mode — the custom domain
+      (build-numbers.dclregenesislabs.xyz) edge-blocks datacenter CI runner IPs with a 403. The
+      custom domain still works for humans / from non-datacenter IPs.
     required: false
-    default: https://build-numbers.dclregenesislabs.xyz
+    default: https://godot-build-number-allocator.mateo-a2b.workers.dev
   allocated-by:
     description: Provenance label recorded with the allocation (e.g. android, ios).
     required: false
@@ -45,8 +49,8 @@ runs:
       run: |
         set -eu
         if [ -z "${SECRET:-}" ]; then
-          echo "ℹ️  BUILD_NUMBER_SECRET not set — skipping allocation; cargo will fall back to its"
-          echo "    local clock-based build number (fork PR / local; never shipped to a store)."
+          echo "ℹ️  BUILD_NUMBER_SECRET not set — skipping allocation; the committed placeholder"
+          echo "    versionCode / CFBundleVersion is kept (fork PR / local; never shipped to a store)."
           exit 0
         fi
         # Mask the secret so it can never surface in CI logs (defense in depth).
