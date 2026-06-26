@@ -4,7 +4,6 @@ use godot::{
     prelude::*,
 };
 
-use crate::dcl::components::proto_components::sdk::components::ShowScrollBar;
 use crate::scene_runner::components::ui::style::SCROLLBAR_GUTTER_PX;
 
 #[derive(GodotClass)]
@@ -80,30 +79,6 @@ impl IScrollContainer for DclUiScroll {
 impl DclUiScroll {
     pub fn content_node(&self) -> Gd<Control> {
         self.scroll_content.clone()
-    }
-
-    pub fn set_scroll_visible(&mut self, scroll_visible: ShowScrollBar) {
-        // Match Unity: scrollbar auto-hides when content fits on that axis,
-        // and gutter is reserved only while the scrollbar is visible. AUTO
-        // gives us both (Godot shrinks the content rect by the scrollbar's
-        // width whenever it shows, and the scrollbar widget itself is
-        // configured to be SCROLLBAR_GUTTER_PX wide in `ready`). SHOW_NEVER
-        // is used for the axes a scene explicitly excludes — the scrollbar
-        // stays hidden even if content overflows and no gutter is taken.
-        use godot::classes::scroll_container::ScrollMode;
-        let (h_mode, v_mode) = match scroll_visible {
-            ShowScrollBar::SsbBoth => (ScrollMode::AUTO, ScrollMode::AUTO),
-            ShowScrollBar::SsbOnlyHorizontal => (ScrollMode::AUTO, ScrollMode::SHOW_NEVER),
-            ShowScrollBar::SsbOnlyVertical => (ScrollMode::SHOW_NEVER, ScrollMode::AUTO),
-            ShowScrollBar::SsbHidden => (ScrollMode::SHOW_NEVER, ScrollMode::SHOW_NEVER),
-        };
-        self.base_mut().set_horizontal_scroll_mode(h_mode);
-        self.base_mut().set_vertical_scroll_mode(v_mode);
-    }
-
-    pub fn set_scroll_position(&mut self, x: f32, y: f32) {
-        self.base_mut().set_h_scroll(x as i32);
-        self.base_mut().set_v_scroll(y as i32);
     }
 
     pub fn update_content_size(&mut self, width: f32, height: f32) {

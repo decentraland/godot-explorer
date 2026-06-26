@@ -30,15 +30,31 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-25880397403.commit-5215454.tgz");
+// Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG).
+// Set this to `Some("<tarball-url>")` only to temporarily pin a specific build
+// (e.g. a per-PR protocol tarball); leave it `None` to track @next.
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = None;
+const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
-    match PROTOCOL_FIXED_VERSION_URL {
-        Some(url) => Ok(url.to_string()),
-        None => Err(anyhow::anyhow!(
-            "PROTOCOL_FIXED_VERSION_URL is not set. Please set it to the desired protocol version URL."
-        )),
+    if let Some(url) = PROTOCOL_FIXED_VERSION_URL {
+        return Ok(url.to_string());
     }
+
+    let manifest_url = format!(
+        "https://registry.npmjs.org/@dcl/protocol/{PROTOCOL_NPM_DIST_TAG}"
+    );
+    let manifest: serde_json::Value = Client::new().get(&manifest_url).send()?.json()?;
+    manifest
+        .get("dist")
+        .and_then(|d| d.get("tarball"))
+        .and_then(|t| t.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Could not resolve tarball URL for @dcl/protocol@{PROTOCOL_NPM_DIST_TAG} from npm registry"
+            )
+        })
 }
 
 pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
