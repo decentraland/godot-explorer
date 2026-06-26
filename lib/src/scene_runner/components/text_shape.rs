@@ -46,10 +46,13 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mut text_shape_node = match existing {
                     Some(node) => node,
                     None => {
-                        let mut node = godot::tools::load::<PackedScene>(DCL_TEXT_SHAPE_SCENE)
-                            .instantiate()
-                            .expect("Failed to instantiate dcl_text_shape.tscn")
-                            .cast::<Node3D>();
+                        let Some(instance) =
+                            godot::tools::load::<PackedScene>(DCL_TEXT_SHAPE_SCENE).instantiate()
+                        else {
+                            tracing::error!("Failed to instantiate {DCL_TEXT_SHAPE_SCENE}");
+                            continue;
+                        };
+                        let mut node = instance.cast::<Node3D>();
                         node.set_name("TextShape");
                         node_3d.add_child(&node.clone().upcast::<Node>());
                         node
