@@ -8,7 +8,7 @@ extends PanelContainer
 
 
 func _ready() -> void:
-	visible = _should_show()
+	visible = false
 	visibility_changed.connect(_on_visibility_changed)
 	Global.guest_upgrade_state_refreshed.connect(_on_guest_upgrade_state_refreshed)
 

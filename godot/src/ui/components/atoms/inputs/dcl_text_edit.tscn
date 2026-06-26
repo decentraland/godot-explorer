@@ -5,7 +5,7 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_tjywf"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="3_v4hat"]
 [ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="4_nhry5"]
-[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/pages/discover/icons/close.svg" id="5_nhry5"]
+[ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="5_ewgm8"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ewgm8"]
 
@@ -90,7 +90,7 @@ custom_minimum_size = Vector2(22, 22)
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
-texture_normal = ExtResource("5_nhry5")
+texture_normal = ExtResource("5_ewgm8")
 ignore_texture_size = true
 stretch_mode = 0
 
