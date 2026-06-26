@@ -151,11 +151,13 @@ impl DclUiControl {
             if self.listening_mouse_up {
                 self.push_pointer_result(PointerEventType::PetUp);
             }
+            let index = self.pressed_touch_index;
             let press_position = self.press_position;
             if let Some(mut mci) = self.get_mobile_camera_input() {
                 mci.call(
                     "adopt_touch",
                     &[
+                        index.to_variant(),
                         press_position.to_variant(),
                         global_position.to_variant(),
                         event.get_relative().to_variant(),
@@ -166,17 +168,23 @@ impl DclUiControl {
     }
 
     fn update_adopted_touch(&mut self, global_position: Vector2, relative: Vector2) {
+        let index = self.pressed_touch_index;
         if let Some(mut mci) = self.get_mobile_camera_input() {
             mci.call(
                 "update_adopted_touch",
-                &[global_position.to_variant(), relative.to_variant()],
+                &[
+                    index.to_variant(),
+                    global_position.to_variant(),
+                    relative.to_variant(),
+                ],
             );
         }
     }
 
     fn release_adopted_touch(&mut self) {
+        let index = self.pressed_touch_index;
         if let Some(mut mci) = self.get_mobile_camera_input() {
-            mci.call("release_adopted_touch", &[]);
+            mci.call("release_adopted_touch", &[index.to_variant()]);
         }
     }
 
