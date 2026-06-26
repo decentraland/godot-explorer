@@ -127,6 +127,14 @@ func _refresh_camera_button_visibility() -> void:
 	_button_camera.visible = should_show
 
 
+## Hides the joystick graphic + touch area while keeping the camera (first/third-person)
+## button usable. Used when a scene hides the native joystick via PBMobileInputControls:
+## dimming the whole node would also hide the still-needed view-toggle button.
+func set_visuals_hidden(hidden: bool) -> void:
+	$Dynamic.visible = not hidden
+	_active_area.visible = not hidden
+
+
 func _on_gui_input(event: InputEvent) -> void:
 	if not Global.is_mobile():
 		return

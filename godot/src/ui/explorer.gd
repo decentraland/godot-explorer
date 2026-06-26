@@ -48,6 +48,10 @@ var _session_hide_world_interactions: bool = true
 var _session_hide_player_names: bool = true
 var _session_hide_scene_ui: bool = true
 var _mobile_controls_hidden_for_hide_ui: bool = false
+# Tracks the last SDK-driven (PBMobileInputControls) hide state we applied, so we only
+# react on change and can restore the native controls when a scene clears the flags.
+var _sdk_hide_joystick_applied: bool = false
+var _sdk_hide_gamepad_applied: bool = false
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -93,6 +97,8 @@ var _debug_panel_from_settings: bool = false
 
 
 func _process(_dt):
+	_apply_sdk_mobile_controls()
+
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
@@ -261,7 +267,11 @@ func _ready():
 		reset_cursor_position()
 		_update_virtual_controls_visibility()
 	else:
-		mobile_ui.hide()
+		# Desktop is development-only in this build: show the on-screen controls so the
+		# native joystick/joypad (and the MobileInputControls / UiInputBinding features)
+		# stay visible and debuggable. Keep the desktop crosshair/cursor behaviour as-is.
+		mobile_ui.show()
+		_update_virtual_controls_visibility()
 
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
@@ -1081,8 +1091,42 @@ func _is_ui_hud_mode_exception(node: Node) -> bool:
 	)
 
 
+# Whether the on-screen controls (joypad + virtual joystick) are present. They show on
+# mobile and on desktop (development), but never in XR.
+func _onscreen_controls_enabled() -> bool:
+	return not Global.is_xr()
+
+
+# Reacts to the PBMobileInputControls component (Global.mobile_input_hide_*), letting a
+# scene hide the native joystick / action buttons so creators can render their own touch
+# UI (bound via PBUiInputBinding). Applies wherever the controls are shown (mobile +
+# desktop dev). Only acts on state changes and defers to _mobile_controls_hidden_for_hide_ui
+# when restoring visibility.
+func _apply_sdk_mobile_controls() -> void:
+	if not _onscreen_controls_enabled():
+		return
+
+	# Enforce the hidden state every frame (other HUD logic may re-show these), but only
+	# restore visibility once, on the transition back, so we don't fight the HUD state.
+	# Hide the joystick's visuals/touch area (not the whole node) so the camera (first/
+	# third-person) button stays visible and usable while the native joystick is hidden.
+	var hide_joystick: bool = Global.mobile_input_hide_joystick
+	if hide_joystick:
+		virtual_joystick.set_visuals_hidden(true)
+	elif _sdk_hide_joystick_applied and not _mobile_controls_hidden_for_hide_ui:
+		virtual_joystick.set_visuals_hidden(false)
+	_sdk_hide_joystick_applied = hide_joystick
+
+	var hide_gamepad: bool = Global.mobile_input_hide_gamepad
+	if hide_gamepad:
+		joypad.hide()
+	elif _sdk_hide_gamepad_applied and not _mobile_controls_hidden_for_hide_ui:
+		joypad.show()
+	_sdk_hide_gamepad_applied = hide_gamepad
+
+
 func _apply_mobile_controls_hide_ui(hidden: bool) -> void:
-	if not Global.is_mobile():
+	if not _onscreen_controls_enabled():
 		return
 	_mobile_controls_hidden_for_hide_ui = hidden
 	if hidden:
@@ -1521,7 +1565,7 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if Global.is_mobile():
+		if _onscreen_controls_enabled():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
@@ -1538,7 +1582,7 @@ func _on_chat_write_mode_changed(is_writing: bool) -> void:
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if Global.is_mobile():
+		if _onscreen_controls_enabled():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()

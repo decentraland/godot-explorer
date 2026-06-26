@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc, sync::atomic::Ordering};
 use godot::{
     classes::{
         control::{FocusMode, MouseFilter},
-        Control, IControl, InputEvent, InputEventMouseButton,
+        Control, IControl, Input, InputEvent, InputEventMouseButton, InputEventScreenTouch,
     },
     global::MouseButton,
     prelude::*,
@@ -19,6 +19,7 @@ use crate::{
     },
     scene_runner::{
         components::ui::scene_ui::UiResults,
+        input::input_action_to_godot_action,
         scene_manager::{GLOBAL_TICK_NUMBER, GLOBAL_TIMESTAMP},
     },
 };
@@ -38,6 +39,11 @@ pub struct DclUiControl {
 
     listening_mouse_down: bool,
     listening_mouse_up: bool,
+
+    // Godot input actions (ia_*) fired while this element is pressed (PBUiInputBinding).
+    bound_actions: Vec<StringName>,
+    // Whether the bound actions are currently held (so we release on press-cancel/up).
+    bound_actions_pressed: bool,
 }
 
 #[godot_api]
@@ -49,6 +55,8 @@ impl IControl for DclUiControl {
             force_pointer_filter_mode: PointerFilterMode::PfmNone,
             listening_mouse_down: false,
             listening_mouse_up: false,
+            bound_actions: Vec::new(),
+            bound_actions_pressed: false,
             ui_result: None,
             dcl_entity_id: SceneEntityId::ROOT,
         }
@@ -63,45 +71,65 @@ impl IControl for DclUiControl {
 impl DclUiControl {
     #[func]
     pub fn _on_gui_input(&mut self, input: Gd<InputEvent>) {
-        if let Ok(event) = input.try_cast::<InputEventMouseButton>() {
-            let global_tick_number = GLOBAL_TICK_NUMBER.load(Ordering::Relaxed);
-            let is_left_button = event.get_button_index() == MouseButton::LEFT;
-            let down_event = event.is_pressed();
-
-            if self.listening_mouse_down && is_left_button && down_event {
-                if let Some(ui_result) = self.ui_result.as_ref() {
-                    ui_result.borrow_mut().pointer_event_results.push((
-                        self.dcl_entity_id,
-                        PbPointerEventsResult {
-                            button: InputAction::IaPointer as i32,
-                            hit: None,
-                            state: PointerEventType::PetDown as i32,
-                            timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
-                            analog: None,
-                            tick_number: global_tick_number,
-                        },
-                    ));
-                }
-            } else if self.listening_mouse_up && is_left_button && !down_event {
-                if let Some(ui_result) = self.ui_result.as_ref() {
-                    ui_result.borrow_mut().pointer_event_results.push((
-                        self.dcl_entity_id,
-                        PbPointerEventsResult {
-                            button: InputAction::IaPointer as i32,
-                            hit: None,
-                            state: PointerEventType::PetUp as i32,
-                            timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
-                            analog: None,
-                            tick_number: global_tick_number,
-                        },
-                    ));
-                }
+        // Mouse button (desktop, and mobile when touch is emulated as mouse):
+        // drives both the SDK pointer-event results and any bound input actions.
+        if let Ok(event) = input.clone().try_cast::<InputEventMouseButton>() {
+            if event.get_button_index() == MouseButton::LEFT {
+                let down_event = event.is_pressed();
+                self.push_pointer_result(down_event);
+                self.press_bound_actions(down_event);
             }
+            return;
+        }
+
+        // Screen touch (mobile native): drives bound input actions only.
+        if let Ok(event) = input.try_cast::<InputEventScreenTouch>() {
+            self.press_bound_actions(event.is_pressed());
         }
 
         // TODO: it enables HOVER and LEAVE events
         // if let Some(event) = input.try_cast::<InputEventMouseMotion>() {
         // }
+    }
+
+    fn push_pointer_result(&mut self, down_event: bool) {
+        let state = if self.listening_mouse_down && down_event {
+            PointerEventType::PetDown
+        } else if self.listening_mouse_up && !down_event {
+            PointerEventType::PetUp
+        } else {
+            return;
+        };
+        if let Some(ui_result) = self.ui_result.as_ref() {
+            ui_result.borrow_mut().pointer_event_results.push((
+                self.dcl_entity_id,
+                PbPointerEventsResult {
+                    button: InputAction::IaPointer as i32,
+                    hit: None,
+                    state: state as i32,
+                    timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
+                    analog: None,
+                    tick_number: GLOBAL_TICK_NUMBER.load(Ordering::Relaxed),
+                },
+            ));
+        }
+    }
+
+    /// Press or release all bound input actions (PBUiInputBinding) on this element,
+    /// like the native on-screen buttons. Idempotent: holds state to avoid double press/release.
+    fn press_bound_actions(&mut self, press: bool) {
+        if self.bound_actions.is_empty() || press == self.bound_actions_pressed {
+            return;
+        }
+        self.bound_actions_pressed = press;
+        let mut input = Input::singleton();
+        for action in self.bound_actions.iter() {
+            if press {
+                input.action_press(action);
+            } else {
+                input.action_release(action);
+            }
+        }
     }
 
     pub fn update_mouse_filter(&mut self) {
@@ -158,7 +186,46 @@ impl DclUiControl {
                     .unwrap_or(false)
         });
 
-        self.set_connect_gui_input(self.listening_mouse_down || self.listening_mouse_up);
+        self.refresh_gui_input_connection();
+    }
+
+    /// gui_input must be connected when we either report pointer events or have bound actions.
+    fn refresh_gui_input_connection(&mut self) {
+        let want =
+            self.listening_mouse_down || self.listening_mouse_up || !self.bound_actions.is_empty();
+        self.set_connect_gui_input(want);
+    }
+
+    /// Sets the input actions bound to this UI element (PBUiInputBinding). Unmapped
+    /// actions (IaAny / IaModifier) are skipped with a warning.
+    pub fn set_input_binding(&mut self, actions: &[i32]) {
+        // Release any currently held actions before rebinding to avoid stuck inputs.
+        self.press_bound_actions(false);
+
+        self.bound_actions = actions
+            .iter()
+            .filter_map(|raw| {
+                let action = InputAction::from_i32(*raw)?;
+                match input_action_to_godot_action(action) {
+                    Some(name) => Some(StringName::from(name)),
+                    None => {
+                        godot_warn!(
+                            "PBUiInputBinding: input action {:?} has no bindable mapping, ignoring",
+                            action
+                        );
+                        None
+                    }
+                }
+            })
+            .collect();
+        self.refresh_gui_input_connection();
+    }
+
+    /// Clears all bound input actions, releasing any that are currently held.
+    pub fn clear_input_binding(&mut self) {
+        self.press_bound_actions(false);
+        self.bound_actions.clear();
+        self.refresh_gui_input_connection();
     }
 
     pub fn set_pointer_filter(&mut self, force_pointer_filter_mode: PointerFilterMode) {
