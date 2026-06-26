@@ -23,7 +23,7 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 	set(value):
 		show_credits_button = value
 		if is_node_ready():
-			button_credits.visible = value
+			margin_container_credits.visible = value
 @export var default_main_category: String = Wearables.Categories.ALL
 ## When true, locks the embedded AvatarPreview to rotation only —
 ## disables mouse-wheel zoom, pinch zoom and pinch vertical-pan. Used by
@@ -100,6 +100,7 @@ var _initial_focus_snapped: bool = false
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
 @onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
 @onready var button_credits: Control = %Button_Credits
+@onready var margin_container_credits: Control = %MarginContainer_Credits
 
 
 # gdlint:ignore = async-function-name
@@ -117,7 +118,7 @@ func _ready():
 		container_navbar.modulate = Color.TRANSPARENT
 		container_navbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	button_credits.visible = show_credits_button
+	margin_container_credits.visible = show_credits_button
 
 	if size_canary != null:
 		size_canary.show()

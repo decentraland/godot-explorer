@@ -437,7 +437,8 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=573091625]
+[node name="MarginContainer_Credits" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=573091625]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -448,8 +449,9 @@ mouse_filter = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_bottom = 32
 
-[node name="Button_Credits" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer" unique_id=1932276915 instance=ExtResource("32_crbtn")]
+[node name="Button_Credits" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer_Credits" unique_id=1932276915 instance=ExtResource("32_crbtn")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 8

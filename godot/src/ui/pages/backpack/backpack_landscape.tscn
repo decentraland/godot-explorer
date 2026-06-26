@@ -402,6 +402,7 @@ theme_override_constants/margin_bottom = 53
 
 [node name="Button_Credits" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer2" unique_id=1936077969 instance=ExtResource("25_crbtn")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 8
