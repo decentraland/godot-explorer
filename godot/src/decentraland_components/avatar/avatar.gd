@@ -288,7 +288,7 @@ func _ready():
 	# Hide mic when the avatar is spawned
 	nickname_ui.mic_enabled = false
 	Global.on_chat_message.connect(on_chat_message)
-	_use_2d_nameplate = not Global.is_xr() and Global.get_explorer() != null
+	_use_2d_nameplate = not Global.is_xr()
 	if _use_2d_nameplate:
 		NameplateLayer.attach(self)
 	_apply_nickname_visibility()
@@ -453,8 +453,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
-	if is_instance_valid(nickname_ui):
-		nickname_ui.name_claimed = profile.has_claimed_name()
+	nickname_ui.name_claimed = profile.has_claimed_name()
 
 	var avatar_id_changed := avatar_id != profile.get_ethereum_address()
 	avatar_id = profile.get_ethereum_address()
