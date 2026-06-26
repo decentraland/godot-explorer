@@ -15,7 +15,8 @@ inputs:
   secret:
     description: >
       API key for the allocator, sent as `Authorization: Bearer` (BUILD_NUMBER_SECRET).
-      Empty (e.g. fork PRs without secrets) skips allocation and falls back to the clock.
+      Empty (e.g. fork PRs without secrets) skips allocation; the committed placeholder
+      versionCode / CFBundleVersion is kept (those builds are never shipped to a store).
     required: false
     default: ''
   endpoint:

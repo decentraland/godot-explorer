@@ -168,7 +168,7 @@ jobs:
           echo "build_version=$V" >> "$GITHUB_OUTPUT"
           echo "build version: ${V:-<none>}"
 
-      # Allocate the store build number from mobile-bff (idempotent per commit SHA, so it matches the
+      # Allocate the store build number from the Cloudflare Worker (idempotent per commit SHA, so it matches the
       # Android versionCode for the same commit); the iOS export below stamps it into CFBundleVersion
       # (application/version), and it is forwarded to godot-asc-deploy so the signed TestFlight build
       # keeps the same number instead of an ASC "latest + 1".
