@@ -68,6 +68,10 @@ window/size/window_height_override=1280
 window/frame_pacing/android/enable_frame_pacing=false
 window/handheld/orientation=6
 
+[editor]
+
+import/use_multiple_threads=false
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
@@ -230,8 +234,6 @@ limits/debugger/max_chars_per_second=3276800
 
 occlusion_culling/bvh_build_quality=1
 rendering_device/vulkan/max_descriptors_per_pool=256
-rendering_device/driver.ios="vulkan"
-rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=512

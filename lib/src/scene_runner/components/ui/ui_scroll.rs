@@ -3,8 +3,7 @@ use godot::{classes::Node, obj::NewAlloc, prelude::Gd};
 use crate::{
     dcl::{
         components::{
-            proto_components::sdk::components::{scroll_position_value::Value, YgOverflow},
-            SceneComponentId, SceneEntityId,
+            proto_components::sdk::components::YgOverflow, SceneComponentId, SceneEntityId,
         },
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
@@ -68,24 +67,6 @@ pub fn update_ui_scroll(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             existing.scroll_container = Some(scroll);
             invalidate_children_parent(godot_dcl_scene, &entity);
-        }
-
-        let existing = godot_dcl_scene
-            .entities
-            .get_mut(&entity)
-            .and_then(|n| n.base_ui.as_mut())
-            .unwrap();
-
-        if let Some(pb) = pb_transform.as_ref() {
-            if let Some(scroll) = existing.scroll_container.as_mut() {
-                scroll.bind_mut().set_scroll_visible(pb.scroll_visible());
-
-                if let Some(scroll_pos) = pb.scroll_position.as_ref() {
-                    if let Some(Value::Position(v)) = scroll_pos.value.as_ref() {
-                        scroll.bind_mut().set_scroll_position(v.x, v.y);
-                    }
-                }
-            }
         }
     }
 }
