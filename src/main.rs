@@ -263,6 +263,13 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("release")
                         .help("Export in release mode (signed)")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("build-number")
+                        .long("build-number")
+                        .help("Override the store build number (versionCode / CFBundleVersion). Defaults to the DCL_BUILD_NUMBER env var; if unset, the committed placeholder is kept.")
+                        .takes_value(true)
+                        .required(false),
                 ),
         )
         .subcommand(Command::new("import-assets"))
@@ -685,7 +692,8 @@ fn main() -> Result<(), anyhow::Error> {
 
                     // 3. Export APK/IPA
                     let format = if platform == "android" { "apk" } else { "ipa" };
-                    let result = export::export(Some(platform), format, sm.is_present("release"));
+                    let result =
+                        export::export(Some(platform), format, sm.is_present("release"), None);
 
                     if result.is_ok() {
                         // 4. Install and run on device
@@ -795,11 +803,16 @@ fn main() -> Result<(), anyhow::Error> {
             let target = sm.value_of("target");
             let format = sm.value_of("format").unwrap_or("apk");
             let release = sm.is_present("release");
+            let build_number = sm.value_of("build-number").map(|v| {
+                v.trim()
+                    .parse::<u64>()
+                    .expect("--build-number must be a positive integer")
+            });
 
             // Check dependencies first
             dependencies::check_command_dependencies("export", target)?;
 
-            let result = export::export(target, format, release);
+            let result = export::export(target, format, release, build_number);
 
             if result.is_ok() {
                 dependencies::suggest_next_steps("export", target);
