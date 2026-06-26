@@ -145,6 +145,18 @@ jobs:
           echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
           "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
 
+      # Allocate the store build number from the Cloudflare Worker (idempotent per commit SHA, so it
+      # matches the Android versionCode for the same commit). MUST run BEFORE the lib build so build.rs
+      # bakes it into the version string (GODOT_EXPLORER_VERSION) — which the "Capture build version"
+      # step below forwards to godot-asc-deploy — and so the iOS export stamps it into CFBundleVersion
+      # (application/version), keeping the signed TestFlight build on the same number (not ASC "latest + 1").
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ inputs.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: ios
+
       - name: Build MacOS
         timeout-minutes: 20
         run: cargo run -- build --release ${{ env.PROD_FLAG }}
@@ -167,17 +179,6 @@ jobs:
           [ -f "$GITHUB_WORKSPACE/.build.version" ] && V="$(tr -d '[:space:]' < "$GITHUB_WORKSPACE/.build.version")"
           echo "build_version=$V" >> "$GITHUB_OUTPUT"
           echo "build version: ${V:-<none>}"
-
-      # Allocate the store build number from the Cloudflare Worker (idempotent per commit SHA, so it matches the
-      # Android versionCode for the same commit); the iOS export below stamps it into CFBundleVersion
-      # (application/version), and it is forwarded to godot-asc-deploy so the signed TestFlight build
-      # keeps the same number instead of an ASC "latest + 1".
-      - name: Compute build number
-        uses: ./.github/actions/compute-build-number
-        with:
-          sha: ${{ inputs.sha || github.sha }}
-          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
-          allocated-by: ios
 
       - name: Import Assets
         uses: ./.github/actions/import-assets
