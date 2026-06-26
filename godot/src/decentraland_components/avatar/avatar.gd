@@ -448,6 +448,8 @@ func _unset_avatar_modifier_area():
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
+	if not is_instance_valid(nickname_ui):
+		return
 	_profile_ready = true
 	var avatar = profile.get_avatar()
 	var new_avatar_name: String = profile.get_name()
