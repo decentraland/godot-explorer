@@ -389,7 +389,8 @@ grow_vertical = 2
 color = Color(0.6666667, 1, 1, 0.29411766)
 metadata/_edit_use_anchors_ = true
 
-[node name="MarginContainer2" type="MarginContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=189227384]
+[node name="MarginContainer_Credits" type="MarginContainer" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=189227384]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -400,7 +401,7 @@ mouse_filter = 2
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 53
 
-[node name="Button_Credits" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer2" unique_id=1936077969 instance=ExtResource("25_crbtn")]
+[node name="Button_Credits" parent="SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer_Credits" unique_id=1936077969 instance=ExtResource("25_crbtn")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
