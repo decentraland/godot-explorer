@@ -340,12 +340,22 @@ pub fn export(
     // its committed placeholder values. AAB additionally needs format/architecture/signing tweaks.
     let is_store_target = matches!(target.as_str(), "android" | "quest" | "ios");
     let aab_tweaks = (target == "android" || target == "quest") && format == "aab";
-    let export_presets_backup = if is_store_target {
-        let build_number = crate::build_number::resolve(build_number);
-        print_message(
-            MessageType::Info,
-            &format!("Build number (versionCode / CFBundleVersion): {build_number}"),
-        );
+    // Resolve the build number: `--build-number` wins, otherwise the `DCL_BUILD_NUMBER` env var
+    // (set in CI by the Cloudflare allocator, idempotent per commit SHA). When neither is present
+    // (local / fork builds) the committed placeholder in export_presets.cfg is kept as-is — those
+    // builds are never shipped to a store.
+    let build_number = build_number.or_else(|| {
+        std::env::var("DCL_BUILD_NUMBER")
+            .ok()
+            .and_then(|v| v.trim().parse::<u64>().ok())
+    });
+    let export_presets_backup = if is_store_target && (build_number.is_some() || aab_tweaks) {
+        if let Some(build_number) = build_number {
+            print_message(
+                MessageType::Info,
+                &format!("Build number (versionCode / CFBundleVersion): {build_number}"),
+            );
+        }
         Some(patch_export_presets_for_store(build_number, aab_tweaks)?)
     } else {
         None
@@ -528,26 +538,29 @@ pub fn strip_ios_templates() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-/// Stamp the build number into `export_presets.cfg` for a store export and return the original
-/// content so the caller can restore it afterward. Rewrites the build-number fields (Android
-/// `version/code`, iOS `application/version`); when `aab` is set, also flips the AAB-specific
-/// format/architecture/signing flags. The marketing strings (`version/name`,
-/// `application/short_version`) are left as committed — they are the SemVer source of truth.
-fn patch_export_presets_for_store(build_number: u64, aab: bool) -> Result<String, anyhow::Error> {
+/// Patch `export_presets.cfg` for a store export and return the original content so the caller can
+/// restore it afterward. When `build_number` is `Some`, rewrites the build-number fields (Android
+/// `version/code`, iOS `application/version`); when `None` the committed placeholder is kept. When
+/// `aab` is set, also flips the AAB-specific format/architecture/signing flags. The marketing
+/// strings (`version/name`, `application/short_version`) are left as committed — the SemVer source
+/// of truth.
+fn patch_export_presets_for_store(
+    build_number: Option<u64>,
+    aab: bool,
+) -> Result<String, anyhow::Error> {
     let export_presets_path = format!("{}/export_presets.cfg", GODOT_PROJECT_FOLDER);
     let original_content = fs::read_to_string(&export_presets_path)?;
 
-    // Robust line-prefix rewrite (not literal `.replace`, which breaks once the value isn't 72).
-    let mut updated = rewrite_cfg_value(
-        &original_content,
-        "version/code=",
-        &build_number.to_string(),
-    );
-    updated = rewrite_cfg_value(
-        &updated,
-        "application/version=",
-        &format!("\"{build_number}\""),
-    );
+    let mut updated = original_content.clone();
+    if let Some(build_number) = build_number {
+        // Robust line-prefix rewrite (not literal `.replace`, which breaks once the value isn't 72).
+        updated = rewrite_cfg_value(&updated, "version/code=", &build_number.to_string());
+        updated = rewrite_cfg_value(
+            &updated,
+            "application/version=",
+            &format!("\"{build_number}\""),
+        );
+    }
 
     if aab {
         updated = updated

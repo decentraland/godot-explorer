@@ -11,7 +11,6 @@ use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir
 
 mod android_godot_lib;
 mod avatar_impostor_benchmark;
-mod build_number;
 mod check_gdscript;
 mod consts;
 mod copy_files;
@@ -268,7 +267,7 @@ fn main() -> Result<(), anyhow::Error> {
                 .arg(
                     Arg::new("build-number")
                         .long("build-number")
-                        .help("Override the store build number (versionCode / CFBundleVersion). Defaults to DCL_BUILD_NUMBER env, then days-since-2020 from the clock.")
+                        .help("Override the store build number (versionCode / CFBundleVersion). Defaults to the DCL_BUILD_NUMBER env var; if unset, the committed placeholder is kept.")
                         .takes_value(true)
                         .required(false),
                 ),
