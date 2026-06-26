@@ -168,11 +168,16 @@ jobs:
           echo "build_version=$V" >> "$GITHUB_OUTPUT"
           echo "build version: ${V:-<none>}"
 
-      # Compute the date-based store build number; the iOS export below stamps it into
-      # CFBundleVersion (application/version), and it is forwarded to godot-asc-deploy so the
-      # signed TestFlight build keeps the same number instead of an ASC "latest + 1".
+      # Allocate the store build number from mobile-bff (idempotent per commit SHA, so it matches the
+      # Android versionCode for the same commit); the iOS export below stamps it into CFBundleVersion
+      # (application/version), and it is forwarded to godot-asc-deploy so the signed TestFlight build
+      # keeps the same number instead of an ASC "latest + 1".
       - name: Compute build number
         uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ inputs.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: ios
 
       - name: Import Assets
         uses: ./.github/actions/import-assets

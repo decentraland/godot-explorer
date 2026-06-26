@@ -1,13 +1,34 @@
 name: Compute build number
 description: >
-  Compute the store build number (days-since-2020-01-01 UTC * 100000 + seconds-of-day) and export
-  it as the DCL_BUILD_NUMBER environment variable. Every `cargo run -- export` later in the job
-  reads DCL_BUILD_NUMBER and stamps the same monotonic Android versionCode / iOS CFBundleVersion.
-  Mirrors `src/build_number.rs` exactly. Also exposes the value as a step output.
+  Allocate the monotonic store build number for this commit from mobile-bff (idempotent per commit
+  SHA) and export it as the DCL_BUILD_NUMBER environment variable. Every `cargo run -- export` later
+  in the job reads DCL_BUILD_NUMBER and stamps the same Android versionCode / iOS CFBundleVersion, so
+  the same commit converges on both stores. When no API key is provided (fork PRs / local), the step
+  is skipped and cargo falls back to its local clock-based number (never shipped to a store). Also
+  exposes the value as a step output.
+
+inputs:
+  sha:
+    description: Commit SHA to bind the build number to (idempotency key).
+    required: true
+  secret:
+    description: >
+      API key for the allocator, sent as `Authorization: Bearer` (BUILD_NUMBER_SECRET).
+      Empty (e.g. fork PRs without secrets) skips allocation and falls back to the clock.
+    required: false
+    default: ''
+  endpoint:
+    description: Build-number allocator base URL (the Cloudflare Worker).
+    required: false
+    default: https://build-numbers.dclregenesislabs.xyz
+  allocated-by:
+    description: Provenance label recorded with the allocation (e.g. android, ios).
+    required: false
+    default: ''
 
 outputs:
   build-number:
-    description: The computed build number.
+    description: The allocated build number (empty when allocation was skipped).
     value: ${{ steps.compute.outputs.build_number }}
 
 runs:
@@ -15,13 +36,45 @@ runs:
   steps:
     - id: compute
       shell: bash
+      env:
+        SHA: ${{ inputs.sha }}
+        SECRET: ${{ inputs.secret }}
+        ENDPOINT: ${{ inputs.endpoint }}
+        ALLOCATED_BY: ${{ inputs.allocated-by }}
       run: |
         set -eu
-        EPOCH=1577836800              # 2020-01-01T00:00:00Z (midnight-aligned, like the Unix epoch)
-        NOW=$(date -u +%s)
-        DAYS=$(( (NOW - EPOCH) / 86400 ))   # whole days since 2020-01-01 UTC
-        SECS=$(( NOW % 86400 ))             # seconds since the most recent UTC midnight
-        BUILD=$(( DAYS * 100000 + SECS ))
+        if [ -z "${SECRET:-}" ]; then
+          echo "ℹ️  BUILD_NUMBER_SECRET not set — skipping allocation; cargo will fall back to its"
+          echo "    local clock-based build number (fork PR / local; never shipped to a store)."
+          exit 0
+        fi
+        # Mask the secret so it can never surface in CI logs (defense in depth).
+        echo "::add-mask::${SECRET}"
+        if [ -z "${SHA:-}" ]; then
+          echo "❌ compute-build-number: 'sha' input is empty"
+          exit 1
+        fi
+        URL="${ENDPOINT%/}/build-numbers/allocate"
+        PAYLOAD=$(jq -nc --arg sha "$SHA" --arg by "$ALLOCATED_BY" '{sha: $sha, allocatedBy: $by}')
+        RESP=""
+        for attempt in 1 2 3; do
+          if RESP=$(curl -fsS -X POST "$URL" \
+            -H 'content-type: application/json' \
+            -H "authorization: Bearer ${SECRET}" \
+            -d "$PAYLOAD"); then
+            break
+          fi
+          echo "⚠️  build-number allocate attempt $attempt failed; retrying in 3s..."
+          RESP=""
+          sleep 3
+        done
+        BUILD=$(printf '%s' "$RESP" | jq -r '.data.buildNumber // empty')
+        case "$BUILD" in
+          ''|*[!0-9]*)
+            echo "❌ compute-build-number: could not allocate a build number from $URL (last response: ${RESP:-<empty>})"
+            exit 1
+            ;;
+        esac
         echo "DCL_BUILD_NUMBER=$BUILD" >> "$GITHUB_ENV"
         echo "build_number=$BUILD" >> "$GITHUB_OUTPUT"
-        echo "🔢 build number: $BUILD (day $DAYS, second-of-day $SECS)"
+        echo "🔢 build number $BUILD for $SHA"
