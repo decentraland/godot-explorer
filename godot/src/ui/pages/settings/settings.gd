@@ -256,6 +256,8 @@ func refresh_graphic_settings():
 
 func show_control(control: Control):
 	for child in v_box_container_sections.get_children():
+		if child is GuestUpgradeCard:
+			continue
 		child.hide()
 	control.show()
 	content_scroll_container.scroll_vertical = 0

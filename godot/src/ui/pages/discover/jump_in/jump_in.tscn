@@ -23,7 +23,6 @@ tracking_handler = SubResource("Resource_mu208")
 
 [node name="TextureProgressBar" parent="." unique_id=749487951 instance=ExtResource("4_jvwlf")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5

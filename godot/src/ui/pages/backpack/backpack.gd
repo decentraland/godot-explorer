@@ -12,8 +12,18 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 	"bid_accepted",
 ]
 
-@export var hide_background: bool = false
+@export var hide_background: bool = false:
+	set(value):
+		hide_background = value
+		if is_node_ready():
+			color_rect_background.visible = not value
+			texture_rect_background.visible = not value
 @export var hide_navbar: bool = false
+@export var show_credits_button: bool = true:
+	set(value):
+		show_credits_button = value
+		if is_node_ready():
+			margin_container_credits.visible = value
 @export var default_main_category: String = Wearables.Categories.ALL
 ## When true, locks the embedded AvatarPreview to rotation only —
 ## disables mouse-wheel zoom, pinch zoom and pinch vertical-pan. Used by
@@ -46,6 +56,7 @@ var _marketplace_restore_pending: bool = false
 
 var _avatar_update_retries: int = 0
 var _is_currently_narrow: bool = false
+var _initial_focus_snapped: bool = false
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
@@ -88,6 +99,8 @@ var _is_currently_narrow: bool = false
 @onready var canary_content: Control = get_node_or_null("%ControlContent_Canary")
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
 @onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
+@onready var button_credits: Control = %Button_Credits
+@onready var margin_container_credits: Control = %MarginContainer_Credits
 
 
 # gdlint:ignore = async-function-name
@@ -102,7 +115,10 @@ func _ready():
 		wearable_button_group_per_category[category] = button_group
 
 	if hide_navbar:
-		container_navbar.hide()
+		container_navbar.modulate = Color.TRANSPARENT
+		container_navbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	margin_container_credits.visible = show_credits_button
 
 	if size_canary != null:
 		size_canary.show()
@@ -143,6 +159,8 @@ func _ready():
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_main_category_filter_type)
+			if wearable_filter_button.get_category_name() == default_main_category:
+				wearable_filter_button.button_pressed = true
 
 	for wearable_filter_button in container_sub_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
@@ -345,6 +363,9 @@ func _async_update_avatar():
 		Global.player_identity.get_mutable_profile()
 	)
 	_unset_avatar_loading(loading_id)
+	if not _initial_focus_snapped and not current_filter.is_empty():
+		_initial_focus_snapped = true
+		avatar_preview.focus_camera_on.call_deferred(current_filter, true)
 
 
 func _load_filtered_data(filter: String):

@@ -28,6 +28,10 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal upgrade_to_otp
+## Fired by GuestUpgradeCard after the thirdweb network check resolves so other
+## UI (e.g. UpgradeBadge) can sync without duplicating the network call.
+signal guest_upgrade_state_refreshed(is_upgraded: bool)
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 ## Sync settings "Hide View Profile" / "Hide World Interactions" / etc. checkboxes.
@@ -71,6 +75,16 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
+
+# DEBUG ONLY — must be `false` for any shipped build. When `true`,
+# get_device_anchor_id() ignores the platform-native device anchor (Android
+# SSAID / iOS Keychain UUID) and uses the per-install UUID in
+# `user://device_anchor.txt` on EVERY platform, so the guest wallet is tied to
+# the app's user data: deleting `user://` (clear app data / reinstall — or the
+# "RESET GUEST WALLET" debug button in the lobby) mints a fresh anchor and a
+# fresh wallet. When `false` the original shipping behavior returns: the
+# device-bound native anchor that survives reinstall.
+const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = true
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -1356,3 +1370,34 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 		return
 	camera_mode_blocked = blocked
 	camera_mode_block_changed.emit(blocked)
+
+
+# Anchor used to derive the thirdweb guest session/wallet. Shared by the lobby
+# guest-login flow and the "Upgrade to OTP" modal so both derive the same wallet.
+#
+# Resolution order:
+#   1. DEBUG_GUEST_ROTATE_ANCHOR_ID on → return "" so Rust falls back to the
+#      resettable per-install UUID in `user://device_anchor.txt` (delete user://
+#      → fresh guest wallet) on every platform.
+#   2. Otherwise (shipping): the device-bound native anchor (Android SSAID / iOS
+#      Keychain UUID), which survives reinstall. Desktop has none → returns ""
+#      and Rust uses the user:// UUID anyway.
+#
+# Android note: `has_method()` always returns false for JNISingleton methods
+# (Object.has_method consults ClassDB, the Android plugin method_map is
+# separate). Don't guard the Android call with has_method or it silently no-ops.
+# See: https://github.com/godotengine/godot/issues/106436
+func get_device_anchor_id() -> String:
+	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
+	if DEBUG_GUEST_ROTATE_ANCHOR_ID:
+		return ""
+	# 2. Shipping: device-bound native anchor (persists across reinstall).
+	if self.is_android():
+		var plugin = Engine.get_singleton("dcl-godot-android")
+		if plugin != null:
+			return plugin.getDeviceAnchorId()
+	elif self.is_ios():
+		var plugin = Engine.get_singleton("DclGodotiOS")
+		if plugin != null and plugin.has_method("get_device_anchor_id"):
+			return plugin.get_device_anchor_id()
+	return ""
