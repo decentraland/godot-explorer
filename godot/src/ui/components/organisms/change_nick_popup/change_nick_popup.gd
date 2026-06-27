@@ -28,7 +28,7 @@ func close() -> void:
 
 
 func open() -> void:
-	var profile = Global.player_identity.get_profile_or_null()
+	var profile = Services.player_identity.get_profile_or_null()
 	var address = profile.get_ethereum_address()
 	new_nickname = profile.get_name()
 	label_tag.text = "#" + address.substr(address.length() - 4, 4)

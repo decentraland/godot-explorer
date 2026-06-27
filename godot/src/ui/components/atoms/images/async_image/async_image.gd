@@ -126,9 +126,9 @@ func _async_download(url: String) -> void:
 	var url_hash := _get_hash_from_url(url)
 	var content_mapping
 	if forced_quality == ForcedQuality.NONE:
-		content_mapping = Global.content_provider.fetch_texture_by_url(url_hash, url)
+		content_mapping = Services.content_provider.fetch_texture_by_url(url_hash, url)
 	else:
-		content_mapping = Global.content_provider.fetch_texture_by_url_with_quality(
+		content_mapping = Services.content_provider.fetch_texture_by_url_with_quality(
 			url_hash, url, forced_quality
 		)
 	var result = await PromiseUtils.async_awaiter(content_mapping)

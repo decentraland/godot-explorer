@@ -20,7 +20,7 @@ func _ready():
 	_my_scene_id = scene_node.get_scene_id()
 
 	_deferred_start.call_deferred()
-	Global.scene_runner.on_change_scene_id.connect(self._on_change_scene_id)
+	Services.scene_runner.on_change_scene_id.connect(self._on_change_scene_id)
 
 
 func _on_change_scene_id(scene_id: int):
@@ -29,7 +29,7 @@ func _on_change_scene_id(scene_id: int):
 
 func _deferred_start():
 	# First emiting to setup the initial value
-	_on_scene_active(_my_scene_id == Global.scene_runner.get_current_parcel_scene_id())
+	_on_scene_active(_my_scene_id == Services.scene_runner.get_current_parcel_scene_id())
 
 
 func _on_scene_active(active: bool):

@@ -2,7 +2,7 @@ extends StaticButton
 
 
 func _get_unread_count() -> int:
-	var notifications = NotificationsManager.get_notifications()
+	var notifications = Services.notifications_manager.get_notifications()
 	var count = 0
 
 	for notif in notifications:
@@ -14,8 +14,8 @@ func _get_unread_count() -> int:
 
 func _connect_update_signals() -> void:
 	# Connect to NotificationsManager signals
-	NotificationsManager.new_notifications.connect(_on_notifications_updated)
-	NotificationsManager.notifications_updated.connect(_on_notifications_updated)
+	Services.notifications_manager.new_notifications.connect(_on_notifications_updated)
+	Services.notifications_manager.notifications_updated.connect(_on_notifications_updated)
 
 
 func _on_button_clicked() -> void:

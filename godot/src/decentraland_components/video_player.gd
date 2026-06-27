@@ -145,7 +145,7 @@ func _async_init_exo_player_backend():
 ## Fetch local video file and return the absolute file path
 ## Returns empty string on error (video_state will be set to ERROR)
 func _async_fetch_local_video() -> String:
-	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	var content_mapping := Services.scene_runner.get_scene_content_mapping(dcl_scene_id)
 	var file_hash = content_mapping.get_hash(_source)
 
 	if file_hash.is_empty():
@@ -153,7 +153,7 @@ func _async_fetch_local_video() -> String:
 		video_state = VIDEO_STATE_ERROR
 		return ""
 
-	var promise = Global.content_provider.fetch_video(file_hash, content_mapping)
+	var promise = Services.content_provider.fetch_video(file_hash, content_mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
 		printerr("VideoPlayer: Error fetching video: ", res.get_error())
@@ -345,7 +345,7 @@ func _update_effective_volume():
 func _calculate_native_effective_volume() -> float:
 	if dcl_muted:
 		return 0.0
-	var config = Global.get_config()
+	var config = Services.config
 	var master_volume: float = config.audio_general_volume / 100.0
 	var scene_volume: float = config.audio_scene_volume / 100.0
 	return master_volume * scene_volume * dcl_volume
@@ -675,9 +675,9 @@ func stream_buffer(data: PackedVector2Array):
 
 # Legacy methods for backward compatibility with existing code
 func async_request_video(file_hash):
-	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	var content_mapping := Services.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
-	var promise = Global.content_provider.fetch_video(file_hash, content_mapping)
+	var promise = Services.content_provider.fetch_video(file_hash, content_mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
 		printerr("Error on fetching video: ", res.get_error())

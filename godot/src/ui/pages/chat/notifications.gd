@@ -26,7 +26,7 @@ func _async_on_chat_message_arrived(address: String, message: String, timestamp:
 	if notifications.size() == MAX_MESSAGES:
 		notifications.pop_front().queue_free()
 
-	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
+	var new_chat = Services.preload_assets.CHAT_MESSAGE.instantiate()
 	notifications.push_back(new_chat)
 	notifications_container.add_child(new_chat)
 	new_chat.reduce_text = true

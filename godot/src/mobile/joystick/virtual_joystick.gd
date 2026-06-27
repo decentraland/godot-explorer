@@ -163,7 +163,7 @@ func _on_gui_input(event: InputEvent) -> void:
 func _consume_if_not_cinematic() -> void:
 	# Cinematic camera mode lets the event bubble to ui_root.gui_input so
 	# explorer.gd can fire ia_pointer for scene click handlers.
-	if not Global.scene_runner.raycast_use_cursor_position:
+	if not Services.scene_runner.raycast_use_cursor_position:
 		_active_area.accept_event()
 
 

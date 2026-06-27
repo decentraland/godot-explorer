@@ -24,9 +24,9 @@ func _ready() -> void:
 	button_mark_all_read.pressed.connect(_async_on_mark_all_read_pressed)
 
 	# Connect to NotificationsManager signals
-	NotificationsManager.new_notifications.connect(_on_new_notifications)
-	NotificationsManager.notifications_updated.connect(_on_notifications_updated)
-	NotificationsManager.notification_error.connect(_on_notification_error)
+	Services.notifications_manager.new_notifications.connect(_on_new_notifications)
+	Services.notifications_manager.notifications_updated.connect(_on_notifications_updated)
+	Services.notifications_manager.notification_error.connect(_on_notification_error)
 
 	# Initial load
 	_refresh_notifications()
@@ -60,7 +60,7 @@ func _refresh_notifications() -> void:
 		_show_guest_message()
 		return
 
-	var notifications = NotificationsManager.get_notifications()
+	var notifications = Services.notifications_manager.get_notifications()
 	async_display_notifications(notifications)
 
 
@@ -124,7 +124,7 @@ func _on_notification_error(error_message: String) -> void:
 
 func _async_on_notification_mark_as_read(notification_id: String) -> void:
 	var ids = PackedStringArray([notification_id])
-	var promise = NotificationsManager.mark_as_read(ids)
+	var promise = Services.notifications_manager.mark_as_read(ids)
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	if result is PromiseError:
@@ -132,7 +132,7 @@ func _async_on_notification_mark_as_read(notification_id: String) -> void:
 
 
 func _async_on_mark_all_read_pressed() -> void:
-	var notifications = NotificationsManager.get_notifications()
+	var notifications = Services.notifications_manager.get_notifications()
 	var unread_ids: Array[String] = []
 
 	for notif in notifications:
@@ -143,7 +143,7 @@ func _async_on_mark_all_read_pressed() -> void:
 		return
 
 	var ids = PackedStringArray(unread_ids)
-	var promise = NotificationsManager.mark_as_read(ids)
+	var promise = Services.notifications_manager.mark_as_read(ids)
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	if result is PromiseError:

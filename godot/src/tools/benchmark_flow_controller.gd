@@ -42,7 +42,7 @@ var benchmark_report = null
 
 
 func _ready():
-	if not Global.cli.benchmark_report:
+	if not Services.cli.benchmark_report:
 		queue_free()
 		return
 
@@ -159,8 +159,8 @@ func handle_lobby_scene(scene):
 	scene.create_guest_account_if_needed()
 
 	# Update metrics identity
-	Global.metrics.update_identity(
-		Global.player_identity.get_address_str(), Global.player_identity.is_guest
+	Services.metrics.update_identity(
+		Services.player_identity.get_address_str(), Services.player_identity.is_guest
 	)
 
 	# Mark stage as complete
@@ -324,7 +324,7 @@ func collect_explorer_metrics(current_pos: Vector2i, location_name: String):
 	# Collect metrics
 	var test_name = "4_Explorer_" + location_name.replace(" ", "_")
 	var location = str(current_pos)
-	var realm = Global.realm.get_realm_string()
+	var realm = Services.realm.get_realm_string()
 
 	benchmark_report.collect_and_store_metrics(test_name, location, realm, resource_data)
 

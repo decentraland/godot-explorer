@@ -58,7 +58,7 @@ func async_show_notification(notification: Dictionary) -> void:
 
 func _on_timer_timeout() -> void:
 	# Resume queue when auto-hiding from timer (don't emit next yet, dequeue will handle it)
-	NotificationsManager.resume_queue()
+	Services.notifications_manager.resume_queue()
 	async_hide_toast()
 
 
@@ -105,7 +105,7 @@ func _track_notification_opened() -> void:
 	var extra_properties = JSON.stringify(
 		{"notification_id": notification_data.get("id", ""), "ui_source": "HUD"}
 	)
-	Global.metrics.track_click_button("notification_opened", "HUD", extra_properties)
+	Services.metrics.track_click_button("notification_opened", "HUD", extra_properties)
 
 
 func _start_swipe(pos: Vector2) -> void:
@@ -124,7 +124,7 @@ func _start_swipe(pos: Vector2) -> void:
 	# Release focus to prevent camera rotation while swiping
 	Global.explorer_release_focus()
 	# Pause the notification queue to prevent new toasts from appearing
-	NotificationsManager.pause_queue()
+	Services.notifications_manager.pause_queue()
 
 
 func _update_velocity(pos: Vector2) -> void:
@@ -172,7 +172,7 @@ func _end_swipe(pos: Vector2) -> void:
 	# Check if it was a tap (small movement)
 	if delta.length() < DRAG_THRESHOLD:
 		# Resume queue (dequeue will handle showing next) and restore focus before hiding
-		NotificationsManager.resume_queue()
+		Services.notifications_manager.resume_queue()
 		Global.explorer_grab_focus()
 		_track_notification_opened()
 		toast_clicked.emit(notification_data)
@@ -197,7 +197,7 @@ func _end_swipe(pos: Vector2) -> void:
 		return
 
 	# Resume queue and restore focus
-	NotificationsManager.resume_queue()
+	Services.notifications_manager.resume_queue()
 	Global.explorer_grab_focus()
 
 	# Reset swipe state
@@ -213,7 +213,7 @@ func _end_swipe(pos: Vector2) -> void:
 func _cancel_swipe() -> void:
 	# Called when a swipe is cancelled (e.g., downward swipe blocked)
 	# Resume queue and restore state
-	NotificationsManager.resume_queue()
+	Services.notifications_manager.resume_queue()
 	Global.explorer_grab_focus()
 
 	# Reset swipe state
@@ -230,7 +230,7 @@ func _cancel_swipe() -> void:
 func async_dismiss_with_inertia() -> void:
 	# Dismiss notification with momentum animation
 	# Mark as read and restore state
-	NotificationsManager.resume_queue()
+	Services.notifications_manager.resume_queue()
 	Global.explorer_grab_focus()
 	mark_as_read.emit(notification_data)
 

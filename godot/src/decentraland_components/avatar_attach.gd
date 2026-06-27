@@ -66,14 +66,14 @@ func _process(_delta):
 
 
 func look_up_player():
-	var primary_player_user_id := Global.player_identity.get_address_str()
+	var primary_player_user_id := Services.player_identity.get_address_str()
 
 	# default to current player
 	var look_up_player_user_id := user_id if not user_id.is_empty() else primary_player_user_id
 	if primary_player_user_id == look_up_player_user_id:
 		_player_avatar_node = get_node("/root/explorer/world/Player/Avatar")
 	else:
-		_player_avatar_node = Global.avatars.get_avatar_by_address(user_id)
+		_player_avatar_node = Services.avatars.get_avatar_by_address(user_id)
 
 	_register_with_current_avatar()
 

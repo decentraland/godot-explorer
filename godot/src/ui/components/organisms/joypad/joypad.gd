@@ -59,7 +59,7 @@ func _process(_dt: float) -> void:
 
 
 func _update_jump_icon() -> void:
-	var player := Global.scene_runner.player_body_node as Player
+	var player := Services.scene_runner.player_body_node as Player
 	if player == null:
 		return
 

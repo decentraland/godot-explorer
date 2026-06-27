@@ -137,4 +137,4 @@ func _on_gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			Global.modal_manager.close_current_modal()
+			Services.modal_manager.close_current_modal()

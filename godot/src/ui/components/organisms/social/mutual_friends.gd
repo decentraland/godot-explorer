@@ -14,7 +14,7 @@ func _ready() -> void:
 func async_set_mutual_friends(address):
 	hide()  # Hide at the start to prevent flickering
 	_clear_profile_pictures()
-	var promise = Global.social_service.get_mutual_friends(address, 1000, 0)
+	var promise = Services.social_service.get_mutual_friends(address, 1000, 0)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():

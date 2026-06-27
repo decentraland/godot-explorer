@@ -53,7 +53,7 @@ func async_show_notification(notification: Dictionary) -> void:
 
 
 func _on_timer_timeout() -> void:
-	NotificationsManager.resume_queue()
+	Services.notifications_manager.resume_queue()
 	async_hide_toast()
 
 

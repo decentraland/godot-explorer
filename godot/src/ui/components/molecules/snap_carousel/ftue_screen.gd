@@ -85,7 +85,7 @@ func _on_button_jump_in_pressed() -> void:
 
 
 func _on_button_skip_pressed() -> void:
-	Global.metrics.track_click_button("SKIP", "DISCOVER_FTUE", "")
+	Services.metrics.track_click_button("SKIP", "DISCOVER_FTUE", "")
 	ftue_completed.emit()
 
 
@@ -102,6 +102,6 @@ func _track_screen_view() -> void:
 	var carousel_items = []
 	for i in _places.size():
 		carousel_items.append({"position": i, "place_id": _places[i].get("id", "")})
-	Global.metrics.track_screen_viewed(
+	Services.metrics.track_screen_viewed(
 		"DISCOVER_FTUE", JSON.stringify({"carousel": carousel_items})
 	)

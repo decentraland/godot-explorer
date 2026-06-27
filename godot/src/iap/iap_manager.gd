@@ -81,8 +81,8 @@ var _store_kit_available: bool = false
 # Synchronous receipt-read environment captured at startup, held until the
 # authoritative AppTransaction resolves so both go out in one atomic event.
 var _env_sync_value: String = ""
-# ms-since-startup when the synchronous read above was taken (same clock the
-# `[Startup]` logs use: Time.get_ticks_msec() - Global._startup_time).
+# ms-since-startup when the synchronous read above was taken (same boot clock
+# the `[Startup]` logs use, via BootInstrumentation.boot_elapsed_ms()).
 var _env_sync_at_ms: int = 0
 var _products: Array = []
 # In-memory only; resets on relaunch.
@@ -127,7 +127,7 @@ func report_environment_to_analytics() -> void:
 	# signal fires exactly once (hard timeout falls back to the receipt read), so
 	# the event is never missing.
 	_env_sync_value = _store_kit.current_environment()
-	_env_sync_at_ms = Time.get_ticks_msec() - Global._startup_time
+	_env_sync_at_ms = BootInstrumentation.boot_elapsed_ms()
 
 	if not _store_kit.environment_resolved.is_connected(_on_environment_resolved):
 		_store_kit.environment_resolved.connect(_on_environment_resolved, CONNECT_DEFERRED)
@@ -135,7 +135,7 @@ func report_environment_to_analytics() -> void:
 
 
 func _on_environment_resolved(environment: String, source: String, resolve_ms: float) -> void:
-	var env_at_ms := Time.get_ticks_msec() - Global._startup_time
+	var env_at_ms := BootInstrumentation.boot_elapsed_ms()
 	var matched := environment == _env_sync_value
 	print(
 		(
@@ -248,7 +248,7 @@ func purchase(product_id: String) -> void:
 		return
 	if _purchase_in_flight:
 		print("[IAP] purchase already in flight; ignoring re-entry for ", product_id)
-		Global.modal_manager.async_show_purchase_in_flight_modal()
+		Services.modal_manager.async_show_purchase_in_flight_modal()
 		return
 	var wallet := _wallet_address()
 	if wallet.is_empty():
@@ -265,7 +265,7 @@ func purchase(product_id: String) -> void:
 			" > ",
 			_MAX_CREDITS
 		)
-		Global.modal_manager.async_show_credit_limit_total_modal()
+		Services.modal_manager.async_show_credit_limit_total_modal()
 		return
 	var today_credits = _get_today_credits()
 	if today_credits + credits_to_add > _MAX_DAILY_CREDITS:
@@ -277,7 +277,7 @@ func purchase(product_id: String) -> void:
 			" > ",
 			_MAX_DAILY_CREDITS
 		)
-		Global.modal_manager.async_show_credit_limit_daily_modal()
+		Services.modal_manager.async_show_credit_limit_daily_modal()
 		return
 	_purchase_in_flight = true
 	_show_overlay()
@@ -337,14 +337,14 @@ func _on_purchase_completed(json: String) -> void:
 func _on_purchase_failed(product_id: String, reason: String) -> void:
 	printerr("[IAP] purchase_failed: ", product_id, " - ", reason)
 	_finish_purchase_flow()
-	Global.modal_manager.async_show_purchase_failed_modal()
+	Services.modal_manager.async_show_purchase_failed_modal()
 	purchase_failed.emit(product_id, reason)
 
 
 func _on_purchase_cancelled(product_id: String) -> void:
 	print("[IAP] purchase_cancelled: ", product_id)
 	_finish_purchase_flow()
-	Global.modal_manager.async_show_purchase_failed_modal()
+	Services.modal_manager.async_show_purchase_failed_modal()
 	purchase_cancelled.emit(product_id)
 
 

@@ -53,8 +53,8 @@ func _ready():
 	button_jump.pressed.connect(_on_button_jump_in_pressed)
 	button_unblock.pressed.connect(_on_button_unblock_pressed)
 	# Connect to locations signal to update jump button visibility
-	if Global.locations:
-		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
+	if Services.locations:
+		Services.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
 
 
 func _cache_nearby_panel_styleboxes() -> void:
@@ -269,7 +269,7 @@ func _update_elements_visibility() -> void:
 	match item_type:
 		SOCIAL_TYPE.NEARBY:
 			h_box_container_nearby.show()
-			if Global.player_identity.is_guest or is_guest:
+			if Services.player_identity.is_guest or is_guest:
 				button_add_friend.hide()
 				return
 			# Guest users cannot add friends
@@ -291,7 +291,7 @@ func _update_elements_visibility() -> void:
 		SOCIAL_TYPE.REQUEST:
 			h_box_container_request.show()
 			# Guest users cannot accept/reject friend requests
-			if Global.player_identity.is_guest or is_guest:
+			if Services.player_identity.is_guest or is_guest:
 				button_accept.hide()
 				button_reject.hide()
 		SOCIAL_TYPE.BLOCKED:
@@ -323,9 +323,9 @@ func set_type(type: SocialItemData.SocialType) -> void:
 	# Subscribe to blacklist changes for NEARBY and REQUEST items to hide/show themselves
 	if (
 		(item_type == SOCIAL_TYPE.NEARBY or item_type == SOCIAL_TYPE.REQUEST)
-		and not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed)
+		and not Services.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed)
 	):
-		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
+		Services.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
 	# Update visibility based on blocked status after setting type
 	_update_blocked_visibility_for_type()
 
@@ -337,7 +337,7 @@ func _on_button_add_friend_pressed() -> void:
 
 func _async_on_button_add_friend_pressed() -> void:
 	button_add_friend.disabled = true
-	var promise = Global.social_service.send_friend_request(social_data.address, "")
+	var promise = Services.social_service.send_friend_request(social_data.address, "")
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -346,7 +346,7 @@ func _async_on_button_add_friend_pressed() -> void:
 		return
 
 	# Request Friend metric
-	Global.metrics.track_request_friend(social_data.address)
+	Services.metrics.track_request_friend(social_data.address)
 
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
@@ -359,7 +359,7 @@ func _async_on_button_accept_pressed() -> void:
 		button_accept.disabled = true
 		button_reject.disabled = true
 
-	var promise = Global.social_service.accept_friend_request(social_data.address)
+	var promise = Services.social_service.accept_friend_request(social_data.address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -376,16 +376,16 @@ func _async_on_button_accept_pressed() -> void:
 	panel_container_request.hide()
 
 	# Accept Friend metric
-	Global.metrics.track_accept_friend(social_data.address, social_data.friendship_id)
+	Services.metrics.track_accept_friend(social_data.address, social_data.friendship_id)
 
 	# Emit signal locally since the service doesn't stream back our own actions
-	Global.social_service.friendship_request_accepted.emit(social_data.address)
+	Services.social_service.friendship_request_accepted.emit(social_data.address)
 
 
 func _async_on_button_reject_pressed() -> void:
 	button_accept.disabled = true
 	button_reject.disabled = true
-	var promise = Global.social_service.reject_friend_request(social_data.address)
+	var promise = Services.social_service.reject_friend_request(social_data.address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -400,7 +400,7 @@ func _async_on_button_reject_pressed() -> void:
 
 	# Update status after rejecting - should be NONE (7) or similar
 	# Check the actual status to update UI correctly
-	var status_promise = Global.social_service.get_friendship_status(social_data.address)
+	var status_promise = Services.social_service.get_friendship_status(social_data.address)
 	await PromiseUtils.async_awaiter(status_promise)
 
 	if not status_promise.is_rejected():
@@ -410,10 +410,10 @@ func _async_on_button_reject_pressed() -> void:
 		_update_button_visibility_from_status()
 
 	# friend_request_reject metric
-	Global.metrics.track_click_button("friend_request_reject", "SOCIAL_PANEL", "")
+	Services.metrics.track_click_button("friend_request_reject", "SOCIAL_PANEL", "")
 
 	# Emit signal locally since the service doesn't stream back our own actions
-	Global.social_service.friendship_request_rejected.emit(social_data.address)
+	Services.social_service.friendship_request_rejected.emit(social_data.address)
 
 
 func _on_button_jump_in_pressed() -> void:
@@ -442,7 +442,7 @@ func _async_fetch_place_data() -> void:
 		label_place.text = "Empty parcel"
 		# Add to known_locations even if empty to avoid refetching
 		var location_entry = {"coord": parcel.duplicate(), "title": "Empty parcel"}
-		Global.locations.known_locations.append(location_entry)
+		Services.locations.known_locations.append(location_entry)
 	else:
 		var place_data = json.data[0]
 		var title = place_data.get("title", "interactive-text")
@@ -453,7 +453,7 @@ func _async_fetch_place_data() -> void:
 			"coord": parcel.duplicate(), "title": shorten_tittle(title, trim_value)
 		}
 		# Add to known_locations for future reference
-		Global.locations.known_locations.append(location_entry)
+		Services.locations.known_locations.append(location_entry)
 
 
 func update_location() -> void:
@@ -462,7 +462,7 @@ func update_location() -> void:
 
 func _on_button_unblock_pressed() -> void:
 	# user_unblock metric
-	Global.metrics.track_click_button("user_unblock", "SOCIAL_PANEL", "")
+	Services.metrics.track_click_button("user_unblock", "SOCIAL_PANEL", "")
 
 	# Disable button during RPC call
 	var unblock_button = %Button_Unblock
@@ -473,7 +473,7 @@ func _on_button_unblock_pressed() -> void:
 
 
 func _async_unblock_user(address: String) -> void:
-	var promise = Global.social_service.unblock_user(address)
+	var promise = Services.social_service.unblock_user(address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -482,10 +482,12 @@ func _async_unblock_user(address: String) -> void:
 			unblock_button.disabled = false
 		var error_msg := PromiseUtils.get_error_message(promise)
 		printerr("Unblock failed: ", error_msg)
-		NotificationsManager.show_system_toast("Unblock failed", error_msg, "error", "alert")
+		Services.notifications_manager.show_system_toast(
+			"Unblock failed", error_msg, "error", "alert"
+		)
 		return
 
-	Global.social_blacklist.remove_blocked(address)  # Update local cache
+	Services.social_blacklist.remove_blocked(address)  # Update local cache
 	# Update the containing list
 	var parent_list = get_parent()
 	if parent_list != null and parent_list.has_method("async_update_list"):
@@ -505,7 +507,7 @@ func _check_and_update_friend_status() -> void:
 func _async_check_friend_status_with_loading() -> void:
 	# While determining button visibility (pending/add friend/friend badge), show skeleton to
 	# avoid intermediate UI flicker.
-	if Global.player_identity.is_guest or is_guest:
+	if Services.player_identity.is_guest or is_guest:
 		return
 	_set_loading(true)
 	await _async_check_friend_status()
@@ -515,7 +517,7 @@ func _async_check_friend_status_with_loading() -> void:
 
 func _update_button_visibility_from_status() -> void:
 	profile_picture.unset_friend()
-	if Global.player_identity.is_guest or is_guest:
+	if Services.player_identity.is_guest or is_guest:
 		return
 	# Update button and label visibility based on pre-checked friendship status
 	if (
@@ -539,9 +541,9 @@ func _update_button_visibility_from_status() -> void:
 
 
 func _async_check_friend_status() -> void:
-	if Global.player_identity.is_guest or is_guest:
+	if Services.player_identity.is_guest or is_guest:
 		return
-	var promise = Global.social_service.get_friendship_status(social_data.address)
+	var promise = Services.social_service.get_friendship_status(social_data.address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -590,14 +592,14 @@ func _update_jump_button_visibility() -> void:
 		button_jump.hide()
 		return
 
-	if not Global.locations:
+	if not Services.locations:
 		button_jump.hide()
 		return
 
 	label_place.show()
 	# Check if address exists in in_genesis_city array
 	var is_in_genesis_city = false
-	for player in Global.locations.in_genesis_city:
+	for player in Services.locations.in_genesis_city:
 		if player.has("address") and player["address"] == social_data.address:
 			is_in_genesis_city = true
 			# Store parcel coordinates
@@ -611,7 +613,7 @@ func _update_jump_button_visibility() -> void:
 		var found_location = false
 		var title = ""
 		if parcel.size() >= 2:
-			for location in Global.locations.known_locations:
+			for location in Services.locations.known_locations:
 				if location.has("coord") and location["coord"].size() >= 2:
 					if location["coord"][0] == parcel[0] and location["coord"][1] == parcel[1]:
 						if location.has("title"):
@@ -654,7 +656,7 @@ func _update_blocked_visibility_for_type() -> void:
 		return
 
 	# Hide if blocked, show if not blocked
-	var is_blocked = Global.social_blacklist.is_blocked(social_data.address)
+	var is_blocked = Services.social_blacklist.is_blocked(social_data.address)
 	if is_blocked:
 		visible = false
 	else:

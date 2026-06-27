@@ -39,7 +39,7 @@ func _async_refresh_data(time_specified: bool):
 	if last_loaded_audio_clip == dcl_audio_clip_url:
 		apply_audio_props(true)
 	else:
-		var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+		var content_mapping := Services.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 		last_loaded_audio_clip = dcl_audio_clip_url
 		valid = false
@@ -49,7 +49,7 @@ func _async_refresh_data(time_specified: bool):
 			# TODO: log file not found
 			return
 
-		var promise: Promise = Global.content_provider.fetch_audio(
+		var promise: Promise = Services.content_provider.fetch_audio(
 			last_loaded_audio_clip, content_mapping
 		)
 		var res = await PromiseUtils.async_awaiter(promise)

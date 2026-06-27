@@ -125,7 +125,7 @@ func async_update_profile_picture(data: SocialItemData):
 		texture_hash = (
 			data.address + "_face" if not data.address.is_empty() else data.avatar_name + "_face"
 		)
-	var promise = Global.content_provider.fetch_texture_by_url(
+	var promise = Services.content_provider.fetch_texture_by_url(
 		texture_hash, data.profile_picture_url
 	)
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -169,7 +169,7 @@ func _on_gui_input(event: InputEvent) -> void:
 		if event.pressed:
 			if avatar != null and is_instance_valid(avatar):
 				var explorer = Global.get_explorer()
-				if avatar.avatar_id == Global.player_identity.get_address_str():
+				if avatar.avatar_id == Services.player_identity.get_address_str():
 					explorer.control_menu.async_show_own_profile()
 				else:
 					Global.open_profile_by_avatar.emit(avatar)

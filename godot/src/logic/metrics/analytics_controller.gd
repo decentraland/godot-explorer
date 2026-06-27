@@ -31,21 +31,21 @@ var _first_move_poll_timer: Timer = null
 ## Called by Global right after `AnalyticsController.new()`. RefCounted has no _ready, so this
 ## stand-in performs the one-time setup (EULA gate for returning users + signal wiring).
 func setup() -> void:
-	if Global.metrics == null:
+	if Services.metrics == null:
 		return
 
 	# Returning user: EULA already accepted on a prior run. Open the consent gate at startup so
 	# queued events ship. Segment ↔ Firebase link is handled automatically by Metrics (user_id /
 	# session_id seeded as Firebase user properties; `Firebase Init` Segment event queued via the
 	# plugin's app-instance-id signal).
-	if Global.get_config().terms_and_conditions_version == Global.TERMS_AND_CONDITIONS_VERSION:
-		Global.metrics.set_eula_accepted.call_deferred(true)
+	if Services.config.terms_and_conditions_version == Global.TERMS_AND_CONDITIONS_VERSION:
+		Services.metrics.set_eula_accepted.call_deferred(true)
 
 	# Connection order is load-bearing: this handler must run BEFORE lobby.gd's
 	# `_on_wallet_connected` because `track_login` reads the wallet address from the signal arg
 	# (lobby's handler is what calls `metrics.update_identity`, so `common.dcl_eth_address` is
 	# stale at this point). We connect here in Global._ready, before the lobby scene loads.
-	Global.player_identity.wallet_connected.connect(_on_wallet_connected_track_login)
+	Services.player_identity.wallet_connected.connect(_on_wallet_connected_track_login)
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
 
@@ -53,10 +53,10 @@ func setup() -> void:
 ## Called by lobby.gd when the user clicks "Accept" on the EULA. Opens the consent gate (which
 ## auto-flushes queued pre-consent events) and fires the Firebase `eula_accepted` Key Event.
 func on_eula_accepted_locally() -> void:
-	if Global.metrics == null:
+	if Services.metrics == null:
 		return
-	Global.metrics.set_eula_accepted(true)
-	Global.metrics.track_eula_accepted()
+	Services.metrics.set_eula_accepted(true)
+	Services.metrics.track_eula_accepted()
 
 
 ## Called by lobby.gd right before `try_recover_account`. Suppresses the next `wallet_connected`
@@ -78,9 +78,9 @@ func _on_wallet_connected_track_login(
 ) -> void:
 	if _wallet_connected_is_session_recovery:
 		return
-	if Global.metrics == null:
+	if Services.metrics == null:
 		return
-	Global.metrics.track_login(address, is_guest_value)
+	Services.metrics.track_login(address, is_guest_value)
 
 
 func _on_loading_started() -> void:
@@ -88,7 +88,7 @@ func _on_loading_started() -> void:
 
 
 func _on_loading_finished() -> void:
-	if Global.get_config().first_move_in_world_sent:
+	if Services.config.first_move_in_world_sent:
 		return
 	_start_first_move_poller()
 
@@ -122,9 +122,9 @@ func cancel_first_move_poll() -> void:
 
 
 func _on_first_move_poll_tick() -> void:
-	if Global.scene_runner == null:
+	if Services.scene_runner == null:
 		return
-	var player_body = Global.scene_runner.player_body_node
+	var player_body = Services.scene_runner.player_body_node
 	if player_body == null:
 		return
 	if not "actual_velocity_xz" in player_body:
@@ -135,10 +135,10 @@ func _on_first_move_poll_tick() -> void:
 	# accepted). On other platforms or pre-EULA we still stop polling for this session, but the
 	# flag stays false so a future session retries.
 	var fired := false
-	if Global.metrics != null:
-		fired = Global.metrics.track_first_move_in_world()
+	if Services.metrics != null:
+		fired = Services.metrics.track_first_move_in_world()
 	if fired:
-		var config := Global.get_config()
+		var config := Services.config
 		config.first_move_in_world_sent = true
 		config.save_to_settings_file()
 	_stop_first_move_poller()

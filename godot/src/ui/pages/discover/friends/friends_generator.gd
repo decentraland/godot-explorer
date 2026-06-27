@@ -39,7 +39,7 @@ func _connect_realtime_signals() -> void:
 	if _connected_signals:
 		return
 	_connected_signals = true
-	Global.social_service.friend_connectivity_updated.connect(_on_friend_connectivity_updated)
+	Services.social_service.friend_connectivity_updated.connect(_on_friend_connectivity_updated)
 
 
 func _on_friend_connectivity_updated(_address: String, _status: int) -> void:
@@ -63,7 +63,7 @@ func on_request(_offset: int, _limit: int) -> void:
 
 
 func _async_on_request(_offset: int, _limit: int) -> void:
-	if Global.player_identity.is_guest:
+	if Services.player_identity.is_guest:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 		return
 
@@ -82,7 +82,7 @@ func _async_on_request(_offset: int, _limit: int) -> void:
 	var offset := 0
 	var max_pages := 10
 	for _page_i in range(max_pages):
-		var promise = Global.social_service.get_friends(page_size, offset, -1)
+		var promise = Services.social_service.get_friends(page_size, offset, -1)
 		var timed_out = await _async_await_with_timeout(promise, 10.0)
 		if timed_out or promise.is_rejected():
 			if all_friends.is_empty():
@@ -115,13 +115,13 @@ func _async_on_request(_offset: int, _limit: int) -> void:
 	# Use a request ID to ignore stale responses from concurrent fetch_peers calls.
 	_peers_request_id += 1
 	var my_request_id := _peers_request_id
-	Global.locations.fetch_peers()
-	await Global.locations.in_genesis_city_changed
+	Services.locations.fetch_peers()
+	await Services.locations.in_genesis_city_changed
 	if not is_instance_valid(item_container) or my_request_id != _peers_request_id:
 		_loading = false
 		return
 
-	var peers = Global.locations.in_genesis_city
+	var peers = Services.locations.in_genesis_city
 
 	# Build genesis set: address_lower -> friend data with parcel
 	var genesis_friends: Dictionary = {}

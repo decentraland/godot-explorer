@@ -59,7 +59,7 @@ func _exit_tree():
 
 func async_load_gltf():
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
-	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	var content_mapping := Services.scene_runner.get_scene_content_mapping(dcl_scene_id)
 	var file_hash := content_mapping.get_hash(dcl_gltf_src)
 	self.dcl_gltf_hash = file_hash
 
@@ -71,15 +71,15 @@ func async_load_gltf():
 	Global.get_gltf_load_timeout_coalescer().schedule(self, 120_000)
 
 	# Check CLI flags for asset loading mode
-	var has_optimized = Global.content_provider.optimized_asset_exists(file_hash)
+	var has_optimized = Services.content_provider.optimized_asset_exists(file_hash)
 
 	# --only-no-optimized: Always use runtime processing, ignore optimized assets
-	if Global.cli.only_no_optimized:
+	if Services.cli.only_no_optimized:
 		await _async_load_runtime_gltf()
 		return
 
 	# --only-optimized: Only use optimized path, skip if not optimized
-	if Global.cli.only_optimized:
+	if Services.cli.only_optimized:
 		if has_optimized:
 			await _async_load_optimized_asset(file_hash)
 		else:
@@ -113,7 +113,7 @@ func _async_load_optimized_asset(gltf_hash: String):
 		currently_loading_assets.append(gltf_hash)
 
 	# Download dependencies (textures, etc.)
-	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
+	var promise = Services.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("[GltfContainer] Failed to download optimized asset dependencies: ", gltf_hash)
@@ -156,8 +156,8 @@ func _async_load_runtime_gltf():
 	if not currently_loading_assets.has(dcl_gltf_hash):
 		currently_loading_assets.append(dcl_gltf_hash)
 
-	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
-	var promise = Global.content_provider.load_scene_gltf(dcl_gltf_src, content_mapping)
+	var content_mapping := Services.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	var promise = Services.content_provider.load_scene_gltf(dcl_gltf_src, content_mapping)
 
 	if promise == null:
 		_finish_with_error("failed to start loading")
@@ -275,7 +275,7 @@ func _finish_with_error(reason: String = "unknown"):
 	printerr("GLTF load error for ", dcl_gltf_src, ": ", reason)
 	# Report to resource tracker if we have a valid hash
 	if not dcl_gltf_hash.is_empty():
-		Global.content_provider.report_resource_failed(dcl_gltf_hash, reason)
+		Services.content_provider.report_resource_failed(dcl_gltf_hash, reason)
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 	Global.get_gltf_load_timeout_coalescer().cancel(self)
 	_finish_loading_slot()
@@ -321,7 +321,7 @@ static func _pop_next_from_queue():
 
 
 func is_current_scene() -> bool:
-	return dcl_scene_id == Global.scene_runner.get_current_parcel_scene_id()
+	return dcl_scene_id == Services.scene_runner.get_current_parcel_scene_id()
 
 
 #endregion

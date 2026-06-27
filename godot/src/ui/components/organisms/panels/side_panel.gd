@@ -34,7 +34,7 @@ func _close():
 	for child in get_children():
 		if child is PlaceItem:
 			child.queue_free()
-	UiSounds.play_sound("mainmenu_widget_close")
+	Services.ui_sounds.play_sound("mainmenu_widget_close")
 
 
 func instantiate_portrait_panel():

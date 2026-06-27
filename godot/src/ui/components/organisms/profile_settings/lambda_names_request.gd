@@ -37,7 +37,7 @@ static func _async_request(
 	url += "?pageNum=%d" % page_number
 	url += "&pageSize=%d" % page_size
 
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+	var promise: Promise = Services.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 
 	var result = await PromiseUtils.async_awaiter(promise)
 
@@ -51,11 +51,11 @@ static func _async_request(
 
 
 static func async_request_names(page_number: int = 1, page_size: int = 10) -> LambdaNamesResponse:
-	var address = Global.player_identity.get_address_str()
+	var address = Services.player_identity.get_address_str()
 	if address.is_empty():
 		return
 
-	var url = Global.realm.get_lambda_server_base_url() + "users/" + address + "/names"
+	var url = Services.realm.get_lambda_server_base_url() + "users/" + address + "/names"
 
 	return await _async_request(url, page_number, page_size)
 

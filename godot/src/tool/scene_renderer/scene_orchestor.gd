@@ -26,16 +26,16 @@ var are_all_scene_loaded: bool = false
 
 func get_params_from_cmd():
 	var scene_data = null
-	var camera_tune := Global.cli.test_camera_tune
+	var camera_tune := Services.cli.test_camera_tune
 
 	# Only use from the editor
-	if USE_TEST_INPUT or Global.cli.use_test_input:
+	if USE_TEST_INPUT or Services.cli.use_test_input:
 		print("scene-renderer: using test input")
 		scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(
 			"res://../tests/scene-renderer-test-input.json"
 		)
 	else:
-		var file_path: String = Global.cli.scene_input_file
+		var file_path: String = Services.cli.scene_input_file
 		if not file_path.is_empty() and scene_data == null:
 			prints("scene-renderer: using input file from command line", file_path)
 			scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(file_path)
@@ -60,9 +60,9 @@ func _ready():
 
 	Global.get_explorer().disable_move_to = true
 
-	Global.realm.realm_changed.connect(self.on_realm_changed)
+	Services.realm.realm_changed.connect(self.on_realm_changed)
 
-	Global.realm.async_set_realm(scenes_to_process.realm_url)
+	Services.realm.async_set_realm(scenes_to_process.realm_url)
 	prints(
 		"scene-renderer: realm",
 		scenes_to_process.realm_url,
@@ -134,14 +134,14 @@ func on_realm_changed():
 	realm_change_emited = true
 	self.process_mode = Node.PROCESS_MODE_ALWAYS
 
-	test_player_body_node = Global.scene_runner.player_body_node
-	var test_player_avatar_node = Global.scene_runner.player_avatar_node
+	test_player_body_node = Services.scene_runner.player_body_node
+	var test_player_avatar_node = Services.scene_runner.player_avatar_node
 
-	Global.scene_runner.set_player_node(
+	Services.scene_runner.set_player_node(
 		test_player_avatar_node, test_player_body_node, self._on_scene_console_message
 	)
-	Global.scene_fetcher.set_scene_radius(0)
-	Global.comms.change_adapter("offline")
+	Services.scene_fetcher.set_scene_radius(0)
+	Services.comms.change_adapter("offline")
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -150,7 +150,7 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 
 func get_scene_child(scene_id: int) -> DclSceneNode:
 	var scene_child: DclSceneNode = null
-	for child in Global.scene_runner.get_children():
+	for child in Services.scene_runner.get_children():
 		if child is DclSceneNode:
 			if child.get_scene_id() == scene_id:
 				scene_child = child
@@ -162,28 +162,29 @@ func _process(_delta):
 	are_all_scene_loaded = true
 
 	# tick limiter!
-	for child: DclSceneNode in Global.scene_runner.get_children():
+	for child: DclSceneNode in Services.scene_runner.get_children():
 		if child.get_last_tick_number() > DEFAULT_TICK_TO_BE_LOADED:
-			if not Global.scene_runner.get_scene_is_paused(child.get_scene_id()):
+			if not Services.scene_runner.get_scene_is_paused(child.get_scene_id()):
 				print(
-					"Pausing the scene ", Global.scene_runner.get_scene_title(child.get_scene_id())
+					"Pausing the scene ",
+					Services.scene_runner.get_scene_title(child.get_scene_id())
 				)
-				Global.scene_runner.set_scene_is_paused(child.get_scene_id(), true)
+				Services.scene_runner.set_scene_is_paused(child.get_scene_id(), true)
 		else:
 			are_all_scene_loaded = false
 
 
 func _on_timer_timeout():
 	# Continue only when every pointer around was fetched
-	if Global.scene_fetcher.scene_entity_coordinator.is_busy():
+	if Services.scene_fetcher.scene_entity_coordinator.is_busy():
 		return
 
 	if current_payload_index >= scenes_to_process.scenes.size():
-		Global.testing_tools.exit_gracefully(0)
+		Services.testing_tools.exit_gracefully(0)
 		return
 
 	var scene := scenes_to_process.scenes[current_payload_index]
-	var scene_id: int = Global.scene_fetcher.get_parcel_scene_id(scene.coords.x, scene.coords.y)
+	var scene_id: int = Services.scene_fetcher.get_parcel_scene_id(scene.coords.x, scene.coords.y)
 	var scene_child: DclSceneNode = get_scene_child(scene_id)
 
 	match current_payload_state:
@@ -197,7 +198,7 @@ func _on_timer_timeout():
 			)
 
 			current_payload_state = PayloadState.LOADING
-			Global.scene_fetcher.set_scene_radius(scene.scene_distance)
+			Services.scene_fetcher.set_scene_radius(scene.scene_distance)
 			timeout_count = 0
 
 		PayloadState.LOADING:
@@ -222,14 +223,14 @@ func _on_timer_timeout():
 				if timeout_count > 10:
 					if timeout_count % 10 == 0:
 						print("Waiting for scenes:")
-						for child: DclSceneNode in Global.scene_runner.get_children():
+						for child: DclSceneNode in Services.scene_runner.get_children():
 							var t = child.get_last_tick_number()
 							if t > DEFAULT_TICK_TO_BE_LOADED:
 								pass
 							else:
 								print(
 									"\t-",
-									Global.scene_runner.get_scene_title(child.get_scene_id()),
+									Services.scene_runner.get_scene_title(child.get_scene_id()),
 									t
 								)
 
@@ -241,9 +242,9 @@ func _on_timer_timeout():
 func async_take_scene_file(
 	input: SceneRendererInputHelper.SceneRendererInputSpecs, child: DclSceneNode
 ):
-	var pending_promises := Global.content_provider.get_pending_promises()
+	var pending_promises := Services.content_provider.get_pending_promises()
 	if not pending_promises.is_empty():
-		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
+		await PromiseUtils.async_all(Services.content_provider.get_pending_promises())
 
 	var dest_path = input.dest_path.replacen("$index", str(input.index)).replacen(
 		"$coords", str(input.coords.x) + "_" + str(input.coords.y)
@@ -257,9 +258,9 @@ func async_take_scene_file(
 func async_take_camera_photo(input: SceneRendererInputHelper.SceneRendererInputSpecs):
 	prints("async_take_camera_photo", input)
 
-	var pending_promises := Global.content_provider.get_pending_promises()
+	var pending_promises := Services.content_provider.get_pending_promises()
 	if not pending_promises.is_empty():
-		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
+		await PromiseUtils.async_all(Services.content_provider.get_pending_promises())
 
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()
@@ -294,16 +295,16 @@ func async_take_camera_photo(input: SceneRendererInputHelper.SceneRendererInputS
 
 	var explorer = Global.get_explorer()
 	explorer.set_visible_ui(false)
-	Global.scene_runner.base_ui.visible = false
+	Services.scene_runner.base_ui.visible = false
 
 	# Freeze avatars animation and hide them
-	for avatar in Global.avatars.get_children():
+	for avatar in Services.avatars.get_children():
 		if avatar is Avatar:
 			avatar.hide()
 			avatar.emote_controller.freeze_on_idle()
 
-	Global.scene_runner.player_avatar_node.emote_controller.freeze_on_idle()
-	Global.scene_runner.player_avatar_node.hide()
+	Services.scene_runner.player_avatar_node.emote_controller.freeze_on_idle()
+	Services.scene_runner.player_avatar_node.hide()
 
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -315,7 +316,7 @@ func async_take_camera_photo(input: SceneRendererInputHelper.SceneRendererInputS
 	# await get_tree().create_timer(10.0).timeout
 
 	get_node("/root/explorer").set_visible_ui(true)
-	Global.scene_runner.base_ui.visible = true
+	Services.scene_runner.base_ui.visible = true
 	# TODO: should unfreeze avatars?
 
 	viewport.size = previous_viewport_size

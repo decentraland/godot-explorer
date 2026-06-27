@@ -67,7 +67,7 @@ func async_load_place_position():
 
 func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)
-	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	var promise = Services.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		texture_rect.texture = texture_placeholder

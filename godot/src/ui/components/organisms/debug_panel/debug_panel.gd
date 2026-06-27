@@ -152,15 +152,15 @@ func set_reload_scene_visible(visible: bool) -> void:
 
 
 func _on_button_reload_scene_pressed():
-	var current_scene = Global.scene_fetcher.get_current_scene_data()
+	var current_scene = Services.scene_fetcher.get_current_scene_data()
 	if current_scene == null:
-		var scenes = Global.scene_fetcher.loaded_scenes
+		var scenes = Services.scene_fetcher.loaded_scenes
 		if not scenes.is_empty():
 			current_scene = scenes.values()[0]
 	if current_scene == null:
 		printerr("No current scene to reload")
 		return
-	Global.scene_fetcher.reload_scene(current_scene.id)
+	Services.scene_fetcher.reload_scene(current_scene.id)
 
 
 func _on_button_show_hide_pressed():
@@ -225,20 +225,20 @@ func _on_button_show_network_pressed():
 
 
 func _on_button_debug_js_pressed():
-	var current_scene = Global.scene_fetcher.get_current_scene_data()
+	var current_scene = Services.scene_fetcher.get_current_scene_data()
 	if current_scene == null:
 		printerr("there is no current scene")
 		return
 
-	Global.scene_fetcher.set_debugging_js_scene_id(current_scene.id)
-	Global.scene_fetcher.reload_scene(current_scene.id)
+	Services.scene_fetcher.set_debugging_js_scene_id(current_scene.id)
+	Services.scene_fetcher.reload_scene(current_scene.id)
 	label_debug_info.show()
 
 	print("debugging js file ", current_scene.scene_entity_definition.get_main_js_hash())
 
 
 func _on_button_open_source_pressed():
-	var current_scene = Global.scene_fetcher.get_current_scene_data()
+	var current_scene = Services.scene_fetcher.get_current_scene_data()
 	if current_scene == null:
 		printerr("there is no current scene")
 		return

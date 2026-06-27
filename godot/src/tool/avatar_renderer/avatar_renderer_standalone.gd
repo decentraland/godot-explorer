@@ -19,13 +19,13 @@ var current_avatar: DclAvatarWireFormat
 
 func get_params_from_cmd():
 	# Only use from the editor
-	if USE_TEST_INPUT or Global.cli.use_test_input:
+	if USE_TEST_INPUT or Services.cli.use_test_input:
 		return [
 			AvatarRendererHelper.AvatarFile.from_file_path("res://../tests/avatars-test-input.json")
 		]
 
 	var avatar_data = null
-	var file_path: String = Global.cli.avatars_file
+	var file_path: String = Services.cli.avatars_file
 	if not file_path.is_empty():
 		avatar_data = AvatarRendererHelper.AvatarFile.from_file_path(file_path)
 
@@ -48,9 +48,9 @@ func _ready():
 		return
 
 	# Disable some functions
-	Global.scene_runner.set_pause(true)
+	Services.scene_runner.set_pause(true)
 
-	Global.realm.content_base_url = profiles_to_process.base_url
+	Services.realm.content_base_url = profiles_to_process.base_url
 
 	self.start.call_deferred()
 
@@ -172,6 +172,6 @@ func _async_on_avatar_avatar_loaded():
 	await get_tree().process_frame
 
 	if current_profile_index >= profiles_to_process.profiles.size() - 1:
-		Global.testing_tools.exit_gracefully(0)
+		Services.testing_tools.exit_gracefully(0)
 	else:
 		async_update_avatar.call_deferred(current_profile_index + 1)

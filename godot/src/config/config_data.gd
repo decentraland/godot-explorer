@@ -319,7 +319,7 @@ func load_from_default():
 
 
 static func _get_profile_suffix() -> String:
-	var saved_profile: String = Global.cli.saved_profile
+	var saved_profile: String = Services.cli.saved_profile
 	if saved_profile.is_empty():
 		saved_profile = Global.deep_link_obj.saved_profile
 	if saved_profile.is_empty():

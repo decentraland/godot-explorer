@@ -59,9 +59,9 @@ static func get_hash_from_url(url: String) -> String:
 ## Check if user is authenticated (not a guest)
 ## @return: true if user has a valid address
 static func is_user_authenticated() -> bool:
-	if not Global.player_identity:
+	if not Services.player_identity:
 		return false
-	var address = Global.player_identity.get_address_str()
+	var address = Services.player_identity.get_address_str()
 	return not address.is_empty()
 
 

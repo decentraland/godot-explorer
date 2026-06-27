@@ -41,7 +41,7 @@ func async_check() -> String:
 
 	var url := String(DclUrls.app_versions())
 	var http_fn := func() -> Promise:
-		return Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+		return Services.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var timeout_fn := func() -> Promise:
 		var p := Promise.new()
 		get_tree().create_timer(TIMEOUT_SECONDS).timeout.connect(
@@ -67,7 +67,7 @@ func async_check() -> String:
 		return RESULT_HARD
 	if current < recommended:
 		var now := int(Time.get_unix_time_from_system())
-		if now < Global.get_config().version_gate_snooze_until:
+		if now < Services.config.version_gate_snooze_until:
 			return RESULT_PROCEED
 		return RESULT_SOFT
 	return RESULT_PROCEED

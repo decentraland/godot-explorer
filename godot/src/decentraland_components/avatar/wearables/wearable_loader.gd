@@ -18,7 +18,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 	var texture_promises: Array = []
 
 	for wearable_key in wearable_keys:
-		var wearable = Global.content_provider.get_wearable(wearable_key)
+		var wearable = Services.content_provider.get_wearable(wearable_key)
 		if wearable == null:
 			printerr("WearableLoader: wearable ", wearable_key, " is null")
 			continue
@@ -38,7 +38,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 			for file_name in content_mapping.get_files():
 				for file_hash in texture_hashes:
 					if content_mapping.get_hash(file_name) == file_hash:
-						var promise = Global.content_provider.fetch_texture(
+						var promise = Services.content_provider.fetch_texture(
 							file_name, content_mapping
 						)
 						texture_promises.push_back(promise)
@@ -56,7 +56,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 			printerr("WearableLoader: null content_mapping for ", wearable_key)
 			continue
 		var main_file = wearable.get_representation_main_file(body_shape_id)
-		var promise = Global.content_provider.load_wearable_gltf(main_file, content_mapping)
+		var promise = Services.content_provider.load_wearable_gltf(main_file, content_mapping)
 		if promise != null:
 			gltf_promises.push_back(promise)
 			gltf_file_hashes.push_back(file_hash)
@@ -86,7 +86,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 func async_get_wearable_node(file_hash: String) -> Node3D:
 	var scene_path = _completed_loads.get(file_hash, "")
 	if scene_path.is_empty():
-		scene_path = Global.content_provider.get_wearable_cache_path(file_hash)
+		scene_path = Services.content_provider.get_wearable_cache_path(file_hash)
 
 	if scene_path.is_empty():
 		printerr("WearableLoader: no scene_path for hash ", file_hash)

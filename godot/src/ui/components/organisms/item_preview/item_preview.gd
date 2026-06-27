@@ -48,7 +48,7 @@ func _async_update_thumbnail(item: DclItemEntityDefinition):
 	var thumbnail_hash = dcl_content_mapping.get_hash(item_thumbnail)
 
 	if not thumbnail_hash.is_empty():
-		var promise: Promise = Global.content_provider.fetch_texture(
+		var promise: Promise = Services.content_provider.fetch_texture(
 			item_thumbnail, dcl_content_mapping
 		)
 		var res = await PromiseUtils.async_awaiter(promise)

@@ -136,7 +136,7 @@ func async_clear_realm():
 	realm_name = ""
 	network_id = 0
 	content_base_url = ""
-	Global.scene_runner.kill_all_scenes()
+	Services.scene_runner.kill_all_scenes()
 
 
 func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> bool:
@@ -150,7 +150,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	)
 	realm_changing.emit()
 
-	var promise: Promise = Global.http_requester.request_json(
+	var promise: Promise = Services.http_requester.request_json(
 		candidate_realm_url + "about", HTTPClient.METHOD_GET, "", {}
 	)
 
@@ -273,10 +273,10 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	if not realm_scene_urns.is_empty() and should_resolve_pos:
 		await async_request_set_position(realm_scene_urns.back())
 
-	Global.get_config().last_realm_joined = realm_url
-	Global.get_config().save_to_settings_file()
+	Services.config.last_realm_joined = realm_url
+	Services.config.save_to_settings_file()
 
-	Global.metrics.update_realm(realm_url)
+	Services.metrics.update_realm(realm_url)
 
 	_has_realm = true
 	realm_changed.emit()
@@ -289,7 +289,7 @@ func _emit_realm_change_failed(new_realm_string: String, reason: String) -> void
 
 func _async_fetch_world_scenes(world_name: String, base_content_url: String) -> Array:
 	var scenes_url = Realm.dcl_world_url(world_name) + "/scenes"
-	var promise: Promise = Global.http_requester.request_json(
+	var promise: Promise = Services.http_requester.request_json(
 		scenes_url, HTTPClient.METHOD_GET, "", {}
 	)
 
@@ -329,7 +329,7 @@ func async_request_set_position(scene_urn):
 	prints(scene_urn)
 	var url = scene_urn.baseUrl + scene_urn.entityId
 
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+	var promise: Promise = Services.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:

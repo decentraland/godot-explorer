@@ -64,7 +64,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 	_loading = true
 
-	var last_places: Array[Dictionary] = Global.get_config().last_places.duplicate()
+	var last_places: Array[Dictionary] = Services.config.last_places.duplicate()
 	var seen: Dictionary = {}
 	var index = 0
 	for place in last_places:
@@ -151,7 +151,7 @@ func async_request_from_api(offset: int, limit: int) -> void:
 		query += "&only_favorites=true"
 
 	if only_my_places:
-		var address := Global.player_identity.get_address_str()
+		var address := Services.player_identity.get_address_str()
 		if not address.is_empty():
 			query += "&owner=" + address
 

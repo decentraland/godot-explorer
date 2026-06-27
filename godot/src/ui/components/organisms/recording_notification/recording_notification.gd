@@ -8,7 +8,7 @@ func _ready():
 
 
 func _physics_process(_delta):
-	if Global.comms.is_voice_chat_enabled():
+	if Services.comms.is_voice_chat_enabled():
 		if visible == false and Input.is_action_pressed("ia_record_mic"):
 			show()
 		elif visible and not Input.is_action_pressed("ia_record_mic"):

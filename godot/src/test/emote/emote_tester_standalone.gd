@@ -30,7 +30,7 @@ func _ready():
 	avatar.avatar_loaded.connect(_on_avatar_loaded)
 
 	# Check for auto mode
-	if Global.cli.emote_test_mode:
+	if Services.cli.emote_test_mode:
 		auto_mode = true
 		status_label.text = "[AUTO] Waiting for avatar..."
 		print("\n========== EMOTE TESTER - AUTO MODE ==========")
@@ -44,8 +44,8 @@ func _load_default_avatar():
 	status_label.text = "Loading avatar..."
 
 	# Set default profile and load avatar
-	Global.player_identity.set_default_profile()
-	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+	Services.player_identity.set_default_profile()
+	var profile: DclUserProfile = Services.player_identity.get_profile_or_null()
 	if profile != null:
 		avatar.async_update_avatar_from_profile(profile)
 	else:

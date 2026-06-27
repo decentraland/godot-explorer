@@ -15,7 +15,7 @@ signal closed
 
 
 func _ready() -> void:
-	UiSounds.install_audio_recusirve(self)
+	Services.ui_sounds.install_audio_recusirve(self)
 	button_back.pressed.connect(_on_button_back_pressed)
 	button_history.pressed.connect(_on_button_history_pressed)
 	Iap.transaction_history_updated.connect(_on_transaction_history_updated)

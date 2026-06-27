@@ -79,8 +79,8 @@ func process_deep_link(url: String) -> void:
 	var bench_param = Global.deep_link_obj.params.get("benchmark", "")
 	if bench_param == "avatar-impostors":
 		print("[DEEPLINK] Triggering avatar impostor benchmark")
-		if Global.player_identity.get_profile_or_null() == null:
-			Global.player_identity.set_default_profile()
+		if Services.player_identity.get_profile_or_null() == null:
+			Services.player_identity.set_default_profile()
 		Global.set_meta("avatar_impostor_benchmark_auto_quit", true)
 		Global.get_tree().change_scene_to_file.call_deferred(
 			"res://src/tools/avatar_impostor_benchmark.tscn"
@@ -207,8 +207,8 @@ func apply_debug_ws_param(value: String) -> void:
 
 
 func _handle_signin_deep_link(identity_id: String) -> void:
-	if Global.player_identity.has_pending_mobile_auth():
-		Global.player_identity.complete_mobile_connect_account(identity_id)
+	if Services.player_identity.has_pending_mobile_auth():
+		Services.player_identity.complete_mobile_connect_account(identity_id)
 	else:
 		printerr("[DEEPLINK] Received signin deep link but no pending mobile auth")
 

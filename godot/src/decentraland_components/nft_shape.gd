@@ -48,7 +48,7 @@ func _load_frame_style(
 		remove_child(child)
 		child.queue_free()
 
-	current_frame = Global.nft_frame_loader.instantiate(style)
+	current_frame = Services.nft_frame_loader.instantiate(style)
 
 	_set_loading_material(style, current_frame, background_color)
 
@@ -100,7 +100,7 @@ func _set_loading_material(
 		printerr("set nft mesh_instance_3d is null")
 		return
 
-	var loading_material: Material = Global.nft_frame_loader.loading_material
+	var loading_material: Material = Services.nft_frame_loader.loading_material
 	_set_picture_frame_material(mesh_instance_3d, style, loading_material)
 
 	# Load background
@@ -117,7 +117,7 @@ func _async_load_nft(picture_frame: Node3D, urn: String, style: NftFrameStyleLoa
 		printerr("NftShape::load_nft Error, invalid urn: ", urn)
 		return
 
-	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
+	var promise = Services.nft_fetcher.fetch_nft(dcl_urn)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("NftShape::load_nft Error on fetching nft: ", result.get_error())

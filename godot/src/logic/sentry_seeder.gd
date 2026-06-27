@@ -21,7 +21,7 @@ func setup() -> void:
 	SentrySDK.set_tag("is_guest", "true")
 
 	Global.realm.realm_changed.connect(_on_realm_changed)
-	Global.scene_fetcher.player_parcel_changed.connect(_on_parcel_changed)
+	Services.scene_fetcher.player_parcel_changed.connect(_on_parcel_changed)
 	Global.comms.on_adapter_changed.connect(_on_adapter_changed)
 	Global.player_identity.wallet_connected.connect(_on_wallet_connected)
 	Global.player_identity.profile_changed.connect(_on_profile_changed)
@@ -42,7 +42,7 @@ func _on_realm_changed() -> void:
 func _on_parcel_changed(new_position: Vector2i) -> void:
 	var location_ctx := {
 		"parcel": "%d,%d" % [new_position.x, new_position.y],
-		"scene_entity_id": Global.scene_fetcher.current_scene_entity_id,
+		"scene_entity_id": Services.scene_fetcher.current_scene_entity_id,
 	}
 	SentrySDK.set_context("location", location_ctx)
 

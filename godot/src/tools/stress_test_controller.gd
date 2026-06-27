@@ -28,7 +28,7 @@ var start_time = 0.0
 
 
 func _ready():
-	if not Global.cli.stress_test:
+	if not Services.cli.stress_test:
 		queue_free()
 		return
 

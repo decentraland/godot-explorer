@@ -85,7 +85,7 @@ func _process(_delta: float) -> void:
 	# avatars borrow another slot's texture and render fully tinted — looks like
 	# a distant silhouette, no capture cost, no LRU thrash.
 	var max_real_impostors: int = (
-		Global.avatars.impostor_max_layers() if Global.avatars != null else 128
+		Services.avatars.impostor_max_layers() if Services.avatars != null else 128
 	)
 	for i in range(entries.size()):
 		var avatar = entries[i][1]

@@ -90,7 +90,7 @@ func _ready():
 	_populate_glide_state_list()
 
 	# Check for CLI auto-run mode: --emote-test
-	if Global.cli.emote_test_mode:
+	if Services.cli.emote_test_mode:
 		emote_batch_auto_mode = true
 		print("\n[AUTO MODE] Emote batch test will start automatically after avatar loads")
 		print("[AUTO MODE] App will close when test completes\n")
@@ -113,7 +113,7 @@ func load_avatar_list():
 
 
 func download_wearable(id: String):
-	var wearable = Global.content_provider.get_wearable(id)
+	var wearable = Services.content_provider.get_wearable(id)
 	var dir_name = "user://downloaded/" + wearable.get_display_name().validate_filename()
 	var content_mapping := wearable.get_content_mapping()
 
@@ -127,7 +127,7 @@ func download_wearable(id: String):
 
 
 func download_wearable_json(id: String):
-	var wearable = Global.content_provider.get_wearable(id)
+	var wearable = Services.content_provider.get_wearable(id)
 	return JSON.parse_string(wearable.to_json_string())
 
 
@@ -235,7 +235,7 @@ func _on_button_fetch_pressed():
 	if line_edit_profile_entity.text.begins_with("0x"):
 		var address = line_edit_profile_entity.text
 		var url = "https://peer.decentraland.org/lambdas/profiles/" + address
-		var promise: Promise = Global.http_requester.request_json(
+		var promise: Promise = Services.http_requester.request_json(
 			url, HTTPClient.METHOD_GET, "", {}
 		)
 		var response = await PromiseUtils.async_awaiter(promise)
@@ -249,7 +249,7 @@ func _on_button_fetch_pressed():
 		avatars_fetched = json.get("avatars", [])
 	elif line_edit_profile_entity.text.begins_with("bafk"):
 		var url = "https://peer.decentraland.org/content/contents/" + line_edit_profile_entity.text
-		var promise: Promise = Global.http_requester.request_json(
+		var promise: Promise = Services.http_requester.request_json(
 			url, HTTPClient.METHOD_GET, "", {}
 		)
 		var response = await PromiseUtils.async_awaiter(promise)

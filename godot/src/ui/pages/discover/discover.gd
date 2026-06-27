@@ -27,7 +27,7 @@ static var _low_spec_warning_shown: bool = false
 
 
 func _ready():
-	UiSounds.install_audio_recusirve(self)
+	Services.ui_sounds.install_audio_recusirve(self)
 	button_back_to_explorer.hide()
 	jump_in.hide()
 	event_details.hide()
@@ -128,7 +128,7 @@ func _on_visibility_changed():
 		last_visited.generator.async_request_last_places(0, 10)
 		friends_online.generator.on_request(0, 10)
 		Global.set_orientation_portrait()
-		Global.metrics.track_screen_viewed(
+		Services.metrics.track_screen_viewed(
 			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
 		)
 		_show_low_spec_warning_if_needed()
@@ -143,7 +143,7 @@ func _show_low_spec_warning_if_needed():
 		return
 
 	var deeplink_warning = Global.deep_link_obj and Global.deep_link_obj.low_spec_warning
-	var is_ftue = not Global.get_config().low_spec_warning_shown
+	var is_ftue = not Services.config.low_spec_warning_shown
 	var is_low_spec = DclIosPlugin.is_available() and DclIosPlugin.is_low_spec_iphone()
 
 	# Show if: deep link forces it OR (FTUE and low-spec device)
@@ -154,11 +154,11 @@ func _show_low_spec_warning_if_needed():
 
 	# Persist FTUE flag (not for deep link bypass)
 	if is_ftue and is_low_spec:
-		Global.get_config().low_spec_warning_shown = true
-		Global.get_config().save_to_settings_file()
+		Services.config.low_spec_warning_shown = true
+		Services.config.save_to_settings_file()
 
-	Global.metrics.track_screen_viewed("MINSPEC_PROMPT", "")
-	Global.modal_manager.async_show_low_spec_iphone_modal()
+	Services.metrics.track_screen_viewed("MINSPEC_PROMPT", "")
+	Services.modal_manager.async_show_low_spec_iphone_modal()
 
 
 func _on_search_bar_opened() -> void:
@@ -167,7 +167,7 @@ func _on_search_bar_opened() -> void:
 	search_container.show()
 	container_content.hide()
 	search_container.set_keyword_search_text("")
-	Global.metrics.track_click_button("SEARCH_SELECT_INPUT", "SEARCH_CLICK", "")
+	Services.metrics.track_click_button("SEARCH_SELECT_INPUT", "SEARCH_CLICK", "")
 	if button_credits:
 		button_credits.hide()
 
@@ -178,7 +178,7 @@ func _on_search_bar_cleared() -> void:
 	search_container.stop_suggestions()
 	search_container.show()
 	search_container.set_keyword_search_text("")
-	Global.metrics.track_click_button("SEARCH_ERASE", "SEARCH_CLICK", "")
+	Services.metrics.track_click_button("SEARCH_ERASE", "SEARCH_CLICK", "")
 	if button_credits:
 		button_credits.visible = Iap.is_available()
 
@@ -368,8 +368,8 @@ func _update_global_messages() -> void:
 			any_has_items = true
 
 	if any_with_results and not search_text.is_empty():
-		if Global.get_config().add_search_history(search_text):
-			Global.get_config().save_to_settings_file()
+		if Services.config.add_search_history(search_text):
+			Services.config.save_to_settings_file()
 
 	if not all_finished:
 		return
@@ -493,7 +493,7 @@ func _async_on_keyword_selected(keyword: SearchSuggestions.Keyword) -> void:
 
 func _on_button_back_to_explorer_pressed() -> void:
 	if not search_bar.closed:
-		Global.metrics.track_click_button("SEARCH_GOBACK", "SEARCH_CLICK", "")
+		Services.metrics.track_click_button("SEARCH_GOBACK", "SEARCH_CLICK", "")
 		search_bar.close_searchbar()
 		search_text = ""
 		set_search_filter_text("")
@@ -508,8 +508,8 @@ func _on_button_back_to_explorer_pressed() -> void:
 		return
 
 	if Global.get_explorer():
-		if Global.modal_manager.ban_pre_check_active:
-			Global.modal_manager.async_show_ban_pre_check_modal()
+		if Services.modal_manager.ban_pre_check_active:
+			Services.modal_manager.async_show_ban_pre_check_modal()
 			return
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()

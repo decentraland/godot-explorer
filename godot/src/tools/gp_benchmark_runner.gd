@@ -446,7 +446,7 @@ func _collect_sample() -> Dictionary:
 		"physics_collision_pairs": Performance.get_monitor(Performance.PHYSICS_3D_COLLISION_PAIRS),
 		"physics_island_count": Performance.get_monitor(Performance.PHYSICS_3D_ISLAND_COUNT),
 		"loaded_scene_count":
-		Global.scene_fetcher.loaded_scenes.size() if Global.scene_fetcher != null else 0,
+		Services.scene_fetcher.loaded_scenes.size() if Services.scene_fetcher != null else 0,
 		"engine_max_fps": Engine.max_fps,
 		"engine_physics_ticks": Engine.physics_ticks_per_second,
 		"vsync_mode": DisplayServer.window_get_vsync_mode(),

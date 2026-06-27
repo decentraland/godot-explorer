@@ -10,14 +10,14 @@ var _session_id: String = ""
 
 
 func setup(scene_inspector_target: String) -> void:
-	_session_id = Global.scene_inspector_dispatcher.get_session_id()
+	_session_id = Services.scene_inspector_dispatcher.get_session_id()
 
 	_connect_to_target(scene_inspector_target)
 
-	Global.scene_inspector_dispatcher.scene_inspector_batch.connect(_on_batch)
+	Services.scene_inspector_dispatcher.scene_inspector_batch.connect(_on_batch)
 
 	# Listen for deeplink changes to reconnect to new targets
-	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
+	Services.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 
 
 func _connect_to_target(target: String) -> void:
@@ -35,7 +35,7 @@ func _connect_to_target(target: String) -> void:
 	_dedicated_ws.connect_to(target)
 
 	# Emit session_start entry so the receiver knows device info
-	Global.scene_inspector_dispatcher.emit_session_start()
+	Services.scene_inspector_dispatcher.emit_session_start()
 
 	print("SceneInspectorBridge: Dedicated WebSocket channel -> ", target)
 
@@ -70,7 +70,7 @@ func _on_batch(entries_json: String) -> void:
 
 
 func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
-	var dispatcher = Global.scene_inspector_dispatcher
+	var dispatcher = Services.scene_inspector_dispatcher
 	var ok := true
 	var data := {}
 
@@ -86,8 +86,8 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 
 		"reload_scene":
 			# Reload the current realm (same mechanism as /reload chat command)
-			if Global.realm:
-				Global.realm.async_set_realm(Global.realm.get_realm_string())
+			if Services.realm:
+				Services.realm.async_set_realm(Services.realm.get_realm_string())
 			else:
 				ok = false
 				data = {"error": "no active realm"}
@@ -129,7 +129,7 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 
 
 func _send_crdt_snapshot() -> void:
-	var snapshot_json := Global.scene_inspector_dispatcher.get_crdt_snapshot_json()
+	var snapshot_json := Services.scene_inspector_dispatcher.get_crdt_snapshot_json()
 	if snapshot_json.is_empty():
 		return
 	if _dedicated_ws and _dedicated_ws.is_open():
@@ -144,9 +144,9 @@ func _send_crdt_snapshot() -> void:
 
 
 func _set_all_scenes_paused(paused: bool) -> void:
-	for child in Global.scene_runner.get_children():
+	for child in Services.scene_runner.get_children():
 		if child is DclSceneNode:
-			Global.scene_runner.set_scene_is_paused(child.get_scene_id(), paused)
+			Services.scene_runner.set_scene_is_paused(child.get_scene_id(), paused)
 
 
 func _send_ack(request_id: String, ok: bool, data: Dictionary) -> void:

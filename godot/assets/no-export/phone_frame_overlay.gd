@@ -37,7 +37,7 @@ func _update_shader_params() -> void:
 	if shader_material == null:
 		return
 
-	var is_ios := Global.cli.emulate_ios
+	var is_ios := Services.cli.emulate_ios
 	var is_portrait := Global.is_orientation_portrait()
 
 	shader_material.set_shader_parameter("is_ios", is_ios)

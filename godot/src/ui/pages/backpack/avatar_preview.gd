@@ -129,8 +129,8 @@ func _ready():
 		_refresh_snap_top_state()
 
 	if Global.standalone:
-		Global.player_identity.set_default_profile()
-		var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+		Services.player_identity.set_default_profile()
+		var profile: DclUserProfile = Services.player_identity.get_profile_or_null()
 		avatar.async_update_avatar_from_profile(profile)
 
 

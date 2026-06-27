@@ -78,25 +78,10 @@ const TERMS_AND_CONDITIONS_VERSION: int = 1
 # Increase this value when local assets cache format changes (invalidates cache)
 const LOCAL_ASSETS_CACHE_VERSION: int = 4
 
-## Global classes (singleton pattern)
-
-var raycast_debugger: RaycastDebugger
-
-var scene_fetcher: SceneFetcher
-var skybox_time: SkyboxTime = null
-
-var nft_fetcher: OpenSeaFetcher
-var nft_frame_loader: NftFrameStyleLoader
-
-var snapshot: Snapshot
-
-var music_player: MusicPlayer
-
-var preload_assets: PreloadAssets
-
-var locations: Node
-
-var modal_manager: ModalManager
+## Global is now thin: it owns CLI/orientation/Sentry-tag setup, scene routing
+## (async_route_to_target_scene), runtime state (camera mode, height tracking,
+## session_id, deeplink parse data), and the explorer-flavored signal hub.
+## Every long-lived service moved to the Services autoload.
 
 var standalone = false
 
@@ -109,27 +94,11 @@ var previous_height_2: int = -1
 
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
-var deep_link_router := DeepLinkRouter.new()
 
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var camera_mode_blocked: bool = false
 var session_id: String
-
-# Orchestrates the Firebase / Segment glue (EULA gate, login suppression on session recovery,
-# first_move_in_world detection). Instantiated after `metrics` is created.
-var analytics_controller: AnalyticsController = null
-
-# Seeds Sentry user / context / tags from realm / scene_fetcher /
-# player_identity / comms signals. Instantiated alongside scene_fetcher.
-var sentry_seeder: SentrySeeder = null
-
-# Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
-# token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
-# see attestation_service.gd. Other code obtains a token via
-# `await Global.attestation.async_get_valid_jwt()`. Instantiated in _ready as a Node
-# child of Global so it can use timers and signals across the session lifetime.
-var attestation: AttestationService = null
 
 var _is_portrait: bool = true
 
@@ -139,9 +108,6 @@ var _safe_area_presets: GDScript = null
 var _hardware_benchmark: HardwareBenchmark = null
 
 var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
-
-# Startup instrumentation timestamp (set once at load time)
-var _startup_time: int = Time.get_ticks_msec()
 
 ## Coalescer for GltfContainer load-timeouts. Lazy-init child node.
 ## Adding `_process` directly on DclGlobal triggers a Godot Vulkan crash —
@@ -243,9 +209,15 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 		Input.vibrate_handheld(duration_ms, amplitude)
 
 
-# gdlint: ignore=async-function-name
-func _ready():
-	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
+func _ready() -> void:
+	# Heavy work lives in Services.bootstrap(), awaited by main.gd under the
+	# visible splash so iOS doesn't see an unresponsive main loop. This
+	# function only does the lightweight work that must happen before the
+	# scene tree settles: window sizing for ios/android emulation, deeplink
+	# parse, environment selection. No awaits, no add_child loops, no SDK
+	# initialization that could stall the watchdog.
+	BootInstrumentation.mark("global._ready_start")
+
 	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
 	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
 	# uncaps via gp_benchmark_runner at the load->settling transition.
@@ -305,7 +277,7 @@ func _ready():
 
 		# Toggle the loopback debug WS server from the fake deeplink (desktop/CLI
 		# testing). Same handling as runtime deeplinks in DeepLinkRouter.
-		deep_link_router.apply_debug_ws_param(deep_link_obj.params.get("debug-ws", ""))
+		Services.deep_link_router.apply_debug_ws_param(deep_link_obj.params.get("debug-ws", ""))
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
@@ -318,16 +290,7 @@ func _ready():
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
 		if dcl_ios_singleton:
-			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
-
-	_dcl_swift_lib_smoke_test()
-
-	# Setup
-	nft_frame_loader = NftFrameStyleLoader.new()
-	nft_fetcher = OpenSeaFetcher.new()
-	music_player = MusicPlayer.new()
-	snapshot = Snapshot.new()
-	preload_assets = PreloadAssets.new()
+			dcl_ios_singleton.deeplink_received.connect(Services.deep_link_router.process_deep_link)
 
 	var args = cli.get_all_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
@@ -337,7 +300,8 @@ func _ready():
 	if FORCE_TEST:
 		Global.testing_scene_mode = true
 
-	# Create GDScript extensions of Rust classes
+	# Config has to load here: deeplink-driven env switch and standalone-mode
+	# detection above use it. Cheap (file read + dict parse).
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
@@ -366,34 +330,14 @@ func _ready():
 		ProfileService.set_deploy_disabled(true)
 		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
 
-	self.realm = Realm.new()
-	self.realm.set_name("realm")
-	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
+	BootInstrumentation.mark("global._ready_end")
 
-	self.dcl_tokio_rpc = DclTokioRpc.new()
-	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
 
-	self.player_identity = PlayerIdentity.new()
-	self.player_identity.set_name("player_identity")
-	self.player_identity.profile_changed.connect(_on_player_profile_changed_sync_events)
-
-	self.testing_tools = TestingTools.new()
-	self.testing_tools.set_name("testing_tool")
-
-	self.portable_experience_controller = PortableExperienceController.new()
-	self.portable_experience_controller.set_name("portable_experience_controller")
-
-	# Ensure the content cache folder exists before clearing — clear runs against
-	# this directory and would log an error if it doesn't exist yet (fresh install).
-	if not DirAccess.dir_exists_absolute("user://content/"):
-		DirAccess.make_dir_absolute("user://content/")
-
-	# Clear cache if needed (startup flag or version changed) - await completion
-	print(
-		"[Startup] global._async_clear_cache start: %dms" % (Time.get_ticks_msec() - _startup_time)
-	)
-	await _async_clear_cache_if_needed()
-	print("[Startup] global._async_clear_cache end: %dms" % (Time.get_ticks_msec() - _startup_time))
+## Pick the target scene based on CLI flags (test runner, fi benchmark, asset
+## server, scene test, regular lobby). Called by main.gd after async_boot
+## completes. Previously this branching lived in main._start().
+func async_route_to_target_scene() -> void:
+	BootInstrumentation.mark("global.route_target_scene_start")
 
 	# Start the debug WebSocket server if requested via --debug-ws
 	if cli.debug_ws:
@@ -402,7 +346,7 @@ func _ready():
 		else:
 			push_warning("[Startup] Failed to start Debug WS server")
 
-	# #[itest] only needs a godot context, not the all explorer one
+	# #[itest] only needs a godot context, not the full explorer one
 	if cli.test_runner:
 		print("Running godot-tests...")
 		var test_runner = load("res://src/test/test_runner.gd").new()
@@ -413,17 +357,14 @@ func _ready():
 	# Floating Islands Benchmark mode
 	if cli.fi_benchmark_size >= 0:
 		print("Running Floating Islands Benchmark...")
-
-		# Create minimal required components for benchmark
-		self.scene_fetcher = SceneFetcher.new()
-		self.scene_fetcher.set_name("scene_fetcher")
-		get_tree().root.add_child.call_deferred(self.scene_fetcher)
-		get_tree().root.add_child.call_deferred(self.scene_runner)
-		get_tree().root.add_child.call_deferred(self.content_provider)
-
 		var fi_runner = load("res://src/tools/fi_benchmark_runner.gd").new()
 		fi_runner.set_name("FIBenchmarkRunner")
-		get_tree().root.add_child.call_deferred(fi_runner)
+		get_tree().root.add_child(fi_runner)
+		return
+
+	if cli.asset_server:
+		print("Running in Asset Server mode")
+		_start_asset_server()
 		return
 
 	# Genesis Plaza profiling benchmark (issue #1862). Lives alongside the full
@@ -435,130 +376,67 @@ func _ready():
 		gp_runner.set_name("GPBenchmarkRunner")
 		add_child(gp_runner)
 
-	if not DirAccess.dir_exists_absolute("user://content/"):
-		DirAccess.make_dir_absolute("user://content/")
+	if cli.avatar_impostor_benchmark:
+		print("Running in Avatar Impostor Benchmark mode")
+		Services.config.guest_profile = {}
+		Services.config.save_to_settings_file()
+		Services.player_identity.set_default_profile()
+		Services.player_identity.create_guest_account()
+		get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
+		return
 
-	session_id = DclConfig.generate_uuid_v4()
-	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
-	# telemetry is disabled at build time (CI desktop builds use the
-	# `disable_telemetry` cargo feature).
-	var telemetry_enabled := not cli.asset_server and not DclGlobal.is_telemetry_disabled()
+	if cli.emote_test_mode:
+		print("Running in Emote Test mode")
+		get_tree().change_scene_to_file("res://src/test/emote/emote_tester_standalone.tscn")
+		return
 
-	# Initialize metrics with proper user_id and session_id
-	if telemetry_enabled:
-		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
-		self.metrics.set_debug_level(0)  # 0 off - 1 on
-		self.metrics.set_name("metrics")
-
-	# Create the GDScript-only components
-	self.scene_fetcher = SceneFetcher.new()
-	self.scene_fetcher.set_name("scene_fetcher")
-
-	# RefCounted, kept alive by this strong reference. Seeds Sentry user /
-	# context / tags from the runtime signals exposed by the subsystems
-	# created above. No scene-tree presence.
-	if telemetry_enabled:
-		self.sentry_seeder = SentrySeeder.new()
-		self.sentry_seeder.setup()
-
-	self.skybox_time = SkyboxTime.new()
-	self.skybox_time.set_name("skybox_time")
-
-	self.locations = load("res://src/helpers_components/locations.gd").new()
-	self.locations.set_name("locations")
-
-	self.modal_manager = load("res://src/ui/components/organisms/modal/modal_manager.gd").new()
-	self.modal_manager.set_name("modal_manager")
-
-	get_tree().root.add_child.call_deferred(self.cli)
-	get_tree().root.add_child.call_deferred(self.music_player)
-	get_tree().root.add_child.call_deferred(self.scene_fetcher)
-	get_tree().root.add_child.call_deferred(self.skybox_time)
-	get_tree().root.add_child.call_deferred(self.locations)
-	get_tree().root.add_child.call_deferred(self.modal_manager)
-	get_tree().root.add_child.call_deferred(self.content_provider)
-	get_tree().root.add_child.call_deferred(self.scene_runner)
-	get_tree().root.add_child.call_deferred(self.realm)
-	get_tree().root.add_child.call_deferred(self.dcl_tokio_rpc)
-	get_tree().root.add_child.call_deferred(self.player_identity)
-	get_tree().root.add_child.call_deferred(self.comms)
-	get_tree().root.add_child.call_deferred(self.avatars)
-	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
-	get_tree().root.add_child.call_deferred(self.testing_tools)
-	if self.metrics != null:
-		get_tree().root.add_child.call_deferred(self.metrics)
-		# Fire install attribution once per install (Android only).
-		if self.is_android() and not self.config.install_referrer_sent:
-			self.metrics.track_install_referrer.call_deferred()
-			self.config.install_referrer_sent = true
-			self.config.save_to_settings_file()
-		# All Firebase/Segment orchestration lives in AnalyticsController — see its docstring.
-		# RefCounted, kept alive by this strong reference. No scene-tree presence by default;
-		# spawns a transient Timer under Global only while polling for first_move_in_world.
-		self.analytics_controller = AnalyticsController.new()
-		self.analytics_controller.setup()
-
-		# iOS only: report the StoreKit environment (production/sandbox) to
-		# analytics once at startup. StoreKit's environment is fixed by how the
-		# binary was distributed and can't be chosen by the app, so this is the
-		# ground truth for which IAP backend a device will hit. We ship this
-		# BEFORE any purchase flow to validate in prod that real App Store
-		# installs report `production`. Deferred so it runs after every autoload
-		# (incl. Iap) is in the tree. See docs/iap-zone-submission/.
-		if self.is_ios():
-			Iap.report_environment_to_analytics.call_deferred()
-	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The
-	# service self-gates on EULA acceptance and caches the issued session token on disk.
-	self.attestation = AttestationService.new()
-	add_child(self.attestation)
-	get_tree().root.add_child.call_deferred(self.network_inspector)
-	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
-	get_tree().root.add_child.call_deferred(self.social_blacklist)
-	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
-
-	if "memory_debugger" in self:
-		get_tree().root.add_child.call_deferred(self.memory_debugger)
-
-	# Initialize BenchmarkReport singleton if benchmarking is enabled (requires use_memory_debugger feature)
-	if cli.benchmark_report and "benchmark_report" in self:
-		print("✓ BenchmarkReport initialized for full flow benchmarking")
-		get_tree().root.add_child.call_deferred(self.benchmark_report)
-
-		# Add benchmark flow controller to orchestrate the full benchmark flow
-		var benchmark_flow_controller = load("res://src/tools/benchmark_flow_controller.gd").new()
-		benchmark_flow_controller.set_name("BenchmarkFlowController")
-		get_tree().root.add_child.call_deferred(benchmark_flow_controller)
-	elif cli.benchmark_report:
-		push_error(
-			"BenchmarkReport requires --features use_memory_debugger to be enabled during build"
+	if cli.avatar_renderer_mode:
+		print("Running in Avatar-Renderer mode")
+		get_tree().change_scene_to_file(
+			"res://src/tool/avatar_renderer/avatar_renderer_standalone.tscn"
 		)
+		return
 
-	# Add stress test controller if stress testing is enabled
-	if cli.stress_test:
-		print("✓ StressTest initialized for scene loading/unloading stress test")
-		var stress_test_controller = load("res://src/tools/stress_test_controller.gd").new()
-		stress_test_controller.set_name("StressTestController")
-		get_tree().root.add_child.call_deferred(stress_test_controller)
+	if cli.client_test_mode:
+		print("Running in Client Test mode")
+		get_tree().change_scene_to_file("res://src/client_tests/client_test_scene.tscn")
+		return
 
-	# Initialize dynamic graphics manager after config is loaded. Self-skips in
-	# bench mode (the function early-returns on cli.bench_mode), so bench results
-	# stay comparable while production keeps thermal-cap + adaptive downgrade.
-	_init_dynamic_graphics_manager.call_deferred()
+	if cli.scene_test_mode or cli.scene_renderer_mode:
+		print("Running in Scene Test mode")
+		Services.config.guest_profile = {}
+		Services.config.save_to_settings_file()
+		Services.player_identity.set_default_profile()
+		Services.player_identity.create_guest_account()
 
-	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
-	GLTFDocument.register_gltf_document_extension(custom_importer)
+		var new_stored_account: Dictionary = {}
+		if Services.player_identity.get_recover_account_to(new_stored_account):
+			Services.config.session_account = new_stored_account
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+		return
 
-	if cli.raycast_debugger:
-		set_raycast_debugger_enable(true)
+	# Regular mode: EULA check is handled inside lobby.gd — always go to lobby
+	BootInstrumentation.mark("global.route_target_scene_lobby")
+	get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
 
-	if cli.network_debugger:
-		self.network_inspector.set_is_active(true)
-		open_network_inspector_ui()
-	else:
-		self.network_inspector.set_is_active(false)
 
-	DclMeshRenderer.init_primitive_shapes()
-	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
+func _start_asset_server() -> void:
+	# Check if asset_server feature was compiled
+	if not ClassDB.class_exists(&"DclAssetServer"):
+		push_error("Asset server requires the 'asset_server' feature to be enabled during build.")
+		push_error("Build with: cargo run -- build --features asset_server")
+		get_tree().quit(1)
+		return
+
+	# Create and start the asset server
+	var asset_server = ClassDB.instantiate(&"DclAssetServer")
+	asset_server.set_port(Services.cli.asset_server_port)
+	asset_server.set_name("AssetServer")
+	get_tree().root.add_child(asset_server)
+	asset_server.start()
+
+	# Keep the process running in headless mode
+	print("Asset server is running. Press Ctrl+C to stop.")
 
 
 # Smoke test for the Swift GDExtension. Runs only on iOS where DclSwiftLibPlugin
@@ -606,7 +484,7 @@ func _async_clear_cache_if_needed() -> void:
 		if version_changed:
 			prints("Local assets cache version changed, clearing cache!")
 
-		var clear_promise = Global.content_provider.clear_cache_folder()
+		var clear_promise = Services.content_provider.clear_cache_folder()
 		await PromiseUtils.async_awaiter(clear_promise)
 		prints("Cache cleared successfully!")
 
@@ -711,21 +589,21 @@ func _on_dynamic_profile_change(new_profile: int) -> void:
 		"Profile changed to %s for better %s"
 		% [new_name, "performance" if is_downgrade else "quality"]
 	)
-	NotificationsManager.show_system_toast(title, description, "graphics_profile")
+	Services.notifications_manager.show_system_toast(title, description, "graphics_profile")
 
 
 func set_raycast_debugger_enable(enable: bool):
-	var current_enabled = is_instance_valid(raycast_debugger)
+	var current_enabled = is_instance_valid(Services.raycast_debugger)
 	if current_enabled == enable:
 		return
 
 	if enable:
-		raycast_debugger = RaycastDebugger.new()
-		add_child(raycast_debugger)
+		Services.raycast_debugger = RaycastDebugger.new()
+		add_child(Services.raycast_debugger)
 	else:
-		remove_child(raycast_debugger)
-		raycast_debugger.queue_free()
-		raycast_debugger = null
+		remove_child(Services.raycast_debugger)
+		Services.raycast_debugger.queue_free()
+		Services.raycast_debugger = null
 
 
 func set_safe_margin_debug_enable(enable: bool) -> void:
@@ -744,8 +622,8 @@ func set_safe_margin_debug_enable(enable: bool) -> void:
 
 
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
-	if is_instance_valid(raycast_debugger):
-		raycast_debugger.add_raycast(id, time, from, to)
+	if is_instance_valid(Services.raycast_debugger):
+		Services.raycast_debugger.add_raycast(id, time, from, to)
 
 
 func print_node_tree(node: Node, prefix = ""):
@@ -781,21 +659,21 @@ func sign_out() -> void:
 		explorer.prepare_for_logout()
 
 	# 2. Stop session pollers and tear down the social gRPC streams.
-	NotificationsManager.stop_polling()
+	Services.notifications_manager.stop_polling()
 	# Wipe the previous account's in-memory notification history so it can't leak
 	# into the next session's panel/bell badge (issue #2104).
-	NotificationsManager.clear_notification_history()
+	Services.notifications_manager.clear_notification_history()
 	# Drop the previous account's event reminders so they can't fire on the
 	# device after sign-out. Only "event_" entries (per-account attended-event
 	# reminders) are cleared; the per-install day1 welcome is preserved. The
 	# sync-on-next-login REMOVE pass only runs for an authenticated account, so
 	# without this a signed-out/guest session keeps the old reminders scheduled.
-	NotificationsManager.clear_event_local_notifications()
+	Services.notifications_manager.clear_event_local_notifications()
 	# The analytics first-move poll (a Timer under this autoload) reads
 	# scene_runner.player_body_node; left running it would poll the freed Player
 	# after the swap, panicking the #[var] getter. It restarts on the next login.
-	if analytics_controller != null:
-		analytics_controller.cancel_first_move_poll()
+	if Services.analytics_controller != null:
+		Services.analytics_controller.cancel_first_move_poll()
 	social_service.unsubscribe_from_updates()
 	social_service.unsubscribe_from_connectivity_updates()
 	social_service.unsubscribe_from_block_updates()
@@ -815,7 +693,7 @@ func sign_out() -> void:
 	#    into the next login. async_clear_realm() runs synchronously here (it only
 	#    zeroes realm fields and kills scenes — no network await before returning).
 	realm.async_clear_realm()
-	scene_fetcher.reset_for_logout()
+	Services.scene_fetcher.reset_for_logout()
 
 	# 5. Close comms (MainRoom / SceneRoom / LiveKit) AND clear the Rust player
 	#    identity (wallet + ephemeral keys). disconnect(true) is idempotent: a
@@ -877,8 +755,8 @@ func return_to_discover() -> void:
 	#    which is freed once the Explorer goes away — left running, its #[var]
 	#    getter would panic on the freed Player. It re-arms on the next
 	#    loading_finished (i.e. when the user jumps into a world again).
-	if analytics_controller != null:
-		analytics_controller.cancel_first_move_poll()
+	if Services.analytics_controller != null:
+		Services.analytics_controller.cancel_first_move_poll()
 
 	# 3. Kill every running DCL scene. The SceneManager reaps them in the
 	#    background (reap_dying_scenes runs even while Discover pauses the runner).
@@ -888,7 +766,7 @@ func return_to_discover() -> void:
 	#    leaks into the next jump-in. This matches the post-login Discover state,
 	#    where no realm is joined yet.
 	realm.async_clear_realm()
-	scene_fetcher.reset_for_logout()
+	Services.scene_fetcher.reset_for_logout()
 
 	# 5. Close comms world rooms (MainRoom / SceneRoom / LiveKit). Pass `false` so
 	#    the Rust player identity (wallet + ephemeral keys) is KEPT — this is the
@@ -993,7 +871,7 @@ func async_get_texture_size(content_mapping, src, sender) -> void:
 	if texture_hash.is_empty():
 		texture_hash = src
 
-	var promise = Global.content_provider.fetch_texture_by_hash(texture_hash, content_mapping)
+	var promise = Services.content_provider.fetch_texture_by_hash(texture_hash, content_mapping)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr(src, "couldn't get the size", result.get_error())
@@ -1090,19 +968,19 @@ func set_orientation_portrait():
 
 func async_resolve_scene_entity_id(coord: Vector2i) -> String:
 	# Try cache first
-	var cached = Global.scene_fetcher.scene_entity_coordinator.get_scene_entity_id(coord)
+	var cached = Services.scene_fetcher.scene_entity_coordinator.get_scene_entity_id(coord)
 	if not cached.is_empty():
 		return cached
 
 	# Make HTTP request to entities/active
-	var content_url = Global.realm.content_base_url
+	var content_url = Services.realm.content_base_url
 	if content_url.is_empty():
 		return ""
 
 	var url = content_url.trim_suffix("/") + "/entities/active"
 	var body = JSON.stringify({"pointers": [str(coord.x) + "," + str(coord.y)]})
 	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
+	var promise: Promise = Services.http_requester.request_json(
 		url, HTTPClient.METHOD_POST, body, headers
 	)
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -1119,7 +997,7 @@ func async_resolve_scene_entity_id(coord: Vector2i) -> String:
 
 func async_resolve_world_scene_id(world_realm: String) -> String:
 	var scenes_url = Realm.dcl_world_url(world_realm) + "/scenes"
-	var promise: Promise = Global.http_requester.request_json(
+	var promise: Promise = Services.http_requester.request_json(
 		scenes_url, HTTPClient.METHOD_GET, "", {}
 	)
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -1140,12 +1018,12 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 	if scene_id.is_empty():
 		return true  # fail-open
 
-	Global.comms.check_scene_access(scene_id, realm_name)
+	Services.comms.check_scene_access(scene_id, realm_name)
 
 	# Loop until we get the result for OUR scene_id (discard stale results from
 	# earlier navigations that may still be in-flight).
 	while true:
-		var result = await Global.comms.scene_access_checked
+		var result = await Services.comms.scene_access_checked
 		# result = [scene_id, allowed, error_message]
 		if str(result[0]) != scene_id:
 			continue
@@ -1173,9 +1051,9 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 		)
 	else:
 		Global.set_orientation_landscape()
-		Global.get_config().last_realm_joined = new_realm
-		Global.get_config().last_parcel_position = parcel_position
-		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
+		Services.config.last_realm_joined = new_realm
+		Services.config.last_parcel_position = parcel_position
+		Services.config.add_place_to_last_places(parcel_position, new_realm)
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
@@ -1190,19 +1068,19 @@ func async_join_world(world_realm: String) -> void:
 			Time.get_unix_time_from_system()
 		)
 		var loading_data = {
-			"position": str(Global.scene_fetcher.current_position),
+			"position": str(Services.scene_fetcher.current_position),
 			"realm": world_realm,
 			"when": "on_world"
 		}
-		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
-		Global.realm.async_set_realm(world_realm, true)
+		Services.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+		Services.realm.async_set_realm(world_realm, true)
 		explorer.hide_menu()
 		Global.close_menu.emit()
 	else:
 		Global.set_orientation_landscape()
 		Global.close_menu.emit()
-		Global.get_config().last_realm_joined = world_realm
-		Global.get_config().last_parcel_position = Vector2i.ZERO
+		Services.config.last_realm_joined = world_realm
+		Services.config.last_parcel_position = Vector2i.ZERO
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
@@ -1231,7 +1109,7 @@ func _http_method_to_string(method: int) -> String:
 
 
 func async_signed_fetch(url: String, method: int, _body: String = ""):
-	var headers_promise = Global.player_identity.async_get_identity_headers(
+	var headers_promise = Services.player_identity.async_get_identity_headers(
 		url, _body, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
@@ -1243,7 +1121,9 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	if not _body.is_empty():
 		headers["Content-Type"] = "application/json"
 
-	var response_promise: Promise = Global.http_requester.request_json(url, method, _body, headers)
+	var response_promise: Promise = Services.http_requester.request_json(
+		url, method, _body, headers
+	)
 
 	return await PromiseUtils.async_awaiter(response_promise)
 
@@ -1325,20 +1205,20 @@ func _notification(what: int) -> void:
 				if not parsed.dclenv.is_empty():
 					DclGlobal.set_dcl_environment(parsed.dclenv)
 
-			deep_link_router.process_deep_link(new_url)
+			Services.deep_link_router.process_deep_link(new_url)
 
 
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
 	# Sync attended events notifications from server after authentication
-	NotificationsManager.async_sync_attended_events()
+	Services.notifications_manager.async_sync_attended_events()
 
 
 func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> void:
 	# User-visible feedback when a requested realm cannot be loaded (e.g. /world
-	# pointing at a non-existent world). Only fires for Global.realm — transient
+	# pointing at a non-existent world). Only fires for Services.realm — transient
 	# Realm instances created elsewhere (e.g. portable experiences) are not wired
 	# to this handler.
-	NotificationsManager.show_system_toast(
+	Services.notifications_manager.show_system_toast(
 		"World unavailable",
 		'Could not load "%s": %s' % [new_realm_string, reason],
 		"error",

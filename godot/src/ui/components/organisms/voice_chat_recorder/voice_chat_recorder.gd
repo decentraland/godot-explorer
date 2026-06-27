@@ -7,13 +7,13 @@ var is_enabled = false
 
 func _ready():
 	if ProjectSettings.get_setting_with_override("audio/driver/enable_input"):
-		Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
-		audio.connect(Global.comms.broadcast_voice)
+		Services.comms.on_adapter_changed.connect(self._on_adapter_changed)
+		audio.connect(Services.comms.broadcast_voice)
 		setup_audio_server()
 
 
 func set_recording_enabled_with_sfx(enabled: bool):
-	UiSounds.play_sound("voice_chat_mic_on" if enabled else "voice_chat_mic_off")
+	Services.ui_sounds.play_sound("voice_chat_mic_on" if enabled else "voice_chat_mic_off")
 	set_recording_enabled(enabled)
 
 

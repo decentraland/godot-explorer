@@ -43,8 +43,8 @@ class LambdaWearableResponse:
 
 
 static func async_fetch_emote(emote_urn: String):
-	var emote_data_promises = Global.content_provider.fetch_wearables(
-		[emote_urn], Global.realm.get_profile_content_url()
+	var emote_data_promises = Services.content_provider.fetch_wearables(
+		[emote_urn], Services.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(emote_data_promises)
 
@@ -55,7 +55,7 @@ static func _async_request(
 	url += "?pageNum=%d" % page_number
 	url += "&pageSize=%d" % page_size
 
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+	var promise: Promise = Services.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 
 	var result = await PromiseUtils.async_awaiter(promise)
 
@@ -71,11 +71,11 @@ static func _async_request(
 static func async_request_emotes(
 	page_number: int = 1, page_size: int = 10
 ) -> LambdaWearableResponse:
-	var address = Global.player_identity.get_address_str()
+	var address = Services.player_identity.get_address_str()
 	if address.is_empty():
 		return
 
-	var url = Global.realm.get_lambda_server_base_url() + "users/" + address + "/emotes"
+	var url = Services.realm.get_lambda_server_base_url() + "users/" + address + "/emotes"
 
 	return await _async_request(url, page_number, page_size)
 
@@ -117,10 +117,10 @@ static func async_request_all_wearables() -> LambdaWearableResponse:
 static func async_request_wearables(
 	page_number: int = 1, page_size: int = 10
 ) -> LambdaWearableResponse:
-	var address = Global.player_identity.get_address_str()
+	var address = Services.player_identity.get_address_str()
 	if address.is_empty():
 		return null
 
-	var url = Global.realm.get_lambda_server_base_url() + "users/" + address + "/wearables"
+	var url = Services.realm.get_lambda_server_base_url() + "users/" + address + "/wearables"
 
 	return await _async_request(url, page_number, page_size)

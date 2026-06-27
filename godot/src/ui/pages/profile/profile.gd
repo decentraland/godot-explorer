@@ -17,7 +17,7 @@ var is_muted_user: bool = false
 var current_profile: DclUserProfile = null
 var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var address: String = ""
-var player_profile = Global.player_identity.get_profile_or_null()
+var player_profile = Services.player_identity.get_profile_or_null()
 
 var _deploy_waiting: bool = false
 var _deploy_timeout_timer: Timer
@@ -58,7 +58,7 @@ var _deploy_timeout_timer: Timer
 func _ready() -> void:
 	call_deferred("_set_about_compact_mode")
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
+	Services.player_identity.profile_changed.connect(self._on_global_profile_changed)
 	button_menu.button_pressed = false
 	menu.hide()
 
@@ -111,10 +111,10 @@ func _ready() -> void:
 		button_unmute_user.pressed.connect(_on_button_unmute_user_pressed)
 
 	# Connect to blacklist changes to update button states
-	if not Global.social_blacklist.blacklist_changed.is_connected(
+	if not Services.social_blacklist.blacklist_changed.is_connected(
 		_on_blacklist_changed_for_buttons
 	):
-		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed_for_buttons)
+		Services.social_blacklist.blacklist_changed.connect(_on_blacklist_changed_for_buttons)
 
 
 func _update_elements_visibility() -> void:
@@ -199,14 +199,14 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	_show_data()
 
 	if is_own_passport:
-		var mutable: DclUserProfile = Global.player_identity.get_mutable_profile()
+		var mutable: DclUserProfile = Services.player_identity.get_mutable_profile()
 		if mutable != null and profile.get_profile_version() < mutable.get_profile_version():
 			if not _deploy_waiting:
 				_deploy_waiting = true
 				_show_placeholder()
 				_deploy_timeout_timer.start()
 
-	UiSounds.play_sound("mainmenu_widget_open")
+	Services.ui_sounds.play_sound("mainmenu_widget_open")
 
 
 func _on_emote_pressed(urn: String) -> void:
@@ -250,18 +250,18 @@ func _refresh_name_and_address() -> void:
 
 func _async_on_change_nick_popup_update_name_on_profile(nickname: String) -> void:
 	label_nickname.text = nickname
-	Global.player_identity.get_mutable_profile().set_name(nickname)
-	await Global.player_identity.async_save_profile_metadata()
+	Services.player_identity.get_mutable_profile().set_name(nickname)
+	await Services.player_identity.async_save_profile_metadata()
 
 
 func _copy_name_and_tag() -> void:
 	DisplayServer.clipboard_set(label_nickname.text + label_tag.text)
-	NotificationsManager.show_system_toast("Copied", "Name copied to clipboard")
+	Services.notifications_manager.show_system_toast("Copied", "Name copied to clipboard")
 
 
 func _copy_address() -> void:
 	DisplayServer.clipboard_set(address)
-	NotificationsManager.show_system_toast("Copied", "Address copied to clipboard")
+	Services.notifications_manager.show_system_toast("Copied", "Address copied to clipboard")
 
 
 func _on_label_nickname_gui_input(event: InputEvent) -> void:
@@ -302,9 +302,9 @@ func _on_global_profile_changed(new_profile: DclUserProfile) -> void:
 func _async_on_deploy_timeout() -> void:
 	if not _deploy_waiting:
 		return
-	var addr = Global.player_identity.get_address_str()
-	var lambda_url = Global.realm.get_lambda_server_base_url()
-	await Global.player_identity.async_fetch_profile(addr, lambda_url)
+	var addr = Services.player_identity.get_address_str()
+	var lambda_url = Services.realm.get_lambda_server_base_url()
+	await Services.player_identity.async_fetch_profile(addr, lambda_url)
 	if _deploy_waiting:
 		_deploy_waiting = false
 		_show_data()
@@ -312,9 +312,9 @@ func _async_on_deploy_timeout() -> void:
 
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 	if toggled_on:
-		Global.social_blacklist.add_muted(avatar_preview.avatar.avatar_id)
+		Services.social_blacklist.add_muted(avatar_preview.avatar.avatar_id)
 	else:
-		Global.social_blacklist.remove_muted(avatar_preview.avatar.avatar_id)
+		Services.social_blacklist.remove_muted(avatar_preview.avatar.avatar_id)
 	_update_buttons()
 
 	_notify_other_components_of_change()
@@ -322,8 +322,8 @@ func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 
 func _check_block_and_mute_status() -> void:
 	var current_avatar = avatar_preview.avatar
-	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
-	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
+	is_blocked_user = Services.social_blacklist.is_blocked(current_avatar.avatar_id)
+	is_muted_user = Services.social_blacklist.is_muted(current_avatar.avatar_id)
 
 	if is_blocked_user:
 		button_block_user.hide()
@@ -337,8 +337,8 @@ func _update_buttons() -> void:
 	if is_own_passport:
 		return
 	var current_avatar = avatar_preview.avatar
-	is_blocked_user = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
-	is_muted_user = Global.social_blacklist.is_muted(current_avatar.avatar_id)
+	is_blocked_user = Services.social_blacklist.is_blocked(current_avatar.avatar_id)
+	is_muted_user = Services.social_blacklist.is_muted(current_avatar.avatar_id)
 	if is_blocked_user:
 		button_block_user.hide()
 		button_unblock_user.show()
@@ -361,21 +361,23 @@ func _update_buttons() -> void:
 
 
 func _async_block_user(user_address: String) -> void:
-	var promise = Global.social_service.block_user(user_address)
+	var promise = Services.social_service.block_user(user_address)
 	await PromiseUtils.async_awaiter(promise)
 	button_block_user.disabled = false
 
 	if promise.is_rejected():
 		var error_msg := PromiseUtils.get_error_message(promise)
 		printerr("Block failed: ", error_msg)
-		NotificationsManager.show_system_toast("Block failed", error_msg, "error", "alert")
+		Services.notifications_manager.show_system_toast(
+			"Block failed", error_msg, "error", "alert"
+		)
 		return
 
 	# Block User metric (track whether blocked user was a friend)
 	var was_friend := current_friendship_status == Global.FriendshipStatus.ACCEPTED
-	Global.metrics.track_block_user(user_address, was_friend)
+	Services.metrics.track_block_user(user_address, was_friend)
 
-	Global.social_blacklist.add_blocked(user_address)  # Update local cache
+	Services.social_blacklist.add_blocked(user_address)  # Update local cache
 	current_friendship_status = Global.FriendshipStatus.NONE
 	_hide_friendship_buttons()
 	_update_buttons()
@@ -384,17 +386,19 @@ func _async_block_user(user_address: String) -> void:
 
 
 func _async_unblock_user_from_profile(user_address: String) -> void:
-	var promise = Global.social_service.unblock_user(user_address)
+	var promise = Services.social_service.unblock_user(user_address)
 	await PromiseUtils.async_awaiter(promise)
 	button_unblock_user.disabled = false
 
 	if promise.is_rejected():
 		var error_msg := PromiseUtils.get_error_message(promise)
 		printerr("Unblock failed: ", error_msg)
-		NotificationsManager.show_system_toast("Unblock failed", error_msg, "error", "alert")
+		Services.notifications_manager.show_system_toast(
+			"Unblock failed", error_msg, "error", "alert"
+		)
 		return
 
-	Global.social_blacklist.remove_blocked(user_address)  # Update local cache
+	Services.social_blacklist.remove_blocked(user_address)  # Update local cache
 	_notify_other_components_of_change()
 	_update_buttons()
 	_async_update_buttons_and_lists()
@@ -434,7 +438,7 @@ func _on_visibility_changed() -> void:
 
 func _async_delete_friendship_if_exists(friend_address: String) -> void:
 	# Check if there's an active friendship or pending request
-	var promise = Global.social_service.get_friendship_status(friend_address)
+	var promise = Services.social_service.get_friendship_status(friend_address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -449,11 +453,11 @@ func _async_delete_friendship_if_exists(friend_address: String) -> void:
 	# Handle different relationship statuses
 	match status:
 		Global.FriendshipStatus.REQUEST_SENT:
-			action_promise = Global.social_service.cancel_friend_request(friend_address)
+			action_promise = Services.social_service.cancel_friend_request(friend_address)
 		Global.FriendshipStatus.REQUEST_RECEIVED:
-			action_promise = Global.social_service.reject_friend_request(friend_address)
+			action_promise = Services.social_service.reject_friend_request(friend_address)
 		Global.FriendshipStatus.ACCEPTED:
-			action_promise = Global.social_service.delete_friendship(friend_address)
+			action_promise = Services.social_service.delete_friendship(friend_address)
 		_:  # No relationship or other status, nothing to do
 			return
 
@@ -526,52 +530,54 @@ func _connect_friendship_signals() -> void:
 		return
 
 	# Connect to friendship status change signals
-	if not Global.social_service.friendship_request_received.is_connected(
+	if not Services.social_service.friendship_request_received.is_connected(
 		_on_friendship_request_received
 	):
-		Global.social_service.friendship_request_received.connect(_on_friendship_request_received)
-	if not Global.social_service.friendship_request_accepted.is_connected(
+		Services.social_service.friendship_request_received.connect(_on_friendship_request_received)
+	if not Services.social_service.friendship_request_accepted.is_connected(
 		_on_friendship_request_accepted
 	):
-		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_accepted)
-	if not Global.social_service.friendship_request_rejected.is_connected(
+		Services.social_service.friendship_request_accepted.connect(_on_friendship_request_accepted)
+	if not Services.social_service.friendship_request_rejected.is_connected(
 		_on_friendship_request_rejected
 	):
-		Global.social_service.friendship_request_rejected.connect(_on_friendship_request_rejected)
-	if not Global.social_service.friendship_deleted.is_connected(_on_friendship_deleted):
-		Global.social_service.friendship_deleted.connect(_on_friendship_deleted)
-	if not Global.social_service.friendship_request_cancelled.is_connected(
+		Services.social_service.friendship_request_rejected.connect(_on_friendship_request_rejected)
+	if not Services.social_service.friendship_deleted.is_connected(_on_friendship_deleted):
+		Services.social_service.friendship_deleted.connect(_on_friendship_deleted)
+	if not Services.social_service.friendship_request_cancelled.is_connected(
 		_on_friendship_request_cancelled
 	):
-		Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_cancelled)
+		Services.social_service.friendship_request_cancelled.connect(
+			_on_friendship_request_cancelled
+		)
 
 
 func _disconnect_friendship_signals() -> void:
 	# Disconnect all friendship signals
-	if Global.social_service.friendship_request_received.is_connected(
+	if Services.social_service.friendship_request_received.is_connected(
 		_on_friendship_request_received
 	):
-		Global.social_service.friendship_request_received.disconnect(
+		Services.social_service.friendship_request_received.disconnect(
 			_on_friendship_request_received
 		)
-	if Global.social_service.friendship_request_accepted.is_connected(
+	if Services.social_service.friendship_request_accepted.is_connected(
 		_on_friendship_request_accepted
 	):
-		Global.social_service.friendship_request_accepted.disconnect(
+		Services.social_service.friendship_request_accepted.disconnect(
 			_on_friendship_request_accepted
 		)
-	if Global.social_service.friendship_request_rejected.is_connected(
+	if Services.social_service.friendship_request_rejected.is_connected(
 		_on_friendship_request_rejected
 	):
-		Global.social_service.friendship_request_rejected.disconnect(
+		Services.social_service.friendship_request_rejected.disconnect(
 			_on_friendship_request_rejected
 		)
-	if Global.social_service.friendship_deleted.is_connected(_on_friendship_deleted):
-		Global.social_service.friendship_deleted.disconnect(_on_friendship_deleted)
-	if Global.social_service.friendship_request_cancelled.is_connected(
+	if Services.social_service.friendship_deleted.is_connected(_on_friendship_deleted):
+		Services.social_service.friendship_deleted.disconnect(_on_friendship_deleted)
+	if Services.social_service.friendship_request_cancelled.is_connected(
 		_on_friendship_request_cancelled
 	):
-		Global.social_service.friendship_request_cancelled.disconnect(
+		Services.social_service.friendship_request_cancelled.disconnect(
 			_on_friendship_request_cancelled
 		)
 
@@ -615,7 +621,7 @@ func _on_button_cancel_request_pressed() -> void:
 
 
 func _async_cancel_friend_request(friend_address: String) -> void:
-	var promise = Global.social_service.cancel_friend_request(friend_address)
+	var promise = Services.social_service.cancel_friend_request(friend_address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -635,7 +641,7 @@ func _on_button_unfriend_pressed() -> void:
 
 func _async_unfriend(friend_address: String) -> void:
 	print("Profile: _async_unfriend called for address: ", friend_address)
-	var promise = Global.social_service.delete_friendship(friend_address)
+	var promise = Services.social_service.delete_friendship(friend_address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -643,7 +649,7 @@ func _async_unfriend(friend_address: String) -> void:
 		return
 
 	# Unfriend metric
-	Global.metrics.track_unfriend(friend_address)
+	Services.metrics.track_unfriend(friend_address)
 
 	print("Profile: Unfriend successful, waiting for signal to update lists")
 	# The signal friendship_deleted will update the UI
@@ -664,7 +670,7 @@ func _on_button_add_friend_pressed() -> void:
 func _async_send_friend_request(friend_address: String) -> void:
 	button_add_friend.hide()
 	button_pending.show()
-	var promise = Global.social_service.send_friend_request(friend_address, "")
+	var promise = Services.social_service.send_friend_request(friend_address, "")
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -674,14 +680,14 @@ func _async_send_friend_request(friend_address: String) -> void:
 		return
 
 	# Request Friend metric
-	Global.metrics.track_request_friend(friend_address)
+	Services.metrics.track_request_friend(friend_address)
 
 	_async_update_buttons_and_lists()
 
 
 func _async_accept_friend_request(friend_address: String) -> void:
 	button_add_friend.disabled = true
-	var promise = Global.social_service.accept_friend_request(friend_address)
+	var promise = Services.social_service.accept_friend_request(friend_address)
 	await PromiseUtils.async_awaiter(promise)
 	button_add_friend.disabled = false
 
@@ -690,7 +696,7 @@ func _async_accept_friend_request(friend_address: String) -> void:
 		return
 
 	# Accept Friend metric (no friendship_id available in profile context)
-	Global.metrics.track_accept_friend(friend_address, "")
+	Services.metrics.track_accept_friend(friend_address, "")
 
 	_async_update_buttons_and_lists()
 
@@ -707,7 +713,7 @@ func _async_check_friendship_status() -> void:
 
 	var friend_address = current_profile.get_ethereum_address()
 	print("Profile: Checking friendship status for address: ", friend_address)
-	var promise = Global.social_service.get_friendship_status(friend_address)
+	var promise = Services.social_service.get_friendship_status(friend_address)
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
@@ -730,7 +736,7 @@ func _update_friendship_buttons() -> void:
 	_hide_friendship_buttons()
 
 	# Guest users cannot have social interactions
-	if Global.player_identity.is_guest:
+	if Services.player_identity.is_guest:
 		return
 
 	# Check if target user is a guest (hasn't connected web3)
@@ -741,7 +747,7 @@ func _update_friendship_buttons() -> void:
 	var current_avatar = avatar_preview.avatar
 	var is_user_blocked = false
 	if current_avatar != null and not current_avatar.avatar_id.is_empty():
-		is_user_blocked = Global.social_blacklist.is_blocked(current_avatar.avatar_id)
+		is_user_blocked = Services.social_blacklist.is_blocked(current_avatar.avatar_id)
 
 	# If user is blocked, hide all friendship buttons
 	if is_user_blocked:
@@ -764,7 +770,7 @@ func _update_friendship_buttons() -> void:
 
 
 func _is_social_service_available() -> bool:
-	return Global.social_service != null
+	return Services.social_service != null
 
 
 func _async_update_buttons_and_lists():
@@ -810,24 +816,24 @@ func _on_copy_address_pressed() -> void:
 func _on_button_block_user_pressed() -> void:
 	var current_avatar = avatar_preview.avatar
 	button_block_user.disabled = true
-	Global.metrics.track_click_button("user_block", "PROFILE", "")
+	Services.metrics.track_click_button("user_block", "PROFILE", "")
 	_async_block_user(current_avatar.avatar_id)
 
 
 func _on_button_unblock_user_pressed() -> void:
 	var current_avatar = avatar_preview.avatar
 	button_unblock_user.disabled = true
-	Global.metrics.track_click_button("user_unblock", "PROFILE", "")
+	Services.metrics.track_click_button("user_unblock", "PROFILE", "")
 	_async_unblock_user_from_profile(current_avatar.avatar_id)
 
 
 func _on_button_mute_user_pressed() -> void:
-	Global.social_blacklist.add_muted(avatar_preview.avatar.avatar_id)
+	Services.social_blacklist.add_muted(avatar_preview.avatar.avatar_id)
 	call_deferred("_update_buttons")
 	_notify_other_components_of_change()
 
 
 func _on_button_unmute_user_pressed() -> void:
-	Global.social_blacklist.remove_muted(avatar_preview.avatar.avatar_id)
+	Services.social_blacklist.remove_muted(avatar_preview.avatar.avatar_id)
 	call_deferred("_update_buttons")
 	_notify_other_components_of_change()

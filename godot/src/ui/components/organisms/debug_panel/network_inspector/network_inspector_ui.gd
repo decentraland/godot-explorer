@@ -19,9 +19,9 @@ var request_selected_id: int = -1
 
 
 func _ready():
-	Global.network_inspector.request_changed.connect(self.on_request_changed)
+	Services.network_inspector.request_changed.connect(self.on_request_changed)
 
-	for i in range(1, Global.network_inspector.get_request_count()):
+	for i in range(1, Services.network_inspector.get_request_count()):
 		dirty_ids.push_back(i)
 
 
@@ -53,7 +53,7 @@ func _update():
 
 			requests[id] = request_control
 
-		var request_data := Global.network_inspector.get_request(id)
+		var request_data := Services.network_inspector.get_request(id)
 
 		if is_instance_valid(request_data):
 			request_control.method = request_data.method
@@ -90,7 +90,7 @@ func on_request_click(id: int):
 	request_selected_id = id
 	requests.get(request_selected_id).selected = true
 
-	var request_data := Global.network_inspector.get_request(id)
+	var request_data := Services.network_inspector.get_request(id)
 
 	if request_data.response_received:
 		if request_data.response_error.is_empty():

@@ -76,11 +76,11 @@ func _async_show_terms_then_purchase() -> void:
 	# Wire the one-shot BEFORE awaiting the modal: connecting after the await
 	# leaves a window where an instant confirm could fire iap_terms_accepted
 	# before we're listening, dropping the purchase.
-	if not Global.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
-		Global.modal_manager.iap_terms_accepted.connect(_on_iap_terms_accepted, CONNECT_ONE_SHOT)
-	await Global.modal_manager.async_show_iap_terms_modal()
+	if not Services.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
+		Services.modal_manager.iap_terms_accepted.connect(_on_iap_terms_accepted, CONNECT_ONE_SHOT)
+	await Services.modal_manager.async_show_iap_terms_modal()
 	# Re-enable the button once the modal is gone (accept or cancel).
-	var modal = Global.modal_manager.current_modal
+	var modal = Services.modal_manager.current_modal
 	if modal and not modal.tree_exited.is_connected(_on_terms_modal_exited):
 		modal.tree_exited.connect(_on_terms_modal_exited, CONNECT_ONE_SHOT)
 
@@ -93,5 +93,5 @@ func _on_terms_modal_exited() -> void:
 	button_price.disabled = false
 	# If the user cancelled, the one-shot is still connected — clean it up
 	# so a later accept on a different item doesn't trigger this product.
-	if Global.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
-		Global.modal_manager.iap_terms_accepted.disconnect(_on_iap_terms_accepted)
+	if Services.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
+		Services.modal_manager.iap_terms_accepted.disconnect(_on_iap_terms_accepted)

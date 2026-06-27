@@ -17,4 +17,4 @@ func track_screen_viewed(item_data: Dictionary):
 		}
 	)
 
-	Global.metrics.track_screen_viewed("EVENT_DETAILS", extra_properties)
+	Services.metrics.track_screen_viewed("EVENT_DETAILS", extra_properties)
