@@ -44,7 +44,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: ios-selfhosted-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}
+  # Include the event action so a `labeled` (build-label) event gets its OWN group and does NOT
+  # cancel an in-flight `synchronize` self-hosted build for the same commit — that build's R2 export
+  # is exactly what mobile_distribute's `ios-resolve` reuses to skip the WarpBuild rebuild. Two
+  # `synchronize` pushes still share a group (newer cancels older), so only the latest build runs.
+  group: ios-selfhosted-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-${{ github.event.action }}
   cancel-in-progress: true
 
 jobs:
