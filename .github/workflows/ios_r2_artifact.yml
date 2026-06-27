@@ -266,29 +266,17 @@ jobs:
       # runs in parallel with the (best-effort) Sentry upload below instead of waiting for it.
       - name: Dispatch godot-asc-deploy (sign & upload to TestFlight)
         if: success() && inputs.dispatch_deploy
-        env:
-          GH_TOKEN: ${{ secrets.ASC_DEPLOY_DISPATCH_TOKEN }}
-          REF: ${{ inputs.ref }}
-          SHA: ${{ inputs.sha }}
-          WHATS_NEW: ${{ inputs.whats_new }}
-          PR_NUMBER: ${{ inputs.pr_number }}
-          TS: ${{ inputs.slack_ts }}
-          BUILD_VERSION: ${{ steps.buildver.outputs.build_version }}
-          BUILD_NUMBER: ${{ env.DCL_BUILD_NUMBER }}
-          TRIGGERED_BY: ${{ inputs.triggered_by }}
-        run: |
-          set -eu
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "❌ ASC_DEPLOY_DISPATCH_TOKEN not set — cannot hand off to godot-asc-deploy."
-            exit 1
-          fi
-          SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
-          gh workflow run deploy_testflight.yml \
-            --repo decentraland/godot-asc-deploy --ref main \
-            -f branch="$SAFE_BRANCH" -f sha="${SHA:-${{ github.sha }}}" -f whats_new="$WHATS_NEW" \
-            -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
-            -f build_version="$BUILD_VERSION" -f build_number="$BUILD_NUMBER" -f triggered_by="$TRIGGERED_BY"
-          echo "✅ Dispatched godot-asc-deploy for ${SAFE_BRANCH}@${SHA:-${{ github.sha }}}"
+        uses: ./.github/actions/dispatch-asc-deploy
+        with:
+          gh-token: ${{ secrets.ASC_DEPLOY_DISPATCH_TOKEN }}
+          ref: ${{ inputs.ref }}
+          sha: ${{ inputs.sha || github.sha }}
+          whats_new: ${{ inputs.whats_new }}
+          pr_number: ${{ inputs.pr_number }}
+          slack_ts: ${{ inputs.slack_ts }}
+          build_version: ${{ steps.buildver.outputs.build_version }}
+          build_number: ${{ env.DCL_BUILD_NUMBER }}
+          triggered_by: ${{ inputs.triggered_by }}
 
       - name: Slack — handed off to signing
         if: success() && inputs.dispatch_deploy && env.SLACK_TS != ''
