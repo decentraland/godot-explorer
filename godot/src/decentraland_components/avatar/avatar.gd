@@ -448,14 +448,13 @@ func _unset_avatar_modifier_area():
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
-	if not is_instance_valid(nickname_ui):
-		return
 	_profile_ready = true
 	var avatar = profile.get_avatar()
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
-	nickname_ui.name_claimed = profile.has_claimed_name()
+	if is_instance_valid(nickname_ui):
+		nickname_ui.name_claimed = profile.has_claimed_name()
 
 	var avatar_id_changed := avatar_id != profile.get_ethereum_address()
 	avatar_id = profile.get_ethereum_address()
@@ -556,12 +555,13 @@ func async_update_avatar(
 	if splitted_nickname.size() > 1:
 		nickname_ui.nickname = splitted_nickname[0]
 		nickname_ui.tag = splitted_nickname[1]
-	else:
+	elif is_instance_valid(nickname_ui):
 		nickname_ui.nickname = new_avatar_name
 		nickname_ui.tag = ""
-
-	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
-	nickname_ui.mic_enabled = false
+	
+	if is_instance_valid(nickname_ui):
+		nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
+		nickname_ui.mic_enabled = false
 
 	_apply_nickname_visibility()
 
