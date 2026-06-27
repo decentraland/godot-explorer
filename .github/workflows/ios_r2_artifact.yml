@@ -235,7 +235,15 @@ jobs:
 
           echo "📤 Uploading export to s3://${AWS_S3_BUCKET}/${KEY}"
           aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-          aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          # Update the branch 'latest' pointer WITHOUT re-uploading the tarball. The managed
+          # `aws s3 cp s3:// s3://` is unusable on R2 (it sends GetObjectTagging / x-amz-tagging-
+          # directive, both NotImplemented), so use the low-level copy-object; fall back to a plain
+          # re-upload if R2 ever rejects the copy, so the build never breaks. asc-deploy's manual
+          # dispatch defaults to ios/<branch>/latest, so this key must stay populated.
+          echo "🔗 Updating latest pointer s3://${AWS_S3_BUCKET}/${LATEST_KEY}"
+          aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_KEY" \
+            --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+            || aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
 
           echo "✅ Unsigned export uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
           echo "🔗 ${R2_PUBLIC_BASE_URL}/${KEY}"
