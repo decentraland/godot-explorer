@@ -92,7 +92,11 @@ jobs:
           fi
 
   # ───────────────────────────────────────────────────────────────────────────────────────────
-  # Build: runs on the dev Mac. No WarpBuild cache actions — the self-hosted runner persists target/.
+  # Build: runs on the dev Mac. No WarpBuild cache actions — the self-hosted runner persists the
+  # build artifacts between runs (target/, lib/target/, .bin/) via `clean: false` on checkout, so
+  # cargo compiles incrementally instead of from scratch every run. The xtask hardcodes the lib
+  # output under lib/target/ (copy_files.rs / ios_xcode.rs), so the cache MUST live in-tree —
+  # redirecting CARGO_TARGET_DIR elsewhere would break those paths.
   # ───────────────────────────────────────────────────────────────────────────────────────────
   build-ios:
     name: Build iOS export → R2
@@ -109,6 +113,11 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Local incremental-build cache: keep untracked/gitignored artifacts (target/, lib/target/,
+          # .bin/) across runs on this persistent runner. Default `clean: true` runs `git clean -ffdx`
+          # which would wipe them every run. Tracked files are still force-checked-out to the ref, so
+          # the source tree stays correct — only the build cache survives.
+          clean: false
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
@@ -151,6 +160,30 @@ jobs:
           echo "❌ No Xcode >= 26 found on the runner. Installed Xcodes:"
           ls -d /Applications/Xcode*.app 2>/dev/null || true
           exit 1
+
+      # Lightweight resource sampler — RAM is the scarce resource on this small VM, so record
+      # free/compressed/swap (+ loadavg + top-RSS process) every 15s during the build. Surfaces a
+      # peak summary in the run's Step Summary and uploads the full trace as an artifact, so we know
+      # how much headroom the 6 GB VM actually had instead of only "it didn't OOM".
+      - name: Start resource sampler
+        run: |
+          LOG="$RUNNER_TEMP/mem_usage.log"
+          echo "time     free_mb  compressed_mb  swap_used_mb  load1  top_rss_mb cmd" > "$LOG"
+          (
+            PAGE=$(vm_stat | awk '/page size of/{print $8; exit}'); PAGE=${PAGE:-16384}
+            while :; do
+              V=$(vm_stat)
+              F=$(echo "$V" | awk '/Pages free/{gsub(/\./,"",$3); print $3}')
+              C=$(echo "$V" | awk '/occupied by compressor/{gsub(/\./,"",$5); print $5}')
+              S=$(sysctl -n vm.swapusage | awk '{gsub(/M/,"",$6); print $6}')
+              L=$(sysctl -n vm.loadavg | awk '{print $2}')
+              T=$(ps -axo rss=,comm= | sort -rn | head -1 | awk '{r=$1/1024; $1=""; sub(/^ /,""); printf "%.0f %s", r, $0}')
+              printf '%s  %s  %s  %s  %s  %s\n' "$(date -u +%H:%M:%S)" "$((F*PAGE/1048576))" "$((C*PAGE/1048576))" "${S:-0}" "${L:-0}" "$T" >> "$LOG"
+              sleep 15
+            done
+          ) >/dev/null 2>&1 &
+          echo $! > "$RUNNER_TEMP/mem_sampler.pid"
+          echo "resource sampler started (pid $(cat "$RUNNER_TEMP/mem_sampler.pid")) → $LOG"
 
       - name: Build macOS (host)
         timeout-minutes: 30
@@ -223,3 +256,38 @@ jobs:
 
           echo "✅ Unsigned export uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
           echo "🔗 ${R2_PUBLIC_BASE_URL}/${KEY}"
+
+      # Stop the sampler and surface the result. `always()` so we still capture the trace when the
+      # build FAILS (e.g. an OOM kill) — that's exactly the run we most want the memory profile for.
+      - name: Resource usage report
+        if: always()
+        run: |
+          kill "$(cat "$RUNNER_TEMP/mem_sampler.pid" 2>/dev/null)" 2>/dev/null || true
+          LOG="$RUNNER_TEMP/mem_usage.log"
+          if [ ! -s "$LOG" ]; then echo "no sampler log found"; exit 0; fi
+          {
+            echo '### 🍏 iOS build — VM resource usage (6 GB guest)'
+            echo '```'
+            awk 'NR>1{
+                   if($4>mxswap)mxswap=$4
+                   if(NR==2||$2<mnfree)mnfree=$2
+                   if($3>mxcomp)mxcomp=$3
+                   if($5>mxload)mxload=$5
+                 }
+                 END{
+                   printf "peak swap used : %s MB\nmin free       : %s MB\npeak compressed: %s MB\npeak load1     : %s\nsamples (~15s) : %d\n",
+                          mxswap+0, mnfree+0, mxcomp+0, mxload+0, NR-1
+                 }' "$LOG"
+            echo '--- trace tail ---'
+            tail -30 "$LOG"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cp "$LOG" mem_usage.log
+
+      - name: Upload resource trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-resource-usage
+          path: mem_usage.log
+          if-no-files-found: ignore
