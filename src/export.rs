@@ -377,6 +377,25 @@ pub fn export(
         output_path_godot_param.as_str(),
     ];
 
+    // The headless Godot editor dlopen's the GDExtension (libdclgodot.dylib) to run the
+    // export. A freshly rebuilt dylib carries an invalid signature, so macOS SIGKILLs Godot
+    // at load time and the export silently produces NOTHING — leaving a stale .pck that the
+    // rest of the pipeline happily reuses (so local GDScript changes never ship). Re-sign it
+    // ad-hoc right before exporting so the editor can load it.
+    #[cfg(target_os = "macos")]
+    {
+        let macos_dylib = "lib/target/libdclgodot_macos/libdclgodot.dylib";
+        if std::path::Path::new(macos_dylib).exists() {
+            print_message(
+                MessageType::Step,
+                "Ad-hoc signing libdclgodot.dylib (macOS) for the headless export...",
+            );
+            let _ = std::process::Command::new("codesign")
+                .args(["--force", "--sign", "-", macos_dylib])
+                .status();
+        }
+    }
+
     print_message(MessageType::Step, "Running Godot export...");
     let spinner = create_spinner("Exporting project...");
 
