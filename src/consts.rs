@@ -15,10 +15,10 @@ pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 
 /// Short commit SHA (first 9 chars) of the godotengine fork this stable build was compiled from.
 /// Must match the `gh.<sha>` segment printed by `godot4_bin --version`
-/// (e.g. `4.6.2.stable.gh.2c8983653 - Protocol Squad`) and the SHA-tagged release path published
+/// (e.g. `4.6.2.stable.gh.6ddcadb64 - Protocol Squad`) and the SHA-tagged release path published
 /// by the godot-engine-releases pipeline. Bump it in lockstep with a new fork publish: it busts the
 /// local download cache (keys embed it) and pins the immutable per-SHA release URLs below.
-pub const GODOT_BUILD_SHA: &str = "2c8983653";
+pub const GODOT_BUILD_SHA: &str = "6ddcadb64";
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
@@ -28,7 +28,7 @@ pub fn godot_release_tag() -> String {
 }
 
 /// Editor (binary) base URL for the pinned stable fork build, e.g.
-/// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.2c8983653/editors/`.
+/// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.6ddcadb64/editors/`.
 pub fn godot_editor_base_url() -> String {
     format!(
         "{GODOT_ENGINE_RELEASES_BASE_URL}{}/editors/",
@@ -37,7 +37,7 @@ pub fn godot_editor_base_url() -> String {
 }
 
 /// Compressed-templates base URL for the pinned stable fork build, e.g.
-/// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.2c8983653/compressed-templates/`.
+/// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.6ddcadb64/compressed-templates/`.
 pub fn godot_templates_base_url() -> String {
     format!(
         "{GODOT_ENGINE_RELEASES_BASE_URL}{}/compressed-templates/",
