@@ -87,6 +87,7 @@ var _android_plugin = null:
 
 
 func _ready() -> void:
+	print("[INIT] NotificationsManager")
 	# Enable debug logging in debug builds
 	# _debug_notifications_enabled = OS.is_debug_build()
 

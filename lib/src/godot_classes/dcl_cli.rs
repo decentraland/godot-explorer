@@ -103,6 +103,8 @@ pub struct DclCli {
     #[var(get)]
     pub scene_inspector_file: bool,
     #[var(get)]
+    pub test_logging: bool,
+    #[var(get)]
     pub low_spec_warning: bool,
     #[var(get)]
     pub fi_benchmark_size: i32,
@@ -529,6 +531,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
+            ArgDefinition {
+                name: "--test-logging".to_string(),
+                description: "Run the logging self-test on startup: every component logs at all levels and every form in its stack (Rust/GDScript/Swift/ObjC/Kotlin), to verify the unified channel + Sentry pipeline. Also via deeplink (?test-logging=true)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
             // Logging
             ArgDefinition {
                 name: "--rust-log".to_string(),
@@ -710,6 +718,7 @@ impl INode for DclCli {
             })
             .unwrap_or_default();
         let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
+        let test_logging = args_map.contains_key("--test-logging");
         let low_spec_warning = args_map.contains_key("--low-spec-warning");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
@@ -853,6 +862,7 @@ impl INode for DclCli {
             asset_server,
             scene_inspector,
             scene_inspector_file,
+            test_logging,
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,

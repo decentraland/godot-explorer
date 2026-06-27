@@ -228,6 +228,11 @@ impl INode for NetworkInspector {
         let mut request_changed = HashSet::new();
         while let Ok(event) = self.receiver.try_recv() {
             request_changed.insert(event.id.0);
+            // Tee into the unified scene-inspector stream as a `"network"` entry
+            // (additive; no-op unless a consumer subscribed to network).
+            if crate::tools::scene_inspector::is_stream_network() {
+                crate::tools::scene_inspector::emit_network(network_entry_from(&event));
+            }
             match event.payload {
                 NetworkInspectPayload::Request(request) => {
                     let mut inspected_request = NetworkInspectedRequest {
@@ -352,4 +357,66 @@ impl NetworkInspector {
     pub fn get_sender(&self) -> tokio::sync::mpsc::Sender<NetworkInspectEvent> {
         self.sender.clone()
     }
+}
+
+/// Build a scene-inspector `NetworkEntry` from a `NetworkInspectEvent` so HTTP
+/// traffic can be folded into the unified stream. Mirrors the event's phase.
+fn network_entry_from(event: &NetworkInspectEvent) -> crate::tools::scene_inspector::NetworkEntry {
+    use crate::tools::scene_inspector::{current_timestamp_ms, NetworkEntry};
+    let mut entry = NetworkEntry {
+        timestamp_ms: current_timestamp_ms(),
+        id: event.id.to_u32(),
+        phase: String::new(),
+        url: None,
+        method: None,
+        requester: None,
+        status: None,
+        ok: None,
+        error: None,
+    };
+    match &event.payload {
+        NetworkInspectPayload::Request(r) => {
+            entry.phase = "request".into();
+            entry.url = Some(r.url.clone());
+            entry.method = Some(r.method.as_str().to_string());
+            entry.requester = Some(r.requester.clone());
+        }
+        NetworkInspectPayload::PartialResponse(res) => {
+            entry.phase = "partial_response".into();
+            match res {
+                Ok(p) => {
+                    entry.status = Some(p.status_code.as_u16());
+                    entry.ok = Some(true);
+                }
+                Err(e) => {
+                    entry.ok = Some(false);
+                    entry.error = Some(e.clone());
+                }
+            }
+        }
+        NetworkInspectPayload::BodyResponse(res) => {
+            entry.phase = "body_response".into();
+            match res {
+                Ok(_) => entry.ok = Some(true),
+                Err(e) => {
+                    entry.ok = Some(false);
+                    entry.error = Some(e.clone());
+                }
+            }
+        }
+        NetworkInspectPayload::FullResponse(res) => {
+            entry.phase = "full_response".into();
+            match res {
+                Ok((p, _)) => {
+                    entry.status = Some(p.status_code.as_u16());
+                    entry.ok = Some(true);
+                }
+                Err(e) => {
+                    entry.ok = Some(false);
+                    entry.error = Some(e.clone());
+                }
+            }
+        }
+    }
+    entry
 }

@@ -3,7 +3,10 @@ extends Node
 
 ## Bridges Scene Inspector entries from the Rust SceneInspectorDispatcher to a
 ## dedicated WebSocket target. Also handles incoming commands from external
-## tools (SCENE_INSPECTOR_CMD protocol).
+## tools (SCENE_INSPECTOR_CMD protocol). Inspection/eval verbs share the same
+## backend as the loopback DebugWs server (one implementation, two transports).
+
+const Collector := preload("res://src/tool/debug_server/debug_collector.gd")
 
 var _dedicated_ws: SceneInspectorWebSocket
 var _session_id: String = ""
@@ -30,17 +33,29 @@ func _connect_to_target(target: String) -> void:
 		_dedicated_ws.set_name("scene_inspector_ws")
 		add_child(_dedicated_ws)
 		_dedicated_ws.command_received.connect(_on_command)
+		_dedicated_ws.connected.connect(_on_ws_connected)
+		_dedicated_ws.disconnected.connect(_on_ws_disconnected)
 
-	# Connect (or reconnect) to the target URL
+	# Connect (or reconnect) to the target URL. session_start + the hot-connect
+	# CRDT snapshot are sent from `_on_ws_connected`, once the socket is actually
+	# open — sending them here (before the handshake completes) would drop them.
 	_dedicated_ws.connect_to(target)
-
-	# Emit session_start entry so the receiver knows device info
-	Global.scene_inspector_dispatcher.emit_session_start()
 
 	print("SceneInspectorBridge: Dedicated WebSocket channel -> ", target)
 
-	# Hot-connect: send current CRDT state so inspector can reconstruct entity tree
+
+func _on_ws_connected() -> void:
+	# A consumer attached: open the master capture gate so producers may run.
+	# Classic streams (crdt/lifecycle/perf) flow by default; logs/network stay
+	# opt-in via `subscribe`.
+	Global.scene_inspector_dispatcher.set_consumer_connected(true)
+	Global.scene_inspector_dispatcher.emit_session_start()
 	_send_crdt_snapshot()
+
+
+func _on_ws_disconnected() -> void:
+	# Consumer gone: close the gate so nothing keeps buffering without a peer.
+	Global.scene_inspector_dispatcher.set_consumer_connected(false)
 
 
 func _on_deep_link_received() -> void:
@@ -72,7 +87,8 @@ func _on_batch(entries_json: String) -> void:
 func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 	var dispatcher = Global.scene_inspector_dispatcher
 	var ok := true
-	var data := {}
+	# Untyped: shared-backend query results may be an Array (scenes / avatars).
+	var data = {}
 
 	match cmd:
 		"pause":
@@ -121,11 +137,43 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 			var enabled: bool = args.get("enabled", false)
 			dispatcher.set_include_bin_payload(enabled)
 
+		"subscribe":
+			# Opt in to high-volume streams (log / network) and the per-tick
+			# lifecycle firehose. Nothing is captured until a consumer subscribes.
+			_apply_subscribe(args, true)
+			data = {"streams": args.get("streams", [])}
+
+		"unsubscribe":
+			_apply_subscribe(args, false)
+			data = {"streams": args.get("streams", [])}
+
 		_:
-			ok = false
-			data = {"error": "unknown command: " + cmd}
+			# Inspection / eval verbs (ping, scenes, scene, entity, ui_scene,
+			# ui_entity, avatars, avatar, app_ui, focus, eval) share the DebugWs
+			# backend — one implementation, two transports.
+			var res: Dictionary = DebugWs.run_command(cmd, args)
+			ok = res.get("ok", false)
+			if ok:
+				data = res.get("data", {})
+			else:
+				data = {"error": str(res.get("error", "unknown command: " + cmd))}
 
 	_send_ack(request_id, ok, data)
+
+
+## Apply (or revert) a `subscribe` / `unsubscribe` request. Maps stream names to
+## the dispatcher's opt-in capture toggles. crdt / ops / perf are classic streams
+## that flow whenever a consumer is connected, so they are not toggled here.
+func _apply_subscribe(args: Dictionary, enable: bool) -> void:
+	var dispatcher = Global.scene_inspector_dispatcher
+	for s in args.get("streams", []):
+		match str(s):
+			"log", "logs":
+				dispatcher.set_stream_logs(enable)
+			"network":
+				dispatcher.set_stream_network(enable)
+			"lifecycle":
+				dispatcher.set_lifecycle_verbose(enable)
 
 
 func _send_crdt_snapshot() -> void:
@@ -149,7 +197,7 @@ func _set_all_scenes_paused(paused: bool) -> void:
 			Global.scene_runner.set_scene_is_paused(child.get_scene_id(), paused)
 
 
-func _send_ack(request_id: String, ok: bool, data: Dictionary) -> void:
+func _send_ack(request_id: String, ok: bool, data) -> void:
 	if request_id.is_empty():
 		return
 	if _dedicated_ws and _dedicated_ws.is_open():

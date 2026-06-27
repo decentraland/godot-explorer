@@ -164,3 +164,123 @@ on the navbar's full-rect `Button`.)
 - `scene` defaults `include_children` and `include_parents` to `false`. Pass
   them as `true` explicitly when you want the tree expanded; `entity` still
   inlines parents/direct children by default.
+
+## Unified channel (debug-hub) — same surface, reachable on any device
+
+The DebugWs server above LISTENS on loopback, so it's only reachable on the
+machine running the client. For **device builds (esp. iOS, which can't be dialed
+into)** use the **unified scene-inspector channel** instead: the device dials OUT
+to a desktop **debug-hub**, and local tools (AI / websocat) connect to the hub.
+
+Same command surface (`ping`/`scenes`/`scene`/`entity`/`ui_scene`/`ui_entity`/
+`avatars`/`avatar`/`app_ui`/`focus`/`eval`), but spoken over the scene-inspector
+CMD protocol — the source-of-truth contract an external inspector app already
+parses, so additions stay backward-compatible.
+
+Wire format (vs the loopback `{id,cmd}` form):
+- request: `{"type":"SCENE_INSPECTOR_CMD","cmd":"<verb>","args":{...},"id":"<id>"}`
+- reply:   `{"type":"SCENE_INSPECTOR_CMD_ACK","id":"<id>","ok":<bool>,"data":...}`
+- streams (push): `{"type":"SCENE_INSPECTOR","payload":{"sessionId":...,"entries":[{type:...}]}}`
+  where `entries[].type` ∈ crdt | op_call_start | op_call_end | scene_lifecycle |
+  perf | **log** | **network** | session_start | session_end.
+
+Bring it up:
+```bash
+cargo run -- debug-hub                       # device port 9231, consumer port 9230
+# launch the client pointed at the hub's device port (LAN IP shown in the banner):
+cargo run -- run -- --scene-inspector=ws://<this-mac>:9231          # desktop
+cargo run -- run --target ios -- --scene-inspector=ws://<this-mac>:9231   # device
+```
+
+Drive it (helpers in `scripts/`):
+```bash
+scripts/unified.sh ping
+scripts/unified.sh scene  '{"scene_id":0,"filters":{"component":["Transform"]}}'
+scripts/unified.sh avatar '{"by":"local"}'
+scripts/unified.sh eval   'Engine.get_frames_per_second()'
+scripts/unified-tail.sh log,network          # subscribe + tail (opt-in streams)
+```
+
+**Capture is connection-gated + opt-in.** With no consumer connected, the device
+captures NOTHING (no buffering) — safe to leave the tool enabled in prod. Classic
+streams (crdt/perf) flow once a consumer connects; `log`/`network` are opt-in via
+`subscribe`. `eval` is hard-gated out of production builds.
+
+**MCP / AI loop:** the hub's consumer port (`ws://127.0.0.1:9230`) is a stable
+local endpoint an MCP server (or the helpers above, called from Bash) can use to
+read all logs and issue `eval`/queries — the same contract the external app uses.
+
+## Recipes (use cases)
+
+Setup once (`export H=.claude/skills/debug-ws-inspector/scripts`):
+```bash
+cargo run -- debug-hub                                    # the hub (terminal 1)
+cargo run -- run -- --scene-inspector=ws://127.0.0.1:9231 # desktop client -> hub
+# iOS device: cargo run -- run --target ios  (export plugin auto-bakes the hub
+#   address); then log in + enter a world + accept the local-network prompt.
+```
+On desktop you can skip the hub for query/eval and hit the client's loopback
+DebugWs directly with `debug-ws.sh` (the `{id,cmd}` form); logs still need the hub.
+
+### 1. Inspect a scene
+```bash
+$H/unified.sh scenes                                           # loaded scenes (id/title/urn/count)
+$H/unified.sh scene  '{"scene_id":0,"filters":{"limit":5}}'    # entities + their components
+$H/unified.sh entity '{"scene_id":0,"entity_id":600}'          # one entity + parents/children
+$H/unified.sh scene  '{"scene_id":0,"filters":{"component":["MeshRenderer"]}}'  # by component
+$H/unified.sh avatars                                          # avatars present
+$H/unified.sh avatar '{"by":"local"}'                          # your avatar (position, animations)
+$H/unified.sh app_ui '{"filters":{"depth":2}}'                 # the explorer's own UI tree
+```
+Component histogram across the scene (via eval):
+`$H/unified.sh eval` with a snippet that loops `debug_list_entities` ×
+`debug_get_entity_component_names` and tallies — see "Tower of Madness" example
+in the session notes (Transform/TextShape/GltfContainer counts).
+
+### 2. See logs
+```bash
+$H/unified-tail.sh log | jq -r 'select(.type=="SCENE_INSPECTOR").payload.entries[]?
+                               | select(.type=="log") | "[\(.source)] \(.msg)"'
+$H/unified-tail.sh log,network                                 # + HTTP
+```
+Logs are opt-in (the helper subscribes for you) and connection-gated — nothing
+flows without it. `source` ∈ rust | godot | native (Swift/ObjC on iOS).
+
+### 3. Follow the app lifecycle via logs
+Start tailing BEFORE the action, then trigger it (realm change / jump / re-enter world):
+```bash
+$H/unified-tail.sh log | jq -rc 'select(.type=="SCENE_INSPECTOR").payload.entries[]?
+  | select(.type=="log" or .type=="scene_lifecycle")
+  | if .type=="log" then "[\(.source)] \(.msg)"
+    else "LIFECYCLE \(.event) scene=\(.scene_id)" end'
+```
+`scene_lifecycle` events: scene_init, main_crdt_loaded, script_loaded, on_start,
+on_update(_end), scene_shutdown. Silence the per-tick on_update firehose with the
+`set_lifecycle_verbose` command (`args:{"enabled":false}`) so boot/load events stay readable.
+
+### 4. Instrument a feature you're building (add logs + verify)
+The dev loop while working ON this branch:
+1. Add a log at debug level for your feature:
+   - Rust: `tracing::debug!("[myfeat] x={:?}", x);`  — use `debug!`, NOT `info!` (info ships to mobile/Sentry-adjacent paths).
+   - GDScript: `print("[myfeat] ...")`  — captured as source `"godot"`.
+2. Run with debug logging on for your module:
+   ```bash
+   cargo run -- run -- --scene-inspector=ws://127.0.0.1:9231 --rust-log='dclgodot::yourmod=debug,warn'
+   ```
+   (device: bake `--rust-log=...` into `DCL_IOS_GODOT_CMDLINE` next to `--scene-inspector=`.)
+3. Tail just your tag while you exercise the feature:
+   ```bash
+   $H/unified-tail.sh log | jq -rc 'select(.type=="SCENE_INSPECTOR").payload.entries[]?
+     | select(.type=="log" and (.msg|test("myfeat"))) | "[\(.source)] \(.msg)"'
+   ```
+4. Poke it live without redeploying — `eval` to read state or call your code:
+   ```bash
+   $H/unified.sh eval 'return Global.your_singleton.your_state'
+   $H/unified.sh eval 'Global.your_singleton.trigger(); return "ok"'
+   ```
+   (`eval` mutates — non-prod only. Ideal for "does my new function actually do X?" with no rebuild.)
+
+Caveats: GDScript `print` is captured but `push_warning`/`push_error` are NOT (only
+Rust warn/error, via the tracing layer). Mobile's default filter is `info`, so
+`debug!` lines need `--rust-log=...=debug`. Everything is connection-gated +
+opt-in, so a prod build with the tool present captures nothing until you connect.

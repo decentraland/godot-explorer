@@ -106,14 +106,26 @@ mod ios {
     pub fn init_logger() {
         let pipe_to_godot = should_pipe_to_godot();
         let filter_layer = create_reload_filter("info");
+        // Feed all Rust log levels (incl. WARN/ERROR) into the log-stream hub
+        // directly — Godot's console output never reaches stdout on iOS, and the
+        // custom Godot logger only sees `print`/`log_message`, not errors.
+        let hub_layer = crate::tools::log_stream::LogHubLayer::new();
 
         if pipe_to_godot {
-            registry().with(filter_layer).with(GodotTracingLayer).init();
+            registry()
+                .with(filter_layer)
+                .with(GodotTracingLayer)
+                .with(hub_layer)
+                .init();
         } else {
             let oslog_layer = IosOsLogLayer {
                 logger: oslog::OsLog::new(env!("CARGO_PKG_NAME"), "default"),
             };
-            registry().with(filter_layer).with(oslog_layer).init();
+            registry()
+                .with(filter_layer)
+                .with(oslog_layer)
+                .with(hub_layer)
+                .init();
         }
     }
 }
@@ -324,6 +336,45 @@ impl INode for DclGlobal {
         let mut portable_experience_controller: Gd<DclPortableExperienceController> =
             DclPortableExperienceController::new_alloc();
 
+        // Arm the boot-log ring as early as possible — gated by a configured
+        // scene-inspector target (debug/dev only; the export plugin bakes it only
+        // in debug, prod never has it) — so the per-component [INIT] logs below,
+        // which fire before `global.gd` can arm it, are captured into the ring and
+        // flushed when a consumer subscribes. The Rust tracing layer is already
+        // installed (init_logger above) and `push_early_log` needs no sender, so
+        // no capture-sink install is required here; `global.gd` installs the
+        // Godot/native sinks at `_ready`. Without this, iOS misses these inits
+        // (they're os_log-only and pre-arming).
+        if !cli.bind().scene_inspector.is_empty() {
+            crate::tools::scene_inspector::set_early_log_capture(true);
+        }
+
+        // Per-component INIT logs — each major Rust subsystem is now constructed
+        // (its `init` has run). Grep `[INIT]` to confirm every component came up
+        // in the unified logging. Always on (info level) so it shows in normal
+        // mobile runs, not only the `--test-logging` self-test.
+        for component in [
+            "AvatarScene",
+            "CommunicationManager",
+            "SceneManager",
+            "TokioRuntime",
+            "ContentProvider",
+            "NetworkInspector",
+            "SceneInspectorDispatcher",
+            "DclSocialBlacklist",
+            "DclSocialService",
+            "Metrics",
+            "DclCli",
+            "DclDynamicGraphicsManager",
+            "DclRealm",
+            "DclTokioRpc",
+            "DclPlayerIdentity",
+            "DclTestingTools",
+            "DclPortableExperienceController",
+        ] {
+            tracing::info!("[INIT] {component}");
+        }
+
         tokio_runtime.set_name("tokio_runtime");
         scene_runner.set_name("scene_runner");
         scene_runner.set_process_mode(ProcessMode::DISABLED);
@@ -465,6 +516,23 @@ impl DclGlobal {
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
         set_scene_log_enabled(enabled);
+    }
+
+    /// Logging self-test for the **Rust stack**: emit every `tracing` level plus
+    /// raw `println!`/`eprintln!`, so the unified channel + Sentry pipeline can be
+    /// verified end-to-end. Called from GDScript's `_run_logging_selftest()` when
+    /// `--test-logging` / `?test-logging=true` is set. ERROR/WARN additionally
+    /// exercise the Godot→Sentry path; `println!`/`eprintln!` exercise the iOS fd
+    /// capture (they never go through `tracing`).
+    #[func]
+    fn test_logging(&self) {
+        tracing::trace!("[LOGTEST][rust] trace via tracing::trace!");
+        tracing::debug!("[LOGTEST][rust] debug via tracing::debug!");
+        tracing::info!("[LOGTEST][rust] info via tracing::info!");
+        tracing::warn!("[LOGTEST][rust] warn via tracing::warn! (expect Sentry)");
+        tracing::error!("[LOGTEST][rust] error via tracing::error! (expect Sentry)");
+        println!("[LOGTEST][rust] stdout via println! (iOS: fd capture)");
+        eprintln!("[LOGTEST][rust] stderr via eprintln! (iOS: fd capture)");
     }
 
     #[func]

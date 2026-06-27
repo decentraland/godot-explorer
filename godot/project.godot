@@ -48,6 +48,7 @@ Iap="*res://src/iap/iap_manager.gd"
 ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_capturer.gd"
 AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
+DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
 
 [debug]
 
@@ -74,7 +75,7 @@ import/use_multiple_threads=false
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl-ios-devtools/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
 
 [filesystem]
 

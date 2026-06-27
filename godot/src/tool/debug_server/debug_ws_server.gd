@@ -175,117 +175,101 @@ func _handle_message(peer: WebSocketPeer, text: String) -> void:
 		_reply(peer, request_id, false, null, "missing 'cmd'")
 		return
 
+	var result := run_command(cmd, msg)
+	_reply(
+		peer, request_id, result.get("ok", false), result.get("data"), str(result.get("error", ""))
+	)
+
+
+## Shared command backend. Returns `{ok:true, data:...}` or `{ok:false, error:...}`.
+## Called by BOTH the loopback DebugWs server (above) and the scene-inspector
+## unified channel (scene_inspector_bridge.gd) so the inspection/eval surface is
+## identical on either transport. `p` is the parameter dict (the full message for
+## the loopback server; the `args` object for the scene-inspector CMD protocol).
+func run_command(cmd: String, p: Dictionary) -> Dictionary:
 	match cmd:
 		"ping":
-			_reply(peer, request_id, true, _build_ping_data(), "")
+			return {"ok": true, "data": _build_ping_data()}
 		"focus":
-			_reply(peer, request_id, true, _build_focus_data(), "")
+			return {"ok": true, "data": _build_focus_data()}
 		"scenes":
-			_reply(peer, request_id, true, Collector.collect_scenes_summary(), "")
-		"scene":
-			var scene_id := int(msg.get("scene_id", -1))
-			if scene_id < 0:
-				_reply(peer, request_id, false, null, "missing 'scene_id'")
-				return
-			var filters: Dictionary = msg.get("filters", {})
-			var data: Dictionary = Collector.collect_scene(scene_id, filters)
-			if data.has("error"):
-				_reply(peer, request_id, false, null, str(data["error"]))
-			else:
-				_reply(peer, request_id, true, data, "")
-		"entity":
-			var scene_id_e := int(msg.get("scene_id", -1))
-			var entity_id := int(msg.get("entity_id", -1))
-			if scene_id_e < 0 or entity_id < 0:
-				_reply(peer, request_id, false, null, "missing 'scene_id' or 'entity_id'")
-				return
-			# `entity` and `scene` both take the same `filters` dict.
-			# Backwards-compat: also accept `include_parents` / `include_children`
-			# at the top level of the message, where the old `entity` API put them.
-			var filters_e: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			if msg.has("include_parents") and not filters_e.has("include_parents"):
-				filters_e["include_parents"] = msg["include_parents"]
-			if msg.has("include_children") and not filters_e.has("include_children"):
-				filters_e["include_children"] = msg["include_children"]
-			var data_e: Dictionary = Collector.collect_entity(scene_id_e, entity_id, filters_e)
-			if data_e.has("error"):
-				_reply(peer, request_id, false, null, str(data_e["error"]))
-			else:
-				_reply(peer, request_id, true, data_e, "")
-		"ui_scene":
-			var ui_scene_id := int(msg.get("scene_id", -1))
-			if ui_scene_id < 0:
-				_reply(peer, request_id, false, null, "missing 'scene_id'")
-				return
-			var ui_filters: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			ui_filters["tree"] = "ui"
-			var ui_data: Dictionary = Collector.collect_scene(ui_scene_id, ui_filters)
-			if ui_data.has("error"):
-				_reply(peer, request_id, false, null, str(ui_data["error"]))
-			else:
-				_reply(peer, request_id, true, ui_data, "")
-		"ui_entity":
-			var ui_sid := int(msg.get("scene_id", -1))
-			var ui_eid := int(msg.get("entity_id", -1))
-			if ui_sid < 0 or ui_eid < 0:
-				_reply(peer, request_id, false, null, "missing 'scene_id' or 'entity_id'")
-				return
-			var ui_ef: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			ui_ef["tree"] = "ui"
-			var ui_de: Dictionary = Collector.collect_entity(ui_sid, ui_eid, ui_ef)
-			if ui_de.has("error"):
-				_reply(peer, request_id, false, null, str(ui_de["error"]))
-			else:
-				_reply(peer, request_id, true, ui_de, "")
+			return {"ok": true, "data": Collector.collect_scenes_summary()}
 		"avatars":
-			_reply(peer, request_id, true, Collector.collect_avatars(), "")
-		"app_ui":
-			var app_filters: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			var app_data: Dictionary = Collector.collect_app_ui(app_filters)
-			if app_data.has("error"):
-				_reply(peer, request_id, false, null, str(app_data["error"]))
-			else:
-				_reply(peer, request_id, true, app_data, "")
-		"avatar":
-			var by: String = str(msg.get("by", ""))
-			if by.is_empty():
-				_reply(
-					peer,
-					request_id,
-					false,
-					null,
-					"missing 'by' (expected address|alias|entity|local)"
-				)
-				return
-			# `local` is keyless — all other modes require `value`.
-			if by != "local" and not msg.has("value"):
-				_reply(peer, request_id, false, null, "missing 'value'")
-				return
-			var a_filters: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			var av_value: Variant = msg.get("value", null)
-			var av: Dictionary = Collector.collect_avatar(by, av_value, a_filters)
-			if av.has("error"):
-				_reply(peer, request_id, false, null, str(av["error"]))
-			else:
-				_reply(peer, request_id, true, av, "")
+			return {"ok": true, "data": Collector.collect_avatars()}
 		"eval":
-			# Run arbitrary GDScript against the live client and return the
-			# serialized result. Unlike the read-only inspection commands this
-			# can mutate state, so it is hard-gated out of production builds.
-			if Global.is_production():
-				_reply(peer, request_id, false, null, "eval disabled in production builds")
-				return
-			var code: String = str(msg.get("code", ""))
-			if code.is_empty():
-				_reply(peer, request_id, false, null, "missing 'code'")
-				return
-			var res: Dictionary = _eval_gdscript(code)
-			if res.get("ok", false):
-				_reply(peer, request_id, true, res.get("data"), "")
-			else:
-				_reply(peer, request_id, false, null, str(res.get("error", "eval failed")))
+			return _run_eval(p)
 		_:
-			_reply(peer, request_id, false, null, "unknown command: %s" % cmd)
+			return _run_tree_query(cmd, p)
+
+
+## Tree / entity / avatar inspection verbs. Split out of `run_command` to stay
+## under the per-function return-count limit. All read-only; an invalid id falls
+## through to the Collector, which returns a structured `{error}`.
+func _run_tree_query(cmd: String, p: Dictionary) -> Dictionary:
+	match cmd:
+		"scene":
+			return _wrap(Collector.collect_scene(int(p.get("scene_id", -1)), p.get("filters", {})))
+		"entity":
+			# `entity` and `scene` share the `filters` dict. Backwards-compat: also
+			# accept `include_parents` / `include_children` at the top level.
+			var filters_e: Dictionary = (p.get("filters", {}) as Dictionary).duplicate()
+			if p.has("include_parents") and not filters_e.has("include_parents"):
+				filters_e["include_parents"] = p["include_parents"]
+			if p.has("include_children") and not filters_e.has("include_children"):
+				filters_e["include_children"] = p["include_children"]
+			return _wrap(
+				Collector.collect_entity(
+					int(p.get("scene_id", -1)), int(p.get("entity_id", -1)), filters_e
+				)
+			)
+		"ui_scene":
+			var ui_filters: Dictionary = (p.get("filters", {}) as Dictionary).duplicate()
+			ui_filters["tree"] = "ui"
+			return _wrap(Collector.collect_scene(int(p.get("scene_id", -1)), ui_filters))
+		"ui_entity":
+			var ui_ef: Dictionary = (p.get("filters", {}) as Dictionary).duplicate()
+			ui_ef["tree"] = "ui"
+			return _wrap(
+				Collector.collect_entity(
+					int(p.get("scene_id", -1)), int(p.get("entity_id", -1)), ui_ef
+				)
+			)
+		"app_ui":
+			return _wrap(Collector.collect_app_ui((p.get("filters", {}) as Dictionary).duplicate()))
+		"avatar":
+			var by: String = str(p.get("by", ""))
+			if by.is_empty():
+				return {"ok": false, "error": "missing 'by' (expected address|alias|entity|local)"}
+			# `local` is keyless — all other modes require `value`.
+			if by != "local" and not p.has("value"):
+				return {"ok": false, "error": "missing 'value'"}
+			return _wrap(
+				Collector.collect_avatar(
+					by, p.get("value", null), (p.get("filters", {}) as Dictionary).duplicate()
+				)
+			)
+		_:
+			return {"ok": false, "error": "unknown command: %s" % cmd}
+
+
+## Wrap a Collector result (`{...}` or `{error:...}`) into the `{ok, data|error}` shape.
+func _wrap(d: Dictionary) -> Dictionary:
+	if d.has("error"):
+		return {"ok": false, "error": str(d["error"])}
+	return {"ok": true, "data": d}
+
+
+## Run arbitrary GDScript. Hard-gated out of production builds (it can mutate state).
+func _run_eval(p: Dictionary) -> Dictionary:
+	if Global.is_production():
+		return {"ok": false, "error": "eval disabled in production builds"}
+	var code: String = str(p.get("code", ""))
+	if code.is_empty():
+		return {"ok": false, "error": "missing 'code'"}
+	var res: Dictionary = _eval_gdscript(code)
+	if res.get("ok", false):
+		return {"ok": true, "data": res.get("data")}
+	return {"ok": false, "error": str(res.get("error", "eval failed"))}
 
 
 func _poll_focus() -> void:
