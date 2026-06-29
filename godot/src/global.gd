@@ -111,6 +111,10 @@ var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
 
+## true when the env came from --dclenv or a deeplink dclenv=… (incl. dclenv=org).
+## When true, Iap's sandbox auto-switch must NOT override the explicit choice.
+var dcl_env_explicit: bool = false
+
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var camera_mode_blocked: bool = false
@@ -355,6 +359,7 @@ func _ready():
 		env = deep_link_obj.dclenv
 		env_source = "deeplink"
 	DclGlobal.set_dcl_environment(env)
+	dcl_env_explicit = env_source != "default"
 	if env != "org":
 		print("[GLOBAL] Environment set to: ", env, " (source: ", env_source, ")")
 
@@ -1302,6 +1307,7 @@ func _check_dclenv_change() -> bool:
 
 	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
 	DclGlobal.set_dcl_environment(new_env)
+	dcl_env_explicit = true
 	sign_out()
 	return true
 
@@ -1329,6 +1335,7 @@ func _notification(what: int) -> void:
 				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
 				if not parsed.dclenv.is_empty():
 					DclGlobal.set_dcl_environment(parsed.dclenv)
+					dcl_env_explicit = true
 
 			deep_link_router.process_deep_link(new_url)
 

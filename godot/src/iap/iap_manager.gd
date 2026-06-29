@@ -238,13 +238,34 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 # that depend on the result gate on async_await_env_resolved() so they never run
 # before this has applied.
 #
-# Only switches away from the untouched org default, so an explicit --dclenv flag
-# or deeplink dclenv (dev/QA override) always wins. Runtime-only: not persisted,
-# since StoreKit re-reports the ground-truth environment on every launch.
+# Gated on two conditions so it never overrides a developer/QA choice:
+#  - PRODUCTION builds only (release export template). A debug/dev build run on a
+#    device with a sandbox Apple ID also reports `sandbox`, but there the dev's
+#    chosen env (default org or --dclenv) must be respected.
+#  - Only an EXPLICIT `dclenv=org` exempts from the switch. Passing
+#    `decentraland://open?dclenv=org` (or `--dclenv org`) means "really use the prod
+#    .org backend" and wins. Any OTHER explicit env is not special-cased here — it
+#    falls through to the `current != "org"` backstop below (which already leaves any
+#    non-org env untouched). A non-explicit default org is the only thing that switches.
+# Runtime-only: not persisted, since StoreKit re-reports the ground-truth
+# environment on every launch.
 func _apply_storekit_env(environment: String) -> void:
 	if environment != "sandbox":
 		return
+	# Only production (release export template) builds auto-switch. A debug/dev build
+	# run on a device with a sandbox Apple ID also reports "sandbox", but there we must
+	# respect the dev's chosen env (org by default or --dclenv).
+	if OS.is_debug_build():
+		print("[IAP] StoreKit sandbox on a debug build — not forcing the Option D env")
+		return
 	var current := str(DclGlobal.get_dcl_environment())
+	# The only explicit override that exempts from the switch is dclenv=org
+	# (decentraland://open?dclenv=org → "really use the prod .org backend"). Any other
+	# explicit env isn't special-cased here: it falls through to the current != "org"
+	# check below.
+	if Global.dcl_env_explicit and current == "org":
+		print("[IAP] StoreKit sandbox, but explicit dclenv=org — staying on .org")
+		return
 	if current != "org":
 		print("[IAP] StoreKit sandbox, but dclenv already '", current, "' — leaving as-is")
 		return
