@@ -29,12 +29,23 @@ var last_selected_emote_urn: String = ""
 
 func _ready():
 	button_emotes.set_meta("attenuated_sound", true)
+	# Drive the toggle from raw touch so it works for every finger, not just the
+	# primary one Godot synthesizes a mouse event from. button_mask = 0 makes the
+	# base Button ignore the emulated mouse so there's a single, consistent path.
+	button_emotes.button_mask = 0
+	button_emotes.gui_input.connect(_on_button_emotes_gui_input)
 	control_wheel.hide()
 
 	for child in emote_wheel_container.get_children():
 		if child is EmoteItemUi:
 			child.play_emote.connect(self._on_play_emote)
 			child.select_emote.connect(self._on_select_emote.bind(child))
+			# Fire the emote from raw touch so a second finger works too (Godot's
+			# emulated mouse only covers the primary touch). button_mask = 0 keeps a
+			# single, consistent input path. Scoped to the wheel only — the shared
+			# EmoteItemUi is left untouched for the backpack grid.
+			child.button_mask = 0
+			child.gui_input.connect(_on_emote_item_gui_input.bind(child))
 			emote_items.push_back(child)
 
 	if avatar_node != null:
@@ -112,6 +123,21 @@ func open() -> void:
 func _on_control_wheel_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		close()
+
+
+func _on_emote_item_gui_input(event: InputEvent, item: EmoteItemUi) -> void:
+	if event is InputEventScreenTouch and event.pressed:
+		# Re-emitting the item's own signal reuses the existing wiring (play + close
+		# in _on_play_emote, and the equip SFX connected by UISounds).
+		item.play_emote.emit(item.emote_urn)
+		item.accept_event()
+
+
+func _on_button_emotes_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and event.pressed:
+		# Flipping button_pressed emits `toggled`, which open()/close()s the wheel.
+		button_emotes.button_pressed = not button_emotes.button_pressed
+		button_emotes.accept_event()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
