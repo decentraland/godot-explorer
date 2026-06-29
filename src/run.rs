@@ -25,6 +25,7 @@ pub fn run(
     client_tests: bool,
     use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
+    crate::install_dependency::warn_if_godot_mismatch();
     let program = get_godot_path();
     println!("extras: {:?}", extras);
 

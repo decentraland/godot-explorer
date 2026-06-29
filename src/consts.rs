@@ -11,13 +11,39 @@ pub const PROTOC_BASE_URL: &str =
 
 pub const GODOT_ENGINE_RELEASES_BASE_URL: &str = "https://godot-engine-releases.dclexplorer.com/";
 
-pub const GODOT4_BIN_BASE_URL: &str =
-    "https://godot-engine-releases.dclexplorer.com/4.6.2.stable/editors/";
-
 pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 
-pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
-    "https://godot-engine-releases.dclexplorer.com/4.6.2.stable/compressed-templates/";
+/// Short commit SHA (first 9 chars) of the godotengine fork this stable build was compiled from.
+/// Must match the `gh.<sha>` segment printed by `godot4_bin --version`
+/// (e.g. `4.6.2.stable.gh.6ddcadb64 - Protocol Squad`) and the SHA-tagged release path published
+/// by the godot-engine-releases pipeline. Bump it in lockstep with a new fork publish: it busts the
+/// local download cache (keys embed it) and pins the immutable per-SHA release URLs below.
+pub const GODOT_BUILD_SHA: &str = "6ddcadb64";
+
+/// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
+/// `--version` string. Single source for the release URL path segment, the on-disk template SHA
+/// marker, and the installed-binary version validation.
+pub fn godot_release_tag() -> String {
+    format!("{GODOT_CURRENT_VERSION}.stable.gh.{GODOT_BUILD_SHA}")
+}
+
+/// Editor (binary) base URL for the pinned stable fork build, e.g.
+/// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.6ddcadb64/editors/`.
+pub fn godot_editor_base_url() -> String {
+    format!(
+        "{GODOT_ENGINE_RELEASES_BASE_URL}{}/editors/",
+        godot_release_tag()
+    )
+}
+
+/// Compressed-templates base URL for the pinned stable fork build, e.g.
+/// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.6ddcadb64/compressed-templates/`.
+pub fn godot_templates_base_url() -> String {
+    format!(
+        "{GODOT_ENGINE_RELEASES_BASE_URL}{}/compressed-templates/",
+        godot_release_tag()
+    )
+}
 
 /// Sanitizes a git branch name for use in the release artifact URL path.
 /// Slashes (e.g. `fix/foo`) are replaced with dashes (`fix-foo`) to match how
