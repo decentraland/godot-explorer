@@ -518,6 +518,13 @@ func _setup_ios_marketplace_section():
 		return
 	if not Iap.is_available():
 		return
+	# Marketplace suggestions are purchaseable items; an un-upgraded thirdweb guest can't
+	# buy, so hide them until the account is upgraded (mirrors CreditsBalanceButton). Re-run
+	# setup once the upgrade lands so suggestions appear without re-opening the backpack.
+	if not _is_marketplace_account_eligible():
+		if not Global.guest_upgrade_state_refreshed.is_connected(_on_marketplace_guest_upgraded):
+			Global.guest_upgrade_state_refreshed.connect(_on_marketplace_guest_upgraded)
+		return
 
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
@@ -530,6 +537,28 @@ func _setup_ios_marketplace_section():
 		section_parent.move_child(_ios_marketplace_section, 0)
 	_ios_marketplace_section.item_equip.connect(_async_on_marketplace_equip)
 	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
+
+
+## Marketplace suggestions are purchaseable; an un-upgraded thirdweb guest can't buy them,
+## so the recommended-wearables section stays hidden for those sessions.
+func _is_marketplace_account_eligible() -> bool:
+	if Global.player_identity == null:
+		return false
+	return (
+		not Global.player_identity.is_thirdweb_guest()
+		or Global.player_identity.is_thirdweb_guest_upgraded()
+	)
+
+
+func _on_marketplace_guest_upgraded(is_upgraded: bool) -> void:
+	if not is_upgraded:
+		return
+	Global.guest_upgrade_state_refreshed.disconnect(_on_marketplace_guest_upgraded)
+	_setup_ios_marketplace_section()
+	# The normal first-time population happens via the subcategory filter; replay it for the
+	# now-visible section using the category currently in view.
+	if _ios_marketplace_section and not current_filter.is_empty():
+		_ios_marketplace_section.update_category(current_filter)
 
 
 func _on_main_category_filter_type(type: String):
