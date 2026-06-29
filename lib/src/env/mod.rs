@@ -58,10 +58,20 @@ pub enum ServiceGroup {
     MobileBff,
     Attestation,
     Notifications,
+    CreditsServer,
+    /// The player's own profile/identity catalyst. Normally the same host as
+    /// `Catalyst`, but an explicit override (e.g. `profile::zone`) pins identity
+    /// (profile, wearables, backpack, avatar) to a different env than the realm
+    /// used for scenes — enables "scenes from org, identity from zone" testing.
+    Profile,
+    /// Marketplace web frontend. `marketplace::today` points it at the local
+    /// dev server (`http://localhost:5173`) instead of
+    /// `decentraland.<env>/marketplace` — used with the in-app dev relay on iOS.
+    Marketplace,
 }
 
 impl ServiceGroup {
-    pub const COUNT: usize = 8;
+    pub const COUNT: usize = 11;
 
     pub fn index(self) -> usize {
         match self {
@@ -73,6 +83,9 @@ impl ServiceGroup {
             Self::MobileBff => 5,
             Self::Attestation => 6,
             Self::Notifications => 7,
+            Self::CreditsServer => 8,
+            Self::Profile => 9,
+            Self::Marketplace => 10,
         }
     }
 
@@ -86,6 +99,9 @@ impl ServiceGroup {
             Self::MobileBff => "mobilebff",
             Self::Attestation => "attestation",
             Self::Notifications => "notifications",
+            Self::CreditsServer => "creditsserver",
+            Self::Profile => "profile",
+            Self::Marketplace => "marketplace",
         }
     }
 
@@ -99,6 +115,9 @@ impl ServiceGroup {
             "mobilebff" => Some(Self::MobileBff),
             "attestation" => Some(Self::Attestation),
             "notifications" => Some(Self::Notifications),
+            "creditsserver" => Some(Self::CreditsServer),
+            "profile" => Some(Self::Profile),
+            "marketplace" => Some(Self::Marketplace),
             _ => None,
         }
     }
@@ -112,6 +131,9 @@ impl ServiceGroup {
         Self::MobileBff,
         Self::Attestation,
         Self::Notifications,
+        Self::CreditsServer,
+        Self::Profile,
+        Self::Marketplace,
     ];
 }
 

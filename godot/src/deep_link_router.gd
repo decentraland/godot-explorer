@@ -72,8 +72,18 @@ func process_deep_link(url: String) -> void:
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
 
-	if Global.deep_link_obj.iap_enabled:
-		Iap.enable()
+	# Returning from the in-app marketplace webview: the web fires a
+	# decentraland://...?urn=<urn> deep link to bring the app back. The native side
+	# dismisses the SFSafariViewController directly, which never fires the tracker's
+	# webview_closed signal — so drive the post-return poll + balance refresh here
+	# (against the pre-purchase baseline), otherwise the credits and the just-bought
+	# wearable never refresh. Then swallow the urn so it doesn't fall through to the
+	# "/open" routing below and pop the jump-in panel (scene title + placeholders).
+	if not Global.deep_link_obj.params.get("urn", "").is_empty():
+		print("[DEEPLINK] marketplace return (urn=...) — driving tracker poll, no routing")
+		MarketplaceTracker.notify_marketplace_return()
+		_clear_deep_link()
+		return
 
 	# Trigger avatar impostor benchmark
 	var bench_param = Global.deep_link_obj.params.get("benchmark", "")
