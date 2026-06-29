@@ -69,6 +69,12 @@ var _use_webview_signal: bool = false
 # Set when we forced portrait for the in-app webview (iOS): true if the backpack was in
 # landscape when the marketplace opened, so we restore landscape once it closes (#2305).
 var _restore_landscape_on_close: bool = false
+# Per-category latch (category -> bool) for edge-triggered fetch-error logging. The owned-NFTs
+# fetch runs every 5s × 2 categories for up to 5 min, so logging every transport failure at
+# error level would fire ~120 Sentry events on a sustained outage. We log the FIRST failure of
+# a streak (the signal worth alerting on) and suppress repeats until a fetch succeeds. Reset per
+# tracking session in _arm() so each session reports its own outage onset.
+var _owned_fetch_failing: Dictionary = {}
 
 
 func _ready() -> void:
@@ -151,6 +157,8 @@ func _arm() -> void:
 	_token += 1
 	_state = State.ARMED
 	_baseline_ready = false
+	# New tracking session: re-enable one error log per category for this session's poll window.
+	_owned_fetch_failing.clear()
 	_async_capture_baseline(_token)
 
 
@@ -290,8 +298,16 @@ func _async_fetch_owned_urns_for(wallet: String, category: String):
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
-		printerr(_LOG, " owned-nfts fetch error (", category, "): ", result.get_error())
+		# Edge-triggered: only the first failure of a streak reaches Sentry; suppress repeats
+		# until a fetch succeeds so the 5s poll loop can't spam ~120 events on a sustained outage.
+		if not _owned_fetch_failing.get(category, false):
+			_owned_fetch_failing[category] = true
+			printerr(_LOG, " owned-nfts fetch error (", category, "): ", result.get_error())
 		return null
+	# Transport recovered: close the streak (logs once) so a later outage is reported again.
+	if _owned_fetch_failing.get(category, false):
+		_owned_fetch_failing[category] = false
+		print(_LOG, " owned-nfts fetch recovered (", category, ")")
 	var json = result.get_string_response_as_json()
 	if not (json is Dictionary):
 		return null
