@@ -62,6 +62,7 @@ var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
 var _joystick_visible := false
 var _is_navbar_open := false
+var _camera_touch_index: int = -1
 
 @onready var _sprint_timer := %SprintTimer
 
@@ -85,6 +86,14 @@ func _ready() -> void:
 		hide()
 
 	_active_area.gui_input.connect(_on_gui_input)
+
+	# Drive the camera button from raw touch so it works for every finger, not just
+	# the primary one Godot synthesizes a mouse event from. toggle_mode unlocks
+	# set_pressed_no_signal() for press feedback; button_mask = 0 makes the base
+	# Button ignore the emulated mouse so we keep a single, consistent path.
+	_button_camera.toggle_mode = true
+	_button_camera.button_mask = 0
+	_button_camera.gui_input.connect(_on_button_camera_gui_input)
 
 	Global.loading_started.connect(_on_loading_scene)
 	Global.camera_mode_set.connect(_on_camera_mode_set)
@@ -277,6 +286,21 @@ func _on_resized() -> void:
 	if not is_node_ready():
 		return
 	_reset()
+
+
+func _on_button_camera_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventScreenTouch):
+		return
+	if event.pressed:
+		if _camera_touch_index == -1:
+			_camera_touch_index = event.index
+			_button_camera.set_pressed_no_signal(true)
+		_button_camera.accept_event()
+	elif event.index == _camera_touch_index:
+		_button_camera.set_pressed_no_signal(false)
+		_camera_touch_index = -1
+		_on_button_camera_pressed()
+		_button_camera.accept_event()
 
 
 func _on_button_camera_pressed() -> void:
