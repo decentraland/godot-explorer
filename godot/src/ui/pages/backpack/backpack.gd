@@ -109,6 +109,14 @@ static var _newtag_session_captured: Dictionary = {}
 # Static (survives the page being recreated) and session-only (never persisted; cleared on app
 # restart, where the persisted snapshot takes over).
 static var _newtag_forced_new: Dictionary = {}
+# The wallet (lowercased) the session state above currently belongs to. sign_out() swaps the
+# scene back to the lobby WITHOUT restarting the process (see Global.sign_out), so these
+# autoload-lived statics outlive an account switch. A different wallet (A -> B) must recapture
+# its OWN baseline from its per-wallet persisted snapshot instead of reusing A's, otherwise
+# every item B owns beyond A's counts is mis-tagged NEW. "" until the first capture; the
+# "" -> first-wallet transition deliberately does NOT reset, so a fresh-install live arrival's
+# forced-NEW flag (marked just before that wallet's first evaluate) survives.
+static var _newtag_session_wallet: String = ""
 
 
 # gdlint:ignore = async-function-name
@@ -469,10 +477,7 @@ func _show_wearables():
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = wearable_button_group_per_category.get(wearable.get_category())
 		wearable_item.async_set_wearable(wearable)
-		var dbg_is_new := _is_wearable_new(wearable_id)
-		if dbg_is_new:
-			print("[NEWTAGDBG] render NEW badge urn=", wearable_id)
-		wearable_item.set_new_badge(dbg_is_new)
+		wearable_item.set_new_badge(_is_wearable_new(wearable_id))
 
 		# Connect signals
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
@@ -872,6 +877,15 @@ static func newtag_evaluate(
 ) -> Dictionary:
 	if wallet.is_empty() or current_counts.is_empty():
 		return {}
+	# Wallet switched mid-session (A -> B): drop A's session state so B captures a fresh baseline
+	# from its own persisted snapshot below. Both categories are cleared together — each needs
+	# recapture for B. Skip the "" -> first-wallet transition so a fresh-install live arrival's
+	# forced-NEW flag (marked just before this first evaluate) isn't wiped.
+	if not _newtag_session_wallet.is_empty() and wallet != _newtag_session_wallet:
+		_newtag_session_baseline.clear()
+		_newtag_session_captured.clear()
+		_newtag_forced_new.clear()
+	_newtag_session_wallet = wallet
 	var stored: Dictionary = _newtag_stored_for(category)
 	if not _newtag_session_captured.get(category, false):
 		_newtag_session_captured[category] = true
@@ -886,13 +900,10 @@ static func newtag_evaluate(
 	var baseline: Dictionary = _newtag_session_baseline.get(category, {})
 	var forced: Dictionary = _newtag_forced_new.get(category, {})
 	var flags := {}
-	var new_urns := []
 	for urn in current_counts:
 		# NEW when the owned count grew vs the baseline, OR it arrived live this session (a
 		# purchase the empty-first-load baseline can't tag). forced survives reloads.
 		flags[urn] = int(current_counts[urn]) > int(baseline.get(urn, 0)) or forced.has(urn)
-		if flags[urn]:
-			new_urns.append(urn)
 	return flags
 
 

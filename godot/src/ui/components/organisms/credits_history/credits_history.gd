@@ -17,7 +17,10 @@ func _ready() -> void:
 
 
 func _rebuild() -> void:
+	# remove_child before queue_free (which is deferred): if two history updates land in the
+	# same frame, queue_free'd nodes still in the tree would otherwise re-render as duplicates.
 	for child in item_container.get_children():
+		item_container.remove_child(child)
 		child.queue_free()
 	for entry in Iap.get_transaction_history():
 		_add_item(int(entry.credits), bool(entry.is_refund), str(entry.timestamp))
