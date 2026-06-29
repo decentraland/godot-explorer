@@ -11,6 +11,15 @@ func _ready() -> void:
 	visible = false
 	visibility_changed.connect(_on_visibility_changed)
 	Global.guest_upgrade_state_refreshed.connect(_on_guest_upgrade_state_refreshed)
+	Global.orientation_changed.connect(_on_orientation_changed)
+
+
+func _on_orientation_changed(_is_portrait: bool) -> void:
+	visible = _should_show()
+
+
+func refresh_visibility() -> void:
+	visible = _should_show()
 
 
 func _on_visibility_changed() -> void:
@@ -26,6 +35,8 @@ func _on_guest_upgrade_state_refreshed(is_upgraded: bool) -> void:
 
 
 func _should_show() -> bool:
+	if not Global.is_orientation_portrait():
+		return false
 	if Global.player_identity == null:
 		return false
 	if not Global.player_identity.is_thirdweb_guest():
