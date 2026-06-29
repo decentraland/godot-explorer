@@ -47,6 +47,15 @@ func _ready() -> void:
 		return
 	button_add_email.pressed.connect(_async_on_add_email_pressed)
 	visibility_changed.connect(_on_visibility_changed)
+	Global.orientation_changed.connect(_on_orientation_changed)
+	_async_update_visibility()
+
+
+func _on_orientation_changed(_is_portrait: bool) -> void:
+	_async_update_visibility()
+
+
+func refresh_visibility() -> void:
 	_async_update_visibility()
 
 
@@ -59,6 +68,8 @@ func _ready() -> void:
 # gdlint:ignore = async-function-name
 func _async_update_visibility() -> void:
 	visible = false
+	if not Global.is_orientation_portrait():
+		return
 	if Global.player_identity == null or not Global.player_identity.is_thirdweb_guest():
 		return
 

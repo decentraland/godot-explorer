@@ -3,9 +3,9 @@ use zip::ZipArchive;
 
 use crate::{
     consts::{
-        godot_templates_base_url_for_branch, sanitize_branch_for_url, EXPORTS_FOLDER,
-        GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION, GODOT_PLATFORM_FILES,
-        GODOT_PROJECT_FOLDER,
+        godot_release_tag, godot_templates_base_url, godot_templates_base_url_for_branch,
+        sanitize_branch_for_url, EXPORTS_FOLDER, GODOT_BUILD_SHA, GODOT_CURRENT_VERSION,
+        GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
     helpers::get_exe_extension,
     install_dependency::{
@@ -279,6 +279,7 @@ pub fn export(
 ) -> Result<(), anyhow::Error> {
     print_section("Exporting Project");
 
+    crate::install_dependency::warn_if_godot_mismatch();
     let program = get_godot_path();
 
     // Make exports directory if it doesn't exist
@@ -510,11 +511,31 @@ pub fn prepare_templates(
 
     let templates_base_url = match branch {
         Some(b) => godot_templates_base_url_for_branch(b),
-        None => GODOT4_EXPORT_TEMPLATES_BASE_URL.to_string(),
+        None => godot_templates_base_url(),
     };
 
+    let expected_tag = godot_release_tag();
     for template in &templates {
         if let Some(files) = file_map.get(template.as_str()) {
+            // Skip-guard: on a non-branch install, if our per-platform SHA marker matches the
+            // expected release tag AND every template file is present, the (potentially multi-GB —
+            // iOS `ios.zip` ≈ 2 GB) download + re-extract is redundant, so skip it entirely. Godot's
+            // own `version.txt` only carries the version (no SHA), hence our own marker. Branch
+            // builds are never marked/skipped (their fork SHA isn't tracked at const time).
+            let marker = Path::new(&dest_path).join(format!(".dcl_build_sha_{template}"));
+            let marker_ok = branch.is_none()
+                && fs::read_to_string(&marker)
+                    .map(|s| s.trim() == expected_tag)
+                    .unwrap_or(false);
+            let all_present = files.iter().all(|f| Path::new(&dest_path).join(f).exists());
+            if marker_ok && all_present {
+                print_message(
+                    MessageType::Info,
+                    &format!("{template} templates already at {expected_tag} — skipping download"),
+                );
+                continue;
+            }
+
             for file in files {
                 println!("Downloading file for {}: {}", template, file);
 
@@ -524,9 +545,15 @@ pub fn prepare_templates(
                         "{GODOT_CURRENT_VERSION}.branch-{}.{file}.export-templates.zip",
                         sanitize_branch_for_url(b)
                     ),
-                    None => format!("{GODOT_CURRENT_VERSION}.{file}.export-templates.zip"),
+                    None => format!(
+                        "{GODOT_CURRENT_VERSION}-{GODOT_BUILD_SHA}.{file}.export-templates.zip"
+                    ),
                 };
                 download_and_extract_zip(url.as_str(), dest_path.as_str(), cache_key(cache_id))?;
+            }
+            // Stamp the SHA marker after a successful extract so the next run can skip.
+            if branch.is_none() {
+                let _ = fs::write(&marker, &expected_tag);
             }
         } else {
             println!("No files mapped for template: {}", template);
