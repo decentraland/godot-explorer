@@ -70,6 +70,11 @@ static func attach(avatar) -> void:
 	avatar.nickname_quad.visible = false
 	ui.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Start fully transparent: update() drives alpha with move_toward(), so a tag can
+	# only ever fade IN from invisible once the gate opens with real data. Without this
+	# the scene-default content (e.g. the "NPC#" placeholder) would fade out from the
+	# inherited modulate.a≈1.0 during the first frames after spawn.
+	ui.modulate.a = 0.0
 	ui.hide()
 	get_root().add_child(ui)
 
