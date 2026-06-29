@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "0.71.0"
+version = "1.10.1"
 edition = "2021"
 publish = false
 
@@ -124,7 +124,7 @@ dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = "thin"
 debug = 1
 strip = false
 

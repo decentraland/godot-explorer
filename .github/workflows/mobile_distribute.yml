@@ -66,7 +66,16 @@ jobs:
       # Defaults to 'true' for every event except the cron, where the change-detection
       # step below may set it to 'false' when main is unchanged since the last build.
       should_build: ${{ steps.changes.outputs.should_build || 'true' }}
+      # Only the dynamic thread ts flows via outputs. The channel ID is a SECRET and GitHub
+      # masks secrets out of job outputs (they arrive empty downstream), so every job reads
+      # SLACK_CHANNEL straight from secrets.SLACK_CHANNEL_ID instead.
+      slack_ts: ${{ steps.slack.outputs.ts }}
+      triggered_by: ${{ steps.ctx.outputs.triggered_by }}
+      pr_url: ${{ steps.ctx.outputs.pr_url }}
+      commit_short: ${{ steps.ctx.outputs.commit_short }}
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
       - name: Resolve build context
         id: ctx
         env:
@@ -76,22 +85,32 @@ jobs:
             REF="${{ github.event.inputs.ref }}"
             SHA=$(gh api "repos/${{ github.repository }}/commits/${REF}" --jq '.sha')
             PR_NUMBER=""
-          elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
-            # schedule always runs on the default branch (main); push is gated to release.
-            REF="${{ github.ref_name }}"
-            SHA="${{ github.sha }}"
-            PR_NUMBER=""
+            TRIGGERED_BY="manual by ${{ github.actor }}"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            REF="${{ github.ref_name }}"; SHA="${{ github.sha }}"; PR_NUMBER=""
+            TRIGGERED_BY="daily trigger"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            REF="${{ github.ref_name }}"; SHA="${{ github.sha }}"; PR_NUMBER=""
+            TRIGGERED_BY="push to ${REF}"
           else
             REF="${{ github.event.pull_request.head.ref }}"
             SHA="${{ github.event.pull_request.head.sha }}"
             PR_NUMBER="${{ github.event.pull_request.number }}"
+            TRIGGERED_BY="label by ${{ github.actor }}"
           fi
           SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "safe_branch=$SAFE_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "Distributing ref=$REF sha=$SHA pr=$PR_NUMBER"
+          PR_URL=""
+          [ -n "$PR_NUMBER" ] && PR_URL="${{ github.server_url }}/${{ github.repository }}/pull/${PR_NUMBER}"
+          {
+            echo "ref=$REF"
+            echo "sha=$SHA"
+            echo "pr_number=$PR_NUMBER"
+            echo "safe_branch=$SAFE_BRANCH"
+            echo "triggered_by=$TRIGGERED_BY"
+            echo "pr_url=$PR_URL"
+            echo "commit_short=${SHA:0:7}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Distributing ref=$REF sha=$SHA pr=$PR_NUMBER trigger=$TRIGGERED_BY"
 
       - name: Check main for changes since last successful distribution
         id: changes
@@ -118,6 +137,25 @@ jobs:
             echo "should_build=true" >> "$GITHUB_OUTPUT"
             echo "🆕 main changed (last=${LAST_SHA:-none} current=$CURRENT_SHA) — building."
           fi
+
+      - name: Post Slack root message
+        id: slack
+        if: steps.changes.outputs.should_build != 'false'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
+          STATUS: building
+          BRANCH: ${{ steps.ctx.outputs.ref }}
+          TRIGGERED_BY: ${{ steps.ctx.outputs.triggered_by }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
+          PR_URL: ${{ steps.ctx.outputs.pr_url }}
+          COMMIT: ${{ steps.ctx.outputs.commit_short }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.ctx.outputs.sha }}
+          IOS_LINE: "⏳ building"
+          ANDROID_LINE: "⏳ building"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 .github/scripts/slack-root.py
 
       - name: Remove trigger label
         if: github.event_name == 'pull_request'
@@ -176,17 +214,58 @@ jobs:
             gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -f body="${COMMENT_BODY}"
           fi
 
-  ios:
-    name: 🍏 iOS → TestFlight
+  # iOS leg, step 1: build the unsigned Godot export and publish it to R2 (no Apple creds).
+  ios-build:
+    name: 🍏 iOS → R2 (unsigned export)
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
-    uses: ./.github/workflows/ios_builds.yml
+    uses: ./.github/workflows/ios_r2_artifact.yml
     with:
       ref: ${{ needs.prepare.outputs.ref }}
+      sha: ${{ needs.prepare.outputs.sha }}
       pr_number: ${{ needs.prepare.outputs.pr_number }}
-      # Empty on PR-label triggers (labels carry no text) → ios_builds auto-generates from the commit
+      slack_ts: ${{ needs.prepare.outputs.slack_ts }}
+      # Fire the godot-asc-deploy handoff from INSIDE ios-build, right after the export lands
+      # in R2 — so the deploy starts immediately and runs in parallel with the Sentry upload
+      # (instead of a separate job that waits for the whole build incl. Sentry to finish).
+      dispatch_deploy: true
+      triggered_by: ${{ needs.prepare.outputs.triggered_by }}
       whats_new: ${{ github.event.inputs.whats_new }}
     secrets: inherit
+
+  # ios-build now also fires the deploy handoff. If it fails or is cancelled, godot-asc-deploy
+  # never runs, so nothing would move the root card off BUILDING — this finalizes it. It can't
+  # clobber the deploy repo's own root update (the deploy didn't run).
+  root-failed:
+    name: 🛑 Finalize root (failed/cancelled)
+    needs: [prepare, ios-build]
+    if: >-
+      always() && needs.prepare.outputs.should_build == 'true' &&
+      (needs.ios-build.result == 'failure' || needs.ios-build.result == 'cancelled')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Update root → failed/cancelled
+        if: needs.prepare.outputs.slack_ts != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_TS: ${{ needs.prepare.outputs.slack_ts }}
+          TRIGGERED_BY: ${{ needs.prepare.outputs.triggered_by }}
+          PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
+          PR_URL: ${{ needs.prepare.outputs.pr_url }}
+          COMMIT: ${{ needs.prepare.outputs.commit_short }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.prepare.outputs.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          IOS_BUILD_RESULT: ${{ needs.ios-build.result }}
+        run: |
+          # Don't set ANDROID_LINE — merge-on-read preserves whatever the Android leg wrote.
+          if [ "$IOS_BUILD_RESULT" = "cancelled" ]; then
+            export STATUS="cancelled"; export IOS_LINE="⚠️ cancelled"
+          else
+            export STATUS="failed"; export IOS_LINE="❌ build/handoff failed"
+          fi
+          python3 .github/scripts/slack-root.py
 
   android-notify:
     name: 🤖 Android → APK ready
@@ -201,13 +280,22 @@ jobs:
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       # Public R2 domain mapped to the mobile-artifacts bucket root.
       R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
+      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
       REF: ${{ needs.prepare.outputs.ref }}
       SHA: ${{ needs.prepare.outputs.sha }}
       PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Slack — Android build started
+        if: env.SLACK_TS != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "🤖 Android — waiting for the signed APK from CI… (${REF})"
+
       - name: Validate required secrets
         run: |
           MISSING=""
@@ -217,9 +305,6 @@ jobs:
           if [ -n "$MISSING" ]; then
             echo "❌ Missing required secrets:$MISSING"
             exit 1
-          fi
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured — the 'build ready' Slack notification will be skipped."
           fi
           echo "✅ Required secrets present"
 
@@ -231,6 +316,7 @@ jobs:
 
           # Build CI takes ~35 min; give it headroom but fail fast if CI already failed.
           DEADLINE=$(( $(date +%s) + 50 * 60 ))
+          INPROG=0
           while true; do
             if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
               echo "✅ APK is available in R2"
@@ -251,66 +337,26 @@ jobs:
               echo "   Make sure the Android CI build for this commit succeeded."
               exit 1
             fi
+            if [ "$INPROG" = "0" ] && [ -n "${SLACK_CHANNEL:-}" ]; then
+              bash .github/scripts/slack-reply.sh "🤖 Android — CI build in progress, waiting for the APK to land in R2…"
+              INPROG=1
+            fi
             echo "⏳ Not ready yet (CI conclusion='${CONCLUSION:-pending}'), retrying in 30s..."
             sleep 30
           done
 
-      - name: Notify Slack - Android build ready
-        if: success()
+      - name: Slack — Android APK ready
+        if: success() && env.SLACK_TS != ''
         run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
-            exit 0
-          fi
+          APK="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          bash .github/scripts/slack-reply.sh "✅ Android — APK ready: ${APK}"
+          ANDROID_LINE="✅ APK ready" APK_URL="$APK" python3 .github/scripts/slack-root.py
 
-          APK_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
-          COMMIT_SHORT="${SHA:0:7}"
-          TRIGGERED_BY="${{ github.actor }}"
-          if [ -n "$PR_NUMBER" ]; then
-            BRANCH_LABEL="PR-${PR_NUMBER}-${REF}"
-          else
-            BRANCH_LABEL="${REF}"
-          fi
-
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"blocks\": [
-              {
-                \"type\": \"header\",
-                \"text\": { \"type\": \"plain_text\", \"text\": \"🤖 Android Build Ready\", \"emoji\": true }
-              },
-              {
-                \"type\": \"section\",
-                \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Decentraland Mobile Client*\nAndroid APK ready (${BRANCH_LABEL})\" }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_LABEL}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
-                ]
-              },
-              {
-                \"type\": \"actions\",
-                \"elements\": [
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"📱 Download APK\", \"emoji\": true },
-                    \"style\": \"primary\",
-                    \"url\": \"${APK_URL}\"
-                  },
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Build Report\", \"emoji\": true },
-                    \"url\": \"${WORKFLOW_URL}\"
-                  }
-                ]
-              }
-            ]
-          }" "$SLACK_WEBHOOK_URL"
-          echo "✅ Slack notification sent (Android build ready)"
+      - name: Slack — Android failed
+        if: failure() && env.SLACK_TS != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "❌ Android — APK not produced for ${SHA} (CI build failed)"
+          ANDROID_LINE="❌ CI build failed" python3 .github/scripts/slack-root.py
 
       # The AAB (Play Store artifact) is only published for main/release builds, so we
       # surface it for any main/release distribution (manual dispatch, push-to-release,
@@ -340,103 +386,10 @@ jobs:
             sleep 20
           done
 
-      - name: Notify Slack - Android AAB ready
-        if: success() && env.AAB_READY == 'true' && (needs.prepare.outputs.ref == 'main' || needs.prepare.outputs.ref == 'release')
+      - name: Slack — Android AAB ready
+        if: success() && env.AAB_READY == 'true' && env.SLACK_TS != ''
         run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
-            exit 0
-          fi
-
-          AAB_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
-          COMMIT_SHORT="${SHA:0:7}"
-          TRIGGERED_BY="${{ github.actor }}"
-
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"blocks\": [
-              {
-                \"type\": \"header\",
-                \"text\": { \"type\": \"plain_text\", \"text\": \"📦 Android AAB Ready (Play Store)\", \"emoji\": true }
-              },
-              {
-                \"type\": \"section\",
-                \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Decentraland Mobile Client*\nAndroid AAB ready for Play Store upload (${REF})\" }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${REF}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
-                ]
-              },
-              {
-                \"type\": \"actions\",
-                \"elements\": [
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"📦 Download AAB\", \"emoji\": true },
-                    \"style\": \"primary\",
-                    \"url\": \"${AAB_URL}\"
-                  },
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Build Report\", \"emoji\": true },
-                    \"url\": \"${WORKFLOW_URL}\"
-                  }
-                ]
-              }
-            ]
-          }" "$SLACK_WEBHOOK_URL"
-          echo "✅ Slack notification sent (Android AAB ready)"
-
-      - name: Notify Slack - Android build failed
-        if: failure()
-        run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "⚠️  SLACK_WEBHOOK_URL not configured, skipping Slack notification"
-            exit 0
-          fi
-
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${SHA}"
-          COMMIT_SHORT="${SHA:0:7}"
-          TRIGGERED_BY="${{ github.actor }}"
-          if [ -n "$PR_NUMBER" ]; then
-            BRANCH_LABEL="PR-${PR_NUMBER}-${REF}"
-          else
-            BRANCH_LABEL="${REF}"
-          fi
-
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"blocks\": [
-              {
-                \"type\": \"header\",
-                \"text\": { \"type\": \"plain_text\", \"text\": \"❌ Android Build Failed\", \"emoji\": true }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${BRANCH_LABEL}\`\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:*\n<${COMMIT_URL}|\`${COMMIT_SHORT}\`>\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Triggered by:*\n${TRIGGERED_BY}\" }
-                ]
-              },
-              {
-                \"type\": \"actions\",
-                \"elements\": [
-                  {
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Logs\", \"emoji\": true },
-                    \"style\": \"danger\",
-                    \"url\": \"${WORKFLOW_URL}\"
-                  }
-                ]
-              }
-            ]
-          }" "$SLACK_WEBHOOK_URL"
+          bash .github/scripts/slack-reply.sh "📦 Android — AAB ready (Play Store): ${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
 
       - name: Update PR comment - Android success
         if: success() && needs.prepare.outputs.pr_number != ''
