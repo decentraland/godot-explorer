@@ -113,21 +113,30 @@ func _async_on_add_email_pressed() -> void:
 		)
 	)
 	if modal:
+		# Add Email modal shown — the OTP upgrade funnel has started (issue #2377).
+		Global.metrics.track_screen_viewed("UPGRADE_OTP_START", "")
 		modal.dismissable = false
 		modal.dcl_text_edit.wrap_text = false
 		modal.dcl_text_edit.validate_on_blur = true
-		# The modal owns the spinner + close timing now: it runs _async_send_code
+		# The modal owns the spinner + close timing now: it runs _async_on_submit_email
 		# while showing a spinner, keeps itself open (inline error) for a bad
 		# address, or closes and emits confirmed/failed for the other outcomes.
-		modal.set_submit_handler(_async_send_code)
+		modal.set_submit_handler(_async_on_submit_email)
 		modal.confirmed.connect(_async_on_code_sent)
 		modal.failed.connect(_async_on_send_code_failed)
 
 
-# Submit handler for the Add Email modal. Sends the verification code and maps
-# the outcome to the modal's status contract: a malformed address stays inline
-# as "Invalid email"; any other failure closes the modal and bubbles up via
-# `failed`; success closes the modal and emits `confirmed`.
+# Submit handler for the Add Email modal: the user tapped "ADD" on the email step.
+# gdlint:ignore = async-function-name
+func _async_on_submit_email(email: String) -> Dictionary:
+	Global.metrics.track_screen_viewed("UPGRADE_OTP_SUBMIT", "")
+	return await _async_send_code(email)
+
+
+# Shared "send verification code" routine used by both the initial submit and the
+# resend wrapper. Maps the outcome to the modal's status contract: a malformed
+# address stays inline as "Invalid email"; any other failure closes the modal and
+# bubbles up via `failed`; success closes the modal and emits `confirmed`.
 # gdlint:ignore = async-function-name
 func _async_send_code(email: String) -> Dictionary:
 	Global.metrics.track_click_button("upgrade_to_otp_send_code", "upgrade_otp_modal", "")
@@ -139,6 +148,7 @@ func _async_send_code(email: String) -> Dictionary:
 		var raw: String = result.get_error()
 		printerr("Upgrade to OTP - send code failed: ", raw)
 		if _is_invalid_email_error(raw):
+			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_INVALID", "")
 			return {"status": InputModal.SUBMIT_INVALID, "message": "Invalid email"}
 		return {"status": InputModal.SUBMIT_ERROR, "message": raw}
 	print("[UpgradeOTP] send_code OK for: ", email)
@@ -150,12 +160,22 @@ func _async_send_code(email: String) -> Dictionary:
 func _async_on_code_sent(email: String) -> void:
 	var code_modal = await Global.modal_manager.async_show_code_modal(email)
 	if code_modal:
+		# Code-entry step shown (issue #2377).
+		Global.metrics.track_screen_viewed("UPGRADE_OTP_ENTERCODE", "")
 		# The code modal owns the spinner + inline error UI; it calls back into
 		# _async_verify_code and only emits `confirmed` once verification succeeds.
 		code_modal.set_verifier(_async_verify_code.bind(email))
-		code_modal.set_resend_handler(_async_send_code.bind(email))
+		code_modal.set_resend_handler(_async_on_resend_code.bind(email))
 		code_modal.confirmed.connect(_async_on_code_confirmed.bind(email))
 		code_modal.cancelled.connect(Global.modal_manager.close_code_modal)
+
+
+# Resend handler for the code modal: the user tapped "Resend code" on the
+# code-entry step. Re-sends the verification code via the shared send routine.
+# gdlint:ignore = async-function-name
+func _async_on_resend_code(email: String) -> Dictionary:
+	Global.metrics.track_click_button("RESEND_OTP", "UPGRADE_OTP_ENTERCODE", "")
+	return await _async_send_code(email)
 
 
 # Non-recoverable send-code failure (Add Email modal already closed): show a
@@ -183,6 +203,7 @@ func _is_invalid_email_error(raw: String) -> bool:
 # gdlint:ignore = async-function-name
 func _async_verify_code(code: String, email: String) -> String:
 	Global.metrics.track_click_button("upgrade_to_otp_verify", "upgrade_otp_modal", "")
+	Global.metrics.track_screen_viewed("UPGRADE_OTP_VERIFY", "")
 	var anchor: String = Global.get_device_anchor_id()
 	var promise: Promise = Global.player_identity.async_link_email_verify(email, code, anchor)
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -191,11 +212,13 @@ func _async_verify_code(code: String, email: String) -> String:
 		var raw: String = result.get_error()
 		printerr("[UpgradeOTP] verify FAILED: ", raw)
 		if _is_already_linked_error(raw):
+			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_BUSY", "")
 			Global.modal_manager.close_code_modal.call_deferred()
 			_async_show_email_in_use_modal.call_deferred()
 			# Return non-empty so the code modal doesn't emit confirmed
 			# (it will try _show_error but the deferred close frees it first).
 			return " "
+		Global.metrics.track_screen_viewed("UPGRADE_OTP_CODE_INVALID", "")
 		return _friendly_error(raw)
 	print("[UpgradeOTP] verify OK")
 	return ""
@@ -216,6 +239,7 @@ func _async_show_email_in_use_modal() -> void:
 # gdlint:ignore = async-function-name
 func _async_on_code_confirmed(_code: String, email: String) -> void:
 	# Verification already succeeded inside the code modal before `confirmed` fired.
+	Global.metrics.track_screen_viewed("ACCOUNT_UPGRADE_SUCCESS", JSON.stringify({"method": "otp"}))
 	Global.modal_manager.close_code_modal()
 	await _async_show_success_modal()
 	email_added.emit(email)

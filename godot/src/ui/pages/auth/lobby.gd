@@ -158,7 +158,7 @@ func show_avatar_naming_screen():
 	show_panel(control_avatar_naming)
 	avatar_preview.reparent(avatar_preview_container_avatar_naming)
 	_restore_avatar_preview_defaults()
-	_on_button_random_name_pressed()
+	_set_random_name()
 	if current_profile:
 		_show_avatar_loading()
 		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
@@ -192,7 +192,9 @@ func show_account_home_screen():
 
 
 func show_account_home_loading_screen():
-	track_lobby_screen("ACCOUNT_HOME_LOADING")
+	# Guest account creation in progress ("Getting you ready..."). Tracked as
+	# ACCOUNT_GUEST_CREATE per the Entry Flow metrics taxonomy (issue #2377).
+	track_lobby_screen("ACCOUNT_GUEST_CREATE")
 	button_back.hide()
 	show_panel(control_account_home_loading)
 
@@ -306,12 +308,12 @@ func show_avatar_edit_screen():
 
 
 func _on_button_edit_avatar_pressed():
-	Global.metrics.track_click_button("edit", current_screen_name, "")
+	Global.metrics.track_click_button("EDIT", "AVATAR_CREATE", "")
 	show_avatar_edit_screen()
 
 
 func _on_button_avatar_create_next_pressed():
-	Global.metrics.track_click_button("next", current_screen_name, "")
+	Global.metrics.track_click_button("NEXT", "AVATAR_CREATE", "")
 	show_avatar_naming_screen()
 
 
@@ -319,6 +321,12 @@ func _on_button_avatar_create_next_pressed():
 func _on_preset_selected(preset_data: Dictionary) -> void:
 	if preset_data.is_empty() or current_profile == null:
 		return
+
+	Global.metrics.track_click_button(
+		"PRESET_SELECT",
+		"AVATAR_CREATE",
+		JSON.stringify({"avatar_id": preset_data.get("avatar_id", -1)})
+	)
 
 	var avatar = current_profile.get_avatar()
 	avatar.set_body_shape(preset_data.get("body_shape", ""))
@@ -643,7 +651,8 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
 	_accept_eula()
 	Global.metrics.update_identity(address, is_guest)
-	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
+	var login_type := "guest" if is_guest else "fully_registered"
+	Global.metrics.track_screen_viewed("AUTH_SUCCESS", JSON.stringify({"login_type": login_type}))
 	Global.metrics.flush.call_deferred()
 
 	Global.get_config().session_account = {}
@@ -708,7 +717,7 @@ func _on_button_continue_pressed():
 
 # gdlint:ignore = async-function-name
 func _on_button_lets_go_pressed():
-	Global.metrics.track_click_button("next", current_screen_name, "")
+	Global.metrics.track_click_button("lets_go", "AVATAR_NAMING", "")
 	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
@@ -734,11 +743,18 @@ func _on_button_lets_go_pressed():
 
 
 func _on_button_random_name_pressed():
+	Global.metrics.track_click_button("NAME_RANDOMIZE", "AVATAR_NAMING", "")
+	_set_random_name()
+
+
+# Sets a fresh random name WITHOUT firing the NAME_RANDOMIZE click metric. Used on
+# screen entry to seed an initial name; the dice button uses _on_button_random_name_pressed.
+func _set_random_name():
 	dcl_line_edit.set_text_value(RandomGeneratorUtil.generate_unique_name())
 
 
 func _on_button_go_to_sign_in_pressed():
-	Global.metrics.track_click_button("sign_in", current_screen_name, "")
+	Global.metrics.track_click_button("SIGN_IN", "ACCOUNT_HOME", "")
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
 	show_auth_home_screen()
@@ -894,7 +910,7 @@ func _on_button_play_as_guest_pressed():
 	# navigates us OFF the loading screen — and that whole chain (request, profile
 	# fetch, avatar load) can hang on a flaky network. Awaiting the create-guest
 	# promise alone doesn't cover that, so arm a screen-state watchdog instead: if
-	# we're still on ACCOUNT_HOME_LOADING after the timeout, bail and offer a retry.
+	# we're still on ACCOUNT_GUEST_CREATE after the timeout, bail and offer a retry.
 	# A per-attempt token stops a stale watchdog from clobbering a fresh attempt.
 	_guest_login_attempt += 1
 	var attempt := _guest_login_attempt
@@ -922,7 +938,7 @@ func _on_button_play_as_guest_pressed():
 func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 	if attempt != _guest_login_attempt:
 		return  # superseded / already handled
-	if current_screen_name != "ACCOUNT_HOME_LOADING":
+	if current_screen_name != "ACCOUNT_GUEST_CREATE":
 		return  # navigation succeeded — nothing to do
 	push_error("Guest login watchdog: stuck on loading screen after %ss" % GUEST_LOGIN_TIMEOUT_SEC)
 	await _fail_guest_login(attempt, "Guest login timed out")
@@ -935,7 +951,7 @@ func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 func _fail_guest_login(attempt: int, reason: String) -> void:
 	if attempt != _guest_login_attempt:
 		return
-	if current_screen_name != "ACCOUNT_HOME_LOADING":
+	if current_screen_name != "ACCOUNT_GUEST_CREATE":
 		return
 	_guest_login_attempt += 1
 	waiting_for_new_wallet = false
