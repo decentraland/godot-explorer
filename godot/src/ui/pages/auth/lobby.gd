@@ -467,6 +467,15 @@ func _ready():
 		if random_profile != null:
 			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
 
+	# A sandbox StoreKit build switches to the Option D hybrid env (credits/profile/
+	# catalog → .zone). That switch must land BEFORE try_recover_account fetches the
+	# profile + credits, or they would load from the wrong backend. Block on the
+	# authoritative env resolution here (no-op on non-iOS / once resolved, which is
+	# the usual case after the version-gate round-trip). Only when there's a real
+	# session to restore — guest/preview cleared session_account above.
+	if not session_account.is_empty():
+		await Iap.async_await_env_resolved()
+
 	# Flag the wallet_connected emission produced by try_recover_account so the analytics
 	# controller skips emitting a Firebase `login_success` for it. Safe to call unconditionally:
 	# the clear runs deferred and just unblocks the next legitimate fresh login.

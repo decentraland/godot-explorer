@@ -1,6 +1,6 @@
 shader_type canvas_item;
 
-// Radio de las esquinas en pixeles
+// Corner radius in pixels
 uniform float corner_radius_px : hint_range(0.0, 512.0, 1.0) = 24.0;
 
 float rounded_box_sdf(vec2 p, vec2 size, float radius) {
