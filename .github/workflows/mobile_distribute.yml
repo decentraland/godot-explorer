@@ -215,10 +215,98 @@ jobs:
           fi
 
   # iOS leg, step 1: build the unsigned Godot export and publish it to R2 (no Apple creds).
-  ios-build:
-    name: 🍏 iOS → R2 (unsigned export)
+  # Before paying for a WarpBuild rebuild, check whether the self-hosted iOS runner already produced
+  # (or is producing) the unsigned export for THIS exact commit in R2 (ios_self_hosted.yml uploads it
+  # on every push). If so, skip the rebuild and sign that artifact directly (ios-dispatch). Mirrors
+  # android-notify's R2 poll + fail-fast.
+  ios-resolve:
+    name: 🍏 iOS — resolve (reuse existing export?)
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      reuse: ${{ steps.resolve.outputs.reuse }}
+      build_version: ${{ steps.resolve.outputs.build_version }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
+      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
+      REF:         ${{ needs.prepare.outputs.ref }}
+      SHA:         ${{ needs.prepare.outputs.sha }}
+      SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
+      GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Validate required secrets
+        run: |
+          MISSING=""
+          [ -z "$AWS_S3_BUCKET" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_BUCKET"
+          [ -z "$AWS_ENDPOINT_URL" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_ENDPOINT"
+          [ -z "$AWS_ACCESS_KEY_ID" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID"
+          if [ -n "$MISSING" ]; then echo "❌ Missing required secrets:$MISSING"; exit 1; fi
+          echo "✅ Required secrets present"
+
+      - name: Resolve reuse vs build
+        id: resolve
+        run: |
+          KEY="ios/${SAFE_BRANCH}/${SHA}/export.tar.gz"
+          echo "Looking for an existing unsigned export at s3://${AWS_S3_BUCKET}/${KEY}"
+          echo "(produced by the self-hosted iOS runner — ios_self_hosted.yml — for this commit)"
+          have_export() { aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$KEY" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
+
+          reuse=false
+          if have_export; then
+            echo "✅ Export already present — reusing it (no WarpBuild rebuild)."
+            reuse=true
+          else
+            # The self-hosted build for this commit may still be in flight (~12 min). Poll for it,
+            # but fail fast (→ build on CI) the moment that run concludes without a usable export.
+            DEADLINE=$(( $(date +%s) + 20 * 60 ))
+            while true; do
+              if have_export; then echo "✅ Export appeared — reusing it."; reuse=true; break; fi
+              CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow ios_self_hosted.yml \
+                --limit 100 --json headSha,conclusion \
+                --jq "first(.[] | select(.headSha==\"$SHA\")) | .conclusion // empty" 2>/dev/null || true)
+              case "$CONCLUSION" in
+                failure|cancelled|skipped|timed_out|success)
+                  echo "ℹ️  self-hosted run for $SHA concluded '$CONCLUSION' with no usable export → building on CI."
+                  break ;;
+              esac
+              if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+                echo "ℹ️  timed out waiting for the self-hosted export → building on CI."
+                break
+              fi
+              sleep 30
+            done
+          fi
+          echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
+
+          # In the reuse path nobody runs the lib build that writes .build.version, so reconstruct it
+          # deterministically (matches lib/build.rs: <lib-version>-<short-sha>-<prod|staging>).
+          LIB_VERSION=$(grep -m1 '^version' lib/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ "$REF" = "release" ]; then SUFFIX="prod"; else SUFFIX="staging"; fi
+          echo "build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}" >> "$GITHUB_OUTPUT"
+          echo "→ reuse=$reuse · build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}"
+
+      - name: Slack — iOS reuse decision
+        if: env.SLACK_TS != ''
+        run: |
+          if [ "${{ steps.resolve.outputs.reuse }}" = "true" ]; then
+            bash .github/scripts/slack-reply.sh "♻️ iOS — found an existing export for this commit; skipping the CI rebuild."
+          else
+            bash .github/scripts/slack-reply.sh "🔨 iOS — no existing export; building on CI."
+          fi
+
+  ios-build:
+    name: 🍏 iOS → R2 (unsigned export)
+    needs: [prepare, ios-resolve]
+    if: needs.prepare.outputs.should_build == 'true' && needs.ios-resolve.outputs.reuse == 'false'
     uses: ./.github/workflows/ios_r2_artifact.yml
     with:
       ref: ${{ needs.prepare.outputs.ref }}
@@ -233,15 +321,64 @@ jobs:
       whats_new: ${{ github.event.inputs.whats_new }}
     secrets: inherit
 
-  # ios-build now also fires the deploy handoff. If it fails or is cancelled, godot-asc-deploy
-  # never runs, so nothing would move the root card off BUILDING — this finalizes it. It can't
-  # clobber the deploy repo's own root update (the deploy didn't run).
+  # Reuse path: an unsigned export for this commit already exists in R2 (built by the self-hosted
+  # runner), so skip WarpBuild and hand off to godot-asc-deploy directly with the same payload.
+  ios-dispatch:
+    name: 🍏 iOS — dispatch (reuse existing export)
+    needs: [prepare, ios-resolve]
+    if: needs.prepare.outputs.should_build == 'true' && needs.ios-resolve.outputs.reuse == 'true'
+    runs-on: ubuntu-latest
+    env:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
+      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      # Same idempotent-per-SHA allocator the build path uses → returns the SAME number the
+      # self-hosted build already allocated for this commit (sets DCL_BUILD_NUMBER).
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ needs.prepare.outputs.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: ios
+
+      - name: Dispatch godot-asc-deploy (sign & upload to TestFlight)
+        uses: ./.github/actions/dispatch-asc-deploy
+        with:
+          gh-token: ${{ secrets.ASC_DEPLOY_DISPATCH_TOKEN }}
+          ref: ${{ needs.prepare.outputs.ref }}
+          sha: ${{ needs.prepare.outputs.sha }}
+          whats_new: ${{ github.event.inputs.whats_new }}
+          pr_number: ${{ needs.prepare.outputs.pr_number }}
+          slack_ts: ${{ needs.prepare.outputs.slack_ts }}
+          build_version: ${{ needs.ios-resolve.outputs.build_version }}
+          build_number: ${{ env.DCL_BUILD_NUMBER }}
+          triggered_by: ${{ needs.prepare.outputs.triggered_by }}
+
+      - name: Slack — handed off (reused export)
+        if: success() && env.SLACK_TS != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "♻️🤝 iOS — reused export, handed off to the signing pipeline (godot-asc-deploy)."
+
+      - name: Slack — handoff failed
+        if: failure() && env.SLACK_TS != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "❌ iOS — failed to hand off to the signing pipeline (check ASC_DEPLOY_DISPATCH_TOKEN)."
+
+  # iOS hands off the deploy from either ios-build (rebuild path) or ios-dispatch (reuse path). If
+  # resolve, build, or dispatch fails/cancels, godot-asc-deploy never runs, so nothing would move
+  # the root card off BUILDING — this finalizes it. A skipped leg (the path not taken) is ignored.
+  # It can't clobber the deploy repo's own root update (the deploy didn't run).
   root-failed:
     name: 🛑 Finalize root (failed/cancelled)
-    needs: [prepare, ios-build]
+    needs: [prepare, ios-resolve, ios-build, ios-dispatch]
     if: >-
-      always() && needs.prepare.outputs.should_build == 'true' &&
-      (needs.ios-build.result == 'failure' || needs.ios-build.result == 'cancelled')
+      always() && needs.prepare.outputs.should_build == 'true' && (
+        needs.ios-resolve.result == 'failure' || needs.ios-resolve.result == 'cancelled' ||
+        needs.ios-build.result == 'failure' || needs.ios-build.result == 'cancelled' ||
+        needs.ios-dispatch.result == 'failure' || needs.ios-dispatch.result == 'cancelled' )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -257,10 +394,13 @@ jobs:
           COMMIT: ${{ needs.prepare.outputs.commit_short }}
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.prepare.outputs.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          IOS_RESOLVE_RESULT: ${{ needs.ios-resolve.result }}
           IOS_BUILD_RESULT: ${{ needs.ios-build.result }}
+          IOS_DISPATCH_RESULT: ${{ needs.ios-dispatch.result }}
         run: |
           # Don't set ANDROID_LINE — merge-on-read preserves whatever the Android leg wrote.
-          if [ "$IOS_BUILD_RESULT" = "cancelled" ]; then
+          # Pick whichever leg actually failed; the path not taken is 'skipped' and ignored.
+          if [ "$IOS_RESOLVE_RESULT" = "cancelled" ] || [ "$IOS_BUILD_RESULT" = "cancelled" ] || [ "$IOS_DISPATCH_RESULT" = "cancelled" ]; then
             export STATUS="cancelled"; export IOS_LINE="⚠️ cancelled"
           else
             export STATUS="failed"; export IOS_LINE="❌ build/handoff failed"
