@@ -3,7 +3,7 @@
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
 [ext_resource type="Script" uid="uid://cm08lp37agj2o" path="res://src/ui/pages/loading_screen/loading_screen.gd" id="2_7hdbk"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="3_6uwlu"]
-[ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="3_gbbrs"]
+[ext_resource type="Shader" uid="uid://bhjcims48e1cf" path="res://src/ui/components/atoms/images/blur_background/quick_blur.gdshader" id="3_7rccc"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_fygee"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_uxxaw"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_w6anr"]
@@ -15,6 +15,10 @@
 [ext_resource type="PackedScene" uid="uid://bk7bchyii05cp" path="res://src/ui/components/molecules/tip_card/tip_card.tscn" id="13_xmi2h"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="14_7rccc"]
 [ext_resource type="PackedScene" uid="uid://cqs5l0uuml56k" path="res://src/ui/components/atoms/buttons/close_button.tscn" id="14_cdm7v"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ky3me"]
+shader = ExtResource("3_7rccc")
+shader_parameter/blur_amount = 2.000000095
 
 [sub_resource type="Gradient" id="Gradient_gt6ke"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -83,7 +87,7 @@ grow_vertical = 2
 texture = ExtResource("9_i03vb")
 
 [node name="TextureRect_Blur" type="TextureRect" parent="." unique_id=1592832536]
-material = ExtResource("3_gbbrs")
+material = SubResource("ShaderMaterial_ky3me")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
