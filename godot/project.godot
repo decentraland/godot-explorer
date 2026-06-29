@@ -45,6 +45,7 @@ NotificationsManager="*res://src/notifications_manager.gd"
 ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 Iap="*res://src/iap/iap_manager.gd"
+MarketplaceTracker="*res://src/iap/marketplace_tracker.gd"
 ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_capturer.gd"
 AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
@@ -67,6 +68,10 @@ window/size/window_width_override=720
 window/size/window_height_override=1280
 window/frame_pacing/android/enable_frame_pacing=false
 window/handheld/orientation=6
+
+[editor]
+
+import/use_multiple_threads=false
 
 [editor_plugins]
 
@@ -230,8 +235,6 @@ limits/debugger/max_chars_per_second=3276800
 
 occlusion_culling/bvh_build_quality=1
 rendering_device/vulkan/max_descriptors_per_pool=256
-rendering_device/driver.ios="vulkan"
-rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=512

@@ -558,7 +558,7 @@ func async_update_avatar(
 	elif is_instance_valid(nickname_ui):
 		nickname_ui.nickname = new_avatar_name
 		nickname_ui.tag = ""
-	
+
 	if is_instance_valid(nickname_ui):
 		nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 		nickname_ui.mic_enabled = false

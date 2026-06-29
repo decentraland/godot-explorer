@@ -377,7 +377,7 @@ fn main() -> Result<(), anyhow::Error> {
                 ),
         ).subcommand(
             Command::new("get-metrics")
-                .about("(TEMPORARY) Get Sentry metrics for godot-explorer and auth-mobile")
+                .about("(TEMPORARY) Get Sentry metrics for godot-explorer")
                 .arg(
                     Arg::new("from")
                         .help("Start date (YYYY-MM-DD)")

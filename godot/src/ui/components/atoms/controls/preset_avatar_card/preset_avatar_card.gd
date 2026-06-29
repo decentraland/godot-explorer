@@ -24,6 +24,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	self_modulate = Color.TRANSPARENT
 	disabled = true
+	_skeleton.show()
 	UiSounds.install_audio(self)
 	toggled.connect(_on_toggled)
 

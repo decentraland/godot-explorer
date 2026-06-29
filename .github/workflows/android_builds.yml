@@ -93,6 +93,16 @@ jobs:
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
 
+      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
+      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
+      # and so the APK + AAB exports below stamp the same versionCode for this commit.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
       - name: Build Rust libraries
         run: |
           cargo run -- build --release ${{ env.PROD_FLAG }}
@@ -106,15 +116,6 @@ jobs:
         with:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
-      
-      # Allocate the store build number once (from the Cloudflare Worker, idempotent per commit SHA);
-      # both the APK and AAB exports below read DCL_BUILD_NUMBER and stamp the same versionCode.
-      - name: Compute build number
-        uses: ./.github/actions/compute-build-number
-        with:
-          sha: ${{ github.event.pull_request.head.sha || github.sha }}
-          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
-          allocated-by: android
 
       - name: Export Android APK
         run: |

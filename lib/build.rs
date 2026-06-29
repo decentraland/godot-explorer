@@ -512,6 +512,7 @@ fn set_godot_explorer_version() {
     println!("cargo:rerun-if-env-changed=BRANCH_NAME");
     println!("cargo:rerun-if-env-changed=DECENTRALAND_PROD_BUILD");
     println!("cargo:rerun-if-env-changed=DECENTRALAND_STAGING_BUILD");
+    println!("cargo:rerun-if-env-changed=DCL_BUILD_NUMBER");
 
     // Always use git to get the actual checked-out commit (what GitHub checkout uses)
     let commit_hash = match check_safe_repo() {
@@ -549,6 +550,22 @@ fn set_godot_explorer_version() {
     // Get the CARGO_PKG_VERSION env var
     let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string());
 
+    // Store build number (Android versionCode / iOS CFBundleVersion), allocated per commit by the
+    // Cloudflare Worker and exported via DCL_BUILD_NUMBER. Woven in as a 4th version segment
+    // (`{version}.{build}`) so the baked string carries the exact store build (Sentry release, UI,
+    // logs). Unset on local/fork builds -> the segment is omitted.
+    //
+    // NOTE: in CI the `compute-build-number` step MUST run BEFORE the lib build so this env is set
+    // when build.rs runs (see android_builds.yml / ios_r2_artifact.yml). The build-number axis is
+    // separate from the marketing SemVer and version_gate parses only major.minor.patch, so the
+    // extra `.{build}` segment is ignored by the force-update gate.
+    let build_segment = env::var("DCL_BUILD_NUMBER")
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty() && v.chars().all(|c| c.is_ascii_digit()))
+        .map(|v| format!(".{v}"))
+        .unwrap_or_default();
+
     // Check if this is a production or staging build
     let is_prod_build = env::var("DECENTRALAND_PROD_BUILD").is_ok();
     let is_staging_build = env::var("DECENTRALAND_STAGING_BUILD").is_ok();
@@ -570,14 +587,20 @@ fn set_godot_explorer_version() {
     let mode_suffix = if is_debug { "-debug" } else { "" };
 
     let full_version = match short_hash {
-        // With git hash: {version}-{short_hash}{-debug}-{dev|prod}
-        Some(hash) => format!("{}-{}{}-{}", version, hash, mode_suffix, env_suffix),
+        // With git hash: {version}{.build_number}-{short_hash}{-debug}-{dev|staging|prod}
+        Some(hash) => format!(
+            "{}{}-{}{}-{}",
+            version, build_segment, hash, mode_suffix, env_suffix
+        ),
         // Fallback if no git hash available
         _ => {
             let timestamp = Utc::now()
                 .to_rfc3339()
                 .replace(|c: char| !c.is_ascii_digit(), "");
-            format!("{}-t{}{}-{}", version, timestamp, mode_suffix, env_suffix)
+            format!(
+                "{}{}-t{}{}-{}",
+                version, build_segment, timestamp, mode_suffix, env_suffix
+            )
         }
     };
 
