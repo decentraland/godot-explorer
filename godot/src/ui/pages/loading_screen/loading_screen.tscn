@@ -186,7 +186,7 @@ fit_content = true
 
 [node name="HSeparator3" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=1792108968]
 layout_mode = 2
-size_flags_vertical = 0
+size_flags_vertical = 3
 theme_override_constants/separation = 64
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 
@@ -195,7 +195,6 @@ layout_mode = 2
 
 [node name="HSeparator4" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=1647476192]
 layout_mode = 2
-size_flags_vertical = 3
 theme_override_constants/separation = 90
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 

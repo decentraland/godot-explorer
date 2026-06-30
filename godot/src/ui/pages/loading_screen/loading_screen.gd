@@ -48,7 +48,7 @@ func enable_loading_screen() -> void:
 
 func _clear_place_ui() -> void:
 	_place_data_set = false
-	vbox_data.hide()
+	vbox_data.modulate.a = 0.0
 	texture_rect_background.texture = null
 	texture_rect_background.modulate = Color.TRANSPARENT
 
@@ -213,7 +213,8 @@ func set_place_data(data: Dictionary, texture: Texture2D = null) -> void:
 	var creator = data.get("contact_name", "")
 	set_place_name(title if title is String else "")
 	set_place_creator(creator if creator is String else "")
-	vbox_data.show()
+	var tween = create_tween()
+	tween.tween_property(vbox_data, "modulate:a", 1.0, 0.3)
 	if texture != null:
 		_apply_background_texture(texture)
 	else:
