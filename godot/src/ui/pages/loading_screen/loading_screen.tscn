@@ -256,3 +256,4 @@ layout_mode = 2
 [connection signal="timeout" from="Timer_CheckProgressTimeout" to="." method="_on_timer_check_progress_timeout_timeout"]
 [connection signal="loading_show_requested" from="LoadingScreenProgressLogic" to="." method="_on_loading_screen_progress_logic_loading_show_requested"]
 [connection signal="gui_input" from="SafeMarginContainer/MarginContainer_Content/VBoxContainer/TextureRect_Logo" to="." method="_on_texture_rect_logo_gui_input"]
+[connection signal="pressed" from="MarginContainer_Close/CloseButton" to="." method="_on_close_button_pressed"]

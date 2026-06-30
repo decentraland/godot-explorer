@@ -26,6 +26,7 @@ var _place_data_set: bool = false
 
 @onready var loading_screen_progress_logic: Node = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout: Timer = $Timer_CheckProgressTimeout
+@onready var close_button: Button = %CloseButton
 @onready var debug_chronometer := Chronometer.new()
 
 static var _low_spec_toast_shown: bool = false
@@ -34,6 +35,7 @@ static var _low_spec_toast_shown: bool = false
 func _ready() -> void:
 	last_activity_time = Time.get_ticks_msec()
 	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
+
 
 # Forward
 func enable_loading_screen() -> void:
@@ -256,3 +258,7 @@ func _async_set_background(url: String) -> void:
 	if result is PromiseError or result.failed:
 		return
 	_apply_background_texture(result.texture)
+
+
+func _on_close_button_pressed() -> void:
+	Global.return_to_discover()
