@@ -516,22 +516,27 @@ impl INode for SceneInspectorDispatcher {
             }
         }
 
-        // Collect performance snapshot every perf_interval seconds
-        self.perf_timer += dt;
-        if self.perf_timer >= self.perf_interval {
-            self.perf_timer = 0.0;
-            if let Some(snapshot_json) = self.collect_performance_snapshot() {
-                batch.push(snapshot_json);
-            }
-            // Report any entries dropped because the channel was full since the
-            // previous tick. Silent drops would mask real loss of telemetry.
-            let dropped = take_dropped_count();
-            if dropped > 0 {
-                tracing::warn!(
-                    "Scene Inspector dropped {} entries (channel full) in the last {:.1}s",
-                    dropped,
-                    self.perf_interval
-                );
+        // Collect a performance snapshot every perf_interval seconds — but only
+        // while a consumer is attached. With none, producers emit nothing, so
+        // this would be pure wasted work (singleton binds + JSON serialization)
+        // on every frame-tick in production.
+        if is_consumer_connected() {
+            self.perf_timer += dt;
+            if self.perf_timer >= self.perf_interval {
+                self.perf_timer = 0.0;
+                if let Some(snapshot_json) = self.collect_performance_snapshot() {
+                    batch.push(snapshot_json);
+                }
+                // Report any entries dropped because the channel was full since the
+                // previous tick. Silent drops would mask real loss of telemetry.
+                let dropped = take_dropped_count();
+                if dropped > 0 {
+                    tracing::warn!(
+                        "Scene Inspector dropped {} entries (channel full) in the last {:.1}s",
+                        dropped,
+                        self.perf_interval
+                    );
+                }
             }
         }
 

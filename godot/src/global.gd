@@ -314,6 +314,11 @@ func _get_safe_area_presets() -> GDScript:
 func _generated_deeplink() -> String:
 	# Baked launch params from `cargo run -- run/build --deeplink|--log-stream`.
 	# Gitignored and optional; absent on a fresh checkout until the first build.
+	# Never honored in a production build: the iOS self-hosted runner exports with
+	# `clean: false`, so a stale build_config.gd left by a prior debug build could
+	# otherwise leak a baked deeplink into a prod IPA.
+	if is_production():
+		return ""
 	var gen_path := "res://src/generated/build_config.gd"
 	if not ResourceLoader.exists(gen_path):
 		return ""
@@ -687,7 +692,7 @@ func _dcl_swift_lib_smoke_test() -> void:
 		return
 	# The Swift class is transient (instantiated per call), so its init log lives
 	# here, where availability is first confirmed, rather than per-instance.
-	print("[INIT] DclSwiftLib (Swift)")
+	InitLog.emit("DclSwiftLib (Swift)")
 	print(
 		"[DclSwiftLib] ping() -> ",
 		DclSwiftLibPlugin.ping(),

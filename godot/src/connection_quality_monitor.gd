@@ -74,7 +74,7 @@ var _snooze_last_update: float = 0.0
 
 
 func _ready() -> void:
-	print("[INIT] ConnectionQualityMonitor")
+	InitLog.emit("ConnectionQualityMonitor")
 	_snooze_last_update = _now()
 
 	_poll_timer = Timer.new()

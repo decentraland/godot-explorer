@@ -147,18 +147,13 @@ var _purchase_in_flight: bool = false
 
 
 func _ready() -> void:
-<<<<<<< HEAD
-	print("[INIT] Iap")
-	# IAP starts disabled. DeepLinkRouter calls enable() when the launch
-	# deeplink carries iap_enabled=true.
-=======
+	InitLog.emit("Iap")
 	# IAP is enabled by default on iOS — the only platform with StoreKit. On
 	# every other platform there's no native backend, so we leave it disabled
 	# (enable() would no-op anyway via is_available(), and the credits UI entry
 	# points stay hidden).
 	if Global.is_ios():
 		enable()
->>>>>>> origin/main
 
 
 # Reports the StoreKit environment (production / sandbox / xcode) to analytics.

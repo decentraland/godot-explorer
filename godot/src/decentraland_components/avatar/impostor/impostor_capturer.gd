@@ -10,7 +10,7 @@ var _in_progress: bool = false
 
 
 func _ready() -> void:
-	print("[INIT] ImpostorCapturer")
+	InitLog.emit("ImpostorCapturer")
 
 
 func request_capture(avatar) -> void:

@@ -21,7 +21,7 @@ var _avatars: Array = []
 
 
 func _ready() -> void:
-	print("[INIT] AvatarLODCoordinator")
+	InitLog.emit("AvatarLODCoordinator")
 
 
 func register(avatar: Node) -> void:

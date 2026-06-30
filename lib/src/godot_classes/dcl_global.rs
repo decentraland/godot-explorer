@@ -351,28 +351,33 @@ impl INode for DclGlobal {
 
         // Per-component INIT logs — each major Rust subsystem is now constructed
         // (its `init` has run). Grep `[INIT]` to confirm every component came up
-        // in the unified logging. Always on (info level) so it shows in normal
-        // mobile runs, not only the `--test-logging` self-test.
-        for component in [
-            "AvatarScene",
-            "CommunicationManager",
-            "SceneManager",
-            "TokioRuntime",
-            "ContentProvider",
-            "NetworkInspector",
-            "SceneInspectorDispatcher",
-            "DclSocialBlacklist",
-            "DclSocialService",
-            "Metrics",
-            "DclCli",
-            "DclDynamicGraphicsManager",
-            "DclRealm",
-            "DclTokioRpc",
-            "DclPlayerIdentity",
-            "DclTestingTools",
-            "DclPortableExperienceController",
-        ] {
-            tracing::info!("[INIT] {component}");
+        // in the unified logging. Info level, so it shows in normal mobile runs,
+        // not only the `--test-logging` self-test.
+        // TODO: set INIT_COMPONENT_LOGS = false once the boot-wiring verification
+        // is no longer needed — this prints on every startup, production included.
+        const INIT_COMPONENT_LOGS: bool = true;
+        if INIT_COMPONENT_LOGS {
+            for component in [
+                "AvatarScene",
+                "CommunicationManager",
+                "SceneManager",
+                "TokioRuntime",
+                "ContentProvider",
+                "NetworkInspector",
+                "SceneInspectorDispatcher",
+                "DclSocialBlacklist",
+                "DclSocialService",
+                "Metrics",
+                "DclCli",
+                "DclDynamicGraphicsManager",
+                "DclRealm",
+                "DclTokioRpc",
+                "DclPlayerIdentity",
+                "DclTestingTools",
+                "DclPortableExperienceController",
+            ] {
+                tracing::info!("[INIT] {component}");
+            }
         }
 
         tokio_runtime.set_name("tokio_runtime");
