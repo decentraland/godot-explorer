@@ -101,10 +101,30 @@ func _get_shown_in() -> String:
 
 
 func _on_visibility_changed() -> void:
-	if is_visible_in_tree():
-		Global.metrics.track_screen_viewed(
-			"UPGRADE_NOTICE_SHOW", JSON.stringify({"shown_in": _get_shown_in()})
-		)
+	if not is_visible_in_tree():
+		return
+	# During menu page transitions this card can briefly become visible while another
+	# screen is actually the active one (e.g. the discover card flips visible mid-crossfade
+	# to settings). Only emit when the host menu's current screen matches this card's
+	# location, so UPGRADE_NOTICE_SHOW never reports the wrong screen (issue #2377).
+	if not _is_on_active_menu_screen():
+		return
+	Global.metrics.track_screen_viewed(
+		"UPGRADE_NOTICE_SHOW", JSON.stringify({"shown_in": _get_shown_in()})
+	)
+
+
+# Walks up to the host menu (duck-typed via `current_screen_name`) and checks that its
+# active screen matches this card's `shown_in` location. Returns true when no such menu
+# ancestor exists (card used standalone), preserving the prior behavior in that case.
+func _is_on_active_menu_screen() -> bool:
+	var node: Node = get_parent()
+	while node != null:
+		if "current_screen_name" in node:
+			var prefix := "SETTINGS" if shown_in == "settings" else "DISCOVER"
+			return String(node.current_screen_name).begins_with(prefix)
+		node = node.get_parent()
+	return true
 
 
 func _async_on_add_email_pressed() -> void:
