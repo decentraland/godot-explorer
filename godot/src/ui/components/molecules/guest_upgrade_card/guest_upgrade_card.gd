@@ -150,7 +150,7 @@ func _async_on_submit_email(email: String) -> Dictionary:
 # bubbles up via `failed`; success closes the modal and emits `confirmed`.
 # gdlint:ignore = async-function-name
 func _async_send_code(email: String) -> Dictionary:
-	Global.metrics.track_click_button("upgrade_to_otp_send_code", "upgrade_otp_modal", "")
+	Global.metrics.track_click_button("ADD", "UPGRADE_OTP_SUBMIT", "")
 	# async_link_email_start both validates the address server-side and sends the
 	# verification code to the thirdweb guest wallet.
 	var promise: Promise = Global.player_identity.async_link_email_start(email)
@@ -213,7 +213,7 @@ func _is_invalid_email_error(raw: String) -> bool:
 # Returns "" on success, or a friendly error string the code modal shows inline.
 # gdlint:ignore = async-function-name
 func _async_verify_code(code: String, email: String) -> String:
-	Global.metrics.track_click_button("upgrade_to_otp_verify", "upgrade_otp_modal", "")
+	Global.metrics.track_click_button("ENTERED_CODE", "UPGRADE_OTP_ENTERCODE", "")
 	Global.metrics.track_screen_viewed("UPGRADE_OTP_VERIFY", "")
 	var anchor: String = Global.get_device_anchor_id()
 	var promise: Promise = Global.player_identity.async_link_email_verify(email, code, anchor)
@@ -251,6 +251,11 @@ func _async_show_email_in_use_modal() -> void:
 func _async_on_code_confirmed(_code: String, email: String) -> void:
 	# Verification already succeeded inside the code modal before `confirmed` fired.
 	Global.metrics.track_screen_viewed("ACCOUNT_UPGRADE_SUCCESS", JSON.stringify({"method": "otp"}))
+	# The guest is now a fully-registered account — mirror the lobby's AUTH_SUCCESS so
+	# the funnel sees the upgraded user as registered (matches a fresh fully_registered login).
+	Global.metrics.track_screen_viewed(
+		"AUTH_SUCCESS", JSON.stringify({"login_type": "fully_registered"})
+	)
 	Global.modal_manager.close_code_modal()
 	await _async_show_success_modal()
 	email_added.emit(email)

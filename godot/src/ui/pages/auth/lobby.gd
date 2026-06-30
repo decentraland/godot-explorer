@@ -187,7 +187,6 @@ func _accept_eula() -> void:
 func show_account_home_screen():
 	track_lobby_screen("ACCOUNT_HOME")
 	button_back.hide()
-	_request_notification_permission_if_needed()
 	show_panel(control_account_home)
 
 
@@ -202,12 +201,10 @@ func show_account_home_loading_screen():
 func _request_notification_permission_if_needed():
 	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
-	# Only surface the OS notification permission dialog once the EULA has been
-	# accepted. On a fresh install Account Home is shown *before* acceptance
-	# (the EULA is accepted by playing as guest / completing sign-in), and asking
-	# for notifications there is premature.
-	if Global.get_config().terms_and_conditions_version != Global.TERMS_AND_CONDITIONS_VERSION:
-		return
+	# Triggered only from the explicit Play-as-Guest / Sign-In taps (the user's
+	# commit point), so the EULA-timing gate that previously guarded this is no
+	# longer needed. NotificationsManager enforces the has-permission + cooldown
+	# guards (and skips the spurious-reject re-prompt loop on Android).
 	if NotificationsManager.has_local_notification_permission():
 		return
 	NotificationsManager.request_local_notification_permission(current_screen_name)
@@ -660,7 +657,10 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
 	_accept_eula()
 	Global.metrics.update_identity(address, is_guest)
-	var login_type := "guest" if is_guest else "fully_registered"
+	# Play-as-Guest uses a thirdweb guest wallet whose `is_guest` arg is false; treat
+	# any guest session (disposable or non-upgraded thirdweb guest) as login_type "guest".
+	var is_guest_session := is_guest or Global.player_identity.is_thirdweb_guest()
+	var login_type := "guest" if is_guest_session else "fully_registered"
 	Global.metrics.track_screen_viewed("AUTH_SUCCESS", JSON.stringify({"login_type": login_type}))
 	Global.metrics.flush.call_deferred()
 
@@ -764,6 +764,7 @@ func _set_random_name():
 
 func _on_button_go_to_sign_in_pressed():
 	Global.metrics.track_click_button("SIGN_IN", "ACCOUNT_HOME", "")
+	_request_notification_permission_if_needed()
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
 	show_auth_home_screen()
@@ -911,6 +912,7 @@ func _get_device_anchor_id() -> String:
 func _on_button_play_as_guest_pressed():
 	Global.metrics.track_click_button("PLAY_GUEST", "ACCOUNT_HOME", "")
 	_accept_eula()
+	_request_notification_permission_if_needed()
 	show_account_home_loading_screen()
 
 	waiting_for_new_wallet = true
