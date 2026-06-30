@@ -370,6 +370,11 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 		# Open the backpack to show the reward
 		async_show_backpack()
 		Global.open_navbar_silently.emit()
+	# MARKETPLACE-IAP-TOAST: a "marketplace_iap" toast tap would route here to open the
+	# backpack and apply the arrival view — read `category` from notification_dict.metadata,
+	# await async_show_backpack(category == "emote"), then have the active Backpack call
+	# apply_marketplace_arrival_view(category) (add a small forwarder on BackpackResponsive
+	# to reach it). Removed pending a portrait-aware toast.
 
 
 func _on_deep_link_received() -> void:

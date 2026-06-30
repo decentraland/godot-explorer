@@ -1,7 +1,25 @@
-name: 🔢 Bump Version
+name: 🔢 Bump Marketing Version
+
+# Bumps ONLY the marketing SemVer (MAJOR.MINOR.PATCH), kept in sync across:
+#   - lib/Cargo.toml  (source of truth)
+#   - Android version/name
+#   - iOS application/short_version
+# The store BUILD NUMBER (Android version/code / iOS application/version) is allocated from the
+# Cloudflare Worker (idempotent per commit SHA) and stamped at build time by the
+# `compute-build-number` action — this workflow never touches it.
 
 on:
   workflow_dispatch:
+    inputs:
+      level:
+        description: "Which part of the SemVer to bump"
+        type: choice
+        required: true
+        default: patch
+        options:
+          - major
+          - minor
+          - patch
 
 permissions:
   contents: write
@@ -9,7 +27,7 @@ permissions:
 
 jobs:
   bump-version:
-    name: Bump version and create PR
+    name: Bump marketing version and create PR
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,81 +40,56 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Get current version
-        id: get_version
+      - name: Compute new version
+        id: ver
         run: |
-          CURRENT_VERSION=$(grep -oP 'version/code=\K[0-9]+' godot/export_presets.cfg | head -1)
-          CURRENT_SHORT_VERSION=$(grep -oP 'application/short_version="\K[0-9]+\.[0-9]+' godot/export_presets.cfg | head -1)
-          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "current_short_version=$CURRENT_SHORT_VERSION" >> $GITHUB_OUTPUT
-          echo "Current version: $CURRENT_VERSION"
-          echo "Current iOS short_version: $CURRENT_SHORT_VERSION"
+          set -eu
+          CURRENT=$(grep -oP '^version = "\K[0-9]+\.[0-9]+\.[0-9]+' lib/Cargo.toml | head -1)
+          IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          case "${{ inputs.level }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          NEW="${MAJOR}.${MINOR}.${PATCH}"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          echo "Bumping marketing version: $CURRENT -> $NEW (${{ inputs.level }})"
 
-      - name: Calculate new version
-        id: new_version
+      - name: Apply new version
         run: |
-          CURRENT=${{ steps.get_version.outputs.current_version }}
-          NEW_VERSION=$((CURRENT + 1))
-          CURRENT_SHORT=${{ steps.get_version.outputs.current_short_version }}
-          SHORT_MAJOR=$(echo "$CURRENT_SHORT" | cut -d. -f1)
-          SHORT_MINOR=$(echo "$CURRENT_SHORT" | cut -d. -f2)
-          NEW_SHORT_VERSION="${SHORT_MAJOR}.$((SHORT_MINOR + 1))"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "new_short_version=$NEW_SHORT_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
-          echo "New iOS short_version: $NEW_SHORT_VERSION"
-
-      - name: Update export_presets.cfg (Android version code)
-        run: |
-          CURRENT=${{ steps.get_version.outputs.current_version }}
-          NEW=${{ steps.new_version.outputs.new_version }}
-          sed -i "s/version\/code=${CURRENT}/version\/code=${NEW}/g" godot/export_presets.cfg
-
-      - name: Update export_presets.cfg (iOS version)
-        run: |
-          CURRENT=${{ steps.get_version.outputs.current_version }}
-          NEW=${{ steps.new_version.outputs.new_version }}
-          sed -i "s/application\/version=\"${CURRENT}\"/application\/version=\"${NEW}\"/g" godot/export_presets.cfg
-
-      - name: Update export_presets.cfg (iOS short_version)
-        run: |
-          CURRENT_SHORT=${{ steps.get_version.outputs.current_short_version }}
-          NEW_SHORT=${{ steps.new_version.outputs.new_short_version }}
-          sed -i "s/application\/short_version=\"${CURRENT_SHORT}\"/application\/short_version=\"${NEW_SHORT}\"/g" godot/export_presets.cfg
-
-      - name: Update lib/Cargo.toml
-        run: |
-          CURRENT=${{ steps.get_version.outputs.current_version }}
-          NEW=${{ steps.new_version.outputs.new_version }}
-          sed -i "s/^version = \"0\.${CURRENT}\.0\"/version = \"0.${NEW}.0\"/" lib/Cargo.toml
-
-      - name: Update lib/Cargo.lock
-        run: |
-          CURRENT=${{ steps.get_version.outputs.current_version }}
-          NEW=${{ steps.new_version.outputs.new_version }}
-          sed -i "0,/name = \"dclgodot\"/{ /name = \"dclgodot\"/{ n; s/version = \"0\.${CURRENT}\.0\"/version = \"0.${NEW}.0\"/ } }" lib/Cargo.lock
+          set -eu
+          CURRENT="${{ steps.ver.outputs.current }}"
+          NEW="${{ steps.ver.outputs.new }}"
+          # lib/Cargo.toml (source of truth) + its lock entry
+          sed -i "s/^version = \"${CURRENT}\"/version = \"${NEW}\"/" lib/Cargo.toml
+          sed -i "0,/name = \"dclgodot\"/{ /name = \"dclgodot\"/{ n; s/version = \"${CURRENT}\"/version = \"${NEW}\"/ } }" lib/Cargo.lock
+          # Android version/name + iOS short_version (marketing strings shown in the stores)
+          sed -i "s/version\/name=\"${CURRENT}\"/version\/name=\"${NEW}\"/" godot/export_presets.cfg
+          sed -i "s/application\/short_version=\"${CURRENT}\"/application\/short_version=\"${NEW}\"/" godot/export_presets.cfg
 
       - name: Verify changes
         run: |
           echo "Changes to commit:"
           git diff --stat
           echo ""
-          echo "Detailed diff:"
           git diff
 
       - name: Create branch, commit, and open PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NEW=${{ steps.new_version.outputs.new_version }}
-          NEW_SHORT=${{ steps.new_version.outputs.new_short_version }}
-          CURRENT_SHORT=${{ steps.get_version.outputs.current_short_version }}
+          set -eu
+          CURRENT="${{ steps.ver.outputs.current }}"
+          NEW="${{ steps.ver.outputs.new }}"
           BRANCH="bump-version-v${NEW}"
           git checkout -b "$BRANCH"
-          git add godot/export_presets.cfg lib/Cargo.toml lib/Cargo.lock
-          git commit -m "bump version v${NEW} and iOS short_version to ${NEW_SHORT}"
+          git add lib/Cargo.toml lib/Cargo.lock godot/export_presets.cfg
+          git commit -m "bump marketing version to v${NEW}"
           git push origin "$BRANCH"
           gh pr create \
-            --title "bump version v${NEW} and iOS short_version to ${NEW_SHORT}" \
-            --body "Automated version bump from v${{ steps.get_version.outputs.current_version }} to v${NEW} (iOS short_version ${CURRENT_SHORT} -> ${NEW_SHORT})." \
+            --title "bump marketing version to v${NEW}" \
+            --body "Automated marketing version bump (${{ inputs.level }}): v${CURRENT} -> v${NEW}.
+
+          Store build numbers (Android versionCode / iOS CFBundleVersion) are allocated from the Cloudflare Worker and stamped at build time — not changed here." \
             --base "${{ github.ref_name }}"

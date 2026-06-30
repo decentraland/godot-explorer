@@ -19,8 +19,9 @@ use crate::platform::{
 use crate::ui::{create_spinner, print_message, print_section, MessageType};
 
 use crate::consts::{
-    godot_editor_base_url_for_branch, sanitize_branch_for_url, BIN_FOLDER, GODOT4_BIN_BASE_URL,
-    GODOT_CURRENT_VERSION, PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER,
+    godot_editor_base_url, godot_editor_base_url_for_branch, godot_release_tag,
+    sanitize_branch_for_url, BIN_FOLDER, GODOT_BUILD_SHA, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
+    RUST_LIB_PROJECT_FOLDER,
 };
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
@@ -30,15 +31,31 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-28104757491.commit-cf57258.tgz");
+// Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG).
+// Set this to `Some("<tarball-url>")` only to temporarily pin a specific build
+// (e.g. a per-PR protocol tarball); leave it `None` to track @next.
+// Pinned here to the controls-customization protocol build (PR #426 rebased on main) that
+// ships the new mobile_input_controls/ui_input_binding components alongside current main.
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-28452214137.commit-9a82e23.tgz");
+const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
-    match PROTOCOL_FIXED_VERSION_URL {
-        Some(url) => Ok(url.to_string()),
-        None => Err(anyhow::anyhow!(
-            "PROTOCOL_FIXED_VERSION_URL is not set. Please set it to the desired protocol version URL."
-        )),
+    if let Some(url) = PROTOCOL_FIXED_VERSION_URL {
+        return Ok(url.to_string());
     }
+
+    let manifest_url = format!("https://registry.npmjs.org/@dcl/protocol/{PROTOCOL_NPM_DIST_TAG}");
+    let manifest: serde_json::Value = Client::new().get(&manifest_url).send()?.json()?;
+    manifest
+        .get("dist")
+        .and_then(|d| d.get("tarball"))
+        .and_then(|t| t.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Could not resolve tarball URL for @dcl/protocol@{PROTOCOL_NPM_DIST_TAG} from npm registry"
+            )
+        })
 }
 
 pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
@@ -242,7 +259,7 @@ fn get_godot_url(branch: Option<&str>) -> Option<String> {
 
     let base_url = match branch {
         Some(b) => godot_editor_base_url_for_branch(b),
-        None => GODOT4_BIN_BASE_URL.to_string(),
+        None => godot_editor_base_url(),
     };
 
     Some(format!("{base_url}{os_url}"))
@@ -283,6 +300,73 @@ pub fn get_godot_executable_path() -> Option<String> {
     }?;
 
     Some(os_url)
+}
+
+/// Status of the locally-installed Godot editor binary relative to the pinned
+/// `GODOT_CURRENT_VERSION` + `GODOT_BUILD_SHA`.
+#[derive(Debug)]
+pub enum GodotBinaryStatus {
+    /// Installed and matches the expected version + fork SHA.
+    Ok,
+    /// Installed but reports a different version/SHA (`found` = raw `--version` line).
+    Mismatch { found: String },
+    /// No binary at `BinPaths::godot_bin()`.
+    Missing,
+    /// Present but its version couldn't be determined (couldn't exec, or unrecognized output).
+    Unverifiable(String),
+}
+
+/// Parse a Godot `--version` line of the form `"{version}.stable.gh.{sha} - {label}"` into
+/// `(version, sha)`. Returns `None` for any line lacking the `.stable.gh.` marker (e.g. branch or
+/// custom builds whose SHA we don't pin). OS-independent — the format comes from Godot's
+/// `VERSION_FULL_NAME` and is identical across platforms.
+pub fn parse_godot_version(line: &str) -> Option<(String, String)> {
+    let token = line.split_whitespace().next()?; // first token; drops the " - <label>" suffix
+    let (version, rest) = token.split_once(".stable.gh.")?;
+    let sha = rest.split('.').next()?; // tolerate any trailing segments
+    Some((version.to_string(), sha.to_string()))
+}
+
+/// Run the installed `godot4_bin --version` and compare against `GODOT_CURRENT_VERSION` +
+/// `GODOT_BUILD_SHA`. Always validates the HOST editor binary (never the cross-compiled export
+/// templates — those are covered by the per-platform SHA marker in `prepare_templates`).
+pub fn validate_installed_godot_binary() -> GodotBinaryStatus {
+    let bin = BinPaths::godot_bin(); // .bin/godot/godot4_bin — same file is_tool_installed checks
+    if !bin.exists() {
+        return GodotBinaryStatus::Missing;
+    }
+    let output = match std::process::Command::new(&bin).arg("--version").output() {
+        Ok(o) => o,
+        Err(e) => return GodotBinaryStatus::Unverifiable(e.to_string()),
+    };
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout.lines().find(|l| l.contains(".stable")).unwrap_or("");
+    match parse_godot_version(line) {
+        Some((v, sha)) if v == GODOT_CURRENT_VERSION && sha == GODOT_BUILD_SHA => {
+            GodotBinaryStatus::Ok
+        }
+        Some(_) => GodotBinaryStatus::Mismatch {
+            found: line.trim().to_string(),
+        },
+        None => {
+            GodotBinaryStatus::Unverifiable(format!("unrecognized --version output: {stdout:?}"))
+        }
+    }
+}
+
+/// Warn (non-fatal) if the installed Godot binary doesn't match the pinned version+SHA. Used as a
+/// pre-`run` / pre-`export` guard. Intentionally a warning, never an error: `run`/`export` carry no
+/// `--branch` context, so a developer on a branch build would always "mismatch" the const SHA.
+pub fn warn_if_godot_mismatch() {
+    if let GodotBinaryStatus::Mismatch { found } = validate_installed_godot_binary() {
+        print_message(
+            MessageType::Warning,
+            &format!(
+                "Installed Godot is {found}, expected {} — run `cargo run -- install` to refresh",
+                godot_release_tag()
+            ),
+        );
+    }
 }
 
 fn install_android_tools() -> Result<(), anyhow::Error> {
@@ -530,15 +614,43 @@ pub fn install(
         print_message(MessageType::Success, "protoc already installed");
     }
 
-    // Check if Godot is already installed
-    if !crate::helpers::is_tool_installed("godot") {
+    // (Re)install Godot if missing OR if the present binary doesn't match the pinned version+SHA.
+    // A stale binary (same version, different fork SHA) is replaced; the SHA-tagged cache key below
+    // guarantees a cache miss so the fresh fork build is fetched, not the stale cached zip. Branch
+    // builds use existence-only (their fork SHA isn't tracked at const time).
+    let needs_godot = match (branch, validate_installed_godot_binary()) {
+        (Some(_), GodotBinaryStatus::Missing) => true,
+        (Some(_), _) => false,
+        (None, GodotBinaryStatus::Ok) => false,
+        (None, GodotBinaryStatus::Missing) => true,
+        (None, GodotBinaryStatus::Mismatch { found }) => {
+            print_message(
+                MessageType::Warning,
+                &format!(
+                    "Godot binary is {found}, expected {} — re-downloading",
+                    godot_release_tag()
+                ),
+            );
+            true
+        }
+        (None, GodotBinaryStatus::Unverifiable(e)) => {
+            // Present but can't self-report (e.g. can't exec the host binary). Don't loop-redownload
+            // the same artifact — warn and keep it.
+            print_message(
+                MessageType::Warning,
+                &format!("Could not verify Godot binary ({e}); leaving as-is"),
+            );
+            false
+        }
+    };
+    if needs_godot {
         print_section("Installing Godot Engine");
         let godot_cache_key = match branch {
             Some(b) => format!(
                 "{GODOT_CURRENT_VERSION}.branch-{}.executable.zip",
                 sanitize_branch_for_url(b)
             ),
-            None => format!("{GODOT_CURRENT_VERSION}.executable.zip"),
+            None => format!("{GODOT_CURRENT_VERSION}-{GODOT_BUILD_SHA}.executable.zip"),
         };
         download_and_extract_zip(
             get_godot_url(branch).unwrap().as_str(),
@@ -558,7 +670,10 @@ pub fn install(
         fs::copy(program_path, dest_program_path)?;
         print_message(MessageType::Success, "Godot binary installed");
     } else {
-        print_message(MessageType::Success, "Godot binary already installed");
+        print_message(
+            MessageType::Success,
+            "Godot binary already installed (version verified)",
+        );
     }
 
     if !PathBuf::from(GODOT_SENTRY_ADDON_FOLDER).exists() {
@@ -604,4 +719,37 @@ pub fn install(
     println!("{}", next_steps);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod godot_version_tests {
+    use super::parse_godot_version;
+
+    #[test]
+    fn parses_stable_gh_build() {
+        assert_eq!(
+            parse_godot_version("4.6.2.stable.gh.9ee6af7ab - Protocol Squad"),
+            Some(("4.6.2".to_string(), "9ee6af7ab".to_string()))
+        );
+    }
+
+    #[test]
+    fn tolerates_trailing_newline_and_crlf() {
+        assert_eq!(
+            parse_godot_version("4.6.2.stable.gh.9ee6af7ab - Protocol Squad\n"),
+            Some(("4.6.2".to_string(), "9ee6af7ab".to_string()))
+        );
+        assert_eq!(
+            parse_godot_version("4.6.2.stable.gh.9ee6af7ab - Protocol Squad\r\n"),
+            Some(("4.6.2".to_string(), "9ee6af7ab".to_string()))
+        );
+    }
+
+    #[test]
+    fn rejects_non_gh_builds() {
+        // Branch / custom builds without the `.stable.gh.` marker are not pinned.
+        assert_eq!(parse_godot_version("4.6.2.stable.custom_build"), None);
+        assert_eq!(parse_godot_version("4.6.2.stable"), None);
+        assert_eq!(parse_godot_version(""), None);
+    }
 }

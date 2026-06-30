@@ -1,0 +1,70 @@
+name: Dispatch godot-asc-deploy
+description: >
+  Hand off an unsigned iOS export already in R2 (ios/<branch>/<sha>/export.tar.gz) to the
+  decentraland/godot-asc-deploy pipeline (deploy_testflight.yml), which signs it and uploads to
+  TestFlight. Factored out of ios_r2_artifact.yml so BOTH the WarpBuild build path and the
+  reuse-existing-export path (mobile_distribute.yml ios-dispatch) hand off identically.
+
+inputs:
+  gh-token:
+    description: PAT that can dispatch deploy_testflight.yml in godot-asc-deploy (ASC_DEPLOY_DISPATCH_TOKEN).
+    required: true
+  ref:
+    description: Source branch — sanitized to the R2 key segment (slashes → dashes).
+    required: true
+  sha:
+    description: Commit SHA of the export to ship (godot-asc-deploy reconstructs the R2 key from branch + sha).
+    required: true
+  whats_new:
+    description: TestFlight "What to Test" notes.
+    required: false
+    default: ""
+  pr_number:
+    required: false
+    default: ""
+  slack_ts:
+    required: false
+    default: ""
+  build_version:
+    required: false
+    default: ""
+  build_number:
+    description: Explicit CFBundleVersion (date-based, idempotent per SHA). Empty → asc-deploy falls back to TestFlight latest+1.
+    required: false
+    default: ""
+  triggered_by:
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Dispatch godot-asc-deploy
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh-token }}
+        REF: ${{ inputs.ref }}
+        SHA: ${{ inputs.sha }}
+        WHATS_NEW: ${{ inputs.whats_new }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        TS: ${{ inputs.slack_ts }}
+        BUILD_VERSION: ${{ inputs.build_version }}
+        BUILD_NUMBER: ${{ inputs.build_number }}
+        TRIGGERED_BY: ${{ inputs.triggered_by }}
+      run: |
+        set -eu
+        if [ -z "${GH_TOKEN:-}" ]; then
+          echo "❌ ASC_DEPLOY_DISPATCH_TOKEN not set — cannot hand off to godot-asc-deploy."
+          exit 1
+        fi
+        if [ -z "${SHA:-}" ]; then
+          echo "❌ sha is empty — godot-asc-deploy cannot locate the export in R2."
+          exit 1
+        fi
+        SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
+        gh workflow run deploy_testflight.yml \
+          --repo decentraland/godot-asc-deploy --ref main \
+          -f branch="$SAFE_BRANCH" -f sha="$SHA" -f whats_new="$WHATS_NEW" \
+          -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
+          -f build_version="$BUILD_VERSION" -f build_number="$BUILD_NUMBER" -f triggered_by="$TRIGGERED_BY"
+        echo "✅ Dispatched godot-asc-deploy for ${SAFE_BRANCH}@${SHA}"

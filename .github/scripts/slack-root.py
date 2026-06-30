@@ -16,7 +16,7 @@ Env (only NON-EMPTY values are merged; everything else is preserved):
   SLACK_BOT_TOKEN, SLACK_CHANNEL   required
   SLACK_TS                         if set -> read+merge+chat.update; else chat.postMessage
   STATUS                           building | success | failed   (only set it when you mean to)
-  BUILD_VERSION, TRIGGERED_BY
+  BUILD_VERSION, BRANCH, TRIGGERED_BY
   PR_NUMBER, PR_URL, COMMIT, COMMIT_URL
   IOS_LINE, ANDROID_LINE, APK_URL, RUN_URL, TESTFLIGHT_URL
 
@@ -25,7 +25,7 @@ On create prints `ts=<ts>` and appends ts/channel to $GITHUB_OUTPUT.
 import os, sys, json, urllib.request, urllib.parse
 
 API = "https://slack.com/api"
-FIELDS = ["status", "build_version", "triggered_by", "pr_number", "pr_url",
+FIELDS = ["status", "build_version", "branch", "triggered_by", "pr_number", "pr_url",
           "commit", "commit_url", "ios_line", "android_line", "apk_url",
           "run_url", "testflight_url"]
 
@@ -71,6 +71,7 @@ status = (state.get("status") or "building").lower()
 emoji = {"building": "⏳", "success": "✅", "failed": "❌", "cancelled": "⚠️"}.get(status, "⏳")
 label = {"building": "BUILDING", "success": "SUCCESS", "failed": "FAILED", "cancelled": "CANCELLED"}.get(status, status.upper())
 bv = state.get("build_version") or "—"
+branch = state.get("branch", "")
 trig = state.get("triggered_by") or "—"
 commit, commit_url = state.get("commit", ""), state.get("commit_url", "")
 pr_number, pr_url = state.get("pr_number", ""), state.get("pr_url", "")
@@ -81,12 +82,14 @@ run_url = state.get("run_url", "")
 
 commit_md = f"<{commit_url}|`{commit}`>" if (commit_url and commit) else (f"`{commit}`" if commit else "—")
 pr_md = f"<{pr_url}|#{pr_number}>" if (pr_url and pr_number) else (f"#{pr_number}" if pr_number else "—")
+branch_md = f"`{branch}`" if branch else "—"
 
 blocks = [
     {"type": "header", "text": {"type": "plain_text",
         "text": f"🤖 Mobile build pipeline · {emoji} {label} 🍏", "emoji": True}},
     {"type": "section", "fields": [
         {"type": "mrkdwn", "text": f"*Build version:*\n`{bv}`"},
+        {"type": "mrkdwn", "text": f"*Branch:*\n{branch_md}"},
         {"type": "mrkdwn", "text": f"*Triggered by:*\n{trig}"},
         {"type": "mrkdwn", "text": f"*PR:*\n{pr_md}"},
         {"type": "mrkdwn", "text": f"*Commit:*\n{commit_md}"},
