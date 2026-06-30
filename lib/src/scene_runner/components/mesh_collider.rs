@@ -284,6 +284,16 @@ pub fn create_or_update_mesh(
                 box_shape.set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.0));
                 box_shape.upcast::<Shape3D>()
             }
+            // Gltf mesh collider is not yet supported; fall back to a box shape.
+            pb_mesh_collider::Mesh::Gltf(_) => {
+                let box_shape = match current_shape {
+                    Some(current_shape) => current_shape
+                        .try_cast::<BoxShape3D>()
+                        .unwrap_or(BoxShape3D::new_gd()),
+                    None => BoxShape3D::new_gd(),
+                };
+                box_shape.upcast::<Shape3D>()
+            }
         },
         _ => {
             let box_shape = match current_shape {

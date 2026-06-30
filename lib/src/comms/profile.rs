@@ -247,6 +247,8 @@ impl SerializedProfile {
                 .iter()
                 .map(|emote| emote.urn.clone())
                 .collect(),
+            // force_render slots are not tracked here yet.
+            force_render: Vec::default(),
         }
     }
 

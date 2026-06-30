@@ -53,6 +53,8 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
 
                 mesh_instance.call("set_plane", &[uvs]);
             }
+            // Gltf mesh renderer is not yet supported.
+            pb_mesh_renderer::Mesh::Gltf(_) => {}
         },
         _ => {
             let box_mesh = match current_mesh {
