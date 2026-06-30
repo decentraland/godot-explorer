@@ -33,6 +33,12 @@ const WEARABLE_CATEGORIES: Array = [
 ## Categories that have no marketplace suggestions.
 const HIDDEN_CATEGORIES: Array = ["body_shape", "all", "all_extras"]
 
+## Hide items priced above the largest credits tier (tier3 = 225 credits): they can't
+## be afforded with a single In-App Purchase, so surfacing them is misleading (#2298).
+## The catalog API takes `maxPrice` in whole MANA/credits — the SAME unit as the existing
+## `minPrice=1` below, inclusive. NOT wei (the price is parsed server-side).
+const _MAX_PRICE_CREDITS := "225"
+
 @export var asset_type: String = "wearables"
 
 var _current_category: String = ""
@@ -94,15 +100,15 @@ func _build_catalog_url(category: String, skip: int = 0, first: int = 3) -> Stri
 		return (
 			DclUrls.marketplace_catalog_api()
 			+ (
-				"?first=%d&skip=%d&category=emote&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
-				% [first, skip]
+				"?first=%d&skip=%d&category=emote&isOnSale=true&minPrice=1&maxPrice=%s&onlyMinting=true&sortBy=recently_listed"
+				% [first, skip, _MAX_PRICE_CREDITS]
 			)
 		)
 	var url = (
 		DclUrls.marketplace_catalog_api()
 		+ (
-			"?first=%d&skip=%d&category=wearable&isOnSale=true&minPrice=1&onlyMinting=true&sortBy=recently_listed"
-			% [first, skip]
+			"?first=%d&skip=%d&category=wearable&isOnSale=true&minPrice=1&maxPrice=%s&onlyMinting=true&sortBy=recently_listed"
+			% [first, skip, _MAX_PRICE_CREDITS]
 		)
 	)
 	var wearable_cat = category if category in WEARABLE_CATEGORIES else ""
@@ -110,6 +116,13 @@ func _build_catalog_url(category: String, skip: int = 0, first: int = 3) -> Stri
 		wearable_cat = "hands"
 	if not wearable_cat.is_empty():
 		url += "&wearableCategory=%s" % wearable_cat
+	# Only surface items that have a representation for the player's body shape;
+	# otherwise equipping them renders the avatar naked for that slot. The catalog
+	# API's `wearableGender=male|female` returns items with that representation
+	# (male/female-exclusive + unisex), excluding the opposite-only ones.
+	var gender := MarketplaceUrl.current_player_gender()
+	if not gender.is_empty():
+		url += "&wearableGender=%s" % gender
 	return url
 
 
@@ -186,7 +199,6 @@ func _populate_cards(items: Array):
 
 func _setup_card(card: WearableItem, item_data: Dictionary):
 	var urn = item_data.get("urn", "")
-
 	_set_rarity_background(card, item_data.get("rarity", "common"))
 
 	var price = _parse_price(item_data.get("minPrice", item_data.get("price", "0")))

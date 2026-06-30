@@ -26,6 +26,10 @@ on:
         required: false
       MOBILE_ARTIFACTS_R2_BUCKET:
         required: false
+      # API key (bearer) for the Cloudflare Worker build-number allocator. Optional: when unset
+      # (e.g. fork PRs) the build keeps the committed placeholder versionCode (never shipped).
+      BUILD_NUMBER_SECRET:
+        required: false
 
 permissions:
   pull-requests: write
@@ -89,6 +93,16 @@ jobs:
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
 
+      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
+      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
+      # and so the APK + AAB exports below stamp the same versionCode for this commit.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
       - name: Build Rust libraries
         run: |
           cargo run -- build --release ${{ env.PROD_FLAG }}
@@ -102,7 +116,7 @@ jobs:
         with:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
-      
+
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release
@@ -223,7 +237,12 @@ jobs:
 
           echo "📤 Uploading APK to s3://${AWS_S3_BUCKET}/${KEY}"
           aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-          aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          # Update the branch 'latest' pointer WITHOUT re-uploading. The managed `aws s3 cp s3:// s3://`
+          # is unusable on R2 (tagging headers NotImplemented), so use low-level copy-object; fall
+          # back to a plain re-upload if R2 rejects the copy.
+          aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_KEY" \
+            --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+            || aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
 
           PUBLIC_URL="${R2_PUBLIC_BASE_URL}/${KEY}"
           echo "✅ APK uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
@@ -239,7 +258,11 @@ jobs:
               AAB_LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.aab"
               echo "📤 Uploading AAB to s3://${AWS_S3_BUCKET}/${AAB_KEY}"
               aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-              aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+              # Update the branch 'latest' pointer WITHOUT re-uploading (low-level copy-object;
+              # R2 rejects the managed server-side copy). Fall back to a re-upload on failure.
+              aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$AAB_LATEST_KEY" \
+                --copy-source "${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+                || aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
               echo "✅ AAB uploaded to R2"
               echo "🔗 Public URL: ${R2_PUBLIC_BASE_URL}/${AAB_KEY}"
             else

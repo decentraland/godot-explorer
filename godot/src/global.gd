@@ -111,6 +111,10 @@ var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
 
+## true when the env came from --dclenv or a deeplink dclenv=… (incl. dclenv=org).
+## When true, Iap's sandbox auto-switch must NOT override the explicit choice.
+var dcl_env_explicit: bool = false
+
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var camera_mode_blocked: bool = false
@@ -415,9 +419,6 @@ func _ready():
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
 
-		if deep_link_obj.iap_enabled:
-			Iap.enable()
-
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
@@ -462,6 +463,7 @@ func _ready():
 		env = deep_link_obj.dclenv
 		env_source = "deeplink"
 	DclGlobal.set_dcl_environment(env)
+	dcl_env_explicit = env_source != "default"
 	if env != "org":
 		print("[GLOBAL] Environment set to: ", env, " (source: ", env_source, ")")
 
@@ -1351,8 +1353,16 @@ func _http_method_to_string(method: int) -> String:
 
 
 func async_signed_fetch(url: String, method: int, _body: String = ""):
+	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
+	# x-identity-metadata header. The server verifier requires it to be a JSON
+	# object: a bodyless request would otherwise be signed as `null`, which the
+	# credits-server crypto-middleware (>=4.0.0) now rejects with
+	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
+	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
+	# body untouched.
+	var metadata := _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, _body, _http_method_to_string(method)
+		url, metadata, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 
@@ -1417,6 +1427,7 @@ func _check_dclenv_change() -> bool:
 
 	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
 	DclGlobal.set_dcl_environment(new_env)
+	dcl_env_explicit = true
 	sign_out()
 	return true
 
@@ -1444,6 +1455,7 @@ func _notification(what: int) -> void:
 				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
 				if not parsed.dclenv.is_empty():
 					DclGlobal.set_dcl_environment(parsed.dclenv)
+					dcl_env_explicit = true
 
 			deep_link_router.process_deep_link(new_url)
 

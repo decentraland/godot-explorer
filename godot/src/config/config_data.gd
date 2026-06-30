@@ -159,6 +159,13 @@ var terms_and_conditions_version: int = 0
 # IapManager.are_terms_accepted / accept_terms.
 var iap_terms_accepted_wallet: String = ""
 
+# Snapshot of owned item counts for the "NEW" tag (#2300), kept entirely local — no
+# endpoint timestamps. Shape: { category: { wallet_lower: { item_urn: count } } } with
+# category in {"wearable","emote"}. An item is tagged NEW when its current owned count
+# exceeds this snapshot (a new urn, or one extra copy). Seeded on the first backpack load
+# for a wallet and advanced on every load (see Backpack.newtag_evaluate).
+var backpack_owned_counts: Dictionary = {}
+
 # Unix timestamp until which the soft version-upgrade overlay is snoozed
 # (set when the user presses "Later"; ignored for required-minimum blocks).
 var version_gate_snooze_until: int = 0
@@ -446,6 +453,10 @@ func load_from_settings_file():
 		"user", "iap_terms_accepted_wallet", data_default.iap_terms_accepted_wallet
 	)
 
+	self.backpack_owned_counts = settings_file.get_value(
+		"user", "backpack_owned_counts", data_default.backpack_owned_counts
+	)
+
 	self.version_gate_snooze_until = settings_file.get_value(
 		"user", "version_gate_snooze_until", data_default.version_gate_snooze_until
 	)
@@ -532,6 +543,7 @@ func save_to_settings_file():
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
 	new_settings_file.set_value("user", "iap_terms_accepted_wallet", self.iap_terms_accepted_wallet)
+	new_settings_file.set_value("user", "backpack_owned_counts", self.backpack_owned_counts)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
