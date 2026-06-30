@@ -13,34 +13,44 @@ var last_hide_click := 0.0
 
 var loaded_resources_offset := 0
 
-@onready var loading_progress = %ColorRect_LoadingProgress
-@onready var loading_progress_label = %Label_LoadingProgress
-@onready var label_loading_state = %Label_LoadingState
+var _place_data_set: bool = false
 
-@onready
-var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/CarouselViewport/SubViewport/Carousel
-
-@onready var timer_auto_move_carousel = $Timer_AutoMoveCarousel
-
-@onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
-@onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
-@onready var debug_chronometer := Chronometer.new()
+@onready var loading_progress_label: Label = %Label_LoadingProgress
+@onready var label_loading_state: Label = %Label_LoadingState
 @onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
+@onready var rich_text_label_place_name: TrimmedRichTextLabel = %RichTextLabel_PlaceName
+
+@onready var texture_rect_background: TextureRect = %TextureRect_Background
+@onready var vbox_data: VBoxContainer = %VBoxContainer_Data
+@onready var rich_text_label_creator: RichTextLabel = %RichTextLabel
+
+@onready var loading_screen_progress_logic: Node = $LoadingScreenProgressLogic
+@onready var timer_check_progress_timeout: Timer = $Timer_CheckProgressTimeout
+@onready var debug_chronometer := Chronometer.new()
 
 static var _low_spec_toast_shown: bool = false
 
 
-func _ready():
+func _ready() -> void:
 	last_activity_time = Time.get_ticks_msec()
+	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
 
 # Forward
-func enable_loading_screen():
+func enable_loading_screen() -> void:
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
+	_clear_place_ui()
 	Global.loading_started.emit()
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
+
+
+func _clear_place_ui() -> void:
+	_place_data_set = false
+	vbox_data.hide()
+	texture_rect_background.texture = null
+	texture_rect_background.modulate = Color.TRANSPARENT
 
 
 func async_hide_loading_screen_effect():
@@ -170,3 +180,78 @@ func _on_texture_rect_logo_gui_input(event: InputEvent) -> void:
 			if elapsed_time <= 500:
 				loading_screen_progress_logic.hide_loading_screen()
 			last_hide_click = Time.get_ticks_msec()
+
+
+func _on_scene_runner_loading_started(_session_id: int, _expected_count: int) -> void:
+	if not _place_data_set:
+		_async_fetch_place_data(Global.scene_fetcher.current_position)
+
+
+func _async_fetch_place_data(pos: Vector2i) -> void:
+	var result: Variant
+	if Realm.is_genesis_city(Global.realm.realm_url):
+		result = await PlacesHelper.async_get_by_position(pos)
+	else:
+		result = await PlacesHelper.async_get_by_names(Global.realm.realm_name)
+	if not is_instance_valid(self) or _place_data_set:
+		return
+	if result is PromiseError:
+		return
+	var json: Dictionary = result.get_string_response_as_json()
+	var data_array = json.get("data", [])
+	if data_array.is_empty():
+		return
+	set_place_data(data_array[0])
+
+
+## Pass the full Places API dict (same format used by PlaceItem).
+## Call this before or right after enable_loading_screen().
+## Keys read: "title", "contact_name", "image".
+func set_place_data(data: Dictionary, texture: Texture2D = null) -> void:
+	_place_data_set = true
+	var title = data.get("title", "")
+	var creator = data.get("contact_name", "")
+	set_place_name(title if title is String else "")
+	set_place_creator(creator if creator is String else "")
+	vbox_data.show()
+	if texture != null:
+		_apply_background_texture(texture)
+	else:
+		var image_url = data.get("image", "")
+		if image_url is String and not image_url.is_empty():
+			set_place_image(image_url)
+
+
+func set_place_name(place_name: String) -> void:
+	if place_name.is_empty():
+		return
+	rich_text_label_place_name	.set_text_trimmed(place_name)
+
+
+func set_place_creator(creator: String) -> void:
+	if creator.is_empty():
+		rich_text_label_creator.hide()
+		return
+	rich_text_label_creator.show()
+	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] " + creator
+
+
+func set_place_image(image_url: String) -> void:
+	_async_set_background.call_deferred(image_url)
+
+
+func _apply_background_texture(texture: Texture2D) -> void:
+	texture_rect_background.texture = texture
+	var tween = create_tween().set_parallel(true)
+	tween.tween_property(texture_rect_background, "modulate", Color.WHITE, 1.0)
+
+
+func _async_set_background(url: String) -> void:
+	var url_hash := AsyncImage._get_hash_from_url(url)
+	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	var result = await PromiseUtils.async_awaiter(promise)
+	if not is_instance_valid(self):
+		return
+	if result is PromiseError or result.failed:
+		return
+	_apply_background_texture(result.texture)

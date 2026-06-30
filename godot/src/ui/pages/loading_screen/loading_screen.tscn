@@ -1,8 +1,11 @@
 [gd_scene format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Script" uid="uid://cm08lp37agj2o" path="res://src/ui/pages/loading_screen/loading_screen.gd" id="2_7hdbk"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="3_6uwlu"]
 [ext_resource type="Shader" uid="uid://bhjcims48e1cf" path="res://src/ui/components/atoms/images/blur_background/quick_blur.gdshader" id="3_7rccc"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_w6anr"]
+[ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="7_xmi2h"]
+[ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/atoms/controls/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="8_cdm7v"]
 [ext_resource type="Texture2D" uid="uid://dp5xw8in28b5x" path="res://assets/ui/loading/world-background.png" id="9_i03vb"]
 [ext_resource type="Script" uid="uid://cu4rtpvdc5b65" path="res://src/ui/pages/loading_screen/loading_screen_progress_logic.gd" id="10_xsh10"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="11_4vh5o"]
@@ -25,11 +28,6 @@ metadata/_snap_count = 5
 gradient = SubResource("Gradient_gt6ke")
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xmi2h"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_cdm7v"]
-font = ExtResource("11_4vh5o")
-font_size = 64
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_ky3me"]
 font = ExtResource("14_7rccc")
@@ -62,14 +60,27 @@ grow_vertical = 2
 script = ExtResource("2_7hdbk")
 metadata/mobile_preview_orientation = "landscape"
 
-[node name="TextureRect_Background" type="TextureRect" parent="." unique_id=475870850]
+[node name="ColorRect_Background" type="ColorRect" parent="." unique_id=292977790]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+color = Color(0.4117647, 0.12156863, 0.6627451, 1)
+
+[node name="TextureRect_Background" type="TextureRect" parent="." unique_id=475870850]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -19.5
+offset_right = 19.5
+grow_horizontal = 2
+grow_vertical = 2
 texture = ExtResource("9_i03vb")
+stretch_mode = 6
 
 [node name="TextureRect_Blur" type="TextureRect" parent="." unique_id=1592832536]
 material = SubResource("ShaderMaterial_ky3me")
@@ -97,25 +108,30 @@ wait_time = 0.5
 script = ExtResource("10_xsh10")
 loading_screen = NodePath("..")
 
-[node name="MarginContainer_Content" type="MarginContainer" parent="." unique_id=1395350413]
+[node name="SafeMarginContainer" type="MarginContainer" parent="." unique_id=1238428016]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("3_6uwlu")
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
+
+[node name="MarginContainer_Content" type="MarginContainer" parent="SafeMarginContainer" unique_id=1395350413]
+layout_mode = 2
 theme_override_constants/margin_left = 80
 theme_override_constants/margin_top = 96
 theme_override_constants/margin_right = 80
 theme_override_constants/margin_bottom = 44
 
-[node name="VBoxContainer_Data" type="VBoxContainer" parent="MarginContainer_Content" unique_id=1011049702]
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/MarginContainer_Content" unique_id=1011049702]
 custom_minimum_size = Vector2(600, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/separation = 0
 
-[node name="TextureRect_Logo" type="TextureRect" parent="MarginContainer_Content/VBoxContainer_Data" unique_id=1849141008]
+[node name="TextureRect_Logo" type="TextureRect" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=1849141008]
 custom_minimum_size = Vector2(58, 58)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -123,30 +139,43 @@ size_flags_vertical = 0
 texture = ExtResource("4_w6anr")
 expand_mode = 5
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer_Content/VBoxContainer_Data" unique_id=1590321812]
+[node name="VBoxContainer_Data" type="VBoxContainer" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=97858265]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer/VBoxContainer_Data" unique_id=1590321812]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 
-[node name="Label_Title" type="Label" parent="MarginContainer_Content/VBoxContainer_Data" unique_id=1396059035]
-custom_minimum_size = Vector2(0, 160)
+[node name="RichTextLabel_PlaceName" type="RichTextLabel" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer/VBoxContainer_Data" unique_id=251786867]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-text = "Place World
-Name Here"
-label_settings = SubResource("LabelSettings_cdm7v")
-autowrap_mode = 1
-clip_text = true
-text_overrun_behavior = 5
-max_lines_visible = 2
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("7_xmi2h")
+theme_override_fonts/bold_italics_font = ExtResource("7_xmi2h")
+theme_override_fonts/italics_font = ExtResource("7_xmi2h")
+theme_override_fonts/mono_font = ExtResource("7_xmi2h")
+theme_override_font_sizes/normal_font_size = 64
+theme_override_font_sizes/bold_font_size = 42
+theme_override_font_sizes/bold_italics_font_size = 42
+theme_override_font_sizes/italics_font_size = 42
+theme_override_font_sizes/mono_font_size = 42
+text = "Scene Title Scene"
+fit_content = true
+scroll_active = false
+autowrap_mode = 2
+justification_flags = 131
+script = ExtResource("8_cdm7v")
 
-[node name="HSeparator2" type="HSeparator" parent="MarginContainer_Content/VBoxContainer_Data" unique_id=1987483422]
+[node name="HSeparator2" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer/VBoxContainer_Data" unique_id=1987483422]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 
-[node name="RichTextLabel" type="RichTextLabel" parent="MarginContainer_Content/VBoxContainer_Data" unique_id=1497587327]
+[node name="RichTextLabel" type="RichTextLabel" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer/VBoxContainer_Data" unique_id=1497587327]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/normal_font = ExtResource("12_4vh5o")
@@ -155,46 +184,53 @@ bbcode_enabled = true
 text = "[color=#DF9CFF]By[/color] Creator"
 fit_content = true
 
-[node name="HSeparator3" type="HSeparator" parent="MarginContainer_Content/VBoxContainer_Data" unique_id=1792108968]
+[node name="HSeparator3" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=1792108968]
 layout_mode = 2
+size_flags_vertical = 0
 theme_override_constants/separation = 64
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 
-[node name="TipCard" parent="MarginContainer_Content/VBoxContainer_Data" unique_id=1184287194 instance=ExtResource("13_xmi2h")]
+[node name="TipCard" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=1184287194 instance=ExtResource("13_xmi2h")]
 layout_mode = 2
 
-[node name="VBoxContainer_Progress" type="VBoxContainer" parent="MarginContainer_Content" unique_id=960033568]
+[node name="HSeparator4" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=1647476192]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 90
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
+
+[node name="VBoxContainer_Progress" type="VBoxContainer" parent="SafeMarginContainer/MarginContainer_Content" unique_id=960033568]
 layout_mode = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 12
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer_Content/VBoxContainer_Progress" unique_id=954266771]
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress" unique_id=954266771]
 layout_mode = 2
 
-[node name="Label_LoadingState" type="Label" parent="MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=525142318]
+[node name="Label_LoadingState" type="Label" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=525142318]
 unique_name_in_owner = true
 layout_mode = 2
 text = "00/00 resouces at 0.10 mb/s"
 label_settings = SubResource("LabelSettings_ky3me")
 
-[node name="VSeparator" type="VSeparator" parent="MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=826283927]
+[node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=826283927]
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 60
 
-[node name="Label_LoadingProgress" type="Label" parent="MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=1665532642]
+[node name="Label_LoadingProgress" type="Label" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=1665532642]
 unique_name_in_owner = true
 layout_mode = 2
 text = "00%"
 label_settings = SubResource("LabelSettings_alcn7")
 
-[node name="PanelContainer" type="PanelContainer" parent="MarginContainer_Content/VBoxContainer_Progress" unique_id=1148164352]
+[node name="PanelContainer" type="PanelContainer" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress" unique_id=1148164352]
 clip_children = 2
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_cdm7v")
 
-[node name="TextureProgressBar" type="TextureProgressBar" parent="MarginContainer_Content/VBoxContainer_Progress/PanelContainer" unique_id=1567175112]
+[node name="TextureProgressBar" type="TextureProgressBar" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/PanelContainer" unique_id=1567175112]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 15)
 layout_mode = 2
@@ -212,6 +248,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 32
+metadata/_edit_lock_ = true
 
 [node name="CloseButton" parent="MarginContainer_Close" unique_id=333937878 instance=ExtResource("14_cdm7v")]
 unique_name_in_owner = true
@@ -219,4 +256,4 @@ layout_mode = 2
 
 [connection signal="timeout" from="Timer_CheckProgressTimeout" to="." method="_on_timer_check_progress_timeout_timeout"]
 [connection signal="loading_show_requested" from="LoadingScreenProgressLogic" to="." method="_on_loading_screen_progress_logic_loading_show_requested"]
-[connection signal="gui_input" from="MarginContainer_Content/VBoxContainer_Data/TextureRect_Logo" to="." method="_on_texture_rect_logo_gui_input"]
+[connection signal="gui_input" from="SafeMarginContainer/MarginContainer_Content/VBoxContainer/TextureRect_Logo" to="." method="_on_texture_rect_logo_gui_input"]
