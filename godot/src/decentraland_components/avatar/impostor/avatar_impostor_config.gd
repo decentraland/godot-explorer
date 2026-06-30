@@ -10,6 +10,16 @@ const TINT_FULL_DISTANCE: float = 60.0
 const DISTANCE_CHECK_PERIOD_FRAMES: int = 6
 const CAPTURE_BUDGET_PER_FRAME: int = 1
 
+# Real local snapshot generation (ImpostorCapturer gen stage) is rendered at
+# this reduced resolution; set_impostor_texture upscales to the 256x512 layer.
+# Cuts render + GPU readback cost vs the full-size capture.
+const GEN_SNAPSHOT_SIZE: Vector2i = Vector2i(128, 256)
+
+# Minimum frames between two real generations so they never run back-to-back
+# (each one still re-assembles the avatar on the main thread). Spreads the
+# remaining per-generation cost out instead of bursting.
+const GEN_MIN_FRAMES_BETWEEN: int = 12
+
 # Hard caps applied by AvatarLODCoordinator. The N closest avatars get FULL,
 # the next M closest get MID/CROSSFADE, the rest are forced to FAR. Static
 # distance thresholds still cap the upper tier (an avatar at 50m is FAR even
