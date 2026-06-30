@@ -1702,6 +1702,46 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     /**
+     * Open the Rabby wallet app with the WalletConnect URI.
+     * Uses Rabby's deep-link scheme (rabby://wc?uri=) to launch the Rabby mobile app directly.
+     *
+     * @return true if Rabby was opened successfully
+     */
+    @UsedByGodot
+    fun walletConnectOpenRabby(): Boolean {
+        if (wcPairingUri.isEmpty()) {
+            wcErrorMessage = "No pairing URI available. Call walletConnectCreatePairing first."
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        }
+
+        val act = activity ?: run {
+            wcErrorMessage = "Activity is null"
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        }
+
+        try {
+            // Open Rabby directly with the WalletConnect URI using Rabby's deep-link scheme
+            val encodedUri = java.net.URLEncoder.encode(wcPairingUri, "UTF-8")
+            val rabbyUri = "rabby://wc?uri=$encodedUri"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(rabbyUri))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            act.startActivity(intent)
+            Log.d(pluginName, "WalletConnect opened Rabby with URI: ${wcPairingUri.take(50)}...")
+            return true
+        } catch (e: ActivityNotFoundException) {
+            wcErrorMessage = "Rabby is not installed. Please install Rabby from the Play Store."
+            Log.e(pluginName, wcErrorMessage)
+            return false
+        } catch (e: Exception) {
+            wcErrorMessage = e.message ?: "Failed to open Rabby"
+            Log.e(pluginName, "WalletConnect openRabby error: ${wcErrorMessage}", e)
+            return false
+        }
+    }
+
+    /**
      * Disconnect the current WalletConnect session.
      *
      * @return true if disconnect was initiated

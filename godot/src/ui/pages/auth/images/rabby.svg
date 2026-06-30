@@ -1,0 +1,18 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rabby wallet logo: purple rounded background with white rabbit silhouette -->
+  <rect width="64" height="64" rx="14" fill="#7084F1"/>
+  <!-- Rabbit body -->
+  <ellipse cx="32" cy="44" rx="13" ry="13" fill="white"/>
+  <!-- Rabbit head -->
+  <ellipse cx="32" cy="28" rx="11" ry="10" fill="white"/>
+  <!-- Left ear -->
+  <ellipse cx="24" cy="13" rx="4.5" ry="10" fill="white"/>
+  <!-- Right ear -->
+  <ellipse cx="40" cy="13" rx="4.5" ry="10" fill="white"/>
+  <!-- Left eye -->
+  <circle cx="27.5" cy="27" r="2" fill="#7084F1"/>
+  <!-- Right eye -->
+  <circle cx="36.5" cy="27" r="2" fill="#7084F1"/>
+  <!-- Nose -->
+  <ellipse cx="32" cy="32" rx="1.5" ry="1" fill="#C4AAFF"/>
+</svg>

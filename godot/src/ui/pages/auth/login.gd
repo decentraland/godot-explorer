@@ -3,6 +3,7 @@ extends Control
 const GOOGLE_ICON = preload("res://src/ui/pages/auth/images/google.svg")
 const METAMASK_ICON = preload("res://src/ui/pages/auth/images/metamask.svg")
 const WALLETCONNECT_ICON = preload("res://src/ui/pages/auth/images/wallet-connect.png")
+const RABBY_ICON = preload("res://src/ui/pages/auth/images/rabby.svg")
 
 # TODO: change final project id
 # WalletConnect Project ID from https://dashboard.reown.com/
@@ -17,12 +18,14 @@ var _wc_polling_timer: Timer = null
 var _wc_using_native_flow: bool = false
 var _wc_plugin = null  # iOS DclWalletConnect instance
 var _wc_polling_start_time: int = 0
+var _wc_target_wallet: String = "metamask"  # "metamask" or "rabby"
 
 @onready var h_box_container_more: HBoxContainer = %HBoxContainer_More
 @onready var button_google: Button = %Button_Google
 @onready var button_apple: Button = %Button_Apple
 @onready var button_wallet_connect: Button = %Button_WalletConnect
 @onready var button_metamask: Button = %Button_MetaMask
+@onready var button_rabby: Button = %Button_Rabby
 
 @onready var texture_rect_google: TextureRect = $Button_Google/TextureRect_Google
 
@@ -37,13 +40,20 @@ func _ready():
 
 func _configure_wallet_button() -> void:
 	if Global.is_android_or_emulating():
-		# Android: Show Metamask button
+		# Android: Show MetaMask and Rabby buttons (both use native WalletConnect)
 		button_wallet_connect.hide()
 		button_metamask.show()
-	else:
-		# iOS and other platforms: Show WalletConnect button
+		button_rabby.show()
+	elif Global.is_ios_or_emulating():
+		# iOS: Show WalletConnect (wallet chooser) and Rabby
 		button_wallet_connect.show()
 		button_metamask.hide()
+		button_rabby.show()
+	else:
+		# Desktop: Show WalletConnect and Rabby (both use web-based WalletConnect flow)
+		button_wallet_connect.show()
+		button_metamask.hide()
+		button_rabby.show()
 
 
 func set_lobby(new_lobby: Lobby):
@@ -92,8 +102,9 @@ func _get_native_plugin():
 	return ret_plugin
 
 
-func _try_native_walletconnect() -> bool:
-	print("[WC] _try_native_walletconnect called")
+func _try_native_walletconnect(wallet: String = "metamask") -> bool:
+	_wc_target_wallet = wallet
+	print("[WC] _try_native_walletconnect called for wallet: ", wallet)
 	if not Global.is_android() and not Global.is_ios():
 		print("[WC] Not Android or iOS, returning false")
 		return false
@@ -172,12 +183,20 @@ func _async_poll_wc_pairing_uri() -> void:
 	await get_tree().create_timer(0.5).timeout
 
 	# Open wallet app with the URI
-	# On Android: opens MetaMask directly
+	# On Android: opens the target wallet directly via its deep-link scheme
 	# On iOS: opens system wallet chooser
-	if not plugin.walletConnectOpenWallet():
+	var open_success: bool = false
+	if _wc_target_wallet == "rabby" and plugin.has_method("walletConnectOpenRabby"):
+		open_success = plugin.walletConnectOpenRabby()
+	else:
+		open_success = plugin.walletConnectOpenWallet()
+
+	if not open_success:
 		var error_msg = plugin.walletConnectGetError()
 		if error_msg.is_empty():
-			if Global.is_android():
+			if _wc_target_wallet == "rabby":
+				error_msg = "Rabby is not installed. Please install Rabby from the Play Store."
+			elif Global.is_android():
 				error_msg = "MetaMask is not installed. Please install MetaMask from the Play Store."
 			else:
 				error_msg = "No wallet app found. Please install a WalletConnect compatible wallet."
@@ -385,3 +404,27 @@ func _on_button_apple_pressed() -> void:
 
 func _on_button_meta_mask_pressed() -> void:
 	_on_button_wallet_connect_pressed()
+
+
+func _on_button_rabby_pressed() -> void:
+	# Try native WalletConnect flow targeting Rabby on Android/iOS
+	if Global.is_android() or Global.is_ios():
+		var native_result = _try_native_walletconnect("rabby")
+
+		if native_result:
+			lobby.waiting_for_new_wallet = true
+			lobby.show_auth_browser_open_screen("Opening Rabby...", "rabby_native")
+			Global.metrics.track_click_button("rabby_native", lobby.current_screen_name, "")
+			return
+
+		# On Android, don't fall back to web - it doesn't work properly
+		if Global.is_android():
+			lobby._show_auth_error(
+				"Rabby failed to initialize. Please try again or use another sign-in method."
+			)
+			Global.metrics.track_click_button("rabby_error", lobby.current_screen_name, "")
+			return
+
+	# Desktop and iOS fallback: web-based WalletConnect flow (Rabby can connect via QR code)
+	async_login("wallet_connect")
+	Global.metrics.track_click_button("rabby", lobby.current_screen_name, "")

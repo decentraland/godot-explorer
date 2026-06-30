@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://cbukvmu67blst" path="res://src/ui/pages/auth/images/discord.svg" id="7_apdvw"]
 [ext_resource type="Texture2D" uid="uid://b1wknyg6nwrwo" path="res://src/ui/pages/auth/images/x.svg" id="8_8hgbb"]
 [ext_resource type="Texture2D" uid="uid://kxlueau7wo2u" path="res://src/ui/pages/auth/images/apple.svg" id="9_tuhne"]
+[ext_resource type="Texture2D" uid="uid://d4r9bwk7xm2p6" path="res://src/ui/pages/auth/images/rabby.svg" id="10_rabby"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_stkud"]
 
@@ -118,6 +119,38 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("6_3kqo8")
+expand_mode = 1
+
+[node name="Button_Rabby" type="Button" parent="." unique_id=1420557073]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("3_kk1uc")
+theme_type_variation = &"SnowButton"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 32
+theme_override_fonts/font = ExtResource("3_f6pdb")
+theme_override_font_sizes/font_size = 30
+text = "        RABBY"
+expand_icon = true
+
+[node name="TextureRect_WalletIcon" type="TextureRect" parent="Button_Rabby" unique_id=1420557074]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -31.5
+offset_right = -60.0
+offset_bottom = 28.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("10_rabby")
 expand_mode = 1
 
 [node name="Button_Apple" type="Button" parent="." unique_id=1232574871]
@@ -250,6 +283,7 @@ expand_mode = 1
 [connection signal="pressed" from="Button_Google" to="." method="_on_button_google_pressed"]
 [connection signal="pressed" from="Button_WalletConnect" to="." method="_on_button_wallet_connect_pressed"]
 [connection signal="pressed" from="Button_MetaMask" to="." method="_on_button_meta_mask_pressed"]
+[connection signal="pressed" from="Button_Rabby" to="." method="_on_button_rabby_pressed"]
 [connection signal="pressed" from="Button_Apple" to="." method="_on_button_apple_pressed"]
 [connection signal="pressed" from="HBoxContainer_More/Button_Discord" to="." method="_on_button_discord_pressed"]
 [connection signal="pressed" from="HBoxContainer_More/Button_X" to="." method="_on_button_x_pressed"]
