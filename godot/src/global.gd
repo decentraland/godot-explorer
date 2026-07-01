@@ -92,6 +92,11 @@ const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = true
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
+# Hide the Play-as-Guest entry path on iOS while Apple reviews the guest + IAP flow
+# (issue #2308): the lobby skips the ACCOUNT_HOME chooser and lands directly on the
+# sign-in screen. Flip to false (or pass ?disable-guest-gating=true) to restore guest.
+const IOS_GUEST_ENTRY_DISABLED := true
+
 # Increase this value when local assets cache format changes (invalidates cache)
 const LOCAL_ASSETS_CACHE_VERSION: int = 4
 

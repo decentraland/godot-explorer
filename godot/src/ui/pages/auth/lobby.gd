@@ -158,7 +158,7 @@ func show_avatar_naming_screen():
 	show_panel(control_avatar_naming)
 	avatar_preview.reparent(avatar_preview_container_avatar_naming)
 	_restore_avatar_preview_defaults()
-	_on_button_random_name_pressed()
+	_set_random_name()
 	if current_profile:
 		_show_avatar_loading()
 		await avatar_preview.avatar.async_update_avatar_from_profile(current_profile)
@@ -178,6 +178,11 @@ func show_version_upgrade_screen():
 
 
 func _accept_eula() -> void:
+	# Idempotent: only accept (and fire the one-shot analytics Key Event) when the
+	# stored T&C version is older than the current one. Lets us call this from every
+	# commit point (Play-as-Guest, sign-in tap, wallet_connected) without re-firing.
+	if Global.get_config().terms_and_conditions_version == Global.TERMS_AND_CONDITIONS_VERSION:
+		return
 	if Global.analytics_controller != null:
 		Global.analytics_controller.on_eula_accepted_locally()
 	Global.get_config().terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
@@ -187,12 +192,35 @@ func _accept_eula() -> void:
 func show_account_home_screen():
 	track_lobby_screen("ACCOUNT_HOME")
 	button_back.hide()
-	_request_notification_permission_if_needed()
 	show_panel(control_account_home)
 
 
+# True when the guest entry path must be hidden (iOS, gated for Apple review, #2308).
+# The `?disable-guest-gating=true` deeplink param re-enables guest for QA/testing.
+func _is_guest_entry_disabled() -> bool:
+	if not Global.is_ios_or_emulating() or not Global.IOS_GUEST_ENTRY_DISABLED:
+		return false
+	var override := str(Global.deep_link_obj.params.get("disable-guest-gating", ""))
+	if override.to_lower() == "true" or override == "1":
+		return false
+	return true
+
+
+# Entry "home" screen: the guest chooser (ACCOUNT_HOME) normally, or the sign-in
+# screen directly when the guest path is disabled (iOS during Apple review, #2308).
+func show_entry_home_screen() -> void:
+	if _is_guest_entry_disabled():
+		is_creating_account = false
+		sign_in_title.text = "Sign in to Decentraland"
+		show_auth_home_screen()
+	else:
+		show_account_home_screen()
+
+
 func show_account_home_loading_screen():
-	track_lobby_screen("ACCOUNT_HOME_LOADING")
+	# Guest account creation in progress ("Getting you ready..."). Tracked as
+	# ACCOUNT_GUEST_CREATE per the Entry Flow metrics taxonomy (issue #2377).
+	track_lobby_screen("ACCOUNT_GUEST_CREATE")
 	button_back.hide()
 	show_panel(control_account_home_loading)
 
@@ -200,12 +228,10 @@ func show_account_home_loading_screen():
 func _request_notification_permission_if_needed():
 	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
-	# Only surface the OS notification permission dialog once the EULA has been
-	# accepted. On a fresh install Account Home is shown *before* acceptance
-	# (the EULA is accepted by playing as guest / completing sign-in), and asking
-	# for notifications there is premature.
-	if Global.get_config().terms_and_conditions_version != Global.TERMS_AND_CONDITIONS_VERSION:
-		return
+	# Triggered only from the explicit Play-as-Guest / Sign-In taps (the user's
+	# commit point), so the EULA-timing gate that previously guarded this is no
+	# longer needed. NotificationsManager enforces the has-permission + cooldown
+	# guards (and skips the spurious-reject re-prompt loop on Android).
 	if NotificationsManager.has_local_notification_permission():
 		return
 	NotificationsManager.request_local_notification_permission(current_screen_name)
@@ -241,7 +267,9 @@ func show_auth_home_screen():
 	track_lobby_screen(get_auth_home_screen_name())
 	container_sign_in_step1.show()
 	container_sign_in_step2.hide()
-	button_back.show()
+	# When the guest path is gated this screen IS the root (no ACCOUNT_HOME to
+	# return to), so hide the back arrow; otherwise show it.
+	button_back.visible = not _is_guest_entry_disabled()
 	show_panel(control_signin)
 
 
@@ -306,12 +334,12 @@ func show_avatar_edit_screen():
 
 
 func _on_button_edit_avatar_pressed():
-	Global.metrics.track_click_button("edit", current_screen_name, "")
+	Global.metrics.track_click_button("EDIT", "AVATAR_CREATE", "")
 	show_avatar_edit_screen()
 
 
 func _on_button_avatar_create_next_pressed():
-	Global.metrics.track_click_button("next", current_screen_name, "")
+	Global.metrics.track_click_button("NEXT", "AVATAR_CREATE", "")
 	show_avatar_naming_screen()
 
 
@@ -319,6 +347,12 @@ func _on_button_avatar_create_next_pressed():
 func _on_preset_selected(preset_data: Dictionary) -> void:
 	if preset_data.is_empty() or current_profile == null:
 		return
+
+	Global.metrics.track_click_button(
+		"PRESET_SELECT",
+		"AVATAR_CREATE",
+		JSON.stringify({"avatar_id": preset_data.get("avatar_id", -1)})
+	)
 
 	var avatar = current_profile.get_avatar()
 	avatar.set_body_shape(preset_data.get("body_shape", ""))
@@ -494,7 +528,7 @@ func _ready():
 			"res://src/ui/components/organisms/menu/menu.tscn"
 		)
 	else:
-		show_account_home_screen()
+		show_entry_home_screen()
 
 
 func _notification(what: int) -> void:
@@ -616,7 +650,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			return
 # gdlint: ignore=no-else-return
 		else:
-			show_account_home_screen()
+			show_entry_home_screen()
 
 	if _skip_lobby:
 		go_to_explorer()
@@ -652,7 +686,11 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
 	_accept_eula()
 	Global.metrics.update_identity(address, is_guest)
-	Global.metrics.track_screen_viewed("AUTH_SUCCESS", "")
+	# Play-as-Guest uses a thirdweb guest wallet whose `is_guest` arg is false; treat
+	# any guest session (disposable or non-upgraded thirdweb guest) as login_type "guest".
+	var is_guest_session := is_guest or Global.player_identity.is_thirdweb_guest()
+	var login_type := "guest" if is_guest_session else "fully_registered"
+	Global.metrics.track_screen_viewed("AUTH_SUCCESS", JSON.stringify({"login_type": login_type}))
 	Global.metrics.flush.call_deferred()
 
 	Global.get_config().session_account = {}
@@ -687,7 +725,7 @@ func _on_button_update_pressed() -> void:
 
 func _on_button_not_now_pressed() -> void:
 	Global.metrics.track_click_button("not_now", current_screen_name, "")
-	show_account_home_screen()
+	show_entry_home_screen()
 
 
 func _on_button_different_account_pressed():
@@ -719,7 +757,7 @@ func _on_button_continue_pressed():
 
 # gdlint:ignore = async-function-name
 func _on_button_lets_go_pressed():
-	Global.metrics.track_click_button("next", current_screen_name, "")
+	Global.metrics.track_click_button("lets_go", "AVATAR_NAMING", "")
 	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
@@ -745,11 +783,19 @@ func _on_button_lets_go_pressed():
 
 
 func _on_button_random_name_pressed():
+	Global.metrics.track_click_button("NAME_RANDOMIZE", "AVATAR_NAMING", "")
+	_set_random_name()
+
+
+# Sets a fresh random name WITHOUT firing the NAME_RANDOMIZE click metric. Used on
+# screen entry to seed an initial name; the dice button uses _on_button_random_name_pressed.
+func _set_random_name():
 	dcl_line_edit.set_text_value(RandomGeneratorUtil.generate_unique_name())
 
 
 func _on_button_go_to_sign_in_pressed():
-	Global.metrics.track_click_button("sign_in", current_screen_name, "")
+	Global.metrics.track_click_button("SIGN_IN", "ACCOUNT_HOME", "")
+	_request_notification_permission_if_needed()
 	sign_in_title.text = "Sign in to Decentraland"
 	is_creating_account = false
 	show_auth_home_screen()
@@ -763,11 +809,11 @@ func _on_button_back_pressed():
 		return
 	match current_screen_name:
 		"AVATAR_CREATE":
-			show_account_home_screen()
+			show_entry_home_screen()
 		"AVATAR_NAMING":
 			async_show_avatar_create_screen()
 		_:
-			show_account_home_screen()
+			show_entry_home_screen()
 
 
 # gdlint:ignore = async-function-name
@@ -807,13 +853,13 @@ func _on_discard_cancelled() -> void:
 func _handle_back_action():
 	match current_screen_name:
 		"ACCOUNT_HOME":
-			show_account_home_screen()
+			show_entry_home_screen()
 		"AUTH_HOME_ANDROID", "AUTH_HOME_IOS", "AUTH_HOME_DESKTOP":
-			show_account_home_screen()
+			show_entry_home_screen()
 		"AUTH_BROWSER_OPEN":
 			_on_button_cancel_pressed()
 		"AVATAR_CREATE":
-			show_account_home_screen()
+			show_entry_home_screen()
 		"AVATAR_CUSTOMIZE", "AVATAR_NAMING":
 			async_show_avatar_create_screen()
 
@@ -897,6 +943,7 @@ func _get_device_anchor_id() -> String:
 func _on_button_play_as_guest_pressed():
 	Global.metrics.track_click_button("PLAY_GUEST", "ACCOUNT_HOME", "")
 	_accept_eula()
+	_request_notification_permission_if_needed()
 	show_account_home_loading_screen()
 
 	waiting_for_new_wallet = true
@@ -905,7 +952,7 @@ func _on_button_play_as_guest_pressed():
 	# navigates us OFF the loading screen — and that whole chain (request, profile
 	# fetch, avatar load) can hang on a flaky network. Awaiting the create-guest
 	# promise alone doesn't cover that, so arm a screen-state watchdog instead: if
-	# we're still on ACCOUNT_HOME_LOADING after the timeout, bail and offer a retry.
+	# we're still on ACCOUNT_GUEST_CREATE after the timeout, bail and offer a retry.
 	# A per-attempt token stops a stale watchdog from clobbering a fresh attempt.
 	_guest_login_attempt += 1
 	var attempt := _guest_login_attempt
@@ -933,7 +980,7 @@ func _on_button_play_as_guest_pressed():
 func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 	if attempt != _guest_login_attempt:
 		return  # superseded / already handled
-	if current_screen_name != "ACCOUNT_HOME_LOADING":
+	if current_screen_name != "ACCOUNT_GUEST_CREATE":
 		return  # navigation succeeded — nothing to do
 	# Expected on flaky networks (that's why the watchdog exists) — the user gets
 	# a retry prompt, so warn instead of erroring into Sentry.
@@ -950,13 +997,13 @@ func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 func _fail_guest_login(attempt: int, reason: String) -> void:
 	if attempt != _guest_login_attempt:
 		return
-	if current_screen_name != "ACCOUNT_HOME_LOADING":
+	if current_screen_name != "ACCOUNT_GUEST_CREATE":
 		return
 	_guest_login_attempt += 1
 	waiting_for_new_wallet = false
 	# Recoverable — just triggers the retry modal, so keep it out of Sentry.
 	push_warning("Guest login failed: " + reason)
-	show_account_home_screen()
+	show_entry_home_screen()
 	await _async_show_guest_login_error()
 
 
