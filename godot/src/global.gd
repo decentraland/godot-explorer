@@ -315,6 +315,10 @@ func _ready():
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
 
+		# scene-stats overlay is applied by explorer.gd:_update_scene_stats_ui();
+		# just log here so CLI/QA can confirm the param parsed.
+		print("[DEEPLINK] scene-stats=", deep_link_obj.scene_stats)
+
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")

@@ -1153,10 +1153,12 @@ func _update_debug_ui():
 	Global.set_scene_log_enabled(should_show)
 
 
-## Preview-only scene-stats overlay. Instantiated ONLY in preview (and never in
-## production), mirroring _update_debug_ui so production pays zero cost.
+## Scene-stats overlay. Instantiated in preview, or in any realm when the
+## `scene-stats=true` deep link forces it on, but NEVER in production — so a
+## normal production run still pays zero cost, mirroring _update_debug_ui.
 func _update_scene_stats_ui() -> void:
-	var should_show := _is_in_preview_realm() and not DclGlobal.is_production()
+	var enabled := _is_in_preview_realm() or Global.deep_link_obj.scene_stats
+	var should_show := enabled and not DclGlobal.is_production()
 	if should_show:
 		if not is_instance_valid(scene_stats_panel):
 			scene_stats_panel = (
