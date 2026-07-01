@@ -87,7 +87,7 @@ const FORCE_DEEPLINK = ""
 # HARD-GATED to non-production: get_device_anchor_id() (and the lobby debug
 # button) only honor this flag when `not is_production()`, so a release cut from
 # main always uses the device-bound native anchor even if this is left `true`.
-const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = true
+const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = false
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
