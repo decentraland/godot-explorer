@@ -980,7 +980,7 @@ func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 		if not success:
 			return
 		if not loading_ui.visible:
-			loading_ui.enable_loading_screen()
+			loading_ui.enable_loading_screen(realm, "on_teleport")
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)

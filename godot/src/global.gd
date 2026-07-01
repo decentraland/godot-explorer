@@ -1308,7 +1308,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen()
+		explorer.loading_ui.enable_loading_screen(new_realm, "on_teleport")
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
