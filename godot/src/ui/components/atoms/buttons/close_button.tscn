@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cqs5l0uuml56k"]
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_wpmf6"]
-[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/pages/discover/icons/close.svg" id="2_ra5sn"]
+[ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="2_wpmf6"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ancl8"]
 content_margin_left = 0.0
@@ -147,6 +147,6 @@ theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_cpyjo")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_cwb2j")
 theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_fc0ga")
 theme_override_styles/focus = SubResource("StyleBoxFlat_pv147")
-icon = ExtResource("2_ra5sn")
+icon = ExtResource("2_wpmf6")
 icon_alignment = 1
 expand_icon = true
