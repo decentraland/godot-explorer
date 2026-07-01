@@ -291,7 +291,7 @@ jobs:
           # In the reuse path nobody runs the lib build that writes .build.version, so reconstruct it
           # deterministically (matches lib/build.rs: <lib-version>-<short-sha>-<prod|staging>).
           LIB_VERSION=$(grep -m1 '^version' lib/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
-          if [ "$REF" = "release" ]; then SUFFIX="prod"; else SUFFIX="staging"; fi
+          case "$REF" in release*) SUFFIX="prod";; *) SUFFIX="staging";; esac
           echo "build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "→ reuse=$reuse · build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}"
 
