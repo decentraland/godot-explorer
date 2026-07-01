@@ -76,14 +76,17 @@ const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
-# DEBUG ONLY — must be `false` for any shipped build. When `true`,
-# get_device_anchor_id() ignores the platform-native device anchor (Android
-# SSAID / iOS Keychain UUID) and uses the per-install UUID in
-# `user://device_anchor.txt` on EVERY platform, so the guest wallet is tied to
-# the app's user data: deleting `user://` (clear app data / reinstall — or the
-# "RESET GUEST WALLET" debug button in the lobby) mints a fresh anchor and a
-# fresh wallet. When `false` the original shipping behavior returns: the
+# DEBUG ONLY. When `true`, get_device_anchor_id() ignores the platform-native
+# device anchor (Android SSAID / iOS Keychain UUID) and uses the per-install
+# UUID in `user://device_anchor.txt` on EVERY platform, so the guest wallet is
+# tied to the app's user data: deleting `user://` (clear app data / reinstall —
+# or the "RESET GUEST WALLET" debug button in the lobby) mints a fresh anchor
+# and a fresh wallet. When `false` the original shipping behavior returns: the
 # device-bound native anchor that survives reinstall.
+#
+# HARD-GATED to non-production: get_device_anchor_id() (and the lobby debug
+# button) only honor this flag when `not is_production()`, so a release cut from
+# main always uses the device-bound native anchor even if this is left `true`.
 const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = true
 
 # Increase this value for new terms and conditions
@@ -1514,9 +1517,10 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 # guest-login flow and the "Upgrade to OTP" modal so both derive the same wallet.
 #
 # Resolution order:
-#   1. DEBUG_GUEST_ROTATE_ANCHOR_ID on → return "" so Rust falls back to the
-#      resettable per-install UUID in `user://device_anchor.txt` (delete user://
-#      → fresh guest wallet) on every platform.
+#   1. DEBUG_GUEST_ROTATE_ANCHOR_ID on AND non-production build → return "" so
+#      Rust falls back to the resettable per-install UUID in
+#      `user://device_anchor.txt` (delete user:// → fresh guest wallet) on every
+#      platform. The production gate means this can never ship accidentally.
 #   2. Otherwise (shipping): the device-bound native anchor (Android SSAID / iOS
 #      Keychain UUID), which survives reinstall. Desktop has none → returns ""
 #      and Rust uses the user:// UUID anyway.
@@ -1527,7 +1531,8 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 # See: https://github.com/godotengine/godot/issues/106436
 func get_device_anchor_id() -> String:
 	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
-	if DEBUG_GUEST_ROTATE_ANCHOR_ID:
+	#    Gated to non-production so it can never ship even if the flag is left on.
+	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():
 		return ""
 	# 2. Shipping: device-bound native anchor (persists across reinstall).
 	if self.is_android():

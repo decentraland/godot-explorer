@@ -93,5 +93,3 @@ theme_type_variation = &"ButtonLittle"
 theme_override_fonts/font = ExtResource("2_kf0lf")
 theme_override_font_sizes/font_size = 22
 text = "ADD EMAIL"
-
-[connection signal="pressed" from="GuestUpgradeCard/MarginContainer/VBoxContainer/Button_AddEmail" to="GuestUpgradeCard" method="_on_button_add_email_pressed"]

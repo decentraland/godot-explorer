@@ -661,7 +661,9 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> vo
 	if Global.player_identity.get_recover_account_to(new_stored_account):
 		Global.get_config().session_account = new_stored_account
 	else:
-		push_error("[recovery] get_recover_account_to returned false for address=%s" % address)
+		# Normal for connections without a recoverable ephemeral identity (e.g.
+		# first-time connect): session_account stays empty and login proceeds.
+		push_warning("[recovery] get_recover_account_to returned false for address=%s" % address)
 
 	Global.get_config().save_to_settings_file()
 
@@ -933,7 +935,11 @@ func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 		return  # superseded / already handled
 	if current_screen_name != "ACCOUNT_HOME_LOADING":
 		return  # navigation succeeded — nothing to do
-	push_error("Guest login watchdog: stuck on loading screen after %ss" % GUEST_LOGIN_TIMEOUT_SEC)
+	# Expected on flaky networks (that's why the watchdog exists) — the user gets
+	# a retry prompt, so warn instead of erroring into Sentry.
+	push_warning(
+		"Guest login watchdog: stuck on loading screen after %ss" % GUEST_LOGIN_TIMEOUT_SEC
+	)
 	await _fail_guest_login(attempt, "Guest login timed out")
 
 
@@ -948,7 +954,8 @@ func _fail_guest_login(attempt: int, reason: String) -> void:
 		return
 	_guest_login_attempt += 1
 	waiting_for_new_wallet = false
-	push_error("Guest login failed: " + reason)
+	# Recoverable — just triggers the retry modal, so keep it out of Sentry.
+	push_warning("Guest login failed: " + reason)
 	show_account_home_screen()
 	await _async_show_guest_login_error()
 

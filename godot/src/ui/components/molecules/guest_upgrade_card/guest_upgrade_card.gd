@@ -148,7 +148,9 @@ func _async_send_code(email: String) -> Dictionary:
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		var raw: String = result.get_error()
-		printerr("Upgrade to OTP - send code failed: ", raw)
+		# Expected/recoverable (bad email, transient network) — the user retries
+		# inline, so keep it out of the error stream / Sentry.
+		push_warning("Upgrade to OTP - send code failed: " + raw)
 		if _is_invalid_email_error(raw):
 			return {"status": InputModal.SUBMIT_INVALID, "message": "Invalid email"}
 		return {"status": InputModal.SUBMIT_ERROR, "message": raw}
@@ -200,7 +202,9 @@ func _async_verify_code(code: String, email: String) -> String:
 	print("[UpgradeOTP] verify result: ", result)
 	if result is PromiseError:
 		var raw: String = result.get_error()
-		printerr("[UpgradeOTP] verify FAILED: ", raw)
+		# Expected/recoverable (wrong/expired code, already-linked email) — surfaced
+		# inline for the user, so keep it out of the error stream / Sentry.
+		push_warning("[UpgradeOTP] verify FAILED: " + raw)
 		if _is_already_linked_error(raw):
 			Global.modal_manager.close_code_modal.call_deferred()
 			_async_show_email_in_use_modal.call_deferred()
