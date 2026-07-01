@@ -10,11 +10,11 @@ const TIPS: Array[String] = [
 
 @export var tip_interval: float = 5.0
 
+var _current_index: int = 0
+
 @onready var icon: TextureRect = %Icon
 @onready var timer: Timer = %Timer_Tip
 @onready var rich_text_label_tip: RichTextLabel = %RichTextLabel_Tip
-
-var _current_index: int = 0
 
 
 func _ready() -> void:
