@@ -854,7 +854,14 @@ func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0, instant: bool = fals
 	center_y = clampf(center_y, minf(pan_min, pan_max), maxf(pan_min, pan_max))
 	_target_camera_center_y = center_y
 	_target_camera_size = cam_size
-	if instant:
+	# `instant` writes the camera directly (bypassing the _process lerp) so a
+	# first-load fit doesn't animate in from a wrong frame. Never do this while a
+	# capture owns the camera: async_get_viewport_image sets _lerp_paused and
+	# drives a fixed top_level camera (position/rotation/ortho size). A deferred
+	# first_load fit (async_on_avatar_loaded → call_deferred(..., instant=true))
+	# can otherwise land mid-capture, clobber the fixed ortho size, and render the
+	# avatar oversized — this is what broke the first avatar's snapshot.
+	if instant and not _lerp_paused:
 		camera_3d.size = cam_size
 		camera_center.position.y = center_y
 
