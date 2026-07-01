@@ -198,17 +198,12 @@ func _ready():
 
 	emote_wheel.avatar_node = player.avatar
 
-	loading_ui.enable_loading_screen()
+	loading_ui.enable_loading_screen(Global.get_config().last_realm_joined, "on_explorer_ready")
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
 	if Global.FORCE_TEST and cmd_location == null:
 		cmd_location = Global.FORCE_TEST_LOCATION
-	# LOADING_START metric
-	var loading_data = {
-		"position": str(cmd_location), "realm": str(cmd_realm), "when": "on_explorer_ready"
-	}
-	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 	# --spawn-avatars
 	if Global.cli.spawn_avatars:
@@ -959,14 +954,7 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
 			if not loading_ui.visible:
-				loading_ui.enable_loading_screen()
-			# LOADING_START metric
-			var loading_data = {
-				"position": str(position),
-				"realm": Global.realm.get_realm_string(),
-				"when": "on_moveto"
-			}
-			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+				loading_ui.enable_loading_screen("", "on_moveto")
 
 
 func _async_try_change_realm(realm_string: String, when: String) -> void:
@@ -975,15 +963,11 @@ func _async_try_change_realm(realm_string: String, when: String) -> void:
 		"[color=#ccc]Trying to change to realm " + realm_string + "[/color]",
 		Time.get_unix_time_from_system()
 	)
+	Global.get_config().last_realm_joined = realm_string
+	loading_ui.enable_loading_screen(realm_string, when)
 	var success = await Global.realm.async_set_realm(realm_string, true)
-	if success:
-		loading_ui.enable_loading_screen()
-		var loading_data = {
-			"position": str(Global.scene_fetcher.current_position),
-			"realm": realm_string,
-			"when": when
-		}
-		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+	if not success:
+		loading_ui.hide_loading_screen()
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):

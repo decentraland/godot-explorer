@@ -24,6 +24,7 @@ func _ready() -> void:
 	timer.timeout.connect(_on_timer_timeout)
 	timer.start()
 
+
 func _on_timer_timeout() -> void:
 	_current_index = (_current_index + 1) % TIPS.size()
 	rich_text_label_tip.text = "[b]Tip:[/b] " + TIPS[_current_index]

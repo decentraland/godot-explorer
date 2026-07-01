@@ -239,23 +239,28 @@ value = 60.0
 nine_patch_stretch = true
 texture_progress = SubResource("GradientTexture1D_ky3me")
 
-[node name="MarginContainer_Close" type="MarginContainer" parent="." unique_id=931555147]
+[node name="SafeMarginContainer2" type="MarginContainer" parent="." unique_id=1369081059]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("3_6uwlu")
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
+
+[node name="MarginContainer_Close" type="MarginContainer" parent="SafeMarginContainer2" unique_id=931555147]
+layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 32
 metadata/_edit_lock_ = true
 
-[node name="CloseButton" parent="MarginContainer_Close" unique_id=333937878 instance=ExtResource("14_cdm7v")]
+[node name="CloseButton" parent="SafeMarginContainer2/MarginContainer_Close" unique_id=333937878 instance=ExtResource("14_cdm7v")]
 unique_name_in_owner = true
 layout_mode = 2
 
 [connection signal="timeout" from="Timer_CheckProgressTimeout" to="." method="_on_timer_check_progress_timeout_timeout"]
 [connection signal="loading_show_requested" from="LoadingScreenProgressLogic" to="." method="_on_loading_screen_progress_logic_loading_show_requested"]
 [connection signal="gui_input" from="SafeMarginContainer/MarginContainer_Content/VBoxContainer/TextureRect_Logo" to="." method="_on_texture_rect_logo_gui_input"]
-[connection signal="pressed" from="MarginContainer_Close/CloseButton" to="." method="_on_close_button_pressed"]
+[connection signal="pressed" from="SafeMarginContainer2/MarginContainer_Close/CloseButton" to="." method="_on_close_button_pressed"]

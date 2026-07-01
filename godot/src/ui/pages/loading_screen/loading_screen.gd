@@ -11,6 +11,8 @@ var last_hide_click := 0.0
 var loaded_resources_offset := 0
 
 var _place_data_set: bool = false
+var _loading_cancelled: bool = false
+var _intended_realm: String = ""
 var _current_bg_url: String = ""
 var _fetch_generation: int = 0
 
@@ -34,7 +36,9 @@ func _ready() -> void:
 	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
 
 
-func enable_loading_screen() -> void:
+func enable_loading_screen(intended_realm: String = "", when: String = "") -> void:
+	_loading_cancelled = false
+	_intended_realm = intended_realm if Realm.is_dcl_ens(intended_realm) else ""
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
@@ -42,6 +46,14 @@ func enable_loading_screen() -> void:
 	Global.loading_started.emit()
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
+	if not when.is_empty():
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm":
+			_intended_realm if not _intended_realm.is_empty() else Global.realm.get_realm_string(),
+			"when": when
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
 func _clear_place_ui() -> void:
@@ -186,10 +198,12 @@ func _on_texture_rect_logo_gui_input(event: InputEvent) -> void:
 
 
 func _on_scene_runner_loading_started(_session_id: int, _expected_count: int) -> void:
-	if _place_data_set:
+	if _loading_cancelled or _place_data_set:
 		return
 	var pos = Global.scene_fetcher.current_position
-	if pos == SceneFetcher.INVALID_PARCEL:
+	# For genesis (no intended world realm) a valid parcel is required for the API call.
+	# For DCL worlds the fetch is by realm name and position is irrelevant.
+	if _intended_realm.is_empty() and pos == SceneFetcher.INVALID_PARCEL:
 		return
 	# Increment so any previous in-flight fetch for an earlier loading session is discarded.
 	_fetch_generation += 1
@@ -197,14 +211,11 @@ func _on_scene_runner_loading_started(_session_id: int, _expected_count: int) ->
 
 
 func _async_fetch_place_data(pos: Vector2i, generation: int) -> void:
-	# last_realm_joined is written before change_scene_to_file, so it reflects the intended
-	# realm even when Global.realm.realm_url/realm_name is still stale (async_set_realm not done yet).
-	var intended_realm = Global.get_config().last_realm_joined
 	var result: Variant
-	if intended_realm.is_empty() or Realm.is_genesis_city(intended_realm):
+	if _intended_realm.is_empty():
 		result = await PlacesHelper.async_get_by_position(pos)
 	else:
-		result = await PlacesHelper.async_get_by_names(intended_realm)
+		result = await PlacesHelper.async_get_by_names(_intended_realm)
 	if not is_instance_valid(self) or not is_inside_tree() or generation != _fetch_generation:
 		return
 	if result is PromiseError:
@@ -269,6 +280,11 @@ func _async_set_background(url: String) -> void:
 	_apply_background_texture(result.texture)
 
 
+func hide_loading_screen() -> void:
+	loading_screen_progress_logic.hide_loading_screen()
+
+
 func _on_close_button_pressed() -> void:
 	_clear_place_ui()
+	_loading_cancelled = true
 	Global.return_to_discover()
