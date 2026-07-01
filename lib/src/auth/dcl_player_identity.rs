@@ -477,6 +477,56 @@ impl DclPlayerIdentity {
         promise
     }
 
+    /// Deletes the current thirdweb guest account server-side by unlinking its
+    /// sole `guest` profile (issue #2335). For a non-upgraded guest the silent
+    /// id-login is the only identity, so removing it deletes the thirdweb user,
+    /// which frees the deterministic `sessionId` → the next `guest_login` from
+    /// the same device anchor mints a BRAND-NEW wallet. A fresh guest JWT is
+    /// re-derived from the anchor so the unlink is authorized even if the
+    /// persisted token aged out.
+    ///
+    /// Best-effort: resolves `true` on success, `false` on failure — it never
+    /// rejects — so the GDScript caller can always continue to wipe local
+    /// storage and sign out regardless of the network outcome. Only call this
+    /// for a confirmed non-upgraded guest; `unlink_guest_profile` additionally
+    /// refuses if any non-`guest` profile is linked, as a safety net.
+    #[func]
+    fn async_delete_guest_account(&mut self, device_anchor_id: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let anchor = device_anchor_id.to_string();
+
+        handle.spawn(async move {
+            let result = perform_delete_guest_account(anchor).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::error!("thirdweb delete_guest: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok(()) => {
+                    tracing::info!("thirdweb delete_guest: guest account deleted");
+                    promise.bind_mut().resolve_with_data(true.to_variant());
+                }
+                Err(e) => {
+                    // Non-fatal: the caller wipes local state + signs out anyway.
+                    tracing::warn!("thirdweb delete_guest failed (non-fatal): {:?}", e);
+                    promise.bind_mut().resolve_with_data(false.to_variant());
+                }
+            }
+        });
+
+        promise
+    }
+
     #[func]
     fn try_connect_account(&mut self) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
@@ -1189,4 +1239,14 @@ async fn perform_link_email(
     }
 
     Ok(session.wallet_address)
+}
+
+/// Deletes the guest account server-side (issue #2335):
+///   1. re-derive a FRESH guest JWT from the anchor (the persisted one may be
+///      expired) — idempotent: same anchor → same wallet → fresh token
+///   2. `unlink_guest_profile` removes the sole `guest` identity, deleting the
+///      thirdweb user so the sessionId is freed for a brand-new wallet
+async fn perform_delete_guest_account(device_anchor_id: String) -> Result<(), anyhow::Error> {
+    let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
+    thirdweb_guest::unlink_guest_profile(&session.token).await
 }
