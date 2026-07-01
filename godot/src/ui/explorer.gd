@@ -781,25 +781,20 @@ func _on_panel_chat_submit_message(message: String):
 			var arg_string = " ".join(params.slice(1)).strip_edges()
 			if _is_coordinate_string(arg_string):
 				var dest_vector = _parse_coordinates(arg_string)
-				Global.on_chat_message.emit(
-					"system",
-					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
-					Time.get_unix_time_from_system()
-				)
-				_on_control_menu_jump_to(dest_vector)
+				Global.modal_manager.async_show_teleport_modal(dest_vector)
 			elif Realm.is_dcl_ens(arg_string) or not arg_string.contains("."):
 				var world_realm = (
 					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
 				)
-				Global.async_join_world(world_realm)
+				Global.modal_manager.async_show_world_modal(world_realm)
 			else:
-				_async_try_change_realm(arg_string, "on_goto_realm")
+				Global.modal_manager.async_show_change_realm_modal(arg_string)
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
 			if Realm.is_dcl_ens(target_realm):
-				Global.async_join_world(target_realm)
+				Global.modal_manager.async_show_world_modal(target_realm)
 			else:
-				_async_try_change_realm(target_realm, "on_changerealm")
+				Global.modal_manager.async_show_change_realm_modal(target_realm)
 
 		elif command_str == "/pos":
 			_emit_pos_command_message()
