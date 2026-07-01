@@ -425,22 +425,24 @@ struct WalletsMeResult {
     profiles: Vec<LinkedProfile>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct LinkedProfile {
     #[serde(rename = "type")]
     profile_type: String,
+    /// Opaque per-profile id (e.g. the guest profile's derived id). Present on
+    /// the `GET /v1/wallets/me` payload and required to target an unlink.
+    #[serde(default)]
+    id: Option<String>,
 }
 
-/// Lists the auth-method types linked to the account behind `token` — e.g.
-/// `["guest"]` for a never-upgraded guest, `["guest", "email"]` after an OTP
-/// upgrade. Hits the unified v1 API `GET /v1/wallets/me`, which returns
-/// `{ result: { profiles: [{ type, ... }] } }`. Auth is the plain guest JWT as a
-/// Bearer (no enclave prefix), same scheme as `link_email`. Lets the client
-/// detect whether a guest has anything linked beyond the silent id-login.
-pub async fn get_linked_profile_types(token: &str) -> Result<Vec<String>, anyhow::Error> {
+/// Fetches the account's linked auth profiles from the unified v1 API
+/// `GET /v1/wallets/me`, which returns `{ result: { profiles: [{ type, id, .. }] } }`.
+/// Auth is the plain guest JWT as a Bearer (no enclave prefix), same scheme as
+/// `link_email`.
+async fn get_linked_profiles(token: &str) -> Result<Vec<LinkedProfile>, anyhow::Error> {
     let url = format!("{}/v1/wallets/me", THIRDWEB_API_BASE);
 
-    tracing::debug!("thirdweb get_linked_profile_types: url={}", url);
+    tracing::debug!("thirdweb get_linked_profiles: url={}", url);
 
     let response = reqwest::Client::builder()
         .timeout(REQUEST_TIMEOUT)
@@ -456,21 +458,121 @@ pub async fn get_linked_profile_types(token: &str) -> Result<Vec<String>, anyhow
     if !status.is_success() {
         let text = response.text().await.unwrap_or_default();
         return Err(anyhow::anyhow!(
-            "thirdweb get_linked_profile_types failed: status={}, body={}",
+            "thirdweb get_linked_profiles failed: status={}, body={}",
             status,
             text
         ));
     }
 
     let parsed: WalletsMeResponse = response.json().await?;
-    let types: Vec<String> = parsed
-        .result
-        .profiles
+    Ok(parsed.result.profiles)
+}
+
+/// Lists the auth-method types linked to the account behind `token` — e.g.
+/// `["guest"]` for a never-upgraded guest, `["guest", "email"]` after an OTP
+/// upgrade. Lets the client detect whether a guest has anything linked beyond
+/// the silent id-login.
+pub async fn get_linked_profile_types(token: &str) -> Result<Vec<String>, anyhow::Error> {
+    let types: Vec<String> = get_linked_profiles(token)
+        .await?
         .into_iter()
         .map(|p| p.profile_type)
         .collect();
     tracing::info!("thirdweb get_linked_profile_types: {:?}", types);
     Ok(types)
+}
+
+#[derive(Debug, Serialize)]
+struct UnlinkDetails<'a> {
+    id: &'a str,
+}
+
+#[derive(Debug, Serialize)]
+struct UnlinkRequest<'a> {
+    #[serde(rename = "type")]
+    profile_type: &'a str,
+    details: UnlinkDetails<'a>,
+}
+
+/// Deletes a non-upgraded guest account by unlinking its sole `guest` profile
+/// (issue #2335). For such a guest the silent id-login is the only identity, so
+/// removing it deletes the thirdweb user — which frees the deterministic
+/// `sessionId`, so the next `guest_login` from the same device anchor mints a
+/// BRAND-NEW wallet (verified against the live API).
+///
+/// `token` must be a fresh guest JWT (see `refresh_guest_session`).
+///
+/// Two behaviours to be aware of, both handled here:
+/// - **Safety refusal:** if the account has ANY non-`guest` profile it is an
+///   *upgraded* guest — we refuse, so an email/social-recoverable account is
+///   never silently stripped. Those go through the manual `/deletion` flow.
+/// - **Last-profile quirk:** unlinking the final profile makes the API delete
+///   the user and then answer `500` with "User not found" / "Failed to unlink
+///   authentication account" (it can't re-fetch the just-deleted user). That
+///   specific response means the delete succeeded, so we treat it as success.
+pub async fn unlink_guest_profile(token: &str) -> Result<(), anyhow::Error> {
+    let profiles = get_linked_profiles(token).await?;
+
+    if profiles.iter().any(|p| p.profile_type != "guest") {
+        return Err(anyhow::anyhow!(
+            "refusing to unlink: account has non-guest profiles (upgraded guest)"
+        ));
+    }
+
+    let Some(guest) = profiles.iter().find(|p| p.profile_type == "guest") else {
+        // Nothing to unlink — already deleted / not a guest. Idempotent success.
+        tracing::info!("thirdweb unlink_guest_profile: no guest profile — nothing to do");
+        return Ok(());
+    };
+    let Some(id) = guest.id.as_deref() else {
+        return Err(anyhow::anyhow!("guest profile missing id — cannot unlink"));
+    };
+
+    let url = format!("{}/v1/auth/unlink", THIRDWEB_API_BASE);
+    let body = UnlinkRequest {
+        profile_type: "guest",
+        details: UnlinkDetails { id },
+    };
+
+    let response = reqwest::Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .build()?
+        .post(&url)
+        .header("x-client-id", THIRDWEB_CLIENT_ID)
+        .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
+        .header("Authorization", format!("Bearer {}", token))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = response.status();
+    let text = response.text().await.unwrap_or_default();
+
+    if status.is_success() {
+        tracing::info!(
+            "thirdweb unlink_guest_profile: unlinked (status={})",
+            status
+        );
+        return Ok(());
+    }
+
+    // Last-profile deletion: the user is gone, so the API 500s trying to
+    // re-fetch it. Treat "not found" / "failed to unlink" 500s as success.
+    let lower = text.to_lowercase();
+    if status.as_u16() == 500 && (lower.contains("not found") || lower.contains("failed to unlink"))
+    {
+        tracing::info!(
+            "thirdweb unlink_guest_profile: last-profile deletion (500 treated as success)"
+        );
+        return Ok(());
+    }
+
+    Err(anyhow::anyhow!(
+        "thirdweb unlink_guest_profile failed: status={}, body={}",
+        status,
+        text
+    ))
 }
 
 /// `true` when the account has any auth method beyond the silent `guest` login —
@@ -547,5 +649,34 @@ mod tests {
             .recover(message.as_bytes())
             .expect("recover signer from signature");
         assert_eq!(recovered, session.wallet_address);
+    }
+
+    /// Issue #2335: unlinking the sole `guest` profile deletes the thirdweb user
+    /// so the SAME device anchor (sessionId) mints a BRAND-NEW wallet on the next
+    /// login — i.e. the guest account is effectively reset. Uses a fresh,
+    /// time-seeded sessionId so it always starts from `is_new_user=true` and never
+    /// touches a real user's wallet.
+    #[tokio::test]
+    #[ignore = "hits live thirdweb API; run manually with --ignored"]
+    async fn unlink_guest_profile_frees_the_session() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let session_id = make_session_id(&format!("delete-unlink-itest-{nanos}"));
+
+        let s1 = guest_login(&session_id).await.expect("first login");
+        assert!(s1.is_new_user, "fresh sessionId should mint a new wallet");
+
+        unlink_guest_profile(&s1.token)
+            .await
+            .expect("unlink sole guest profile");
+
+        let s2 = guest_login(&session_id).await.expect("second login");
+        assert_ne!(
+            s1.wallet_address, s2.wallet_address,
+            "same sessionId must mint a NEW wallet after the guest profile is unlinked"
+        );
+        assert!(s2.is_new_user, "re-login after unlink should be a new user");
     }
 }
