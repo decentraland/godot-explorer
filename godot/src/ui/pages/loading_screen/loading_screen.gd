@@ -14,6 +14,7 @@ var last_hide_click := 0.0
 var loaded_resources_offset := 0
 
 var _place_data_set: bool = false
+var _current_bg_url: String = ""
 
 @onready var loading_progress_label: Label = %Label_LoadingProgress
 @onready var label_loading_state: Label = %Label_LoadingState
@@ -38,24 +39,41 @@ func _ready() -> void:
 
 
 # Forward
-func enable_loading_screen() -> void:
+func enable_loading_screen(data: Dictionary = {}, texture: Texture2D = null) -> void:
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
-	_clear_place_ui()
+	# If no explicit data passed, consume any pending data stored by the no-explorer path
+	# (async_teleport_to / async_join_world when the explorer did not exist yet).
+	if data.is_empty() and not Global.pending_loading_data.is_empty():
+		data = Global.pending_loading_data
+		texture = Global.pending_loading_texture
+		Global.pending_loading_data = {}
+		Global.pending_loading_texture = null
+	if data.is_empty() or not _place_data_set:
+		_clear_place_ui()
+	if not data.is_empty():
+		set_place_data(data, texture)
 	Global.loading_started.emit()
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
 
 
+func prefetch_place_data(data: Dictionary) -> void:
+	_clear_place_ui()
+	set_place_data(data)
+
+
 func _clear_place_ui() -> void:
 	_place_data_set = false
-	vbox_data.modulate.a = 0.0
+	_current_bg_url = ""
 	texture_rect_background.texture = null
-	texture_rect_background.modulate = Color.TRANSPARENT
+	rich_text_label_place_name.text = ""
+	rich_text_label_creator.hide()
 
 
 func async_hide_loading_screen_effect():
+	_clear_place_ui()
 	Global.close_navbar.emit()
 	Global.close_chat.emit()
 	debug_chronometer.lap("Finished loading scene")
@@ -185,8 +203,9 @@ func _on_texture_rect_logo_gui_input(event: InputEvent) -> void:
 
 
 func _on_scene_runner_loading_started(_session_id: int, _expected_count: int) -> void:
-	if not _place_data_set:
-		_async_fetch_place_data(Global.scene_fetcher.current_position)
+	var pos = Global.scene_fetcher.current_position
+	if not _place_data_set and pos != SceneFetcher.INVALID_PARCEL:
+		_async_fetch_place_data(pos)
 
 
 func _async_fetch_place_data(pos: Vector2i) -> void:
@@ -215,8 +234,6 @@ func set_place_data(data: Dictionary, texture: Texture2D = null) -> void:
 	var creator = data.get("contact_name", "")
 	set_place_name(title if title is String else "")
 	set_place_creator(creator if creator is String else "")
-	var tween = create_tween()
-	tween.tween_property(vbox_data, "modulate:a", 1.0, 0.3)
 	if texture != null:
 		_apply_background_texture(texture)
 	else:
@@ -228,7 +245,7 @@ func set_place_data(data: Dictionary, texture: Texture2D = null) -> void:
 func set_place_name(place_name: String) -> void:
 	if place_name.is_empty():
 		return
-	rich_text_label_place_name	.set_text_trimmed(place_name)
+	rich_text_label_place_name.set_text_trimmed(place_name)
 
 
 func set_place_creator(creator: String) -> void:
@@ -239,14 +256,19 @@ func set_place_creator(creator: String) -> void:
 	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] " + creator
 
 
+func set_background_texture(texture: Texture2D) -> void:
+	_apply_background_texture(texture)
+
+
 func set_place_image(image_url: String) -> void:
+	if _current_bg_url == image_url:
+		return
+	_current_bg_url = image_url
 	_async_set_background.call_deferred(image_url)
 
 
 func _apply_background_texture(texture: Texture2D) -> void:
 	texture_rect_background.texture = texture
-	var tween = create_tween().set_parallel(true)
-	tween.tween_property(texture_rect_background, "modulate", Color.WHITE, 1.0)
 
 
 func _async_set_background(url: String) -> void:
@@ -255,10 +277,13 @@ func _async_set_background(url: String) -> void:
 	var result = await PromiseUtils.async_awaiter(promise)
 	if not is_instance_valid(self):
 		return
+	if url != _current_bg_url:
+		return
 	if result is PromiseError or result.failed:
 		return
 	_apply_background_texture(result.texture)
 
 
 func _on_close_button_pressed() -> void:
+	_clear_place_ui()
 	Global.return_to_discover()

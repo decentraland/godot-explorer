@@ -162,7 +162,7 @@ theme_override_font_sizes/bold_font_size = 42
 theme_override_font_sizes/bold_italics_font_size = 42
 theme_override_font_sizes/italics_font_size = 42
 theme_override_font_sizes/mono_font_size = 42
-text = "Scene Title Scene"
+text = "Enjoy your experience"
 fit_content = true
 scroll_active = false
 autowrap_mode = 2
@@ -181,7 +181,7 @@ theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/normal_font = ExtResource("12_4vh5o")
 theme_override_font_sizes/normal_font_size = 26
 bbcode_enabled = true
-text = "[color=#DF9CFF]By[/color] Creator"
+text = "[color=#DF9CFF]By[/color] Decentraland"
 fit_content = true
 
 [node name="HSeparator3" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=1792108968]

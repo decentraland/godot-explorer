@@ -969,7 +969,8 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 	)
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
-			loading_ui.enable_loading_screen()
+			if not loading_ui.visible:
+				loading_ui.enable_loading_screen()
 			# LOADING_START metric
 			var loading_data = {
 				"position": str(position),
@@ -1005,7 +1006,8 @@ func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 		var success = await Global.realm.async_set_realm(realm)
 		if not success:
 			return
-		loading_ui.enable_loading_screen()
+		if not loading_ui.visible:
+			loading_ui.enable_loading_screen()
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)

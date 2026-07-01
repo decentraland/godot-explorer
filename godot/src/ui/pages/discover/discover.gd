@@ -110,13 +110,15 @@ func async_open_place_by_id(place_id: String) -> void:
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String):
+	var texture = jump_in.get_loaded_texture()
 	jump_in.hide()
-	Global.async_teleport_to(parcel_position, realm)
+	Global.async_teleport_to(parcel_position, realm, jump_in.item_data, texture)
 
 
 func _on_jump_in_world(realm: String):
+	var texture = jump_in.get_loaded_texture()
 	jump_in.hide()
-	Global.async_join_world(realm)
+	Global.async_join_world(realm, jump_in.item_data, texture)
 
 
 func _get_ui_location() -> String:

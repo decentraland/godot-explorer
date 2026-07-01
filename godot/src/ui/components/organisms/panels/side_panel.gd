@@ -43,8 +43,10 @@ func instantiate_portrait_panel():
 	self.add_child(portrait_panel)
 	portrait_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	portrait_panel.set_data(item_data)
+	portrait_panel.push_image_to_loading_screen = true
 	portrait_panel.jump_in.connect(self._emit_jump_in)
 	portrait_panel.jump_in_world.connect(self._emit_jump_in_world)
+	portrait_panel.image_loaded.connect(_on_panel_image_loaded)
 	set_data(item_data)
 
 
@@ -53,9 +55,17 @@ func instantiate_landscape_panel():
 	self.add_child(landscape_panel)
 	landscape_panel.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	landscape_panel.set_data(item_data)
+	landscape_panel.push_image_to_loading_screen = true
 	landscape_panel.jump_in.connect(self._emit_jump_in)
 	landscape_panel.jump_in_world.connect(self._emit_jump_in_world)
+	landscape_panel.image_loaded.connect(_on_panel_image_loaded)
 	set_data(item_data)
+
+
+func _on_panel_image_loaded(texture: Texture2D) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.loading_ui.set_background_texture(texture)
 
 
 func async_load_place_position(pos: Vector2i):
@@ -101,6 +111,13 @@ func open_panel() -> void:
 		tracking_handler.track_screen_viewed(item_data)
 	else:
 		printerr("SidePanel: tracking_handler is null")
+
+
+func get_loaded_texture() -> Texture2D:
+	var panel: PlaceItem = portrait_panel if is_instance_valid(portrait_panel) else landscape_panel
+	if not is_instance_valid(panel):
+		return null
+	return panel.get_loaded_texture()
 
 
 func _on_gui_input(event: InputEvent) -> void:

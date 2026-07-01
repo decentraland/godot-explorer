@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://b8837sg55qd8m"]
+[gd_scene format=3 uid="uid://d4farpkxglsok"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/molecules/place_item/place_item.gd" id="1_limbe"]

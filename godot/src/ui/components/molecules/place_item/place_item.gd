@@ -6,6 +6,7 @@ signal event_pressed(data)
 signal jump_in(position: Vector2i, realm: String)
 signal jump_in_world(realm: String)
 signal close
+signal image_loaded(texture: Texture2D)
 
 enum DragState { HIDDEN, HALF, FULL }
 enum DragGesture { IDLE, UP, DOWN }
@@ -40,6 +41,8 @@ var initial_pos: Vector2
 var drag_tween: Tween
 var drag_state := DragState.HALF
 var dragging: bool = false
+
+var push_image_to_loading_screen: bool = false
 
 var _data: Dictionary = {}
 var _node_cache: Dictionary = {}
@@ -410,11 +413,18 @@ func format_name(full: String, max_len := 7) -> String:
 	return base
 
 
+func get_loaded_texture() -> Texture2D:
+	var tex_rect = _get_texture_image()
+	return tex_rect.texture if is_instance_valid(tex_rect) else null
+
+
 func set_image(_texture: Texture2D):
 	show_image_container(true)
 	var texture_rect = _get_texture_image()
 	if texture_rect:
 		texture_rect.texture = _texture
+	if push_image_to_loading_screen:
+		image_loaded.emit(_texture)
 
 
 func set_title(_title: String):
