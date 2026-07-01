@@ -1,16 +1,15 @@
 class_name DebugWsServer
 extends Node
 
-## Developer-only WebSocket server that returns rich JSON snapshots of loaded
-## scenes / entities on demand. Off by default — toggled from the Developer
-## section of Settings. Bound to loopback only.
+## Developer-only command backend for live scene / entity / UI / avatar
+## inspection and GDScript `eval`. Exposes `run_command(cmd, args)`, driven by the
+## scene-inspector unified channel (`scene_inspector_bridge.gd`) so the same
+## surface is reachable on desktop and on-device via the debug-hub.
 ##
-## Protocol: each text frame is a JSON object with at least `id` and `cmd`.
-## Reply: `{"id": <id>, "ok": <bool>, "data": ...}` or `{"id": <id>, "ok": false, "error": "..."}`.
-##
-## Implementation: TCPServer + WebSocketPeer.accept_stream() — a vanilla
-## bidirectional WebSocket, NOT the multiplayer routing layer (which injects
-## peer-id sys packets that confuse generic clients like websocat / browsers).
+## Formerly this node also served a loopback `{id,cmd}` WebSocket on 9230; that
+## transport + its protocol were removed — everything now goes over the unified
+## scene-inspector CMD protocol. This node is kept as the shared command backend
+## (and the keyboard-focus tracker for the `focus` cmd).
 ##
 ## Supported commands:
 ##   ping
@@ -26,6 +25,7 @@ extends Node
 ##                                                    subtree by default).
 ##   eval      {code}                                — run GDScript, return result
 ##                                                    (non-production only).
+##   focus                                          — keyboard-focus owner + history
 ##
 ## `ui_scene` / `ui_entity` are identical to their 3D counterparts except the
 ## `godot` block reports the rendered `Control` (rect, anchors, modulate, …)
@@ -37,14 +37,6 @@ extends Node
 ## `value`. The avatar tree uses its own SceneEntityId space; the entity_id
 ## here is not addressable through the `entity` command.
 
-const DEFAULT_PORT: int = 9230
-const DEFAULT_BIND: String = "127.0.0.1"
-const MAX_FRAME_BYTES: int = 65536  ## drop inbound frames larger than this
-## Per-peer outbound buffer. Godot's default is 64 KiB, which a single `scene`
-## or `app_ui` reply trivially exceeds — `send_text` then returns
-## ERR_OUT_OF_MEMORY and the reply is silently dropped, leaving the client
-## hanging. 8 MiB comfortably fits expanded scene snapshots.
-const OUTBOUND_BUFFER_BYTES: int = 8 * 1024 * 1024
 ## Max focus-change entries retained for the `focus` diagnostic cmd.
 const FOCUS_HISTORY_MAX: int = 64
 ## Keywords that mark an `eval` snippet as a statement body, not a bare expression.
@@ -52,11 +44,6 @@ const EVAL_STATEMENT_PREFIXES: Array[String] = [
 	"return", "var", "const", "if", "for", "while", "match", "pass", "print", "assert"
 ]
 const Collector := preload("res://src/tool/debug_server/debug_collector.gd")
-
-var _tcp: TCPServer
-var _peers: Array[WebSocketPeer] = []
-var _running: bool = false
-var _port: int = DEFAULT_PORT
 
 ## Focus tracking: poll the viewport's keyboard-focus owner each frame and log
 ## every change (including release-to-null, which `gui_focus_changed` misses).
@@ -67,125 +54,24 @@ var _last_focus_desc: String = "<unset>"
 
 
 func _ready() -> void:
-	set_process(false)
-	# Debug builds start the server automatically so agents can attach without a
-	# manual toggle. Release/exported builds stay off until the Settings →
-	# Developer toggle. Never in production.
-	if OS.is_debug_build() and not Global.is_production():
-		# DCL_DEBUG_WS_PORT lets a second local instance get its own inspector
-		# (the default port can only be bound by one process).
-		var port := DEFAULT_PORT
-		var env_port := OS.get_environment("DCL_DEBUG_WS_PORT")
-		if env_port.is_valid_int():
-			port = env_port.to_int()
-		start(port)
-
-
-func is_running() -> bool:
-	return _running
-
-
-func get_port() -> int:
-	return _port
-
-
-func start(port: int = DEFAULT_PORT, bind_address: String = DEFAULT_BIND) -> bool:
-	if _running:
-		return true
-	_tcp = TCPServer.new()
-	var err := _tcp.listen(port, bind_address)
-	if err != OK:
-		printerr("DebugWsServer: failed to bind tcp://%s:%d (err=%d)" % [bind_address, port, err])
-		_tcp = null
-		return false
-	_port = port
-	_running = true
-	set_process(true)
-	print("DebugWsServer: listening on ws://%s:%d" % [bind_address, port])
-	return true
-
-
-func stop() -> void:
-	if not _running:
-		return
-	set_process(false)
-	for peer in _peers:
-		peer.close()
-	_peers.clear()
-	if _tcp != null:
-		_tcp.stop()
-		_tcp = null
-	_running = false
-	print("DebugWsServer: stopped")
+	# Poll keyboard focus each frame so the `focus` cmd has history. Same gate the
+	# loopback server used to auto-start under — debug builds (editor / debug
+	# exports), never in production.
+	set_process(OS.is_debug_build() and not Global.is_production())
 
 
 func _process(_dt: float) -> void:
 	_poll_focus()
-	if _tcp == null:
-		return
-
-	# Accept new connections: wrap each TCP stream in a WebSocketPeer that runs
-	# its own RFC6455 handshake.
-	while _tcp.is_connection_available():
-		var stream := _tcp.take_connection()
-		var peer := WebSocketPeer.new()
-		peer.set_outbound_buffer_size(OUTBOUND_BUFFER_BYTES)
-		var err := peer.accept_stream(stream)
-		if err != OK:
-			printerr("DebugWsServer: accept_stream failed err=%d" % err)
-			continue
-		_peers.append(peer)
-
-	# Drive each peer one frame: poll, drain inbound packets, prune closed ones.
-	for i in range(_peers.size() - 1, -1, -1):
-		var peer: WebSocketPeer = _peers[i]
-		peer.poll()
-		var state := peer.get_ready_state()
-		if state == WebSocketPeer.STATE_OPEN:
-			while peer.get_available_packet_count() > 0:
-				var raw := peer.get_packet()
-				if raw.size() > MAX_FRAME_BYTES:
-					_send(
-						peer,
-						{
-							"id": null,
-							"ok": false,
-							"error": "frame too large (max %d bytes)" % MAX_FRAME_BYTES
-						}
-					)
-					continue
-				_handle_message(peer, raw.get_string_from_utf8())
-		elif state == WebSocketPeer.STATE_CLOSED:
-			_peers.remove_at(i)
 
 
 # --------------------------------------------------------------------
 # Dispatch
 
 
-func _handle_message(peer: WebSocketPeer, text: String) -> void:
-	var parsed = JSON.parse_string(text)
-	if not (parsed is Dictionary):
-		_send(peer, {"id": null, "ok": false, "error": "expected a JSON object per frame"})
-		return
-	var msg: Dictionary = parsed
-	var request_id = msg.get("id", null)
-	var cmd: String = str(msg.get("cmd", ""))
-	if cmd.is_empty():
-		_reply(peer, request_id, false, null, "missing 'cmd'")
-		return
-
-	var result := run_command(cmd, msg)
-	_reply(
-		peer, request_id, result.get("ok", false), result.get("data"), str(result.get("error", ""))
-	)
-
-
 ## Shared command backend. Returns `{ok:true, data:...}` or `{ok:false, error:...}`.
-## Called by BOTH the loopback DebugWs server (above) and the scene-inspector
-## unified channel (scene_inspector_bridge.gd) so the inspection/eval surface is
-## identical on either transport. `p` is the parameter dict (the full message for
-## the loopback server; the `args` object for the scene-inspector CMD protocol).
+## Driven by the scene-inspector unified channel (scene_inspector_bridge.gd) so
+## the inspection/eval surface is transport-agnostic. `p` is the parameter dict
+## (the scene-inspector CMD `args` object).
 func run_command(cmd: String, p: Dictionary) -> Dictionary:
 	match cmd:
 		"ping":
@@ -387,46 +273,3 @@ func _compile_and_run(code: String, as_expression: bool) -> Dictionary:
 		return {"compiled": true, "ok": false, "error": "internal: eval runner missing _run()"}
 	var result: Variant = instance.call("_run", get_tree(), Global, self)
 	return {"compiled": true, "ok": true, "data": Collector._variant_to_json(result)}
-
-
-# --------------------------------------------------------------------
-# Reply helpers
-
-
-func _reply(peer: WebSocketPeer, request_id, ok: bool, data, err_msg: String) -> void:
-	var reply: Dictionary = {"id": request_id, "ok": ok}
-	if ok:
-		reply["data"] = data
-	else:
-		reply["error"] = err_msg
-	_send(peer, reply)
-
-
-func _send(peer: WebSocketPeer, reply: Dictionary) -> void:
-	if peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
-		return
-	var payload := JSON.stringify(reply)
-	var err := peer.send_text(payload)
-	if err == OK:
-		return
-	# Most common cause: payload exceeds `outbound_buffer_size`. The failed
-	# message is not enqueued, so a tiny replacement frame still fits and the
-	# client gets a usable error instead of hanging on a dropped reply.
-	var fallback := (
-		JSON
-		. stringify(
-			{
-				"id": reply.get("id", null),
-				"ok": false,
-				"error":
-				(
-					(
-						"reply dropped (err=%d, payload=%d bytes, buffer=%d). "
-						+ "Narrow `filters` (e.g. add `component`, set `include_children:false`)."
-					)
-					% [err, payload.length(), OUTBOUND_BUFFER_BYTES]
-				),
-			}
-		)
-	)
-	peer.send_text(fallback)

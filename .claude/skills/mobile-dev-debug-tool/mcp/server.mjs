@@ -93,7 +93,7 @@ const TOOLS = [
       "Query the live client's read-only trees. cmd ∈ ping | scenes | scene | entity | ui_scene | " +
       "ui_entity | avatars | avatar | app_ui | focus. Pass cmd-specific params in `args` " +
       "(e.g. {scene_id, entity_id, filters} or {by:'local'}). Filters support component/property_is/" +
-      "collect_nodes/include_children/limit. See the debug-ws-inspector skill.",
+      "collect_nodes/include_children/limit. See the mobile-dev-debug-tool skill.",
     inputSchema: {
       type: "object",
       properties: {

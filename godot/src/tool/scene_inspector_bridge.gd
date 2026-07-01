@@ -3,8 +3,9 @@ extends Node
 
 ## Bridges Scene Inspector entries from the Rust SceneInspectorDispatcher to a
 ## dedicated WebSocket target. Also handles incoming commands from external
-## tools (SCENE_INSPECTOR_CMD protocol). Inspection/eval verbs share the same
-## backend as the loopback DebugWs server (one implementation, two transports).
+## tools (SCENE_INSPECTOR_CMD protocol) — the single transport for the live
+## client. Inspection/eval verbs run through the shared DebugWs command backend
+## (`run_command`).
 
 const Collector := preload("res://src/tool/debug_server/debug_collector.gd")
 
@@ -149,8 +150,8 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 
 		_:
 			# Inspection / eval verbs (ping, scenes, scene, entity, ui_scene,
-			# ui_entity, avatars, avatar, app_ui, focus, eval) share the DebugWs
-			# backend — one implementation, two transports.
+			# ui_entity, avatars, avatar, app_ui, focus, eval) run through the
+			# shared DebugWs command backend.
 			var res: Dictionary = DebugWs.run_command(cmd, args)
 			ok = res.get("ok", false)
 			if ok:

@@ -1,33 +1,62 @@
 ---
-name: debug-ws-inspector
-description: Use when inspecting the running Decentraland Godot Explorer client over the localhost debug WebSocket (port 9230), writing or interpreting `websocat` queries against `ws://127.0.0.1:9230`, or extending the debug server itself. Covers the JSON protocol, the five trees (`scene`/`entity`, `ui_scene`/`ui_entity`, `avatars`/`avatar`, `app_ui`, `ping`/`scenes`), the `focus` keyboard-focus tracker, the shared `filters` dict, and the wiring across `godot/src/tool/debug_server/` and the Rust `SceneManager::debug_*` / `AvatarScene::debug_*` hooks. Also covers the `eval` command for running arbitrary GDScript against the live client (non-production only). Trigger when the user mentions the debug WS server, port 9230, `DebugWs`, `debug_collector`, websocat against the client, running/evaluating GDScript against the running client, or asks how to query live scene/UI/avatar/focus state.
+name: mobile-dev-debug-tool
+description: Use when inspecting or reporting the state of the running Decentraland Godot Explorer client — on desktop or on a mobile device (iOS/Android) — over the unified scene-inspector debug-hub (`cargo run -- debug-hub`; device port 9231, consumer port 9230) that the client dials out to. Covers the SCENE_INSPECTOR_CMD JSON protocol, the five trees (`scene`/`entity`, `ui_scene`/`ui_entity`, `avatars`/`avatar`, `app_ui`, `ping`/`scenes`), the `focus` keyboard-focus tracker, the `log`/`network` streams, the shared `filters` dict, the `websocat` helper scripts (`scripts/unified.sh`, `unified-tail.sh`), and the wiring across `godot/src/tool/debug_server/`, `scene_inspector_bridge.gd` and the Rust `SceneManager::debug_*` / `AvatarScene::debug_*` hooks. Also covers the `eval` command for running arbitrary GDScript against the live client (non-production only). Trigger when the user asks what state the running app/client is in (what scenes/realm are loaded, where the avatar is, what the UI is showing — desktop or on-device/mobile/iOS/Android), asks to connect to or host the debug-hub, or mentions the scene-inspector channel, debug-hub, port 9230/9231, `DebugWs`, `debug_collector`, websocat against the client, or running/evaluating GDScript against the running client.
 ---
 
-# Debug WebSocket inspector
+# Mobile dev debug tool — scene-inspector debug-hub
 
-A localhost-only WS server exposes a JSON inspection protocol for the live
-client state, plus an `eval` command that runs arbitrary GDScript. Auto-starts
-in debug builds (editor / debug exports); in release builds it stays off until
-toggled in **Settings → Developer → "Debug WS Server"**. Binds to
-`127.0.0.1:9230`. Hidden — and `eval` hard-disabled — in production builds.
+A single WebSocket channel exposes live client state (scenes / entities / UI /
+avatars / focus), a `log`/`network`/lifecycle stream, and an `eval` command that
+runs arbitrary GDScript — reachable on **any platform, including iOS/Android
+devices that can't be dialed into**. The client dials **out** to a desktop
+**debug-hub**; local tools (AI / websocat) connect to the hub's consumer port.
+
+There is **one transport**: the scene-inspector CMD protocol (the source-of-truth
+contract an external inspector app already parses, so additions stay
+backward-compatible). `eval` is hard-disabled in production builds.
+
+## Bring up the hub
+
+```bash
+cargo run -- debug-hub                       # device port 9231, consumer port 9230
+# launch the client pointed at the hub's device port (LAN IP shown in the banner):
+cargo run -- run -- --scene-inspector=ws://127.0.0.1:9231              # desktop
+cargo run -- run --target ios -- --scene-inspector=ws://<this-mac>:9231   # device
+```
+
+On iOS the `dcl-ios-devtools` export plugin auto-bakes the hub address (debug
+builds), so even a Godot-editor deploy phones home — just log in, enter a world,
+and accept the local-network prompt. The bridge connects **in-world**
+(`explorer.gd`), so the channel comes alive after entering a world.
 
 ## Wiring
 
-- Autoload: `DebugWs` → `godot/src/tool/debug_server/debug_ws_server.gd`
-- Data assembly: `godot/src/tool/debug_server/debug_collector.gd`
+- Command backend: `DebugWs` autoload → `godot/src/tool/debug_server/debug_ws_server.gd`
+  (`run_command`) + `debug_collector.gd` (data assembly). No longer a server —
+  purely the shared inspection/eval backend + keyboard-focus tracker.
+- Transport: `godot/src/tool/scene_inspector_bridge.gd` (drives CMD ↔ ACK and the
+  streams) + `godot/src/logic/scene_inspector_websocket.gd`; Rust side in
+  `lib/src/tools/scene_inspector/`. The hub is the `debug-hub` xtask
+  (`src/log_server.rs`).
 - Rust `#[func]` hooks for state only Rust can reach:
   - `SceneManager::debug_*` (`lib/src/scene_runner/scene_manager.rs`) —
     CRDT enumeration, deserialization, UI control lookup.
   - `AvatarScene::debug_*` (`lib/src/avatars/avatar_scene.rs`) — avatar
     listing, address/alias/entity/local lookup.
 
-## Protocol
+## Protocol (scene-inspector CMD)
 
-Each frame is a JSON object with `id` (echoed in the reply) and `cmd`. Reply
-shape: `{"id":..., "ok":true, "data":{...}}` or
-`{"id":..., "ok":false, "error":"..."}`.
+- request: `{"type":"SCENE_INSPECTOR_CMD","cmd":"<verb>","args":{...},"id":"<id>"}`
+- reply:   `{"type":"SCENE_INSPECTOR_CMD_ACK","id":"<id>","ok":<bool>,"data":...}`
+  (or `{"ok":false,"error":"..."}`)
+- streams (push): `{"type":"SCENE_INSPECTOR","payload":{"sessionId":...,"entries":[{type:...}]}}`
+  where `entries[].type` ∈ crdt | op_call_start | op_call_end | scene_lifecycle |
+  perf | **log** | **network** | session_start | session_end.
 
-## Five trees, one protocol
+The `id` is echoed in the ACK — always match replies by it (see the perf-vs-ACK
+note below). The helpers (`scripts/unified.sh`) do this for you.
+
+## Five trees, one command surface
 
 | cmd | Tree | Identified by |
 |---|---|---|
@@ -46,51 +75,45 @@ All four data cmds (`scene`, `ui_scene`, `avatar`, `app_ui`) share a `filters` d
 - `include_parents`, `include_children`, `limit`, `offset`, `depth`,
   `class_filter`, `name_contains` — traversal/pagination knobs
 
-## Quick examples
+## Querying — `unified.sh`
 
-Use the bundled wrapper `scripts/debug-ws.sh` (relative to this SKILL.md) — it
-sends a single JSON frame to `ws://127.0.0.1:9230` and bakes in `-B 16777216`
-so websocat doesn't split large replies. Requires `websocat` on `$PATH`
-(`cargo install websocat` or your package manager).
-
-Why the buffer flag matters: websocat's default inbound buffer is 64 KiB.
-`ping`/`scenes`/`avatars` fit easily, but `scene`/`ui_scene`/`app_ui`/`avatar`
-replies routinely exceed that and websocat will split the frame
-("Incoming message too long ... splitting it to parts"), which breaks JSON
-parsing. The wrapper's `-B 16777216` (16 MiB) matches the server's 8 MiB
-outbound cap with headroom.
+`scripts/unified.sh <cmd> [args-json]` sends one CMD frame to the hub consumer
+port (`ws://127.0.0.1:9230`) and returns its matching ACK. It bakes in
+`-B 16777216` so websocat doesn't split large replies, and keeps the socket open
+until the ACK's `id` matches (needed for on-device round-trips). Requires
+`websocat` on `$PATH` (`cargo install websocat` or your package manager).
 
 ```bash
-# Confirm connection
-./scripts/debug-ws.sh '{"id":1,"cmd":"ping"}'
+# Confirm the round-trip to the connected client
+scripts/unified.sh ping
 
 # All loaded scenes
-./scripts/debug-ws.sh '{"id":2,"cmd":"scenes"}'
+scripts/unified.sh scenes
 
 # All TextShape entities in scene 0 with their Label3D properties
-./scripts/debug-ws.sh '{"id":3,"cmd":"scene","scene_id":0,"filters":{
+scripts/unified.sh scene '{"scene_id":0,"filters":{
   "component":["TextShape"],
   "collect_nodes":{"TextShape":["text","font_size","pixel_size","outline_size","modulate"]}
 }}'
 
 # Your own avatar — what it's wearing + what's playing
-./scripts/debug-ws.sh '{"id":4,"cmd":"avatar","by":"local","filters":{
+scripts/unified.sh avatar '{"by":"local","filters":{
   "collect_nodes":{"AnimationPlayer":["current_animation","autoplay"],"AnimationTree":["active"]}
 }}'
 
 # Explorer's own UI hierarchy (lobby in this state, scene UI when loaded)
-./scripts/debug-ws.sh '{"id":5,"cmd":"app_ui","filters":{"depth":2}}'
+scripts/unified.sh app_ui '{"filters":{"depth":2}}'
 
 # Keyboard-focus tracker — current owner + ui_root + change history
-./scripts/debug-ws.sh '{"id":6,"cmd":"focus"}'
+scripts/unified.sh focus
 ```
 
 ## Eval — running GDScript
 
-`{"id":N,"cmd":"eval","code":"<gdscript>"}` compiles and runs `code` against the
-live client and returns the serialized result — the agent-facing equivalent of
-the old devtools console. **Non-production only**: in a production build the cmd
-replies `{"ok":false,"error":"eval disabled in production builds"}`.
+`scripts/unified.sh eval '<gdscript>'` compiles and runs the snippet against the
+live client and returns the serialized result — the agent-facing equivalent of a
+devtools console. **Non-production only**: in a production build the cmd replies
+`{"ok":false,"error":"eval disabled in production builds"}`.
 
 `code` is a GDScript function body. Use `return X` to send a value back. Three
 locals are in scope:
@@ -99,11 +122,11 @@ locals are in scope:
 |---|---|
 | `tree` | the `SceneTree` (`tree.root`, `tree.get_node(...)`) |
 | `global` | the `Global` autoload |
-| `server` | this `DebugWsServer` node |
+| `server` | the `DebugWsServer` command-backend node |
 
 Autoloads (`Global`, `DebugWs`, …) and engine singletons (`OS`, `Engine`,
 `Time`, …) are reachable directly too. A bare single-line expression is
-auto-wrapped in `return`, so `"code":"1 + 1"` works without the keyword.
+auto-wrapped in `return`, so `eval '1 + 1'` works without the keyword.
 
 The result passes through the same `_variant_to_json` used elsewhere
 (primitives, `Vector*`, `Color`, `AABB`, `Array`, `Dictionary`; everything else
@@ -111,13 +134,16 @@ The result passes through the same `_variant_to_json` used elsewhere
 
 ```bash
 # Bare expression (auto-wrapped)
-./scripts/debug-ws.sh '{"id":10,"cmd":"eval","code":"Engine.get_frames_per_second()"}'
+scripts/unified.sh eval 'Engine.get_frames_per_second()'
 
 # Reach into the tree
-./scripts/debug-ws.sh '{"id":11,"cmd":"eval","code":"return tree.get_root().get_child_count()"}'
+scripts/unified.sh eval 'return tree.get_root().get_child_count()'
 
-# Multi-line statement body (\n between lines, \t for indentation)
-./scripts/debug-ws.sh '{"id":12,"cmd":"eval","code":"var names = []\nfor c in tree.get_root().get_children():\n\tnames.append(c.name)\nreturn names"}'
+# Multi-line statement body
+scripts/unified.sh eval 'var names = []
+for c in tree.get_root().get_children():
+	names.append(c.name)
+return names'
 ```
 
 Limitations: **synchronous only** — `await` is not supported (it would return a
@@ -133,8 +159,8 @@ plus a timestamped change history (no `filters`). Reply `data`:
 "history": [{"t_ms", "frame", "from", "to"}, ...]}` (last `FOCUS_HISTORY_MAX`
 = 64 changes; `"<none>"` means focus was released to null).
 
-The server polls `get_viewport().gui_get_focus_owner()` every `_process` frame
-(only while running) so the history captures transient changes — including
+`DebugWs` polls `get_viewport().gui_get_focus_owner()` every `_process` frame (in
+debug builds) so the history captures transient changes — including
 release-to-null, which the engine's `gui_focus_changed` signal misses.
 
 Use it for "input stops working" bugs: mobile walk/jump are gated by
@@ -144,8 +170,39 @@ control stole focus and on which frame. (This is how the navbar-toggle
 focus-steal bug was found: the gate read true→false when a press landed focus
 on the navbar's full-rect `Button`.)
 
+## Streams — `unified-tail.sh`
+
+```bash
+scripts/unified-tail.sh                 # logs only (default)
+scripts/unified-tail.sh log,network     # logs + HTTP
+scripts/unified-tail.sh log,lifecycle   # logs + per-tick scene lifecycle
+```
+
+**Capture is connection-gated + opt-in.** With no consumer connected, the device
+captures NOTHING (no buffering) — safe to leave the tool enabled in prod. Classic
+streams (crdt/perf) flow once a consumer connects; `log`/`network`/`lifecycle` are
+opt-in (the helper subscribes for you). `source` ∈ rust | godot | native
+(Swift/ObjC on iOS).
+
+**MCP / AI loop:** the hub's consumer port (`ws://127.0.0.1:9230`) is a stable
+local endpoint an MCP server (or the helpers above, called from Bash) can use to
+read all logs and issue `eval`/queries — the same contract the external app uses.
+
 ## Important notes
 
+- **Report state from a request/reply ACK, never from a stray `perf` frame.**
+  On the hub, `perf` (and `crdt`) are always-on *pushes* that start the instant a
+  consumer connects — so a naïve read of the socket returns a `perf` frame, not
+  the answer to your command. Always query with the id-filtered request/reply
+  (`unified.sh <cmd>`), which matches the ACK by its unique `id`. If a query comes
+  back empty, that's a dropped ACK — do **not** fall back to inferring app state
+  from a `perf` push (it only happens to carry `fps`/`mem`/`scene_count`; it has no
+  realm/avatar/UI, and its `scene_count: 0` can mislead you into "everything's
+  fine / in lobby"). On a device the ACK needs a full consumer→hub→device→hub
+  round-trip, so it lands *after* the first pushed `perf`: the helper must keep the
+  socket open until the id matches (`unified.sh` does this via a trailing `sleep`
+  that `grep -m1` tears down on match). Closing stdin right after sending — as an
+  ad-hoc `printf frame | websocat` does — drops the ACK on-device.
 - The local-player avatar appears in `avatars` with `is_local: true` and lives
   on `SceneManager.player_avatar_node`, separate from the
   `AvatarScene.avatar_godot_scene` HashMap that tracks remote players.
@@ -155,72 +212,22 @@ on the navbar's full-rect `Button`.)
 - `app_ui` skips `<root>/SceneUIContainer/scenes_ui` by default to avoid
   shadowing `ui_scene`; pass `include_scene_ui: true` to lift the skip.
 - The inspection cmds are read-only; only `eval` can mutate client state.
-  Loopback bind only — never exposed beyond the local machine.
-- Per-peer outbound buffer is 8 MiB. If a reply exceeds it the server returns a
-  short `{"ok":false,"error":"reply dropped (err=..., payload=..., buffer=...)"}`
-  frame carrying the original `id`, so the client gets an actionable error
-  instead of a silent hang — narrow `filters` (add `component` / `property_is`,
-  drop `include_children`/`include_parents`, use `limit`).
+- Large replies (expanded `scene` / `app_ui`) can be huge — narrow `filters`
+  (add `component` / `property_is`, drop `include_children`/`include_parents`,
+  use `limit`) if a reply is unwieldy.
 - `scene` defaults `include_children` and `include_parents` to `false`. Pass
   them as `true` explicitly when you want the tree expanded; `entity` still
   inlines parents/direct children by default.
 
-## Unified channel (debug-hub) — same surface, reachable on any device
-
-The DebugWs server above LISTENS on loopback, so it's only reachable on the
-machine running the client. For **device builds (esp. iOS, which can't be dialed
-into)** use the **unified scene-inspector channel** instead: the device dials OUT
-to a desktop **debug-hub**, and local tools (AI / websocat) connect to the hub.
-
-Same command surface (`ping`/`scenes`/`scene`/`entity`/`ui_scene`/`ui_entity`/
-`avatars`/`avatar`/`app_ui`/`focus`/`eval`), but spoken over the scene-inspector
-CMD protocol — the source-of-truth contract an external inspector app already
-parses, so additions stay backward-compatible.
-
-Wire format (vs the loopback `{id,cmd}` form):
-- request: `{"type":"SCENE_INSPECTOR_CMD","cmd":"<verb>","args":{...},"id":"<id>"}`
-- reply:   `{"type":"SCENE_INSPECTOR_CMD_ACK","id":"<id>","ok":<bool>,"data":...}`
-- streams (push): `{"type":"SCENE_INSPECTOR","payload":{"sessionId":...,"entries":[{type:...}]}}`
-  where `entries[].type` ∈ crdt | op_call_start | op_call_end | scene_lifecycle |
-  perf | **log** | **network** | session_start | session_end.
-
-Bring it up:
-```bash
-cargo run -- debug-hub                       # device port 9231, consumer port 9230
-# launch the client pointed at the hub's device port (LAN IP shown in the banner):
-cargo run -- run -- --scene-inspector=ws://<this-mac>:9231          # desktop
-cargo run -- run --target ios -- --scene-inspector=ws://<this-mac>:9231   # device
-```
-
-Drive it (helpers in `scripts/`):
-```bash
-scripts/unified.sh ping
-scripts/unified.sh scene  '{"scene_id":0,"filters":{"component":["Transform"]}}'
-scripts/unified.sh avatar '{"by":"local"}'
-scripts/unified.sh eval   'Engine.get_frames_per_second()'
-scripts/unified-tail.sh log,network          # subscribe + tail (opt-in streams)
-```
-
-**Capture is connection-gated + opt-in.** With no consumer connected, the device
-captures NOTHING (no buffering) — safe to leave the tool enabled in prod. Classic
-streams (crdt/perf) flow once a consumer connects; `log`/`network` are opt-in via
-`subscribe`. `eval` is hard-gated out of production builds.
-
-**MCP / AI loop:** the hub's consumer port (`ws://127.0.0.1:9230`) is a stable
-local endpoint an MCP server (or the helpers above, called from Bash) can use to
-read all logs and issue `eval`/queries — the same contract the external app uses.
-
 ## Recipes (use cases)
 
-Setup once (`export H=.claude/skills/debug-ws-inspector/scripts`):
+Setup once (`export H=.claude/skills/mobile-dev-debug-tool/scripts`):
 ```bash
 cargo run -- debug-hub                                    # the hub (terminal 1)
 cargo run -- run -- --scene-inspector=ws://127.0.0.1:9231 # desktop client -> hub
 # iOS device: cargo run -- run --target ios  (export plugin auto-bakes the hub
 #   address); then log in + enter a world + accept the local-network prompt.
 ```
-On desktop you can skip the hub for query/eval and hit the client's loopback
-DebugWs directly with `debug-ws.sh` (the `{id,cmd}` form); logs still need the hub.
 
 ### 1. Inspect a scene
 ```bash

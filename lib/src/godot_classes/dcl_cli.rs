@@ -53,8 +53,6 @@ pub struct DclCli {
     #[var(get)]
     pub clear_cache_startup: bool,
     #[var(get)]
-    pub debug_ws: bool,
-    #[var(get)]
     pub raycast_debugger: bool,
     #[var(get)]
     pub network_debugger: bool,
@@ -387,12 +385,6 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Maintenance".to_string(),
             },
-            ArgDefinition {
-                name: "--debug-ws".to_string(),
-                description: "Start the debug WebSocket server on startup (port 9230)".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Maintenance".to_string(),
-            },
             // Asset Loading
             ArgDefinition {
                 name: "--only-optimized".to_string(),
@@ -684,7 +676,6 @@ impl INode for DclCli {
         let client_test_mode = args_map.contains_key("--client-test");
         let test_runner = args_map.contains_key("--test-runner");
         let clear_cache_startup = args_map.contains_key("--clear-cache-startup");
-        let debug_ws = args_map.contains_key("--debug-ws");
         let raycast_debugger = args_map.contains_key("--raycast-debugger");
         let network_debugger = args_map.contains_key("--network-debugger");
         let spawn_avatars = args_map.contains_key("--spawn-avatars");
@@ -837,7 +828,6 @@ impl INode for DclCli {
             client_test_mode,
             test_runner,
             clear_cache_startup,
-            debug_ws,
             raycast_debugger,
             network_debugger,
             spawn_avatars,

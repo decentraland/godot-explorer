@@ -422,10 +422,6 @@ func _ready():
 
 		_apply_optimized_content_base_url(deep_link_obj)
 
-		# Toggle the loopback debug WS server from the fake deeplink (desktop/CLI
-		# testing). Same handling as runtime deeplinks in DeepLinkRouter.
-		deep_link_router.apply_debug_ws_param(deep_link_obj.params.get("debug-ws", ""))
-
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
@@ -511,13 +507,6 @@ func _ready():
 	)
 	await _async_clear_cache_if_needed()
 	print("[Startup] global._async_clear_cache end: %dms" % (Time.get_ticks_msec() - _startup_time))
-
-	# Start the debug WebSocket server if requested via --debug-ws
-	if cli.debug_ws:
-		if DebugWs.start():
-			print("[Startup] Debug WS server listening on port ", DebugWs.get_port())
-		else:
-			push_warning("[Startup] Failed to start Debug WS server")
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:

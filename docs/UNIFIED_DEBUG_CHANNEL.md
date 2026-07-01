@@ -99,7 +99,7 @@ cargo run -- run --target ios -- --scene-inspector=ws://<this-mac-ip>:9231 # dev
 #    builds via the godot_cmdline Info.plist key — so even a Godot-editor deploy
 #    phones home to the hub with no extra args. Override via DCL_IOS_GODOT_CMDLINE.)
 
-# 3. Drive it (helpers in .claude/skills/debug-ws-inspector/scripts/):
+# 3. Drive it (helpers in .claude/skills/mobile-dev-debug-tool/scripts/):
 unified.sh ping
 unified.sh scene  '{"scene_id":0,"filters":{"component":["Transform"]}}'
 unified.sh avatar '{"by":"local"}'
@@ -109,7 +109,7 @@ unified-tail.sh   log,network         # subscribe + tail (opt-in streams)
 
 The hub's consumer port (`ws://127.0.0.1:9230`) is a stable local endpoint — an
 MCP server (or the helpers above from Bash) reads all logs and issues `eval` /
-queries there, which is the **AI loop**. See the `debug-ws-inspector` skill.
+queries there, which is the **AI loop**. See the `mobile-dev-debug-tool` skill.
 
 ## iOS specifics
 
@@ -154,4 +154,4 @@ it also serves consumers + relays commands).
 - Log capture: `lib/src/tools/log_stream.rs`; network: `lib/src/tools/network_inspector.rs`
 - Hub (xtask): `src/log_server.rs` (`debug-hub`), `src/main.rs`
 - iOS export plugin: `godot/addons/dcl-ios-devtools/export_plugin.gd`
-- Helpers + docs: `.claude/skills/debug-ws-inspector/`
+- Helpers + docs: `.claude/skills/mobile-dev-debug-tool/`

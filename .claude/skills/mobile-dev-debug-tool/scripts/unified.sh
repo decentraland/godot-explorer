@@ -3,9 +3,9 @@
 # debug-hub consumer port. One request → its matching ACK.
 #
 # This speaks the scene-inspector CMD protocol (the source-of-truth contract an
-# external inspector app already uses), NOT the loopback DebugWs `{id,cmd}` form
-# that debug-ws.sh uses. Same command surface, but reachable on any platform
-# (incl. iOS device) because the device dials OUT to the hub.
+# external inspector app already uses) — the single transport for the live
+# client, reachable on any platform (incl. iOS device) because the device dials
+# OUT to the hub.
 #
 # Prereqs: `cargo run -- debug-hub` running; the client launched with
 #   --scene-inspector=ws://<this-mac>:9231 (the hub's device port).
@@ -36,6 +36,20 @@ frame="$(printf '{"type":"SCENE_INSPECTOR_CMD","cmd":"%s","args":%s,"id":"%s"}' 
 
 # The channel also streams SCENE_INSPECTOR frames (logs/crdt/…); filter for our
 # ACK by id so we return exactly the reply to this request.
-printf '%s\n' "$frame" \
-  | websocat -B 16777216 "ws://$HOST:$PORT" \
-  | grep -m1 "\"id\":\"$id\""
+#
+# Keep stdin open (the trailing sleep) until the ACK returns: `grep -m1` exits on
+# the first match and SIGPIPEs the rest of the pipeline, so a fast reply tears the
+# whole thing down immediately and the sleep is only a latency ceiling. Without
+# it, websocat closes the socket on stdin EOF and can miss a slower on-device
+# reply (loopback desktop is sub-ms, but USB/adb + LAN round-trips are not).
+reply="$(
+  { printf '%s\n' "$frame"; sleep "${REPLY_TIMEOUT:-10}"; } \
+    | websocat -B 16777216 "ws://$HOST:$PORT" 2>/dev/null \
+    | grep -m1 "\"id\":\"$id\"" || true
+)"
+if [ -n "$reply" ]; then
+  printf '%s\n' "$reply"
+else
+  echo "unified.sh: no reply for id=$id within ${REPLY_TIMEOUT:-10}s — is a device connected to the hub (device port 9231)?" >&2
+  exit 1
+fi
