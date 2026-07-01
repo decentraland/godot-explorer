@@ -5,10 +5,15 @@ name: 🍏 iOS (self-hosted)
 # android_builds.yml's per-push APK. It runs on a SELF-HOSTED macOS runner (a dev Mac labelled
 # `dcl-ios`), so it only builds when that Mac is registered.
 #
-# Two-tier gating:
-#   • `gate` job (GitHub-hosted): if the `RUNNERS_READ_TOKEN` PAT exists, it checks that a runner
+# Gating (both stages live in the `gate` job):
+#   • Static-checks gate: waits for runner.yml's "📊 Static checks" check-run on THIS commit and
+#     SKIPS the iOS build unless it succeeded — the self-hosted Mac is never spent on a commit that
+#     already failed formatting/lint. This is the cross-workflow equivalent of Android/Linux gating
+#     on `needs: static-checks` (they live in runner.yml; iOS is its own workflow, so it can't use
+#     `needs` and instead polls the check-run by name).
+#   • Runner/codeowner gate: if the `RUNNERS_READ_TOKEN` PAT exists, it checks that a runner
 #     labelled `dcl-ios` is ONLINE and that the actor is an active member of the CODEOWNERS team
-#     (decentraland/rgl-mobile-team). If the PAT is ABSENT, the gate BYPASSES (outputs `bypass`),
+#     (decentraland/rgl-mobile-team). If the PAT is ABSENT, this stage BYPASSES (outputs `bypass`),
 #     so the workflow works with zero extra setup and auto-upgrades the day the PAT is added.
 #   • inline `if` on build-ios (always applies): non-fork PR authored by an OWNER/MEMBER/COLLABORATOR,
 #     or a push (write access already required), and the PR must not carry the `build` label.
@@ -42,6 +47,7 @@ on:
 
 permissions:
   contents: read
+  checks: read # read the "📊 Static checks" check-run so the gate can require it (like Android)
 
 concurrency:
   # Include the event action so a `labeled` (build-label) event gets its OWN group and does NOT
@@ -53,39 +59,73 @@ concurrency:
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────────────────────
-  # Gate: cheap GitHub-hosted check. With a PAT it yields a deterministic online + codeowner
-  # verdict; without a PAT it bypasses so the rest still runs (queue + inline checks).
+  # Gate: cheap GitHub-hosted check. Stage 1 waits for the "📊 Static checks" check-run on this
+  # commit and skips iOS unless it passed (cross-workflow equivalent of `needs: static-checks`).
+  # Stage 2, with a PAT, yields a deterministic online + codeowner verdict; without a PAT it
+  # bypasses so the rest still runs (queue + inline checks).
   # ───────────────────────────────────────────────────────────────────────────────────────────
   gate:
-    name: Gate (runner online + codeowner)
+    name: Gate (static checks + runner online + codeowner)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     outputs:
-      # `true` = online && codeowner · `false` = offline or not-codeowner (skip) · `bypass` = no PAT.
+      # `true` = static passed && online && codeowner · `false` = static failed, offline, or
+      # not-codeowner (skip) · `bypass` = static passed but no PAT.
       should_build: ${{ steps.check.outputs.should_build }}
     steps:
       - id: check
         env:
+          # Always-present token — used ONLY to read the static-checks check-run on this commit.
+          GH_TOKEN: ${{ github.token }}
           # Optional fine-grained PAT: repo `Administration: Read` + org `Members: Read`
-          # (or classic PAT `repo` + `read:org`). Absent → the gate bypasses.
-          GH_TOKEN: ${{ secrets.RUNNERS_READ_TOKEN }}
+          # (or classic PAT `repo` + `read:org`). Absent → the runner/codeowner stage bypasses.
+          RUNNERS_PAT: ${{ secrets.RUNNERS_READ_TOKEN }}
+          REPO: ${{ github.repository }}
+          # Commit under test: PR head on pull_request, the pushed SHA on push.
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          # runner.yml's static-checks stage reports this check-run name (same string as the
+          # branch-protection required context). Android/Linux gate on this stage via `needs`.
+          STATIC_CHECK: "📊 Static checks / Code style and file formatting"
           # GitHub-authenticated identity of whoever triggered this (NOT the spoofable git author):
           # the PR author on pull_request, the pusher on push.
           ACTOR: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login || github.actor }}
         run: |
           set -u
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "ℹ️  RUNNERS_READ_TOKEN not set — bypassing the gate (queue + inline checks apply)."
+
+          # ── Stage 1: gate on the same first CI stage as Android/Linux ────────────────────────
+          # Poll the "📊 Static checks" check-run on this commit until it completes, then skip the
+          # iOS build unless it succeeded (failure / cancelled / never-reported within the budget).
+          DEADLINE=$(( SECONDS + 900 ))   # wait up to 15 min for static-checks to finish
+          STATUS="" ; CONCLUSION=""
+          while [ "$SECONDS" -lt "$DEADLINE" ]; do
+            LINE=$(gh api "/repos/${REPO}/commits/${SHA}/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name==env.STATIC_CHECK)] | sort_by(.started_at) | last
+                    | "\(.status)|\(.conclusion // "")"' 2>/dev/null || echo "")
+            STATUS="${LINE%%|*}" ; CONCLUSION="${LINE#*|}"
+            if [ "$STATUS" = "completed" ]; then break; fi
+            echo "⏳ waiting for '${STATIC_CHECK}' on ${SHA} (status=${STATUS:-none})…"
+            sleep 15
+          done
+          echo "static-checks: status=${STATUS:-none} conclusion=${CONCLUSION:-none}"
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "🛑 static-checks did not pass — skipping the iOS build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # ── Stage 2: runner-online + codeowner (needs the optional PAT) ──────────────────────
+          if [ -z "${RUNNERS_PAT:-}" ]; then
+            echo "ℹ️  RUNNERS_READ_TOKEN not set — bypassing the runner/codeowner gate (queue + inline checks apply)."
             echo "should_build=bypass" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           # Is a runner labelled `dcl-ios` online? (busy-but-online still counts → job queues)
-          ONLINE=$(gh api "/repos/${{ github.repository }}/actions/runners" \
+          ONLINE=$(GH_TOKEN="$RUNNERS_PAT" gh api "/repos/${REPO}/actions/runners" \
             --jq '[.runners[] | select(.status=="online") | select(any(.labels[]; .name=="dcl-ios"))] | length' \
             2>/dev/null || echo 0)
           # Is the actor an active member of the CODEOWNERS team? (404 for non-members → empty)
-          STATE=$(gh api "/orgs/decentraland/teams/rgl-mobile-team/memberships/${ACTOR}" \
+          STATE=$(GH_TOKEN="$RUNNERS_PAT" gh api "/orgs/decentraland/teams/rgl-mobile-team/memberships/${ACTOR}" \
             --jq '.state' 2>/dev/null || echo "")
           echo "runners_online=${ONLINE:-0} · actor=${ACTOR} · membership=${STATE:-none}"
 
