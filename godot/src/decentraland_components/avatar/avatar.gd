@@ -305,13 +305,28 @@ func _ready():
 func _exit_tree() -> void:
 	AvatarLODCoordinator.unregister(self)
 
-	# The 2D nameplate lives in the shared layer, not under this avatar, so it
-	# won't be auto-freed — free it explicitly.
-	if _use_2d_nameplate:
-		NameplateLayer.detach(self)
+	# The 2D nameplate lives in the shared NameplateLayer, not under this avatar, so it is
+	# NOT auto-freed with the subtree. We must NOT free it here either: _exit_tree also
+	# fires on a transient reparent (e.g. lobby.gd moves avatar_preview between containers),
+	# and since _ready() only runs once it would never be re-created — leaving nickname_ui
+	# permanently freed while the avatar stays alive (the avatar.gd:539 "previously freed"
+	# bug). Instead just hide it while out of the tree; NameplateLayer.update() (driven by
+	# our _process) is paused meanwhile, so a last-visible tag would otherwise linger frozen.
+	# The real free happens in _notification(NOTIFICATION_PREDELETE) when the avatar dies.
+	if _use_2d_nameplate and is_instance_valid(nickname_ui):
+		nickname_ui.modulate.a = 0.0
+		nickname_ui.hide()
 
 	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
 	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
+
+
+func _notification(what: int) -> void:
+	# Free the reparented nickname_ui only when the avatar object is actually deleted (not
+	# on transient tree exits) — see _exit_tree for why. NameplateLayer.detach() guards
+	# is_instance_valid, so a full-teardown double-free is harmless.
+	if what == NOTIFICATION_PREDELETE and _use_2d_nameplate:
+		NameplateLayer.detach(self)
 
 
 ## Setup trigger detection for this avatar (local player and remote avatars only).
@@ -534,14 +549,15 @@ func async_update_avatar(
 		# Only update the name if it changed
 		if get_avatar_name() != new_avatar_name:
 			set_avatar_name(new_avatar_name)
-			var splitted_nickname = new_avatar_name.split("#", false)
-			if splitted_nickname.size() > 1:
-				nickname_ui.nickname = splitted_nickname[0]
-				nickname_ui.tag = splitted_nickname[1]
-			else:
-				nickname_ui.nickname = new_avatar_name
-				nickname_ui.tag = ""
-			nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
+			if is_instance_valid(nickname_ui):
+				var splitted_nickname = new_avatar_name.split("#", false)
+				if splitted_nickname.size() > 1:
+					nickname_ui.nickname = splitted_nickname[0]
+					nickname_ui.tag = splitted_nickname[1]
+				else:
+					nickname_ui.nickname = new_avatar_name
+					nickname_ui.tag = ""
+				nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 			# Re-trigger UPDATE_ONCE so the SubViewport repaints with the new text
 			_apply_nickname_visibility()
 		return
