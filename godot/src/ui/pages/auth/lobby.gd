@@ -28,14 +28,6 @@ const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
 # Guest-login (thirdweb) can hang on a flaky network and leave the user stuck on
 # the "Getting you ready..." screen forever. Cap the wait and surface a retry.
 const GUEST_LOGIN_TIMEOUT_SEC: float = 20.0
-# Debug-only: on-disk guest identity state wiped by the "reset guest wallet"
-# affordance (revealed via the secret logo double-tap in non-prod). These paths
-# are owned by Rust — keep in sync with lib/src/auth/device_anchor.rs (anchor)
-# and lib/src/auth/thirdweb_guest.rs (persisted session).
-const DEBUG_GUEST_STATE_FILES = [
-	"user://device_anchor.txt",
-	"user://thirdweb_session.json",
-]
 const BG_GRADIENT = preload("res://assets/backgrounds/gradient-background.png")
 const BG_DISCOVER = preload("res://assets/backgrounds/photo-background.png")
 const BG_AVATAR = preload("res://assets/backgrounds/gradient-background.tres")
@@ -600,22 +592,11 @@ func _on_button_reset_guest_debug_pressed() -> void:
 	Global.modal_manager.close_current_modal()
 
 
-# Deletes the on-disk guest identity (anchor + persisted thirdweb session) and
-# clears the cached guest profile so the next "Play as guest" derives a fresh
-# wallet instead of reusing the old one. Returns how many files were removed.
+# Deletes all on-disk guest identity state via the shared production helper so
+# the next "Play as guest" derives a fresh wallet. Returns how many files were
+# removed. See Global.clear_guest_device_storage / GUEST_DEVICE_STORAGE_FILES.
 func _debug_clear_guest_state() -> int:
-	var removed := 0
-	for path in DEBUG_GUEST_STATE_FILES:
-		if FileAccess.file_exists(path):
-			var err := DirAccess.remove_absolute(path)
-			if err == OK:
-				removed += 1
-			else:
-				push_error("[guest] debug reset: failed to delete %s (err %d)" % [path, err])
-	# The cached guest profile would otherwise be reused by the fresh wallet.
-	Global.get_config().guest_profile = {}
-	Global.get_config().save_to_settings_file()
-	return removed
+	return Global.clear_guest_device_storage()
 
 
 func go_to_explorer():

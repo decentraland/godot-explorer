@@ -100,6 +100,16 @@ const IOS_GUEST_ENTRY_DISABLED := true
 # Increase this value when local assets cache format changes (invalidates cache)
 const LOCAL_ASSETS_CACHE_VERSION: int = 4
 
+# On-disk guest identity artifacts, owned by Rust (keep in sync with
+# lib/src/auth/device_anchor.rs + thirdweb_guest.rs) plus the mobile-BFF
+# attestation session. Wiped when a non-upgraded guest deletes their account
+# (issue #2335) and by the non-prod lobby "reset guest wallet" debug button.
+const GUEST_DEVICE_STORAGE_FILES: Array[String] = [
+	"user://device_anchor.txt",
+	"user://thirdweb_session.json",
+	"user://attest_session.json",
+]
+
 ## Global classes (singleton pattern)
 
 var raycast_debugger: RaycastDebugger
@@ -917,6 +927,26 @@ func get_explorer() -> Explorer:
 ## realm, scene-fetcher state and the Rust player identity — then returns to a
 ## fresh lobby so the next login starts as if the app had restarted. Every UI
 ## logout button and the disconnect handler funnel through here.
+## Deletes every on-disk guest identity artifact so the next "Play as guest"
+## derives a BRAND-NEW wallet instead of rehydrating the old one, and drops the
+## cached guest look. Returns how many files were removed. This does NOT end the
+## session — pair it with [sign_out] (see the guest account-deletion flow) to
+## actually log the user out. Shared by that flow and the lobby debug reset.
+func clear_guest_device_storage() -> int:
+	var removed := 0
+	for path in GUEST_DEVICE_STORAGE_FILES:
+		if FileAccess.file_exists(path):
+			var err := DirAccess.remove_absolute(path)
+			if err == OK:
+				removed += 1
+			else:
+				push_error("[guest] delete: failed to remove %s (err %d)" % [path, err])
+	# The cached guest profile would otherwise be reused by the fresh wallet.
+	get_config().guest_profile = {}
+	get_config().save_to_settings_file()
+	return removed
+
+
 func sign_out() -> void:
 	if _signing_out:
 		return
