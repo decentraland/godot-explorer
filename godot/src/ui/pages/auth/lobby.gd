@@ -178,6 +178,11 @@ func show_version_upgrade_screen():
 
 
 func _accept_eula() -> void:
+	# Idempotent: only accept (and fire the one-shot analytics Key Event) when the
+	# stored T&C version is older than the current one. Lets us call this from every
+	# commit point (Play-as-Guest, sign-in tap, wallet_connected) without re-firing.
+	if Global.get_config().terms_and_conditions_version == Global.TERMS_AND_CONDITIONS_VERSION:
+		return
 	if Global.analytics_controller != null:
 		Global.analytics_controller.on_eula_accepted_locally()
 	Global.get_config().terms_and_conditions_version = Global.TERMS_AND_CONDITIONS_VERSION
@@ -188,6 +193,28 @@ func show_account_home_screen():
 	track_lobby_screen("ACCOUNT_HOME")
 	button_back.hide()
 	show_panel(control_account_home)
+
+
+# True when the guest entry path must be hidden (iOS, gated for Apple review, #2308).
+# The `?disable-guest-gating=true` deeplink param re-enables guest for QA/testing.
+func _is_guest_entry_disabled() -> bool:
+	if not Global.is_ios_or_emulating() or not Global.IOS_GUEST_ENTRY_DISABLED:
+		return false
+	var override := str(Global.deep_link_obj.params.get("disable-guest-gating", ""))
+	if override.to_lower() == "true" or override == "1":
+		return false
+	return true
+
+
+# Entry "home" screen: the guest chooser (ACCOUNT_HOME) normally, or the sign-in
+# screen directly when the guest path is disabled (iOS during Apple review, #2308).
+func show_entry_home_screen() -> void:
+	if _is_guest_entry_disabled():
+		is_creating_account = false
+		sign_in_title.text = "Sign in to Decentraland"
+		show_auth_home_screen()
+	else:
+		show_account_home_screen()
 
 
 func show_account_home_loading_screen():
@@ -240,7 +267,9 @@ func show_auth_home_screen():
 	track_lobby_screen(get_auth_home_screen_name())
 	container_sign_in_step1.show()
 	container_sign_in_step2.hide()
-	button_back.show()
+	# When the guest path is gated this screen IS the root (no ACCOUNT_HOME to
+	# return to), so hide the back arrow; otherwise show it.
+	button_back.visible = not _is_guest_entry_disabled()
 	show_panel(control_signin)
 
 
@@ -499,7 +528,7 @@ func _ready():
 			"res://src/ui/components/organisms/menu/menu.tscn"
 		)
 	else:
-		show_account_home_screen()
+		show_entry_home_screen()
 
 
 func _notification(what: int) -> void:
@@ -621,7 +650,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			return
 # gdlint: ignore=no-else-return
 		else:
-			show_account_home_screen()
+			show_entry_home_screen()
 
 	if _skip_lobby:
 		go_to_explorer()
@@ -694,7 +723,7 @@ func _on_button_update_pressed() -> void:
 
 func _on_button_not_now_pressed() -> void:
 	Global.metrics.track_click_button("not_now", current_screen_name, "")
-	show_account_home_screen()
+	show_entry_home_screen()
 
 
 func _on_button_different_account_pressed():
@@ -778,11 +807,11 @@ func _on_button_back_pressed():
 		return
 	match current_screen_name:
 		"AVATAR_CREATE":
-			show_account_home_screen()
+			show_entry_home_screen()
 		"AVATAR_NAMING":
 			async_show_avatar_create_screen()
 		_:
-			show_account_home_screen()
+			show_entry_home_screen()
 
 
 # gdlint:ignore = async-function-name
@@ -822,13 +851,13 @@ func _on_discard_cancelled() -> void:
 func _handle_back_action():
 	match current_screen_name:
 		"ACCOUNT_HOME":
-			show_account_home_screen()
+			show_entry_home_screen()
 		"AUTH_HOME_ANDROID", "AUTH_HOME_IOS", "AUTH_HOME_DESKTOP":
-			show_account_home_screen()
+			show_entry_home_screen()
 		"AUTH_BROWSER_OPEN":
 			_on_button_cancel_pressed()
 		"AVATAR_CREATE":
-			show_account_home_screen()
+			show_entry_home_screen()
 		"AVATAR_CUSTOMIZE", "AVATAR_NAMING":
 			async_show_avatar_create_screen()
 
@@ -967,7 +996,7 @@ func _fail_guest_login(attempt: int, reason: String) -> void:
 	_guest_login_attempt += 1
 	waiting_for_new_wallet = false
 	push_error("Guest login failed: " + reason)
-	show_account_home_screen()
+	show_entry_home_screen()
 	await _async_show_guest_login_error()
 
 
