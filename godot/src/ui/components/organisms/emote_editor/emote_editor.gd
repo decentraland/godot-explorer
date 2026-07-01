@@ -58,6 +58,12 @@ func _ready():
 func _setup_ios_marketplace_section():
 	if not Iap.is_available():
 		return
+	# Marketplace suggestions are purchaseable; hide them for an un-upgraded thirdweb guest
+	# (mirrors backpack / CreditsBalanceButton). Re-run setup when the account upgrades.
+	if not _is_marketplace_account_eligible():
+		if not Global.guest_upgrade_state_refreshed.is_connected(_on_marketplace_guest_upgraded):
+			Global.guest_upgrade_state_refreshed.connect(_on_marketplace_guest_upgraded)
+		return
 
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
@@ -70,6 +76,24 @@ func _setup_ios_marketplace_section():
 		section_parent.move_child(_ios_marketplace_section, 0)
 	_ios_marketplace_section.item_selected.connect(_on_marketplace_emote_selected)
 	_ios_marketplace_section.update_category("emotes")
+
+
+## Marketplace suggestions are purchaseable; an un-upgraded thirdweb guest can't buy them,
+## so the recommended-emotes section stays hidden for those sessions.
+func _is_marketplace_account_eligible() -> bool:
+	if Global.player_identity == null:
+		return false
+	return (
+		not Global.player_identity.is_thirdweb_guest()
+		or Global.player_identity.is_thirdweb_guest_upgraded()
+	)
+
+
+func _on_marketplace_guest_upgraded(is_upgraded: bool) -> void:
+	if not is_upgraded:
+		return
+	Global.guest_upgrade_state_refreshed.disconnect(_on_marketplace_guest_upgraded)
+	_setup_ios_marketplace_section()
 
 
 func async_set_only_collectibles(new_state: bool):

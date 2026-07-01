@@ -19,6 +19,7 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.provider.CalendarContract
+import android.provider.Settings
 import android.util.Log
 import android.webkit.WebResourceRequest
 import android.widget.FrameLayout
@@ -2398,6 +2399,39 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         } catch (e: Throwable) {
             Log.e(pluginName, "[PlayIntegrity] setup error: ${e.javaClass.name}: ${e.message}", e)
             emitSignal("play_integrity_token_ready", "", "${e.javaClass.simpleName}: ${e.message}")
+        }
+    }
+
+    // --- Device anchor (Android ID / SSAID) ---
+
+    /**
+     * Returns the Android ID (SSAID) for this app on this device. Scoped per
+     * (signing key, user, device) since Android O — survives uninstall as
+     * long as the APK signature stays stable.
+     *
+     * Returns `""` when SSAID is unavailable or matches the well-known buggy
+     * value `9774d56d682e549c` (some pre-Oreo OEMs hardcoded that for many
+     * devices). The caller should fall back to its own UUID storage in that
+     * case.
+     */
+    @UsedByGodot
+    fun getDeviceAnchorId(): String {
+        val ctx = activity?.applicationContext ?: run {
+            Log.w(pluginName, "[DeviceAnchor] applicationContext null — cannot read SSAID")
+            return ""
+        }
+        return try {
+            val ssaid = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+            if (ssaid.isEmpty() || ssaid.equals("9774d56d682e549c", ignoreCase = true)) {
+                Log.w(pluginName, "[DeviceAnchor] SSAID unavailable or matches known-bug value")
+                ""
+            } else {
+                Log.i(pluginName, "[DeviceAnchor] SSAID resolved (len=${ssaid.length})")
+                ssaid
+            }
+        } catch (e: Throwable) {
+            Log.e(pluginName, "[DeviceAnchor] failed to read SSAID: ${e.message}", e)
+            ""
         }
     }
 
