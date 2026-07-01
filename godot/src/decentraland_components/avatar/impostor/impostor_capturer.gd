@@ -9,10 +9,6 @@ var _enqueued: Dictionary = {}
 var _in_progress: bool = false
 
 
-func _ready() -> void:
-	InitLog.emit("ImpostorCapturer")
-
-
 func request_capture(avatar) -> void:
 	if avatar == null or not is_instance_valid(avatar):
 		return

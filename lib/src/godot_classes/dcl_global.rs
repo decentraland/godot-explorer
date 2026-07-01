@@ -338,46 +338,15 @@ impl INode for DclGlobal {
 
         // Arm the boot-log ring as early as possible — gated by a configured
         // scene-inspector target (debug/dev only; the export plugin bakes it only
-        // in debug, prod never has it) — so the per-component [INIT] logs below,
-        // which fire before `global.gd` can arm it, are captured into the ring and
-        // flushed when a consumer subscribes. The Rust tracing layer is already
-        // installed (init_logger above) and `push_early_log` needs no sender, so
-        // no capture-sink install is required here; `global.gd` installs the
-        // Godot/native sinks at `_ready`. Without this, iOS misses these inits
-        // (they're os_log-only and pre-arming).
+        // in debug, prod never has it) — so any early boot logs, which fire before
+        // `global.gd` can arm it, are captured into the ring and flushed when a
+        // consumer subscribes. The Rust tracing layer is already installed
+        // (init_logger above) and `push_early_log` needs no sender, so no
+        // capture-sink install is required here; `global.gd` installs the
+        // Godot/native sinks at `_ready`. Without this, iOS misses these early
+        // logs (they're os_log-only and pre-arming).
         if !cli.bind().scene_inspector.is_empty() {
             crate::tools::scene_inspector::set_early_log_capture(true);
-        }
-
-        // Per-component INIT logs — each major Rust subsystem is now constructed
-        // (its `init` has run). Grep `[INIT]` to confirm every component came up
-        // in the unified logging. Info level, so it shows in normal mobile runs,
-        // not only the `--test-logging` self-test.
-        // TODO: set INIT_COMPONENT_LOGS = false once the boot-wiring verification
-        // is no longer needed — this prints on every startup, production included.
-        const INIT_COMPONENT_LOGS: bool = true;
-        if INIT_COMPONENT_LOGS {
-            for component in [
-                "AvatarScene",
-                "CommunicationManager",
-                "SceneManager",
-                "TokioRuntime",
-                "ContentProvider",
-                "NetworkInspector",
-                "SceneInspectorDispatcher",
-                "DclSocialBlacklist",
-                "DclSocialService",
-                "Metrics",
-                "DclCli",
-                "DclDynamicGraphicsManager",
-                "DclRealm",
-                "DclTokioRpc",
-                "DclPlayerIdentity",
-                "DclTestingTools",
-                "DclPortableExperienceController",
-            ] {
-                tracing::info!("[INIT] {component}");
-            }
         }
 
         tokio_runtime.set_name("tokio_runtime");

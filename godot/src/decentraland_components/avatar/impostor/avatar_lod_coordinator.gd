@@ -20,10 +20,6 @@ const FRUSTUM_SPHERE_RADIUS: float = 1.2
 var _avatars: Array = []
 
 
-func _ready() -> void:
-	InitLog.emit("AvatarLODCoordinator")
-
-
 func register(avatar: Node) -> void:
 	if not _avatars.has(avatar):
 		_avatars.append(avatar)

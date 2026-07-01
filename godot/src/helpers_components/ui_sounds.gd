@@ -34,7 +34,6 @@ var _sounds: Dictionary = {}
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	InitLog.emit("UiSounds")
 	# set up audio streams
 	for sound_to_load: String in _SOUNDS_TO_LOAD:
 		var path: String = "res://assets/sfx/ui/%s.wav" % sound_to_load

@@ -147,7 +147,6 @@ var _purchase_in_flight: bool = false
 
 
 func _ready() -> void:
-	InitLog.emit("Iap")
 	# IAP is enabled by default on iOS — the only platform with StoreKit. On
 	# every other platform there's no native backend, so we leave it disabled
 	# (enable() would no-op anyway via is_available(), and the credits UI entry

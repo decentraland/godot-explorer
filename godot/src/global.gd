@@ -242,6 +242,12 @@ func _activate_scene_inspector_from_config() -> void:
 func _maybe_run_logging_selftest() -> void:
 	if _selftest_done:
 		return
+	# Never run in production: the self-test deliberately fires push_error /
+	# tracing::error! / ERR_PRINT / Log.e, all of which ship to Sentry — otherwise
+	# reachable in prod via the `?test-logging=true` deeplink. Staging/TestFlight
+	# still run it so the Sentry path can be verified on a real build.
+	if is_production():
+		return
 	var requested := cli.test_logging
 	if not requested and deep_link_obj != null:
 		requested = str(deep_link_obj.params.get("test-logging", "")).to_lower() == "true"
@@ -690,9 +696,6 @@ func _ready():
 func _dcl_swift_lib_smoke_test() -> void:
 	if not DclSwiftLibPlugin.is_available():
 		return
-	# The Swift class is transient (instantiated per call), so its init log lives
-	# here, where availability is first confirmed, rather than per-instance.
-	InitLog.emit("DclSwiftLib (Swift)")
 	print(
 		"[DclSwiftLib] ping() -> ",
 		DclSwiftLibPlugin.ping(),
