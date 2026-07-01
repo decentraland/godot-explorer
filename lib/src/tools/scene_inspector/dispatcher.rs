@@ -20,7 +20,9 @@ use super::logger::{
 };
 use super::storage::StorageManager;
 use super::{
-    is_bin_payload_included, is_lifecycle_verbose, set_include_bin_payload, set_lifecycle_verbose,
+    flush_early_logs, is_bin_payload_included, is_consumer_connected, is_lifecycle_verbose,
+    is_stream_logs, is_stream_network, set_consumer_connected, set_early_log_capture,
+    set_include_bin_payload, set_lifecycle_verbose, set_stream_logs, set_stream_network,
     take_dropped_count, try_send_entry,
 };
 use crate::godot_classes::dcl_global::DclGlobal;
@@ -168,6 +170,77 @@ impl SceneInspectorDispatcher {
     #[func]
     fn is_bin_payload_included(&self) -> bool {
         is_bin_payload_included()
+    }
+
+    /// Master capture gate. The WS bridge calls this on connect / disconnect.
+    /// With no consumer connected, every producer short-circuits (no buffering).
+    /// On disconnect, opt-in streams are reset off so nothing keeps capturing
+    /// once the consumer is gone.
+    #[func]
+    fn set_consumer_connected(&mut self, connected: bool) {
+        set_consumer_connected(connected);
+        if !connected {
+            set_stream_logs(false);
+            set_stream_network(false);
+            crate::tools::network_inspector::NETWORK_INSPECTOR_ENABLE
+                .store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    #[func]
+    fn is_consumer_connected(&self) -> bool {
+        is_consumer_connected()
+    }
+
+    /// Fold captured log lines (Rust / GDScript+engine / native Swift+ObjC) into
+    /// the stream as `"log"` entries. Off by default; the `subscribe` command
+    /// turns it on. High-volume — opt-in only.
+    #[func]
+    fn set_stream_logs(&mut self, enabled: bool) {
+        set_stream_logs(enabled);
+        if enabled {
+            // Register the Godot logger sink (and, on iOS, the native fd capture)
+            // so log lines actually reach the stream. Idempotent; only reached via
+            // an explicit subscribe from a connected consumer.
+            crate::tools::log_stream::install_capture();
+            // Deliver any boot-time logs captured before this subscribe so the
+            // most valuable startup lines aren't lost (debug only; the ring is
+            // empty in production since early capture is never armed).
+            flush_early_logs();
+        }
+    }
+
+    /// Arm/disarm the bounded boot-log ring AND install the capture sinks so they
+    /// feed `emit_log` from app startup. The bridge calls this at boot in DEBUG
+    /// builds only, so logs emitted before a consumer subscribes are held
+    /// (bounded) and flushed on subscribe. Never armed in production — there,
+    /// producers do nothing without a connection (no buffering "just in case").
+    #[func]
+    fn set_early_log_capture(&mut self, enabled: bool) {
+        set_early_log_capture(enabled);
+        if enabled {
+            crate::tools::log_stream::install_capture();
+        }
+    }
+
+    #[func]
+    fn is_stream_logs(&self) -> bool {
+        is_stream_logs()
+    }
+
+    /// Fold HTTP traffic into the stream as `"network"` entries. Also flips the
+    /// network inspector's enable flag, since producers only emit events while it
+    /// is active.
+    #[func]
+    fn set_stream_network(&mut self, enabled: bool) {
+        set_stream_network(enabled);
+        crate::tools::network_inspector::NETWORK_INSPECTOR_ENABLE
+            .store(enabled, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    #[func]
+    fn is_stream_network(&self) -> bool {
+        is_stream_network()
     }
 
     /// Returns a JSON array of the current CRDT state snapshot for hot-connect.
@@ -443,22 +516,27 @@ impl INode for SceneInspectorDispatcher {
             }
         }
 
-        // Collect performance snapshot every perf_interval seconds
-        self.perf_timer += dt;
-        if self.perf_timer >= self.perf_interval {
-            self.perf_timer = 0.0;
-            if let Some(snapshot_json) = self.collect_performance_snapshot() {
-                batch.push(snapshot_json);
-            }
-            // Report any entries dropped because the channel was full since the
-            // previous tick. Silent drops would mask real loss of telemetry.
-            let dropped = take_dropped_count();
-            if dropped > 0 {
-                tracing::warn!(
-                    "Scene Inspector dropped {} entries (channel full) in the last {:.1}s",
-                    dropped,
-                    self.perf_interval
-                );
+        // Collect a performance snapshot every perf_interval seconds — but only
+        // while a consumer is attached. With none, producers emit nothing, so
+        // this would be pure wasted work (singleton binds + JSON serialization)
+        // on every frame-tick in production.
+        if is_consumer_connected() {
+            self.perf_timer += dt;
+            if self.perf_timer >= self.perf_interval {
+                self.perf_timer = 0.0;
+                if let Some(snapshot_json) = self.collect_performance_snapshot() {
+                    batch.push(snapshot_json);
+                }
+                // Report any entries dropped because the channel was full since the
+                // previous tick. Silent drops would mask real loss of telemetry.
+                let dropped = take_dropped_count();
+                if dropped > 0 {
+                    tracing::warn!(
+                        "Scene Inspector dropped {} entries (channel full) in the last {:.1}s",
+                        dropped,
+                        self.perf_interval
+                    );
+                }
             }
         }
 

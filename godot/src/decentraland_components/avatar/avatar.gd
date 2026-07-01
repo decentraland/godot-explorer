@@ -665,6 +665,11 @@ func _apply_nickname_visibility() -> void:
 		# _update_nameplate_2d() positions/shows when allowed; hide now if gated off.
 		_nametag_gate_visible = not should_hide
 		if should_hide and nickname_ui != null:
+			# Hard reset alpha too: NameplateLayer.update() recomputes visibility from
+			# move_toward()'d alpha every frame, so a plain hide() would be undone and the
+			# stale tag would linger as a ~6-frame fade-out. Zeroing alpha makes the hide
+			# instant; the gate reopening fades it back in cleanly from 0.
+			nickname_ui.modulate.a = 0.0
 			nickname_ui.hide()
 		return
 	if should_hide:

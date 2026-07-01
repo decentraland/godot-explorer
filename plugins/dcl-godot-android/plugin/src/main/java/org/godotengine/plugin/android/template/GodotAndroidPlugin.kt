@@ -108,6 +108,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     override fun onGodotSetupCompleted() {
         super.onGodotSetupCompleted()
+        // Per-component init log. Grep [INIT] to confirm the plugin came up.
+        Log.i(pluginName, "[INIT] GodotAndroidPlugin")
         // Initialize notification database
         activity?.let {
             notificationDatabase = NotificationDatabase(it.applicationContext)
@@ -368,6 +370,23 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             Log.v(pluginName, message)
         }
+    }
+
+    /**
+     * Logging self-test for the Kotlin/Android stack: log at every level via every
+     * Android form, so the unified channel can be verified. Log.w/.e are the
+     * Sentry-relevant levels. Invoked from GDScript's `_run_logging_selftest()` via
+     * `DclAndroidPlugin.test_logging()`.
+     */
+    @UsedByGodot
+    fun testLogging() {
+        Log.v(pluginName, "[LOGTEST][kotlin] verbose via Log.v")
+        Log.d(pluginName, "[LOGTEST][kotlin] debug via Log.d")
+        Log.i(pluginName, "[LOGTEST][kotlin] info via Log.i")
+        Log.w(pluginName, "[LOGTEST][kotlin] warn via Log.w (expect Sentry)")
+        Log.e(pluginName, "[LOGTEST][kotlin] error via Log.e (expect Sentry)")
+        println("[LOGTEST][kotlin] info via println (System.out)")
+        System.err.println("[LOGTEST][kotlin] error via System.err.println")
     }
 
     @UsedByGodot
