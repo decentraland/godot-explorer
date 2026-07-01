@@ -170,7 +170,10 @@ func _async_on_submit_email(email: String) -> Dictionary:
 # bubbles up via `failed`; success closes the modal and emits `confirmed`.
 # gdlint:ignore = async-function-name
 func _async_send_code(email: String) -> Dictionary:
-	Global.metrics.track_click_button("ADD", "UPGRADE_OTP_SUBMIT", "")
+	# No CLICK_BUTTON here: this routine is shared by the initial submit and every
+	# resend, so a click would double-count. The submit action is captured by the
+	# UPGRADE_OTP_SUBMIT screen view (fired once in _async_on_submit_email) and each
+	# resend by RESEND_OTP. There is no "ADD" click in the #2377 taxonomy.
 	# async_link_email_start both validates the address server-side and sends the
 	# verification code to the thirdweb guest wallet.
 	var promise: Promise = Global.player_identity.async_link_email_start(email)
@@ -235,7 +238,8 @@ func _is_invalid_email_error(raw: String) -> bool:
 # Returns "" on success, or a friendly error string the code modal shows inline.
 # gdlint:ignore = async-function-name
 func _async_verify_code(code: String, email: String) -> String:
-	Global.metrics.track_click_button("ENTERED_CODE", "UPGRADE_OTP_ENTERCODE", "")
+	# No CLICK_BUTTON here either: the verify action is captured by the
+	# UPGRADE_OTP_VERIFY screen view below, and #2377 defines no such click.
 	Global.metrics.track_screen_viewed("UPGRADE_OTP_VERIFY", "")
 	var anchor: String = Global.get_device_anchor_id()
 	var promise: Promise = Global.player_identity.async_link_email_verify(email, code, anchor)

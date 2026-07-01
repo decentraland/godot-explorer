@@ -666,6 +666,11 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
 	_accept_eula()
+	# Also surface the OS notification prompt on sign-in success: the per-tap calls
+	# (Play-as-Guest / go-to-Sign-In) never fire on the iOS guest-gated path, where the
+	# user lands directly on the sign-in screen. NotificationsManager's has-permission +
+	# cooldown guards make this a no-op when it was already prompted this session.
+	_request_notification_permission_if_needed()
 	Global.metrics.update_identity(address, is_guest)
 	# Play-as-Guest uses a thirdweb guest wallet whose `is_guest` arg is false; treat
 	# any guest session (disposable or non-upgraded thirdweb guest) as login_type "guest".
@@ -731,14 +736,14 @@ func _on_button_different_account_pressed():
 
 
 func _on_button_continue_pressed():
-	Global.metrics.track_click_button("done", current_screen_name, "")
+	Global.metrics.track_click_button("DONE", current_screen_name, "")
 	current_profile = Global.player_identity.get_mutable_profile()
 	show_avatar_naming_screen()
 
 
 # gdlint:ignore = async-function-name
 func _on_button_lets_go_pressed():
-	Global.metrics.track_click_button("lets_go", "AVATAR_NAMING", "")
+	Global.metrics.track_click_button("LETS_GO", "AVATAR_NAMING", "")
 	if dcl_line_edit.line_edit.text.is_empty():
 		return
 
