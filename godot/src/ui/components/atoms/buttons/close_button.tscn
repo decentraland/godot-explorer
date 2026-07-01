@@ -124,7 +124,7 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="Button_CloseProfile" type="Button" unique_id=333937878]
+[node name="CloseButton" type="Button" unique_id=333937878]
 custom_minimum_size = Vector2(60, 60)
 size_flags_horizontal = 8
 size_flags_vertical = 0
