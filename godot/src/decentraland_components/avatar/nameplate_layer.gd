@@ -29,7 +29,7 @@ const CL_PHYSICS := 2
 const OCCLUSION_MASK := CL_PHYSICS
 # Frames between occlusion raycasts per avatar (staggered) — not every frame.
 const OCCLUSION_PERIOD := 6
-# Debug: set true at runtime (e.g. the debug-ws `eval` command, non-production) to bypass
+# Debug: set true at runtime (e.g. the scene-inspector `eval` command, non-production) to bypass
 # the occlusion raycast entirely so tags fade by distance only — confirms whether a
 # vanishing tag is an occlusion artifact. `NameplateLayer.debug_disable_occlusion = true`.
 static var debug_disable_occlusion := false
