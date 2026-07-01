@@ -171,6 +171,7 @@ impl ResourceProvider {
     /// Returns Ok(true) if file exists (2xx response), Ok(false) if not found (404),
     /// or Err for other errors (network issues, server errors, etc.)
     pub async fn check_remote_file_exists(&self, url: &str) -> Result<bool, String> {
+        tracing::debug!("[HTTP] HEAD {}", url);
         let response = self
             .client
             .head(url)
@@ -197,6 +198,7 @@ impl ResourceProvider {
         dest: &Path,
         #[cfg(feature = "use_resource_tracking")] file_hash: String,
     ) -> Result<(), String> {
+        tracing::debug!("[HTTP] GET {}", url);
         let tmp_dest = dest.with_extension("tmp");
         let response = self
             .client
@@ -274,6 +276,7 @@ impl ResourceProvider {
         dest: &Path,
         #[cfg(feature = "use_resource_tracking")] file_hash: String,
     ) -> Result<Vec<u8>, String> {
+        tracing::debug!("[HTTP] GET {}", url);
         let tmp_dest = dest.with_extension("tmp");
         let response = self
             .client

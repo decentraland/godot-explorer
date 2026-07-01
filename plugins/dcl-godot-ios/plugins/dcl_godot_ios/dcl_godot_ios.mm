@@ -17,6 +17,7 @@
 #import <UserNotifications/UserNotifications.h>
 #import <DeviceCheck/DeviceCheck.h>
 #import <Security/Security.h>
+#import <os/log.h>
 
 const char* DCLGODOTIOS_VERSION = "1.0";
 
@@ -201,6 +202,7 @@ String DclGodotiOS::receivedUrl = "";
 
 void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
+    ClassDB::bind_method(D_METHOD("test_logging"), &DclGodotiOS::test_logging);
     ClassDB::bind_method(D_METHOD("open_auth_url", "url"), &DclGodotiOS::open_auth_url);
     ClassDB::bind_method(D_METHOD("open_safari_auth_url", "url"), &DclGodotiOS::open_safari_auth_url);
     ClassDB::bind_method(D_METHOD("open_webview_url", "url"), &DclGodotiOS::open_webview_url);
@@ -1518,6 +1520,30 @@ DclGodotiOS::DclGodotiOS() {
     #else
     notificationDatabase = nullptr;
     #endif
+    // Per-component init log (singleton; runs once). Grep [INIT] to confirm.
+    print_line("[INIT] DclGodotiOS (ObjC)");
+}
+
+// Logging self-test for the ObjC stack: emit at every level via every ObjC form,
+// so the unified channel + Sentry pipeline can be verified. Bound as
+// `test_logging` and invoked from GDScript's `_run_logging_selftest()`.
+// printf/fprintf/NSLog reach the iOS fd capture; os_log exercises the unified
+// logging system; print_line/WARN_PRINT/ERR_PRINT go through Godot (ERR_PRINT →
+// Sentry).
+String DclGodotiOS::test_logging() {
+    printf("[LOGTEST][objc] info via printf (stdout)\n");
+    fprintf(stderr, "[LOGTEST][objc] error via fprintf(stderr)\n");
+    NSLog(@"[LOGTEST][objc] info via NSLog");
+    os_log_t logtest = os_log_create("org.decentraland.godotexplorer", "logtest");
+    os_log_debug(logtest, "[LOGTEST][objc] debug via os_log_debug");
+    os_log_info(logtest, "[LOGTEST][objc] info via os_log_info");
+    os_log(logtest, "[LOGTEST][objc] default via os_log");
+    os_log_error(logtest, "[LOGTEST][objc] error via os_log_error (expect Sentry)");
+    os_log_fault(logtest, "[LOGTEST][objc] fault via os_log_fault (expect Sentry)");
+    print_line("[LOGTEST][objc] info via print_line (Godot)");
+    WARN_PRINT("[LOGTEST][objc] warn via WARN_PRINT (expect Sentry)");
+    ERR_PRINT("[LOGTEST][objc] error via ERR_PRINT (expect Sentry)");
+    return String("objc-logtest-done");
 }
 
 // ---------------- App Attest ----------------

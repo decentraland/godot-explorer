@@ -137,6 +137,16 @@ func _on_gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
+			# Pressing the joystick zone must hand keyboard/GUI focus back to the
+			# explorer. Player movement is gated on ui_root having focus
+			# (player.gd zeroes input_dir when not explorer_has_focus), but any
+			# panel we came from (e.g. the profile passport's buttons) leaves focus
+			# on itself. Because the joystick consumes its own touches, they never
+			# reach mobile_camera_input, which is the only other place that regrabs
+			# focus — so without this the joystick animates but the avatar won't
+			# move after dismissing such a panel (#2361).
+			if not Global.explorer_has_focus():
+				Global.explorer_grab_focus()
 			if touch_index != -1:
 				return
 			if joystick_mode == JoystickMode.FIXED and not _is_point_inside_base(event.position):
