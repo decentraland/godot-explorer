@@ -113,7 +113,7 @@ var bloom_quality: int = 0:
 		param_changed.emit(ConfigParams.BLOOM_QUALITY)
 
 # 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
-var graphic_profile: int = 0:
+var graphic_profile: int = 3:
 	set(value):
 		graphic_profile = value
 		param_changed.emit(ConfigParams.GRAPHIC_PROFILE)
@@ -158,6 +158,13 @@ var terms_and_conditions_version: int = 0
 # over to a different account signing in on the same device. See
 # IapManager.are_terms_accepted / accept_terms.
 var iap_terms_accepted_wallet: String = ""
+
+# Snapshot of owned item counts for the "NEW" tag (#2300), kept entirely local — no
+# endpoint timestamps. Shape: { category: { wallet_lower: { item_urn: count } } } with
+# category in {"wearable","emote"}. An item is tagged NEW when its current owned count
+# exceeds this snapshot (a new urn, or one extra copy). Seeded on the first backpack load
+# for a wallet and advanced on every load (see Backpack.newtag_evaluate).
+var backpack_owned_counts: Dictionary = {}
 
 # Unix timestamp until which the soft version-upgrade overlay is snoozed
 # (set when the user presses "Later"; ignored for required-minimum blocks).
@@ -292,7 +299,7 @@ func load_from_default():
 	self.shadow_quality = 0  # disabled
 	self.bloom_quality = 0  # off
 	self.anti_aliasing = 0  # off
-	self.graphic_profile = 0  # Very Low (will be set by benchmark on first launch)
+	self.graphic_profile = 3  # High (HardwareBenchmark may downgrade on first launch)
 	self.first_launch_completed = false
 	self.benchmark_gpu_score = -1.0
 	self.benchmark_ram_gb = -1.0
@@ -446,6 +453,10 @@ func load_from_settings_file():
 		"user", "iap_terms_accepted_wallet", data_default.iap_terms_accepted_wallet
 	)
 
+	self.backpack_owned_counts = settings_file.get_value(
+		"user", "backpack_owned_counts", data_default.backpack_owned_counts
+	)
+
 	self.version_gate_snooze_until = settings_file.get_value(
 		"user", "version_gate_snooze_until", data_default.version_gate_snooze_until
 	)
@@ -532,6 +543,7 @@ func save_to_settings_file():
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
 	new_settings_file.set_value("user", "iap_terms_accepted_wallet", self.iap_terms_accepted_wallet)
+	new_settings_file.set_value("user", "backpack_owned_counts", self.backpack_owned_counts)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)

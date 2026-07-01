@@ -20,6 +20,9 @@ var selected_node: PlaceholderManager
 var current_screen_name: String = ""
 var fade_out_tween: Tween = null
 var fade_in_tween: Tween = null
+var _credits_page: CreditsPage = null
+var _credits_layer: CanvasLayer = null
+var _credits_was_portrait: bool = true
 var _close_modulate_tween: Tween = null
 var _close_hide_tween: Tween = null
 var _close_node_to_free: PlaceholderManager = null
@@ -37,6 +40,7 @@ var _close_node_to_free: PlaceholderManager = null
 @onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
 
 @onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
+@onready var upgrade_otp_pop_up: TextureRect = $UpgradeOtpPopUp
 
 @onready var static_button_backpack: TextureButton = %StaticButton_Backpack
 @onready var static_button_discover: TextureButton = %StaticButton_Discover
@@ -89,10 +93,12 @@ func _ready():
 	Global.open_settings.connect(async_show_settings)
 	Global.open_backpack.connect(async_show_backpack)
 	Global.open_discover.connect(async_show_discover)
+	Global.open_credits.connect(async_show_credits)
 	Global.open_own_profile.connect(async_show_own_profile)
 	Global.open_profile_editor.connect(async_show_profile_editor)
 	Global.close_menu.connect(async_close)
 	Global.delete_account.connect(_on_account_delete)
+	Global.upgrade_to_otp.connect(_on_upgrade_to_otp)
 
 	if not is_in_game:
 		open.call_deferred()
@@ -112,6 +118,7 @@ func async_close():
 	if not is_open:
 		return
 	is_open = false
+	_on_credits_page_closed()
 	GraphicSettings.apply_full_processor_mode()
 	if (
 		selected_node
@@ -146,6 +153,30 @@ func async_show_discover(open_menu := true):
 		static_button_discover.button_pressed = true
 	if open_menu:
 		_open()
+
+
+func async_show_credits():
+	if is_instance_valid(_credits_page):
+		return
+	_open()
+	_credits_was_portrait = Global.is_orientation_portrait()
+	Global.set_orientation_portrait()
+	_credits_layer = CanvasLayer.new()
+	add_child(_credits_layer)
+	var scene = load("res://src/ui/pages/credits/credits_page.tscn")
+	_credits_page = scene.instantiate()
+	_credits_page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_credits_layer.add_child(_credits_page)
+	_credits_page.closed.connect(_on_credits_page_closed)
+
+
+func _on_credits_page_closed() -> void:
+	if is_instance_valid(_credits_layer):
+		_credits_layer.queue_free()
+		_credits_layer = null
+		_credits_page = null
+		if not _credits_was_portrait:
+			Global.set_orientation_landscape()
 
 
 func async_show_backpack(on_emotes := false):
@@ -341,6 +372,11 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 		# Open the backpack to show the reward
 		async_show_backpack()
 		Global.open_navbar_silently.emit()
+	# MARKETPLACE-IAP-TOAST: a "marketplace_iap" toast tap would route here to open the
+	# backpack and apply the arrival view — read `category` from notification_dict.metadata,
+	# await async_show_backpack(category == "emote"), then have the active Backpack call
+	# apply_marketplace_arrival_view(category) (add a small forwarder on BackpackResponsive
+	# to reach it). Removed pending a portrait-aware toast.
 
 
 func _on_deep_link_received() -> void:
@@ -378,3 +414,18 @@ func _on_account_delete() -> void:
 		show()
 		is_open = true
 	account_deletion_pop_up.async_start_flow()
+
+
+func _on_upgrade_to_otp() -> void:
+	if not upgrade_otp_pop_up:
+		return
+	if not is_open:
+		# Kill pending close tweens from a previous close
+		if is_instance_valid(_close_modulate_tween) and _close_modulate_tween.is_running():
+			_close_modulate_tween.kill()
+		if is_instance_valid(_close_hide_tween) and _close_hide_tween.is_running():
+			_close_hide_tween.kill()
+		modulate = Color(1, 1, 1, 1)
+		show()
+		is_open = true
+	upgrade_otp_pop_up.async_start_flow()

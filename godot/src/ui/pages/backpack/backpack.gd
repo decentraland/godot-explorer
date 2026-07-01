@@ -12,8 +12,18 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 	"bid_accepted",
 ]
 
-@export var hide_background: bool = false
+@export var hide_background: bool = false:
+	set(value):
+		hide_background = value
+		if is_node_ready():
+			color_rect_background.visible = not value
+			texture_rect_background.visible = not value
 @export var hide_navbar: bool = false
+@export var show_credits_button: bool = true:
+	set(value):
+		show_credits_button = value
+		if is_node_ready():
+			margin_container_credits.visible = value
 @export var default_main_category: String = Wearables.Categories.ALL
 ## When true, locks the embedded AvatarPreview to rotation only —
 ## disables mouse-wheel zoom, pinch zoom and pinch vertical-pan. Used by
@@ -39,8 +49,20 @@ var avatar_loading_counter: int = 0
 var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
+var _ios_marketplace_section: MarketplaceRecommendedSection = null
+var _marketplace_preview_urn: String = ""
+var _marketplace_saved_wearables: PackedStringArray = []
+var _marketplace_restore_pending: bool = false
+
 var _avatar_update_retries: int = 0
 var _is_currently_narrow: bool = false
+var _initial_focus_snapped: bool = false
+
+# "NEW" tag (#2300): item_urn -> current owned count for this load, and item_urn -> bool of
+# whether it is tagged new (count grew vs the persisted per-wallet snapshot). No endpoint
+# timestamps — see newtag_evaluate.
+var _wearable_owned_counts: Dictionary = {}
+var _wearable_is_new: Dictionary = {}
 
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
@@ -54,7 +76,6 @@ var _is_currently_narrow: bool = false
 
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
-@onready var control_no_items = %Control_NoItems
 @onready var backpack_loading = %TextureProgressBar_BackpackLoading
 @onready var container_backpack = %HBoxContainer_Backpack
 @onready var button_back_to_explorer := %Button_BackToExplorer
@@ -83,6 +104,32 @@ var _is_currently_narrow: bool = false
 @onready var canary_container: Control = get_node_or_null("%ControlContainer_Canary")
 @onready var canary_content: Control = get_node_or_null("%ControlContent_Canary")
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
+@onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
+@onready var button_credits: Control = %Button_Credits
+@onready var margin_container_credits: Control = %MarginContainer_Credits
+
+# "NEW" tag (#2300) session state. Per category ("wearable"/"emote"): the baseline snapshot
+# (item_urn -> count) each item must exceed to be tagged new, captured once per app session
+# from the persisted config, plus whether it has been captured. Static so they survive the
+# backpack being freed/recreated on orientation switches (rotation must not wipe the tags
+# mid-session).
+static var _newtag_session_baseline: Dictionary = {}
+static var _newtag_session_captured: Dictionary = {}
+# Items that arrived LIVE this session (a marketplace purchase). Shape { category: { urn: true } }.
+# OR-ed into every newtag_evaluate so the tag survives later full reloads (which re-run evaluate
+# and would otherwise clear a per-item flag). Needed because on a fresh install the first load is
+# empty, deferring baseline capture to the arrival itself — the count diff then can never tag it.
+# Static (survives the page being recreated) and session-only (never persisted; cleared on app
+# restart, where the persisted snapshot takes over).
+static var _newtag_forced_new: Dictionary = {}
+# The wallet (lowercased) the session state above currently belongs to. sign_out() swaps the
+# scene back to the lobby WITHOUT restarting the process (see Global.sign_out), so these
+# autoload-lived statics outlive an account switch. A different wallet (A -> B) must recapture
+# its OWN baseline from its per-wallet persisted snapshot instead of reusing A's, otherwise
+# every item B owns beyond A's counts is mis-tagged NEW. "" until the first capture; the
+# "" -> first-wallet transition deliberately does NOT reset, so a fresh-install live arrival's
+# forced-NEW flag (marked just before that wallet's first evaluate) survives.
+static var _newtag_session_wallet: String = ""
 
 
 # gdlint:ignore = async-function-name
@@ -97,7 +144,14 @@ func _ready():
 		wearable_button_group_per_category[category] = button_group
 
 	if hide_navbar:
-		container_navbar.hide()
+		container_navbar.modulate = Color.TRANSPARENT
+		container_navbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# The lobby/FTUE "Create your avatar" flow reuses this backpack but must not surface
+	# the IAP credits affordances (#2303): force the credits balance hidden there regardless
+	# of show_credits_button (the marketplace suggestions are skipped in
+	# _setup_ios_marketplace_section, which returns early when hide_navbar).
+	margin_container_credits.visible = show_credits_button and not hide_navbar
 
 	if size_canary != null:
 		size_canary.show()
@@ -138,18 +192,50 @@ func _ready():
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_main_category_filter_type)
+			if wearable_filter_button.get_category_name() == default_main_category:
+				wearable_filter_button.button_pressed = true
 
 	for wearable_filter_button in container_sub_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
+	# NEW tag (#2300): owned counts are rebuilt below from the owned list, then evaluated
+	# against the persisted per-wallet snapshot.
+	_wearable_owned_counts.clear()
+
+	# Surface the most-recently-obtained owned wearables from the fast marketplace API
+	# first (added only if not already listed), so an item just bought on the web shows
+	# up immediately instead of waiting for the catalyst lambda below (which lags
+	# minutes). Augments the lambda list — never the sole source.
+	var fast_owned_urns: Array = []
+	for urn in await MarketplaceTracker.async_fetch_recent_owned("wearable"):
+		if not wearable_data.has(urn):
+			wearable_data[urn] = null
+		# Surfaced before the lambda; counted as one below if the lambda doesn't list it yet.
+		fast_owned_urns.append(urn)
+
 	# Load all remote wearables that you own...
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
 	if remote_wearables != null:
 		remote_wearables.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
 		for wearable_item in remote_wearables.elements:
-			wearable_data[wearable_item.urn] = null
+			# The lambda yields the token-instance urn; collapse to the ITEM urn so it
+			# dedupes against the recent-owned API / live inject (see _to_item_urn).
+			var item_urn := _to_item_urn(wearable_item.urn, wearable_item.token_id)
+			wearable_data[item_urn] = null
+			# Count owned token instances per item for the NEW tag (#2300).
+			_wearable_owned_counts[item_urn] = int(_wearable_owned_counts.get(item_urn, 0)) + 1
+	# Fast-API items the lambda hasn't listed yet (just bought) count as one.
+	for urn in fast_owned_urns:
+		if not _wearable_owned_counts.has(urn):
+			_wearable_owned_counts[urn] = 1
+	# Evaluate NEW tags only when the owned list actually loaded, so an early/transient/failed
+	# load never seeds a bogus baseline.
+	if remote_wearables != null:
+		_wearable_is_new = newtag_evaluate(
+			"wearable", _current_wallet_lower(), _wearable_owned_counts
+		)
 
 	# Dev/testing: inject fake-owned wearables from deeplink (see FORCE_DEEPLINK in global.gd).
 	for fake_urn in Global.deep_link_obj.fake_owned_wearables:
@@ -180,10 +266,16 @@ func _ready():
 	container_backpack.show()
 	backpack_loading.hide()
 
+	_setup_ios_marketplace_section()
+
 	request_show_wearables = true
 
 	# Listen for notifications that may indicate new wearables (e.g. rewards)
 	NotificationsManager.new_notifications.connect(self._on_new_notifications)
+
+	# Refresh the inventory live when a marketplace purchase is detected as owned
+	# (MarketplaceTracker polls for it after returning from the web checkout).
+	MarketplaceTracker.item_arrived.connect(self._on_item_arrived)
 
 	# responsive
 	if get_window() != null:
@@ -224,6 +316,8 @@ func _update_grid_columns() -> void:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var is_portrait := window_size.x < window_size.y
 	grid_container_wearables_list.columns = columns
+	if _ios_marketplace_section:
+		_ios_marketplace_section.set_columns(columns)
 	#if emote_editor.container_all_emotes != null:
 	emote_editor.container_all_emotes.columns = columns if is_portrait else columns - 1
 
@@ -321,6 +415,14 @@ func _async_update_avatar():
 		request_update_avatar = true
 		return
 	_avatar_update_retries = 0
+
+	# If marketplace preview is active, rebuild the preview with updated colors
+	if not _marketplace_preview_urn.is_empty():
+		var wearable = Global.content_provider.get_wearable(_marketplace_preview_urn)
+		if wearable != null:
+			_async_marketplace_preview_equip(_marketplace_preview_urn, wearable)
+			return
+
 	mutable_profile.set_avatar(mutable_avatar)
 
 	var loading_id := _set_avatar_loading()
@@ -328,6 +430,9 @@ func _async_update_avatar():
 		Global.player_identity.get_mutable_profile()
 	)
 	_unset_avatar_loading(loading_id)
+	if not _initial_focus_snapped and not current_filter.is_empty():
+		_initial_focus_snapped = true
+		avatar_preview.focus_camera_on.call_deferred(current_filter, true)
 
 
 func _load_filtered_data(filter: String):
@@ -381,8 +486,9 @@ func _show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
 
-	control_no_items.visible = filtered_data.is_empty()
-	grid_container_wearables_list.visible = not filtered_data.is_empty()
+	var has_items = not filtered_data.is_empty()
+	margin_container_no_items.visible = not has_items
+	grid_container_wearables_list.visible = has_items
 
 	for wearable_id in filtered_data:
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
@@ -390,6 +496,7 @@ func _show_wearables():
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = wearable_button_group_per_category.get(wearable.get_category())
 		wearable_item.async_set_wearable(wearable)
+		wearable_item.set_new_badge(_is_wearable_new(wearable_id))
 
 		# Connect signals
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
@@ -404,14 +511,68 @@ func _show_wearables():
 		wearable_item.set_equiped(is_wearable_pressed)
 
 
+func _setup_ios_marketplace_section():
+	# Not shown in the lobby/FTUE "Create your avatar" flow (same context that hides the
+	# navbar): only the in-world backpack surfaces purchaseable suggestions (#2303).
+	if hide_navbar:
+		return
+	if not Iap.is_available():
+		return
+	# Marketplace suggestions are purchaseable items; an un-upgraded thirdweb guest can't
+	# buy, so hide them until the account is upgraded (mirrors CreditsBalanceButton). Re-run
+	# setup once the upgrade lands so suggestions appear without re-opening the backpack.
+	if not _is_marketplace_account_eligible():
+		if not Global.guest_upgrade_state_refreshed.is_connected(_on_marketplace_guest_upgraded):
+			Global.guest_upgrade_state_refreshed.connect(_on_marketplace_guest_upgraded)
+		return
+
+	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
+	if _ios_marketplace_section == null:
+		return
+	# Surface purchaseable items at the TOP of the items list, above the owned-wearables
+	# grid, for better discoverability (#2299). The section is the last child of
+	# VBoxContainer_ItemsAndSuggestions in the scene; move it to the front.
+	var section_parent := _ios_marketplace_section.get_parent()
+	if section_parent:
+		section_parent.move_child(_ios_marketplace_section, 0)
+	_ios_marketplace_section.item_equip.connect(_async_on_marketplace_equip)
+	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
+
+
+## Marketplace suggestions are purchaseable; an un-upgraded thirdweb guest can't buy them,
+## so the recommended-wearables section stays hidden for those sessions.
+func _is_marketplace_account_eligible() -> bool:
+	if Global.player_identity == null:
+		return false
+	return (
+		not Global.player_identity.is_thirdweb_guest()
+		or Global.player_identity.is_thirdweb_guest_upgraded()
+	)
+
+
+func _on_marketplace_guest_upgraded(is_upgraded: bool) -> void:
+	if not is_upgraded:
+		return
+	Global.guest_upgrade_state_refreshed.disconnect(_on_marketplace_guest_upgraded)
+	_setup_ios_marketplace_section()
+	# The normal first-time population happens via the subcategory filter; replay it for the
+	# now-visible section using the category currently in view.
+	if _ios_marketplace_section and not current_filter.is_empty():
+		_ios_marketplace_section.update_category(current_filter)
+
+
 func _on_main_category_filter_type(type: String):
+	_marketplace_preview_restore()
 	main_category_selected = type
 	_update_visible_categories()
 
 
 func _on_wearable_filter_button_filter_type(type):
+	_marketplace_preview_restore()
 	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
+	if _ios_marketplace_section:
+		_ios_marketplace_section.update_category(type)
 	var color_name := "%s Color" % type.to_pascal_case()
 	color_carrousel.set_title(color_name)
 
@@ -514,6 +675,99 @@ func _on_wearable_unequip(wearable_id: String):
 	request_update_avatar = true
 
 
+func _async_on_marketplace_equip(urn: String):
+	if urn.is_empty():
+		return
+	# Cancel any pending restore immediately so the deferred call doesn't
+	# clear_selection while we await the wearable fetch.
+	_marketplace_restore_pending = false
+	# Fetch wearable definition — use content_provider cache, don't add to wearable_data
+	var wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		var promise = Global.content_provider.fetch_wearables(
+			[urn], Global.realm.get_profile_content_url()
+		)
+		await PromiseUtils.async_all(promise)
+		wearable = Global.content_provider.get_wearable(urn)
+		if wearable == null:
+			printerr("[Marketplace] Failed to fetch wearable: ", urn)
+			return
+	_async_marketplace_preview_equip(urn, wearable)
+
+
+func _on_marketplace_unequip(_urn: String):
+	# When switching cards in the ButtonGroup, unequip fires before the new equip.
+	# Defer the restore so equip can cancel it if another card takes over.
+	_marketplace_restore_pending = true
+	_deferred_marketplace_restore.call_deferred()
+
+
+## Temporarily equips a marketplace wearable for visual preview only.
+## Never touches mutable avatar/profile — only updates the local avatar_preview.
+func _async_marketplace_preview_equip(urn: String, wearable: DclItemEntityDefinition):
+	# Cancel any pending restore from a ButtonGroup switch
+	_marketplace_restore_pending = false
+
+	var mutable_avatar = Global.player_identity.get_mutable_avatar()
+	if mutable_avatar == null:
+		return
+
+	# Save original wearables on first preview
+	if _marketplace_preview_urn.is_empty():
+		_marketplace_saved_wearables = mutable_avatar.get_wearables().duplicate()
+
+	_marketplace_preview_urn = urn
+	var category = wearable.get_category()
+
+	# Build temporary wearable list: replace same category, add new
+	var preview_wearables = _marketplace_saved_wearables.duplicate()
+	var to_remove = []
+	for current_id in preview_wearables:
+		var current_wearable = wearable_data.get(current_id)
+		if current_wearable != null and current_wearable.get_category() == category:
+			to_remove.push_back(current_id)
+	for remove_id in to_remove:
+		var idx = preview_wearables.find(remove_id)
+		if idx != -1:
+			preview_wearables.remove_at(idx)
+	preview_wearables.append(urn)
+
+	# Create a temporary avatar wire format for preview — don't touch the real one
+	var temp_avatar = DclAvatarWireFormat.new()
+	temp_avatar.set_body_shape(mutable_avatar.get_body_shape())
+	temp_avatar.set_eyes_color(mutable_avatar.get_eyes_color())
+	temp_avatar.set_hair_color(mutable_avatar.get_hair_color())
+	temp_avatar.set_skin_color(mutable_avatar.get_skin_color())
+	temp_avatar.set_wearables(preview_wearables)
+	temp_avatar.set_emotes(mutable_avatar.get_emotes())
+
+	var profile = Global.player_identity.get_mutable_profile()
+	var avatar_name = profile.get_name() if profile else ""
+
+	var loading_id := _set_avatar_loading()
+	await avatar_preview.avatar.async_update_avatar(temp_avatar, avatar_name)
+	_unset_avatar_loading(loading_id)
+
+
+## Restores the avatar preview to the real profile state.
+func _marketplace_preview_restore():
+	if _marketplace_preview_urn.is_empty():
+		return
+	_marketplace_restore_pending = false
+	_marketplace_preview_urn = ""
+	_marketplace_saved_wearables = []
+	if _ios_marketplace_section:
+		_ios_marketplace_section.clear_selection()
+	request_update_avatar = true
+
+
+## Deferred version — only runs if not cancelled by a new equip.
+func _deferred_marketplace_restore():
+	if not _marketplace_restore_pending:
+		return
+	_marketplace_preview_restore()
+
+
 func _on_button_logout_pressed():
 	# Route through the single canonical teardown (kills scenes, closes comms,
 	# clears identity, resets realm) instead of just dropping comms.
@@ -544,7 +798,9 @@ func _on_color_set() -> void:
 
 
 func _on_button_wearables_pressed():
+	_marketplace_preview_restore()
 	avatar_preview.avatar.emote_controller.stop_emote()
+	scroll_container_items.scroll_vertical = 0
 	wearable_editor.show()
 	emote_editor.hide()
 	if emote_name_anim != null:
@@ -552,6 +808,8 @@ func _on_button_wearables_pressed():
 
 
 func _on_button_emotes_pressed():
+	_marketplace_preview_restore()
+	scroll_container_items.scroll_vertical = 0
 	show_emotes()
 
 
@@ -596,16 +854,205 @@ func _on_new_notifications(notifications: Array) -> void:
 			return
 
 
+func _on_item_arrived(urn: String, category: String) -> void:
+	# A marketplace purchase just landed (MarketplaceTracker detected it via the fast
+	# marketplace API). Force the matching view + Collectibles filter so it's visible,
+	# then inject that exact item directly instead of re-fetching the catalyst lambda,
+	# which lags minutes behind. Emotes live in the emote editor, not the wearables
+	# grid, so route by category.
+	apply_marketplace_arrival_view(category)
+	if category == "emote":
+		emote_editor.inject_owned_emote(urn)
+	else:
+		_async_inject_wearable(urn)
+	# A marketplace buy consumes credits, but nothing else re-fetches the balance after a
+	# (non-IAP) marketplace purchase — so the displayed credits stay stale. Refresh here.
+	Iap.async_refresh_balance()
+
+
+# Force the backpack into the view that surfaces a just-arrived marketplace item:
+# wearable → ALL tab; emote → emotes view; both with the Collectibles filter on so the
+# purchased NFT shows. Reused by the live arrival handler and by the toast-click path
+# (via BackpackResponsive). Also refreshes the relevant list.
+func apply_marketplace_arrival_view(category: String) -> void:
+	only_collectibles = true
+	filter_indicator.visible = true
+	emote_editor.async_set_only_collectibles(true)
+	if category == "emote":
+		show_emotes()
+		press_button_emotes()
+	else:
+		_on_button_wearables_pressed()
+		_on_main_category_filter_type(Wearables.Categories.ALL)
+		# Reflect ALL as the selected main-category tab; otherwise the tab the user was
+		# previously on stays visually highlighted even though ALL is now active.
+		for btn in container_main_categories.get_children():
+			if btn is WearableFilterButton:
+				btn.set_pressed_no_signal(btn.get_category_name() == Wearables.Categories.ALL)
+
+
+# --- "NEW" tag helpers (#2300) ---
+#
+# Endpoint-timestamp-free: we keep a per-wallet snapshot of owned item COUNTS (item_urn ->
+# count) in the config and tag an item NEW when its current count exceeds the snapshot (a new
+# urn, or one extra copy). The first load for a wallet just seeds the snapshot and tags
+# nothing. Shared by the wearable grid and the emote grid (category "wearable" / "emote").
+
+
+func _current_wallet_lower() -> String:
+	if Global.player_identity == null:
+		return ""
+	return Global.player_identity.get_address_str().to_lower()
+
+
+# Collapses a token-instance urn (…:<itemId>:<tokenId>) to its ITEM urn so multiple copies of
+# the same item count together. Static so the emote grid can share it. token_id is the parsed
+# tokenId; base/off-chain items have none and pass through unchanged.
+static func newtag_item_urn(urn: String, token_id: String) -> String:
+	if not token_id.is_empty() and urn.ends_with(":" + token_id):
+		return urn.trim_suffix(":" + token_id)
+	return urn
+
+
+# Evaluates the NEW tags for a category from the current owned counts and persists the
+# snapshot so tags clear next session. Returns { item_urn: bool }. The comparison baseline is
+# captured once per app session per category (static), so it stays stable across the grid
+# being rebuilt (filter changes, orientation switches). Persists on every load rather than on
+# teardown, so killing the app can't strand a stale snapshot. Returns {} without a wallet or
+# with empty counts, so an early/transient load never seeds a bogus baseline.
+static func newtag_evaluate(
+	category: String, wallet: String, current_counts: Dictionary
+) -> Dictionary:
+	if wallet.is_empty() or current_counts.is_empty():
+		return {}
+	# Wallet switched mid-session (A -> B): drop A's session state so B captures a fresh baseline
+	# from its own persisted snapshot below. Both categories are cleared together — each needs
+	# recapture for B. Skip the "" -> first-wallet transition so a fresh-install live arrival's
+	# forced-NEW flag (marked just before this first evaluate) isn't wiped.
+	if not _newtag_session_wallet.is_empty() and wallet != _newtag_session_wallet:
+		_newtag_session_baseline.clear()
+		_newtag_session_captured.clear()
+		_newtag_forced_new.clear()
+	_newtag_session_wallet = wallet
+	var stored: Dictionary = _newtag_stored_for(category)
+	if not _newtag_session_captured.get(category, false):
+		_newtag_session_captured[category] = true
+		# First load this session: the baseline is the previously-persisted snapshot, or — on a
+		# wallet's first-ever visit — the current inventory itself (so nothing is tagged).
+		if stored.has(wallet):
+			_newtag_session_baseline[category] = (stored[wallet] as Dictionary).duplicate()
+		else:
+			_newtag_session_baseline[category] = current_counts.duplicate()
+	# Advance the persisted snapshot to the current counts (next session's baseline).
+	_newtag_persist(category, wallet, current_counts)
+	var baseline: Dictionary = _newtag_session_baseline.get(category, {})
+	var forced: Dictionary = _newtag_forced_new.get(category, {})
+	var flags := {}
+	for urn in current_counts:
+		# NEW when the owned count grew vs the baseline, OR it arrived live this session (a
+		# purchase the empty-first-load baseline can't tag). forced survives reloads.
+		flags[urn] = int(current_counts[urn]) > int(baseline.get(urn, 0)) or forced.has(urn)
+	return flags
+
+
+# The persisted { wallet_lower: { item_urn: count } } map for a category.
+static func _newtag_stored_for(category: String) -> Dictionary:
+	var all: Dictionary = Global.get_config().backpack_owned_counts
+	return all.get(category, {})
+
+
+## Marks an item as NEW for the rest of this app session because it arrived live (a marketplace
+## purchase). Static so it survives the page being recreated; OR-ed into newtag_evaluate so a
+## later full reload can't clear it. Shared by the wearable grid and the emote editor.
+static func newtag_mark_arrived(category: String, urn: String) -> void:
+	var per_category: Dictionary = _newtag_forced_new.get(category, {})
+	per_category[urn] = true
+	_newtag_forced_new[category] = per_category
+
+
+static func _newtag_persist(category: String, wallet: String, counts: Dictionary) -> void:
+	var all: Dictionary = Global.get_config().backpack_owned_counts
+	var per_category: Dictionary = all.get(category, {})
+	per_category[wallet] = counts.duplicate()
+	all[category] = per_category
+	Global.get_config().backpack_owned_counts = all
+	Global.get_config().save_to_settings_file()
+
+
+func _is_wearable_new(urn: String) -> bool:
+	return bool(_wearable_is_new.get(urn, false))
+
+
+# Owned collectibles enter wearable_data from two sources with different urn forms: the
+# catalyst lambda yields the token-instance urn (…:<itemId>:<tokenId>, from
+# individualData[].id) while the fast recent-owned API and the live inject yield the ITEM
+# urn (…:<itemId>). Keying by both forms lists the same wearable twice — every item shows
+# duplicated. Collapse to the ITEM urn, the canonical form get_wearable/can_equip/the
+# avatar profile all use, so the two sources dedupe and equipped collectibles match the
+# profile's item urns. token_id is the parsed tokenId; base/off-chain items have none.
+func _to_item_urn(urn: String, token_id: String) -> String:
+	return newtag_item_urn(urn, token_id)
+
+
+# gdlint:ignore = async-function-name
+func _async_inject_wearable(urn: String) -> void:
+	if urn.is_empty() or wearable_data.has(urn):
+		return
+	var wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		var content_url := Global.realm.get_profile_content_url()
+		var promise = Global.content_provider.fetch_wearables([urn], content_url)
+		await PromiseUtils.async_all(promise)
+		wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		return
+
+	# A live arrival is a fresh acquisition THIS session, so it must show the NEW tag regardless
+	# of the owned-count baseline. On a fresh install the first backpack load is empty (the wallet
+	# owns nothing yet), so newtag_evaluate bails on its empty-counts guard and never captures the
+	# baseline — deferring it to THIS arrival, which would then seed the item into the baseline and
+	# tag it count==baseline (not new). Mark it forced-NEW (survives later reloads), bump its count
+	# and re-evaluate so the grid tags it. Mirrors the emote path (inject_owned_emote). (#2300)
+	newtag_mark_arrived("wearable", urn)
+	_wearable_owned_counts[urn] = int(_wearable_owned_counts.get(urn, 0)) + 1
+	_wearable_is_new = newtag_evaluate("wearable", _current_wallet_lower(), _wearable_owned_counts)
+
+	# Insert at the front so the just-arrived wearable shows first in the grid.
+	var reordered := {urn: wearable}
+	for k in wearable_data:
+		if k != urn:
+			reordered[k] = wearable_data[k]
+	wearable_data = reordered
+	var cat: String = wearable.get_category()
+
+	# Reload the current view; if the new item isn't visible under the active filter
+	# (different category, or no filter set), switch to its category so it shows.
+	if not current_filter.is_empty():
+		_load_filtered_data(current_filter)
+	if current_filter.is_empty() or not filtered_data.has(urn):
+		_load_filtered_data(cat)
+
+
 func _async_refresh_owned_wearables() -> void:
 	var remote_wearables = await WearableRequest.async_request_all_wearables()
 	if remote_wearables == null:
 		return
 
-	var new_keys: Array[String] = []
+	# Untyped Array: content_provider.fetch_wearables() expects an untyped array
+	# (like the initial load's wearable_data.keys()). Passing a typed Array[String]
+	# makes the Rust binding panic with BadArrayType and crashes the app.
+	var new_keys: Array = []
+	# Rebuild owned counts from the authoritative full list, then re-evaluate the NEW tags.
+	_wearable_owned_counts.clear()
 	for wearable_item in remote_wearables.elements:
-		if not wearable_data.has(wearable_item.urn):
-			wearable_data[wearable_item.urn] = null
-			new_keys.append(wearable_item.urn)
+		# Collapse the lambda's token-instance urn to the ITEM urn (see _to_item_urn) so it
+		# dedupes against entries already added by the recent-owned API / live inject.
+		var item_urn := _to_item_urn(wearable_item.urn, wearable_item.token_id)
+		_wearable_owned_counts[item_urn] = int(_wearable_owned_counts.get(item_urn, 0)) + 1
+		if not wearable_data.has(item_urn):
+			wearable_data[item_urn] = null
+			new_keys.append(item_urn)
+	_wearable_is_new = newtag_evaluate("wearable", _current_wallet_lower(), _wearable_owned_counts)
 
 	if new_keys.is_empty():
 		return
@@ -621,9 +1068,24 @@ func _async_refresh_owned_wearables() -> void:
 		if wearable == null:
 			printerr("Error loading new wearable_id ", wearable_id)
 
-	# Refresh the current view to show newly available wearables
+	# Show the just-arrived wearables first: rebuild wearable_data with the new keys
+	# at the front. Grid order follows wearable_data insertion order (via
+	# _load_filtered_data → _show_wearables), and the new keys were appended last.
+	var reordered := {}
+	for k in new_keys:
+		reordered[k] = wearable_data[k]
+	for k in wearable_data:
+		if not reordered.has(k):
+			reordered[k] = wearable_data[k]
+	wearable_data = reordered
+
+	# Refresh the current view to show newly available wearables. Fall back to
+	# rebuilding the visible categories when no explicit filter is set, so the new
+	# item shows up regardless of how the grid was last populated.
 	if not current_filter.is_empty():
 		_load_filtered_data(current_filter)
+	else:
+		_update_visible_categories()
 
 
 func _exit_tree():
@@ -634,6 +1096,9 @@ func _exit_tree():
 
 	if NotificationsManager.new_notifications.is_connected(self._on_new_notifications):
 		NotificationsManager.new_notifications.disconnect(self._on_new_notifications)
+
+	if MarketplaceTracker.item_arrived.is_connected(self._on_item_arrived):
+		MarketplaceTracker.item_arrived.disconnect(self._on_item_arrived)
 
 	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
 		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
@@ -678,12 +1143,15 @@ func _on_color_carrousel_toggle_color_picker(toggle: bool) -> void:
 
 
 func _on_visibility_changed() -> void:
-	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		#Global.set_orientation_portrait()
+	if not is_node_ready() or not is_inside_tree():
+		return
+	if is_visible_in_tree():
 		if Global.get_explorer():
 			if button_back_to_explorer:
-				#button_back_to_explorer.show()
 				button_back_to_explorer.hide()
+	else:
+		# Leaving backpack — restore avatar preview to real state
+		_marketplace_preview_restore()
 
 
 func _on_button_back_to_explorer_pressed() -> void:

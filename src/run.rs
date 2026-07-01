@@ -25,6 +25,7 @@ pub fn run(
     client_tests: bool,
     use_tuned_glibc: bool,
 ) -> anyhow::Result<()> {
+    crate::install_dependency::warn_if_godot_mismatch();
     let program = get_godot_path();
     println!("extras: {:?}", extras);
 
@@ -742,10 +743,12 @@ pub fn deploy_and_run_on_device(
     platform: &str,
     release: bool,
     extras: Vec<String>,
+    stream_device_logs: bool,
+    install_app: bool,
 ) -> anyhow::Result<()> {
     match platform {
-        "android" => deploy_and_run_android(release, extras),
-        "ios" => deploy_and_run_ios(release, extras),
+        "android" => deploy_and_run_android(release, extras, stream_device_logs, install_app),
+        "ios" => deploy_and_run_ios(release, extras, stream_device_logs, install_app),
         _ => Err(anyhow::anyhow!(
             "Unsupported platform for device deployment: {}",
             platform
@@ -754,18 +757,12 @@ pub fn deploy_and_run_on_device(
 }
 
 /// Deploy and run on Android device using adb
-fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Result<()> {
-    // TODO: wire `_extras` into the `am start` intent via --esa args. For now
-    // keep the behaviour identical to the pre-extras code path.
-    // The APK name is always the same regardless of release/debug mode
-    let apk_name = "decentraland.godot.client.apk";
-    let apk_path = format!("{}/{}", EXPORTS_FOLDER, apk_name);
-
-    // Check if APK exists
-    if !std::path::Path::new(&apk_path).exists() {
-        return Err(anyhow::anyhow!("APK not found at: {}", apk_path));
-    }
-
+fn deploy_and_run_android(
+    _release: bool,
+    extras: Vec<String>,
+    stream_device_logs: bool,
+    install_app: bool,
+) -> anyhow::Result<()> {
     // Check if adb is available
     let adb_check = std::process::Command::new("which").arg("adb").output();
 
@@ -791,31 +788,116 @@ fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Resul
         print_message(MessageType::Info, &format!("Using device: {}", device_id));
     }
 
-    // Install APK
-    let spinner = create_spinner("Installing APK...");
-    let install_status = std::process::Command::new("adb")
-        .args(["-s", &device_id, "install", "-r", &apk_path])
-        .status()?;
-    spinner.finish();
-
-    if !install_status.success() {
-        return Err(anyhow::anyhow!("Failed to install APK"));
+    // Install APK (skipped under --launch-only — relaunch what's already on the
+    // device). The APK name is the same regardless of release/debug mode.
+    if install_app {
+        let apk_path = format!("{}/decentraland.godot.client.apk", EXPORTS_FOLDER);
+        if !std::path::Path::new(&apk_path).exists() {
+            return Err(anyhow::anyhow!("APK not found at: {}", apk_path));
+        }
+        let spinner = create_spinner("Installing APK...");
+        let install_status = std::process::Command::new("adb")
+            .args(["-s", &device_id, "install", "-r", &apk_path])
+            .status()?;
+        spinner.finish();
+        if !install_status.success() {
+            return Err(anyhow::anyhow!("Failed to install APK"));
+        }
+        print_message(MessageType::Success, "APK installed successfully");
     }
 
-    print_message(MessageType::Success, "APK installed successfully");
+    // If remote-debug is requested, set up the reverse tunnel so the device's
+    // localhost:<port> reaches the editor's debugger on this Mac. This is the
+    // Android counterpart of the iOS `godot_cmdline` + LAN path. Opt-in: only
+    // when `--remote-debug tcp://…:<port>` is among the launch args.
+    if let Some(port) = remote_debug_port(&extras) {
+        print_message(
+            MessageType::Info,
+            &format!("Setting up `adb reverse tcp:{port}` for remote-debug"),
+        );
+        let reverse = std::process::Command::new("adb")
+            .args([
+                "-s",
+                &device_id,
+                "reverse",
+                &format!("tcp:{port}"),
+                &format!("tcp:{port}"),
+            ])
+            .status();
+        if reverse.map(|s| s.success()).unwrap_or(false) {
+            print_message(
+                MessageType::Info,
+                "Open the editor with the debugger listening to attach.",
+            );
+        } else {
+            print_message(
+                MessageType::Warning,
+                "adb reverse failed; remote-debug may not attach",
+            );
+        }
+    }
 
-    // Launch the app
+    // The unified debug-hub: when launched with a loopback scene-inspector arg
+    // (auto-injected by `run --target android`, unless `--no-hub`), tunnel the
+    // device's connect-out to the desktop hub via `adb reverse`. A LAN-IP arg
+    // would reach the Mac directly and needs no tunnel.
+    if let Some(port) = loopback_scene_inspector_port(&extras) {
+        let reverse = std::process::Command::new("adb")
+            .args([
+                "-s",
+                &device_id,
+                "reverse",
+                &format!("tcp:{port}"),
+                &format!("tcp:{port}"),
+            ])
+            .status();
+        if reverse.map(|s| s.success()).unwrap_or(false) {
+            print_message(
+                MessageType::Info,
+                &format!("adb reverse tcp:{port} → debug-hub (scene-inspector)"),
+            );
+        } else {
+            print_message(
+                MessageType::Warning,
+                "adb reverse for scene-inspector failed; the device won't reach the debug-hub",
+            );
+        }
+    }
+
+    // Launch the app.
+    //
+    // Engine args can't be forwarded via `command_line_params`: Godot's Android
+    // launcher SANITIZES that extra off intents sent to EXPORTED activities (a
+    // security guard — see `GodotActivity.sanitizeLaunchIntent`), and we can only
+    // `am start` the exported `GodotAppLauncher` (GodotApp itself isn't exported).
+    // So forward the args as a DEEPLINK (ACTION_VIEW data URI, which is NOT
+    // stripped); `deep_link_router` parses it on startup. Each `--key[=value]`
+    // extra becomes a `key=value` query param (bare flag → `key=true`).
     let spinner = create_spinner("Launching application...");
+    let mut launch_args = vec![
+        "-s".to_string(),
+        device_id.clone(),
+        "shell".to_string(),
+        "am".to_string(),
+        "start".to_string(),
+    ];
+    if let Some(deeplink) = extras_to_deeplink(&extras) {
+        launch_args.push("-a".to_string());
+        launch_args.push("android.intent.action.VIEW".to_string());
+        launch_args.push("-d".to_string());
+        // Single-quote: the deeplink's `&` param separators would otherwise be
+        // interpreted by the device shell (adb concatenates argv + re-parses).
+        launch_args.push(format!("'{deeplink}'"));
+        print_message(
+            MessageType::Info,
+            &format!("Launching via deeplink: {deeplink}"),
+        );
+    }
+    launch_args.push("-n".to_string());
+    launch_args.push("org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher".to_string());
+
     let launch_status = std::process::Command::new("adb")
-        .args([
-            "-s",
-            &device_id,
-            "shell",
-            "am",
-            "start",
-            "-n",
-            "org.decentraland.godotexplorer/com.godot.game.GodotApp",
-        ])
+        .args(&launch_args)
         .status()?;
     spinner.finish();
 
@@ -825,107 +907,222 @@ fn deploy_and_run_android(_release: bool, _extras: Vec<String>) -> anyhow::Resul
 
     print_message(MessageType::Success, "Application launched on device");
 
-    // Show logs
-    print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
-    let _log_status = std::process::Command::new("adb")
-        .args([
-            "-s",
-            &device_id,
-            "logcat",
-            "-s",
-            "godot:V",
-            "GodotApp:V",
-            "dclgodot:V",
-        ])
-        .status()?;
+    // Show logs. Tags: Godot engine (godot), the launcher (GodotApp), the Rust lib
+    // + GDScript routed through it (dclgodot), the Kotlin plugin (dcl-godot-android
+    // — its [INIT]/Log.* lines), Kotlin println/stderr (System.out/err), and native
+    // crashes (AndroidRuntime:E). Kotlin `Log.*` only reach logcat (not the
+    // scene-inspector/hub channel), so logcat is the complete log view on Android.
+    //
+    // Skipped under `--hub-viewer`: the caller streams logs through the hub instead
+    // and blocks on that, so this would only duplicate (and Kotlin `Log.*` won't
+    // show in the hub — see the `--hub-viewer` warning).
+    if stream_device_logs {
+        print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
+        let _log_status = std::process::Command::new("adb")
+            .args([
+                "-s",
+                &device_id,
+                "logcat",
+                "-s",
+                "godot:V",
+                "GodotApp:V",
+                "dclgodot:V",
+                "dcl-godot-android:V",
+                "System.out:V",
+                "System.err:V",
+                "AndroidRuntime:E",
+            ])
+            .status()?;
+    }
 
     Ok(())
+}
+
+/// Extract the remote-debug port from launch args, accepting either
+/// `--remote-debug tcp://host:PORT` (two tokens) or `--remote-debug=tcp://host:PORT`
+/// (one token). Returns None when remote-debug isn't requested.
+fn remote_debug_port(extras: &[String]) -> Option<u16> {
+    for (i, a) in extras.iter().enumerate() {
+        let uri = if let Some(v) = a.strip_prefix("--remote-debug=") {
+            Some(v.to_string())
+        } else if a == "--remote-debug" {
+            extras.get(i + 1).cloned()
+        } else {
+            None
+        };
+        if let Some(uri) = uri {
+            if let Some(port) = uri.rsplit(':').next().and_then(|p| p.parse::<u16>().ok()) {
+                return Some(port);
+            }
+        }
+    }
+    None
+}
+
+/// Extract the port from a *loopback* `--scene-inspector=ws://127.0.0.1:PORT`
+/// launch arg — the marker that the device should be tunneled to the desktop
+/// debug-hub via `adb reverse`. Only loopback hosts (`127.0.0.1`/`localhost`)
+/// qualify; a LAN-IP target reaches the Mac directly and needs no tunnel.
+/// Returns None when absent or non-loopback.
+fn loopback_scene_inspector_port(extras: &[String]) -> Option<u16> {
+    for a in extras {
+        let value = match a.strip_prefix("--scene-inspector=") {
+            Some(v) => v,
+            None => continue,
+        };
+        let rest = match value
+            .strip_prefix("ws://")
+            .or_else(|| value.strip_prefix("wss://"))
+        {
+            Some(r) => r,
+            None => continue,
+        };
+        // `rest` is "host:port[/path]" — drop any path, then split host/port.
+        let host_port = rest.split('/').next().unwrap_or(rest);
+        if let Some((host, port)) = host_port.rsplit_once(':') {
+            if (host == "127.0.0.1" || host == "localhost") && !host.is_empty() {
+                if let Ok(p) = port.parse::<u16>() {
+                    return Some(p);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Build a `decentraland://open?...` deeplink from launcher extras — the channel
+/// Android uses to receive args, since `command_line_params` is sanitized off
+/// intents to exported activities. Each `--key[=value]` becomes a `key=value`
+/// query param (bare flag → `key=true`). Returns None when there are no extras.
+fn extras_to_deeplink(extras: &[String]) -> Option<String> {
+    if extras.is_empty() {
+        return None;
+    }
+    let params: Vec<String> = extras
+        .iter()
+        .map(|a| {
+            let a = a.strip_prefix("--").unwrap_or(a);
+            match a.split_once('=') {
+                Some((k, v)) => format!("{}={}", k, encode_query_value(v)),
+                None => format!("{a}=true"),
+            }
+        })
+        .collect();
+    Some(format!("decentraland://open?{}", params.join("&")))
+}
+
+/// Minimal percent-encoding for a deeplink query value: only the characters that
+/// would break the query or the device shell. `=`/`:`/`,`/`/` are valid in a
+/// value and left literal so common args (`--rust-log=a::b=trace,info`,
+/// `--scene-inspector=ws://h:p`) read naturally (the parser splits a param on its
+/// first `=` and URL-decodes the value).
+fn encode_query_value(v: &str) -> String {
+    let mut out = String::with_capacity(v.len());
+    for c in v.chars() {
+        match c {
+            '%' => out.push_str("%25"),
+            '&' => out.push_str("%26"),
+            '#' => out.push_str("%23"),
+            '?' => out.push_str("%3F"),
+            ' ' => out.push_str("%20"),
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 /// iOS bundle identifier
 const IOS_BUNDLE_ID: &str = "org.decentraland.godotexplorer";
 
 /// Deploy and run on iOS device using xcodebuild and xcrun devicectl
-fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> {
+fn deploy_and_run_ios(
+    release: bool,
+    extras: Vec<String>,
+    stream_device_logs: bool,
+    install_app: bool,
+) -> anyhow::Result<()> {
     if std::env::consts::OS != "macos" {
         return Err(anyhow::anyhow!("iOS deployment is only supported on macOS"));
     }
 
-    let xcodeproj = format!("{}decentraland-godot-client.xcodeproj", EXPORTS_FOLDER);
-    if !std::path::Path::new(&xcodeproj).exists() {
-        return Err(anyhow::anyhow!(
-            "Xcode project not found at: {}. Run export first.",
-            xcodeproj
-        ));
-    }
-
-    // Detect connected iOS device
+    // Detect connected iOS device (needed for both install and launch).
     let device_id = get_connected_ios_device()?;
     print_message(MessageType::Info, &format!("Using device: {}", device_id));
 
-    // Build the Xcode project
-    let configuration = if release { "Release" } else { "Debug" };
-    let derived_data = format!("{}build", EXPORTS_FOLDER);
+    // Build + install (skipped under --launch-only — relaunch what's installed).
+    if install_app {
+        let xcodeproj = format!("{}decentraland-godot-client.xcodeproj", EXPORTS_FOLDER);
+        if !std::path::Path::new(&xcodeproj).exists() {
+            return Err(anyhow::anyhow!(
+                "Xcode project not found at: {}. Run export first.",
+                xcodeproj
+            ));
+        }
 
-    let spinner = create_spinner("Building Xcode project...");
-    let build_output = std::process::Command::new("xcodebuild")
-        .args([
-            "-project",
-            &xcodeproj,
-            "-scheme",
-            "decentraland-godot-client",
-            "-configuration",
-            configuration,
-            "-destination",
-            "generic/platform=iOS",
-            "-derivedDataPath",
-            &derived_data,
-            "-allowProvisioningUpdates",
-            "build",
-        ])
-        .output()?;
-    spinner.finish();
+        // Build the Xcode project
+        let configuration = if release { "Release" } else { "Debug" };
+        let derived_data = format!("{}build", EXPORTS_FOLDER);
 
-    if !build_output.status.success() {
-        let stderr = String::from_utf8_lossy(&build_output.stderr);
-        return Err(anyhow::anyhow!("xcodebuild failed:\n{}", stderr));
+        let spinner = create_spinner("Building Xcode project...");
+        let build_output = std::process::Command::new("xcodebuild")
+            .args([
+                "-project",
+                &xcodeproj,
+                "-scheme",
+                "decentraland-godot-client",
+                "-configuration",
+                configuration,
+                "-destination",
+                "generic/platform=iOS",
+                "-derivedDataPath",
+                &derived_data,
+                "-allowProvisioningUpdates",
+                "build",
+            ])
+            .output()?;
+        spinner.finish();
+
+        if !build_output.status.success() {
+            let stderr = String::from_utf8_lossy(&build_output.stderr);
+            return Err(anyhow::anyhow!("xcodebuild failed:\n{}", stderr));
+        }
+
+        print_message(MessageType::Success, "Xcode build succeeded");
+
+        // Find the .app bundle
+        let app_path = format!(
+            "{}/Build/Products/{}-iphoneos/decentraland-godot-client.app",
+            derived_data, configuration
+        );
+        if !std::path::Path::new(&app_path).exists() {
+            return Err(anyhow::anyhow!(".app not found at: {}", app_path));
+        }
+
+        // Install on device
+        let spinner = create_spinner("Installing on iOS device...");
+        let install_output = std::process::Command::new("xcrun")
+            .args([
+                "devicectl",
+                "device",
+                "install",
+                "app",
+                "--device",
+                &device_id,
+                &app_path,
+            ])
+            .output()?;
+        spinner.finish();
+
+        if !install_output.status.success() {
+            let stderr = String::from_utf8_lossy(&install_output.stderr);
+            return Err(anyhow::anyhow!(
+                "Failed to install app on device:\n{}",
+                stderr
+            ));
+        }
+
+        print_message(MessageType::Success, "App installed on device");
     }
-
-    print_message(MessageType::Success, "Xcode build succeeded");
-
-    // Find the .app bundle
-    let app_path = format!(
-        "{}/Build/Products/{}-iphoneos/decentraland-godot-client.app",
-        derived_data, configuration
-    );
-    if !std::path::Path::new(&app_path).exists() {
-        return Err(anyhow::anyhow!(".app not found at: {}", app_path));
-    }
-
-    // Install on device
-    let spinner = create_spinner("Installing on iOS device...");
-    let install_output = std::process::Command::new("xcrun")
-        .args([
-            "devicectl",
-            "device",
-            "install",
-            "app",
-            "--device",
-            &device_id,
-            &app_path,
-        ])
-        .output()?;
-    spinner.finish();
-
-    if !install_output.status.success() {
-        let stderr = String::from_utf8_lossy(&install_output.stderr);
-        return Err(anyhow::anyhow!(
-            "Failed to install app on device:\n{}",
-            stderr
-        ));
-    }
-
-    print_message(MessageType::Success, "App installed on device");
 
     // Launch the app with `--console` so stdout/stderr from the device are
     // streamed back to this terminal (Godot prints, Rust tracing, native
@@ -941,12 +1138,17 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
         "device".into(),
         "process".into(),
         "launch".into(),
-        "--console".into(),
-        "--terminate-existing".into(),
-        "--device".into(),
-        device_id.clone(),
-        IOS_BUNDLE_ID.into(),
     ];
+    // `--console` streams stdout/stderr back here and BLOCKS until exit/Ctrl-C.
+    // Under `--hub-viewer` the caller streams via the hub instead, so omit it —
+    // the launch then returns immediately and the caller blocks on the viewer.
+    if stream_device_logs {
+        launch_args.push("--console".into());
+    }
+    launch_args.push("--terminate-existing".into());
+    launch_args.push("--device".into());
+    launch_args.push(device_id.clone());
+    launch_args.push(IOS_BUNDLE_ID.into());
     if !extras.is_empty() {
         launch_args.push("--".into());
         launch_args.extend(extras.iter().cloned());
@@ -954,7 +1156,11 @@ fn deploy_and_run_ios(release: bool, extras: Vec<String>) -> anyhow::Result<()> 
     spinner.finish();
     print_message(
         MessageType::Info,
-        "Application launched on iOS device — streaming device logs (Ctrl+C to stop):",
+        if stream_device_logs {
+            "Application launched on iOS device — streaming device logs (Ctrl+C to stop):"
+        } else {
+            "Application launched on iOS device (logs via the debug-hub viewer)."
+        },
     );
 
     let launch_status = std::process::Command::new("xcrun")
@@ -1185,10 +1391,21 @@ pub fn hotreload_android(extras: Vec<String>) -> anyhow::Result<()> {
         "Application restarted with new library!",
     );
 
-    // Show logs
+    // Show logs (same tag set as the full deploy — incl. the Kotlin plugin
+    // `dcl-godot-android`, System.out/err, and native crashes).
     print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
     std::process::Command::new("adb")
-        .args(["logcat", "-s", "godot:V", "GodotApp:V", "dclgodot:V"])
+        .args([
+            "logcat",
+            "-s",
+            "godot:V",
+            "GodotApp:V",
+            "dclgodot:V",
+            "dcl-godot-android:V",
+            "System.out:V",
+            "System.err:V",
+            "AndroidRuntime:E",
+        ])
         .status()?;
 
     Ok(())

@@ -18,8 +18,10 @@ use super::auth_identity::{
     generate_ephemeral_for_signing, start_mobile_auth,
 };
 use super::decentraland_auth_server::{do_request, CreateRequest};
+use super::device_anchor;
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
+use super::thirdweb_guest;
 use super::wallet::{AsH160, Wallet};
 
 enum CurrentWallet {
@@ -44,6 +46,24 @@ pub struct DclPlayerIdentity {
     #[var]
     is_guest: bool,
 
+    /// `true` only when the active wallet is a silent persistent thirdweb guest
+    /// (created via `async_create_guest_account`). Distinct from `is_guest`,
+    /// which stays reserved for disposable LocalWallet sessions — a thirdweb
+    /// guest is `is_guest = false` but `is_thirdweb_guest = true`. Gates the
+    /// "Upgrade to OTP" affordance, which only makes sense for this account
+    /// type. Cleared on every other account path so it never leaks across an
+    /// account switch.
+    is_thirdweb_guest: bool,
+
+    /// `true` when the active thirdweb guest has at least one linked auth method
+    /// beyond the silent `guest` login (email/social/passkey) — i.e. it has
+    /// already been upgraded. Best-effort cache refreshed from thirdweb via
+    /// `async_refresh_thirdweb_upgrade_state` (and set on a successful link).
+    /// Only meaningful while `is_thirdweb_guest` is `true`; cleared on every
+    /// account switch so it never leaks. Lets the UI hide the Upgrade affordance
+    /// for guests that are already linked.
+    is_thirdweb_guest_upgraded: bool,
+
     base: Base<Node>,
 }
 
@@ -56,6 +76,8 @@ impl INode for DclPlayerIdentity {
             profile: None,
             base,
             is_guest: false,
+            is_thirdweb_guest: false,
+            is_thirdweb_guest_upgraded: false,
             try_connect_account_handle: None,
             pending_mobile_auth: None,
         }
@@ -131,6 +153,43 @@ impl DclPlayerIdentity {
             ],
         );
         self.is_guest = false;
+        // Default for any remote connect (WalletConnect / social). The thirdweb
+        // guest path re-sets this to `true` via a deferred setter right after.
+        self.is_thirdweb_guest = false;
+        self.is_thirdweb_guest_upgraded = false;
+    }
+
+    /// Deferred setter for the thirdweb-guest marker. Run on the main thread
+    /// from `async_create_guest_account`'s success branch so the flag flips
+    /// only after `try_set_remote_wallet` (also deferred) has installed the
+    /// wallet and reset the marker to `false`.
+    #[func]
+    fn _set_thirdweb_guest_flag(&mut self, value: bool) {
+        self.is_thirdweb_guest = value;
+    }
+
+    /// Whether the active account is a silent persistent thirdweb guest. Gates
+    /// the Settings "Upgrade to OTP" affordance from GDScript.
+    #[func]
+    fn is_thirdweb_guest(&self) -> bool {
+        self.is_thirdweb_guest
+    }
+
+    /// Deferred setter for the upgraded marker. Called from the thirdweb thread
+    /// after a profiles query (`async_refresh_thirdweb_upgrade_state`) or a
+    /// successful email link, so the write lands on the main thread.
+    #[func]
+    fn _set_thirdweb_guest_upgraded_flag(&mut self, value: bool) {
+        self.is_thirdweb_guest_upgraded = value;
+    }
+
+    /// Whether the active thirdweb guest has already linked a non-`guest` auth
+    /// method (email/social). Best-effort cache — call
+    /// `async_refresh_thirdweb_upgrade_state` to confirm against thirdweb. Lets
+    /// the UI hide the Upgrade affordance for already-upgraded guests.
+    #[func]
+    fn is_thirdweb_guest_upgraded(&self) -> bool {
+        self.is_thirdweb_guest_upgraded
     }
 
     fn _update_local_wallet(
@@ -161,6 +220,8 @@ impl DclPlayerIdentity {
             ],
         );
         self.is_guest = true;
+        self.is_thirdweb_guest = false;
+        self.is_thirdweb_guest_upgraded = false;
         self.profile = None;
     }
 
@@ -171,12 +232,249 @@ impl DclPlayerIdentity {
             .emit_signal("auth_error", &[error_str.to_variant()]);
     }
 
+    /// Creates a random throwaway wallet that lives only as long as the install.
+    /// "Disposable" because every cold start mints a brand-new wallet — no
+    /// persistence, no recovery. Reserved for dev / hidden behind double-tap
+    /// in non-prod. For silent + persistent guest, use `async_create_guest_account`.
     #[func]
-    fn create_guest_account(&mut self) {
+    fn create_disposable_account(&mut self) {
         let local_wallet = LocalWallet::new(&mut thread_rng());
         let local_wallet_bytes = local_wallet.signer().to_bytes().to_vec();
         let ephemeral_auth_chain = create_local_ephemeral(&local_wallet);
         self._update_local_wallet(local_wallet_bytes.as_slice(), ephemeral_auth_chain);
+    }
+
+    /// Silent guest login backed by thirdweb. Returns a Promise that resolves
+    /// with the wallet address string on success, or rejects with an error
+    /// message. The same `device_anchor_id` always resolves to the same
+    /// wallet address — pass the SSAID (Android) / Keychain UUID (iOS), or
+    /// leave empty to use the desktop UUID file fallback.
+    #[func]
+    fn async_create_guest_account(&mut self, device_anchor_id: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let instance_id = self.base().instance_id();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let anchor_input = device_anchor_id.to_string();
+
+        handle.spawn(async move {
+            let result = perform_thirdweb_guest_login(anchor_input).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::error!("thirdweb guest_login: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok((address, ephemeral_auth_chain)) => {
+                    let address_str = format!("{:#x}", address);
+                    let ephemeral_chain_json = serde_json::to_string(&ephemeral_auth_chain)
+                        .expect("serialize ephemeral auth chain");
+
+                    if let Ok(mut identity) =
+                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                    {
+                        // Thirdweb wallets are real custodial wallets — same model
+                        // as WalletConnect / Apple / Google as far as Decentraland
+                        // is concerned. The thirdweb "guest" label is just the auth
+                        // method (no social link) and doesn't affect `is_guest`,
+                        // which stays reserved for disposable LocalWallet sessions.
+                        identity.call_deferred(
+                            "try_set_remote_wallet",
+                            &[
+                                address_str.clone().to_variant(),
+                                1_u64.to_variant(),
+                                ephemeral_chain_json.to_variant(),
+                            ],
+                        );
+                        // Flip the thirdweb-guest marker after the (also
+                        // deferred) wallet install, which resets it to `false`.
+                        // Both run on the main thread in submission order.
+                        identity.call_deferred("_set_thirdweb_guest_flag", &[true.to_variant()]);
+                    }
+
+                    promise
+                        .bind_mut()
+                        .resolve_with_data(address_str.to_variant());
+                }
+                Err(e) => {
+                    tracing::error!("thirdweb guest_login failed: {:?}", e);
+                    promise
+                        .bind_mut()
+                        .reject(GString::from(&format!("Guest login failed: {}", e)));
+                }
+            }
+        });
+
+        promise
+    }
+
+    /// Step 1 of "Upgrade to OTP": sends a one-time code to `email`. No token
+    /// is needed. Resolves with `true` on success, rejects with a friendly
+    /// message otherwise. Only meaningful when `is_thirdweb_guest()` is true.
+    #[func]
+    fn async_link_email_start(&mut self, email: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let email = email.to_string();
+
+        handle.spawn(async move {
+            let result = thirdweb_guest::email_initiate(&email).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::error!("thirdweb email_initiate: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok(()) => {
+                    promise.bind_mut().resolve_with_data(true.to_variant());
+                }
+                Err(e) => {
+                    tracing::error!("thirdweb email_initiate failed: {:?}", e);
+                    promise
+                        .bind_mut()
+                        .reject(GString::from(&format!("Could not send code: {}", e)));
+                }
+            }
+        });
+
+        promise
+    }
+
+    /// Step 2 of "Upgrade to OTP": verifies the `code`, then links the email
+    /// identity into the existing guest wallet so the SAME address becomes
+    /// email-recoverable. `device_anchor_id` is used to refresh the guest JWT
+    /// (the persisted one may be expired) — pass the same value the lobby uses.
+    /// Resolves with the (unchanged) guest wallet address string on success.
+    #[func]
+    fn async_link_email_verify(
+        &mut self,
+        email: GString,
+        code: GString,
+        device_anchor_id: GString,
+    ) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let instance_id = self.base().instance_id();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let email = email.to_string();
+        let code = code.to_string();
+        let anchor = device_anchor_id.to_string();
+
+        handle.spawn(async move {
+            let result = perform_link_email(anchor, email, code).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::error!("thirdweb link_email: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok(address) => {
+                    // The guest now has an email linked — it's upgraded. Update
+                    // the cached marker so the UI hides the affordance without a
+                    // round trip to re-query profiles.
+                    if let Ok(mut identity) =
+                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                    {
+                        identity.call_deferred(
+                            "_set_thirdweb_guest_upgraded_flag",
+                            &[true.to_variant()],
+                        );
+                    }
+                    promise
+                        .bind_mut()
+                        .resolve_with_data(format!("{:#x}", address).to_variant());
+                }
+                Err(e) => {
+                    tracing::error!("thirdweb link_email failed: {:?}", e);
+                    promise
+                        .bind_mut()
+                        .reject(GString::from(&format!("Could not verify code: {}", e)));
+                }
+            }
+        });
+
+        promise
+    }
+
+    /// Queries thirdweb for the account's linked auth methods and refreshes the
+    /// cached `is_thirdweb_guest_upgraded` flag. Resolves with `true` when the
+    /// guest already has a non-`guest` profile (email/social), `false` when it
+    /// only has the silent id-login. Re-derives a fresh guest token from the
+    /// device anchor so the query is authorized even if the persisted token aged
+    /// out. Rejects on network error — the caller should keep the last-known
+    /// state rather than assume "not upgraded".
+    #[func]
+    fn async_refresh_thirdweb_upgrade_state(&mut self, device_anchor_id: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let instance_id = self.base().instance_id();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let anchor_input = device_anchor_id.to_string();
+
+        handle.spawn(async move {
+            let result = async {
+                let session = thirdweb_guest::refresh_guest_session(&anchor_input).await?;
+                let types = thirdweb_guest::get_linked_profile_types(&session.token).await?;
+                Ok::<bool, anyhow::Error>(thirdweb_guest::account_is_upgraded(&types))
+            }
+            .await;
+
+            let Some(mut promise) = get_promise() else {
+                return;
+            };
+
+            match result {
+                Ok(upgraded) => {
+                    if let Ok(mut identity) =
+                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                    {
+                        identity.call_deferred(
+                            "_set_thirdweb_guest_upgraded_flag",
+                            &[upgraded.to_variant()],
+                        );
+                    }
+                    promise.bind_mut().resolve_with_data(upgraded.to_variant());
+                }
+                Err(e) => {
+                    tracing::warn!("thirdweb refresh upgrade state failed: {:?}", e);
+                    promise.bind_mut().reject(GString::from(&format!(
+                        "Could not check upgrade state: {}",
+                        e
+                    )));
+                }
+            }
+        });
+
+        promise
     }
 
     #[func]
@@ -475,6 +773,17 @@ impl DclPlayerIdentity {
             true
         } else {
             self._update_remote_wallet(account_address, chain_id, ephemeral_auth_chain);
+            // Rehydrate the thirdweb-guest marker across cold starts: the
+            // recovered remote wallet doesn't record how it was minted, so we
+            // match the recovered address against the persisted guest session.
+            // Matching addresses ⇒ this remote wallet IS the thirdweb guest.
+            // A mismatch (e.g. the user upgraded to a real WalletConnect wallet
+            // since) leaves the marker `false`, avoiding a false positive.
+            if let Some(session) = thirdweb_guest::load_session_from_disk() {
+                if session.wallet_address == account_address {
+                    self.is_thirdweb_guest = true;
+                }
+            }
             true
         }
     }
@@ -553,6 +862,16 @@ impl DclPlayerIdentity {
             "emit_signal",
             &["profile_changed".to_variant(), profile.to_variant()],
         );
+    }
+
+    /// GDScript-callable logout used by the sign-out flow to fully forget the
+    /// current identity (issue #1658). A bare `logout()` can't be called from
+    /// GDScript because the name is taken by the `logout` signal, and the
+    /// internal `logout()` fn is comms-only — so expose an explicitly-named
+    /// entry point. Clears wallet/ephemeral/profile and emits `logout`.
+    #[func]
+    pub fn clear_identity(&mut self) {
+        self.logout();
     }
 
     #[func]
@@ -739,6 +1058,8 @@ impl DclPlayerIdentity {
         self.wallet = None;
         self.ephemeral_auth_chain = None;
         self.profile = None;
+        self.is_thirdweb_guest = false;
+        self.is_thirdweb_guest_upgraded = false;
         self.base_mut()
             .call_deferred("emit_signal", &["logout".to_variant()]);
     }
@@ -765,4 +1086,107 @@ impl DclPlayerIdentity {
             });
         }
     }
+}
+
+/// Runs the silent guest-login flow end-to-end:
+///   1. resolve the device anchor (native value or desktop fallback)
+///   2. hash anchor → opaque thirdweb `sessionId`
+///   3. POST /v1/auth/complete (guest) → wallet address + bearer token
+///   4. mint a local ephemeral keypair + Decentraland delegation message
+///   5. POST /v1/wallets/sign-message → external signature
+///   6. assemble the EphemeralAuthChain
+///
+/// On success, the returned `EphemeralAuthChain` is signed by the thirdweb
+/// wallet and delegates request signing to the local ephemeral key for the
+/// usual ~30 day window. The thirdweb JWT itself is dropped after step 5 —
+/// every cold start re-runs steps 1–6 (idempotent because the anchor is
+/// stable, so thirdweb returns the same wallet address).
+async fn perform_thirdweb_guest_login(
+    device_anchor_id: String,
+) -> Result<(H160, EphemeralAuthChain), anyhow::Error> {
+    let anchor = device_anchor::resolve_anchor(&device_anchor_id);
+    let session_id = device_anchor::compute_session_id(&anchor);
+
+    let session = thirdweb_guest::guest_login(&session_id).await?;
+
+    let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
+
+    let signature_hex = thirdweb_guest::sign_message(
+        &session.token,
+        session.wallet_address,
+        1,
+        &ephemeral_message,
+    )
+    .await?;
+
+    let signer_address_str = format!("{:#x}", session.wallet_address);
+    let chain = create_ephemeral_from_external_signature(
+        &signer_address_str,
+        &signature_hex,
+        &ephemeral_keys,
+        expiration,
+        &ephemeral_message,
+    )?;
+
+    // Persist the JWT so future cold starts can renew the ephemeral
+    // delegation without re-running `guest_login`. Failure is non-fatal:
+    // we already have a valid in-memory ephemeral chain for this session.
+    if let Err(e) = thirdweb_guest::save_session_to_disk(&session) {
+        tracing::warn!(
+            "thirdweb: failed to persist session to disk (non-fatal): {}",
+            e
+        );
+    }
+
+    Ok((session.wallet_address, chain))
+}
+
+/// Runs the "Upgrade to OTP" link end-to-end:
+///   1. verify the OTP → EMAIL identity JWT (`email_complete`)
+///   2. obtain a FRESH guest JWT — re-run `guest_login` from the anchor so the
+///      `/link` bearer is guaranteed non-expired (the persisted one may have
+///      aged out); fall back to the persisted token if the refresh fails
+///   3. `link_email` merges the email into the guest user, preserving address
+///   4. persist the refreshed session so the disk copy stays current
+///
+/// Returns the guest wallet address, which is unchanged by linking.
+async fn perform_link_email(
+    device_anchor_id: String,
+    email: String,
+    code: String,
+) -> Result<H160, anyhow::Error> {
+    let email_jwt = thirdweb_guest::email_complete(&email, &code).await?;
+
+    // Prefer a freshly minted guest session (idempotent: same anchor → same
+    // wallet → fresh token). Fall back to the persisted token only if the
+    // refresh round-trip fails (e.g. transient network), since the disk token
+    // may be expired.
+    let session = match thirdweb_guest::refresh_guest_session(&device_anchor_id).await {
+        Ok(session) => session,
+        Err(refresh_err) => {
+            tracing::warn!(
+                "thirdweb: guest session refresh failed ({}); falling back to persisted token",
+                refresh_err
+            );
+            thirdweb_guest::load_session_from_disk().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "no guest session available to authorize link (refresh failed: {})",
+                    refresh_err
+                )
+            })?
+        }
+    };
+
+    thirdweb_guest::link_email(&session.token, &email_jwt).await?;
+
+    // Keep the disk copy current with the (possibly refreshed) token. The
+    // address is unchanged by linking, so the rehydration match still holds.
+    if let Err(e) = thirdweb_guest::save_session_to_disk(&session) {
+        tracing::warn!(
+            "thirdweb: failed to persist refreshed session after link (non-fatal): {}",
+            e
+        );
+    }
+
+    Ok(session.wallet_address)
 }

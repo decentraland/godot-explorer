@@ -12,9 +12,9 @@
 [ext_resource type="Texture2D" uid="uid://cnainsx10j8v1" path="res://assets/ui/add.svg" id="13_5r2pa"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="13_m2rwh"]
 [ext_resource type="StyleBox" uid="uid://cjr732avt4ugw" path="res://assets/themes/secondary_disabled_little.tres" id="13_pm4ta"]
+[ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="14_ockp6"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="14_pm4ta"]
 [ext_resource type="Texture2D" uid="uid://b1f8bhb2dkbx3" path="res://assets/themes/icons/check.svg" id="15_0guw6"]
-[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/pages/discover/icons/close.svg" id="15_40r3o"]
 [ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/pages/discover/carrousel/discover_carrousel_skeleton_material.tres" id="16_m2rwh"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66h5u"]
@@ -170,7 +170,6 @@ theme_override_constants/separation = 9
 
 [node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=1253382352 instance=ExtResource("3_yus00")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 
@@ -334,7 +333,7 @@ theme = ExtResource("10_2kre2")
 theme_type_variation = &"SecondaryLittle"
 theme_override_styles/normal = SubResource("StyleBoxFlat_b4lym")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_gaktv")
-icon = ExtResource("15_40r3o")
+icon = ExtResource("14_ockp6")
 icon_alignment = 1
 expand_icon = true
 

@@ -1,0 +1,345 @@
+name: 🍏 iOS (self-hosted)
+
+# Builds the iOS app (Rust lib + Godot export) and uploads the UNSIGNED export tree to the R2
+# mobile-artifacts bucket on every push to main/release and on PRs — the iOS counterpart of
+# android_builds.yml's per-push APK. It runs on a SELF-HOSTED macOS runner (a dev Mac labelled
+# `dcl-ios`), so it only builds when that Mac is registered.
+#
+# Gating (both stages live in the `gate` job):
+#   • Static-checks gate: waits for runner.yml's "📊 Static checks" check-run on THIS commit and
+#     SKIPS the iOS build unless it succeeded — the self-hosted Mac is never spent on a commit that
+#     already failed formatting/lint. This is the cross-workflow equivalent of Android/Linux gating
+#     on `needs: static-checks` (they live in runner.yml; iOS is its own workflow, so it can't use
+#     `needs` and instead polls the check-run by name).
+#   • Runner/codeowner gate: if the `RUNNERS_READ_TOKEN` PAT exists, it checks that a runner
+#     labelled `dcl-ios` is ONLINE and that the actor is an active member of the CODEOWNERS team
+#     (decentraland/rgl-mobile-team). If the PAT is ABSENT, this stage BYPASSES (outputs `bypass`),
+#     so the workflow works with zero extra setup and auto-upgrades the day the PAT is added.
+#   • inline `if` on build-ios (always applies): non-fork PR authored by an OWNER/MEMBER/COLLABORATOR,
+#     or a push (write access already required), and the PR must not carry the `build` label.
+#
+# Queueing behaviour:
+#   • Runner BUSY with another job  → build-ios QUEUES natively until the runner frees up
+#     (a busy runner still reports status==online, so the gate does not skip it).
+#   • Runner OFFLINE + PAT present  → gate outputs `false` → build-ios is cleanly SKIPPED.
+#   • Runner OFFLINE + no PAT       → gate BYPASSES → build-ios stays QUEUED (pending) until a
+#     newer push cancels it (concurrency) or up to 24h.
+#   • New push on the same branch   → cancels the in-progress/queued run (concurrency), like Android.
+#   • PR gets the `build` label     → the full WarpBuild pipeline (mobile_distribute → ios_r2_artifact)
+#     owns iOS, so this build SKIPS; the `labeled` trigger + concurrency cancels any queued run here.
+#
+# Security: PUBLIC repo — a self-hosted runner can run arbitrary PR code. NOTE: the `if:` gates
+# below are NOT a security boundary — a `pull_request` runs the workflow as modified by the PR,
+# so they can be edited away. The real, PR-proof controls are SERVER-SIDE: (1) require approval
+# for all outside collaborators (Settings → Actions), and (2) an org runner group restricted to
+# this workflow. The `if:` gates are correctness/convenience only. The runner/VM setup scripts are
+# kept LOCAL (outside this repo) and provision the `dcl-ios`-labelled runner this workflow targets.
+
+on:
+  push:
+    branches:
+      - main
+      - release
+  pull_request:
+    # `labeled` is included so adding the `build` label re-triggers this workflow; combined with
+    # the `if` skip + concurrency below, that cancels any per-push run already queued on the Mac.
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+  checks: read # read the "📊 Static checks" check-run so the gate can require it (like Android)
+
+concurrency:
+  # Include the event action so a `labeled` (build-label) event gets its OWN group and does NOT
+  # cancel an in-flight `synchronize` self-hosted build for the same commit — that build's R2 export
+  # is exactly what mobile_distribute's `ios-resolve` reuses to skip the WarpBuild rebuild. Two
+  # `synchronize` pushes still share a group (newer cancels older), so only the latest build runs.
+  group: ios-selfhosted-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-${{ github.event.action }}
+  cancel-in-progress: true
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────────────────────
+  # Gate: cheap GitHub-hosted check. Stage 1 waits for the "📊 Static checks" check-run on this
+  # commit and skips iOS unless it passed (cross-workflow equivalent of `needs: static-checks`).
+  # Stage 2, with a PAT, yields a deterministic online + codeowner verdict; without a PAT it
+  # bypasses so the rest still runs (queue + inline checks).
+  # ───────────────────────────────────────────────────────────────────────────────────────────
+  gate:
+    name: Gate (static checks + runner online + codeowner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      # `true` = static passed && online && codeowner · `false` = static failed, offline, or
+      # not-codeowner (skip) · `bypass` = static passed but no PAT.
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - id: check
+        env:
+          # Always-present token — used ONLY to read the static-checks check-run on this commit.
+          GH_TOKEN: ${{ github.token }}
+          # Optional fine-grained PAT: repo `Administration: Read` + org `Members: Read`
+          # (or classic PAT `repo` + `read:org`). Absent → the runner/codeowner stage bypasses.
+          RUNNERS_PAT: ${{ secrets.RUNNERS_READ_TOKEN }}
+          REPO: ${{ github.repository }}
+          # Commit under test: PR head on pull_request, the pushed SHA on push.
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          # runner.yml's static-checks stage reports this check-run name (same string as the
+          # branch-protection required context). Android/Linux gate on this stage via `needs`.
+          STATIC_CHECK: "📊 Static checks / Code style and file formatting"
+          # GitHub-authenticated identity of whoever triggered this (NOT the spoofable git author):
+          # the PR author on pull_request, the pusher on push.
+          ACTOR: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login || github.actor }}
+        run: |
+          set -u
+
+          # ── Stage 1: gate on the same first CI stage as Android/Linux ────────────────────────
+          # Poll the "📊 Static checks" check-run on this commit until it completes, then skip the
+          # iOS build unless it succeeded (failure / cancelled / never-reported within the budget).
+          DEADLINE=$(( SECONDS + 900 ))   # wait up to 15 min for static-checks to finish
+          STATUS="" ; CONCLUSION=""
+          while [ "$SECONDS" -lt "$DEADLINE" ]; do
+            LINE=$(gh api "/repos/${REPO}/commits/${SHA}/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name==env.STATIC_CHECK)] | sort_by(.started_at) | last
+                    | "\(.status)|\(.conclusion // "")"' 2>/dev/null || echo "")
+            STATUS="${LINE%%|*}" ; CONCLUSION="${LINE#*|}"
+            if [ "$STATUS" = "completed" ]; then break; fi
+            echo "⏳ waiting for '${STATIC_CHECK}' on ${SHA} (status=${STATUS:-none})…"
+            sleep 15
+          done
+          echo "static-checks: status=${STATUS:-none} conclusion=${CONCLUSION:-none}"
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "🛑 static-checks did not pass — skipping the iOS build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # ── Stage 2: runner-online + codeowner (needs the optional PAT) ──────────────────────
+          if [ -z "${RUNNERS_PAT:-}" ]; then
+            echo "ℹ️  RUNNERS_READ_TOKEN not set — bypassing the runner/codeowner gate (queue + inline checks apply)."
+            echo "should_build=bypass" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Is a runner labelled `dcl-ios` online? (busy-but-online still counts → job queues)
+          ONLINE=$(GH_TOKEN="$RUNNERS_PAT" gh api "/repos/${REPO}/actions/runners" \
+            --jq '[.runners[] | select(.status=="online") | select(any(.labels[]; .name=="dcl-ios"))] | length' \
+            2>/dev/null || echo 0)
+          # Is the actor an active member of the CODEOWNERS team? (404 for non-members → empty)
+          STATE=$(GH_TOKEN="$RUNNERS_PAT" gh api "/orgs/decentraland/teams/rgl-mobile-team/memberships/${ACTOR}" \
+            --jq '.state' 2>/dev/null || echo "")
+          echo "runners_online=${ONLINE:-0} · actor=${ACTOR} · membership=${STATE:-none}"
+
+          if [ "${ONLINE:-0}" -gt 0 ] 2>/dev/null && [ "$STATE" = "active" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ───────────────────────────────────────────────────────────────────────────────────────────
+  # Build: runs on the dev Mac. No WarpBuild cache actions — the self-hosted runner persists the
+  # build artifacts between runs (target/, lib/target/, .bin/) via `clean: false` on checkout, so
+  # cargo compiles incrementally instead of from scratch every run. The xtask hardcodes the lib
+  # output under lib/target/ (copy_files.rs / ios_xcode.rs), so the cache MUST live in-tree —
+  # redirecting CARGO_TARGET_DIR elsewhere would break those paths.
+  # ───────────────────────────────────────────────────────────────────────────────────────────
+  build-ios:
+    name: Build iOS export → R2
+    needs: gate
+    if: >
+      needs.gate.outputs.should_build != 'false' &&
+      (github.event_name != 'pull_request' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association))) &&
+      !contains(github.event.pull_request.labels.*.name, 'build')
+    runs-on: [self-hosted, macOS, ARM64, dcl-ios]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Local incremental-build cache: keep untracked/gitignored artifacts (target/, lib/target/,
+          # .bin/) across runs on this persistent runner. Default `clean: true` runs `git clean -ffdx`
+          # which would wipe them every run. Tracked files are still force-checked-out to the ref, so
+          # the source tree stays correct — only the build cache survives.
+          clean: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.90"
+          targets: aarch64-apple-ios
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: Cargo install
+        timeout-minutes: 15
+        run: cargo run -- install --targets ios
+
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+
+      # Build the iOS dylib against the iOS 26 SDK (matches ios_r2_artifact.yml). On a WarpBuild
+      # macOS image Xcode lives at /Applications/Xcode_26*.app; on a personal Mac it's the default
+      # /Applications/Xcode.app — so prefer a versioned app, else accept the selected Xcode if ≥ 26.
+      - name: Select Xcode 26 (iOS 26 SDK)
+        run: |
+          set -eu
+          XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
+          if [ -n "$XCODE_APP" ] && [ -d "$XCODE_APP" ]; then
+            echo "Using $XCODE_APP"
+            echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
+            "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
+            exit 0
+          fi
+          # Fall back to the currently selected Xcode if it satisfies the SDK floor.
+          CUR="$(xcode-select -p 2>/dev/null || true)"
+          VER="$(xcodebuild -version 2>/dev/null | awk '/^Xcode/{print $2}')"
+          MAJOR="${VER%%.*}"
+          if [ -n "${MAJOR:-}" ] && [ "$MAJOR" -ge 26 ] 2>/dev/null; then
+            echo "Using selected Xcode $VER at $CUR"
+            echo "DEVELOPER_DIR=$CUR" >> "$GITHUB_ENV"
+            xcodebuild -version
+            exit 0
+          fi
+          echo "❌ No Xcode >= 26 found on the runner. Installed Xcodes:"
+          ls -d /Applications/Xcode*.app 2>/dev/null || true
+          exit 1
+
+      # Lightweight resource sampler — RAM is the scarce resource on this small VM, so record
+      # free/compressed/swap (+ loadavg + top-RSS process) every 15s during the build. Surfaces a
+      # peak summary in the run's Step Summary and uploads the full trace as an artifact, so we know
+      # how much headroom the 6 GB VM actually had instead of only "it didn't OOM".
+      - name: Start resource sampler
+        run: |
+          LOG="$RUNNER_TEMP/mem_usage.log"
+          echo "time     free_mb  compressed_mb  swap_used_mb  load1  top_rss_mb cmd" > "$LOG"
+          (
+            PAGE=$(vm_stat | awk '/page size of/{print $8; exit}'); PAGE=${PAGE:-16384}
+            while :; do
+              V=$(vm_stat)
+              F=$(echo "$V" | awk '/Pages free/{gsub(/\./,"",$3); print $3}')
+              C=$(echo "$V" | awk '/occupied by compressor/{gsub(/\./,"",$5); print $5}')
+              S=$(sysctl -n vm.swapusage | awk '{gsub(/M/,"",$6); print $6}')
+              L=$(sysctl -n vm.loadavg | awk '{print $2}')
+              T=$(ps -axo rss=,comm= | sort -rn | head -1 | awk '{r=$1/1024; $1=""; sub(/^ /,""); printf "%.0f %s", r, $0}')
+              printf '%s  %s  %s  %s  %s  %s\n' "$(date -u +%H:%M:%S)" "$((F*PAGE/1048576))" "$((C*PAGE/1048576))" "${S:-0}" "${L:-0}" "$T" >> "$LOG"
+              sleep 15
+            done
+          ) >/dev/null 2>&1 &
+          echo $! > "$RUNNER_TEMP/mem_sampler.pid"
+          echo "resource sampler started (pid $(cat "$RUNNER_TEMP/mem_sampler.pid")) → $LOG"
+
+      - name: Build macOS (host)
+        timeout-minutes: 30
+        run: cargo run -- build --release ${{ env.PROD_FLAG }}
+
+      - name: Build iOS
+        timeout-minutes: 30
+        run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
+
+      # Allocate the store build number (idempotent per commit SHA, matches the Android versionCode
+      # for the same commit); export below stamps it into CFBundleVersion. Skipped if the secret is
+      # absent (keeps the committed placeholder — these unsigned per-push builds never ship).
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: ios
+
+      - name: Import assets
+        uses: ./.github/actions/import-assets
+
+      - name: Export
+        timeout-minutes: 10
+        run: cargo run -- export --target ios
+
+      # Package the export TREE (Xcode project + embedded libdclgodot.dylib + assets) and upload it
+      # to R2, keyed by branch + commit (mirrors ios_r2_artifact.yml). A separate deploy repo can
+      # pull, sign and ship it; this repo holds no Apple signing material.
+      - name: Package & upload unsigned export to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
+          REF: ${{ github.head_ref || github.ref_name }}
+          SHA_INPUT: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_S3_BUCKET:-}" ] || [ -z "${AWS_ENDPOINT_URL:-}" ]; then
+            echo "❌ R2 mobile-artifacts bucket not configured (MOBILE_ARTIFACTS_R2_* secrets)"
+            exit 1
+          fi
+          if [ ! -d exports ]; then
+            echo "❌ exports/ not found — the Godot iOS export did not run"
+            exit 1
+          fi
+
+          echo "exports/ contents:"; ls -la exports/
+          echo "dylibs found:"; find exports -name "*.dylib" 2>/dev/null || true
+
+          tar -czf export.tar.gz -C exports .
+          echo "Export tarball size: $(du -h export.tar.gz | cut -f1)"
+
+          # The macOS runner may not ship the AWS CLI — install it on demand via Homebrew.
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "Installing AWS CLI via Homebrew..."
+            brew install awscli
+          fi
+
+          SHA="${SHA_INPUT:-${{ github.sha }}}"
+          SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
+          KEY="ios/${SAFE_BRANCH}/${SHA}/export.tar.gz"
+          LATEST_KEY="ios/${SAFE_BRANCH}/latest/export.tar.gz"
+
+          echo "📤 Uploading export to s3://${AWS_S3_BUCKET}/${KEY}"
+          aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          # Update the branch 'latest' pointer WITHOUT re-uploading the tarball. The managed
+          # `aws s3 cp s3:// s3://` is unusable on R2 (it sends GetObjectTagging / x-amz-tagging-
+          # directive, both NotImplemented), so use the low-level copy-object; fall back to a plain
+          # re-upload if R2 ever rejects the copy, so the build never breaks. asc-deploy's manual
+          # dispatch defaults to ios/<branch>/latest, so this key must stay populated.
+          echo "🔗 Updating latest pointer s3://${AWS_S3_BUCKET}/${LATEST_KEY}"
+          aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_KEY" \
+            --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+            || aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+
+          echo "✅ Unsigned export uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
+          echo "🔗 ${R2_PUBLIC_BASE_URL}/${KEY}"
+
+      # Stop the sampler and surface the result. `always()` so we still capture the trace when the
+      # build FAILS (e.g. an OOM kill) — that's exactly the run we most want the memory profile for.
+      - name: Resource usage report
+        if: always()
+        run: |
+          kill "$(cat "$RUNNER_TEMP/mem_sampler.pid" 2>/dev/null)" 2>/dev/null || true
+          LOG="$RUNNER_TEMP/mem_usage.log"
+          if [ ! -s "$LOG" ]; then echo "no sampler log found"; exit 0; fi
+          {
+            echo '### 🍏 iOS build — VM resource usage (6 GB guest)'
+            echo '```'
+            awk 'NR>1{
+                   if($4>mxswap)mxswap=$4
+                   if(NR==2||$2<mnfree)mnfree=$2
+                   if($3>mxcomp)mxcomp=$3
+                   if($5>mxload)mxload=$5
+                 }
+                 END{
+                   printf "peak swap used : %s MB\nmin free       : %s MB\npeak compressed: %s MB\npeak load1     : %s\nsamples (~15s) : %d\n",
+                          mxswap+0, mnfree+0, mxcomp+0, mxload+0, NR-1
+                 }' "$LOG"
+            echo '--- trace tail ---'
+            tail -30 "$LOG"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cp "$LOG" mem_usage.log
+
+      - name: Upload resource trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-resource-usage
+          path: mem_usage.log
+          if-no-files-found: ignore

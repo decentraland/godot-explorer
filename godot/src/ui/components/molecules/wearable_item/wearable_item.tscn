@@ -8,13 +8,60 @@
 [ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="5_dtfap"]
 [ext_resource type="Texture2D" uid="uid://dw4mn6l1jn25f" path="res://assets/ui/Intersect.svg" id="6_ckipv"]
 [ext_resource type="Texture2D" uid="uid://bygnpeber2qmc" path="res://assets/ui/wearable_categories/mask-icon.svg" id="7_h4p8s"]
+[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="7_jpiph"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_ys8dn"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_jpiph"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="10_nwsor"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_m2ljc"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_225su"]
-bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jpiph"]
+content_margin_left = 12.0
+content_margin_right = 12.0
+bg_color = Color(0, 0, 0, 0.6)
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_225su"]
+content_margin_left = 12.0
+content_margin_right = 12.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="LabelSettings" id="LabelSettings_price"]
+font = ExtResource("8_ys8dn")
+font_size = 24
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_348dk"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+corner_radius_bottom_right = 11
+corner_radius_bottom_left = 11
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_upumf"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yniee"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.6)
+corner_radius_bottom_right = 11
+corner_radius_bottom_left = 11
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_24axm"]
 bg_color = Color(1, 0.1764706, 0.33333334, 1)
@@ -28,6 +75,18 @@ corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_newbadge"]
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="LabelSettings" id="LabelSettings_new"]
+font = ExtResource("10_nwsor")
+font_size = 18
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [node name="WearableItem" type="Button" unique_id=631880418]
 custom_minimum_size = Vector2(192, 192)
@@ -87,7 +146,7 @@ offset_right = -2.0
 offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_225su")
+theme_override_styles/panel = SubResource("StyleBoxFlat_jpiph")
 
 [node name="TextureRect_EquipedB" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/TextureRect_Equiped" unique_id=594947545]
 custom_minimum_size = Vector2(36, 36)
@@ -140,6 +199,102 @@ mouse_filter = 2
 texture = ExtResource("7_h4p8s")
 expand_mode = 1
 stretch_mode = 4
+
+[node name="PanelContainer_NewBadge" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=800000001]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(52, 22)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -58.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = 28.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_newbadge")
+
+[node name="Label_New" type="Label" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/PanelContainer_NewBadge" unique_id=800000002]
+layout_mode = 2
+mouse_filter = 2
+text = "NEW"
+label_settings = SubResource("LabelSettings_new")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=1707035680]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -40.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/margin_bottom = 7
+
+[node name="PanelContainer_Price" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/MarginContainer" unique_id=1617226028]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_225su")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/MarginContainer/PanelContainer_Price" unique_id=686267892]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/MarginContainer/PanelContainer_Price/HBoxContainer" unique_id=1075722656]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+texture = ExtResource("7_jpiph")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Price" type="Label" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/MarginContainer/PanelContainer_Price/HBoxContainer" unique_id=229030389]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+text = "10"
+label_settings = SubResource("LabelSettings_price")
+horizontal_alignment = 1
+
+[node name="Button_Action" type="Button" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=1718939014]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = -42.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 0
+focus_mode = 0
+theme = ExtResource("9_jpiph")
+theme_type_variation = &"SecondaryButton"
+theme_override_fonts/font = ExtResource("10_nwsor")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_348dk")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_upumf")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_yniee")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_yniee")
+theme_override_styles/hover = SubResource("StyleBoxFlat_yniee")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_yniee")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_yniee")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_yniee")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_yniee")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_yniee")
+theme_override_styles/focus = SubResource("StyleBoxFlat_yniee")
 
 [node name="TextureRect_Skeleton" type="TextureRect" parent="MarginContainer/PanelContainer_White" unique_id=10976566]
 unique_name_in_owner = true

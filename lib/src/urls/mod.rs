@@ -86,18 +86,43 @@ pub fn worlds_content_server() -> String {
 
 // Peer: org uses peer.decentraland.org, zone uses peer.decentraland.zone,
 // today uses peer-testing.decentraland.org (internal dev catalyst).
-pub fn peer_base() -> String {
-    match resolved_env(ServiceGroup::Catalyst) {
+fn peer_base_for(env: DclEnvironment) -> String {
+    match env {
         DclEnvironment::Org => "https://peer.decentraland.org".to_string(),
         DclEnvironment::Zone => "https://peer.decentraland.zone".to_string(),
         DclEnvironment::Today => "https://peer-testing.decentraland.org".to_string(),
     }
+}
+pub fn peer_base() -> String {
+    peer_base_for(resolved_env(ServiceGroup::Catalyst))
 }
 pub fn peer_content() -> String {
     format!("{}/content/", peer_base())
 }
 pub fn peer_lambdas() -> String {
     format!("{}/lambdas/", peer_base())
+}
+
+// Identity decoupling ("Option D" testing). When `ServiceGroup::Profile` is
+// explicitly overridden (e.g. `dclenv=catalyst::org,profile::zone,zone`), the
+// player's own profile/identity catalyst is pinned to that env regardless of the
+// connected realm — so scenes load from one env while the avatar, wearables,
+// backpack and profile resolve from another. Returns `None` when no profile
+// override is set, preserving the normal realm-bound behavior. Consumed by
+// `DclRealm`'s profile/lambda URL accessors so every caller is covered centrally.
+fn identity_env() -> Option<DclEnvironment> {
+    let config = env::get_config();
+    if config.has_override(ServiceGroup::Profile) {
+        Some(config.env_for(ServiceGroup::Profile))
+    } else {
+        None
+    }
+}
+pub fn identity_lambdas() -> Option<String> {
+    identity_env().map(|e| format!("{}/lambdas/", peer_base_for(e)))
+}
+pub fn identity_content() -> Option<String> {
+    identity_env().map(|e| format!("{}/content/", peer_base_for(e)))
 }
 
 // Comms
@@ -212,12 +237,50 @@ pub fn notifications_api() -> String {
     )
 }
 
+// Credits server (IAP purchases + on-chain credits balance). Base host only; the
+// IAP client appends paths like /credits/iap/quote and /users/:address/credits.
+pub fn credits_server() -> String {
+    format!(
+        "https://credits.decentraland.{}",
+        suffix(ServiceGroup::CreditsServer)
+    )
+}
+
 // Frontend (ungrouped — uses default)
 pub fn host() -> String {
     format!("https://decentraland.{}", default_suffix())
 }
 pub fn marketplace() -> String {
-    format!("https://decentraland.{}/marketplace", default_suffix())
+    if resolved_env(ServiceGroup::Marketplace) == DclEnvironment::Today {
+        "http://localhost:5173".to_string()
+    } else {
+        format!(
+            "https://decentraland.{}/marketplace",
+            suffix(ServiceGroup::Marketplace)
+        )
+    }
+}
+// Catalog of wearables/items for the recommendations panel. Follows the identity
+// env (ServiceGroup::Profile) so the listed items live on the same network as the
+// player's wallet. Otherwise (e.g. profile::zone) the catalog returns org/Polygon
+// URNs the zone wallet doesn't own and the zone avatar loader can't resolve, so
+// the recommendations can't be equipped.
+pub fn marketplace_catalog_api() -> String {
+    format!(
+        "https://marketplace-api.decentraland.{}/v2/catalog",
+        suffix(ServiceGroup::Profile)
+    )
+}
+// Owned-NFTs marketplace API (subgraph-backed) — the same source the web "My
+// Assets" uses. Follows the marketplace env (ServiceGroup::Marketplace) so it
+// matches where the user browses/buys. Reflects a mint in ~seconds (vs the
+// catalyst lambda's minutes), so it's the fast source for detecting a just-bought
+// wearable. Base host only; callers append /v1/nfts?... .
+pub fn marketplace_api() -> String {
+    format!(
+        "https://marketplace-api.decentraland.{}",
+        suffix(ServiceGroup::Marketplace)
+    )
 }
 pub fn marketplace_claim_name() -> String {
     format!(
@@ -295,6 +358,7 @@ mod tests {
             events_api(),
             mobile_events_api(),
             notifications_api(),
+            credits_server(),
             mobile_bff(),
             host(),
             marketplace(),

@@ -1,15 +1,27 @@
-name: Set up WarpBuild cache
-description: Set up cache with WarpBuild optimized caching
+name: Set up WarpBuild cache (restore)
+description: >
+  Restore the Rust build + cargo registry caches (WarpBuild-native, raw target/ with NO
+  cleaning so the v8 prebuilt static lib survives). Restore runs on every branch; the SAVE
+  is handled separately by save-warp-cache and only writes on main — PR builds get the
+  restore speed-up without paying the multi-minute save on every push.
 inputs:
   cache-name:
-    description: The cache base name (job name by default).
+    description: The cache base name (job name by default). Currently informational; keys are keyed by runner.os.
     default: ${{ github.job }}
+outputs:
+  cargo-key:
+    description: Primary key for the cargo-registry cache. Feed to save-warp-cache.
+    value: ${{ steps.cargo.outputs.cache-primary-key }}
+  rust-key:
+    description: Primary key for the rust-build cache. Feed to save-warp-cache.
+    value: ${{ steps.rust.outputs.cache-primary-key }}
 
 runs:
   using: composite
   steps:
-    - name: WarpCache - Cargo Registry
-      uses: WarpBuilds/cache@v1.4.6
+    - name: WarpCache restore - Cargo Registry
+      id: cargo
+      uses: WarpBuilds/cache/restore@v1.4.6
       with:
         path: |
           ~/.cargo/bin/
@@ -20,12 +32,15 @@ runs:
         restore-keys: |
           ${{ runner.os }}-cargo-
 
-    - name: WarpCache - Rust Build
-      uses: WarpBuilds/cache@v1.4.6
+    - name: WarpCache restore - Rust Build
+      id: rust
+      uses: WarpBuilds/cache/restore@v1.4.6
       with:
         path: |
           target/
           lib/target/
+        # *.rs is hashed BEFORE the build, so generated .rs under target/ can't pollute the
+        # key. Off-main builds miss the exact key and fall back to main's cache via restore-keys.
         key: ${{ runner.os }}-rust-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
         restore-keys: |
           ${{ runner.os }}-rust-build-${{ hashFiles('**/Cargo.lock') }}-

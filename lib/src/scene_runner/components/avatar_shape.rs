@@ -92,11 +92,6 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             })
                             .collect(),
                     ),
-                    force_render: if new_value.force_render.is_empty() {
-                        None
-                    } else {
-                        Some(new_value.force_render)
-                    },
                     show_only_wearables: new_value.show_only_wearables.unwrap_or(false),
                     ..Default::default()
                 };
@@ -182,6 +177,12 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .unwrap();
 
                     new_avatar_shape.set("skip_process", &true.to_variant());
+                    // Flag it as an AvatarShape *before* add_child fires _ready, so the
+                    // nameplate gate can apply the "scene NPC with no real name -> hide"
+                    // rule from frame one. Otherwise _ready runs with is_avatar_shape=false
+                    // (it's only delivered by the deferred async_update_avatar below) and
+                    // the default "NPC" tag flashes on screen until that deferred call lands.
+                    new_avatar_shape.set("is_avatar_shape", &true.to_variant());
                     new_avatar_shape.set_name("AvatarShape");
                     node_3d.add_child(&new_avatar_shape.clone().upcast::<Node>());
 

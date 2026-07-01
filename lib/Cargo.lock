@@ -841,7 +841,7 @@ dependencies = [
 [[package]]
 name = "dcl-rpc"
 version = "2.3.7"
-source = "git+https://github.com/decentraland/rpc-rust?branch=main#aa2302d6918e2d1c7f2e298aa972d8a6bba6c389"
+source = "git+https://github.com/decentraland/rpc-rust?rev=aa2302d6918e2d1c7f2e298aa972d8a6bba6c389#aa2302d6918e2d1c7f2e298aa972d8a6bba6c389"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -861,7 +861,7 @@ dependencies = [
 
 [[package]]
 name = "dclgodot"
-version = "0.70.0"
+version = "1.10.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -888,8 +888,10 @@ dependencies = [
  "image",
  "jni",
  "json5",
+ "libc",
  "livekit",
  "log-panics",
+ "meshopt",
  "modular-bitfield",
  "multihash-codetable",
  "multipart",
@@ -899,6 +901,7 @@ dependencies = [
  "once_cell",
  "oslog",
  "paranoid-android",
+ "png",
  "poll-promise",
  "prost 0.11.9",
  "prost-build 0.11.9",
@@ -1344,6 +1347,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fdeflate"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
+dependencies = [
+ "simd-adler32",
+]
+
+[[package]]
 name = "ff"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1379,6 +1391,15 @@ checksum = "a1b589b4dc103969ad3cf85c950899926ec64300a1a46d76c03a6072957036f0"
 dependencies = [
  "crc32fast",
  "miniz_oxide 0.8.0",
+]
+
+[[package]]
+name = "float-cmp"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b09cf3155332e944990140d967ff5eceb70df778b34f77d8075db46e4704e6d8"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -2412,7 +2433,7 @@ checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
 [[package]]
 name = "libwebrtc"
 version = "0.3.6"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "cxx",
  "jni",
@@ -2456,7 +2477,7 @@ checksum = "643cb0b8d4fcc284004d5fd0d67ccf61dfffadb7f75e1e71bc420f4688a3a704"
 [[package]]
 name = "livekit"
 version = "0.5.2"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "futures-util",
  "lazy_static",
@@ -2476,7 +2497,7 @@ dependencies = [
 [[package]]
 name = "livekit-api"
 version = "0.4.0"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "futures-util",
  "http 0.2.12",
@@ -2498,7 +2519,7 @@ dependencies = [
 [[package]]
 name = "livekit-protocol"
 version = "0.3.5"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "futures-util",
  "livekit-runtime",
@@ -2515,7 +2536,7 @@ dependencies = [
 [[package]]
 name = "livekit-runtime"
 version = "0.3.0"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "tokio",
  "tokio-stream",
@@ -2581,6 +2602,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "meshopt"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e01e77ead21976b3a9f01ec1724f766923da74f0726364e2b0f425658935d71a"
+dependencies = [
+ "bitflags 2.6.0",
+ "cc",
+ "float-cmp",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2618,6 +2651,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2d80299ef12ff69b16a84bb182e3b9df68b5a91574d3d4fa6e41b65deec4df1"
 dependencies = [
  "adler2",
+ "simd-adler32",
 ]
 
 [[package]]
@@ -3294,6 +3328,19 @@ name = "pkg-config"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
+
+[[package]]
+name = "png"
+version = "0.17.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82151a2fc869e011c153adc57cf2789ccb8d9906ce52c0b39a6b5697749d7526"
+dependencies = [
+ "bitflags 1.3.2",
+ "crc32fast",
+ "fdeflate",
+ "flate2",
+ "miniz_oxide 0.8.0",
+]
 
 [[package]]
 name = "poll-promise"
@@ -4199,6 +4246,12 @@ checksum = "9cadb29c57caadc51ff8346233b5cec1d240b68ce55cf1afc764818791876987"
 dependencies = [
  "outref",
 ]
+
+[[package]]
+name = "simd-adler32"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
 
 [[package]]
 name = "simdutf8"
@@ -5178,7 +5231,7 @@ dependencies = [
 [[package]]
 name = "webrtc-sys"
 version = "0.3.4"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "cc",
  "cxx",
@@ -5191,7 +5244,7 @@ dependencies = [
 [[package]]
 name = "webrtc-sys-build"
 version = "0.3.4"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "fs2",
  "regex",

@@ -34,6 +34,23 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	Global._apply_optimized_content_base_url(Global.deep_link_obj)
+
+	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
+	# component dirty-set is processed by `update_gltf_container`. The
+	# bench runner's `_apply_deeplink_overrides` runs too late — by then
+	# the first scene's GLTFs are already instantiated. Apply here, in
+	# the deeplink router, which lands before any scene starts loading.
+	var skip_gltf_value = Global.deep_link_obj.params.get("skip-gltf", "")
+	if not skip_gltf_value.is_empty():
+		Global.cli.set_skip_gltf_load(skip_gltf_value.to_lower() in ["true", "1", "yes"])
+		print("[DEEPLINK] skip-gltf=", Global.cli.get_skip_gltf_load())
+
+	var kill_sky_value = Global.deep_link_obj.params.get("kill-sky", "")
+	if not kill_sky_value.is_empty():
+		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
+		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
+
 	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
 	# runner from Global._ready, but on mobile the deep link is not parsed by
 	# then — spawn here once the deeplink lands and only if no runner exists.
@@ -51,8 +68,18 @@ func process_deep_link(url: String) -> void:
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
 
-	if Global.deep_link_obj.iap_enabled:
-		Iap.enable()
+	# Returning from the in-app marketplace webview: the web fires a
+	# decentraland://...?urn=<urn> deep link to bring the app back. The native side
+	# dismisses the SFSafariViewController directly, which never fires the tracker's
+	# webview_closed signal — so drive the post-return poll + balance refresh here
+	# (against the pre-purchase baseline), otherwise the credits and the just-bought
+	# wearable never refresh. Then swallow the urn so it doesn't fall through to the
+	# "/open" routing below and pop the jump-in panel (scene title + placeholders).
+	if not Global.deep_link_obj.params.get("urn", "").is_empty():
+		print("[DEEPLINK] marketplace return (urn=...) — driving tracker poll, no routing")
+		MarketplaceTracker.notify_marketplace_return()
+		_clear_deep_link()
+		return
 
 	# Trigger avatar impostor benchmark
 	var bench_param = Global.deep_link_obj.params.get("benchmark", "")

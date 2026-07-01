@@ -26,6 +26,10 @@ on:
         required: false
       MOBILE_ARTIFACTS_R2_BUCKET:
         required: false
+      # API key (bearer) for the Cloudflare Worker build-number allocator. Optional: when unset
+      # (e.g. fork PRs) the build keeps the committed placeholder versionCode (never shipped).
+      BUILD_NUMBER_SECRET:
+        required: false
 
 permissions:
   pull-requests: write
@@ -45,6 +49,12 @@ jobs:
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
+      # WarpBuild's cache action authenticates via this token, which exists on the runner
+      # host but is NOT propagated into the container unless forwarded explicitly. Without
+      # it the cache step is a silent no-op ("Authentication token is invalid"). See:
+      # https://github.com/WarpBuilds/cache#running-inside-a-container
+      env:
+        WARPBUILD_RUNNER_VERIFICATION_TOKEN: ${{ env.WARPBUILD_RUNNER_VERIFICATION_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,10 +63,27 @@ jobs:
         run: |
           git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
           toolchain: "1.90"
           components: clippy, rustfmt
+
+      # Cache the Rust build (host + Android target) so the dep tree isn't recompiled from
+      # scratch every push. Use the WarpBuild-native cache (raw target/, NO cleaning): the v8
+      # crate's prebuilt static lib (librusty_v8.a) lives under target/.../build/v8-*/out, and
+      # rust-cache's cleanup strips it while keeping v8's fingerprint → warm builds then fail to
+      # link. set-up-warp-cache keeps the full target/, so the lib survives (matches the iOS leg).
+      # Restore runs on every branch; the save (below) only writes on main, so PRs restore from
+      # main's cache without paying the multi-minute save on each push.
+      # WarpBuild's cache action shells out to wget; the builder image may not ship it.
+      - name: Ensure wget (WarpCache dependency)
+        run: command -v wget >/dev/null 2>&1 || (apt-get update && apt-get install -y wget)
+      - name: Set up build cache
+        id: cache
+        uses: ./.github/actions/set-up-warp-cache
+        with:
+          cache-name: android-build
+
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
@@ -66,12 +93,30 @@ jobs:
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
 
+      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
+      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
+      # and so the APK + AAB exports below stamp the same versionCode for this commit.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
       - name: Build Rust libraries
         run: |
           cargo run -- build --release ${{ env.PROD_FLAG }}
           cargo run -- build --release --target android ${{ env.PROD_FLAG }}
           cargo run -- import-assets
-      
+
+      # Persist the freshly built target/ — no-op off main (see save-warp-cache). Placed right
+      # after the build so a later export/sign failure can't lose a valid cache.
+      - name: Save build cache (main only)
+        uses: ./.github/actions/save-warp-cache
+        with:
+          cargo-key: ${{ steps.cache.outputs.cargo-key }}
+          rust-key: ${{ steps.cache.outputs.rust-key }}
+
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release
@@ -192,7 +237,12 @@ jobs:
 
           echo "📤 Uploading APK to s3://${AWS_S3_BUCKET}/${KEY}"
           aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-          aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          # Update the branch 'latest' pointer WITHOUT re-uploading. The managed `aws s3 cp s3:// s3://`
+          # is unusable on R2 (tagging headers NotImplemented), so use low-level copy-object; fall
+          # back to a plain re-upload if R2 rejects the copy.
+          aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_KEY" \
+            --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+            || aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
 
           PUBLIC_URL="${R2_PUBLIC_BASE_URL}/${KEY}"
           echo "✅ APK uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
@@ -208,7 +258,11 @@ jobs:
               AAB_LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.aab"
               echo "📤 Uploading AAB to s3://${AWS_S3_BUCKET}/${AAB_KEY}"
               aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-              aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+              # Update the branch 'latest' pointer WITHOUT re-uploading (low-level copy-object;
+              # R2 rejects the managed server-side copy). Fall back to a re-upload on failure.
+              aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$AAB_LATEST_KEY" \
+                --copy-source "${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+                || aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
               echo "✅ AAB uploaded to R2"
               echo "🔗 Public URL: ${R2_PUBLIC_BASE_URL}/${AAB_KEY}"
             else

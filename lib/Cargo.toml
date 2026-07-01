@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "0.70.0"
+version = "1.10.1"
 edition = "2021"
 publish = false
 
@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 godot = { version = "0.4.5", features = ["experimental-threads", "serde"] }
+meshopt = "0.6"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -55,12 +56,14 @@ http = "0.2.9"
 bytes = "1.4.0"
 url = "2.5"
 
-dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", branch = "main", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
+# Pinned to a commit (not a branch) so CI builds are immutable — a moved branch must not
+# change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
+dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
 
 tokio-tungstenite = "0.20.1"
 futures-util = "0.3.30"
 
-livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="0.6-h264-false-2", features=["rustls-tls-webpki-roots"], optional = true }
+livekit = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", features=["rustls-tls-webpki-roots"], optional = true }
 
 taffy = "0.5.2"
 tracing-test = "0.2.4"
@@ -79,6 +82,10 @@ modular-bitfield = "0.11"
 # Image decoding for formats not natively supported by Godot (GIF, animated WebP)
 image = { version = "0.25", default-features = false, features = ["gif", "webp"] }
 
+# PNG encoding for off-main-thread impostor cache writes (Godot's Image::save_png
+# blocks the render thread; we encode + write on a tokio blocking worker instead).
+png = "0.17"
+
 # Procedural noise for Floating Islands terrain generation. Pure-Rust port of
 # FastNoiseLite (same algorithm Godot uses) so seeds match the legacy GDScript
 # implementation bit-for-bit.
@@ -90,6 +97,10 @@ paranoid-android = "0.2.1"
 
 [target.'cfg(target_os = "ios")'.dependencies]
 oslog = "0.2"
+
+# stdout/stderr capture for the `--log-stream` debug feature (see tools/log_stream.rs)
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [features]
 default = ["use_livekit", "use_deno"]
@@ -108,14 +119,16 @@ disable_telemetry = []
 enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
-webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", branch="0.6-h264-false-2", optional = true }
+webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", optional = true }
 prost-build = "0.11.8"
 chrono = "0.4.31"
-dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", branch = "main", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
+# Pinned to a commit (not a branch) so CI builds are immutable — a moved branch must not
+# change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
+dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = "thin"
 debug = 1
 strip = false
 

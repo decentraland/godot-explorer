@@ -16,6 +16,8 @@
 #import <LinkPresentation/LinkPresentation.h>
 #import <UserNotifications/UserNotifications.h>
 #import <DeviceCheck/DeviceCheck.h>
+#import <Security/Security.h>
+#import <os/log.h>
 
 const char* DCLGODOTIOS_VERSION = "1.0";
 
@@ -129,6 +131,51 @@ const char* DCLGODOTIOS_VERSION = "1.0";
 
 @end
 
+// Delegate for the in-app web browser opened via open_webview_url (marketplace,
+// terms, etc.). Emits `webview_closed` to GDScript on dismissal — the only
+// reliable "user returned from the webview" signal on iOS, since the in-app
+// SFSafariViewController does NOT trigger app focus/lifecycle notifications.
+// Guards against emitting `webview_closed` twice for one presentation: tapping "Done" can
+// fire BOTH the Safari delegate and the presentation delegate. Reset on each
+// open_webview_url so the next round-trip emits again.
+static BOOL g_webviewDismissEmitted = NO;
+
+@interface WebviewDelegate : NSObject <SFSafariViewControllerDelegate, UIAdaptivePresentationControllerDelegate>
+@end
+
+@implementation WebviewDelegate
+
+- (void)emitWebviewClosed {
+    if (g_webviewDismissEmitted) {
+        return;
+    }
+    g_webviewDismissEmitted = YES;
+    DclGodotiOS *singleton = DclGodotiOS::get_singleton();
+    if (singleton != nullptr) {
+        singleton->emit_signal("webview_closed");
+    }
+}
+
+// Tapping the "Done" button on the SFSafariViewController.
+- (void)safariViewControllerDidFinish:(SFSafariViewController *)controller {
+    NSLog(@"[WEBVIEW] SFSafariViewController dismissed (Done)");
+    [self emitWebviewClosed];
+}
+
+// Interactive swipe-down of the page sheet. Crucially this does NOT trigger
+// safariViewControllerDidFinish, so without this callback a swipe-to-dismiss (how most
+// users actually close it) never tells the tracker the user returned from the marketplace.
+- (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+    NSLog(@"[WEBVIEW] SFSafariViewController dismissed (swipe)");
+    [self emitWebviewClosed];
+}
+
+@end
+
+// Retained for the lifetime of the process (ARC strong static). SFSafariViewController
+// only holds a weak reference to its delegate, so it must be owned elsewhere.
+static WebviewDelegate *g_webviewDelegate = nil;
+
 // Helper class to handle calendar event edit view controller delegate
 @interface CalendarEventDelegate : NSObject <EKEventEditViewDelegate>
 @end
@@ -155,6 +202,7 @@ String DclGodotiOS::receivedUrl = "";
 
 void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
+    ClassDB::bind_method(D_METHOD("test_logging"), &DclGodotiOS::test_logging);
     ClassDB::bind_method(D_METHOD("open_auth_url", "url"), &DclGodotiOS::open_auth_url);
     ClassDB::bind_method(D_METHOD("open_safari_auth_url", "url"), &DclGodotiOS::open_safari_auth_url);
     ClassDB::bind_method(D_METHOD("open_webview_url", "url"), &DclGodotiOS::open_webview_url);
@@ -222,8 +270,14 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("attestation_attest_key", "key_id", "client_data_hash"), &DclGodotiOS::attestation_attest_key);
     ClassDB::bind_method(D_METHOD("attestation_generate_assertion", "key_id", "client_data_hash"), &DclGodotiOS::attestation_generate_assertion);
 
+    // Device anchor — Keychain-stored UUID that survives uninstall.
+    ClassDB::bind_method(D_METHOD("get_device_anchor_id"), &DclGodotiOS::get_device_anchor_id);
+
     // Signal emitted when a deeplink URL is received
     ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
+
+    // Signal emitted when the in-app web browser (open_webview_url) is dismissed.
+    ADD_SIGNAL(MethodInfo("webview_closed"));
 
     // App Attest completion signals — `error` is empty on success.
     ADD_SIGNAL(MethodInfo("attestation_key_generated",
@@ -319,6 +373,18 @@ void DclGodotiOS::open_webview_url(String url) {
         // Create Safari View Controller
         SFSafariViewController *safariVC = [[SFSafariViewController alloc] initWithURL:ns_nsurl];
         safariVC.modalPresentationStyle = UIModalPresentationPageSheet;
+
+        // Attach the dismissal delegate so GDScript gets a `webview_closed` signal
+        // when the user comes back (no focus/lifecycle notification fires for this
+        // in-app Safari). Lazily created and retained by g_webviewDelegate.
+        if (g_webviewDelegate == nil) {
+            g_webviewDelegate = [[WebviewDelegate alloc] init];
+        }
+        g_webviewDismissEmitted = NO;
+        safariVC.delegate = g_webviewDelegate;
+        // Also catch the interactive swipe-down dismissal (which does NOT call the Safari
+        // delegate's didFinish) via the presentation controller delegate.
+        safariVC.presentationController.delegate = g_webviewDelegate;
 
         // Get the top-most view controller
         UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
@@ -1454,6 +1520,30 @@ DclGodotiOS::DclGodotiOS() {
     #else
     notificationDatabase = nullptr;
     #endif
+    // Per-component init log (singleton; runs once). Grep [INIT] to confirm.
+    print_line("[INIT] DclGodotiOS (ObjC)");
+}
+
+// Logging self-test for the ObjC stack: emit at every level via every ObjC form,
+// so the unified channel + Sentry pipeline can be verified. Bound as
+// `test_logging` and invoked from GDScript's `_run_logging_selftest()`.
+// printf/fprintf/NSLog reach the iOS fd capture; os_log exercises the unified
+// logging system; print_line/WARN_PRINT/ERR_PRINT go through Godot (ERR_PRINT →
+// Sentry).
+String DclGodotiOS::test_logging() {
+    printf("[LOGTEST][objc] info via printf (stdout)\n");
+    fprintf(stderr, "[LOGTEST][objc] error via fprintf(stderr)\n");
+    NSLog(@"[LOGTEST][objc] info via NSLog");
+    os_log_t logtest = os_log_create("org.decentraland.godotexplorer", "logtest");
+    os_log_debug(logtest, "[LOGTEST][objc] debug via os_log_debug");
+    os_log_info(logtest, "[LOGTEST][objc] info via os_log_info");
+    os_log(logtest, "[LOGTEST][objc] default via os_log");
+    os_log_error(logtest, "[LOGTEST][objc] error via os_log_error (expect Sentry)");
+    os_log_fault(logtest, "[LOGTEST][objc] fault via os_log_fault (expect Sentry)");
+    print_line("[LOGTEST][objc] info via print_line (Godot)");
+    WARN_PRINT("[LOGTEST][objc] warn via WARN_PRINT (expect Sentry)");
+    ERR_PRINT("[LOGTEST][objc] error via ERR_PRINT (expect Sentry)");
+    return String("objc-logtest-done");
 }
 
 // ---------------- App Attest ----------------
@@ -1608,6 +1698,58 @@ void DclGodotiOS::emit_attestation_assertion_completed(String assertion_b64u, St
     if (singleton) {
         singleton->emit_signal("attestation_assertion_completed", assertion_b64u, error);
     }
+}
+
+String DclGodotiOS::get_device_anchor_id() {
+    #if TARGET_OS_IOS
+    NSString *service = @"xyz.decentraland.guest-anchor";
+    NSString *account = @"device-id";
+
+    NSDictionary *readQuery = @{
+        (id)kSecClass: (id)kSecClassGenericPassword,
+        (id)kSecAttrService: service,
+        (id)kSecAttrAccount: account,
+        (id)kSecReturnData: @YES,
+        (id)kSecMatchLimit: (id)kSecMatchLimitOne
+    };
+    CFTypeRef readResult = NULL;
+    OSStatus readStatus = SecItemCopyMatching((__bridge CFDictionaryRef)readQuery, &readResult);
+    if (readStatus == errSecSuccess && readResult) {
+        NSData *data = (__bridge_transfer NSData *)readResult;
+        NSString *uuid = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        if (uuid.length > 0) {
+            return _dcl_string_from_ns(uuid);
+        }
+        NSLog(@"[DeviceAnchor] keychain item present but UTF8 decode failed; regenerating");
+        NSDictionary *deleteQuery = @{
+            (id)kSecClass: (id)kSecClassGenericPassword,
+            (id)kSecAttrService: service,
+            (id)kSecAttrAccount: account
+        };
+        SecItemDelete((__bridge CFDictionaryRef)deleteQuery);
+    } else if (readStatus != errSecItemNotFound) {
+        NSLog(@"[DeviceAnchor] read failed: OSStatus=%d", (int)readStatus);
+    }
+
+    NSString *newUuid = [[NSUUID UUID] UUIDString];
+    NSData *uuidData = [newUuid dataUsingEncoding:NSUTF8StringEncoding];
+    NSDictionary *addQuery = @{
+        (id)kSecClass: (id)kSecClassGenericPassword,
+        (id)kSecAttrService: service,
+        (id)kSecAttrAccount: account,
+        (id)kSecValueData: uuidData,
+        (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock
+    };
+    OSStatus addStatus = SecItemAdd((__bridge CFDictionaryRef)addQuery, NULL);
+    if (addStatus != errSecSuccess) {
+        NSLog(@"[DeviceAnchor] keychain SecItemAdd failed: OSStatus=%d (anchor will not persist)", (int)addStatus);
+    } else {
+        NSLog(@"[DeviceAnchor] stored new UUID in keychain");
+    }
+    return _dcl_string_from_ns(newUuid);
+    #else
+    return String();
+    #endif
 }
 
 DclGodotiOS::~DclGodotiOS() {
