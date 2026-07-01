@@ -28,6 +28,10 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal upgrade_to_otp
+## Fired by GuestUpgradeCard after the thirdweb network check resolves so other
+## UI (e.g. UpgradeBadge) can sync without duplicating the network call.
+signal guest_upgrade_state_refreshed(is_upgraded: bool)
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 ## Sync settings "Hide View Profile" / "Hide World Interactions" / etc. checkboxes.
@@ -71,6 +75,19 @@ const FORCE_TEST_LOCATION = Vector2i(54, -55)
 const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
+
+# DEBUG ONLY. When `true`, get_device_anchor_id() ignores the platform-native
+# device anchor (Android SSAID / iOS Keychain UUID) and uses the per-install
+# UUID in `user://device_anchor.txt` on EVERY platform, so the guest wallet is
+# tied to the app's user data: deleting `user://` (clear app data / reinstall —
+# or the "RESET GUEST WALLET" debug button in the lobby) mints a fresh anchor
+# and a fresh wallet. When `false` the original shipping behavior returns: the
+# device-bound native anchor that survives reinstall.
+#
+# HARD-GATED to non-production: get_device_anchor_id() (and the lobby debug
+# button) only honor this flag when `not is_production()`, so a release cut from
+# main always uses the device-bound native anchor even if this is left `true`.
+const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = true
 
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
@@ -137,6 +154,12 @@ var attestation: AttestationService = null
 
 var _is_portrait: bool = true
 
+# Scene Inspector bridge, created lazily at boot when a target is configured.
+var _scene_inspector_bridge: Node = null
+
+# Guard so the logging self-test runs at most once (cli or deeplink trigger).
+var _selftest_done: bool = false
+
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
 
@@ -194,6 +217,102 @@ func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
+## Activate the Scene Inspector bridge from app startup when a target is set via
+## `--scene-inspector=ws://…` (baked into the iOS build / passed on desktop) or
+## `?scene-inspector=` deeplink. Idempotent: the bridge is created at most once;
+## later target changes are handled by the bridge's own deeplink-reconnect.
+##
+## Dialing from boot (instead of in-world) means the channel is up from second 0.
+## In DEBUG builds it also arms the bounded boot-log ring + installs the capture
+## sinks, so startup logs are buffered and flushed on the first `subscribe`. This
+## is gated off production: there, nothing is captured or buffered without a
+## connection (the no-buffering-without-a-peer contract).
+func _activate_scene_inspector_from_config() -> void:
+	if _scene_inspector_bridge != null:
+		return
+	var target := ""
+	if not deep_link_obj.scene_inspector.is_empty():
+		target = deep_link_obj.scene_inspector
+	elif not cli.scene_inspector.is_empty():
+		target = cli.scene_inspector
+	if target.is_empty():
+		# Debug builds with no explicit target default to a local hub over loopback,
+		# so a plain Godot-editor deploy / F5 auto-dials with no --scene-inspector
+		# arg (parity with the iOS export plugin, which bakes the LAN IP). Android
+		# reaches it via `adb reverse tcp:9231 tcp:9231`; desktop hits it directly.
+		# The client retries quietly if no hub is up, and capture stays gated. Never
+		# in production.
+		if OS.is_debug_build() and not is_production():
+			target = "ws://127.0.0.1:9231"
+		else:
+			return
+	scene_inspector_active = true
+	if OS.is_debug_build():
+		scene_inspector_dispatcher.set_early_log_capture(true)
+	_scene_inspector_bridge = SceneInspectorBridge.new()
+	_scene_inspector_bridge.set_name("scene_inspector_bridge")
+	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
+	_scene_inspector_bridge.setup.call_deferred(target)
+	print("SceneInspectorBridge: activating from boot -> ", target)
+
+
+## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
+## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
+## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
+## to verify. The ERROR/WARN forms (push_error/push_warning, tracing error/warn,
+## NSLog/os_log faults, Log.e) also exercise the Sentry pipeline.
+## Run the logging self-test if requested (via `--test-logging` cli flag or a
+## `?test-logging=true` deeplink), at most once. Called at _ready (covers the cli
+## flag, e.g. iOS's baked arg) and on `deep_link_received` (Android delivers the
+## deeplink async, after _ready — and its launcher strips command-line args).
+func _maybe_run_logging_selftest() -> void:
+	if _selftest_done:
+		return
+	# Never run in production: the self-test deliberately fires push_error /
+	# tracing::error! / ERR_PRINT / Log.e, all of which ship to Sentry — otherwise
+	# reachable in prod via the `?test-logging=true` deeplink. Staging/TestFlight
+	# still run it so the Sentry path can be verified on a real build.
+	if is_production():
+		return
+	var requested := cli.test_logging
+	if not requested and deep_link_obj != null:
+		requested = str(deep_link_obj.params.get("test-logging", "")).to_lower() == "true"
+	if requested:
+		_selftest_done = true
+		_run_logging_selftest.call_deferred()
+
+
+func _run_logging_selftest() -> void:
+	print("[LOGTEST] ===== logging self-test start =====")
+
+	# --- GDScript stack: every logging form ---
+	print("[LOGTEST][gdscript] info via print()")
+	prints("[LOGTEST][gdscript]", "info", "via", "prints()")
+	print_rich("[LOGTEST][gdscript] info via print_rich() [color=yellow]rich[/color]")
+	printraw("[LOGTEST][gdscript] raw via printraw() (no newline)\n")
+	printerr("[LOGTEST][gdscript] error via printerr() (stderr)")
+	push_warning("[LOGTEST][gdscript] warn via push_warning() (expect Sentry)")
+	push_error("[LOGTEST][gdscript] error via push_error() (expect Sentry)")
+
+	# --- Rust stack: all tracing levels + raw println!/eprintln! (DclGlobal) ---
+	test_logging()
+
+	# --- Native stacks: gated by per-platform availability ---
+	if DclSwiftLibPlugin.is_available():
+		print("[LOGTEST][swift] DclSwiftLib.test_logging() -> ", DclSwiftLibPlugin.test_logging())
+	if DclAndroidPlugin.is_available():
+		DclAndroidPlugin.test_logging()
+		print("[LOGTEST][kotlin] invoked DclAndroidPlugin.test_logging()")
+	# has_singleton first: get_singleton logs an ERROR (→ Sentry) when absent.
+	if Engine.has_singleton("DclGodotiOS"):
+		var dcl_ios = Engine.get_singleton("DclGodotiOS")
+		if dcl_ios != null and dcl_ios.has_method("test_logging"):
+			dcl_ios.test_logging()
+			print("[LOGTEST][objc] invoked DclGodotiOS.test_logging()")
+
+	print("[LOGTEST] ===== logging self-test end =====")
+
+
 ## Forward the optimized-content-base-url deeplink param into DclCli so the
 ## scene fetcher / content provider use it for optimized loading. Shared by the
 ## desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
@@ -222,6 +341,23 @@ func _get_safe_area_presets() -> GDScript:
 	if _safe_area_presets == null:
 		_safe_area_presets = load("res://assets/no-export/safe_area_presets.gd")
 	return _safe_area_presets
+
+
+func _generated_deeplink() -> String:
+	# Baked launch params from `cargo run -- run/build --deeplink|--log-stream`.
+	# Gitignored and optional; absent on a fresh checkout until the first build.
+	# Never honored in a production build: the iOS self-hosted runner exports with
+	# `clean: false`, so a stale build_config.gd left by a prior debug build could
+	# otherwise leak a baked deeplink into a prod IPA.
+	if is_production():
+		return ""
+	var gen_path := "res://src/generated/build_config.gd"
+	if not ResourceLoader.exists(gen_path):
+		return ""
+	var gen_script: GDScript = load(gen_path)
+	if gen_script == null:
+		return ""
+	return gen_script.get_script_constant_map().get("DEEPLINK", "")
 
 
 func get_safe_area() -> Rect2i:
@@ -280,8 +416,13 @@ func _ready():
 	if cli.landscape and (should_emulate_ios() or should_emulate_android()):
 		set_orientation_landscape()
 
-	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
+	# Handle fake deep link. Precedence: --fake-deeplink CLI arg > generated
+	# build_config (baked by `cargo run -- run/build --deeplink|--log-stream`) >
+	# FORCE_DEEPLINK constant. The generated path works on mobile/TestFlight where
+	# no CLI args are available.
 	var fake_deeplink = cli.fake_deeplink
+	if fake_deeplink.is_empty():
+		fake_deeplink = _generated_deeplink()
 	if fake_deeplink.is_empty() and not FORCE_DEEPLINK.is_empty():
 		fake_deeplink = FORCE_DEEPLINK
 	if not fake_deeplink.is_empty():
@@ -306,10 +447,6 @@ func _ready():
 			print("[DEEPLINK] No rust-log param in deeplink")
 
 		_apply_optimized_content_base_url(deep_link_obj)
-
-		# Toggle the loopback debug WS server from the fake deeplink (desktop/CLI
-		# testing). Same handling as runtime deeplinks in DeepLinkRouter.
-		deep_link_router.apply_debug_ws_param(deep_link_obj.params.get("debug-ws", ""))
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
@@ -400,13 +537,6 @@ func _ready():
 	)
 	await _async_clear_cache_if_needed()
 	print("[Startup] global._async_clear_cache end: %dms" % (Time.get_ticks_msec() - _startup_time))
-
-	# Start the debug WebSocket server if requested via --debug-ws
-	if cli.debug_ws:
-		if DebugWs.start():
-			print("[Startup] Debug WS server listening on port ", DebugWs.get_port())
-		else:
-			push_warning("[Startup] Failed to start Debug WS server")
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -522,6 +652,12 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
 
+	# Scene Inspector: dial the configured hub from app startup (second 0) rather
+	# than in-world, so the channel — and, in debug, boot-log capture — is live
+	# from boot. Also re-checked when a deeplink arrives (idempotent).
+	_activate_scene_inspector_from_config()
+	deep_link_router.deep_link_received.connect(_activate_scene_inspector_from_config)
+
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
 
@@ -562,6 +698,13 @@ func _ready():
 		open_network_inspector_ui()
 	else:
 		self.network_inspector.set_is_active(false)
+
+	# Logging self-test (debug aid). When --test-logging / ?test-logging=true is
+	# set, exercise every logging form in every stack so we can confirm each pipes
+	# into the unified channel + Sentry. Checked here (cli, e.g. iOS baked arg) AND
+	# on deeplink arrival (Android delivers it async, after _ready), run once.
+	_maybe_run_logging_selftest()
+	deep_link_router.deep_link_received.connect(_maybe_run_logging_selftest)
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
@@ -1372,3 +1515,36 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 		return
 	camera_mode_blocked = blocked
 	camera_mode_block_changed.emit(blocked)
+
+
+# Anchor used to derive the thirdweb guest session/wallet. Shared by the lobby
+# guest-login flow and the "Upgrade to OTP" modal so both derive the same wallet.
+#
+# Resolution order:
+#   1. DEBUG_GUEST_ROTATE_ANCHOR_ID on AND non-production build → return "" so
+#      Rust falls back to the resettable per-install UUID in
+#      `user://device_anchor.txt` (delete user:// → fresh guest wallet) on every
+#      platform. The production gate means this can never ship accidentally.
+#   2. Otherwise (shipping): the device-bound native anchor (Android SSAID / iOS
+#      Keychain UUID), which survives reinstall. Desktop has none → returns ""
+#      and Rust uses the user:// UUID anyway.
+#
+# Android note: `has_method()` always returns false for JNISingleton methods
+# (Object.has_method consults ClassDB, the Android plugin method_map is
+# separate). Don't guard the Android call with has_method or it silently no-ops.
+# See: https://github.com/godotengine/godot/issues/106436
+func get_device_anchor_id() -> String:
+	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
+	#    Gated to non-production so it can never ship even if the flag is left on.
+	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():
+		return ""
+	# 2. Shipping: device-bound native anchor (persists across reinstall).
+	if self.is_android():
+		var plugin = Engine.get_singleton("dcl-godot-android")
+		if plugin != null:
+			return plugin.getDeviceAnchorId()
+	elif self.is_ios():
+		var plugin = Engine.get_singleton("DclGodotiOS")
+		if plugin != null and plugin.has_method("get_device_anchor_id"):
+			return plugin.get_device_anchor_id()
+	return ""

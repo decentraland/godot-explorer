@@ -14,15 +14,16 @@ pub mod storage;
 pub use config::SceneInspectorConfig;
 pub use dispatcher::SceneInspectorDispatcher;
 pub use logger::{
-    current_timestamp_ms, CrdtDirection, CrdtLogEntry, CrdtOperation, OpCallEndEntry,
-    OpCallStartEntry, SceneInspectorEntry, SceneInspectorSender, SceneLifecycleEntry,
-    SceneLifecycleEvent, SessionEndEntry, SessionStartEntry,
+    current_timestamp_ms, CrdtDirection, CrdtLogEntry, CrdtOperation, LogEntry, NetworkEntry,
+    OpCallEndEntry, OpCallStartEntry, SceneInspectorEntry, SceneInspectorSender,
+    SceneLifecycleEntry, SceneLifecycleEvent, SessionEndEntry, SessionStartEntry,
 };
 pub use storage::StorageManager;
 
+use std::collections::VecDeque;
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
-    OnceLock,
+    Mutex, OnceLock,
 };
 
 /// Encodes a byte slice as a lowercase hex string. Uses a pre-allocated buffer
@@ -102,6 +103,180 @@ pub fn set_include_bin_payload(enabled: bool) {
 
 pub fn is_bin_payload_included() -> bool {
     INCLUDE_BIN_PAYLOAD.load(Ordering::Relaxed)
+}
+
+/// Whether a debug consumer is currently connected (the WS bridge flips this on
+/// open/close). The master gate for opt-in capture: with no consumer connected,
+/// producers must do NOTHING — no buffering "just in case", even if the tool is
+/// left enabled in a production build. Keeps prod impact ≈ zero until someone
+/// actually connects and subscribes.
+static CONSUMER_CONNECTED: AtomicBool = AtomicBool::new(false);
+
+pub fn set_consumer_connected(connected: bool) {
+    CONSUMER_CONNECTED.store(connected, Ordering::Relaxed);
+}
+
+pub fn is_consumer_connected() -> bool {
+    CONSUMER_CONNECTED.load(Ordering::Relaxed)
+}
+
+/// Whether captured log lines are folded into the scene-inspector stream as
+/// `"log"` entries. Default `false`: opt-in via the `subscribe` command so the
+/// log firehose doesn't flood the channel (which CRDT entries share) unless a
+/// consumer asks for it.
+static STREAM_LOGS: AtomicBool = AtomicBool::new(false);
+
+pub fn set_stream_logs(enabled: bool) {
+    STREAM_LOGS.store(enabled, Ordering::Relaxed);
+}
+
+pub fn is_stream_logs() -> bool {
+    STREAM_LOGS.load(Ordering::Relaxed)
+}
+
+/// Whether HTTP observations are folded into the scene-inspector stream as
+/// `"network"` entries. Default `false`; opt-in via `subscribe`.
+static STREAM_NETWORK: AtomicBool = AtomicBool::new(false);
+
+pub fn set_stream_network(enabled: bool) {
+    STREAM_NETWORK.store(enabled, Ordering::Relaxed);
+}
+
+pub fn is_stream_network() -> bool {
+    STREAM_NETWORK.load(Ordering::Relaxed)
+}
+
+/// Whether boot-time log lines are buffered into a bounded ring until a consumer
+/// subscribes — so the most valuable startup logs (which happen in the window
+/// between app launch and the first `subscribe`) aren't lost.
+///
+/// ARMED ONLY in debug builds with a scene-inspector target configured (the
+/// bridge sets it at startup). NEVER armed in production: there, with no
+/// connection, `emit_log` short-circuits and buffers nothing — honoring the
+/// "no moving logs into a buffer without a connection" contract.
+static EARLY_LOG_ARMED: AtomicBool = AtomicBool::new(false);
+
+/// Max boot log lines held before a consumer subscribes. Bounded so an armed-but-
+/// never-subscribed debug session can't grow without limit; oldest dropped first.
+const EARLY_LOG_RING_CAP: usize = 4096;
+
+/// Bounded FIFO of pre-subscribe log entries. Only ever touched in debug builds
+/// (when armed). Lock contention is negligible: log volume is low and this is the
+/// cold path (the live path doesn't lock).
+static EARLY_LOG_RING: Mutex<VecDeque<LogEntry>> = Mutex::new(VecDeque::new());
+
+/// Boot logs dropped from the ring because it was full (reported on flush).
+static EARLY_LOG_DROPPED: AtomicU64 = AtomicU64::new(0);
+
+/// Arm or disarm the bounded boot-log ring. Disarming clears whatever was held.
+pub fn set_early_log_capture(enabled: bool) {
+    EARLY_LOG_ARMED.store(enabled, Ordering::Relaxed);
+    if !enabled {
+        if let Ok(mut ring) = EARLY_LOG_RING.lock() {
+            ring.clear();
+        }
+    }
+}
+
+pub fn is_early_log_armed() -> bool {
+    EARLY_LOG_ARMED.load(Ordering::Relaxed)
+}
+
+/// Push a log entry into the bounded boot ring, dropping the oldest if full.
+fn push_early_log(entry: LogEntry) {
+    if let Ok(mut ring) = EARLY_LOG_RING.lock() {
+        if ring.len() >= EARLY_LOG_RING_CAP {
+            ring.pop_front();
+            EARLY_LOG_DROPPED.fetch_add(1, Ordering::Relaxed);
+        }
+        ring.push_back(entry);
+    }
+}
+
+/// Drain the boot-log ring into the live channel. Called once a consumer
+/// subscribes to `log` (which implies the WS is connected), so the buffered
+/// startup lines are delivered before live ones. No-op when empty / never armed.
+pub fn flush_early_logs() {
+    let drained: Vec<LogEntry> = match EARLY_LOG_RING.lock() {
+        Ok(mut ring) => ring.drain(..).collect(),
+        Err(_) => return,
+    };
+    if drained.is_empty() {
+        return;
+    }
+    if let Some(sender) = get_logger_sender() {
+        // Surface any ring overflow so a flooded boot window isn't silently lossy.
+        let dropped = EARLY_LOG_DROPPED.swap(0, Ordering::Relaxed);
+        if dropped > 0 {
+            try_send_entry(
+                &sender,
+                SceneInspectorEntry::Log(LogEntry {
+                    timestamp_ms: current_timestamp_ms(),
+                    source: "scene_inspector".to_string(),
+                    level: Some("warn".to_string()),
+                    target: None,
+                    file: None,
+                    line: None,
+                    msg: format!("early-log ring overflowed: {dropped} boot lines dropped"),
+                }),
+            );
+        }
+        for entry in drained {
+            try_send_entry(&sender, SceneInspectorEntry::Log(entry));
+        }
+    }
+}
+
+/// Fold a captured log line into the scene-inspector stream. No-op unless log
+/// streaming is enabled (via `subscribe`) AND the dispatcher is initialized.
+///
+/// MUST NOT log via `tracing` / Godot — it is called from inside the log sinks
+/// (tracing layer, Godot logger, fd capture) and would recurse.
+#[allow(clippy::too_many_arguments)]
+pub fn emit_log(
+    source: &str,
+    level: Option<&str>,
+    target: Option<&str>,
+    file: Option<&str>,
+    line: Option<u32>,
+    msg: String,
+) {
+    let streaming = is_consumer_connected() && is_stream_logs();
+    // Prod fast path: not streaming live AND not armed for boot capture → do
+    // nothing, buffer nothing. `EARLY_LOG_ARMED` is never set in production, so
+    // this is just two relaxed atomic loads and a branch — impact ≈ zero.
+    if !streaming && !is_early_log_armed() {
+        return;
+    }
+    let entry = LogEntry {
+        timestamp_ms: current_timestamp_ms(),
+        source: source.to_string(),
+        level: level.map(str::to_string),
+        target: target.map(str::to_string),
+        file: file.map(str::to_string),
+        line,
+        msg,
+    };
+    if streaming {
+        if let Some(sender) = get_logger_sender() {
+            try_send_entry(&sender, SceneInspectorEntry::Log(entry));
+        }
+    } else {
+        // Armed but no consumer subscribed yet: hold in the bounded boot ring,
+        // flushed on the first `subscribe` (debug builds only).
+        push_early_log(entry);
+    }
+}
+
+/// Fold an HTTP observation into the scene-inspector stream. No-op unless
+/// network streaming is enabled (via `subscribe`) AND the dispatcher exists.
+pub fn emit_network(entry: NetworkEntry) {
+    if !is_consumer_connected() || !is_stream_network() {
+        return;
+    }
+    if let Some(sender) = get_logger_sender() {
+        try_send_entry(&sender, SceneInspectorEntry::Network(entry));
+    }
 }
 
 /// Logs a scene lifecycle event. No-op if the Scene Inspector is not

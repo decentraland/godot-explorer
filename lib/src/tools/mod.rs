@@ -1,4 +1,5 @@
 pub mod godot_logger;
+pub mod log_stream;
 pub mod network_inspector;
 
 #[cfg(feature = "use_memory_debugger")]

@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://buu3ox7iefpgx"]
 
-[ext_resource type="Texture2D" uid="uid://dx7vyin0sc2ne" path="res://assets/ui/loading_spinner_progress.png" id="1_roup2"]
+[ext_resource type="Texture2D" uid="uid://bnxuieksge7dk" path="res://src/ui/components/atoms/controls/loading_spinner/radial_background.svg" id="1_2r7pi"]
+[ext_resource type="Texture2D" uid="uid://2og4yaj0r61n" path="res://src/ui/components/atoms/controls/loading_spinner/radial_filled.svg" id="2_474ti"]
 [ext_resource type="Script" uid="uid://chldogpo72e70" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.gd" id="2_rds4p"]
 
 [sub_resource type="Animation" id="Animation_h8jfn"]
@@ -26,22 +27,16 @@ _data = {
 }
 
 [node name="TextureProgressBar" type="TextureProgressBar" unique_id=1364957813]
-offset_right = 40.0
-offset_bottom = 40.0
+custom_minimum_size = Vector2(40, 40)
+offset_right = 128.0
+offset_bottom = 128.0
 value = 100.0
 fill_mode = 4
 radial_fill_degrees = 60.0
-texture_progress = ExtResource("1_roup2")
+nine_patch_stretch = true
+texture_under = ExtResource("1_2r7pi")
+texture_progress = ExtResource("2_474ti")
 script = ExtResource("2_rds4p")
-
-[node name="BackgroundCircle" type="TextureRect" parent="." unique_id=1703723515]
-unique_name_in_owner = true
-modulate = Color(0, 0, 0, 0.4)
-show_behind_parent = true
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-texture = ExtResource("1_roup2")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1006979125]
 libraries/ = SubResource("AnimationLibrary_rrpsh")

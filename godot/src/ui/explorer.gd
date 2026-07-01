@@ -230,19 +230,8 @@ func _ready():
 	if Global.deep_link_obj.livekit_debug:
 		_on_control_menu_request_livekit_debug(true)
 
-	# Scene Inspector: activate bridge if --scene-inspector or ?scene-inspector= is set
-	var scene_inspector_target := ""
-	if not Global.deep_link_obj.scene_inspector.is_empty():
-		scene_inspector_target = Global.deep_link_obj.scene_inspector
-	elif not Global.cli.scene_inspector.is_empty():
-		scene_inspector_target = Global.cli.scene_inspector
-	if not scene_inspector_target.is_empty():
-		# Activate Rust-side instrumentation before any scene is spawned
-		Global.scene_inspector_active = true
-		var bridge = SceneInspectorBridge.new()
-		bridge.set_name("scene_inspector_bridge")
-		add_child(bridge)
-		bridge.setup(scene_inspector_target)
+	# Scene Inspector: the bridge is now dialed from app startup (Global._ready),
+	# not here — so the channel is live from second 0, before login / world entry.
 	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
 	var scene_inspector_file: bool = (
 		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
@@ -347,7 +336,7 @@ func _ready():
 	Global.scene_runner.set_pause(false)
 
 	if Global.testing_scene_mode:
-		Global.player_identity.create_guest_account()
+		Global.player_identity.create_disposable_account()
 
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest

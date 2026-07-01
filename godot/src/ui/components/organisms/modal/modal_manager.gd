@@ -14,6 +14,8 @@ signal session_ended_exit
 
 const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
+const INPUT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/input_modal/input_modal.tscn"
+const CODE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/code_modal/code_modal.tscn"
 
 # Modal text constants
 const EXTERNAL_LINK_TITLE = "Open external link?"
@@ -95,13 +97,19 @@ const SESSION_ENDED_SECONDARY = "EXIT"
 
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
+var current_input_modal: InputModal = null
+var current_code_modal: CodeModal = null
 var modal_scene: PackedScene = null
 var travel_modal_scene: PackedScene = null
+var input_modal_scene: PackedScene = null
+var code_modal_scene: PackedScene = null
 var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
 var _canvas_layer: CanvasLayer = null
 var _travel_canvas_layer: CanvasLayer = null
+var _input_canvas_layer: CanvasLayer = null
+var _code_canvas_layer: CanvasLayer = null
 
 
 func _ready() -> void:
@@ -111,6 +119,12 @@ func _ready() -> void:
 	travel_modal_scene = load(TRAVEL_MODAL_SCENE_PATH)
 	if not travel_modal_scene:
 		push_error("ModalManager: Could not load travel modal scene at: " + TRAVEL_MODAL_SCENE_PATH)
+	input_modal_scene = load(INPUT_MODAL_SCENE_PATH)
+	if not input_modal_scene:
+		push_error("ModalManager: Could not load input modal scene at: " + INPUT_MODAL_SCENE_PATH)
+	code_modal_scene = load(CODE_MODAL_SCENE_PATH)
+	if not code_modal_scene:
+		push_error("ModalManager: Could not load code modal scene at: " + CODE_MODAL_SCENE_PATH)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
@@ -586,6 +600,31 @@ func clear_suppress_ban_kicked() -> void:
 	_suppress_ban_kicked = false
 
 
+## Shows a generic input modal. Returns the InputModal instance so callers
+## can connect to its confirmed/cancelled signals.
+func async_show_input_modal(
+	title: String,
+	subtitle: String,
+	placeholder: String,
+	confirm_text: String,
+	cancel_text: String,
+	validation: Callable,
+) -> InputModal:
+	var modal = await _async_create_input_modal()
+	if not modal:
+		return null
+	modal.setup(title, subtitle, placeholder, confirm_text, cancel_text, validation)
+	modal.open()
+	return modal
+
+
+## Closes the current input modal if it exists
+func close_input_modal() -> void:
+	if current_input_modal:
+		current_input_modal.close()
+		_remove_input_modal()
+
+
 ## Closes the current travel modal if it exists
 func close_travel_modal() -> void:
 	if current_travel_modal:
@@ -935,3 +974,123 @@ func _remove_travel_modal() -> void:
 	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
 		_travel_canvas_layer.queue_free()
 		_travel_canvas_layer = null
+
+
+func _async_create_input_modal() -> InputModal:
+	if current_input_modal:
+		close_input_modal()
+
+	if not input_modal_scene:
+		push_error("ModalManager: Input modal scene is not loaded")
+		return null
+
+	var modal = input_modal_scene.instantiate() as InputModal
+	if not modal:
+		push_error("ModalManager: Could not instantiate input modal")
+		return null
+
+	if _input_canvas_layer and is_instance_valid(_input_canvas_layer):
+		_input_canvas_layer.get_parent().remove_child(_input_canvas_layer)
+		_input_canvas_layer.queue_free()
+
+	_input_canvas_layer = CanvasLayer.new()
+	_input_canvas_layer.layer = 100
+
+	var root = get_tree().root
+	if not root:
+		push_error("ModalManager: Could not get scene tree root")
+		return null
+
+	root.add_child(_input_canvas_layer)
+	_input_canvas_layer.add_child(modal)
+	current_input_modal = modal
+
+	current_input_modal.tree_exited.connect(_on_input_modal_tree_exited)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	return modal
+
+
+func _on_input_modal_tree_exited() -> void:
+	if current_input_modal:
+		current_input_modal = null
+
+
+func _remove_input_modal() -> void:
+	if current_input_modal:
+		if current_input_modal.tree_exited.is_connected(_on_input_modal_tree_exited):
+			current_input_modal.tree_exited.disconnect(_on_input_modal_tree_exited)
+		current_input_modal.queue_free()
+		current_input_modal = null
+	if _input_canvas_layer and is_instance_valid(_input_canvas_layer):
+		_input_canvas_layer.queue_free()
+		_input_canvas_layer = null
+
+
+func async_show_code_modal(email: String = "") -> CodeModal:
+	var modal = await _async_create_code_modal()
+	if not modal:
+		return null
+	modal.open(email)
+	return modal
+
+
+func close_code_modal() -> void:
+	if current_code_modal:
+		current_code_modal.close()
+		_remove_code_modal()
+
+
+func _async_create_code_modal() -> CodeModal:
+	if current_code_modal:
+		close_code_modal()
+
+	if not code_modal_scene:
+		push_error("ModalManager: Code modal scene is not loaded")
+		return null
+
+	var modal = code_modal_scene.instantiate() as CodeModal
+	if not modal:
+		push_error("ModalManager: Could not instantiate code modal")
+		return null
+
+	if _code_canvas_layer and is_instance_valid(_code_canvas_layer):
+		_code_canvas_layer.get_parent().remove_child(_code_canvas_layer)
+		_code_canvas_layer.queue_free()
+
+	_code_canvas_layer = CanvasLayer.new()
+	_code_canvas_layer.layer = 100
+
+	var root = get_tree().root
+	if not root:
+		push_error("ModalManager: Could not get scene tree root")
+		return null
+
+	root.add_child(_code_canvas_layer)
+	_code_canvas_layer.add_child(modal)
+	current_code_modal = modal
+
+	current_code_modal.tree_exited.connect(_on_code_modal_tree_exited)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	return modal
+
+
+func _on_code_modal_tree_exited() -> void:
+	if current_code_modal:
+		current_code_modal = null
+
+
+func _remove_code_modal() -> void:
+	if current_code_modal:
+		if current_code_modal.tree_exited.is_connected(_on_code_modal_tree_exited):
+			current_code_modal.tree_exited.disconnect(_on_code_modal_tree_exited)
+		current_code_modal.queue_free()
+		current_code_modal = null
+	if _code_canvas_layer and is_instance_valid(_code_canvas_layer):
+		_code_canvas_layer.queue_free()
+		_code_canvas_layer = null
