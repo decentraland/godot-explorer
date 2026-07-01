@@ -1881,6 +1881,7 @@ impl SceneManager {
         if let Some(mut global) = DclGlobal::try_singleton() {
             let mut global_bind = global.bind_mut();
             global_bind.reset_input_modifiers();
+            global_bind.reset_mobile_input_controls();
             let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
             drop(global_bind);

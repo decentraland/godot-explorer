@@ -172,6 +172,8 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 .wrap_mode
                 .as_ref()
                 .unwrap_or(&TextureWrapMode::TwmClamp.into()),
+            // UiTexture (ui canvas texture) is not yet supported; use defaults.
+            Tex::UiTexture(_) => TextureWrapMode::TwmClamp.into(),
         };
         let filter_mode = match texture {
             Tex::Texture(texture) => *texture
@@ -186,6 +188,8 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 .filter_mode
                 .as_ref()
                 .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
+            // UiTexture (ui canvas texture) is not yet supported; use defaults.
+            Tex::UiTexture(_) => TextureFilterMode::TfmBilinear.into(),
         };
 
         let wrap_mode = TextureWrapMode::from_i32(wrap_mode).unwrap_or(TextureWrapMode::TwmClamp);
@@ -230,6 +234,8 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 offset: RoundedVector2(Vector2 { x: 0.0, y: 0.0 }),
                 tiling: RoundedVector2(Vector2 { x: 1.0, y: 1.0 }),
             }),
+            // UiTexture (ui canvas texture) is not yet supported.
+            Tex::UiTexture(_) => None,
         }
     }
 }

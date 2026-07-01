@@ -180,6 +180,12 @@ pub fn sync_gltf_loading_state(
         if current_state_godot != current_state {
             let pb_gltf_container_loading_state = PbGltfContainerLoadingState {
                 current_state: current_state_godot.to_i32(),
+                // Gltf introspection fields are not yet populated.
+                node_paths: Vec::default(),
+                mesh_names: Vec::default(),
+                material_names: Vec::default(),
+                skin_names: Vec::default(),
+                animation_names: Vec::default(),
             };
             gltf_container_loading_state_component
                 .put(*entity, Some(pb_gltf_container_loading_state));

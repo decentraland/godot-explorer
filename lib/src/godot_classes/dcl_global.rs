@@ -258,6 +258,12 @@ pub struct DclGlobal {
     #[var]
     pub input_modifier_disable_gliding: bool,
 
+    // Mobile input controls visibility - set by scenes via PBMobileInputControls on PLAYER entity
+    #[var]
+    pub mobile_input_hide_joystick: bool,
+    #[var]
+    pub mobile_input_hide_gamepad: bool,
+
     // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
     #[var]
     pub sdk_skybox_time_active: bool,
@@ -449,6 +455,10 @@ impl INode for DclGlobal {
             input_modifier_disable_double_jump: false,
             input_modifier_disable_gliding: false,
 
+            // Mobile input controls start fully visible (no hiding)
+            mobile_input_hide_joystick: false,
+            mobile_input_hide_gamepad: false,
+
             // SDK skybox time starts as inactive
             sdk_skybox_time_active: false,
             sdk_skybox_fixed_time: 0,
@@ -637,6 +647,12 @@ impl DclGlobal {
         self.input_modifier_disable_emote = false;
         self.input_modifier_disable_double_jump = false;
         self.input_modifier_disable_gliding = false;
+    }
+
+    /// Reset mobile input controls to fully visible (no hiding)
+    pub fn reset_mobile_input_controls(&mut self) {
+        self.mobile_input_hide_joystick = false;
+        self.mobile_input_hide_gamepad = false;
     }
 
     /// Reset SDK skybox time to inactive state
