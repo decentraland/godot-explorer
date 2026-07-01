@@ -98,9 +98,6 @@ var current_travel_modal: TravelModal = null
 var modal_scene: PackedScene = null
 var travel_modal_scene: PackedScene = null
 var ban_pre_check_active: bool = false
-
-var _travel_place_data: Dictionary = {}
-var _travel_place_texture: Texture2D = null
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
 var _canvas_layer: CanvasLayer = null
@@ -238,7 +235,6 @@ func async_show_world_modal(world_name: String) -> void:
 		return
 
 	var world_data: Dictionary = json.data[0]
-	_travel_place_data = world_data
 
 	if not await _async_create_travel_modal():
 		return
@@ -704,7 +700,7 @@ func _async_create_travel_modal() -> TravelModal:
 
 
 func _on_world_jump_in(world_name: String) -> void:
-	Global.async_teleport_to(Vector2i.ZERO, world_name, _travel_place_data, _travel_place_texture)
+	Global.async_teleport_to(Vector2i.ZERO, world_name)
 	close_travel_modal()
 
 
@@ -727,7 +723,6 @@ func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
 		return
 
 	var place_data: Dictionary = json.data[0]
-	_travel_place_data = place_data
 
 	var title = str(place_data.get("title", ""))
 	if not title.is_empty() and title != "interactive-text":
@@ -764,7 +759,6 @@ func _async_load_change_realm_data(realm_name: String) -> void:
 		return
 
 	var realm_data: Dictionary = json.data[0]
-	_travel_place_data = realm_data
 
 	var title = str(realm_data.get("title", realm_name))
 	current_travel_modal.set_place_name(title if not title.is_empty() else realm_name)
@@ -786,7 +780,6 @@ func _async_load_travel_modal_image(url: String) -> void:
 		printerr("ModalManager: Error downloading travel modal image: ", result.get_error())
 		return
 
-	_travel_place_texture = result.texture
 	if is_instance_valid(current_travel_modal):
 		current_travel_modal.set_image(result.texture)
 
@@ -823,14 +816,11 @@ func _on_connection_lost_secondary() -> void:
 
 
 func _on_teleport_primary(location: Vector2i, realm: String) -> void:
-	Global.async_teleport_to(location, realm, _travel_place_data, _travel_place_texture)
+	Global.async_teleport_to(location, realm)
 	close_travel_modal()
 
 
 func _on_change_realm_primary(realm_name: String) -> void:
-	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		explorer.loading_ui.enable_loading_screen(_travel_place_data, _travel_place_texture)
 	Global.realm.async_set_realm(realm_name)
 	close_travel_modal()
 
@@ -936,8 +926,6 @@ func _disconnect_travel_signals() -> void:
 
 
 func _remove_travel_modal() -> void:
-	_travel_place_data = {}
-	_travel_place_texture = null
 	if current_travel_modal:
 		_disconnect_travel_signals()
 		if current_travel_modal.tree_exited.is_connected(_on_travel_modal_tree_exited):

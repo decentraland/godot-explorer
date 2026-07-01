@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Script" uid="uid://cm08lp37agj2o" path="res://src/ui/pages/loading_screen/loading_screen.gd" id="2_7hdbk"]
+[ext_resource type="Texture2D" uid="uid://cyeldk4pls71x" path="res://assets/ui/placeholder2.png" id="2_cdm7v"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="3_6uwlu"]
 [ext_resource type="Shader" uid="uid://bhjcims48e1cf" path="res://src/ui/components/atoms/images/blur_background/quick_blur.gdshader" id="3_7rccc"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_w6anr"]
@@ -79,7 +80,7 @@ offset_left = -19.5
 offset_right = 19.5
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("9_i03vb")
+texture = ExtResource("2_cdm7v")
 stretch_mode = 6
 
 [node name="TextureRect_Blur" type="TextureRect" parent="." unique_id=1592832536]
@@ -208,8 +209,9 @@ layout_mode = 2
 
 [node name="Label_LoadingState" type="Label" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=525142318]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(351, 0)
 layout_mode = 2
-text = "00/00 resouces at 0.10 mb/s"
+text = "0000/0000 resouces at 000.00 mb/s - Opt"
 label_settings = SubResource("LabelSettings_ky3me")
 
 [node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=826283927]

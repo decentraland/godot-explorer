@@ -7,27 +7,23 @@ const MAX_LOADING_TIME_SECONDS := 90.0
 var progress: float = 0.0
 var last_activity_time := Time.get_ticks_msec()
 var loading_start_time := 0
-var popup_warning_pos_y: int = 0
-
 var last_hide_click := 0.0
-
 var loaded_resources_offset := 0
 
 var _place_data_set: bool = false
 var _current_bg_url: String = ""
+var _fetch_generation: int = 0
 
 @onready var loading_progress_label: Label = %Label_LoadingProgress
 @onready var label_loading_state: Label = %Label_LoadingState
 @onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 @onready var rich_text_label_place_name: TrimmedRichTextLabel = %RichTextLabel_PlaceName
-
 @onready var texture_rect_background: TextureRect = %TextureRect_Background
 @onready var vbox_data: VBoxContainer = %VBoxContainer_Data
 @onready var rich_text_label_creator: RichTextLabel = %RichTextLabel
 
 @onready var loading_screen_progress_logic: Node = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout: Timer = $Timer_CheckProgressTimeout
-@onready var close_button: Button = %CloseButton
 @onready var debug_chronometer := Chronometer.new()
 
 static var _low_spec_toast_shown: bool = false
@@ -38,36 +34,23 @@ func _ready() -> void:
 	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
 
 
-# Forward
-func enable_loading_screen(data: Dictionary = {}, texture: Texture2D = null) -> void:
+func enable_loading_screen() -> void:
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
-	# If no explicit data passed, consume any pending data stored by the no-explorer path
-	# (async_teleport_to / async_join_world when the explorer did not exist yet).
-	if data.is_empty() and not Global.pending_loading_data.is_empty():
-		data = Global.pending_loading_data
-		texture = Global.pending_loading_texture
-		Global.pending_loading_data = {}
-		Global.pending_loading_texture = null
-	if data.is_empty() or not _place_data_set:
-		_clear_place_ui()
-	if not data.is_empty():
-		set_place_data(data, texture)
+	_clear_place_ui()
 	Global.loading_started.emit()
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
 
 
-func prefetch_place_data(data: Dictionary) -> void:
-	_clear_place_ui()
-	set_place_data(data)
-
-
 func _clear_place_ui() -> void:
+	_fetch_generation += 1
 	_place_data_set = false
 	_current_bg_url = ""
 	texture_rect_background.texture = null
+	texture_rect_background.modulate = Color.TRANSPARENT
+	vbox_data.modulate = Color.TRANSPARENT
 	rich_text_label_place_name.text = ""
 	rich_text_label_creator.hide()
 
@@ -203,18 +186,26 @@ func _on_texture_rect_logo_gui_input(event: InputEvent) -> void:
 
 
 func _on_scene_runner_loading_started(_session_id: int, _expected_count: int) -> void:
+	if _place_data_set:
+		return
 	var pos = Global.scene_fetcher.current_position
-	if not _place_data_set and pos != SceneFetcher.INVALID_PARCEL:
-		_async_fetch_place_data(pos)
+	if pos == SceneFetcher.INVALID_PARCEL:
+		return
+	# Increment so any previous in-flight fetch for an earlier loading session is discarded.
+	_fetch_generation += 1
+	_async_fetch_place_data(pos, _fetch_generation)
 
 
-func _async_fetch_place_data(pos: Vector2i) -> void:
+func _async_fetch_place_data(pos: Vector2i, generation: int) -> void:
+	# last_realm_joined is written before change_scene_to_file, so it reflects the intended
+	# realm even when Global.realm.realm_url/realm_name is still stale (async_set_realm not done yet).
+	var intended_realm = Global.get_config().last_realm_joined
 	var result: Variant
-	if Realm.is_genesis_city(Global.realm.realm_url):
+	if intended_realm.is_empty() or Realm.is_genesis_city(intended_realm):
 		result = await PlacesHelper.async_get_by_position(pos)
 	else:
-		result = await PlacesHelper.async_get_by_names(Global.realm.realm_name)
-	if not is_instance_valid(self) or _place_data_set:
+		result = await PlacesHelper.async_get_by_names(intended_realm)
+	if not is_instance_valid(self) or not is_inside_tree() or generation != _fetch_generation:
 		return
 	if result is PromiseError:
 		return
@@ -225,21 +216,17 @@ func _async_fetch_place_data(pos: Vector2i) -> void:
 	set_place_data(data_array[0])
 
 
-## Pass the full Places API dict (same format used by PlaceItem).
-## Call this before or right after enable_loading_screen().
-## Keys read: "title", "contact_name", "image".
-func set_place_data(data: Dictionary, texture: Texture2D = null) -> void:
+func set_place_data(data: Dictionary) -> void:
 	_place_data_set = true
 	var title = data.get("title", "")
 	var creator = data.get("contact_name", "")
 	set_place_name(title if title is String else "")
 	set_place_creator(creator if creator is String else "")
-	if texture != null:
-		_apply_background_texture(texture)
-	else:
-		var image_url = data.get("image", "")
-		if image_url is String and not image_url.is_empty():
-			set_place_image(image_url)
+	var image_url = data.get("image", "")
+	if image_url is String and not image_url.is_empty():
+		set_place_image(image_url)
+	var tween = create_tween()
+	tween.tween_property(vbox_data, "modulate", Color.WHITE, 0.125)
 
 
 func set_place_name(place_name: String) -> void:
@@ -256,10 +243,6 @@ func set_place_creator(creator: String) -> void:
 	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] " + creator
 
 
-func set_background_texture(texture: Texture2D) -> void:
-	_apply_background_texture(texture)
-
-
 func set_place_image(image_url: String) -> void:
 	if _current_bg_url == image_url:
 		return
@@ -269,13 +252,15 @@ func set_place_image(image_url: String) -> void:
 
 func _apply_background_texture(texture: Texture2D) -> void:
 	texture_rect_background.texture = texture
+	var tween = create_tween()
+	tween.tween_property(texture_rect_background, "modulate", Color.WHITE, 0.125)
 
 
 func _async_set_background(url: String) -> void:
 	var url_hash := AsyncImage._get_hash_from_url(url)
 	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
-	if not is_instance_valid(self):
+	if not is_instance_valid(self) or not is_inside_tree():
 		return
 	if url != _current_bg_url:
 		return

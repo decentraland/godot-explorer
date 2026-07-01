@@ -135,12 +135,6 @@ var sentry_seeder: SentrySeeder = null
 # child of Global so it can use timers and signals across the session lifetime.
 var attestation: AttestationService = null
 
-# Place data to show in the loading screen for the next navigation.
-# Set by async_teleport_to / async_join_world when no explorer exists yet,
-# so the new explorer can populate the loading screen without a fresh API fetch.
-var pending_loading_data: Dictionary = {}
-var pending_loading_texture: Texture2D = null
-
 var _is_portrait: bool = true
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
@@ -1167,13 +1161,11 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 	return true  # unreachable, keeps compiler happy
 
 
-func async_teleport_to(
-	parcel_position: Vector2i, new_realm: String, data: Dictionary = {}, texture: Texture2D = null
-) -> void:
+func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen(data, texture)
+		explorer.loading_ui.enable_loading_screen()
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
@@ -1186,18 +1178,14 @@ func async_teleport_to(
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
-		pending_loading_data = data
-		pending_loading_texture = texture
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func async_join_world(
-	world_realm: String, data: Dictionary = {}, texture: Texture2D = null
-) -> void:
+func async_join_world(world_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen(data, texture)
+		explorer.loading_ui.enable_loading_screen()
 		Global.on_chat_message.emit(
 			"system",
 			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
@@ -1217,8 +1205,6 @@ func async_join_world(
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = world_realm
 		Global.get_config().last_parcel_position = Vector2i.ZERO
-		pending_loading_data = data
-		pending_loading_texture = texture
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
