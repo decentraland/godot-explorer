@@ -11,8 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://cbukvmu67blst" path="res://src/ui/pages/auth/images/discord.svg" id="7_apdvw"]
 [ext_resource type="Texture2D" uid="uid://b1wknyg6nwrwo" path="res://src/ui/pages/auth/images/x.svg" id="8_8hgbb"]
 [ext_resource type="Texture2D" uid="uid://kxlueau7wo2u" path="res://src/ui/pages/auth/images/apple.svg" id="9_tuhne"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_stkud"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="11_jikst"]
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_stkud"]
 color = Color(1, 1, 1, 1)
@@ -21,7 +20,7 @@ thickness = 2
 [node name="Login" type="VBoxContainer" unique_id=303006634]
 offset_right = 576.0
 offset_bottom = 412.0
-theme_override_constants/separation = 38
+theme_override_constants/separation = 46
 script = ExtResource("1_f6pdb")
 
 [node name="Button_Google" type="Button" parent="." unique_id=1173224871]
@@ -191,11 +190,6 @@ icon = ExtResource("8_8hgbb")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Separator2" type="HSeparator" parent="." unique_id=1586360804]
-layout_mode = 2
-theme_override_constants/separation = 35
-theme_override_styles/separator = SubResource("StyleBoxEmpty_stkud")
-
 [node name="Separator" type="HBoxContainer" parent="." unique_id=1533452699]
 layout_mode = 2
 theme_override_constants/separation = 27
@@ -207,6 +201,7 @@ theme_override_styles/separator = SubResource("StyleBoxLine_stkud")
 
 [node name="Label" type="Label" parent="Separator" unique_id=408878744]
 layout_mode = 2
+theme_override_fonts/font = ExtResource("11_jikst")
 theme_override_font_sizes/font_size = 24
 text = "or"
 

@@ -113,6 +113,7 @@ stretch_mode = 4
 
 [node name="TextureProgressBar_Loading" parent="." unique_id=1328538268 instance=ExtResource("7_ph8vs")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5

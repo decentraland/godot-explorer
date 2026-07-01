@@ -43,6 +43,7 @@ theme_override_constants/separation = 18
 alignment = 1
 
 [node name="Spinner" parent="Backdrop/Blur/VBoxContainer" unique_id=95632668 instance=ExtResource("1_spinr")]
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
 size_flags_horizontal = 4
 show_background = true

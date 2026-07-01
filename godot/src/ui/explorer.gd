@@ -327,7 +327,7 @@ func _ready():
 	Global.scene_runner.set_pause(false)
 
 	if Global.testing_scene_mode:
-		Global.player_identity.create_guest_account()
+		Global.player_identity.create_disposable_account()
 
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest

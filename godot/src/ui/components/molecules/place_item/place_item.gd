@@ -1021,7 +1021,7 @@ func _input(event: InputEvent) -> void:
 							DragState.HALF:
 								_on_show_more_toggled(true)
 								drag_state = DragState.FULL
-								tween_to(0.0, func(): return, true)
+								tween_to(0.0, func(): pass, true)
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:

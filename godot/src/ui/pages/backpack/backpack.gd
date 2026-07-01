@@ -12,8 +12,18 @@ const WEARABLE_REFRESH_NOTIFICATION_TYPES = [
 	"bid_accepted",
 ]
 
-@export var hide_background: bool = false
+@export var hide_background: bool = false:
+	set(value):
+		hide_background = value
+		if is_node_ready():
+			color_rect_background.visible = not value
+			texture_rect_background.visible = not value
 @export var hide_navbar: bool = false
+@export var show_credits_button: bool = true:
+	set(value):
+		show_credits_button = value
+		if is_node_ready():
+			margin_container_credits.visible = value
 @export var default_main_category: String = Wearables.Categories.ALL
 ## When true, locks the embedded AvatarPreview to rotation only —
 ## disables mouse-wheel zoom, pinch zoom and pinch vertical-pan. Used by
@@ -46,6 +56,7 @@ var _marketplace_restore_pending: bool = false
 
 var _avatar_update_retries: int = 0
 var _is_currently_narrow: bool = false
+var _initial_focus_snapped: bool = false
 
 # "NEW" tag (#2300): item_urn -> current owned count for this load, and item_urn -> bool of
 # whether it is tagged new (count grew vs the persisted per-wallet snapshot). No endpoint
@@ -94,6 +105,8 @@ var _wearable_is_new: Dictionary = {}
 @onready var canary_content: Control = get_node_or_null("%ControlContent_Canary")
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
 @onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
+@onready var button_credits: Control = %Button_Credits
+@onready var margin_container_credits: Control = %MarginContainer_Credits
 
 # "NEW" tag (#2300) session state. Per category ("wearable"/"emote"): the baseline snapshot
 # (item_urn -> count) each item must exceed to be tagged new, captured once per app session
@@ -131,13 +144,14 @@ func _ready():
 		wearable_button_group_per_category[category] = button_group
 
 	if hide_navbar:
-		container_navbar.hide()
-		# The lobby/FTUE "Create your avatar" flow reuses this backpack but must not
-		# surface the IAP credits affordances (#2303): hide the credits balance here and
-		# skip the marketplace suggestions setup below (see _setup_ios_marketplace_section).
-		var credits_button := get_node_or_null("%Button_Credits")
-		if credits_button:
-			credits_button.hide()
+		container_navbar.modulate = Color.TRANSPARENT
+		container_navbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# The lobby/FTUE "Create your avatar" flow reuses this backpack but must not surface
+	# the IAP credits affordances (#2303): force the credits balance hidden there regardless
+	# of show_credits_button (the marketplace suggestions are skipped in
+	# _setup_ios_marketplace_section, which returns early when hide_navbar).
+	margin_container_credits.visible = show_credits_button and not hide_navbar
 
 	if size_canary != null:
 		size_canary.show()
@@ -178,6 +192,8 @@ func _ready():
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_main_category_filter_type)
+			if wearable_filter_button.get_category_name() == default_main_category:
+				wearable_filter_button.button_pressed = true
 
 	for wearable_filter_button in container_sub_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
@@ -414,6 +430,9 @@ func _async_update_avatar():
 		Global.player_identity.get_mutable_profile()
 	)
 	_unset_avatar_loading(loading_id)
+	if not _initial_focus_snapped and not current_filter.is_empty():
+		_initial_focus_snapped = true
+		avatar_preview.focus_camera_on.call_deferred(current_filter, true)
 
 
 func _load_filtered_data(filter: String):
@@ -499,6 +518,13 @@ func _setup_ios_marketplace_section():
 		return
 	if not Iap.is_available():
 		return
+	# Marketplace suggestions are purchaseable items; an un-upgraded thirdweb guest can't
+	# buy, so hide them until the account is upgraded (mirrors CreditsBalanceButton). Re-run
+	# setup once the upgrade lands so suggestions appear without re-opening the backpack.
+	if not _is_marketplace_account_eligible():
+		if not Global.guest_upgrade_state_refreshed.is_connected(_on_marketplace_guest_upgraded):
+			Global.guest_upgrade_state_refreshed.connect(_on_marketplace_guest_upgraded)
+		return
 
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
@@ -511,6 +537,28 @@ func _setup_ios_marketplace_section():
 		section_parent.move_child(_ios_marketplace_section, 0)
 	_ios_marketplace_section.item_equip.connect(_async_on_marketplace_equip)
 	_ios_marketplace_section.item_unequip.connect(_on_marketplace_unequip)
+
+
+## Marketplace suggestions are purchaseable; an un-upgraded thirdweb guest can't buy them,
+## so the recommended-wearables section stays hidden for those sessions.
+func _is_marketplace_account_eligible() -> bool:
+	if Global.player_identity == null:
+		return false
+	return (
+		not Global.player_identity.is_thirdweb_guest()
+		or Global.player_identity.is_thirdweb_guest_upgraded()
+	)
+
+
+func _on_marketplace_guest_upgraded(is_upgraded: bool) -> void:
+	if not is_upgraded:
+		return
+	Global.guest_upgrade_state_refreshed.disconnect(_on_marketplace_guest_upgraded)
+	_setup_ios_marketplace_section()
+	# The normal first-time population happens via the subcategory filter; replay it for the
+	# now-visible section using the category currently in view.
+	if _ios_marketplace_section and not current_filter.is_empty():
+		_ios_marketplace_section.update_category(current_filter)
 
 
 func _on_main_category_filter_type(type: String):

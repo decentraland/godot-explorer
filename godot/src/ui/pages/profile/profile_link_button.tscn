@@ -5,12 +5,12 @@
 [ext_resource type="Texture2D" uid="uid://c22ghvgmgry8" path="res://assets/ui/link-icon.svg" id="2_oyqjs"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_r8w7o"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_3knha"]
-[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/pages/discover/icons/close.svg" id="5_j0r87"]
+[ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="6_ykyw5"]
 
 [node name="PofileLinkButton" type="Button" unique_id=2141351039]
 custom_minimum_size = Vector2(0, 64)
-offset_right = 133.0
-offset_bottom = 42.0
+offset_right = 261.0
+offset_bottom = 64.0
 focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("1_oyqjs")
@@ -30,6 +30,7 @@ theme_override_fonts/font = ExtResource("2_r8w7o")
 theme_override_font_sizes/font_size = 24
 text = "LINK LABEL"
 icon = ExtResource("2_oyqjs")
+alignment = 0
 script = ExtResource("2_j0r87")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1755097941]
@@ -40,20 +41,20 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_right = 8
+theme_override_constants/margin_right = 16
 metadata/_edit_lock_ = true
 
 [node name="TextureRect_Remove" type="TextureRect" parent="MarginContainer" unique_id=1461453910]
 unique_name_in_owner = true
 modulate = Color(0.627451, 0.67058825, 1, 1)
-custom_minimum_size = Vector2(35, 35)
+custom_minimum_size = Vector2(22, 22)
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 4
 mouse_filter = 2
 theme = ExtResource("3_3knha")
 theme_type_variation = &"BlackButton"
-texture = ExtResource("5_j0r87")
+texture = ExtResource("6_ykyw5")
 expand_mode = 1
 stretch_mode = 4
 

@@ -1,7 +1,8 @@
 name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 
 # Single entry point that builds & distributes BOTH mobile platforms:
-#   - iOS    → deploy pipeline repo (DEPLOY_REPO secret) → Xcode Cloud → TestFlight
+#   - iOS    → unsigned export uploaded to R2, then repository_dispatch to the
+#              godot-asc-deploy repo which signs it and uploads to TestFlight
 #   - Android → APK is already uploaded to the R2 mobile-artifacts bucket by the
 #               regular Android CI build (android_builds.yml) for every commit; this
 #               workflow waits for that commit's APK and posts a Slack "build ready"
@@ -290,7 +291,7 @@ jobs:
           # In the reuse path nobody runs the lib build that writes .build.version, so reconstruct it
           # deterministically (matches lib/build.rs: <lib-version>-<short-sha>-<prod|staging>).
           LIB_VERSION=$(grep -m1 '^version' lib/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
-          if [ "$REF" = "release" ]; then SUFFIX="prod"; else SUFFIX="staging"; fi
+          case "$REF" in release*) SUFFIX="prod";; *) SUFFIX="staging";; esac
           echo "build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "→ reuse=$reuse · build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}"
 

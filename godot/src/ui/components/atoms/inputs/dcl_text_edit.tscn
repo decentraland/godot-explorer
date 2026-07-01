@@ -5,7 +5,9 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_tjywf"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="3_v4hat"]
 [ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="4_nhry5"]
-[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/pages/discover/icons/close.svg" id="5_nhry5"]
+[ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="5_ewgm8"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ewgm8"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_evgii"]
 font = ExtResource("3_tjywf")
@@ -19,21 +21,21 @@ font_color = Color(1, 0.1764706, 0.33333334, 1)
 
 [node name="DclTextEdit" type="VBoxContainer" unique_id=1583726089]
 custom_minimum_size = Vector2(100, 0)
-offset_right = 333.0
-offset_bottom = 97.0
+offset_right = 352.0
+offset_bottom = 101.0
 size_flags_horizontal = 3
 size_flags_vertical = 0
 theme_override_constants/separation = 8
 script = ExtResource("1_iibrq")
 
 [node name="TextEditContainer" type="Control" parent="." unique_id=1976220458]
-custom_minimum_size = Vector2(0, 72)
+custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 size_flags_vertical = 3
 
 [node name="TextEdit" type="TextEdit" parent="TextEditContainer" unique_id=861440361]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 72)
+custom_minimum_size = Vector2(0, 68)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -49,21 +51,46 @@ placeholder_text = "Type text here..."
 wrap_mode = 1
 caret_blink = true
 
-[node name="ClearButton" type="TextureButton" parent="TextEditContainer" unique_id=887865242]
-unique_name_in_owner = true
-visible = false
-self_modulate = Color(0.9098039, 0.7254902, 1, 1)
-custom_minimum_size = Vector2(40, 40)
+[node name="HBoxContainer" type="HBoxContainer" parent="TextEditContainer" unique_id=941557482]
+custom_minimum_size = Vector2(0, 22)
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
+anchors_preset = 14
+anchor_top = 0.5
 anchor_right = 1.0
-offset_left = -48.0
-offset_top = 16.0
-offset_right = -8.0
-offset_bottom = 56.0
-grow_horizontal = 0
-texture_normal = ExtResource("5_nhry5")
+anchor_bottom = 0.5
+offset_top = -11.0
+offset_bottom = 11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 2
+
+[node name="VSeparator" type="VSeparator" parent="TextEditContainer/HBoxContainer" unique_id=1003360044]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewgm8")
+
+[node name="MarginContainer" type="MarginContainer" parent="TextEditContainer" unique_id=722955294]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 16
+
+[node name="ClearButton" type="TextureButton" parent="TextEditContainer/MarginContainer" unique_id=887865242]
+unique_name_in_owner = true
+self_modulate = Color(0.9098039, 0.7254902, 1, 1)
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture_normal = ExtResource("5_ewgm8")
 ignore_texture_size = true
 stretch_mode = 0
 
