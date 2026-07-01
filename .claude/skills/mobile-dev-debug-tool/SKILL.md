@@ -25,9 +25,37 @@ cargo run -- run --target ios -- --scene-inspector=ws://<this-mac>:9231   # devi
 ```
 
 On iOS the `dcl-ios-devtools` export plugin auto-bakes the hub address (debug
-builds), so even a Godot-editor deploy phones home — just log in, enter a world,
-and accept the local-network prompt. The bridge connects **in-world**
-(`explorer.gd`), so the channel comes alive after entering a world.
+builds), so even a Godot-editor deploy phones home — just accept the
+local-network prompt on first launch. The bridge activates at **boot**
+(`global.gd::_activate_scene_inspector_from_config`, from `_ready` + on every
+deeplink), so the channel is live from the lobby, **before login** — no need to
+enter a world first.
+
+## Answering "what state is the app in?" — the connect procedure
+
+The client **dials out** to the hub and **retries forever** (exponential backoff
+1s→2s→…→30s cap; `scene_inspector_websocket.gd`), so a hub started *after* the app
+is picked up within ≤30s — **no app restart needed**. From a cold start:
+
+1. **Probe for a running hub** — `lsof -nP -iTCP:9230 -iTCP:9231`, or just
+   `scripts/unified.sh ping`. A `*:9231 LISTEN` plus a non-loopback / `adb`
+   `:9231->… ESTABLISHED` means a device is already connected → skip to step 4.
+   Reuse it — don't start a second hub; two `debug-hub`s just fight over 9230/9231.
+2. **No hub? Host it — in the background.** `cargo run -- debug-hub` **blocks**, so
+   start it detached (Bash `run_in_background: true`); running it in the foreground
+   hangs your turn. It binds device port 9231 + consumer port 9230.
+3. **Wait for the device to dial in** (≤~35 s): poll `scripts/unified.sh ping`
+   until it returns an ACK (or watch `lsof … :9231` for the device's ESTABLISHED
+   socket). The app connects on its next backoff tick — no redeploy needed.
+4. **Query + report** with the id-filtered helpers (`unified.sh ping / scenes /
+   avatar / app_ui`, `eval`) — never infer state from a stray `perf` push
+   (see Important notes).
+5. **Still nothing after ~35 s?** The app isn't dialing this hub — ask the user to
+   **relaunch / redeploy** so it picks up `--scene-inspector=ws://<host>:9231`:
+   - iOS: a Godot-editor deploy auto-bakes it (dcl-ios-devtools → LAN IP); just
+     relaunch the app.
+   - Android: `cargo run -- run --target android` injects the arg + `adb reverse`;
+     a plain Godot-editor Android deploy has neither, so prefer the xtask run.
 
 ## Wiring
 
