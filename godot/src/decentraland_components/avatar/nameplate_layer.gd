@@ -29,7 +29,7 @@ const CL_PHYSICS := 2
 const OCCLUSION_MASK := CL_PHYSICS
 # Frames between occlusion raycasts per avatar (staggered) — not every frame.
 const OCCLUSION_PERIOD := 6
-# Debug: set true at runtime (e.g. the debug-ws `eval` command, non-production) to bypass
+# Debug: set true at runtime (e.g. the scene-inspector `eval` command, non-production) to bypass
 # the occlusion raycast entirely so tags fade by distance only — confirms whether a
 # vanishing tag is an occlusion artifact. `NameplateLayer.debug_disable_occlusion = true`.
 static var debug_disable_occlusion := false
@@ -70,6 +70,11 @@ static func attach(avatar) -> void:
 	avatar.nickname_quad.visible = false
 	ui.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Start fully transparent: update() drives alpha with move_toward(), so a tag can
+	# only ever fade IN from invisible once the gate opens with real data. Without this
+	# the scene-default content (e.g. the "NPC#" placeholder) would fade out from the
+	# inherited modulate.a≈1.0 during the first frames after spawn.
+	ui.modulate.a = 0.0
 	ui.hide()
 	get_root().add_child(ui)
 
