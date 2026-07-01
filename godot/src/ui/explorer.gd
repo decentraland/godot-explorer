@@ -17,6 +17,7 @@ var dirty_save_position: bool = false
 
 var debug_panel = null
 var livekit_debug_panel = null
+var scene_stats_panel = null
 var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
@@ -221,6 +222,9 @@ func _ready():
 
 	# Show debug panel and reload button if in preview mode or --debug-panel
 	_update_debug_ui()
+
+	# Preview-only scene-stats / limits overlay (never created in production)
+	_update_scene_stats_ui()
 
 	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
 	if Global.deep_link_obj.livekit_debug:
@@ -1149,6 +1153,45 @@ func _update_debug_ui():
 	Global.set_scene_log_enabled(should_show)
 
 
+## Preview-only scene-stats overlay. Instantiated ONLY in preview (and never in
+## production), mirroring _update_debug_ui so production pays zero cost.
+func _update_scene_stats_ui() -> void:
+	var should_show := _is_in_preview_realm() and not DclGlobal.is_production()
+	if should_show:
+		if not is_instance_valid(scene_stats_panel):
+			scene_stats_panel = (
+				load("res://src/ui/components/organisms/scene_stats_panel/scene_stats_panel.tscn")
+				. instantiate()
+			)
+			# Host inside the safe-area HUD layer so it respects device safe
+			# insets (notch) like the other top-right HUD elements.
+			var host: Node = ui_root.get_node_or_null("LeftRightSafeContainer/InteractableHUD")
+			if host == null:
+				host = ui_root
+			host.add_child(scene_stats_panel)
+		scene_stats_panel.set_scene(_preview_scene_id())
+	else:
+		if is_instance_valid(scene_stats_panel):
+			scene_stats_panel.queue_free()
+			scene_stats_panel = null
+
+
+## The single scene being previewed (one scene may span multiple parcels):
+## prefer the non-global scene at the player's parcel, else the first non-global
+## scene loaded; -1 if none.
+func _preview_scene_id() -> int:
+	if not is_instance_valid(Global.scene_runner):
+		return -1
+	var sid := int(Global.scene_runner.get_scene_id_by_parcel_position(parcel_position))
+	for child in Global.scene_runner.get_children():
+		if child is DclSceneNode and not child.is_global() and child.get_scene_id() == sid:
+			return sid
+	for node in Global.scene_runner.get_children():
+		if node is DclSceneNode and not node.is_global():
+			return node.get_scene_id()
+	return -1
+
+
 func _on_timer_fps_label_timeout():
 	var fps_text = "- " + str(Engine.get_frames_per_second()) + " FPS"
 
@@ -1226,6 +1269,7 @@ func _is_in_preview_realm() -> bool:
 
 func _update_preview_ui(_in_preview: bool) -> void:
 	_update_debug_ui()
+	_update_scene_stats_ui()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:
