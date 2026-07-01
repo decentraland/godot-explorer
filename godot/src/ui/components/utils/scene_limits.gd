@@ -12,60 +12,65 @@ enum Model { FIXED_ABSOLUTE, PER_PARCEL }
 
 const MB: int = 1024 * 1024
 
-## metric_key -> { label, group, unit, soft, hard, [inverse] }
+## metric_key -> { label, group, unit, soft, hard, [inverse], [dynamic_max] }
 ##   group: "scene" (per-scene) or "global" (whole-app, informational)
 ##   unit:  "count" or "bytes"
 ##   inverse: higher-is-better (e.g. fps) — coloring flips, no overpass
+##   dynamic_max: bar's full-scale + thresholds computed at runtime (see fps)
+##
+## `hard` is the MAX (red boundary); `soft` (yellow warning band) is 80% of it.
 const FIXED: Dictionary = {
 	"triangles":
-	{"label": "Triangles", "group": "scene", "unit": "count", "soft": 1500000, "hard": 2000000},
+	{"label": "Triangles", "group": "scene", "unit": "count", "soft": 960000, "hard": 1200000},
 	"entities":
-	{"label": "Entities", "group": "scene", "unit": "count", "soft": 5000, "hard": 10000},
+	{"label": "Entities", "group": "scene", "unit": "count", "soft": 4800, "hard": 6000},
 	"bodies":
-	{"label": "Meshes (bodies)", "group": "scene", "unit": "count", "soft": 3000, "hard": 5000},
+	{"label": "Meshes (bodies)", "group": "scene", "unit": "count", "soft": 2400, "hard": 3000},
 	"geometries":
 	{"label": "Geometries", "group": "scene", "unit": "count", "soft": 1000, "hard": 2000},
 	"materials":
-	{"label": "Materials", "group": "scene", "unit": "count", "soft": 500, "hard": 1000},
-	"textures": {"label": "Textures", "group": "scene", "unit": "count", "soft": 400, "hard": 800},
+	{"label": "Materials", "group": "scene", "unit": "count", "soft": 400, "hard": 500},
+	"textures": {"label": "Textures", "group": "scene", "unit": "count", "soft": 400, "hard": 500},
 	"colliders":
-	{"label": "Colliders", "group": "scene", "unit": "count", "soft": 1000, "hard": 2000},
+	{"label": "Colliders", "group": "scene", "unit": "count", "soft": 1200, "hard": 1500},
 	"content_size":
 	{
 		"label": "Content size",
 		"group": "scene",
 		"unit": "bytes",
-		"soft": 100 * MB,
-		"hard": 300 * MB
+		"soft": 120 * MB,
+		"hard": 150 * MB
 	},
 	"texture_vram":
 	{
 		"label": "Texture VRAM",
 		"group": "global",
 		"unit": "bytes",
-		"soft": 512 * MB,
-		"hard": 1024 * MB
+		"soft": 560 * MB,
+		"hard": 700 * MB
 	},
 	"video_mem":
 	{
 		"label": "Video memory",
 		"group": "global",
 		"unit": "bytes",
-		"soft": 768 * MB,
-		"hard": 1536 * MB
+		"soft": 560 * MB,
+		"hard": 700 * MB
 	},
 	"static_mem":
-	{
-		"label": "CPU memory",
-		"group": "global",
-		"unit": "bytes",
-		"soft": 512 * MB,
-		"hard": 1024 * MB
-	},
+	{"label": "CPU memory", "group": "global", "unit": "bytes", "soft": 560 * MB, "hard": 700 * MB},
 	"draw_calls":
 	{"label": "Draw calls", "group": "global", "unit": "count", "soft": 1000, "hard": 2000},
 	"fps":
-	{"label": "FPS", "group": "global", "unit": "count", "soft": 50, "hard": 30, "inverse": true},
+	{
+		"label": "Performance",
+		"group": "global",
+		"unit": "count",
+		"soft": 50,
+		"hard": 30,
+		"inverse": true,
+		"dynamic_max": true
+	},
 }
 
 ## Display order (per-scene group first, then whole-app).

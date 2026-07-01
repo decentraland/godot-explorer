@@ -101,7 +101,17 @@ func _refresh() -> void:
 		var key: String = meta["key"]
 		var value: int = int(stats.get(key, glob.get(key, 0)))
 		var lim: Dictionary = SceneLimits.limits_for(key, _parcels)
-		_update_row(key, value, int(lim["soft"]), int(lim["hard"]), meta)
+		var soft: int = int(lim["soft"])
+		var hard: int = int(lim["hard"])
+		# FPS: the bar's full scale is the CURRENT max fps (thermal/user cap, or
+		# the display refresh rate when uncapped). Green within 80% of the cap,
+		# red below half of it — so an 18fps-capped scene treats 18 as the max.
+		if bool(meta.get("dynamic_max", false)):
+			var m: int = _current_max_fps()
+			meta["bar_max"] = m
+			soft = int(round(float(m) * 0.8))
+			hard = int(round(float(m) * 0.5))
+		_update_row(key, value, soft, hard, meta)
 
 
 func _update_row(key: String, value: int, soft: int, hard: int, meta: Dictionary) -> void:
@@ -115,9 +125,15 @@ func _update_row(key: String, value: int, soft: int, hard: int, meta: Dictionary
 	var status: int = _status(value, soft, hard, inverse)
 
 	if inverse:
-		bar.max_value = maxi(soft, 1)
+		# Show performance as a percentage of the current max (e.g. fps / max fps):
+		# 100% = running at the cap, lower = worse. Not the raw fps number.
+		var bar_max: int = int(meta.get("bar_max", soft))
+		bar.max_value = maxi(bar_max, 1)
 		bar.value = clampi(value, 0, int(bar.max_value))
-		lbl.text = _fmt(value, unit)
+		var pct: int = 0
+		if bar_max > 0:
+			pct = clampi(int(round(float(value) / float(bar_max) * 100.0)), 0, 100)
+		lbl.text = "%d%%" % pct
 	else:
 		bar.max_value = maxi(hard, 1)
 		bar.value = clampi(value, 0, int(bar.max_value))
@@ -139,6 +155,18 @@ func _set_row_idle(key: String) -> void:
 	bar.value = 0
 	bar.add_theme_stylebox_override("fill", _fill_styles[Status.GREEN])
 	(row["value"] as Label).text = "—"
+
+
+## Current max fps: the active cap (thermal or user setting, via Engine.max_fps),
+## or the display refresh rate when uncapped, or 60 as a last resort.
+func _current_max_fps() -> int:
+	var cap: int = Engine.max_fps
+	if cap > 0:
+		return cap
+	var hz: float = DisplayServer.screen_get_refresh_rate()
+	if hz > 0.0:
+		return int(round(hz))
+	return 60
 
 
 static func _status(value: int, soft: int, hard: int, inverse: bool) -> int:
