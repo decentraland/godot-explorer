@@ -18,11 +18,7 @@ pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 /// (e.g. `4.6.2.stable.gh.6ddcadb64 - Protocol Squad`) and the SHA-tagged release path published
 /// by the godot-engine-releases pipeline. Bump it in lockstep with a new fork publish: it busts the
 /// local download cache (keys embed it) and pins the immutable per-SHA release URLs below.
-///
-/// TEMP (feature-branch build): head of `fix/remote-debug-bind-all-multi-ip`, so the installed-binary
-/// validation + cache keys match the branch editor's `--version` (`4.6.2.stable.gh.15a634fa4`).
-/// Revert to `6ddcadb64` together with the URL fns below once the engine change lands on 4.6.2.
-pub const GODOT_BUILD_SHA: &str = "15a634fa4";
+pub const GODOT_BUILD_SHA: &str = "36d9ae5fa";
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
@@ -31,20 +27,22 @@ pub fn godot_release_tag() -> String {
     format!("{GODOT_CURRENT_VERSION}.stable.gh.{GODOT_BUILD_SHA}")
 }
 
-/// TEMP (feature-branch build): default installs are served from the `/branches/<slug>/` build
-/// instead of the immutable per-SHA path — feature branches have no per-SHA release path. Revert
-/// both fns below (back to `godot_release_tag()`) + `GODOT_BUILD_SHA` once the engine change lands
-/// on the 4.6.2 branch and is re-published.
-const TEMP_GODOT_BRANCH: &str = "fix-remote-debug-bind-all-multi-ip";
-
-/// Editor (binary) base URL. TEMP: served from the feature-branch build (see `TEMP_GODOT_BRANCH`).
+/// Editor (binary) base URL for the pinned stable fork build, e.g.
+/// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.36d9ae5fa/editors/`.
 pub fn godot_editor_base_url() -> String {
-    godot_editor_base_url_for_branch(TEMP_GODOT_BRANCH)
+    format!(
+        "{GODOT_ENGINE_RELEASES_BASE_URL}{}/editors/",
+        godot_release_tag()
+    )
 }
 
-/// Compressed-templates base URL. TEMP: served from the feature-branch build (see `TEMP_GODOT_BRANCH`).
+/// Compressed-templates base URL for the pinned stable fork build, e.g.
+/// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.36d9ae5fa/compressed-templates/`.
 pub fn godot_templates_base_url() -> String {
-    godot_templates_base_url_for_branch(TEMP_GODOT_BRANCH)
+    format!(
+        "{GODOT_ENGINE_RELEASES_BASE_URL}{}/compressed-templates/",
+        godot_release_tag()
+    )
 }
 
 /// Sanitizes a git branch name for use in the release artifact URL path.
