@@ -219,7 +219,16 @@ func _activate_scene_inspector_from_config() -> void:
 	elif not cli.scene_inspector.is_empty():
 		target = cli.scene_inspector
 	if target.is_empty():
-		return
+		# Debug builds with no explicit target default to a local hub over loopback,
+		# so a plain Godot-editor deploy / F5 auto-dials with no --scene-inspector
+		# arg (parity with the iOS export plugin, which bakes the LAN IP). Android
+		# reaches it via `adb reverse tcp:9231 tcp:9231`; desktop hits it directly.
+		# The client retries quietly if no hub is up, and capture stays gated. Never
+		# in production.
+		if OS.is_debug_build() and not is_production():
+			target = "ws://127.0.0.1:9231"
+		else:
+			return
 	scene_inspector_active = true
 	if OS.is_debug_build():
 		scene_inspector_dispatcher.set_early_log_capture(true)

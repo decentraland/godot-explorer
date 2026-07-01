@@ -31,31 +31,43 @@ local-network prompt on first launch. The bridge activates at **boot**
 deeplink), so the channel is live from the lobby, **before login** — no need to
 enter a world first.
 
-## Answering "what state is the app in?" — the connect procedure
+## Answering "what state is the app in?" — ONE step
 
-The client **dials out** to the hub and **retries forever** (exponential backoff
-1s→2s→…→30s cap; `scene_inspector_websocket.gd`), so a hub started *after* the app
-is picked up within ≤30s — **no app restart needed**. From a cold start:
+Run the pre-armed connector **in the background**, read its output, then query:
 
-1. **Probe for a running hub** — `lsof -nP -iTCP:9230 -iTCP:9231`, or just
-   `scripts/unified.sh ping`. A `*:9231 LISTEN` plus a non-loopback / `adb`
-   `:9231->… ESTABLISHED` means a device is already connected → skip to step 4.
-   Reuse it — don't start a second hub; two `debug-hub`s just fight over 9230/9231.
-2. **No hub? Host it — in the background.** `cargo run -- debug-hub` **blocks**, so
-   start it detached (Bash `run_in_background: true`); running it in the foreground
-   hangs your turn. It binds device port 9231 + consumer port 9230.
-3. **Wait for the device to dial in** (≤~35 s): poll `scripts/unified.sh ping`
-   until it returns an ACK (or watch `lsof … :9231` for the device's ESTABLISHED
-   socket). The app connects on its next backoff tick — no redeploy needed.
-4. **Query + report** with the id-filtered helpers (`unified.sh ping / scenes /
-   avatar / app_ui`, `eval`) — never infer state from a stray `perf` push
-   (see Important notes).
-5. **Still nothing after ~35 s?** The app isn't dialing this hub — ask the user to
-   **relaunch / redeploy** so it picks up `--scene-inspector=ws://<host>:9231`:
-   - iOS: a Godot-editor deploy auto-bakes it (dcl-ios-devtools → LAN IP); just
-     relaunch the app.
-   - Android: `cargo run -- run --target android` injects the arg + `adb reverse`;
-     a plain Godot-editor Android deploy has neither, so prefer the xtask run.
+```bash
+scripts/hub-connect.sh          # Bash tool: run_in_background: true — read its output
+```
+
+`hub-connect.sh` does the whole cold-start dance in one shot: wires Android
+`adb reverse`, ensures a hub (reuse or start), waits ≤35 s for the device to dial
+in, and prints either `=== CONNECTED ===` + a `ping` snapshot or a `NO DEVICE`
+relaunch hint. If it started the hub it keeps the task alive so the hub persists.
+Then query with the id-filtered helpers:
+
+```bash
+scripts/unified.sh scenes
+scripts/unified.sh scene '{"scene_id":0,"filters":{"limit":5}}'
+scripts/unified.sh eval  'return {"scene": str(get_tree().current_scene.name), "scenes_loaded": Global.scene_runner.debug_get_loaded_scene_ids().size()}'
+```
+
+**Why it just works:** the client **dials out** and **retries forever** (backoff
+1s→…→30 s cap, `scene_inspector_websocket.gd`), and debug builds **default the
+target to `ws://127.0.0.1:9231`** with no arg (`global.gd`), so a hub started
+*after* the app is picked up within ≤30 s — no app restart needed. Per platform:
+
+- **iOS** — the `dcl-ios-devtools` export plugin bakes `ws://<LAN-IP>:9231` (even a
+  Godot-editor deploy phones home); accept the Local Network prompt once.
+- **Android** — NO plugin bakes the arg (the baking plugin is iOS-only, and Android
+  editor-deploy CLI args don't reach the app). The **debug loopback default** +
+  `adb reverse tcp:9231` (set by `hub-connect.sh`) carry it instead. A build made
+  *before* that default won't connect — rebuild+redeploy, or use
+  `cargo run -- run --target android`.
+- **desktop** — `cargo run -- run -- --scene-inspector=ws://127.0.0.1:9231`, or an
+  editor F5 also auto-dials loopback.
+
+If `hub-connect.sh` reports `NO DEVICE`, the app simply isn't dialing — follow the
+hint it prints (usually: relaunch/redeploy the app).
 
 ## Wiring
 
