@@ -47,3 +47,37 @@ pub fn truncate_utf8_safe(s: &str, max_bytes: usize) -> &str {
     }
     &s[..end]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::truncate_utf8_safe;
+
+    #[test]
+    fn returns_original_when_within_limit() {
+        assert_eq!(truncate_utf8_safe("hello", 10), "hello");
+        assert_eq!(truncate_utf8_safe("hello", 5), "hello");
+    }
+
+    #[test]
+    fn truncates_ascii_at_byte_limit() {
+        assert_eq!(truncate_utf8_safe("hello world", 5), "hello");
+    }
+
+    #[test]
+    fn never_splits_a_multibyte_char() {
+        // "é" is 2 bytes, "🌐" is 4 bytes. Truncating mid-character must back off
+        // to the previous char boundary rather than produce invalid UTF-8.
+        let s = "aé🌐b"; // bytes: 1 + 2 + 4 + 1 = 8
+                         // Limit 2 lands on the second byte of "é" -> must drop "é" entirely.
+        assert_eq!(truncate_utf8_safe(s, 2), "a");
+        // Limit 5 lands inside "🌐" -> back off to after "é".
+        assert_eq!(truncate_utf8_safe(s, 5), "aé");
+        // The result is always valid UTF-8 (no panic, str slicing succeeded).
+        assert!(truncate_utf8_safe(s, 4).is_char_boundary(truncate_utf8_safe(s, 4).len()));
+    }
+
+    #[test]
+    fn handles_zero_limit() {
+        assert_eq!(truncate_utf8_safe("abc", 0), "");
+    }
+}

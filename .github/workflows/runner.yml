@@ -22,6 +22,14 @@ jobs:
     needs: static-checks
     uses: ./.github/workflows/clippy.yml
 
+  # Fast, network-free Rust unit tests (comms protocol/dedup/compression, etc).
+  # Gates every PR and runs in parallel with clippy/builds. The heavier
+  # headless-Godot integration tests run in coverage.yml.
+  unit-tests:
+    name: 🧪 Unit Tests
+    needs: static-checks
+    uses: ./.github/workflows/unit_tests.yml
+
   # Third stage: Run all the builds and tests (all depend on static-checks)
 
   # Temporarily disabled: GPU self-hosted runner is down

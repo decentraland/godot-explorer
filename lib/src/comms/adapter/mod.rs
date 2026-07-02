@@ -4,5 +4,6 @@ pub mod archipelago;
 #[cfg(feature = "use_livekit")]
 pub mod livekit;
 pub mod message_processor;
+pub mod message_processor_itest;
 pub mod movement_compressed;
 pub mod ws_room;

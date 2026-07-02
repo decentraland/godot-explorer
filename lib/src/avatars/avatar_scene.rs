@@ -110,7 +110,9 @@ pub struct AvatarScene {
     last_movement_timestamp: HashMap<AvatarAlias, f32>,
     last_position_index: HashMap<AvatarAlias, u32>,
 
-    last_emote_incremental_id: HashMap<AvatarAlias, u32>,
+    // Last emote urn dispatched per alias. Test-observable (see debug_last_emote);
+    // emote de-dup itself lives upstream in the comms MessageProcessor.
+    last_emote_urn: HashMap<AvatarAlias, String>,
 
     impostor_multimesh: Option<Gd<MultiMeshInstance3D>>,
     impostor_texture_array: Option<Gd<Texture2DArray>>,
@@ -137,7 +139,7 @@ impl INode for AvatarScene {
             last_updated_profile: HashMap::new(),
             last_movement_timestamp: HashMap::new(),
             last_position_index: HashMap::new(),
-            last_emote_incremental_id: HashMap::new(),
+            last_emote_urn: HashMap::new(),
             impostor_multimesh: None,
             impostor_texture_array: None,
             impostor_slots: HashMap::new(),
@@ -1025,6 +1027,39 @@ impl AvatarScene {
         self.avatar_godot_scene.len() as i32
     }
 
+    /// World position of the avatar with `alias`, or an all-infinity vector if
+    /// unknown. Read-only; used by integration tests and the debug WS.
+    #[func]
+    pub fn debug_avatar_position(&self, alias: i64) -> Vector3 {
+        self.avatar_entity
+            .get(&(alias as u32))
+            .and_then(|entity_id| self.avatar_godot_scene.get(entity_id))
+            .map(|avatar| avatar.get_position())
+            .unwrap_or(Vector3::new(f32::INFINITY, f32::INFINITY, f32::INFINITY))
+    }
+
+    /// Last emote urn dispatched to the avatar with `alias` (empty string if
+    /// none yet). Read-only; used by integration tests and the debug WS.
+    #[func]
+    pub fn debug_last_emote(&self, alias: i64) -> GString {
+        self.last_emote_urn
+            .get(&(alias as u32))
+            .map(GString::from)
+            .unwrap_or_default()
+    }
+
+    /// Last accepted movement/position timestamp for the avatar with `alias`
+    /// (`-1` if none). Lets tests assert a Movement packet was processed and that
+    /// dedup dropped stale ones, without depending on frame-stepped lerp.
+    /// Read-only; used by integration tests and the debug WS.
+    #[func]
+    pub fn debug_avatar_last_movement_ts(&self, alias: i64) -> f32 {
+        self.last_movement_timestamp
+            .get(&(alias as u32))
+            .copied()
+            .unwrap_or(-1.0)
+    }
+
     #[func]
     pub fn on_scene_spawned(&mut self, _scene_id: i32, _entity_id: GString) {
         for (_, avatar) in self.avatar_godot_scene.iter_mut() {
@@ -1650,30 +1685,19 @@ impl AvatarScene {
         }
     }
 
-    pub fn play_emote(&mut self, alias: u32, incremental_id: u32, emote_urn: &String) {
+    pub fn play_emote(&mut self, alias: u32, _incremental_id: u32, emote_urn: &String) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
             return;
         };
 
-        // Discard if the emote is less than or equal to the last played emote
-        if let Some(last_incremental_id) = self.last_emote_incremental_id.get(&alias) {
-            if incremental_id <= *last_incremental_id {
-                tracing::debug!(
-                    "Discarding emote {} for alias {}: incremental_id {} <= last_emote_incremental_id {}",
-                    emote_urn,
-                    alias,
-                    incremental_id,
-                    last_incremental_id
-                );
-                return;
-            }
-        }
-
-        // Store the last emote incremental ID for this alias
-        self.last_emote_incremental_id.insert(alias, incremental_id);
-
+        // Emote de-duplication / re-trigger detection lives upstream in the comms
+        // MessageProcessor, which understands the per-client urn/timestamp/
+        // incremental_id re-broadcast conventions. A second incremental_id-only
+        // check here used to drop every emote whose id was 0 (the same bug fixed in
+        // the MessageProcessor), so we now always forward to the avatar.
+        self.last_emote_urn.insert(alias, emote_urn.clone());
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar_scene.call("async_play_emote", &[emote_urn.to_variant()]);
         }

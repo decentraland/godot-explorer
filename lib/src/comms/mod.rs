@@ -1,6 +1,9 @@
 pub mod adapter;
 pub mod communication_manager;
 mod consts;
+pub mod dedup;
+#[cfg(test)]
+mod packet_tests;
 pub use consts::truncate_utf8_safe;
 pub mod profile;
 pub mod randomize_profile;

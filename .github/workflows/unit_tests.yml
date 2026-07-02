@@ -1,0 +1,41 @@
+name: 🧪 Unit Tests
+on:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-unit-tests
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Rust unit tests (cargo test --lib)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+      PROTOC: ${{ github.workspace }}/.bin/protoc/bin/protoc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.90"
+
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: cargo install
+        run: cargo run -- install --no-templates
+
+      # Fast, network-free unit tests (comms protocol/dedup/compression, etc).
+      # `--skip auth` excludes tests that reach out to live auth services, matching
+      # the coverage.yml convention. These run on every PR to gate logic
+      # regressions (e.g. the emote incremental_id==0 drop) that the heavier
+      # headless-Godot itest/coverage job — only on the self-hosted runner — would
+      # otherwise be the sole guard for.
+      - name: cargo test
+        working-directory: lib
+        run: cargo test --lib -- --skip auth

@@ -381,3 +381,147 @@ impl MovementCompressed {
         Vector3::new(vel.x, vel.y, -vel.z)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dcl::components::proto_components::kernel::comms::rfc4;
+
+    // Default realm bounds used by the client (see MessageProcessor::new).
+    fn bounds() -> (Vector2i, Vector2i) {
+        (Vector2i::new(-150, -150), Vector2i::new(163, 158))
+    }
+
+    // Serialize a (temporal, movement) pair the same way broadcast_movement does,
+    // then decode it back through the wire types.
+    fn round_trip(temporal: Temporal, movement: Movement) -> MovementCompressed {
+        let proto = rfc4::MovementCompressed {
+            temporal_data: i32::from_le_bytes(temporal.into_bytes()),
+            movement_data: i64::from_le_bytes(movement.into_bytes()),
+            head_sync_data: 0,
+            point_at_data: 0,
+        };
+        MovementCompressed::from_proto(proto)
+    }
+
+    #[test]
+    fn temporal_timestamp_round_trips_within_one_quantum() {
+        for &t in &[0.0_f32, 1.0, 12.34, 600.0] {
+            let temporal = Temporal::new().with_timestamp_f32(t);
+            let bytes = temporal.into_bytes();
+            let decoded = Temporal::from_bytes(bytes).timestamp_f32();
+            assert!(
+                (decoded - t).abs() <= Temporal::TIMESTAMP_QUANTUM + 1e-3,
+                "timestamp {t} -> {decoded}"
+            );
+        }
+    }
+
+    #[test]
+    fn temporal_rotation_round_trips_within_one_quantum() {
+        let quantum = TAU / 64.0; // B6 over [0, TAU)
+        for &r in &[0.0_f32, 1.0, 3.0, 6.0] {
+            let temporal = Temporal::new().with_rotation_f32(r);
+            let decoded = Temporal::from_bytes(temporal.into_bytes()).rotation_f32();
+            assert!(
+                (decoded - r).abs() <= quantum + 1e-3,
+                "rotation {r} -> {decoded}"
+            );
+        }
+    }
+
+    #[test]
+    fn position_round_trips_with_z_flip() {
+        let (min, max) = bounds();
+        // A world position inside the realm; velocity small => Slow tier (finer pos).
+        let world = Vector3::new(42.5, 1.3, -88.25);
+        let vel = Vector3::new(0.0, 0.0, 0.0);
+        let movement = Movement::new(world, vel, min, max);
+        let temporal = Temporal::from_parts(
+            0.0,
+            false,
+            0.0,
+            movement.velocity_tier(),
+            MoveKind::Idle,
+            true,
+        );
+
+        let decoded = round_trip(temporal, movement);
+        let pos = decoded.position(min, max);
+
+        // x and y reconstruct directly; z comes back negated (DCL<->Godot frame).
+        assert!((pos.x - world.x).abs() < 0.1, "x {} -> {}", world.x, pos.x);
+        assert!((pos.y - world.y).abs() < 0.1, "y {} -> {}", world.y, pos.y);
+        assert!(
+            (pos.z - (-world.z)).abs() < 0.1,
+            "z {} -> {} (expected ~{})",
+            world.z,
+            pos.z,
+            -world.z
+        );
+    }
+
+    #[test]
+    fn velocity_sign_and_magnitude_round_trip() {
+        let (min, max) = bounds();
+        let world = Vector3::new(10.0, 0.0, -10.0);
+        let vel = Vector3::new(2.0, -1.5, 3.0);
+        let movement = Movement::new(world, vel, min, max);
+        let temporal = Temporal::from_parts(
+            0.0,
+            false,
+            0.0,
+            movement.velocity_tier(),
+            MoveKind::Walk,
+            true,
+        );
+
+        let decoded = round_trip(temporal, movement).velocity();
+
+        // B3 velocity quantization is coarse (0.5 m/s quantum), so check sign +
+        // a generous magnitude tolerance — the point is the axis/sign convention.
+        assert!(
+            decoded.x > 0.0 && (decoded.x - vel.x).abs() < 0.7,
+            "vx {decoded:?}"
+        );
+        assert!(
+            decoded.y < 0.0 && (decoded.y - vel.y).abs() < 0.7,
+            "vy {decoded:?}"
+        );
+        assert!(
+            decoded.z > 0.0 && (decoded.z - vel.z).abs() < 0.7,
+            "vz {decoded:?}"
+        );
+    }
+
+    #[test]
+    fn position_round_trips_across_multiple_parcels() {
+        let (min, max) = bounds();
+        // Several world points spread across different parcels.
+        for &(x, y, z) in &[
+            (0.0_f32, 0.0_f32, 0.0_f32),
+            (16.0, 5.0, -16.0),
+            (100.25, 2.0, -50.5),
+            (-32.75, 10.0, 48.5),
+        ] {
+            let world = Vector3::new(x, y, z);
+            let movement = Movement::new(world, Vector3::ZERO, min, max);
+            let temporal = Temporal::from_parts(
+                0.0,
+                false,
+                0.0,
+                movement.velocity_tier(),
+                MoveKind::Idle,
+                true,
+            );
+            let pos = round_trip(temporal, movement).position(min, max);
+            assert!((pos.x - x).abs() < 0.1, "x {x} -> {}", pos.x);
+            assert!(
+                (pos.z - (-z)).abs() < 0.1,
+                "z {z} -> {} (exp {})",
+                pos.z,
+                -z
+            );
+        }
+    }
+}

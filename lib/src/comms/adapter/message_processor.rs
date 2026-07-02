@@ -5,7 +5,6 @@ use std::{
 
 use ethers_core::types::H160;
 use godot::prelude::{GString, Gd, ToGodot};
-use std::cmp::Ordering;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -17,6 +16,7 @@ use crate::{
             MESSAGE_CHANNEL_SIZE, OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS,
             PROFILE_UPDATE_CHANNEL_SIZE,
         },
+        dedup,
         profile::{SerializedProfile, UserProfile},
     },
     content::profile::{
@@ -132,7 +132,11 @@ struct Peer {
     peer_version: Option<String>,            // Client version for staging/dev builds
     lambdas_endpoint: Option<String>, // Peer's lambda URL from LiveKit metadata (lambdasEndpoint)
     last_movement_timestamp: f32,     // Dedup: last movement timestamp received
-    last_emote_incremental_id: u32,   // Dedup: last emote incremental ID received
+    // Dedup for emotes: last PLAYED emote as (urn, timestamp, incremental_id).
+    // Different clients signal a new emote differently — some bump
+    // `incremental_id`, others keep it at 0 and only change `urn`/`timestamp` —
+    // so a single field can't dedup both. See the PlayerEmote handler.
+    last_played_emote: Option<(String, f32, u32)>,
 }
 
 struct ProfileUpdate {
@@ -220,18 +224,6 @@ pub struct MessageProcessor {
 
     // Set to true when room metadata indicates the local player is banned
     room_metadata_banned: bool,
-}
-
-fn compare_f64(a: &f64, b: &f64) -> Ordering {
-    match (a.is_nan(), b.is_nan()) {
-        (true, true) => Ordering::Equal, // NaN == NaN for sorting purposes
-        (true, false) => Ordering::Greater, // NaN sorts last
-        (false, true) => Ordering::Less,
-        (false, false) => {
-            // Use total_cmp for consistent ordering (handles -0.0 vs 0.0)
-            a.total_cmp(b)
-        }
-    }
 }
 
 impl MessageProcessor {
@@ -807,7 +799,7 @@ impl MessageProcessor {
                     peer_version: None,
                     lambdas_endpoint: None,
                     last_movement_timestamp: f32::NEG_INFINITY,
-                    last_emote_incremental_id: 0,
+                    last_played_emote: None,
                 },
             );
 
@@ -1060,7 +1052,7 @@ impl MessageProcessor {
             rfc4::packet::Message::Movement(movement) => {
                 // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
                 if let Some(peer) = self.peer_identities.get_mut(&address) {
-                    if movement.timestamp <= peer.last_movement_timestamp {
+                    if !dedup::movement_is_newer(peer.last_movement_timestamp, movement.timestamp) {
                         tracing::debug!(
                             "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
                             address,
@@ -1097,7 +1089,7 @@ impl MessageProcessor {
                 // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
                 let timestamp = movement.temporal.timestamp_f32();
                 if let Some(peer) = self.peer_identities.get_mut(&address) {
-                    if timestamp <= peer.last_movement_timestamp {
+                    if !dedup::movement_is_newer(peer.last_movement_timestamp, timestamp) {
                         tracing::debug!(
                             "Discarding duplicate MovementCompressed from {:#x}: timestamp {} <= {}",
                             address,
@@ -1143,19 +1135,16 @@ impl MessageProcessor {
                     return; // muted/blocked - ignore chat messages
                 }
 
-                // Check for duplicate messages based on timestamp
-                // Check if we've seen a recent message from this sender
-                if let Some(&last_timestamp) = self.last_chat_timestamps.get(&address) {
-                    // If the new timestamp is older or within tolerance of the last one, it's a duplicate
-                    if compare_f64(&chat.timestamp, &last_timestamp) != Ordering::Greater {
-                        tracing::debug!(
-                            "Discarding duplicate chat from {:#x}: timestamp {} <= {} (last + tolerance)",
-                            address,
-                            chat.timestamp,
-                            last_timestamp
-                        );
-                        return;
-                    }
+                // Check for duplicate messages based on timestamp (dual-room broadcasting)
+                let last_timestamp = self.last_chat_timestamps.get(&address).copied();
+                if !dedup::chat_is_newer(last_timestamp, chat.timestamp) {
+                    tracing::debug!(
+                        "Discarding duplicate chat from {:#x}: timestamp {} <= {:?}",
+                        address,
+                        chat.timestamp,
+                        last_timestamp
+                    );
+                    return;
                 }
 
                 // Update the last timestamp for this sender
@@ -1250,13 +1239,16 @@ impl MessageProcessor {
                 };
 
                 // If the announced version is newer than what we have AND we haven't tried to fetch it yet AND not banned
-                if announced_version > current_version
-                    && !self
-                        .peer_identities
-                        .get(&address)
-                        .is_some_and(|p| p.profile_fetch_attempted)
-                    && !is_banned
-                {
+                let fetch_attempted = self
+                    .peer_identities
+                    .get(&address)
+                    .is_some_and(|p| p.profile_fetch_attempted);
+                if dedup::profile_should_fetch(
+                    current_version,
+                    announced_version,
+                    fetch_attempted,
+                    is_banned,
+                ) {
                     tracing::debug!(
                         "Requesting newer profile from {:#x}: announced={}, current={}",
                         address,
@@ -1612,22 +1604,51 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Voice(_voice) => {}
             rfc4::packet::Message::PlayerEmote(player_emote) => {
-                // Deduplicate: skip if incremental_id is not newer (dual-room broadcasting)
+                // Decide whether this is a NEW emote trigger or just a duplicate
+                // re-broadcast (peers re-send their current emote, and every packet
+                // arrives twice via dual-room broadcasting).
+                //
+                // Clients disagree on how they signal a new emote:
+                //  - The godot client bumps `incremental_id` per trigger (starting
+                //    at 1) and re-broadcasts the current emote with the SAME id.
+                //  - Web / Foundation clients leave `incremental_id = 0` and signal a
+                //    new emote only by changing `urn`, with an ever-increasing
+                //    `timestamp` on every re-broadcast.
+                //
+                // The old check (`incremental_id <= last`, default 0) silently dropped
+                // EVERY emote from the second class of clients because `0 <= 0` — the
+                // root cause of "emotes from other players don't play". See
+                // [`dedup::emote_should_play`] for the full decision (unit-tested).
+                let should_play = dedup::emote_should_play(
+                    self.peer_identities
+                        .get(&address)
+                        .and_then(|p| p.last_played_emote.as_ref()),
+                    &player_emote.urn,
+                    player_emote.timestamp,
+                    player_emote.incremental_id,
+                );
+
+                if !should_play {
+                    tracing::debug!(
+                        "Discarding duplicate/stale PlayerEmote from {:#x}: id={} urn={:?} ts={}",
+                        address,
+                        player_emote.incremental_id,
+                        player_emote.urn,
+                        player_emote.timestamp
+                    );
+                    return;
+                }
+
                 if let Some(peer) = self.peer_identities.get_mut(&address) {
-                    if player_emote.incremental_id <= peer.last_emote_incremental_id {
-                        tracing::debug!(
-                            "Discarding duplicate PlayerEmote from {:#x}: id {} <= {}",
-                            address,
-                            player_emote.incremental_id,
-                            peer.last_emote_incremental_id
-                        );
-                        return;
-                    }
-                    peer.last_emote_incremental_id = player_emote.incremental_id;
+                    peer.last_played_emote = Some((
+                        player_emote.urn.clone(),
+                        player_emote.timestamp,
+                        player_emote.incremental_id,
+                    ));
                 }
 
                 tracing::debug!(
-                    "Received PlayerEmote from {:#x}: {:?}",
+                    "Playing PlayerEmote from {:#x}: {:?}",
                     address,
                     player_emote
                 );
