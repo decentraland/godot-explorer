@@ -38,7 +38,7 @@ func _async_load_presets() -> void:
 		card.button_group = _button_group
 		h_box_container_cards.add_child(card)
 		if i == 1:
-			card.button_pressed = true
+			card.set_pressed_no_signal(true)
 		cards.append(card)
 		_async_load_preset_into_card("default%d" % i, card)
 

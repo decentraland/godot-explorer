@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://b0jonmd2rfupn"]
 
 [ext_resource type="Script" uid="uid://b17n1qqifgain" path="res://src/main.gd" id="1_2a1rx"]
+[ext_resource type="Texture2D" uid="uid://djhqqgo0jyq4t" path="res://assets/backgrounds/gradient-background.png" id="2_3cfgd"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="2_logo"]
 
 [node name="main" type="Node" unique_id=2004683069]
@@ -9,25 +10,39 @@ metadata/mobile_preview_orientation = "portrait"
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=36137294]
 
-[node name="ColorRect" type="ColorRect" parent="CanvasLayer" unique_id=1828465057]
+[node name="Background" type="TextureRect" parent="CanvasLayer" unique_id=812315547]
+unique_name_in_owner = true
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.411765, 0.121569, 0.662745, 1)
+texture = ExtResource("2_3cfgd")
+expand_mode = 3
+stretch_mode = 6
 
-[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer" unique_id=1788785371]
+[node name="DclSplash" type="Control" parent="CanvasLayer" unique_id=1821175761]
+unique_name_in_owner = true
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 
-[node name="TextureRect" type="TextureRect" parent="CanvasLayer/CenterContainer" unique_id=124319291]
-custom_minimum_size = Vector2(154, 154)
-layout_mode = 2
+[node name="TextureRect2" type="TextureRect" parent="CanvasLayer/DclSplash" unique_id=279759910]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -48.0
+offset_top = -48.0
+offset_right = 48.0
+offset_bottom = 48.0
+grow_horizontal = 2
+grow_vertical = 2
 texture = ExtResource("2_logo")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 4
