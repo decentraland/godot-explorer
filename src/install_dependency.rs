@@ -36,7 +36,7 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // (e.g. a per-PR protocol tarball); leave it `None` to track @next.
 // Pinned here to the controls-customization protocol build (PR #426 rebased on main) that
 // ships the new mobile_input_controls/ui_input_binding components alongside current main.
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-28452214137.commit-9a82e23.tgz");
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-28537371424.commit-9b4f100.tgz");
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {

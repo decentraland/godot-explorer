@@ -99,7 +99,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::PhysicsCombinedImpulse => "PhysicsCombinedImpulse",
         S::CameraModeArea => "CameraModeArea",
         S::InputModifier => "InputModifier",
-        S::MobileInputControls => "MobileInputControls",
+        S::TouchScreenControls => "TouchScreenControls",
         S::SkyboxTime => "SkyboxTime",
         S::TriggerArea => "TriggerArea",
         S::VirtualCameras => "VirtualCameras",
@@ -130,7 +130,7 @@ use super::{
         material::{update_material, update_video_material_textures},
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
-        mobile_input_controls::update_mobile_input_controls,
+        touch_screen_controls::update_touch_screen_controls,
         nft_shape::update_nft_shape,
         physics_combined::{update_physics_combined_force, update_physics_combined_impulse},
         pointer_events::update_scene_pointer_events,
@@ -511,8 +511,8 @@ pub fn _process_scene(
                     update_input_modifier(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
-                SceneUpdateState::MobileInputControls => {
-                    update_mobile_input_controls(scene, crdt_state, current_parcel_scene_id);
+                SceneUpdateState::TouchScreenControls => {
+                    update_touch_screen_controls(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
                 SceneUpdateState::SkyboxTime => {

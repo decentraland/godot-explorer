@@ -48,10 +48,10 @@ var _session_hide_world_interactions: bool = true
 var _session_hide_player_names: bool = true
 var _session_hide_scene_ui: bool = true
 var _mobile_controls_hidden_for_hide_ui: bool = false
-# Tracks the last SDK-driven (PBMobileInputControls) hide state we applied, so we only
+# Tracks the last SDK-driven (PBTouchscreenInputControls) hide state we applied, so we only
 # react on change and can restore the native controls when a scene clears the flags.
 var _sdk_hide_joystick_applied: bool = false
-var _sdk_hide_gamepad_applied: bool = false
+var _sdk_hide_crosshair_applied: bool = false
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -98,6 +98,7 @@ var _debug_panel_from_settings: bool = false
 
 func _process(_dt):
 	_apply_sdk_mobile_controls()
+	_apply_sdk_crosshair_visibility()
 
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 
@@ -268,7 +269,7 @@ func _ready():
 		_update_virtual_controls_visibility()
 	else:
 		# Desktop is development-only in this build: show the on-screen controls so the
-		# native joystick/joypad (and the MobileInputControls / UiInputBinding features)
+		# native joystick/joypad (and the TouchscreenInputControls / UiInputBinding features)
 		# stay visible and debuggable. Keep the desktop crosshair/cursor behaviour as-is.
 		mobile_ui.show()
 		_update_virtual_controls_visibility()
@@ -1045,7 +1046,8 @@ func capture_mouse():
 	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if label_crosshair and ui_root:
-		label_crosshair.show()
+		if not Global.touch_controls_hide_crosshair:  # respect scene-driven crosshair hide
+			label_crosshair.show()
 		ui_root.grab_focus.call_deferred()
 
 
@@ -1097,11 +1099,12 @@ func _onscreen_controls_enabled() -> bool:
 	return not Global.is_xr()
 
 
-# Reacts to the PBMobileInputControls component (Global.mobile_input_hide_*), letting a
-# scene hide the native joystick / action buttons so creators can render their own touch
-# UI (bound via PBUiInputBinding). Applies wherever the controls are shown (mobile +
-# desktop dev). Only acts on state changes and defers to _mobile_controls_hidden_for_hide_ui
-# when restoring visibility.
+# Reacts to the PBTouchScreenControls component (Global.touch_controls_hide_joystick),
+# letting a scene hide the native joystick so creators can render their own touch UI (bound
+# via PBUiInputBinding). The gamepad action buttons are configured separately by the joypad
+# itself (denylist / main_action). Applies wherever the controls are shown (mobile + desktop
+# dev). Only acts on state changes and defers to _mobile_controls_hidden_for_hide_ui when
+# restoring visibility.
 func _apply_sdk_mobile_controls() -> void:
 	if not _onscreen_controls_enabled():
 		return
@@ -1110,19 +1113,26 @@ func _apply_sdk_mobile_controls() -> void:
 	# restore visibility once, on the transition back, so we don't fight the HUD state.
 	# Hide the joystick's visuals/touch area (not the whole node) so the camera (first/
 	# third-person) button stays visible and usable while the native joystick is hidden.
-	var hide_joystick: bool = Global.mobile_input_hide_joystick
+	var hide_joystick: bool = Global.touch_controls_hide_joystick
 	if hide_joystick:
 		virtual_joystick.set_visuals_hidden(true)
 	elif _sdk_hide_joystick_applied and not _mobile_controls_hidden_for_hide_ui:
 		virtual_joystick.set_visuals_hidden(false)
 	_sdk_hide_joystick_applied = hide_joystick
 
-	var hide_gamepad: bool = Global.mobile_input_hide_gamepad
-	if hide_gamepad:
-		joypad.hide()
-	elif _sdk_hide_gamepad_applied and not _mobile_controls_hidden_for_hide_ui:
-		joypad.show()
-	_sdk_hide_gamepad_applied = hide_gamepad
+
+# Reacts to PBTouchScreenControls.hide_crosshair (restores mobile shown / desktop-when-captured).
+func _apply_sdk_crosshair_visibility() -> void:
+	if Global.is_xr() or label_crosshair == null:
+		return
+
+	var hide_crosshair: bool = Global.touch_controls_hide_crosshair
+	if hide_crosshair:
+		label_crosshair.hide()
+	elif _sdk_hide_crosshair_applied:
+		if Global.is_mobile() or Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+			label_crosshair.show()
+	_sdk_hide_crosshair_applied = hide_crosshair
 
 
 func _apply_mobile_controls_hide_ui(hidden: bool) -> void:

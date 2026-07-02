@@ -7,10 +7,43 @@ signal touch_action_changed(pressed: bool)
 var _touch_index: int = -1
 var _is_action_active: bool = false  # Tracks if we're actually sending the action
 
+# Optional scene-provided icon (PBTouchScreenControls), rendered on a dedicated overlay so
+# it never interferes with the button's native glyph (icon/text). Toggle via set/clear.
+var _custom_icon: TextureRect
+
 
 func _ready() -> void:
 	# Disable toggle_mode for normal button behavior
 	toggle_mode = false
+
+	_custom_icon = TextureRect.new()
+	_custom_icon.name = "CustomIcon"
+	_custom_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_custom_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_custom_icon.offset_left = 6
+	_custom_icon.offset_top = 6
+	_custom_icon.offset_right = -6
+	_custom_icon.offset_bottom = -6
+	_custom_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_custom_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_custom_icon.hide()
+	add_child(_custom_icon)
+
+
+## Show a scene-provided icon on the overlay (leaves the native glyph untouched underneath).
+func set_custom_icon(texture: Texture2D) -> void:
+	if _custom_icon == null:
+		return
+	_custom_icon.texture = texture
+	_custom_icon.show()
+
+
+## Hide the scene-provided icon overlay, revealing the native glyph again.
+func clear_custom_icon() -> void:
+	if _custom_icon == null:
+		return
+	_custom_icon.texture = null
+	_custom_icon.hide()
 
 
 func _on_gui_input(event: InputEvent) -> void:
