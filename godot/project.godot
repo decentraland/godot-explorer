@@ -10,7 +10,7 @@ config_version=5
 
 [_mobile_preview]
 
-active=true
+active=false
 is_ios=false
 is_portrait=false
 viewport_width=1600

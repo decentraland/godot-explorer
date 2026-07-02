@@ -13,7 +13,7 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="12_4vh5o"]
 [ext_resource type="PackedScene" uid="uid://bk7bchyii05cp" path="res://src/ui/components/molecules/tip_card/tip_card.tscn" id="13_xmi2h"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="14_7rccc"]
-[ext_resource type="PackedScene" uid="uid://cqs5l0uuml56k" path="res://src/ui/components/atoms/buttons/close_button.tscn" id="14_cdm7v"]
+[ext_resource type="PackedScene" uid="uid://cqs5l0uuml56k" path="res://src/ui/components/atoms/buttons/close_button/close_button.tscn" id="14_cdm7v"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ky3me"]
 shader = ExtResource("3_7rccc")
