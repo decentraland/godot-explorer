@@ -170,9 +170,13 @@ func _on_scene_crashed(crashed_scene_id: int, entity_id: String) -> void:
 # the current scene (issue #2002). Instead of killing it, we warn and let the
 # user choose: "Continue anyway" (keep going, verbose logging) or "Back to
 # Discover". Rust emits this once per pressure episode for the current scene.
-func _on_low_memory_warning(_scene_id: int, entity_id: String) -> void:
+func _on_low_memory_warning(
+	_scene_id: int, entity_id: String, footprint_mb: int, available_mb: int
+) -> void:
 	if Global.modal_manager != null:
-		Global.modal_manager.async_show_low_memory_warning_modal(entity_id)
+		Global.modal_manager.async_show_low_memory_warning_modal(
+			entity_id, footprint_mb, available_mb
+		)
 
 
 func get_current_scene_data() -> SceneItem:

@@ -178,7 +178,7 @@ impl SceneManager {
     /// a warning modal letting the user "Continue anyway" or go "Back to
     /// Discover". Emitted once per pressure episode (issue #2002).
     #[signal]
-    fn low_memory_warning(scene_id: i32, entity_id: GString);
+    fn low_memory_warning(scene_id: i32, entity_id: GString, footprint_mb: i32, available_mb: i32);
 
     // Loading session signals
     #[signal]
@@ -1478,14 +1478,20 @@ impl SceneManager {
                 .map(|s| s.scene_entity_definition.id.clone());
 
             if let Some(entity_id) = entity_id {
+                let footprint = crate::tools::memory_monitor::FOOTPRINT_MB.load(Ordering::Relaxed);
                 crate::tools::memory_monitor::emit_log(&format!(
-                    "[MemMonitor] CRITICAL available={}MB -> warn user (scene id={})",
-                    available, current.0
+                    "[MemMonitor] CRITICAL available={}MB footprint={}MB -> warn user (scene id={})",
+                    available, footprint, current.0
                 ));
                 self.memory_modal_active = true;
                 self.base_mut().emit_signal(
                     "low_memory_warning",
-                    &[current.0.to_variant(), entity_id.to_godot().to_variant()],
+                    &[
+                        current.0.to_variant(),
+                        entity_id.to_godot().to_variant(),
+                        footprint.to_variant(),
+                        available.to_variant(),
+                    ],
                 );
             }
         }

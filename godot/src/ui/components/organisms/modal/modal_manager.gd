@@ -322,7 +322,9 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 ##   observe how far it gets before a possible OOM; stop nagging this session.
 ## - "BACK TO DISCOVER": leave the scene.
 ## @param _entity_id: The entity ID of the current scene (unused for now)
-func async_show_low_memory_warning_modal(_entity_id: String) -> void:
+func async_show_low_memory_warning_modal(
+	entity_id: String, footprint_mb: int = -1, available_mb: int = -1
+) -> void:
 	if not current_modal:
 		if not await _async_create_modal():
 			return
@@ -339,6 +341,23 @@ func async_show_low_memory_warning_modal(_entity_id: String) -> void:
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_low_memory_continue)
 	current_modal.button_secondary.pressed.connect(_on_low_memory_back)
+
+	# Measure how often the low-memory warning surfaces, on which scene/device and at
+	# what memory level (issue #2002). Flush eagerly: the app may be jetsam-killed by the
+	# OS shortly after this warning, so we can't rely on the periodic flush to send it.
+	if Global.metrics != null:
+		Global.metrics.track_screen_viewed(
+			"LOW_MEMORY_WARNING",
+			JSON.stringify(
+				{
+					"entity_id": entity_id,
+					"footprint_mb": footprint_mb,
+					"available_mb": available_mb,
+					"platform": OS.get_name()
+				}
+			)
+		)
+		Global.metrics.flush.call_deferred()
 
 
 ## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
