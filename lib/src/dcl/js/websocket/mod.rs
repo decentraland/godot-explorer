@@ -36,7 +36,7 @@ struct WsState {
 #[serde(tag = "type")]
 enum WsPoll {
     Connected,
-    Closed,
+    Closed { code: Option<u16>, reason: String },
     BinaryData { data: Vec<u8> },
     TextData { data: String },
 }
@@ -251,11 +251,11 @@ async fn op_ws_poll(op_state: Rc<RefCell<OpState>>, res_id: u32) -> Result<WsPol
         Some(WsReceiveData::Connected) => Ok(WsPoll::Connected),
         Some(WsReceiveData::Error(err)) => Err(err),
         Some(WsReceiveData::Close(data)) => {
-            if let Some(_data) = data {
-                Ok(WsPoll::Closed)
-            } else {
-                Ok(WsPoll::Closed)
-            }
+            let (code, reason) = match data {
+                Some(frame) => (Some(u16::from(frame.code)), frame.reason.into_owned()),
+                None => (None, String::new()),
+            };
+            Ok(WsPoll::Closed { code, reason })
         }
         None => Err(anyhow::Error::msg("none")),
     };
