@@ -246,6 +246,23 @@ jobs:
             --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
             || aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
 
+          # Sidecar: record the build number this export was BAKED with, right next to the tarball.
+          # The deploy orchestrator (mobile_distribute ios-resolve) compares it against a fresh
+          # allocation before reusing this export — if the allocator has since bumped the number
+          # (a store shipped past it), the export is stale and must be rebuilt, not reused/shipped.
+          if [ -n "${DCL_BUILD_NUMBER:-}" ]; then
+            BUILD_NUMBER_KEY="ios/${SAFE_BRANCH}/${SHA}/build_number.txt"
+            LATEST_BUILD_NUMBER_KEY="ios/${SAFE_BRANCH}/latest/build_number.txt"
+            printf '%s' "$DCL_BUILD_NUMBER" > build_number.txt
+            echo "🔢 Writing build_number sidecar ($DCL_BUILD_NUMBER) → s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}"
+            aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+            aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_BUILD_NUMBER_KEY" \
+              --copy-source "${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+              || aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${LATEST_BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          else
+            echo "ℹ️  DCL_BUILD_NUMBER unset — no build_number sidecar (fork PR / allocator skipped)."
+          fi
+
           echo "✅ Unsigned export uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
           echo "🔗 ${R2_PUBLIC_BASE_URL}/${KEY}"
 
