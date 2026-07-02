@@ -4,61 +4,71 @@ extends Control
 ## the "RUN ANYWAY" modal is shown regardless of download activity.
 const MAX_LOADING_TIME_SECONDS := 90.0
 
-var bg_colors: Array[Color] = [
-	Color(0.5, 0.25, 0.0, 1.0),
-	Color(0.0, 0.0, 0.5, 1.0),
-	Color(0.5, 0.5, 0.0, 1.0),
-	Color(0.5, 0.0, 0.25, 1.0),
-	Color(0.25, 0.0, 0.5, 1.0),
-	Color(0.34, 0.22, 0.15, 1.0),
-	Color(0.0, 0.5, 0.5, 1.0),
-]
-
-var item_index = 0
-var item_count = 0
 var progress: float = 0.0
 var last_activity_time := Time.get_ticks_msec()
 var loading_start_time := 0
-var popup_warning_pos_y: int = 0
-
 var last_hide_click := 0.0
-
 var loaded_resources_offset := 0
 
-@onready var loading_progress = %ColorRect_LoadingProgress
-@onready var loading_progress_label = %Label_LoadingProgress
-@onready var label_loading_state = %Label_LoadingState
+var _place_data_set: bool = false
+var _loading_cancelled: bool = false
+var _intended_realm: String = ""
+var _current_bg_url: String = ""
+var _fetch_generation: int = 0
 
-@onready
-var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/CarouselViewport/SubViewport/Carousel
-@onready var background: ColorRect = $VBox_Loading/ColorRect_Background
+@onready var loading_progress_label: Label = %Label_LoadingProgress
+@onready var label_loading_state: Label = %Label_LoadingState
+@onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
+@onready var rich_text_label_place_name: TrimmedRichTextLabel = %RichTextLabel_PlaceName
+@onready var texture_rect_background: TextureRect = %TextureRect_Background
+@onready var vbox_data: VBoxContainer = %VBoxContainer_Data
+@onready var rich_text_label_creator: RichTextLabel = %RichTextLabel
 
-@onready var timer_auto_move_carousel = $Timer_AutoMoveCarousel
-
-@onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
-@onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
+@onready var loading_screen_progress_logic: Node = $LoadingScreenProgressLogic
+@onready var timer_check_progress_timeout: Timer = $Timer_CheckProgressTimeout
 @onready var debug_chronometer := Chronometer.new()
 
 static var _low_spec_toast_shown: bool = false
 
 
-func _ready():
+func _ready() -> void:
 	last_activity_time = Time.get_ticks_msec()
-	item_count = carousel.item_count()
-	set_item(randi_range(0, item_count - 1))
+	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
 
 
-# Forward
-func enable_loading_screen():
+func enable_loading_screen(intended_realm: String = "", when: String = "") -> void:
+	_loading_cancelled = false
+	_intended_realm = intended_realm if Realm.is_dcl_ens(intended_realm) else ""
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
+	_clear_place_ui()
 	Global.loading_started.emit()
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
+	if not when.is_empty():
+		var loading_data = {
+			"position": str(Global.scene_fetcher.current_position),
+			"realm":
+			_intended_realm if not _intended_realm.is_empty() else Global.realm.get_realm_string(),
+			"when": when
+		}
+		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+
+func _clear_place_ui() -> void:
+	_fetch_generation += 1
+	_place_data_set = false
+	_current_bg_url = ""
+	texture_rect_background.texture = null
+	texture_rect_background.modulate = Color.TRANSPARENT
+	vbox_data.modulate = Color.TRANSPARENT
+	rich_text_label_place_name.text = ""
+	rich_text_label_creator.hide()
 
 
 func async_hide_loading_screen_effect():
+	_clear_place_ui()
 	Global.close_navbar.emit()
 	Global.close_chat.emit()
 	debug_chronometer.lap("Finished loading scene")
@@ -66,13 +76,11 @@ func async_hide_loading_screen_effect():
 	timer_check_progress_timeout.stop()
 	_low_spec_toast_shown = false
 	var tween = get_tree().create_tween()
-	background.use_parent_material = true  # disable material
 	modulate = Color.WHITE
 	tween.tween_property(self, "modulate", Color.TRANSPARENT, 1.0)
 	await tween.finished
 	hide()
 	modulate = Color.WHITE
-	background.use_parent_material = false  # enable material
 	self.position.y = 0
 
 	if Global.cli.measure_perf:
@@ -84,78 +92,14 @@ func async_hide_loading_screen_effect():
 		counter.log_active_counts()
 
 
-func _on_texture_rect_right_arrow_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			next_page()
-
-
-func _on_texture_rect_left_arrow_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			prev_page()
-
-
-func prev_page():
-	var next_index = item_index - 1
-	if next_index < 0:
-		next_index = item_count - 1
-
-	set_item(next_index, false)
-
-
-func next_page():
-	var next_index = item_index + 1
-	if next_index >= item_count:
-		next_index = 0
-
-	set_item(next_index, true)
-
-
-func set_item(index: int, right_direction: bool = true):
-	timer_auto_move_carousel.stop()
-	timer_auto_move_carousel.start()
-
-	var current_color = Color(bg_colors[item_index])
-	item_index = index
-	carousel.set_item(index, right_direction)
-
-	var new_color = Color(bg_colors[index])
-	set_bg_shader_color(current_color, new_color)
-
-
-func set_bg_shader_color(from: Color, to: Color):
-	# Bail if we've left the tree (e.g. sign-out freed the loading screen between
-	# frames): get_tree() would be null and create_tween() would crash.
-	if not is_inside_tree():
-		return
-	var tween = get_tree().create_tween()
-	tween.tween_method(set_shader_background_color, from, to, 0.25)
-
-
-func set_shader_background_color(color: Color):
-	var shader_material: ShaderMaterial = background.get_material()
-	shader_material.set_shader_parameter("lineColor", color)
-
-
 func set_progress(new_progress: float):
 	new_progress = clampf(new_progress, 0.0, 100.0)
 	if progress != new_progress:
 		last_activity_time = Time.get_ticks_msec()
 	progress = new_progress
 
-	loading_progress_label.text = "LOADING %d%%" % floor(progress)
-	# Bail if we've left the tree (e.g. sign-out freed the loading screen between
-	# frames): get_tree() would be null and create_tween() would crash.
-	if not is_inside_tree():
-		return
-	var tween = get_tree().create_tween()
-	var new_width = loading_progress.get_parent().size.x * (progress / 100.0)
-	tween.tween_property(loading_progress, "position:x", new_width, 0.1)
-
-
-func _on_timer_auto_move_carousel_timeout():
-	next_page()
+	loading_progress_label.text = "%d%%" % floor(progress)
+	texture_progress_bar.value = progress
 
 
 func _on_timer_check_progress_timeout_timeout():
@@ -244,11 +188,103 @@ func _show_low_spec_toast_if_needed():
 	toast.async_show()
 
 
-# For dev purposes
-func _on_color_rect_header_gui_input(event):
+func _on_texture_rect_logo_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			var elapsed_time = Time.get_ticks_msec() - last_hide_click
 			if elapsed_time <= 500:
 				loading_screen_progress_logic.hide_loading_screen()
 			last_hide_click = Time.get_ticks_msec()
+
+
+func _on_scene_runner_loading_started(_session_id: int, _expected_count: int) -> void:
+	if _loading_cancelled or _place_data_set:
+		return
+	var pos = Global.scene_fetcher.current_position
+	# For genesis (no intended world realm) a valid parcel is required for the API call.
+	# For DCL worlds the fetch is by realm name and position is irrelevant.
+	if _intended_realm.is_empty() and pos == SceneFetcher.INVALID_PARCEL:
+		return
+	# Increment so any previous in-flight fetch for an earlier loading session is discarded.
+	_fetch_generation += 1
+	_async_fetch_place_data(pos, _fetch_generation)
+
+
+func _async_fetch_place_data(pos: Vector2i, generation: int) -> void:
+	var result: Variant
+	if _intended_realm.is_empty():
+		result = await PlacesHelper.async_get_by_position(pos)
+	else:
+		result = await PlacesHelper.async_get_by_names(_intended_realm)
+	if not is_instance_valid(self) or not is_inside_tree() or generation != _fetch_generation:
+		return
+	if result is PromiseError:
+		return
+	var json: Dictionary = result.get_string_response_as_json()
+	var data_array = json.get("data", [])
+	if data_array.is_empty():
+		return
+	set_place_data(data_array[0])
+
+
+func set_place_data(data: Dictionary) -> void:
+	_place_data_set = true
+	var title = data.get("title", "")
+	var creator = data.get("contact_name", "")
+	set_place_name(title if title is String else "")
+	set_place_creator(creator if creator is String else "")
+	var image_url = data.get("image", "")
+	if image_url is String and not image_url.is_empty():
+		set_place_image(image_url)
+	var tween = create_tween()
+	tween.tween_property(vbox_data, "modulate", Color.WHITE, 0.125)
+
+
+func set_place_name(place_name: String) -> void:
+	if place_name.is_empty():
+		return
+	rich_text_label_place_name.set_text_trimmed(place_name)
+
+
+func set_place_creator(creator: String) -> void:
+	if creator.is_empty():
+		rich_text_label_creator.hide()
+		return
+	rich_text_label_creator.show()
+	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] " + creator
+
+
+func set_place_image(image_url: String) -> void:
+	if _current_bg_url == image_url:
+		return
+	_current_bg_url = image_url
+	_async_set_background.call_deferred(image_url)
+
+
+func _apply_background_texture(texture: Texture2D) -> void:
+	texture_rect_background.texture = texture
+	var tween = create_tween()
+	tween.tween_property(texture_rect_background, "modulate", Color.WHITE, 0.125)
+
+
+func _async_set_background(url: String) -> void:
+	var url_hash := AsyncImage._get_hash_from_url(url)
+	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	var result = await PromiseUtils.async_awaiter(promise)
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
+	if url != _current_bg_url:
+		return
+	if result is PromiseError or result.failed:
+		return
+	_apply_background_texture(result.texture)
+
+
+func hide_loading_screen() -> void:
+	loading_screen_progress_logic.hide_loading_screen()
+
+
+func _on_close_button_pressed() -> void:
+	_clear_place_ui()
+	_loading_cancelled = true
+	Global.return_to_discover()

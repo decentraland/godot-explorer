@@ -1,0 +1,64 @@
+[gd_scene format=3 uid="uid://bk7bchyii05cp"]
+
+[ext_resource type="Script" uid="uid://ccollx78gprck" path="res://src/ui/components/molecules/tip_card/tip_card.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="2_73sl0"]
+[ext_resource type="Texture2D" uid="uid://d33hlm68ffcfk" path="res://assets/ui/loading/tip-icon.svg" id="2_itsbd"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_itsbd"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.69803923)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8745098, 0.6117647, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="TipCard" type="PanelContainer" unique_id=1902901349]
+custom_minimum_size = Vector2(600, 84)
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+script = ExtResource("1_script")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1554580710]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=1849520790]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="MarginContainer/HBoxContainer" unique_id=487404116]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("2_itsbd")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="RichTextLabel_Tip" type="RichTextLabel" parent="MarginContainer/HBoxContainer" unique_id=624439851]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("2_73sl0")
+theme_override_fonts/bold_font = ExtResource("3_itsbd")
+theme_override_font_sizes/normal_font_size = 20
+theme_override_font_sizes/bold_font_size = 20
+bbcode_enabled = true
+text = "[b]Tip:[/b] Explore thousands of scenes built by creators from around the world."
+scroll_active = false
+vertical_alignment = 1
+
+[node name="Timer_Tip" type="Timer" parent="." unique_id=854562968]
+unique_name_in_owner = true
+wait_time = 5.0

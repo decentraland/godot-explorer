@@ -1308,7 +1308,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen()
+		explorer.loading_ui.enable_loading_screen(new_realm, "on_teleport")
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
@@ -1328,18 +1328,12 @@ func async_join_world(world_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen()
+		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
 			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
 			Time.get_unix_time_from_system()
 		)
-		var loading_data = {
-			"position": str(Global.scene_fetcher.current_position),
-			"realm": world_realm,
-			"when": "on_world"
-		}
-		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 		Global.realm.async_set_realm(world_realm, true)
 		explorer.hide_menu()
 		Global.close_menu.emit()

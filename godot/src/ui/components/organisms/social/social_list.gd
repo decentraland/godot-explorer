@@ -557,6 +557,8 @@ func _async_await_with_timeout(promise: Promise, timeout_seconds: float) -> bool
 		return true
 	if promise.is_resolved():
 		return false
+	if not is_inside_tree():
+		return true
 
 	var timer = get_tree().create_timer(timeout_seconds)
 	var resolved = false
@@ -565,6 +567,8 @@ func _async_await_with_timeout(promise: Promise, timeout_seconds: float) -> bool
 	while not resolved and timer.time_left > 0:
 		if promise.is_resolved():
 			resolved = true
+			break
+		if not is_inside_tree():
 			break
 		await get_tree().process_frame
 
