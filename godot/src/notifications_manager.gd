@@ -633,6 +633,13 @@ func show_system_toast(
 	if _notification_queue.size() == 1 and not _queue_paused:
 		notification_queued.emit(notif)
 
+	# MARKETPLACE-IAP-TOAST: a portrait-aware toast for marketplace arrivals would hook
+	# in here. A prior attempt added a `metadata_extra` param (to carry {category, urn})
+	# plus a CanvasLayer fallback render for when the explorer listener was disconnected;
+	# it was removed because the toast UI isn't laid out for portrait. The arrival signal
+	# itself still fires (MarketplaceTracker.item_arrived) and drives the backpack
+	# auto-focus; only the toast + its tap→backpack routing (menu.gd) were dropped.
+
 
 # =============================================================================
 # LOCAL NOTIFICATIONS

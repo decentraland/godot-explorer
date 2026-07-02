@@ -103,6 +103,7 @@ mouse_filter = 1
 theme = ExtResource("4_2vs87")
 
 [node name="MobileCameraInput" type="Control" parent="UI" unique_id=435960516]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -112,6 +113,7 @@ grow_vertical = 2
 script = ExtResource("1_mcinput")
 
 [node name="LeftRightSafeContainerMobile" type="MarginContainer" parent="UI" unique_id=1539864391]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

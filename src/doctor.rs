@@ -217,11 +217,30 @@ fn check_sentry_addon_installation() -> bool {
 }
 
 fn check_godot_installation() {
-    if crate::helpers::is_tool_installed("godot") {
-        print_message(MessageType::Success, "Godot binary found");
-    } else {
-        print_message(MessageType::Warning, "Godot binary not found");
-        println!("  Run: cargo run -- install");
+    use crate::install_dependency::GodotBinaryStatus;
+    match crate::install_dependency::validate_installed_godot_binary() {
+        GodotBinaryStatus::Ok => print_message(
+            MessageType::Success,
+            &format!(
+                "Godot binary found — {}",
+                crate::consts::godot_release_tag()
+            ),
+        ),
+        GodotBinaryStatus::Mismatch { found } => print_message(
+            MessageType::Error,
+            &format!(
+                "Godot binary mismatch: expected {}, found {found} — run: cargo run -- install",
+                crate::consts::godot_release_tag()
+            ),
+        ),
+        GodotBinaryStatus::Missing => {
+            print_message(MessageType::Warning, "Godot binary not found");
+            println!("  Run: cargo run -- install");
+        }
+        GodotBinaryStatus::Unverifiable(e) => print_message(
+            MessageType::Warning,
+            &format!("Godot binary present but unverifiable: {e}"),
+        ),
     }
 
     // Check export templates per platform

@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://2n7qh48sy4i4"]
+[gd_scene format=3 uid="uid://2n7qh48sy4i4"]
 
 [ext_resource type="Script" uid="uid://muiiytq5vnn4" path="res://src/ui/pages/backpack/no_items_message.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://10ljw6k05g33" path="res://assets/ui/backpack/no-items-in-category.svg" id="2_icon"]
@@ -11,14 +11,22 @@
 font = ExtResource("3_font600")
 font_size = 40
 
-[node name="NoItemsMessage" type="VBoxContainer"]
+[sub_resource type="LabelSettings" id="LabelSettings_cym58"]
+font = ExtResource("3_font600")
+font_size = 36
+
+[node name="NoItemsMessage" type="VBoxContainer" unique_id=959078015]
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 alignment = 1
 script = ExtResource("1_script")
 
-[node name="TextureRect" type="TextureRect" parent="."]
+[node name="VBoxContainer_Content" type="VBoxContainer" parent="." unique_id=1958262225]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer_Content" unique_id=1623450492]
 custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -27,18 +35,18 @@ texture = ExtResource("2_icon")
 expand_mode = 3
 stretch_mode = 5
 
-[node name="HSeparator" type="HSeparator" parent="."]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer_Content" unique_id=453815265]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_hp11i")
 
-[node name="Label" type="Label" parent="."]
+[node name="Label" type="Label" parent="VBoxContainer_Content" unique_id=1490803548]
 layout_mode = 2
 text = "Nothing here yet"
 label_settings = SubResource("LabelSettings_title")
 horizontal_alignment = 1
 
-[node name="RichTextBox" type="RichTextLabel" parent="."]
+[node name="RichTextBox" type="RichTextLabel" parent="VBoxContainer_Content" unique_id=327327557]
 layout_mode = 2
 mouse_filter = 1
 theme_override_fonts/normal_font = ExtResource("4_font400")
@@ -51,4 +59,12 @@ scroll_active = false
 autowrap_mode = 2
 horizontal_alignment = 1
 
-[connection signal="meta_clicked" from="RichTextBox" to="." method="_on_rich_text_box_meta_clicked"]
+[node name="Label_Iap" type="Label" parent="." unique_id=1403359019]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Nothing here yet"
+label_settings = SubResource("LabelSettings_cym58")
+horizontal_alignment = 1
+
+[connection signal="meta_clicked" from="VBoxContainer_Content/RichTextBox" to="." method="_on_rich_text_box_meta_clicked"]

@@ -3,9 +3,9 @@ use zip::ZipArchive;
 
 use crate::{
     consts::{
-        godot_templates_base_url_for_branch, sanitize_branch_for_url, EXPORTS_FOLDER,
-        GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION, GODOT_PLATFORM_FILES,
-        GODOT_PROJECT_FOLDER,
+        godot_release_tag, godot_templates_base_url, godot_templates_base_url_for_branch,
+        sanitize_branch_for_url, EXPORTS_FOLDER, GODOT_BUILD_SHA, GODOT_CURRENT_VERSION,
+        GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
     helpers::get_exe_extension,
     install_dependency::{
@@ -271,9 +271,15 @@ pub fn import_assets() -> ExitStatus {
         .expect("Failed to run Godot")
 }
 
-pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), anyhow::Error> {
+pub fn export(
+    target: Option<&str>,
+    format: &str,
+    release: bool,
+    build_number: Option<u64>,
+) -> Result<(), anyhow::Error> {
     print_section("Exporting Project");
 
+    crate::install_dependency::warn_if_godot_mismatch();
     let program = get_godot_path();
 
     // Make exports directory if it doesn't exist
@@ -330,9 +336,28 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     // This should reflect the correct relative path from the Godot project directory
     let output_path_godot_param = format!("./../exports/{output_file_name}");
 
-    // For Android/Quest AAB format, we need to update export_presets.cfg
-    let export_presets_backup = if (target == "android" || target == "quest") && format == "aab" {
-        update_export_presets_for_aab()?
+    // Store targets get the build number (Android versionCode / iOS CFBundleVersion) stamped
+    // into export_presets.cfg at export time, then restored afterward so the working tree keeps
+    // its committed placeholder values. AAB additionally needs format/architecture/signing tweaks.
+    let is_store_target = matches!(target.as_str(), "android" | "quest" | "ios");
+    let aab_tweaks = (target == "android" || target == "quest") && format == "aab";
+    // Resolve the build number: `--build-number` wins, otherwise the `DCL_BUILD_NUMBER` env var
+    // (set in CI by the Cloudflare allocator, idempotent per commit SHA). When neither is present
+    // (local / fork builds) the committed placeholder in export_presets.cfg is kept as-is — those
+    // builds are never shipped to a store.
+    let build_number = build_number.or_else(|| {
+        std::env::var("DCL_BUILD_NUMBER")
+            .ok()
+            .and_then(|v| v.trim().parse::<u64>().ok())
+    });
+    let export_presets_backup = if is_store_target && (build_number.is_some() || aab_tweaks) {
+        if let Some(build_number) = build_number {
+            print_message(
+                MessageType::Info,
+                &format!("Build number (versionCode / CFBundleVersion): {build_number}"),
+            );
+        }
+        Some(patch_export_presets_for_store(build_number, aab_tweaks)?)
     } else {
         None
     };
@@ -352,6 +377,25 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
         target.as_str(),
         output_path_godot_param.as_str(),
     ];
+
+    // The headless Godot editor dlopen's the GDExtension (libdclgodot.dylib) to run the
+    // export. A freshly rebuilt dylib carries an invalid signature, so macOS SIGKILLs Godot
+    // at load time and the export silently produces NOTHING — leaving a stale .pck that the
+    // rest of the pipeline happily reuses (so local GDScript changes never ship). Re-sign it
+    // ad-hoc right before exporting so the editor can load it.
+    #[cfg(target_os = "macos")]
+    {
+        let macos_dylib = "lib/target/libdclgodot_macos/libdclgodot.dylib";
+        if std::path::Path::new(macos_dylib).exists() {
+            print_message(
+                MessageType::Step,
+                "Ad-hoc signing libdclgodot.dylib (macOS) for the headless export...",
+            );
+            let _ = std::process::Command::new("codesign")
+                .args(["--force", "--sign", "-", macos_dylib])
+                .status();
+        }
+    }
 
     print_message(MessageType::Step, "Running Godot export...");
     let spinner = create_spinner("Exporting project...");
@@ -467,11 +511,31 @@ pub fn prepare_templates(
 
     let templates_base_url = match branch {
         Some(b) => godot_templates_base_url_for_branch(b),
-        None => GODOT4_EXPORT_TEMPLATES_BASE_URL.to_string(),
+        None => godot_templates_base_url(),
     };
 
+    let expected_tag = godot_release_tag();
     for template in &templates {
         if let Some(files) = file_map.get(template.as_str()) {
+            // Skip-guard: on a non-branch install, if our per-platform SHA marker matches the
+            // expected release tag AND every template file is present, the (potentially multi-GB —
+            // iOS `ios.zip` ≈ 2 GB) download + re-extract is redundant, so skip it entirely. Godot's
+            // own `version.txt` only carries the version (no SHA), hence our own marker. Branch
+            // builds are never marked/skipped (their fork SHA isn't tracked at const time).
+            let marker = Path::new(&dest_path).join(format!(".dcl_build_sha_{template}"));
+            let marker_ok = branch.is_none()
+                && fs::read_to_string(&marker)
+                    .map(|s| s.trim() == expected_tag)
+                    .unwrap_or(false);
+            let all_present = files.iter().all(|f| Path::new(&dest_path).join(f).exists());
+            if marker_ok && all_present {
+                print_message(
+                    MessageType::Info,
+                    &format!("{template} templates already at {expected_tag} — skipping download"),
+                );
+                continue;
+            }
+
             for file in files {
                 println!("Downloading file for {}: {}", template, file);
 
@@ -481,9 +545,15 @@ pub fn prepare_templates(
                         "{GODOT_CURRENT_VERSION}.branch-{}.{file}.export-templates.zip",
                         sanitize_branch_for_url(b)
                     ),
-                    None => format!("{GODOT_CURRENT_VERSION}.{file}.export-templates.zip"),
+                    None => format!(
+                        "{GODOT_CURRENT_VERSION}-{GODOT_BUILD_SHA}.{file}.export-templates.zip"
+                    ),
                 };
                 download_and_extract_zip(url.as_str(), dest_path.as_str(), cache_key(cache_id))?;
+            }
+            // Stamp the SHA marker after a successful extract so the next run can skip.
+            if branch.is_none() {
+                let _ = fs::write(&marker, &expected_tag);
             }
         } else {
             println!("No files mapped for template: {}", template);
@@ -514,25 +584,97 @@ pub fn strip_ios_templates() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn update_export_presets_for_aab() -> Result<Option<String>, anyhow::Error> {
+/// Patch `export_presets.cfg` for a store export and return the original content so the caller can
+/// restore it afterward. When `build_number` is `Some`, rewrites the build-number fields (Android
+/// `version/code`, iOS `application/version`); when `None` the committed placeholder is kept. When
+/// `aab` is set, also flips the AAB-specific format/architecture/signing flags. The marketing
+/// strings (`version/name`, `application/short_version`) are left as committed — the SemVer source
+/// of truth.
+fn patch_export_presets_for_store(
+    build_number: Option<u64>,
+    aab: bool,
+) -> Result<String, anyhow::Error> {
     let export_presets_path = format!("{}/export_presets.cfg", GODOT_PROJECT_FOLDER);
-
-    // Read current content
     let original_content = fs::read_to_string(&export_presets_path)?;
 
-    // Update for AAB format
-    let updated_content = original_content
-        .replace(
-            "gradle_build/export_format=0",
-            "gradle_build/export_format=1",
-        )
-        .replace("architectures/x86_64=true", "architectures/x86_64=false")
-        .replace("package/signed=true", "package/signed=false");
+    let mut updated = original_content.clone();
+    if let Some(build_number) = build_number {
+        // Robust line-prefix rewrite (not literal `.replace`, which breaks once the value isn't 72).
+        updated = rewrite_cfg_value(&updated, "version/code=", &build_number.to_string());
+        updated = rewrite_cfg_value(
+            &updated,
+            "application/version=",
+            &format!("\"{build_number}\""),
+        );
+    }
 
-    // Write updated content
-    fs::write(&export_presets_path, updated_content)?;
+    if aab {
+        updated = updated
+            .replace(
+                "gradle_build/export_format=0",
+                "gradle_build/export_format=1",
+            )
+            .replace("architectures/x86_64=true", "architectures/x86_64=false")
+            .replace("package/signed=true", "package/signed=false");
+    }
 
-    Ok(Some(original_content))
+    fs::write(&export_presets_path, updated)?;
+    Ok(original_content)
+}
+
+/// Replace the value of every line starting with `prefix` (ignoring leading whitespace) with
+/// `{prefix}{new_value}`, preserving indentation and any trailing newline.
+fn rewrite_cfg_value(content: &str, prefix: &str, new_value: &str) -> String {
+    let trailing_newline = content.ends_with('\n');
+    let mut out = content
+        .lines()
+        .map(|line| {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with(prefix) {
+                let indent = &line[..line.len() - trimmed.len()];
+                format!("{indent}{prefix}{new_value}")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    if trailing_newline {
+        out.push('\n');
+    }
+    out
+}
+
+#[cfg(test)]
+mod build_number_patch_tests {
+    use super::rewrite_cfg_value;
+
+    #[test]
+    fn rewrites_android_value_preserving_others_and_trailing_newline() {
+        let cfg = "version/code=72\nversion/name=\"1.10.0\"\napplication/version=\"72\"\n";
+        let out = rewrite_cfg_value(cfg, "version/code=", "236786399");
+        assert_eq!(
+            out,
+            "version/code=236786399\nversion/name=\"1.10.0\"\napplication/version=\"72\"\n"
+        );
+    }
+
+    #[test]
+    fn ios_version_does_not_clobber_short_version() {
+        // `application/version=` must NOT match `application/short_version=`.
+        let cfg = "application/short_version=\"1.10.0\"\napplication/version=\"72\"";
+        let out = rewrite_cfg_value(cfg, "application/version=", "\"236786399\"");
+        assert_eq!(
+            out,
+            "application/short_version=\"1.10.0\"\napplication/version=\"236786399\""
+        );
+    }
+
+    #[test]
+    fn no_match_is_identity() {
+        let cfg = "a=1\nb=2\n";
+        assert_eq!(rewrite_cfg_value(cfg, "c=", "9"), cfg);
+    }
 }
 
 fn restore_export_presets(original_content: String) -> Result<(), anyhow::Error> {

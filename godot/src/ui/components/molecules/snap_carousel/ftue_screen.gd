@@ -5,6 +5,7 @@ signal jump_in(parcel_position: Vector2i, realm_str: String)
 signal jump_in_world(realm_str: String)
 
 var _places: Array[Dictionary] = []
+var _cards_loaded: bool = false
 
 @onready var carousel: Control = %SnapCarousel
 @onready var label_title: Label = %Label_Title
@@ -45,10 +46,11 @@ func _on_items_loaded(places: Array[Dictionary]) -> void:
 
 
 func _on_all_cards_loaded() -> void:
+	_cards_loaded = true
 	label_title.show()
-	hbox_creator.show()
 	title_skeleton.hide()
 	creator_skeleton.hide()
+	_update_creator(carousel.selected_index)
 
 
 func _on_card_changed(index: int) -> void:
@@ -56,10 +58,27 @@ func _on_card_changed(index: int) -> void:
 		return
 	var place: Dictionary = _places[index]
 	label_title.text = place.get("title", "")
-	var creator: String = place.get("contact_name", "")
-	if creator.is_empty():
-		creator = place.get("owner", "")
+	_update_creator(index)
+
+
+# Show the "by <creator>" row only when the place has a real creator name.
+# The destinations API returns `contact_name: null` for worlds/places without
+# one (e.g. the Kickoff world), and the only other identifier is the raw 0x
+# `owner` address. Assigning that null to a typed String used to crash
+# _on_card_changed (leaking the "Creator" placeholder); the raw-owner fallback
+# only printed a wallet address. Hide the whole row instead when there's no name.
+func _update_creator(index: int) -> void:
+	if index < 0 or index >= _places.size():
+		hbox_creator.hide()
+		return
+	var raw = _places[index].get("contact_name")
+	var creator := "" if raw == null else str(raw)
+	if creator.strip_edges().is_empty():
+		hbox_creator.hide()
+		return
 	label_creator.text = creator
+	if _cards_loaded:
+		hbox_creator.show()
 
 
 func _on_card_tapped(_index: int) -> void:

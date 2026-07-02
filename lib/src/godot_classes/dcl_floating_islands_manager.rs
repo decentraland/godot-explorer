@@ -183,17 +183,26 @@ impl DclFloatingIslandsManager {
             self.candidates.insert((coord.x, coord.y), cfg);
         }
 
-        // Stale active parcels whose corner configuration changed must be
-        // rebuilt — otherwise we'd be left with cliff/overhang geometry that
-        // no longer matches the surrounding scenes (T-junctions, overhangs
-        // pointing at a now-loaded neighbor, etc.). Drop them now and let
-        // `tick_culling` re-enqueue with the fresh config.
+        // Reconcile the active set against the new candidate set:
+        //   * still a candidate, but corner config changed -> rebuild it, else
+        //     we'd keep cliff/overhang geometry that no longer matches the
+        //     surrounding scenes (T-junctions, overhangs pointing at a
+        //     now-loaded neighbor, etc.);
+        //   * no longer a candidate at all -> destroy it. This is the parcel
+        //     that just stopped being empty (a freshly-loaded scene now covers
+        //     it) or an island left over from a location we teleported away
+        //     from. `tick_culling` only ever destroys by *distance*, so an
+        //     orphan within view distance of the player would otherwise linger
+        //     forever — rendering on top of the scene we just teleported onto.
+        // Either way the parcel is dropped here; `tick_culling` re-enqueues any
+        // still-valid candidate with its fresh config.
         let stale_actives: Vec<(i32, i32)> = self
             .active
             .iter()
             .filter_map(|(coord, data)| match self.candidates.get(coord) {
                 Some(new_cfg) if new_cfg != &data.config => Some(*coord),
-                _ => None,
+                Some(_) => None,
+                None => Some(*coord),
             })
             .collect();
         for coord in stale_actives {

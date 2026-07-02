@@ -197,11 +197,11 @@ cargo run -- export --target ios
 
    It is triggered by:
    - **Every push to `release`** → full distribution.
-   - **A daily 09:00 UTC cron on `main`** → distribution, but only when `main` changed
-     since the last *successful* main distribution run (compared via
+   - **A weekday (Mon–Fri) 09:00 UTC cron on `main`** → distribution, but only when
+     `main` changed since the last *successful* main distribution run (compared via
      `gh run list --workflow mobile_distribute.yml --branch main --status success`). When
      unchanged the `prepare` job logs "main unchanged — skipping" and the iOS/Android jobs
-     are skipped (the run still concludes successfully, which is what the next day's cron
+     are skipped (the run still concludes successfully, which is what the next cron run
      compares against).
    - **The `build` label** (or legacy alias `build-ios`) on a PR.
    - **Manual `workflow_dispatch`** on `main`/`release`.

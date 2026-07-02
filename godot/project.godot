@@ -45,9 +45,11 @@ NotificationsManager="*res://src/notifications_manager.gd"
 ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 Iap="*res://src/iap/iap_manager.gd"
+MarketplaceTracker="*res://src/iap/marketplace_tracker.gd"
 ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_capturer.gd"
 AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
+DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
 
 [debug]
 
@@ -57,6 +59,7 @@ gdscript/warnings/unused_variable=2
 gdscript/warnings/unused_signal=0
 gdscript/warnings/shadowed_variable=2
 gdscript/warnings/redundant_await=false
+memory/limits/message_queue/max_size_mb=64
 
 [display]
 
@@ -64,15 +67,16 @@ window/size/viewport_width=1600
 window/size/viewport_height=720
 window/size/window_width_override=720
 window/size/window_height_override=1280
+window/frame_pacing/android/enable_frame_pacing=false
 window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--emulate-ios"
+import/use_multiple_threads=false
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl-ios-devtools/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
 
 [filesystem]
 
@@ -230,9 +234,8 @@ limits/debugger/max_chars_per_second=3276800
 
 [rendering]
 
+occlusion_culling/bvh_build_quality=1
 rendering_device/vulkan/max_descriptors_per_pool=256
-rendering_device/driver.ios="vulkan"
-rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=512
@@ -279,6 +282,14 @@ sun_size={
 moon_mask_size={
 "type": "float",
 "value": 0.0
+}
+sun_color={
+"type": "vec3",
+"value": Vector3(1.05, 1, 0.92)
+}
+ambient_color={
+"type": "vec3",
+"value": Vector3(0.35, 0.36, 0.4)
 }
 
 [xr]

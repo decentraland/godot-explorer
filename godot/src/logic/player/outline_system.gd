@@ -5,6 +5,7 @@ const OUTLINE_LAYER = 20  # Using layer 20 for outlined objects (bit 19, value 5
 
 var main_camera: Camera3D = null
 var current_outlined_avatar: Node3D = null
+var current_outlined_entity: Node3D = null
 
 # Cached so we only push to the shader on size changes.
 var _last_pushed_viewport_size: Vector2i = Vector2i.ZERO
@@ -68,11 +69,35 @@ func set_outlined_avatar(avatar: Node3D):
 	if avatar:
 		_set_avatar_layers(avatar, true)
 
+	_update_effect_visibility()
+
+
+func set_outlined_entity(entity: Node3D):
+	if current_outlined_entity == entity:
+		return
+
+	# Clear previous outline (guard against a freed entity node)
+	if is_instance_valid(current_outlined_entity):
+		_set_layers_recursive(current_outlined_entity, false)
+
+	current_outlined_entity = entity
+
+	# Set new outline
+	if entity:
+		_set_layers_recursive(entity, true)
+
+	_update_effect_visibility()
+
+
+# The outline post-process is shared by the avatar and entity paths; keep it
+# rendering while either has a target (the crosshair hits only one at a time).
+func _update_effect_visibility():
+	var active := current_outlined_avatar != null or current_outlined_entity != null
 	if outline_quad:
-		outline_quad.visible = avatar != null
+		outline_quad.visible = active
 	if sub_viewport:
 		sub_viewport.render_target_update_mode = (
-			SubViewport.UPDATE_ALWAYS if avatar != null else SubViewport.UPDATE_DISABLED
+			SubViewport.UPDATE_ALWAYS if active else SubViewport.UPDATE_DISABLED
 		)
 
 
@@ -101,5 +126,7 @@ func _set_layers_recursive(node: Node, add_outline: bool):
 
 
 func _exit_tree():
-	if current_outlined_avatar:
+	if is_instance_valid(current_outlined_avatar):
 		_set_avatar_layers(current_outlined_avatar, false)
+	if is_instance_valid(current_outlined_entity):
+		_set_layers_recursive(current_outlined_entity, false)

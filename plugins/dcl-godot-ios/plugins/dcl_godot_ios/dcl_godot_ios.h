@@ -48,6 +48,7 @@ public:
 	static String receivedUrl;
 
     void print_version();
+    String test_logging();
     void open_auth_url(String url);
     void open_safari_auth_url(String url);
     void open_webview_url(String url);

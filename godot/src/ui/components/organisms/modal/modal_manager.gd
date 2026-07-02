@@ -61,12 +61,24 @@ const PURCHASE_IN_FLIGHT_TITLE = "Purchase in progress"
 const PURCHASE_IN_FLIGHT_BODY = "A purchase is already being processed. Please wait for it to complete before starting a new one."
 const PURCHASE_IN_FLIGHT_PRIMARY = "OK"
 
-const IAP_TERMS_TITLE = "Terms of use"
-# TODO: replace placeholder URLs with final ones
+# Shown at quote time when the server hit its global daily credit ceiling — nothing
+# was charged, the user should try again later.
+const PURCHASE_UNAVAILABLE_TITLE = "Temporarily\nunavailable"
+const PURCHASE_UNAVAILABLE_BODY = "Credit purchases are temporarily unavailable. Please try again later."
+const PURCHASE_UNAVAILABLE_PRIMARY = "OK"
+
+# Shown after a successful charge whose credits are still being applied (the server
+# was at its daily ceiling; the Apple webhook will credit shortly).
+const PURCHASE_PROCESSING_TITLE = "Almost there"
+const PURCHASE_PROCESSING_BODY = "Your purchase went through and your credits will be added shortly."
+const PURCHASE_PROCESSING_PRIMARY = "OK"
+
+const IAP_TERMS_TITLE = "Terms of Use"
 const IAP_TERMS_CHECKBOX_BBCODE = (
-	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms/"]Terms of Service[/url][/color], '
-	+ '[color=#E8B9FF][url="https://decentraland.org/privacy/"]Privacy Policy[/url][/color] and '
-	+ '[color=#E8B9FF][url="https://decentraland.org/content/"]Content Policy[/url][/color].'
+	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms"]Terms of Use[/url][/color], '
+	+ '[color=#E8B9FF][url="https://decentraland.org/privacy"]Privacy Policy[/url][/color], '
+	+ '[color=#E8B9FF][url="https://decentraland.org/content"]Content Policy[/url][/color] and '
+	+ '[color=#E8B9FF][url="https://decentraland.org/credits-terms"]Credits Terms of Use[/url][/color].'
 )
 const IAP_TERMS_PRIMARY = "CONFIRM"
 const IAP_TERMS_SECONDARY = "CANCEL"
@@ -488,6 +500,42 @@ func async_show_purchase_in_flight_modal() -> void:
 	current_modal.button_primary.pressed.connect(close_current_modal)
 
 
+## Shows a modal when credit purchases are temporarily unavailable (server daily cap)
+func async_show_purchase_unavailable_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(PURCHASE_UNAVAILABLE_TITLE)
+	current_modal.set_body(PURCHASE_UNAVAILABLE_BODY)
+	current_modal.set_primary_button_text(PURCHASE_UNAVAILABLE_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a modal when a purchase succeeded but its credits are still being applied
+func async_show_purchase_processing_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(PURCHASE_PROCESSING_TITLE)
+	current_modal.set_body(PURCHASE_PROCESSING_BODY)
+	current_modal.set_primary_button_text(PURCHASE_PROCESSING_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
 ## Shows IAP terms of use modal with a checkbox that must be accepted before confirming
 func async_show_iap_terms_modal() -> void:
 	if not current_modal:
@@ -568,7 +616,22 @@ func _disconnect_button_signals() -> void:
 			current_modal.button_secondary.pressed.disconnect(connection.callable)
 
 
+## When any modal opens, tear down the chat's text-input ("write") mode so the
+## on-screen keyboard is dismissed and focus is handed back. Otherwise a modal
+## (e.g. the crash blocker) can appear over an active chat, leaving the mobile
+## virtual keyboard stuck on screen with no way to dismiss it — a dead end.
+## Idempotent and safe to call unconditionally before every modal. See #2427.
+func _dismiss_chat_input_for_modal() -> void:
+	var explorer = Global.get_explorer()
+	if not is_instance_valid(explorer):
+		return
+	var chat_panel = explorer.chat_panel
+	if is_instance_valid(chat_panel) and is_instance_valid(chat_panel.chat):
+		chat_panel.chat.close_write_mode_if_active()
+
+
 func _async_create_modal() -> Modal:
+	_dismiss_chat_input_for_modal()
 	# If there's already a modal open, close it first
 	if current_modal:
 		close_current_modal()
@@ -615,6 +678,7 @@ func _async_create_modal() -> Modal:
 
 
 func _async_create_travel_modal() -> TravelModal:
+	_dismiss_chat_input_for_modal()
 	if current_travel_modal:
 		close_travel_modal()
 

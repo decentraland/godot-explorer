@@ -265,6 +265,14 @@ func clamp_camera_rotation():
 		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(35))
 
 
+## Apply a relative look delta (screen pixels) to the camera. Shared by the mobile
+## touch handler and by scene-UI swipe handoff, so both rotate the camera identically.
+func apply_look_delta(relative: Vector2) -> void:
+	rotate_y(deg_to_rad(-relative.x) * MobileCameraInput.HORIZONTAL_SENS)
+	mount_camera.rotate_x(deg_to_rad(-relative.y) * MobileCameraInput.VERTICAL_SENS)
+	clamp_camera_rotation()
+
+
 func _physics_process(dt: float) -> void:
 	# Sample scene-driven physics before gravity — force.y feeds effective_gravity below.
 	var scene_external_force: Vector3 = Global.scene_runner.get_active_external_force()

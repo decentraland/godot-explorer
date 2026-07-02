@@ -1,0 +1,187 @@
+[gd_scene format=3]
+
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_theme"]
+[ext_resource type="Script" path="res://src/ui/pages/credits/credits_page.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="3_bg"]
+[ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/pages/discover/icons/back.svg" id="4_back"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="5_font"]
+[ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="6_label"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="7_dcl"]
+[ext_resource type="Texture2D" uid="uid://v10kj2je18ti" path="res://assets/ui/iap/purchase-history.svg" id="8_hist"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/credits_balance_button/credits_balance_button.tscn" id="9_crbtn"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="11_safe"]
+[ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/atoms/controls/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="12_scroll"]
+[ext_resource type="PackedScene" uid="uid://bk0bh2bgdycxx" path="res://src/ui/components/organisms/credits_shop/credits_shop.tscn" id="13_shop"]
+[ext_resource type="PackedScene" uid="uid://c7m54lyhw5fwp" path="res://src/ui/components/organisms/credits_history/credits_history.tscn" id="14_history"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_backbtn"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(1, 0.176471, 0.333333, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pill"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[node name="CreditsPage" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+script = ExtResource("2_script")
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SafeTopMarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 20
+script = ExtResource("11_safe")
+use_left = false
+use_right = false
+use_bottom = false
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeTopMarginContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+size_flags_vertical = 8
+theme_override_constants/separation = 14
+
+[node name="Button_Back" type="Button" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_backbtn")
+icon = ExtResource("4_back")
+flat = true
+expand_icon = true
+
+[node name="Label_Title" type="Label" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 28
+text = "Credits"
+label_settings = ExtResource("6_label")
+
+[node name="Button_History" type="Button" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 5
+focus_mode = 0
+mouse_filter = 1
+theme = ExtResource("7_dcl")
+theme_type_variation = &"SettingsButton"
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_pressed_color = Color(0.9882353, 0.9882353, 0.9882353, 0.49803922)
+theme_override_constants/icon_max_width = 48
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_pill")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pill")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_pill")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/focus = SubResource("StyleBoxFlat_pill")
+icon = ExtResource("8_hist")
+flat = true
+alignment = 0
+
+[node name="Button_Credits" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" instance=ExtResource("9_crbtn")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 5
+display_only = true
+
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="CreditsOption" type="Container" parent="TextureRect/VBoxContainer/MarginContainer"]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 2
+script = ExtResource("12_scroll")
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+scroll_deadzone = 100
+drag = 6.0
+metadata/_custom_type_script = "uid://c3wphp306q0w"
+
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+
+[node name="CreditsShop" parent="TextureRect/VBoxContainer/MarginContainer/CreditsOption/MarginContainer" instance=ExtResource("13_shop")]
+layout_mode = 2
+
+[node name="CreditsHistory" type="Container" parent="TextureRect/VBoxContainer/MarginContainer"]
+unique_name_in_owner = true
+visible = false
+clip_contents = true
+layout_mode = 2
+script = ExtResource("12_scroll")
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+scroll_deadzone = 100
+drag = 6.0
+metadata/_custom_type_script = "uid://c3wphp306q0w"
+
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/MarginContainer/CreditsHistory"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+
+[node name="CreditsHistory" parent="TextureRect/VBoxContainer/MarginContainer/CreditsHistory/MarginContainer" instance=ExtResource("14_history")]
+layout_mode = 2

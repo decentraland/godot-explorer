@@ -1,0 +1,6 @@
+# Every change requires review from a human on the mobile team.
+# Combined with branch protection (require_code_owner_reviews on main and the
+# release ruleset), this ensures a bot approval (e.g. regenesis-claw, which is
+# not a team member) can never satisfy the required review on its own — relevant
+# because merges to main/release auto-sign and ship the iOS app to TestFlight.
+* @decentraland/rgl-mobile-team

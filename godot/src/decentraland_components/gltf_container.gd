@@ -17,8 +17,6 @@ var _last_load_error := ""
 # Once entity is known to move, all colliders should spawn as KINEMATIC
 var _kinematic_requested := false
 
-@onready var timer = $Timer
-
 # Static variable to track currently loading assets (by hash)
 static var currently_loading_assets := []
 # Static queue for throttling
@@ -70,7 +68,7 @@ func async_load_gltf():
 		return
 
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
-	timer.start()
+	Global.get_gltf_load_timeout_coalescer().schedule(self, 120_000)
 
 	# Check CLI flags for asset loading mode
 	var has_optimized = Global.content_provider.optimized_asset_exists(file_hash)
@@ -87,7 +85,7 @@ func async_load_gltf():
 		else:
 			# Skip loading - no optimized asset available
 			dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
-			timer.stop()
+			Global.get_gltf_load_timeout_coalescer().cancel(self)
 		return
 
 	# Default: Check for optimized asset first (pre-baked in res://glbs/)
@@ -223,35 +221,14 @@ func _async_load_and_instantiate(scene_path: String) -> Node3D:
 			printerr("GltfContainer: ", _last_load_error)
 			return null
 
-	# Request threaded load
-	var err := ResourceLoader.load_threaded_request(scene_path)
-	if err != OK:
-		_last_load_error = "ResourceLoader request failed (error " + str(err) + ")"
-		printerr("GltfContainer: ", _last_load_error, " for ", scene_path)
-		return null
-
-	# Wait for load to complete
-	var main_tree := get_tree()
-	var status := ResourceLoader.load_threaded_get_status(scene_path)
-	while status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-		if not is_instance_valid(main_tree) or not is_inside_tree():
-			return null
-		await main_tree.process_frame
-		status = ResourceLoader.load_threaded_get_status(scene_path)
-
-	# Check for load failures BEFORE trying to get the resource
-	if status != ResourceLoader.THREAD_LOAD_LOADED:
-		if status == ResourceLoader.THREAD_LOAD_FAILED:
-			_last_load_error = "ResourceLoader THREAD_LOAD_FAILED"
-		elif status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
-			_last_load_error = "ResourceLoader THREAD_LOAD_INVALID_RESOURCE"
-		else:
-			_last_load_error = "ResourceLoader unexpected status " + str(status)
-		printerr("GltfContainer: ", _last_load_error, " for ", scene_path)
-		return null
-
-	# Get the loaded resource
-	var resource := ResourceLoader.load_threaded_get(scene_path)
+	# Synchronous load on the MAIN thread. The optimized .scn embeds
+	# ETC2 ImageTexture atlases (impostors) and mesh textures that upload
+	# to the GPU during load; doing that on Godot's WorkerThreadPool
+	# (load_threaded_request) raced with the render thread (VkThread) over
+	# the RenderingServer command lock and intermittently DEADLOCKED the
+	# load on Mali (both threads parked in futex_wait). A main-thread load
+	# serializes the GPU upload with the frame loop.
+	var resource := ResourceLoader.load(scene_path)
 	if resource == null:
 		_last_load_error = "loaded resource is null"
 		printerr("GltfContainer: ", _last_load_error, " for ", scene_path)
@@ -275,7 +252,12 @@ func _async_add_gltf_to_tree(gltf_node: Node3D):
 		_finish_with_error("scene unloaded during load")
 		return
 
+	# Add to tree first so global_transform of every MeshInstance3D inside
+	# the GLB is valid (the manager bakes per-mesh local poses against the
+	# container's current world). Without this step every mesh would land at
+	# the world origin.
 	add_child(gltf_node)
+
 	await get_tree().process_frame
 
 	_complete_load()
@@ -283,7 +265,7 @@ func _async_add_gltf_to_tree(gltf_node: Node3D):
 
 func _complete_load():
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
-	timer.stop()
+	Global.get_gltf_load_timeout_coalescer().cancel(self)
 	_finish_loading_slot()
 
 	self.check_animations()
@@ -295,7 +277,7 @@ func _finish_with_error(reason: String = "unknown"):
 	if not dcl_gltf_hash.is_empty():
 		Global.content_provider.report_resource_failed(dcl_gltf_hash, reason)
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-	timer.stop()
+	Global.get_gltf_load_timeout_coalescer().cancel(self)
 	_finish_loading_slot()
 
 
@@ -398,7 +380,7 @@ func async_deferred_add_child():
 	# Corner case, when the scene is unloaded before the gltf is loaded
 	if not is_inside_tree():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
+		Global.get_gltf_load_timeout_coalescer().cancel(self)
 		# Free orphan node that was never added to tree
 		new_gltf_node.queue_free()
 		return
@@ -406,7 +388,7 @@ func async_deferred_add_child():
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		timer.stop()
+		Global.get_gltf_load_timeout_coalescer().cancel(self)
 		# Free orphan node that was never added to tree
 		new_gltf_node.queue_free()
 		return
@@ -417,7 +399,7 @@ func async_deferred_add_child():
 
 	# Colliders and rendering is ensured to be ready at this point
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
-	timer.stop()
+	Global.get_gltf_load_timeout_coalescer().cancel(self)
 
 	self.check_animations()
 
@@ -588,7 +570,9 @@ func change_gltf(
 		update_mask_colliders(gltf_node)
 
 
-func _on_timer_timeout():
+## Invoked from GltfLoadTimeoutCoalescer when the load-timeout deadline
+## elapses (replacement for the per-container Timer node's `timeout` signal).
+func _on_load_timeout():
 	_finish_with_error("timeout")
 
 #endregion

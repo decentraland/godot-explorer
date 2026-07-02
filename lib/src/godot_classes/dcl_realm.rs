@@ -45,6 +45,11 @@ pub struct DclRealm {
 impl DclRealm {
     #[func]
     pub fn get_profile_content_url(&self) -> GString {
+        // Identity override (Option D testing): pin profile/wearable content to the
+        // Profile-group env, decoupled from the connected realm. No-op normally.
+        if let Some(url) = urls::identity_content() {
+            return url.to_godot();
+        }
         urls::peer_content().to_godot()
     }
 
@@ -53,6 +58,11 @@ impl DclRealm {
     /// deploying directly to the realm's specific node.
     #[func]
     pub fn get_profile_deployment_url(&self) -> GString {
+        // Identity override (Option D testing): deploy the own profile to the
+        // Profile-group env's catalyst, not the realm used for scenes.
+        if let Some(url) = urls::identity_content() {
+            return url.to_godot();
+        }
         if self.content_base_url.is_empty() {
             urls::peer_content().to_godot()
         } else {
@@ -62,6 +72,13 @@ impl DclRealm {
 
     #[func]
     pub fn get_lambda_server_base_url(&self) -> GString {
+        // Identity override (Option D testing): pin profile/names/identity lambdas
+        // to the Profile-group env, decoupled from the connected realm. This also
+        // makes livekit broadcast the same identity catalyst to other peers, so
+        // they fetch this player's profile from the right place. No-op normally.
+        if let Some(url) = urls::identity_lambdas() {
+            return url.to_godot();
+        }
         if self.lambda_server_base_url.is_empty() {
             urls::peer_lambdas().to_godot()
         } else {

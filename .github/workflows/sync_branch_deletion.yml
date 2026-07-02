@@ -32,7 +32,7 @@ jobs:
           # Initialize fresh repo (no need to clone, we only need to delete a remote branch)
           mkdir deploy-repo && cd deploy-repo
           git init
-          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:decentraland/godot-mobile-deploy-pipeline.git
+          GIT_SSH_COMMAND='ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' git remote add origin git@github.com:${{ secrets.DEPLOY_REPO }}.git
 
           # Configure git
           git config user.name "github-actions[bot]"
@@ -52,7 +52,7 @@ jobs:
           rm -rf deploy-repo
 
           echo "✅ Branch deletion synchronized"
-          echo "📦 Deploy Repository: https://github.com/decentraland/godot-mobile-deploy-pipeline"
+          echo "📦 Deploy Repository: https://github.com/${{ secrets.DEPLOY_REPO }}"
           echo "🗑️ Deleted Branch: ${BRANCH_NAME}"
 
       - name: Cleanup SSH key
