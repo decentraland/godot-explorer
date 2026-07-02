@@ -299,3 +299,288 @@ fn op_ws_cleanup(state: &mut OpState, res_id: u32) -> Result<(), AnyError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    //! Integration tests for the native `ws_poll` transport task, exercised
+    //! against a local `tokio-tungstenite` server. These lock down the
+    //! transport behaviour scenes rely on — connect, text/binary round-trip,
+    //! message ordering, ping/pong, close-code propagation and connection
+    //! failure — and guard against regressions of the Colyseus WebSocket bug
+    //! (#2430), whose sibling defect was the close code/reason being dropped.
+    //!
+    //! Run with: `cargo test -p dclgodot websocket`
+
+    use std::future::Future;
+    use std::time::Duration;
+
+    use futures_util::{SinkExt, StreamExt};
+    use tokio::net::TcpListener;
+    use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+    use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+    use tokio_tungstenite::tungstenite::Message;
+    use tokio_tungstenite::WebSocketStream;
+
+    use super::{ws_poll, WsReceiveData, WsSendData};
+
+    type ServerWs = WebSocketStream<tokio::net::TcpStream>;
+
+    /// Bind an ephemeral local server, accept ONE connection, run `handler`,
+    /// and return the `ws://` URL to dial.
+    async fn serve<F, Fut>(handler: F) -> String
+    where
+        F: FnOnce(ServerWs) -> Fut + Send + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let ws = tokio_tungstenite::accept_async(stream).await.unwrap();
+            handler(ws).await;
+        });
+        format!("ws://{addr}/")
+    }
+
+    struct Client {
+        to_native: tokio::sync::mpsc::Sender<WsSendData>,
+        from_native: tokio::sync::mpsc::Receiver<WsReceiveData>,
+    }
+
+    /// Wire up the JS<->native channels the same way `op_ws_create` does and
+    /// spawn the real `ws_poll` task.
+    fn connect(url: String) -> Client {
+        let (to_native, rx_send) = tokio::sync::mpsc::channel(100);
+        let (tx_recv, from_native) = tokio::sync::mpsc::channel(100);
+        tokio::spawn(ws_poll(url, vec![], rx_send, tx_recv));
+        Client {
+            to_native,
+            from_native,
+        }
+    }
+
+    /// Await the next native->JS event, failing the test on timeout/close.
+    async fn next(c: &mut Client) -> WsReceiveData {
+        tokio::time::timeout(Duration::from_secs(5), c.from_native.recv())
+            .await
+            .expect("timed out waiting for a native event")
+            .expect("native->JS channel closed unexpectedly")
+    }
+
+    /// A server that echoes text/binary frames and stops on close.
+    async fn echo_server(mut ws: ServerWs) {
+        while let Some(Ok(m)) = ws.next().await {
+            match m {
+                Message::Text(_) | Message::Binary(_) => {
+                    if ws.send(m).await.is_err() {
+                        break;
+                    }
+                }
+                Message::Close(_) => break,
+                _ => {}
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn reports_connected_first() {
+        let url = serve(echo_server).await;
+        let mut c = connect(url);
+        assert!(
+            matches!(next(&mut c).await, WsReceiveData::Connected),
+            "the first native event must be Connected"
+        );
+        c.to_native.send(WsSendData::Close).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn echoes_text() {
+        let url = serve(echo_server).await;
+        let mut c = connect(url);
+        assert!(matches!(next(&mut c).await, WsReceiveData::Connected));
+
+        c.to_native
+            .send(WsSendData::Text {
+                data: "hello world".into(),
+            })
+            .await
+            .unwrap();
+
+        match next(&mut c).await {
+            WsReceiveData::TextData(s) => assert_eq!(s, "hello world"),
+            _ => panic!("expected TextData echo"),
+        }
+    }
+
+    #[tokio::test]
+    async fn echoes_binary() {
+        let url = serve(echo_server).await;
+        let mut c = connect(url);
+        assert!(matches!(next(&mut c).await, WsReceiveData::Connected));
+
+        let payload = vec![0u8, 1, 2, 3, 255, 254, 42];
+        c.to_native
+            .send(WsSendData::Binary {
+                data: payload.clone(),
+            })
+            .await
+            .unwrap();
+
+        match next(&mut c).await {
+            WsReceiveData::BinaryData(b) => assert_eq!(b, payload),
+            _ => panic!("expected BinaryData echo"),
+        }
+    }
+
+    #[tokio::test]
+    async fn preserves_order_under_burst() {
+        let url = serve(echo_server).await;
+        let mut c = connect(url);
+        assert!(matches!(next(&mut c).await, WsReceiveData::Connected));
+
+        for i in 0..50 {
+            c.to_native
+                .send(WsSendData::Text {
+                    data: format!("msg-{i}"),
+                })
+                .await
+                .unwrap();
+        }
+        for i in 0..50 {
+            match next(&mut c).await {
+                WsReceiveData::TextData(s) => assert_eq!(s, format!("msg-{i}")),
+                _ => panic!("expected in-order TextData"),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn round_trips_large_binary() {
+        let url = serve(echo_server).await;
+        let mut c = connect(url);
+        assert!(matches!(next(&mut c).await, WsReceiveData::Connected));
+
+        let payload: Vec<u8> = (0..1_000_000).map(|i| (i % 251) as u8).collect();
+        c.to_native
+            .send(WsSendData::Binary {
+                data: payload.clone(),
+            })
+            .await
+            .unwrap();
+
+        match next(&mut c).await {
+            WsReceiveData::BinaryData(b) => assert_eq!(b, payload),
+            _ => panic!("expected large BinaryData echo"),
+        }
+    }
+
+    #[tokio::test]
+    async fn responds_to_server_ping_with_pong() {
+        let (tx, rx) = tokio::sync::oneshot::channel::<Vec<u8>>();
+        let url = serve(|mut ws: ServerWs| async move {
+            ws.send(Message::Ping(vec![9, 8, 7])).await.unwrap();
+            let mut tx = Some(tx);
+            while let Some(Ok(m)) = ws.next().await {
+                if let Message::Pong(p) = m {
+                    if let Some(tx) = tx.take() {
+                        let _ = tx.send(p);
+                    }
+                    break;
+                }
+            }
+        })
+        .await;
+
+        let mut c = connect(url);
+        assert!(matches!(next(&mut c).await, WsReceiveData::Connected));
+
+        // The client must auto-pong; the ping must not surface to the JS side.
+        let pong = tokio::time::timeout(Duration::from_secs(5), rx)
+            .await
+            .expect("server never received a pong")
+            .expect("pong channel dropped");
+        assert_eq!(
+            pong,
+            vec![9, 8, 7],
+            "pong payload must echo the ping payload"
+        );
+    }
+
+    /// Regression test for #2430's sibling defect: the server's close code and
+    /// reason must survive all the way to the native->JS boundary.
+    #[tokio::test]
+    async fn server_close_propagates_code_and_reason() {
+        let url = serve(|mut ws: ServerWs| async move {
+            ws.send(Message::Close(Some(CloseFrame {
+                code: CloseCode::Away, // 1001
+                reason: "going away".into(),
+            })))
+            .await
+            .unwrap();
+            // Drive the close handshake to completion.
+            while let Some(Ok(_)) = ws.next().await {}
+        })
+        .await;
+
+        let mut c = connect(url);
+        loop {
+            match next(&mut c).await {
+                WsReceiveData::Connected => continue,
+                WsReceiveData::Close(Some(frame)) => {
+                    assert_eq!(u16::from(frame.code), 1001, "close code must be preserved");
+                    assert_eq!(frame.reason, "going away", "close reason must be preserved");
+                    break;
+                }
+                WsReceiveData::Close(None) => panic!("close frame lost its code/reason"),
+                _ => panic!("unexpected event before close"),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn client_close_is_seen_by_server() {
+        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+        let url = serve(|mut ws: ServerWs| async move {
+            loop {
+                match ws.next().await {
+                    Some(Ok(Message::Close(_))) | Some(Err(_)) | None => break,
+                    Some(Ok(_)) => {}
+                }
+            }
+            let _ = tx.send(());
+        })
+        .await;
+
+        let mut c = connect(url);
+        assert!(matches!(next(&mut c).await, WsReceiveData::Connected));
+        c.to_native.send(WsSendData::Close).await.unwrap();
+
+        tokio::time::timeout(Duration::from_secs(5), rx)
+            .await
+            .expect("server never observed the client close")
+            .expect("close-signal channel dropped");
+    }
+
+    #[tokio::test]
+    async fn connect_failure_returns_err_without_connected() {
+        // Accept the TCP connection then drop it before completing the
+        // WebSocket handshake -> deterministic handshake failure.
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            if let Ok((stream, _)) = listener.accept().await {
+                drop(stream);
+            }
+        });
+
+        let (_to_native, rx_send) = tokio::sync::mpsc::channel(100);
+        let (tx_recv, mut from_native) = tokio::sync::mpsc::channel(100);
+
+        let res = ws_poll(format!("ws://{addr}/"), vec![], rx_send, tx_recv).await;
+        assert!(res.is_err(), "a failed handshake must return Err");
+        assert!(
+            from_native.try_recv().is_err(),
+            "no Connected event may be emitted on connection failure"
+        );
+    }
+}
