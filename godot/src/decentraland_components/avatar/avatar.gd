@@ -397,6 +397,10 @@ func set_hidden(value):
 		try_show()
 		# Re-enable click detection
 		_set_click_area_enabled(true)
+	# Blocked/hidden avatars must also hide their nameplate. The 2D nameplate is
+	# reparented out of this node into a shared screen-space layer, so hide() above
+	# doesn't reach it — re-evaluate the gate (which now includes `hidden`) explicitly.
+	_apply_nickname_visibility()
 
 
 # The impostor MultiMesh lives on AvatarScene (parent), not on the Avatar node,
@@ -657,6 +661,7 @@ func _apply_nickname_visibility() -> void:
 		or _force_hide_name
 		or far_lod
 		or nametag_hidden
+		or hidden
 		or (profile_pending and Global.is_production())
 	)
 	if _use_2d_nameplate:
