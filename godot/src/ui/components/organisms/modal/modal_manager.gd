@@ -616,7 +616,22 @@ func _disconnect_button_signals() -> void:
 			current_modal.button_secondary.pressed.disconnect(connection.callable)
 
 
+## When any modal opens, tear down the chat's text-input ("write") mode so the
+## on-screen keyboard is dismissed and focus is handed back. Otherwise a modal
+## (e.g. the crash blocker) can appear over an active chat, leaving the mobile
+## virtual keyboard stuck on screen with no way to dismiss it — a dead end.
+## Idempotent and safe to call unconditionally before every modal. See #2427.
+func _dismiss_chat_input_for_modal() -> void:
+	var explorer = Global.get_explorer()
+	if not is_instance_valid(explorer):
+		return
+	var chat_panel = explorer.chat_panel
+	if is_instance_valid(chat_panel) and is_instance_valid(chat_panel.chat):
+		chat_panel.chat.close_write_mode_if_active()
+
+
 func _async_create_modal() -> Modal:
+	_dismiss_chat_input_for_modal()
 	# If there's already a modal open, close it first
 	if current_modal:
 		close_current_modal()
@@ -663,6 +678,7 @@ func _async_create_modal() -> Modal:
 
 
 func _async_create_travel_modal() -> TravelModal:
+	_dismiss_chat_input_for_modal()
 	if current_travel_modal:
 		close_travel_modal()
 
