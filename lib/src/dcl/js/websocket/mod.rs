@@ -14,8 +14,10 @@ pub fn ops() -> Vec<OpDecl> {
 
 /// Give up on the opening handshake after this long.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
-/// Give up on a single frame write after this long (wedged/adversarial peer).
-const WRITE_TIMEOUT: Duration = Duration::from_secs(30);
+/// Backstop against a wedged/adversarial peer that never drains our writes.
+/// Kept generous so a legitimately-progressing large send over a slow link is
+/// not aborted mid-transfer.
+const WRITE_TIMEOUT: Duration = Duration::from_secs(120);
 /// After we initiate close, wait at most this long for the peer's close frame
 /// before tearing the socket down so it can never wedge in CLOSING.
 const CLOSE_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
