@@ -44,7 +44,7 @@ var _is_dirty := false
 @onready var texture_rect_skeleton: TextureRect = %TextureRect_Skeleton
 @onready var texture_rect_picture: TextureRect = %TextureRect_Picture
 @onready var button_equiped: Button = get_node_or_null("%Button_Equiped")
-@onready var panel_new_badge: PanelContainer = %PanelContainer_NewBadge
+@onready var panel_new_badge: PanelContainer = get_node_or_null("%PanelContainer_NewBadge")
 
 
 func async_load_from_urn(_emote_urn: String, _index: int = -1):
@@ -185,7 +185,9 @@ func set_equipped(equipped: bool) -> void:
 
 ## Shows the "NEW" tag (top-right corner) for a recently-acquired emote (#2300).
 func set_new_badge(is_new: bool) -> void:
-	panel_new_badge.visible = is_new
+	# The wheel variant (emote_wheel_item.tscn) has no badge node; only square items do.
+	if panel_new_badge != null:
+		panel_new_badge.visible = is_new
 
 
 func set_slot_selected(toggled_on: bool) -> void:

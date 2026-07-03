@@ -9,6 +9,9 @@ const DOUBLE_JUMP_ICON = preload("uid://euvimxirt85b")  # "res://assets/themes/d
 const SINGLE_JUMP_ICON_MAX_WIDTH = 85
 const SINGLE_JUMP_ICON = preload("uid://ck3atqpytstpo")  # "res://assets/themes/dark_dcl_theme/icons/Jump.svg"
 
+# Button SKIN (border/fill/radius/colors) is owned by the theme, not this organism: the
+# `TouchableButton` variation in assets/themes/dcl_theme.tres -> touchable_normal.tres. The
+# joypad only swaps these two styleboxes onto the central button for the glider inverted state.
 const TOUCHABLE_NORMAL_STYLEBOX = preload("uid://b66geet5bo5yf")  # touchable_normal.tres (black bg)
 const TOUCHABLE_PRESSED_STYLEBOX = preload("uid://cvducxvis7n6e")  # touchable_pressed.tres (white bg)
 
@@ -32,6 +35,24 @@ const ICON_GLIDER := 2
 
 const DEFAULT_MAIN_ACTION := "ia_jump"
 
+# Adaptive gamepad arc. The arc around the main button is, clockwise: the visible satellites
+# (pointer, E, F) followed by the "+" combo toggle as the LAST / topmost element. All of them
+# reflow together based on the TOTAL number of visible arc buttons, so the "+" is not pinned —
+# it moves with the count and always lands at the top of the arc when shown.
+# LAYOUTS: key = total visible arc buttons, value = positions (top-left, relative to the
+# Satellites anchor), slot 0 = lower-left (~9 o'clock) up to the last slot = top (~12).
+# Design source (Figma file skocZRe2lV9IjqV4rF6EYs): N=4 is the full arc (3 satellites + "+"),
+# from the "RightSideControls" HUD frame; the satellite-only counts come from the per-count
+# frames (3 -> 5:1141, 2 -> 3:1187, 1 -> 3:1274).
+const SATELLITE_ORDER := ["ia_pointer", "ia_primary", "ia_secondary"]
+const LAYOUTS := {
+	1: [Vector2(-226, -62)],
+	2: [Vector2(-226, -62), Vector2(-162, -200)],
+	3: [Vector2(-229, -57), Vector2(-188, -175), Vector2(-57, -219)],
+	4: [Vector2(-229, -57), Vector2(-208, -145), Vector2(-140, -202), Vector2(-57, -219)],
+}
+const COMBO_ACTIONS := ["ia_action_3", "ia_action_4", "ia_action_5", "ia_action_6"]
+
 var combo_opened: bool = false
 
 var _current_icon: int = ICON_DOUBLE_JUMP
@@ -50,9 +71,15 @@ var _last_tc_hash: int = 0
 var _main_action: String = DEFAULT_MAIN_ACTION
 var _jump_icon_overridden: bool = false
 
-@onready var animation_player: AnimationPlayer = %AnimationPlayer
+# The satellite buttons (authored flat on the Satellites anchor, `Button_Press/Control`) and
+# the vertical column that holds the combo buttons. All live in the scene now — see joypad.tscn.
+var _pointer_btn: Button
+var _primary_btn: Button
+var _secondary_btn: Button
+
 @onready var button_combo: Button = %Button_Combo
 @onready var button_press: Button = $Button_Press
+@onready var _combo_column: VBoxContainer = %ComboColumn
 
 @onready var _combo_action_buttons: Array[Button] = [
 	%Button_Combo1,
@@ -68,11 +95,15 @@ func _ready() -> void:
 	_set_attenuated_sound_for_buttons(self)
 	_apply_jump_icon(ICON_DOUBLE_JUMP)
 
+	_pointer_btn = $Button_Press/Control/Button_Jump
+	_primary_btn = $Button_Press/Control/Button_Primary
+	_secondary_btn = $Button_Press/Control/Button_Secondary
+
 	_tc_action_buttons = {
 		"ia_jump": button_press,
-		"ia_pointer": $Button_Press/Control/HBoxContainer/Button_Jump,
-		"ia_primary": $Button_Press/Control/HBoxContainer2/Button_Primary,
-		"ia_secondary": $Button_Press/Control/HBoxContainer4/Button_Secondary,
+		"ia_pointer": _pointer_btn,
+		"ia_primary": _primary_btn,
+		"ia_secondary": _secondary_btn,
 		"ia_action_3": %Button_Combo1,
 		"ia_action_4": %Button_Combo2,
 		"ia_action_5": %Button_Combo3,
@@ -82,6 +113,8 @@ func _ready() -> void:
 		var btn := _tc_action_buttons[action] as Button
 		_tc_default_icons[action] = btn.icon
 		_tc_default_text[action] = btn.text
+
+	_relayout_gamepad({})
 
 
 func _process(_dt: float) -> void:
@@ -184,10 +217,8 @@ func _set_attenuated_sound_for_buttons(node: Node) -> void:
 
 func _on_button_combo_toggled(toggled_on: bool) -> void:
 	combo_opened = toggled_on
-	if toggled_on:
-		animation_player.play("open_combo")
-	else:
-		animation_player.play_backwards("open_combo")
+	if _combo_column:
+		_combo_column.visible = toggled_on
 
 
 func _on_combo_action_changed(pressed: bool) -> void:
@@ -233,40 +264,83 @@ func _apply_touch_controls() -> void:
 		main_action, String(jump_icon.get("hash", "")), String(jump_icon.get("url", ""))
 	)
 
+	# Apply icon overrides (visibility + positioning is handled by _relayout_gamepad).
 	for action in _tc_action_buttons:
+		if action == "ia_jump":
+			continue  # central button icon handled by _apply_main_action
 		var btn := _tc_action_buttons[action] as Button
-		var hide_it: bool = hidden.has(action)
-		# The action promoted to the central button is suppressed in its normal slot.
-		if _main_action != "ia_jump" and action == _main_action:
-			hide_it = true
-		# Combo (action_3..6) buttons stay .visible unless denylisted; the tray open/close
-		# animation controls whether they're actually revealed (like the default gamepad).
-		btn.visible = not hide_it
-		# The central (jump) button's icon is handled by _apply_main_action.
-		if action != "ia_jump":
-			var icon: Dictionary = icons.get(action, {})
-			_apply_icon_override(
-				action, btn, String(icon.get("hash", "")), String(icon.get("url", ""))
-			)
+		var icon: Dictionary = icons.get(action, {})
+		_apply_icon_override(action, btn, String(icon.get("hash", "")), String(icon.get("url", "")))
 
-	# The combo tray toggle is only useful if at least one combo action is still visible.
-	var any_combo := false
-	for a in ["ia_action_3", "ia_action_4", "ia_action_5", "ia_action_6"]:
-		if not hidden.has(a):
-			any_combo = true
-			break
-	button_combo.visible = any_combo
+	_relayout_gamepad(hidden)
 
 
 func _restore_touch_controls() -> void:
 	_apply_main_action("", "", "")
 	for action in _tc_action_buttons:
-		var btn := _tc_action_buttons[action] as Button
 		if action != "ia_jump":
-			_restore_button_default_style(btn, action)
-		# Buttons stay .visible; the combo tray animation governs combo-button display.
-		btn.visible = true
-	button_combo.visible = true
+			_restore_button_default_style(_tc_action_buttons[action] as Button, action)
+	_relayout_gamepad({})
+
+
+## Positions the satellites (pointer, E, F, "12") from LAYOUTS based on how many are visible,
+## and toggles per-button visibility. `hidden` is the denylist (empty in default mode). The
+## main button and the combo column are handled separately.
+func _relayout_gamepad(hidden: Dictionary) -> void:
+	# Combo buttons live in the column, shown unless denylisted; the "+" toggle appears iff any
+	# combo is visible.
+	var any_combo := false
+	for a in COMBO_ACTIONS:
+		var cb := _tc_action_buttons[a] as Button
+		cb.visible = not hidden.has(a)
+		if cb.visible:
+			any_combo = true
+
+	# Build the clockwise arc: the visible satellites (pointer, E, F) first, then the "+" toggle
+	# as the last / topmost element. Everything reflows together by the TOTAL arc count.
+	var arc: Array[Control] = []
+	for key in SATELLITE_ORDER:
+		var vis := not hidden.has(key)
+		# main_action promotes a satellite to the center, freeing its slot.
+		if _main_action != "ia_jump" and key == _main_action:
+			vis = false
+		var node := _satellite_node(key)
+		if vis and node != null:
+			arc.append(node)
+
+	_pointer_btn.visible = false
+	_primary_btn.visible = false
+	_secondary_btn.visible = false
+	button_combo.visible = any_combo
+	if any_combo:
+		arc.append(button_combo)
+
+	var count := arc.size()
+	var positions: Array = LAYOUTS.get(count, LAYOUTS.get(4, LAYOUTS.get(3, [])))
+	for i in range(count):
+		var node := arc[i]
+		node.visible = true
+		if i < positions.size():
+			node.position = positions[i]
+
+	# The combo column sits directly on top of the "+" toggle; collapsed unless open.
+	if _combo_column:
+		var col_size := _combo_column.get_combined_minimum_size()
+		_combo_column.position = Vector2(
+			(button_combo.size.x - col_size.x) / 2.0, -col_size.y - 8.0
+		)
+		_combo_column.visible = combo_opened and any_combo
+
+
+func _satellite_node(key: String) -> Control:
+	match key:
+		"ia_pointer":
+			return _pointer_btn
+		"ia_primary":
+			return _primary_btn
+		"ia_secondary":
+			return _secondary_btn
+	return null
 
 
 ## Sets the large central button to `main_action` (empty = default jump). `jump_icon_hash`/
