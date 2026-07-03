@@ -51,6 +51,9 @@ func set_lobby(new_lobby: Lobby):
 
 
 func async_login(provider: String = ""):
+	# Commit T&C at the sign-in action ("By continuing, you agree…"). Idempotent, so
+	# it's a no-op once already accepted (e.g. when the guest chooser was used first).
+	lobby._accept_eula()
 	# Use mobile auth flow (deep link based) only for ACTUAL mobile platforms (Android/iOS)
 	# Desktop uses polling-based flow even when --force-mobile is used for UI testing
 	var is_real_mobile = Global.is_android() or Global.is_ios()
@@ -331,6 +334,9 @@ func _cleanup_wc_flow(error_message: String) -> void:
 
 
 func _on_button_wallet_connect_pressed() -> void:
+	# Commit T&C at the sign-in action; the native WalletConnect path bypasses
+	# async_login, so accept here too. Idempotent (no-op once already accepted).
+	lobby._accept_eula()
 	# Try native WalletConnect flow on Android/iOS
 	if Global.is_android():
 		var native_result = _try_native_walletconnect()
