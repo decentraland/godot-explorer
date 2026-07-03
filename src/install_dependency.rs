@@ -20,8 +20,8 @@ use crate::ui::{create_spinner, print_message, print_section, MessageType};
 
 use crate::consts::{
     godot_editor_base_url, godot_editor_base_url_for_branch, godot_release_tag,
-    sanitize_branch_for_url, BIN_FOLDER, GODOT_BUILD_SHA, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
-    RUST_LIB_PROJECT_FOLDER,
+    sanitize_branch_for_url, BIN_FOLDER, GODOT_BUILD_SHA, GODOT_CURRENT_VERSION, GODOT_USE_BRANCH,
+    PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER,
 };
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
@@ -528,7 +528,12 @@ pub fn install(
         &format!("Platform: {}", platform.display_name),
     );
 
-    if let Some(b) = branch {
+    // Explicit `--branch` takes precedence; otherwise fall back to the GODOT_USE_BRANCH override.
+    // Used for binary validation and cache keys below; the URLs resolve the same override in their
+    // consts helpers.
+    let effective_branch = branch.or(GODOT_USE_BRANCH);
+
+    if let Some(b) = effective_branch {
         print_message(
             MessageType::Info,
             &format!(
@@ -618,7 +623,7 @@ pub fn install(
     // A stale binary (same version, different fork SHA) is replaced; the SHA-tagged cache key below
     // guarantees a cache miss so the fresh fork build is fetched, not the stale cached zip. Branch
     // builds use existence-only (their fork SHA isn't tracked at const time).
-    let needs_godot = match (branch, validate_installed_godot_binary()) {
+    let needs_godot = match (effective_branch, validate_installed_godot_binary()) {
         (Some(_), GodotBinaryStatus::Missing) => true,
         (Some(_), _) => false,
         (None, GodotBinaryStatus::Ok) => false,
@@ -645,7 +650,7 @@ pub fn install(
     };
     if needs_godot {
         print_section("Installing Godot Engine");
-        let godot_cache_key = match branch {
+        let godot_cache_key = match effective_branch {
             Some(b) => format!(
                 "{GODOT_CURRENT_VERSION}.branch-{}.executable.zip",
                 sanitize_branch_for_url(b)

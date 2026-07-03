@@ -11,6 +11,7 @@ use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir
 
 mod android_godot_lib;
 mod avatar_impostor_benchmark;
+mod build_config;
 mod check_gdscript;
 mod consts;
 mod copy_files;
@@ -25,6 +26,7 @@ mod image_comparison;
 mod install_dependency;
 mod ios_xcode;
 mod keystore;
+mod log_server;
 mod path;
 mod platform;
 mod run;
@@ -347,6 +349,11 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Skip build and export steps, deploy existing APK/IPA directly to device")
                         .takes_value(false),
                 ).arg(
+                    Arg::new("launch-only")
+                        .long("launch-only")
+                        .help("Just relaunch the app already installed on the device — no build, export, or install (android/ios). Still starts the hub + wires the scene-inspector")
+                        .takes_value(false),
+                ).arg(
                     Arg::new("no-default-features")
                         .long("no-default-features")
                         .help("Do not activate default features")
@@ -374,6 +381,45 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Port for asset optimization server (default: 8080)")
                         .takes_value(true)
                         .default_value("8080"),
+                ).arg(
+                    Arg::new("deeplink")
+                        .long("deeplink")
+                        .help("Bake a deeplink into the build (e.g. 'decentraland://open?location=10,20&rust-log=debug'); applied at startup with no CLI args needed (mobile/TestFlight)")
+                        .takes_value(true),
+                ).arg(
+                    Arg::new("no-hub")
+                        .long("no-hub")
+                        .help("For android/ios device deploys: don't auto-start the debug-hub or wire the scene-inspector. Falls back to plain device-log streaming (adb logcat / iOS --console)")
+                        .takes_value(false),
+                ).arg(
+                    Arg::new("hub-viewer")
+                        .long("hub-viewer")
+                        .help("For android/ios device deploys: make the debug-hub the on-screen log view on any platform and turn OFF the device log stream (adb logcat / iOS --console) so it isn't duplicated. Note: Android Kotlin logs only reach logcat, so they won't show")
+                        .takes_value(false),
+                ),
+        ).subcommand(
+            Command::new("debug-hub")
+                .about("Rendezvous broker: one connect-out device <-> many local consumers (unified scene-inspector channel: logs + tree queries + eval)")
+                .arg(
+                    Arg::new("device-port")
+                        .long("device-port")
+                        .help("Port the device dials out to (default: 9231)")
+                        .takes_value(true)
+                        .default_value("9231"),
+                )
+                .arg(
+                    Arg::new("consumer-port")
+                        .long("consumer-port")
+                        .help("Loopback port consumers (websocat/MCP/AI) connect to (default: 9230)")
+                        .takes_value(true)
+                        .default_value("9230"),
+                )
+                .arg(
+                    Arg::new("bind")
+                        .long("bind")
+                        .help("Device-facing bind address (default: 0.0.0.0)")
+                        .takes_value(true)
+                        .default_value("0.0.0.0"),
                 ),
         ).subcommand(
             Command::new("get-metrics")
@@ -518,6 +564,11 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Space-separated list of features to activate")
                         .takes_value(true)
                         .multiple_values(true),
+                ).arg(
+                    Arg::new("deeplink")
+                        .long("deeplink")
+                        .help("Bake a deeplink into the build (applied at startup with no CLI args needed)")
+                        .takes_value(true),
                 ),
         );
     let matches = cli.get_matches();
@@ -564,6 +615,18 @@ fn main() -> Result<(), anyhow::Error> {
             compare_images_folders(snapshot_folder, result_folder, 0.995)
                 .map_err(|e| anyhow::anyhow!(e))
         }
+        ("debug-hub", sm) => {
+            let device_port: u16 = sm
+                .value_of("device-port")
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(9231);
+            let consumer_port: u16 = sm
+                .value_of("consumer-port")
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(9230);
+            let bind = sm.value_of("bind").unwrap_or("0.0.0.0");
+            log_server::run_hub_blocking(bind, device_port, consumer_port)
+        }
         ("run", sm) => {
             // Check dependencies first
             dependencies::check_command_dependencies("run", None)?;
@@ -604,7 +667,23 @@ fn main() -> Result<(), anyhow::Error> {
             // Check if target is specified
             let target = sm.value_of("target");
             let is_only_lib = sm.is_present("only-lib");
-            let is_skip_export = sm.is_present("skip-export");
+            let is_launch_only = sm.is_present("launch-only");
+            // launch-only is a stronger skip-export: it also skips the install
+            // (android) / xcodebuild+install (ios) and just relaunches the app
+            // already on the device.
+            let is_skip_export = sm.is_present("skip-export") || is_launch_only;
+
+            // Bake --deeplink into the generated GDScript so it also applies on
+            // builds that can't receive CLI args (tap-to-open, TestFlight).
+            // Overwritten on every run; empty when nothing was passed.
+            let baked_deeplink = build_config::resolve_deeplink(sm.value_of("deeplink"));
+            build_config::write_build_config(&baked_deeplink)?;
+            if !baked_deeplink.is_empty() {
+                print_message(
+                    MessageType::Info,
+                    &format!("Baked deeplink into build: {baked_deeplink}"),
+                );
+            }
 
             // For android/ios targets, check if we should deploy to device
             let should_deploy = target.is_some()
@@ -614,8 +693,65 @@ fn main() -> Result<(), anyhow::Error> {
             // Both --prod and --staging require release profile
             let production_or_staging = sm.is_present("prod") || sm.is_present("staging");
 
+            // The unified debug-hub (default on for device deploys). One command
+            // does build + deploy + hub: the device dials out to it (iOS bakes
+            // the address via the export plugin; Android is wired below + via
+            // `adb reverse`). `--no-hub` opts out → plain device-log streaming.
+            let hub_enabled = should_deploy && !sm.is_present("no-hub");
+            // `--hub-viewer`: force the hub to be the on-screen log view on ANY
+            // platform, and suppress the device log stream (--console / logcat) so
+            // it isn't duplicated. The viewer then blocks after deploy (below).
+            let hub_viewer = hub_enabled && sm.is_present("hub-viewer");
+            const HUB_DEVICE_PORT: u16 = 9231;
+            const HUB_CONSUMER_PORT: u16 = 9230;
+
             if should_deploy {
                 let platform = target.unwrap();
+
+                if hub_enabled {
+                    // Reuses an existing hub if one is already up; non-fatal. The
+                    // hub itself stays quiet — a viewer (a consumer) does the
+                    // on-screen printing.
+                    log_server::spawn_hub_background(
+                        "0.0.0.0",
+                        HUB_DEVICE_PORT,
+                        HUB_CONSUMER_PORT,
+                        log_server::HubOutput::Quiet,
+                    );
+                    // Default (no --hub-viewer): on iOS attach a background log
+                    // viewer so this terminal shows the GDScript/Rust logs os_log
+                    // hides from `--console`; Android's logcat already shows
+                    // everything. Under --hub-viewer the viewer runs blocking AFTER
+                    // deploy (with native shown, device stream off) — see below.
+                    if platform == "ios" && !hub_viewer {
+                        log_server::spawn_log_viewer(HUB_CONSUMER_PORT, false);
+                    }
+                    if hub_viewer && platform == "android" {
+                        print_message(
+                            MessageType::Warning,
+                            "--hub-viewer: Android Kotlin logs (dcl-godot-android) won't show — they reach only logcat, which is now off.",
+                        );
+                    }
+                } else if platform == "ios" {
+                    // No hub: tell the iOS export plugin to bake NO connect-out
+                    // arg (sentinel), so the app doesn't idle-retry a dead hub —
+                    // pure old-style `--console` log streaming.
+                    std::env::set_var("DCL_IOS_GODOT_CMDLINE", "none");
+                }
+
+                // Android dials the hub through `adb reverse` (set up in
+                // deploy_and_run_android when it sees a loopback scene-inspector
+                // arg). Inject it unless the user already passed one.
+                let inject_scene_inspector = |extras: &mut Vec<String>| {
+                    if hub_enabled
+                        && platform == "android"
+                        && !extras.iter().any(|a| a.starts_with("--scene-inspector"))
+                    {
+                        extras.push(format!(
+                            "--scene-inspector=ws://127.0.0.1:{HUB_DEVICE_PORT}"
+                        ));
+                    }
+                };
 
                 if is_only_lib && platform == "android" {
                     // Hotreload mode: build and push .so file only
@@ -644,25 +780,36 @@ fn main() -> Result<(), anyhow::Error> {
 
                     return Ok(());
                 } else if is_skip_export {
-                    // Skip export mode: deploy existing APK/IPA directly
                     print_message(
                         MessageType::Step,
                         &format!(
-                            "Deploying existing build to {} (skipping build and export)",
-                            platform
+                            "{} on {} (no build/export{})",
+                            if is_launch_only {
+                                "Launching installed app"
+                            } else {
+                                "Deploying existing build"
+                            },
+                            platform,
+                            if is_launch_only { "/install" } else { "" }
                         ),
                     );
 
-                    // Just deploy to device
-                    let device_extras: Vec<String> = sm
+                    // Just deploy to device (launch-only skips the install too)
+                    let mut device_extras: Vec<String> = sm
                         .values_of("extras")
                         .map(|v| v.map(|it| it.into()).collect())
                         .unwrap_or_default();
+                    inject_scene_inspector(&mut device_extras);
                     run::deploy_and_run_on_device(
                         platform,
                         sm.is_present("release"),
                         device_extras,
+                        !hub_viewer,
+                        !is_launch_only,
                     )?;
+                    if hub_viewer {
+                        log_server::run_log_viewer_blocking(HUB_CONSUMER_PORT, true);
+                    }
 
                     return Ok(());
                 } else {
@@ -697,15 +844,21 @@ fn main() -> Result<(), anyhow::Error> {
 
                     if result.is_ok() {
                         // 4. Install and run on device
-                        let device_extras: Vec<String> = sm
+                        let mut device_extras: Vec<String> = sm
                             .values_of("extras")
                             .map(|v| v.map(|it| it.into()).collect())
                             .unwrap_or_default();
+                        inject_scene_inspector(&mut device_extras);
                         run::deploy_and_run_on_device(
                             platform,
                             sm.is_present("release"),
                             device_extras,
+                            !hub_viewer,
+                            true,
                         )?;
+                        if hub_viewer {
+                            log_server::run_log_viewer_blocking(HUB_CONSUMER_PORT, true);
+                        }
                     }
 
                     return result;
@@ -748,6 +901,18 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("build", sm) => {
             let target = sm.value_of("target");
+
+            // Bake --deeplink into the generated GDScript (overwritten each build).
+            {
+                let baked = build_config::resolve_deeplink(sm.value_of("deeplink"));
+                build_config::write_build_config(&baked)?;
+                if !baked.is_empty() {
+                    print_message(
+                        MessageType::Info,
+                        &format!("Baked deeplink into build: {baked}"),
+                    );
+                }
+            }
 
             // Run version check first
             version_check::run_version_check()?;

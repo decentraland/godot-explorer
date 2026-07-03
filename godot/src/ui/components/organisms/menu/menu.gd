@@ -40,6 +40,7 @@ var _close_node_to_free: PlaceholderManager = null
 @onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
 
 @onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
+@onready var upgrade_otp_pop_up: TextureRect = $UpgradeOtpPopUp
 
 @onready var static_button_backpack: TextureButton = %StaticButton_Backpack
 @onready var static_button_discover: TextureButton = %StaticButton_Discover
@@ -97,6 +98,7 @@ func _ready():
 	Global.open_profile_editor.connect(async_show_profile_editor)
 	Global.close_menu.connect(async_close)
 	Global.delete_account.connect(_on_account_delete)
+	Global.upgrade_to_otp.connect(_on_upgrade_to_otp)
 
 	if not is_in_game:
 		open.call_deferred()
@@ -412,3 +414,18 @@ func _on_account_delete() -> void:
 		show()
 		is_open = true
 	account_deletion_pop_up.async_start_flow()
+
+
+func _on_upgrade_to_otp() -> void:
+	if not upgrade_otp_pop_up:
+		return
+	if not is_open:
+		# Kill pending close tweens from a previous close
+		if is_instance_valid(_close_modulate_tween) and _close_modulate_tween.is_running():
+			_close_modulate_tween.kill()
+		if is_instance_valid(_close_hide_tween) and _close_hide_tween.is_running():
+			_close_hide_tween.kill()
+		modulate = Color(1, 1, 1, 1)
+		show()
+		is_open = true
+	upgrade_otp_pop_up.async_start_flow()

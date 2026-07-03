@@ -5,7 +5,7 @@ use crate::{
     consts::{
         godot_release_tag, godot_templates_base_url, godot_templates_base_url_for_branch,
         sanitize_branch_for_url, EXPORTS_FOLDER, GODOT_BUILD_SHA, GODOT_CURRENT_VERSION,
-        GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
+        GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER, GODOT_USE_BRANCH,
     },
     helpers::get_exe_extension,
     install_dependency::{
@@ -509,6 +509,12 @@ pub fn prepare_templates(
         }
     };
 
+    // Effective branch = explicit `--branch` (takes precedence) or the `GODOT_USE_BRANCH` override.
+    // Drives the marker-skip guard, cache key and marker stamp so a branch build is never skipped as
+    // if it were the pinned stable release. The download URL itself resolves the same override inside
+    // godot_templates_base_url() below.
+    let effective_branch = branch.or(GODOT_USE_BRANCH);
+
     let templates_base_url = match branch {
         Some(b) => godot_templates_base_url_for_branch(b),
         None => godot_templates_base_url(),
@@ -523,7 +529,7 @@ pub fn prepare_templates(
             // own `version.txt` only carries the version (no SHA), hence our own marker. Branch
             // builds are never marked/skipped (their fork SHA isn't tracked at const time).
             let marker = Path::new(&dest_path).join(format!(".dcl_build_sha_{template}"));
-            let marker_ok = branch.is_none()
+            let marker_ok = effective_branch.is_none()
                 && fs::read_to_string(&marker)
                     .map(|s| s.trim() == expected_tag)
                     .unwrap_or(false);
@@ -540,7 +546,7 @@ pub fn prepare_templates(
                 println!("Downloading file for {}: {}", template, file);
 
                 let url = format!("{}{}.zip", templates_base_url, file);
-                let cache_id = match branch {
+                let cache_id = match effective_branch {
                     Some(b) => format!(
                         "{GODOT_CURRENT_VERSION}.branch-{}.{file}.export-templates.zip",
                         sanitize_branch_for_url(b)
@@ -552,7 +558,8 @@ pub fn prepare_templates(
                 download_and_extract_zip(url.as_str(), dest_path.as_str(), cache_key(cache_id))?;
             }
             // Stamp the SHA marker after a successful extract so the next run can skip.
-            if branch.is_none() {
+            // Skipped for branch builds (their fork SHA isn't tracked at const time).
+            if effective_branch.is_none() {
                 let _ = fs::write(&marker, &expected_tag);
             }
         } else {

@@ -9,14 +9,23 @@ signal items_loaded(places: Array[Dictionary])
 
 enum Mode { FTUE, BANNER }
 
-const FTUE_SELECTED_SIZE = Vector2(600, 480)
-const FTUE_UNSELECTED_SIZE = Vector2(550, 440)
+const FTUE_SELECTED_SIZE = Vector2(624, 350)
+const FTUE_UNSELECTED_SIZE = Vector2(530, 300)
 const BANNER_SELECTED_SIZE = Vector2(624, 350)
 const BANNER_UNSELECTED_SIZE = Vector2(530, 300)
 const CARD_SCENE_PATH = "res://src/ui/components/molecules/snap_carousel/snap_carousel_card.tscn"
 const FeaturedDataProvider = preload(
 	"res://src/ui/components/molecules/snap_carousel/featured_data_provider.gd"
 )
+
+## Title shown above the carousel, left-aligned with the selected card.
+## Requires a MarginContainer with unique name "TitleContainer" as first child
+## (containing the Label) — add it via the editor.
+@export var show_title: bool = false:
+	set(value):
+		show_title = value
+		if is_node_ready() and is_instance_valid(_title_container):
+			_title_container.visible = value
 
 @export var mode: Mode = Mode.FTUE:
 	set(v):
@@ -36,6 +45,8 @@ const FeaturedDataProvider = preload(
 @export var auto_scroll: bool = false
 @export var auto_scroll_interval: float = 3.0
 
+var _title_container: MarginContainer = null
+
 var _cards: Array = []
 var _auto_scroll_timer: Timer = null
 var _is_touching: bool = false
@@ -53,6 +64,9 @@ var _dot_indicators: Array[Control] = []
 
 func _ready() -> void:
 	clip_contents = true
+	_title_container = get_node_or_null("%TitleContainer")
+	if is_instance_valid(_title_container):
+		_title_container.visible = show_title
 	_apply_mode()
 
 	if not Engine.is_editor_hint():
@@ -167,6 +181,12 @@ func _layout_cards() -> void:
 		card.visible = false
 
 	var center_x = (area_w - sel_size.x) / 2.0 + _drag_offset
+
+	# Align title left edge with the selected card (use base center_x, not drag offset).
+	if is_instance_valid(_title_container):
+		_title_container.add_theme_constant_override(
+			"margin_left", int((area_w - sel_size.x) / 2.0)
+		)
 
 	# Selected card (center)
 	var sel_card = _cards[selected_index]

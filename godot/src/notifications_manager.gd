@@ -56,6 +56,12 @@ const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
 # Local notifications version - increment this to clear and re-sync all notifications
 const LOCAL_NOTIFICATIONS_VERSION = 1
 
+## Minimum seconds between OS notification-permission prompts. Once denied,
+## Android's requestPermissions() returns immediately without re-showing a dialog,
+## so re-requesting only logs a spurious reject — gate re-prompts behind this
+## cooldown (persisted via config, so it also holds across app restarts).
+const PERMISSION_PROMPT_COOLDOWN_SEC = 300
+
 ## DEBUG: Enable verbose logging of notification database operations
 ## Only active in debug builds (OS.is_debug_build())
 var _debug_notifications_enabled: bool = false
@@ -648,10 +654,21 @@ func show_system_toast(
 
 ## Request permission to show local notifications
 func request_local_notification_permission(from_screen: String = "") -> void:
-	if _os_wrapper:
-		Global.metrics.track_screen_viewed("NOTIF_PROMPT", from_screen)
-		Global.metrics.flush.call_deferred()
-		_os_wrapper.request_permission()
+	if not _os_wrapper:
+		return
+	# Already granted — nothing to prompt.
+	if has_local_notification_permission():
+		return
+	# Don't re-prompt within the cooldown window.
+	var now := int(Time.get_unix_time_from_system())
+	var last: int = Global.get_config().notif_permission_last_prompt_unix
+	if last > 0 and now - last < PERMISSION_PROMPT_COOLDOWN_SEC:
+		return
+	Global.get_config().notif_permission_last_prompt_unix = now
+	Global.get_config().save_to_settings_file()
+	Global.metrics.track_screen_viewed("NOTIF_PROMPT", from_screen)
+	Global.metrics.flush.call_deferred()
+	_os_wrapper.request_permission()
 
 
 ## Check if local notification permission is granted
@@ -917,17 +934,12 @@ func async_sync_attended_events() -> void:
 	# Check version and clear all notifications if version changed
 	_check_and_handle_version_change()
 
-	# Check and request notification permission
+	# Don't surface the OS permission dialog from this background sync — the prompt is
+	# only shown on the explicit Play-as-Guest / Sign-In taps now (issue #2377). If
+	# permission isn't granted we still schedule; the OS drops it gracefully and the
+	# reminders start surfacing once the user grants from the entry flow.
 	if not has_local_notification_permission():
-		request_local_notification_permission("SYNC_ATTENDED_EVENTS")
-
-		# Check permission after request
-		# Note: On iOS this is async, but we'll try to schedule anyway
-		# If permission is denied, the OS will handle it gracefully
-		if not has_local_notification_permission():
-			_debug_log(
-				"Notification permission not granted yet, scheduling anyway (OS will handle)"
-			)
+		_debug_log("Notification permission not granted; scheduling anyway (OS will handle)")
 
 	# iOS plugin doesn't emit permission_changed, so the lobby grant never reaches
 	# _on_permission_changed. Trigger day1 here instead — its own guards handle dedup.

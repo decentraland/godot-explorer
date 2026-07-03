@@ -27,6 +27,17 @@ func initialize() -> void:
 			_android_plugin.createNotificationChannel(
 				_channel_id, _channel_name, _channel_description
 			)
+			# The POST_NOTIFICATIONS dialog result is delivered asynchronously by the
+			# plugin (requestNotificationPermission returns before the user answers).
+			if (
+				_android_plugin.has_signal("notification_permission_result")
+				and not _android_plugin.notification_permission_result.is_connected(
+					_on_android_permission_result
+				)
+			):
+				_android_plugin.notification_permission_result.connect(
+					_on_android_permission_result
+				)
 		else:
 			push_warning("Local notifications: Android plugin not found")
 	elif OS.get_name() == "iOS":
@@ -40,11 +51,22 @@ func initialize() -> void:
 ## iOS: Shows permission dialog on first call
 func request_permission() -> void:
 	if OS.get_name() == "Android" and _android_plugin:
-		var granted = _android_plugin.requestNotificationPermission()
-		permission_changed.emit(granted)
+		# Returns true only when permission is already granted (no dialog). When it
+		# returns false a dialog was requested and the real result arrives later via
+		# the notification_permission_result signal — do NOT emit here, otherwise
+		# every request is logged as a reject regardless of the user's choice.
+		var already_granted = _android_plugin.requestNotificationPermission()
+		if already_granted:
+			permission_changed.emit(true)
 	elif OS.get_name() == "iOS" and _ios_plugin:
 		_ios_plugin.request_notification_permission()
 		# Permission result is async on iOS
+
+
+## Android delivers the POST_NOTIFICATIONS dialog outcome asynchronously via the
+## plugin's notification_permission_result signal ("granted"/"denied").
+func _on_android_permission_result(result: String) -> void:
+	permission_changed.emit(result == "granted")
 
 
 ## Check if local notification permission is granted

@@ -1,7 +1,13 @@
 [gd_scene format=3 uid="uid://byp4n7u2145fx"]
 
 [ext_resource type="Script" uid="uid://cml07tp7nuhck" path="res://src/ui/components/molecules/snap_carousel/snap_carousel.gd" id="1_snap"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_4i21x"]
 [ext_resource type="PackedScene" uid="uid://532ab3qicjp6" path="res://src/ui/components/molecules/snap_carousel/snap_carousel_card.tscn" id="3_2oyge"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_ecuem"]
+font = ExtResource("2_4i21x")
+font_size = 24
+font_color = Color(1, 1, 1, 0.69803923)
 
 [node name="SnapCarousel" type="VBoxContainer" unique_id=1417653535]
 clip_contents = true
@@ -14,7 +20,18 @@ size_flags_horizontal = 3
 size_flags_vertical = 0
 theme_override_constants/separation = 16
 script = ExtResource("1_snap")
+show_title = null
 mode = 1
+
+[node name="TitleContainer" type="MarginContainer" parent="." unique_id=1874823612]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_bottom = 9
+
+[node name="Title" type="Label" parent="TitleContainer" unique_id=19343611]
+layout_mode = 2
+text = "RECOMMENDED PLACES"
+label_settings = SubResource("LabelSettings_ecuem")
 
 [node name="CardArea" type="Control" parent="." unique_id=1951379499]
 clip_contents = true
@@ -36,12 +53,16 @@ mouse_filter = 2
 
 [node name="SnapCarouselCard" parent="CardArea/CardContainer" unique_id=353149603 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(530, 300)
+layout_mode = 0
 
 [node name="SnapCarouselCard2" parent="CardArea/CardContainer" unique_id=1324026161 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(624, 350)
+layout_mode = 0
 
 [node name="SnapCarouselCard3" parent="CardArea/CardContainer" unique_id=1837558481 instance=ExtResource("3_2oyge")]
 custom_minimum_size = Vector2(530, 300)
+layout_mode = 0
+offset_bottom = 300.0
 
 [node name="DotsContainer" type="HBoxContainer" parent="." unique_id=1645889567]
 unique_name_in_owner = true

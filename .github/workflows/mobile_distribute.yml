@@ -1,7 +1,8 @@
 name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 
 # Single entry point that builds & distributes BOTH mobile platforms:
-#   - iOS    → deploy pipeline repo (DEPLOY_REPO secret) → Xcode Cloud → TestFlight
+#   - iOS    → unsigned export uploaded to R2, then repository_dispatch to the
+#              godot-asc-deploy repo which signs it and uploads to TestFlight
 #   - Android → APK is already uploaded to the R2 mobile-artifacts bucket by the
 #               regular Android CI build (android_builds.yml) for every commit; this
 #               workflow waits for that commit's APK and posts a Slack "build ready"
@@ -240,6 +241,11 @@ jobs:
       SHA:         ${{ needs.prepare.outputs.sha }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
       GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+      # Build-number allocator: used to check whether a reusable export's baked number is still
+      # current before reusing it (see the reuse-vs-build step). workers.dev route — the custom
+      # domain edge-blocks datacenter CI IPs. Empty secret (fork PR) → the check is skipped.
+      ALLOCATOR_URL:       https://godot-build-number-allocator.mateo-a2b.workers.dev
+      BUILD_NUMBER_SECRET: ${{ secrets.BUILD_NUMBER_SECRET }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -285,12 +291,37 @@ jobs:
               sleep 30
             done
           fi
+          # Monotonic guard: an export is only safe to reuse while its BAKED build number is still the
+          # one the allocator assigns for this commit. If a store has since shipped past that number
+          # the allocator refreshes it (returns a higher one) — reusing the old export would ship a
+          # superseded CFBundleVersion (TestFlight rejects it) or desync it from the baked version
+          # string. When that happens, force a rebuild so the fresh number gets baked in.
+          if [ "$reuse" = "true" ] && [ -n "${BUILD_NUMBER_SECRET:-}" ]; then
+            SIDECAR_KEY="ios/${SAFE_BRANCH}/${SHA}/build_number.txt"
+            BAKED=$(aws s3 cp "s3://${AWS_S3_BUCKET}/${SIDECAR_KEY}" - --endpoint-url "$AWS_ENDPOINT_URL" 2>/dev/null | tr -dc '0-9' || true)
+            ALLOC=$(curl -fsS -X POST "${ALLOCATOR_URL%/}/build-numbers/allocate" \
+              -H 'content-type: application/json' -H "authorization: Bearer ${BUILD_NUMBER_SECRET}" \
+              -d "$(printf '{"sha":"%s","allocatedBy":"ios"}' "$SHA")" 2>/dev/null \
+              | grep -oE '"buildNumber"[[:space:]]*:[[:space:]]*[0-9]+' | tr -dc '0-9' || true)
+            if [ -z "$BAKED" ]; then
+              echo "⚠️  No build_number sidecar for this export → rebuilding to bake a current number."
+              reuse=false
+            elif [ -z "$ALLOC" ]; then
+              echo "⚠️  Could not reach the allocator to verify — reusing anyway (asc-deploy fails loud if the number is behind)."
+            elif [ "$BAKED" != "$ALLOC" ]; then
+              echo "♻️→🔨 Export baked build $BAKED, but the allocator now assigns $ALLOC (superseded on a store) → rebuilding."
+              reuse=false
+            else
+              echo "✅ Reusable export's build number ($BAKED) is still current (allocator: $ALLOC)."
+            fi
+          fi
+
           echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
 
           # In the reuse path nobody runs the lib build that writes .build.version, so reconstruct it
           # deterministically (matches lib/build.rs: <lib-version>-<short-sha>-<prod|staging>).
           LIB_VERSION=$(grep -m1 '^version' lib/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
-          if [ "$REF" = "release" ]; then SUFFIX="prod"; else SUFFIX="staging"; fi
+          case "$REF" in release*) SUFFIX="prod";; *) SUFFIX="staging";; esac
           echo "build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "→ reuse=$reuse · build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}"
 

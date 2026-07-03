@@ -21,7 +21,8 @@ var _generator_statuses: Dictionary = {}
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 @onready var friend_jump_in: SidePanelWrapper = %FriendJumpIn
-@onready var button_credits: CreditsBalanceButton = get_node_or_null("%Button_Credits")
+@onready var guest_upgrade_card: GuestUpgradeCard = %GuestUpgradeCard
+@onready var button_credits: CreditsBalanceButton = %Button_Credits
 
 static var _low_spec_warning_shown: bool = false
 
@@ -170,6 +171,8 @@ func _on_search_bar_opened() -> void:
 	Global.metrics.track_click_button("SEARCH_SELECT_INPUT", "SEARCH_CLICK", "")
 	if button_credits:
 		button_credits.hide()
+	if guest_upgrade_card:
+		guest_upgrade_card.hide()
 
 
 func _on_search_bar_cleared() -> void:
@@ -192,6 +195,8 @@ func set_search_filter_text(new_text: String) -> void:
 		places_favorites.visible = places_favorites.has_items()
 		places_my_places.visible = places_my_places.has_items()
 		places_most_active.title = "Most Actives"
+		if guest_upgrade_card:
+			guest_upgrade_card.show()
 	else:
 		friends_online.hide()
 		last_visited.hide()
@@ -199,6 +204,8 @@ func set_search_filter_text(new_text: String) -> void:
 		places_favorites.hide()
 		places_my_places.hide()
 		places_most_active.title = "Scenes"
+		if guest_upgrade_card:
+			guest_upgrade_card.hide()
 	places_most_active.set_search_param(new_text)
 	events.set_search_param(new_text)
 	_scroll_all_carousels_to_start()
