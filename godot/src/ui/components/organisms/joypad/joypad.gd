@@ -379,9 +379,7 @@ func _apply_main_action(main_action: String, jump_icon_hash: String, jump_icon_u
 		# satellite's small glyph for the large one so the outline weight matches the design.
 		if target == "ia_pointer":
 			button_press.icon = POINTER_LARGE_ICON
-			button_press.add_theme_constant_override(
-				"icon_max_width", POINTER_LARGE_ICON_MAX_WIDTH
-			)
+			button_press.add_theme_constant_override("icon_max_width", POINTER_LARGE_ICON_MAX_WIDTH)
 
 
 func _apply_icon_override(action: String, btn: Button, icon_hash: String, icon_url: String) -> void:
