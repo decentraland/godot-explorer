@@ -193,7 +193,11 @@ func _ready():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_main_category_filter_type)
 			if wearable_filter_button.get_category_name() == default_main_category:
-				wearable_filter_button.button_pressed = true
+				if wearable_filter_button.button_group:
+					for btn in wearable_filter_button.button_group.get_buttons():
+						btn.set_pressed_no_signal(btn == wearable_filter_button)
+				else:
+					wearable_filter_button.set_pressed_no_signal(true)
 
 	for wearable_filter_button in container_sub_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
@@ -368,7 +372,8 @@ func _update_visible_categories():
 	if main_category_selected == Wearables.Categories.ALL:
 		hseparator_extra_space.hide()
 	if first_wearable_filter_button:
-		first_wearable_filter_button.set_pressed(true)
+		for btn in wearable_filter_buttons:
+			btn.set_pressed_no_signal(btn == first_wearable_filter_button)
 		_on_wearable_filter_button_filter_type(first_wearable_filter_button.get_category_name())
 	elif main_category_selected == Wearables.Categories.ALL:
 		_on_wearable_filter_button_filter_type(Wearables.Categories.ALL)

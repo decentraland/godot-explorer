@@ -9,6 +9,7 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
 [ext_resource type="PackedScene" uid="uid://5x6lss2vy1x0" path="res://src/ui/pages/discover/first_time_user_experience.tscn" id="5_3tlbd"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_g62s5"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/dcl_splash/dcl_splash.tscn" id="5_l114c"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/pages/backpack/backpack_portrait.tscn" id="9_qv8xq"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_ypsmd"]
 [ext_resource type="LabelSettings" uid="uid://cjsuieuof7bhf" path="res://assets/themes/lobby_title_small.tres" id="10_3tlbd"]
@@ -158,9 +159,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="DclSplash" type="Control" parent="Main" unique_id=1249608778]
+[node name="DclSplash" parent="Main" unique_id=964062833 instance=ExtResource("5_l114c")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="TextureProgressBar" parent="Main/DclSplash" unique_id=774353178 instance=ExtResource("11_7iulh")]
@@ -178,23 +178,6 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 speed_scale = 2.0
-
-[node name="TextureRect2" type="TextureRect" parent="Main/DclSplash" unique_id=499632262]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -48.0
-offset_top = -48.0
-offset_right = 48.0
-offset_bottom = 48.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("3_mwmw7")
-expand_mode = 1
-stretch_mode = 4
 
 [node name="AccountHomeLoading" type="Control" parent="Main" unique_id=374747450]
 unique_name_in_owner = true
@@ -553,6 +536,7 @@ icon_alignment = 2
 
 [node name="AvatarCustomize" type="Control" parent="Main" unique_id=1314744326]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/AvatarCustomize" unique_id=370001754]
