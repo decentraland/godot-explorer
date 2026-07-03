@@ -9,6 +9,14 @@ const DOUBLE_JUMP_ICON = preload("uid://euvimxirt85b")  # "res://assets/themes/d
 const SINGLE_JUMP_ICON_MAX_WIDTH = 85
 const SINGLE_JUMP_ICON = preload("uid://ck3atqpytstpo")  # "res://assets/themes/dark_dcl_theme/icons/Jump.svg"
 
+# Pointer glyph has two hand-tuned variants (Figma nodes 3:869 small / 3:1008 large) so the
+# outline weight stays visually constant instead of scaling with the button. The small variant
+# is authored on the satellite (joypad.tscn); the large one is swapped onto the central button
+# when the pointer is promoted to the main action. See _apply_main_action.
+const POINTER_SMALL_ICON = preload("uid://cio1wsarij08p")  # pointer_small.svg (node 3:869)
+const POINTER_LARGE_ICON = preload("uid://5nfo22llcuuv")  # pointer_large.svg (node 3:1008)
+const POINTER_LARGE_ICON_MAX_WIDTH = 55  # 54/118 of the Figma big button, on the 120px center
+
 # Button SKIN (border/fill/radius/colors) is owned by the theme, not this organism: the
 # `TouchableButton` variation in assets/themes/dcl_theme.tres -> touchable_normal.tres. The
 # joypad only swaps these two styleboxes onto the central button for the glider inverted state.
@@ -367,6 +375,13 @@ func _apply_main_action(main_action: String, jump_icon_hash: String, jump_icon_u
 		# Borrow the promoted action's default glyph (icon or text), from a clean state.
 		_jump_icon_overridden = false
 		_restore_button_default_style(button_press, target)
+		# The pointer uses a size-specific variant: on the big central button, swap the
+		# satellite's small glyph for the large one so the outline weight matches the design.
+		if target == "ia_pointer":
+			button_press.icon = POINTER_LARGE_ICON
+			button_press.add_theme_constant_override(
+				"icon_max_width", POINTER_LARGE_ICON_MAX_WIDTH
+			)
 
 
 func _apply_icon_override(action: String, btn: Button, icon_hash: String, icon_url: String) -> void:

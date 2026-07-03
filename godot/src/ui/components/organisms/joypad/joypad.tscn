@@ -2,10 +2,10 @@
 
 [ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/atoms/buttons/button_touch_action/button_touch_action.tscn" id="1_81cx4"]
 [ext_resource type="Script" uid="uid://dwlnsnbe4h0b0" path="res://src/ui/components/organisms/joypad/joypad.gd" id="1_il1fe"]
-[ext_resource type="Texture2D" uid="uid://72xpjysoxgwo" path="res://assets/themes/icons/InteractiveIcon.svg" id="2_6enwl"]
+[ext_resource type="Texture2D" uid="uid://cio1wsarij08p" path="res://assets/themes/dark_dcl_theme/icons/pointer_small.svg" id="2_6enwl"]
 [ext_resource type="Texture2D" uid="uid://ck3atqpytstpo" path="res://assets/themes/dark_dcl_theme/icons/Jump.svg" id="3_il1fe"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_8at3g"]
-[ext_resource type="Texture2D" uid="uid://doi4r1nh7rtr7" path="res://assets/themes/dark_dcl_theme/icons/multi_action.svg" id="5_il1fe"]
+[ext_resource type="Texture2D" uid="uid://0vj8slip287r" path="res://assets/themes/dark_dcl_theme/icons/plus.svg" id="5_il1fe"]
 
 [node name="Joypad" type="Control" unique_id=400349512]
 custom_minimum_size = Vector2(300, 0)
@@ -63,11 +63,11 @@ offset_top = -57.0
 offset_right = -164.0
 offset_bottom = 8.0
 mouse_force_pass_scroll_events = false
-theme_override_constants/icon_max_width = 25
+theme_override_constants/icon_max_width = 27
 text = ""
 icon = ExtResource("2_6enwl")
 trigger_action = "ia_pointer"
-editor_description = "Satellite: pointer (ia_pointer). Figma SecondaryButton; per-count slot position in joypad.gd LAYOUTS."
+editor_description = "Satellite: pointer (ia_pointer). Figma SecondaryButton, icon = pointer_small.svg (node 3:869, heavier relative stroke tuned for the small button). When this action is promoted to the central button, joypad.gd swaps in pointer_large.svg (node 3:1008) so the outline weight stays constant across sizes."
 
 [node name="Button_Primary" parent="Button_Press/Control" unique_id=125286180 instance=ExtResource("1_81cx4")]
 layout_mode = 1
@@ -108,7 +108,7 @@ theme_override_constants/icon_max_width = 30
 toggle_mode = true
 icon = ExtResource("5_il1fe")
 icon_alignment = 1
-editor_description = "Figma: MultiAction (the + combo toggle). Raw toggle Button (NOT the touch-action atom): reveals the 1/2/3/4 column, fires no input. It is the LAST arc element (topmost), reflowed with the others via joypad.gd LAYOUTS."
+editor_description = "Figma: MultiAction (the + combo toggle). Raw toggle Button (NOT the touch-action atom): reveals the 1/2/3/4 column, fires no input. It is the LAST arc element (topmost), reflowed with the others via joypad.gd LAYOUTS. Icon is plus.svg, matching Figma node 3:874 (Group 3088): a 32x32 '+' of two 4px round-cap white strokes."
 
 [node name="ComboColumn" type="VBoxContainer" parent="Button_Press/Control/Button_Combo" unique_id=724900001]
 unique_name_in_owner = true
