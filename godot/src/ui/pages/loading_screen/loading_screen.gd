@@ -288,6 +288,7 @@ func hide_loading_screen() -> void:
 
 
 func _on_close_button_pressed() -> void:
+	Global.metrics.track_click_button("CANCEL_LOADING", "LOADING", "")
 	_clear_place_ui()
 	_loading_cancelled = true
 	Global.return_to_discover()
