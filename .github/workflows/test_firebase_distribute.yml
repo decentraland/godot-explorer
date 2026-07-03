@@ -31,8 +31,14 @@ jobs:
           access_token_scopes: https://www.googleapis.com/auth/cloud-platform
 
       - name: Download APK from R2
+        # Same authenticated path the real workflow uses — the public R2 URL 403s from runner IPs.
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
         run: |
-          curl -fsSL "https://mobile-artifacts.dclregenesislabs.xyz/android/ci-firebase-app-distribution/latest/decentraland.godot.client.apk" -o app.apk
+          aws s3 cp "s3://${AWS_S3_BUCKET}/android/ci-firebase-app-distribution/latest/decentraland.godot.client.apk" app.apk --endpoint-url "$AWS_ENDPOINT_URL"
           ls -la app.apk
 
       - name: Distribute via App Distribution REST API
