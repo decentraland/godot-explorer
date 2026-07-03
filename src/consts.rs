@@ -18,7 +18,7 @@ pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 /// (e.g. `4.6.2.stable.gh.6ddcadb64 - Protocol Squad`) and the SHA-tagged release path published
 /// by the godot-engine-releases pipeline. Bump it in lockstep with a new fork publish: it busts the
 /// local download cache (keys embed it) and pins the immutable per-SHA release URLs below.
-pub const GODOT_BUILD_SHA: &str = "36d9ae5fa";
+pub const GODOT_BUILD_SHA: &str = "aed178f10";
 
 /// TEMPORARY per-checkout override to pull the Godot editor + export templates from a specific
 /// fork *branch* build (published by CI under `/branches/<slug>/`) instead of the pinned stable
@@ -28,9 +28,10 @@ pub const GODOT_BUILD_SHA: &str = "36d9ae5fa";
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently pinned
-/// to the issue #2002 iOS main-thread-freeze fix (decentraland/godotengine#17).
-pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/pipeline-inline-compile-2002");
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently `None`:
+/// the issue #2002 iOS main-thread-freeze fix (decentraland/godotengine#17) is merged and
+/// `GODOT_BUILD_SHA` above points at its merge commit.
+pub const GODOT_USE_BRANCH: Option<&str> = None;
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
