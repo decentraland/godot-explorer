@@ -40,10 +40,13 @@ func _async_load_presets() -> void:
 		if i == 1:
 			card.button_pressed = true
 		cards.append(card)
-		_async_load_preset_into_card("default%d" % i, card)
+		# 0-based avatar_id surfaced in the PRESET_SELECT metric (issue #2377).
+		_async_load_preset_into_card("default%d" % i, card, i - 1)
 
 
-func _async_load_preset_into_card(preset_id: String, card: PresetAvatarCard) -> void:
+func _async_load_preset_into_card(
+	preset_id: String, card: PresetAvatarCard, avatar_id: int
+) -> void:
 	var url = PROFILES_BASE_URL + preset_id
 	var headers = {"Content-Type": "application/json"}
 	var promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", headers)
@@ -64,6 +67,7 @@ func _async_load_preset_into_card(preset_id: String, card: PresetAvatarCard) -> 
 
 	var avatar_data: Dictionary = avatars[0].get("avatar", {})
 	var preset_data = _extract_preset_data(avatar_data)
+	preset_data["avatar_id"] = avatar_id
 	card.preset_data = preset_data
 
 	var snapshot_url = _get_body_snapshot_url(json)
