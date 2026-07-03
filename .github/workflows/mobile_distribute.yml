@@ -46,6 +46,7 @@ permissions:
   pull-requests: write
   contents: read
   actions: write
+  id-token: write   # OIDC token for keyless Google Cloud auth (Firebase App Distribution via WIF)
 
 jobs:
   prepare:
@@ -525,20 +526,32 @@ jobs:
 
       # Firebase App Distribution: push the freshly-built signed APK (already in R2) to the
       # testers' real devices — the Android counterpart of the iOS TestFlight leg. Free, no app
-      # changes. Gated on the FIREBASE_* secrets so it's a no-op until they're configured (mirrors
-      # the R2 skip pattern). Lives in this workflow (not android_builds.yml) so testers are only
-      # notified on intentional distributions — release push / main cron / `build` label / dispatch
-      # — never on every PR. Auth is via a service account (the CI-token flow is deprecated).
+      # changes. Lives in this workflow (not android_builds.yml) so testers are only notified on
+      # intentional distributions — release push / main cron / `build` label / dispatch — never on
+      # every PR.
+      #
+      # Auth is KEYLESS via Workload Identity Federation: the org disables downloadable
+      # service-account keys (constraints/iam.disableServiceAccountKeyCreation), so instead the
+      # runner's OIDC token impersonates the fad-ci service account. Gated on the GCP_WIF_PROVIDER
+      # variable so the whole thing is a clean no-op until WIF is configured.
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: gcp-auth
+        if: success() && vars.GCP_WIF_PROVIDER != ''
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
       - name: Distribute Android APK to Firebase App Distribution
-        if: success()
+        # Only runs once WIF auth succeeded (auth step is skipped → this is skipped too).
+        if: success() && steps.gcp-auth.outcome == 'success'
         env:
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
-          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
           # Comma-separated Firebase tester group aliases (created in the Firebase console).
           FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'qa' }}
         run: |
-          if [ -z "$FIREBASE_ANDROID_APP_ID" ] || [ -z "$FIREBASE_SERVICE_ACCOUNT_BASE64" ]; then
-            echo "⚠️  Firebase App Distribution not configured (FIREBASE_ANDROID_APP_ID / FIREBASE_SERVICE_ACCOUNT_BASE64) — skipping."
+          if [ -z "$FIREBASE_ANDROID_APP_ID" ]; then
+            echo "⚠️  FIREBASE_ANDROID_APP_ID not set — skipping App Distribution."
             exit 0
           fi
 
@@ -546,10 +559,8 @@ jobs:
           echo "📥 Downloading APK from R2: ${APK_KEY}"
           aws s3 cp "s3://${AWS_S3_BUCKET}/${APK_KEY}" ./firebase-dist.apk --endpoint-url "$AWS_ENDPOINT_URL"
 
-          # Service-account credentials (base64 JSON, matching this repo's *_BASE64 keystore convention).
-          echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 -d > /tmp/fb-sa.json
-          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/fb-sa.json
-
+          # google-github-actions/auth exported GOOGLE_APPLICATION_CREDENTIALS (WIF external-account
+          # credentials); firebase-tools picks it up via Application Default Credentials.
           RELEASE_NOTES="branch ${REF} · commit ${SHA:0:7} · $(date -u +'%Y-%m-%d %H:%M UTC')"
           echo "📲 Distributing to Firebase groups: ${FIREBASE_TESTER_GROUPS}"
           npx --yes firebase-tools@13 appdistribution:distribute ./firebase-dist.apk \
@@ -557,7 +568,7 @@ jobs:
             --groups "$FIREBASE_TESTER_GROUPS" \
             --release-notes "$RELEASE_NOTES"
 
-          rm -f /tmp/fb-sa.json ./firebase-dist.apk
+          rm -f ./firebase-dist.apk
           echo "FIREBASE_DIST_OK=true" >> "$GITHUB_ENV"
 
       - name: Slack — Android sent to Firebase App Distribution
