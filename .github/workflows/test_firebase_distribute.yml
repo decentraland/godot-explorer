@@ -4,12 +4,12 @@
 # WIF/external_account ADC). Delete once the logic is ported to mobile_distribute.yml.
 name: 🧪 test firebase distribute
 on:
-  workflow_dispatch:
-    inputs:
-      apk_url:
-        description: 'Public APK URL to distribute'
-        required: false
-        default: 'https://mobile-artifacts.dclregenesislabs.xyz/android/ci-firebase-app-distribution/latest/decentraland.godot.client.apk'
+  # push-triggered (workflow_dispatch only works from the default branch). Scoped to this
+  # throwaway file so it only runs when I iterate on it — not on unrelated pushes.
+  push:
+    branches: [ci/firebase-app-distribution]
+    paths: ['.github/workflows/test_firebase_distribute.yml']
+  workflow_dispatch: {}
 
 permissions:
   id-token: write
@@ -32,7 +32,7 @@ jobs:
 
       - name: Download APK from R2
         run: |
-          curl -fsSL "${{ github.event.inputs.apk_url }}" -o app.apk
+          curl -fsSL "https://mobile-artifacts.dclregenesislabs.xyz/android/ci-firebase-app-distribution/latest/decentraland.godot.client.apk" -o app.apk
           ls -la app.apk
 
       - name: Distribute via App Distribution REST API
