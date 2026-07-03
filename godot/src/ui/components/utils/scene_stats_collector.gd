@@ -111,15 +111,17 @@ func _mesh_triangles(mesh: Mesh) -> int:
 ## content hash:
 ##   - "{hash}"             raw download (textures, audio, crdt, js, ...)
 ##   - "{hash}.scn"         runtime-processed GLTF (the raw glb is deleted after)
-##   - "{hash}-mobile.zip"  optimized asset pack (used only in optimized mode)
-## Summing only the raw "{hash}" (as before) missed the processed .scn files —
-## the bulk of a scene's footprint. Here we scan user://content once and add every
-## file whose hash (the text before the first '.') is in the scene's content
-## mapping: this catches "{hash}" and any "{hash}.ext" processed form, while a
-## leftover optimized "{hash}-mobile.zip" is skipped (its prefix "{hash}-mobile"
-## is not a bare content hash) so it never double-counts the runtime .scn.
-## CID hashes contain no '.', so the split is exact. Recomputed each call from the
-## live listing, so it converges as assets download.
+##   - "{hash}-mobile.zip"  optimized asset pack (mobile / optimized realms)
+## Summing only the raw "{hash}" missed the processed ".scn" files (the bulk of a
+## desktop scene's footprint); ignoring "{hash}-mobile.zip" missed almost all of a
+## MOBILE scene's footprint — there the geometry/textures live inside the pack,
+## mounted virtually via load_resource_pack, so there is no separate ".scn" on
+## disk. We scan user://content once and add every file whose leading hash (see
+## _hash_prefix) is in the scene's content mapping, covering all three on-disk
+## forms. Desktop and mobile use mutually exclusive forms per hash, so summing
+## every matching file is the true local size on both. CID hashes contain no '.',
+## so the hash split is exact. Recomputed each call from the live listing, so it
+## converges as assets download.
 func content_bytes(scene_id: int) -> int:
 	if scene_id == -1 or not is_instance_valid(Global.scene_fetcher):
 		return 0
@@ -155,11 +157,19 @@ func _sum_disk_bytes(hashes: Dictionary) -> int:
 	return total
 
 
-## Leading content hash of a content filename: the text before the first '.'.
-## CID hashes ("bafk...", "bafy...", "Qm...") contain no '.', so this isolates
-## the hash for "{hash}" and "{hash}.scn". An optimized "{hash}-mobile.zip"
-## yields "{hash}-mobile" (never a bare hash), so it is naturally excluded.
+## Leading content hash of a content filename — the key that ties an on-disk file
+## back to a content-mapping hash. CID hashes ("bafk...", "bafy...", "Qm...")
+## contain no '.', so:
+##   - "{hash}-mobile.zip"  -> "{hash}"   (optimized pack; matched FIRST)
+##   - "{hash}.scn" / "{hash}.ext" -> "{hash}"   (text before the first '.')
+##   - "{hash}"             -> "{hash}"
+## The "-mobile.zip" case is handled before the '.' split because that split alone
+## would yield "{hash}-mobile", never a bare hash, and the pack (the whole scene on
+## mobile) would be dropped.
 func _hash_prefix(fname: String) -> String:
+	const OPTIMIZED_SUFFIX: String = "-mobile.zip"
+	if fname.ends_with(OPTIMIZED_SUFFIX):
+		return fname.substr(0, fname.length() - OPTIMIZED_SUFFIX.length())
 	var dot: int = fname.find(".")
 	if dot == -1:
 		return fname
@@ -187,5 +197,19 @@ static func global_stats() -> Dictionary:
 		"draw_calls": int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		"texture_vram": int(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)),
 		"video_mem": int(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)),
-		"static_mem": int(Performance.get_monitor(Performance.MEMORY_STATIC)),
+		"static_mem": _process_memory_bytes(),
 	}
+
+
+## Real process memory (resident set) in bytes, cross-platform. Godot's
+## Performance.MEMORY_STATIC only tracks the engine's OWN allocator and is
+## compiled out of release / mobile export templates — it returns 0 on mobile,
+## which is the "CPU memory shows 0" bug. Prefer the OS-level RSS/footprint the
+## Rust side reads (SceneManager.get_process_memory_mb, in MB), and fall back to
+## MEMORY_STATIC only when that is unavailable (e.g. -1 on an unsupported host).
+static func _process_memory_bytes() -> int:
+	if is_instance_valid(Global.scene_runner):
+		var mb: int = Global.scene_runner.get_process_memory_mb()
+		if mb > 0:
+			return mb * 1024 * 1024
+	return int(Performance.get_monitor(Performance.MEMORY_STATIC))

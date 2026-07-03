@@ -150,6 +150,112 @@ pub fn available_memory_mb() -> i32 {
     AVAILABLE_MB.load(Ordering::Relaxed)
 }
 
+/// Current process resident memory in MB (RSS on Linux/Android/macOS,
+/// `phys_footprint` on iOS), or -1 when it cannot be determined (e.g. Windows,
+/// where the caller should fall back to another source).
+///
+/// Synchronous, cheap, and safe to call from the main thread every frame. Unlike
+/// Godot's `Performance.MEMORY_STATIC` / `OS.get_static_memory_usage()` — which
+/// only report Godot's OWN allocator and are compiled out of release / mobile
+/// export templates (returning 0 there) — this reads the OS's real figure for
+/// the whole process, so it stays correct on mobile release builds.
+pub fn used_memory_mb() -> i32 {
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    {
+        // /proc/self/statm field 1 (0-indexed) = resident set size in pages.
+        let Ok(statm) = std::fs::read_to_string("/proc/self/statm") else {
+            return -1;
+        };
+        let Some(rss_pages) = statm
+            .split_whitespace()
+            .nth(1)
+            .and_then(|v| v.parse::<i64>().ok())
+        else {
+            return -1;
+        };
+        if rss_pages <= 0 {
+            return -1;
+        }
+        let page_size: i64 = 4096;
+        return (rss_pages * page_size / (1024 * 1024)) as i32;
+    }
+
+    #[cfg(target_os = "ios")]
+    {
+        // phys_footprint via proc_pid_rusage — the real charge the OS tracks,
+        // GPU/IOSurface memory included (same value jetsam and Xcode report).
+        let mut info = std::mem::MaybeUninit::<libc::rusage_info_v2>::zeroed();
+        // SAFETY: proc_pid_rusage fills a v2 rusage struct for our own pid; the
+        // buffer is a correctly-sized, zeroed rusage_info_v2.
+        let ret = unsafe {
+            libc::proc_pid_rusage(
+                std::process::id() as libc::c_int,
+                libc::RUSAGE_INFO_V2,
+                info.as_mut_ptr() as *mut libc::rusage_info_t,
+            )
+        };
+        if ret != 0 {
+            return -1;
+        }
+        // SAFETY: proc_pid_rusage returned 0, so `info` is initialized.
+        let info = unsafe { info.assume_init() };
+        return (info.ri_phys_footprint / (1024 * 1024)) as i32;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // Resident size via mach_task_basic_info for the current task.
+        #[repr(C)]
+        struct MachTaskBasicInfo {
+            virtual_size: u64,
+            resident_size: u64,
+            resident_size_max: u64,
+            user_time: u64,
+            system_time: u64,
+            policy: i32,
+            suspend_count: i32,
+        }
+
+        extern "C" {
+            fn mach_task_self() -> u32;
+            fn task_info(
+                target_task: u32,
+                flavor: i32,
+                task_info_out: *mut MachTaskBasicInfo,
+                task_info_out_cnt: *mut u32,
+            ) -> i32;
+        }
+
+        const MACH_TASK_BASIC_INFO: i32 = 20;
+        const MACH_TASK_BASIC_INFO_COUNT: u32 =
+            (std::mem::size_of::<MachTaskBasicInfo>() / std::mem::size_of::<u32>()) as u32;
+
+        // SAFETY: task_info fills a MachTaskBasicInfo for the current task; the
+        // buffer is correctly sized and `count` matches its u32-word length.
+        unsafe {
+            let mut info = std::mem::MaybeUninit::<MachTaskBasicInfo>::uninit();
+            let mut count = MACH_TASK_BASIC_INFO_COUNT;
+            let result = task_info(
+                mach_task_self(),
+                MACH_TASK_BASIC_INFO,
+                info.as_mut_ptr(),
+                &mut count,
+            );
+            if result == 0 {
+                let info = info.assume_init();
+                return (info.resident_size / (1024 * 1024)) as i32;
+            }
+        }
+        return -1;
+    }
+
+    // Windows / other: no reader wired — caller falls back to another source.
+    #[allow(unreachable_code)]
+    {
+        -1
+    }
+}
+
 /// Write a line to stdout AND stderr, both flushed immediately. The Godot
 /// `print()` path does not reach the iOS `devicectl` console (and is lost when
 /// the app freezes), but native writes to fd 1/2 do — this is the only logging

@@ -2311,6 +2311,16 @@ impl SceneManager {
     fn dismiss_memory_warning(&mut self) {
         self.memory_warning_dismissed = true;
     }
+
+    /// Real process memory usage (resident set) in MB, or -1 when unavailable.
+    /// Cross-platform. Exposed for the preview scene-stats overlay:
+    /// `Performance.MEMORY_STATIC` only counts Godot's own allocator and is
+    /// compiled out of release / mobile export templates (returns 0 there), so
+    /// the overlay reads the real OS-level figure through here.
+    #[func]
+    fn get_process_memory_mb(&self) -> i32 {
+        crate::tools::memory_monitor::used_memory_mb()
+    }
 }
 
 #[godot_api]
