@@ -1,12 +1,12 @@
 name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 
-# Single entry point that builds & distributes BOTH mobile platforms:
-#   - iOS    → unsigned export uploaded to R2, then repository_dispatch to the
-#              godot-asc-deploy repo which signs it and uploads to TestFlight
-#   - Android → APK is already uploaded to the R2 mobile-artifacts bucket by the
-#               regular Android CI build (android_builds.yml) for every commit; this
-#               workflow waits for that commit's APK and posts a Slack "build ready"
-#               notification + PR comment with the direct download link.
+# Single entry point that builds & distributes BOTH mobile platforms with a mirrored, store-aware
+# flow. prepare allocates ONE authoritative build number for the commit; each leg then resolves
+# reuse-vs-rebuild against it (a shared guard) so iOS and Android can never diverge:
+#   - iOS    → resolve (reuse the self-hosted R2 export if its baked number is current, else rebuild)
+#              → sign & upload to TestFlight via the godot-asc-deploy repo
+#   - Android → resolve (reuse the push-built R2 APK if its baked number is current, else rebuild it
+#              here via android_builds.yml) → surface the R2 download link (Slack + PR comment)
 #
 # Triggered by:
 #   - Every push to `release` (full distribution)
@@ -15,9 +15,10 @@ name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 #   - The `build` label on a PR (alias: `build-ios` for backward compatibility)
 #   - Manual workflow dispatch on the main / release branch
 #
-# The Android leg does NOT rebuild and does NOT distribute to a store — it only
-# surfaces the R2 download link once the APK is ready. For main/release builds it
-# additionally surfaces the AAB (Play Store artifact) the same way.
+# The Android leg rebuilds only when the push-built APK is missing or its baked number was
+# superseded on a store; otherwise it reuses that APK and just surfaces the R2 download link. It
+# does NOT push to a store. For main/release builds it additionally surfaces the AAB (Play Store
+# artifact); a rebuild regenerates the AAB with the current number too.
 on:
   push:
     branches:
@@ -74,6 +75,11 @@ jobs:
       triggered_by: ${{ steps.ctx.outputs.triggered_by }}
       pr_url: ${{ steps.ctx.outputs.pr_url }}
       commit_short: ${{ steps.ctx.outputs.commit_short }}
+      # The ONE authoritative store build number for this commit + the full baked version string.
+      # Both mobile legs bake/compare THIS number, so iOS and Android can never diverge. Empty on
+      # fork PRs (no allocator secret) → downstream guards skip and nothing ships to a store.
+      build_number: ${{ steps.buildnum.outputs.build_number }}
+      build_version: ${{ steps.buildnum.outputs.build_version }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -139,6 +145,42 @@ jobs:
             echo "🆕 main changed (last=${LAST_SHA:-none} current=$CURRENT_SHA) — building."
           fi
 
+      # Allocate the authoritative store build number for this commit ONCE (idempotent per SHA), up
+      # front, so both mobile legs bake/compare the SAME number and can never diverge. The build jobs
+      # (ios_r2_artifact / android_builds) still run compute-build-number themselves — needed so
+      # build.rs sees DCL_BUILD_NUMBER at build time — but it's idempotent and returns this same
+      # number. Gated to skip on the cron no-op; empty on fork PRs (no secret) → guards skip.
+      - name: Allocate build number
+        id: compute
+        if: steps.changes.outputs.should_build != 'false'
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ steps.ctx.outputs.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: mobile
+
+      - name: Compose build number + version string
+        id: buildnum
+        if: steps.changes.outputs.should_build != 'false'
+        env:
+          BUILD_NUMBER: ${{ steps.compute.outputs.build-number }}
+          REF: ${{ steps.ctx.outputs.ref }}
+          SHA: ${{ steps.ctx.outputs.sha }}
+        run: |
+          # Full baked version string, matching lib/build.rs:
+          #   {marketing-version}{.build-number}-{short-sha}-{prod|staging}
+          # CI builds release (no -debug); set-prod-flag maps release* → prod, else staging.
+          LIB_VERSION=$(grep -m1 '^version' lib/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          case "$REF" in release*) SUFFIX="prod";; *) SUFFIX="staging";; esac
+          BUILD_SEGMENT=""
+          [ -n "$BUILD_NUMBER" ] && BUILD_SEGMENT=".${BUILD_NUMBER}"
+          BUILD_VERSION="${LIB_VERSION}${BUILD_SEGMENT}-${SHA:0:7}-${SUFFIX}"
+          {
+            echo "build_number=$BUILD_NUMBER"
+            echo "build_version=$BUILD_VERSION"
+          } >> "$GITHUB_OUTPUT"
+          echo "🔢 build_number=${BUILD_NUMBER:-<none>} · build_version=$BUILD_VERSION"
+
       - name: Post Slack root message
         id: slack
         if: steps.changes.outputs.should_build != 'false'
@@ -146,6 +188,7 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
           STATUS: building
+          BUILD_VERSION: ${{ steps.buildnum.outputs.build_version }}
           BRANCH: ${{ steps.ctx.outputs.ref }}
           TRIGGERED_BY: ${{ steps.ctx.outputs.triggered_by }}
           PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
@@ -227,8 +270,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     outputs:
-      reuse: ${{ steps.resolve.outputs.reuse }}
-      build_version: ${{ steps.resolve.outputs.build_version }}
+      reuse: ${{ steps.combine.outputs.reuse }}
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
@@ -241,11 +283,6 @@ jobs:
       SHA:         ${{ needs.prepare.outputs.sha }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
       GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
-      # Build-number allocator: used to check whether a reusable export's baked number is still
-      # current before reusing it (see the reuse-vs-build step). workers.dev route — the custom
-      # domain edge-blocks datacenter CI IPs. Empty secret (fork PR) → the check is skipped.
-      ALLOCATOR_URL:       https://godot-build-number-allocator.mateo-a2b.workers.dev
-      BUILD_NUMBER_SECRET: ${{ secrets.BUILD_NUMBER_SECRET }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -258,24 +295,24 @@ jobs:
           if [ -n "$MISSING" ]; then echo "❌ Missing required secrets:$MISSING"; exit 1; fi
           echo "✅ Required secrets present"
 
-      - name: Resolve reuse vs build
-        id: resolve
+      - name: Poll for an existing export
+        id: poll
         run: |
           KEY="ios/${SAFE_BRANCH}/${SHA}/export.tar.gz"
           echo "Looking for an existing unsigned export at s3://${AWS_S3_BUCKET}/${KEY}"
           echo "(produced by the self-hosted iOS runner — ios_self_hosted.yml — for this commit)"
           have_export() { aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$KEY" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
 
-          reuse=false
+          have=false
           if have_export; then
-            echo "✅ Export already present — reusing it (no WarpBuild rebuild)."
-            reuse=true
+            echo "✅ Export already present."
+            have=true
           else
             # The self-hosted build for this commit may still be in flight (~12 min). Poll for it,
-            # but fail fast (→ build on CI) the moment that run concludes without a usable export.
+            # but stop the moment that run concludes without a usable export (→ build on CI).
             DEADLINE=$(( $(date +%s) + 20 * 60 ))
             while true; do
-              if have_export; then echo "✅ Export appeared — reusing it."; reuse=true; break; fi
+              if have_export; then echo "✅ Export appeared."; have=true; break; fi
               CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow ios_self_hosted.yml \
                 --limit 100 --json headSha,conclusion \
                 --jq "first(.[] | select(.headSha==\"$SHA\")) | .conclusion // empty" 2>/dev/null || true)
@@ -291,44 +328,35 @@ jobs:
               sleep 30
             done
           fi
-          # Monotonic guard: an export is only safe to reuse while its BAKED build number is still the
-          # one the allocator assigns for this commit. If a store has since shipped past that number
-          # the allocator refreshes it (returns a higher one) — reusing the old export would ship a
-          # superseded CFBundleVersion (TestFlight rejects it) or desync it from the baked version
-          # string. When that happens, force a rebuild so the fresh number gets baked in.
-          if [ "$reuse" = "true" ] && [ -n "${BUILD_NUMBER_SECRET:-}" ]; then
-            SIDECAR_KEY="ios/${SAFE_BRANCH}/${SHA}/build_number.txt"
-            BAKED=$(aws s3 cp "s3://${AWS_S3_BUCKET}/${SIDECAR_KEY}" - --endpoint-url "$AWS_ENDPOINT_URL" 2>/dev/null | tr -dc '0-9' || true)
-            ALLOC=$(curl -fsS -X POST "${ALLOCATOR_URL%/}/build-numbers/allocate" \
-              -H 'content-type: application/json' -H "authorization: Bearer ${BUILD_NUMBER_SECRET}" \
-              -d "$(printf '{"sha":"%s","allocatedBy":"ios"}' "$SHA")" 2>/dev/null \
-              | grep -oE '"buildNumber"[[:space:]]*:[[:space:]]*[0-9]+' | tr -dc '0-9' || true)
-            if [ -z "$BAKED" ]; then
-              echo "⚠️  No build_number sidecar for this export → rebuilding to bake a current number."
-              reuse=false
-            elif [ -z "$ALLOC" ]; then
-              echo "⚠️  Could not reach the allocator to verify — reusing anyway (asc-deploy fails loud if the number is behind)."
-            elif [ "$BAKED" != "$ALLOC" ]; then
-              echo "♻️→🔨 Export baked build $BAKED, but the allocator now assigns $ALLOC (superseded on a store) → rebuilding."
-              reuse=false
-            else
-              echo "✅ Reusable export's build number ($BAKED) is still current (allocator: $ALLOC)."
-            fi
-          fi
+          echo "have_export=$have" >> "$GITHUB_OUTPUT"
 
+      # Monotonic guard (shared with Android): only reuse an export whose BAKED build number is still
+      # the authoritative one from prepare. If a store shipped past it, prepare's number is higher →
+      # the sidecar mismatches → rebuild so the fresh number gets baked in (else TestFlight rejects
+      # the superseded CFBundleVersion). Skipped when there's no export to check.
+      - name: Check baked build number is current
+        id: guard
+        if: steps.poll.outputs.have_export == 'true'
+        uses: ./.github/actions/check-build-number-current
+        with:
+          bucket: ${{ env.AWS_S3_BUCKET }}
+          endpoint: ${{ env.AWS_ENDPOINT_URL }}
+          sidecar-key: ios/${{ env.SAFE_BRANCH }}/${{ env.SHA }}/build_number.txt
+          expected-number: ${{ needs.prepare.outputs.build_number }}
+
+      - name: Combine reuse decision
+        id: combine
+        run: |
+          have='${{ steps.poll.outputs.have_export }}'
+          current='${{ steps.guard.outputs.current }}'   # empty when the guard was skipped (no export)
+          if [ "$have" = "true" ] && [ "$current" != "false" ]; then reuse=true; else reuse=false; fi
           echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
-
-          # In the reuse path nobody runs the lib build that writes .build.version, so reconstruct it
-          # deterministically (matches lib/build.rs: <lib-version>-<short-sha>-<prod|staging>).
-          LIB_VERSION=$(grep -m1 '^version' lib/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
-          case "$REF" in release*) SUFFIX="prod";; *) SUFFIX="staging";; esac
-          echo "build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}" >> "$GITHUB_OUTPUT"
-          echo "→ reuse=$reuse · build_version=${LIB_VERSION}-${SHA:0:7}-${SUFFIX}"
+          echo "→ reuse=$reuse (have_export=$have, current=${current:-n/a})"
 
       - name: Slack — iOS reuse decision
         if: env.SLACK_TS != ''
         run: |
-          if [ "${{ steps.resolve.outputs.reuse }}" = "true" ]; then
+          if [ "${{ steps.combine.outputs.reuse }}" = "true" ]; then
             bash .github/scripts/slack-reply.sh "♻️ iOS — found an existing export for this commit; skipping the CI rebuild."
           else
             bash .github/scripts/slack-reply.sh "🔨 iOS — no existing export; building on CI."
@@ -366,15 +394,8 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      # Same idempotent-per-SHA allocator the build path uses → returns the SAME number the
-      # self-hosted build already allocated for this commit (sets DCL_BUILD_NUMBER).
-      - name: Compute build number
-        uses: ./.github/actions/compute-build-number
-        with:
-          sha: ${{ needs.prepare.outputs.sha }}
-          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
-          allocated-by: ios
-
+      # The build number + version string come from prepare's single authoritative allocation — the
+      # SAME number the self-hosted build already baked into this export for this commit.
       - name: Dispatch godot-asc-deploy (sign & upload to TestFlight)
         uses: ./.github/actions/dispatch-asc-deploy
         with:
@@ -384,8 +405,8 @@ jobs:
           whats_new: ${{ github.event.inputs.whats_new }}
           pr_number: ${{ needs.prepare.outputs.pr_number }}
           slack_ts: ${{ needs.prepare.outputs.slack_ts }}
-          build_version: ${{ needs.ios-resolve.outputs.build_version }}
-          build_number: ${{ env.DCL_BUILD_NUMBER }}
+          build_version: ${{ needs.prepare.outputs.build_version }}
+          build_number: ${{ needs.prepare.outputs.build_number }}
           triggered_by: ${{ needs.prepare.outputs.triggered_by }}
 
       - name: Slack — handed off (reused export)
@@ -438,12 +459,140 @@ jobs:
           fi
           python3 .github/scripts/slack-root.py
 
-  android-notify:
-    name: 🤖 Android → APK ready
+  # Android leg, step 1 (mirrors ios-resolve): the signed APK for this commit is normally produced by
+  # the push CI (runner.yml → android_builds.yml) and uploaded to R2. Wait for it, then apply the SAME
+  # monotonic guard as iOS. reuse=true → surface the existing APK (android-notify); reuse=false
+  # (missing, superseded, or the push build failed) → rebuild it here (android-build).
+  android-resolve:
+    name: 🤖 Android — resolve (reuse existing APK?)
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      reuse: ${{ steps.combine.outputs.reuse }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
+      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
+      REF:         ${{ needs.prepare.outputs.ref }}
+      SHA:         ${{ needs.prepare.outputs.sha }}
+      SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
+      GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Slack — Android resolve started
+        if: env.SLACK_TS != ''
+        run: |
+          bash .github/scripts/slack-reply.sh "🤖 Android — checking for the signed APK from CI… (${REF})"
+
+      - name: Validate required secrets
+        run: |
+          MISSING=""
+          [ -z "$AWS_S3_BUCKET" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_BUCKET"
+          [ -z "$AWS_ENDPOINT_URL" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_ENDPOINT"
+          [ -z "$AWS_ACCESS_KEY_ID" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID"
+          if [ -n "$MISSING" ]; then echo "❌ Missing required secrets:$MISSING"; exit 1; fi
+          echo "✅ Required secrets present"
+
+      - name: Poll for the push-built APK
+        id: poll
+        run: |
+          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          echo "Waiting for s3://${AWS_S3_BUCKET}/${KEY}"
+          echo "(produced by the Android CI build — runner.yml → android_builds.yml — for this commit)"
+          have_apk() { aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
+
+          # Build CI takes ~35 min; give it headroom. Unlike the old android-notify, a missing/failed
+          # push build is NOT fatal here — it just means we rebuild the APK ourselves (android-build),
+          # mirroring the iOS self-sufficient rebuild.
+          DEADLINE=$(( $(date +%s) + 50 * 60 ))
+          INPROG=0
+          have=false
+          while true; do
+            if have_apk; then echo "✅ APK is available in R2."; have=true; break; fi
+            CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow runner.yml \
+              --limit 100 --json headSha,conclusion \
+              --jq "first(.[] | select(.headSha==\"$SHA\") | .conclusion) // empty" 2>/dev/null || true)
+            case "$CONCLUSION" in
+              failure|cancelled|timed_out)
+                echo "ℹ️  Android CI for $SHA concluded '$CONCLUSION' with no APK → rebuilding here."
+                break ;;
+            esac
+            if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+              echo "ℹ️  timed out waiting for the push APK → rebuilding here."
+              break
+            fi
+            if [ "$INPROG" = "0" ] && [ -n "${SLACK_CHANNEL:-}" ] && [ -n "${SLACK_TS:-}" ]; then
+              bash .github/scripts/slack-reply.sh "🤖 Android — CI build in progress, waiting for the APK to land in R2…"
+              INPROG=1
+            fi
+            echo "⏳ Not ready yet (CI conclusion='${CONCLUSION:-pending}'), retrying in 30s..."
+            sleep 30
+          done
+          echo "have_apk=$have" >> "$GITHUB_OUTPUT"
+
+      # Same shared guard as iOS: reuse the APK only while its baked number is still authoritative.
+      - name: Check baked build number is current
+        id: guard
+        if: steps.poll.outputs.have_apk == 'true'
+        uses: ./.github/actions/check-build-number-current
+        with:
+          bucket: ${{ env.AWS_S3_BUCKET }}
+          endpoint: ${{ env.AWS_ENDPOINT_URL }}
+          sidecar-key: android/${{ env.SAFE_BRANCH }}/${{ env.SHA }}/build_number.txt
+          expected-number: ${{ needs.prepare.outputs.build_number }}
+
+      - name: Combine reuse decision
+        id: combine
+        run: |
+          have='${{ steps.poll.outputs.have_apk }}'
+          current='${{ steps.guard.outputs.current }}'   # empty when the guard was skipped (no APK)
+          if [ "$have" = "true" ] && [ "$current" != "false" ]; then reuse=true; else reuse=false; fi
+          echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
+          echo "→ reuse=$reuse (have_apk=$have, current=${current:-n/a})"
+
+      - name: Slack — Android reuse decision
+        if: env.SLACK_TS != ''
+        run: |
+          if [ "${{ steps.combine.outputs.reuse }}" = "true" ]; then
+            bash .github/scripts/slack-reply.sh "♻️ Android — found a current APK for this commit; skipping the rebuild."
+          else
+            bash .github/scripts/slack-reply.sh "🔨 Android — no current APK; rebuilding on CI."
+          fi
+
+  # Rebuild path (mirrors ios-build): no current APK (missing, superseded, or the push build failed),
+  # so build & sign a fresh one for this exact commit. android_builds.yml bakes prepare's number (via
+  # its own idempotent compute-build-number) and re-uploads the APK + sidecar (+ AAB on main/release)
+  # to the same R2 key android-notify surfaces. concurrency_key isolates it from the push build so
+  # the two don't cancel each other.
+  android-build:
+    name: 🤖 Android → R2 (rebuild signed APK)
+    needs: [prepare, android-resolve]
+    if: needs.prepare.outputs.should_build == 'true' && needs.android-resolve.outputs.reuse == 'false'
+    uses: ./.github/workflows/android_builds.yml
+    with:
+      ref: ${{ needs.prepare.outputs.ref }}
+      sha: ${{ needs.prepare.outputs.sha }}
+      concurrency_key: distribute-${{ needs.prepare.outputs.sha }}
+    secrets: inherit
+
+  # Surface (mirrors ios-dispatch's terminal role): by now the APK is guaranteed in R2 — either the
+  # reused push build (android-resolve confirmed it) or the fresh android-build (a completed
+  # dependency). Post the download link + PR comment; surface the AAB on main/release. No runner.yml
+  # re-poll — an android-build rebuild lives under THIS workflow, not runner.yml. Runs on the reuse
+  # path (android-build skipped) and the rebuild path alike.
+  android-notify:
+    name: 🤖 Android → APK ready
+    needs: [prepare, android-resolve, android-build]
+    if: always() && needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
@@ -462,11 +611,6 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Slack — Android build started
-        if: env.SLACK_TS != ''
-        run: |
-          bash .github/scripts/slack-reply.sh "🤖 Android — waiting for the signed APK from CI… (${REF})"
-
       - name: Validate required secrets
         run: |
           MISSING=""
@@ -479,41 +623,25 @@ jobs:
           fi
           echo "✅ Required secrets present"
 
-      - name: Wait for Android APK in R2
+      - name: Confirm APK present in R2
         run: |
           KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
-          echo "Waiting for s3://${AWS_S3_BUCKET}/${KEY}"
-          echo "(produced by the Android CI build — android_builds.yml — for this commit)"
-
-          # Build CI takes ~35 min; give it headroom but fail fast if CI already failed.
-          DEADLINE=$(( $(date +%s) + 50 * 60 ))
-          INPROG=0
+          echo "Confirming s3://${AWS_S3_BUCKET}/${KEY}"
+          # By now the APK is expected present — either the reused push build (android-resolve
+          # confirmed it) or the fresh android-build (a completed dependency). Short poll for R2
+          # eventual consistency; fail (→ failure surface below) only if it's genuinely absent.
+          DEADLINE=$(( $(date +%s) + 10 * 60 ))
           while true; do
             if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
               echo "✅ APK is available in R2"
               break
             fi
-
-            # Fail fast if the CI run for this commit already finished without an APK.
-            CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow runner.yml \
-              --limit 100 --json headSha,conclusion \
-              --jq "first(.[] | select(.headSha==\"$SHA\") | .conclusion) // empty" 2>/dev/null || true)
-            if [ "$CONCLUSION" = "failure" ] || [ "$CONCLUSION" = "cancelled" ] || [ "$CONCLUSION" = "timed_out" ]; then
-              echo "❌ Android CI build for $SHA concluded '$CONCLUSION' and no APK was produced."
-              exit 1
-            fi
-
             if [ "$(date +%s)" -ge "$DEADLINE" ]; then
-              echo "❌ Timed out waiting for the APK in R2 ($KEY)."
-              echo "   Make sure the Android CI build for this commit succeeded."
+              echo "❌ APK not found in R2 ($KEY) — the Android build/rebuild must have failed."
               exit 1
             fi
-            if [ "$INPROG" = "0" ] && [ -n "${SLACK_CHANNEL:-}" ]; then
-              bash .github/scripts/slack-reply.sh "🤖 Android — CI build in progress, waiting for the APK to land in R2…"
-              INPROG=1
-            fi
-            echo "⏳ Not ready yet (CI conclusion='${CONCLUSION:-pending}'), retrying in 30s..."
-            sleep 30
+            echo "⏳ Not visible yet, retrying in 20s..."
+            sleep 20
           done
 
       - name: Slack — Android APK ready
