@@ -534,6 +534,7 @@ jobs:
       # service-account keys (constraints/iam.disableServiceAccountKeyCreation), so instead the
       # runner's OIDC token impersonates the fad-ci service account. Gated on the GCP_WIF_PROVIDER
       # variable so the whole thing is a clean no-op until WIF is configured.
+      # (WIF verified against project decentraland-mobile-app / service account fad-ci.)
       - name: Authenticate to Google Cloud (Workload Identity Federation)
         id: gcp-auth
         if: success() && vars.GCP_WIF_PROVIDER != ''
