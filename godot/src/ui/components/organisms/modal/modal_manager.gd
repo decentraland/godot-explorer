@@ -38,6 +38,11 @@ const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back t
 const SCENE_CRASH_PRIMARY = "RELOAD"
 const SCENE_CRASH_SECONDARY = "BACK"
 
+const LOW_MEMORY_TITLE = "Running low on memory"
+const LOW_MEMORY_BODY = "This scene is using a lot of memory and might make the app close unexpectedly. You can continue anyway or go back to Discover."
+const LOW_MEMORY_PRIMARY = "CONTINUE ANYWAY"
+const LOW_MEMORY_SECONDARY = "BACK TO DISCOVER"
+
 const BAN_PRE_CHECK_TITLE = "You can't enter"
 const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
 const BAN_PRE_CHECK_PRIMARY = "BACK TO DISCOVER"
@@ -308,6 +313,51 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_scene_crash_reload.bind(entity_id))
 	current_modal.button_secondary.pressed.connect(_on_scene_crash_back)
+
+
+## Shows a LOW_MEMORY warning modal (issue #2002): the memory monitor detected
+## critical pressure with nothing left to evict but the current scene. Rather
+## than kill it, let the user choose. Reuses the crash modal design (alert icon).
+## - "CONTINUE ANYWAY": keep the scene; enable verbose memory logging so we can
+##   observe how far it gets before a possible OOM; stop nagging this session.
+## - "BACK TO DISCOVER": leave the scene.
+## @param _entity_id: The entity ID of the current scene (unused for now)
+func async_show_low_memory_warning_modal(
+	entity_id: String, footprint_mb: int = -1, available_mb: int = -1
+) -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.blocker = true
+	current_modal.set_title(LOW_MEMORY_TITLE)
+	current_modal.set_body(LOW_MEMORY_BODY)
+	current_modal.set_primary_button_text(LOW_MEMORY_PRIMARY)
+	current_modal.set_secondary_button_text(LOW_MEMORY_SECONDARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_low_memory_continue)
+	current_modal.button_secondary.pressed.connect(_on_low_memory_back)
+
+	# Measure how often the low-memory warning surfaces, on which scene/device and at
+	# what memory level (issue #2002). Flush eagerly: the app may be jetsam-killed by the
+	# OS shortly after this warning, so we can't rely on the periodic flush to send it.
+	if Global.metrics != null:
+		Global.metrics.track_screen_viewed(
+			"LOW_MEMORY_WARNING",
+			JSON.stringify(
+				{
+					"entity_id": entity_id,
+					"footprint_mb": footprint_mb,
+					"available_mb": available_mb,
+					"platform": OS.get_name()
+				}
+			)
+		)
+		Global.metrics.flush.call_deferred()
 
 
 ## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
@@ -870,6 +920,22 @@ func _on_scene_crash_reload(_entity_id: String) -> void:
 
 
 func _on_scene_crash_back() -> void:
+	Global.open_discover.emit()
+	close_current_modal()
+
+
+# Low-memory warning (issue #2002) — "Continue anyway": keep the scene running,
+# turn on verbose memory logging to capture the run-up to a possible OOM, and
+# tell the runner to stop warning for the rest of the session.
+func _on_low_memory_continue() -> void:
+	if Global.scene_runner != null:
+		Global.scene_runner.set_memory_verbose_logging(true)
+		Global.scene_runner.dismiss_memory_warning()
+	close_current_modal()
+
+
+# Low-memory warning — "Back to Discover": leave the heavy scene.
+func _on_low_memory_back() -> void:
 	Global.open_discover.emit()
 	close_current_modal()
 

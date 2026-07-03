@@ -18,7 +18,20 @@ pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 /// (e.g. `4.6.2.stable.gh.6ddcadb64 - Protocol Squad`) and the SHA-tagged release path published
 /// by the godot-engine-releases pipeline. Bump it in lockstep with a new fork publish: it busts the
 /// local download cache (keys embed it) and pins the immutable per-SHA release URLs below.
-pub const GODOT_BUILD_SHA: &str = "36d9ae5fa";
+pub const GODOT_BUILD_SHA: &str = "aed178f10";
+
+/// TEMPORARY per-checkout override to pull the Godot editor + export templates from a specific
+/// fork *branch* build (published by CI under `/branches/<slug>/`) instead of the pinned stable
+/// release — without having to pass `--branch` on every `install` / `run` / `export`.
+///
+/// `None` = use the pinned stable build (`GODOT_BUILD_SHA`). `Some("<branch>")` = use that
+/// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
+///
+/// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently `None`:
+/// the issue #2002 iOS main-thread-freeze fix (decentraland/godotengine#17) is merged and
+/// `GODOT_BUILD_SHA` above points at its merge commit.
+pub const GODOT_USE_BRANCH: Option<&str> = None;
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
@@ -29,7 +42,11 @@ pub fn godot_release_tag() -> String {
 
 /// Editor (binary) base URL for the pinned stable fork build, e.g.
 /// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.36d9ae5fa/editors/`.
+/// Honors the `GODOT_USE_BRANCH` override: when set, resolves to the branch build's URL instead.
 pub fn godot_editor_base_url() -> String {
+    if let Some(branch) = GODOT_USE_BRANCH {
+        return godot_editor_base_url_for_branch(branch);
+    }
     format!(
         "{GODOT_ENGINE_RELEASES_BASE_URL}{}/editors/",
         godot_release_tag()
@@ -38,7 +55,11 @@ pub fn godot_editor_base_url() -> String {
 
 /// Compressed-templates base URL for the pinned stable fork build, e.g.
 /// `https://godot-engine-releases.dclexplorer.com/4.6.2.stable.gh.36d9ae5fa/compressed-templates/`.
+/// Honors the `GODOT_USE_BRANCH` override: when set, resolves to the branch build's URL instead.
 pub fn godot_templates_base_url() -> String {
+    if let Some(branch) = GODOT_USE_BRANCH {
+        return godot_templates_base_url_for_branch(branch);
+    }
     format!(
         "{GODOT_ENGINE_RELEASES_BASE_URL}{}/compressed-templates/",
         godot_release_tag()
