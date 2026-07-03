@@ -24,6 +24,7 @@ var _fetch_generation: int = 0
 @onready var vbox_data: VBoxContainer = %VBoxContainer_Data
 @onready var rich_text_label_creator: RichTextLabel = %RichTextLabel
 
+@onready var close_button: BaseButton = %CloseButton
 @onready var loading_screen_progress_logic: Node = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout: Timer = $Timer_CheckProgressTimeout
 @onready var debug_chronometer := Chronometer.new()
@@ -37,6 +38,7 @@ func _ready() -> void:
 
 
 func enable_loading_screen(intended_realm: String = "", when: String = "") -> void:
+	close_button.show()
 	_loading_cancelled = false
 	_intended_realm = intended_realm if Realm.is_dcl_ens(intended_realm) else ""
 	if !debug_chronometer:
@@ -68,6 +70,7 @@ func _clear_place_ui() -> void:
 
 
 func async_hide_loading_screen_effect():
+	close_button.hide()
 	_clear_place_ui()
 	Global.close_navbar.emit()
 	Global.close_chat.emit()
