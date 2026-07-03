@@ -1,4 +1,4 @@
-# THROWAWAY: fast-iteration harness for the Firebase App Distribution auth fix.
+# THROWAWAY: fast-iteration harness for the Firebase App Distribution auth fix. (run 2)
 # Pulls the already-built public APK from R2 (no rebuild) and distributes via the
 # App Distribution REST API using a WIF-minted access token (firebase-tools can't read
 # WIF/external_account ADC). Delete once the logic is ported to mobile_distribute.yml.
