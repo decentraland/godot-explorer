@@ -532,8 +532,9 @@ jobs:
       #
       # Auth is KEYLESS via Workload Identity Federation: the org disables downloadable
       # service-account keys (constraints/iam.disableServiceAccountKeyCreation), so instead the
-      # runner's OIDC token impersonates the fad-ci service account. Gated on the GCP_WIF_PROVIDER
-      # variable so the whole thing is a clean no-op until WIF is configured.
+      # runner's OIDC token impersonates the fad-ci service account to mint a short-lived access
+      # token (needs the IAM Service Account Credentials API enabled). Gated on GCP_WIF_PROVIDER so
+      # the whole thing is a clean no-op until WIF is configured.
       # (WIF verified against project decentraland-mobile-app / service account fad-ci.)
       - name: Authenticate to Google Cloud (Workload Identity Federation)
         id: gcp-auth
@@ -542,32 +543,71 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/cloud-platform
 
       - name: Distribute Android APK to Firebase App Distribution
         # Only runs once WIF auth succeeded (auth step is skipped → this is skipped too).
+        # Uses the App Distribution REST API directly with the WIF-minted access token — firebase-tools
+        # cannot read WIF/external-account ADC ("Failed to authenticate"), and the org forbids the
+        # service-account keys firebase-tools would otherwise need.
         if: success() && steps.gcp-auth.outcome == 'success'
         env:
+          ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
           # Comma-separated Firebase tester group aliases (created in the Firebase console).
           FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'qa' }}
+          PROJECT_NUMBER: '300605090472'
         run: |
+          set -euo pipefail
           if [ -z "$FIREBASE_ANDROID_APP_ID" ]; then
             echo "⚠️  FIREBASE_ANDROID_APP_ID not set — skipping App Distribution."
             exit 0
           fi
+          BASE=https://firebaseappdistribution.googleapis.com
 
           APK_KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
           echo "📥 Downloading APK from R2: ${APK_KEY}"
           aws s3 cp "s3://${AWS_S3_BUCKET}/${APK_KEY}" ./firebase-dist.apk --endpoint-url "$AWS_ENDPOINT_URL"
 
-          # google-github-actions/auth exported GOOGLE_APPLICATION_CREDENTIALS (WIF external-account
-          # credentials); firebase-tools picks it up via Application Default Credentials.
+          echo "▶️  Uploading APK to App Distribution…"
+          UP=$(curl -sS -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "X-Goog-Upload-Protocol: raw" \
+            -H "X-Goog-Upload-File-Name: decentraland.godot.client.apk" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @firebase-dist.apk \
+            "${BASE}/upload/v1/projects/${PROJECT_NUMBER}/apps/${FIREBASE_ANDROID_APP_ID}/releases:upload")
+          OP=$(echo "$UP" | jq -r '.name // empty')
+          if [ -z "$OP" ]; then echo "❌ upload failed: $UP"; exit 1; fi
+
+          echo "▶️  Waiting for the release to be processed…"
+          REL=""
+          for _ in $(seq 1 40); do
+            R=$(curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" "${BASE}/v1/${OP}")
+            if [ "$(echo "$R" | jq -r '.done // false')" = "true" ]; then
+              REL=$(echo "$R" | jq -r '.response.release.name // empty')
+              break
+            fi
+            sleep 5
+          done
+          if [ -z "$REL" ]; then echo "❌ release not created: ${R:-<no response>}"; exit 1; fi
+          echo "✅ Release: $REL"
+
+          # Release notes (best-effort — don't fail the distribution if this patch errors).
           RELEASE_NOTES="branch ${REF} · commit ${SHA:0:7} · $(date -u +'%Y-%m-%d %H:%M UTC')"
+          curl -sS -X PATCH \
+            -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/json" \
+            -d "$(jq -n --arg t "$RELEASE_NOTES" '{releaseNotes:{text:$t}}')" \
+            "${BASE}/v1/${REL}?updateMask=release_notes.text" >/dev/null || true
+
           echo "📲 Distributing to Firebase groups: ${FIREBASE_TESTER_GROUPS}"
-          npx --yes firebase-tools@13 appdistribution:distribute ./firebase-dist.apk \
-            --app "$FIREBASE_ANDROID_APP_ID" \
-            --groups "$FIREBASE_TESTER_GROUPS" \
-            --release-notes "$RELEASE_NOTES"
+          GJSON=$(echo "$FIREBASE_TESTER_GROUPS" | jq -R 'split(",")')
+          DIST=$(curl -sS -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"groupAliases\": ${GJSON}}" \
+            "${BASE}/v1/${REL}:distribute")
+          if echo "$DIST" | jq -e '.error' >/dev/null 2>&1; then echo "❌ distribute failed: $DIST"; exit 1; fi
 
           rm -f ./firebase-dist.apk
           echo "FIREBASE_DIST_OK=true" >> "$GITHUB_ENV"
