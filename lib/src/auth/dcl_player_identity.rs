@@ -1319,7 +1319,8 @@ async fn perform_email_login(
 
     let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
 
-    let signature_hex = thirdweb_guest::sign_message(&email_jwt, email_address, 1, &ephemeral_message).await?;
+    let signature_hex =
+        thirdweb_guest::sign_message(&email_jwt, email_address, 1, &ephemeral_message).await?;
 
     let signer_address_str = format!("{:#x}", email_address);
     let chain = create_ephemeral_from_external_signature(
