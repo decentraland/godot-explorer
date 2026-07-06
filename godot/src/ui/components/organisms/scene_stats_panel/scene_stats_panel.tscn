@@ -14,15 +14,9 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [node name="SceneStatsPanel" type="PanelContainer"]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -352.0
-offset_top = 110.0
-offset_right = -12.0
-offset_bottom = 110.0
-grow_horizontal = 0
-grow_vertical = 1
+custom_minimum_size = Vector2(340, 0)
+size_flags_horizontal = 8
+size_flags_vertical = 0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 script = ExtResource("1_script")

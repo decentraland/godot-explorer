@@ -189,14 +189,55 @@ func _file_size(fname: String) -> int:
 	return size
 
 
+## External (non-deployed) content the scene pulled at runtime: url-sourced
+## textures cached on disk as user://content/hashed_{hex} (sizes read from
+## disk, so the value converges as downloads land) plus bytes the scene's JS
+## consumed via fetch() (never stored on disk). External video is streamed and
+## not included. Rust side: content/external_content.rs registry, exposed by
+## SceneManager.get_scene_external_content().
+func external_bytes(scene_id: int) -> int:
+	if scene_id == -1 or not is_instance_valid(Global.scene_runner):
+		return 0
+	var info: Dictionary = Global.scene_runner.get_scene_external_content(scene_id)
+	var total: int = int(info.get("fetch_bytes", 0))
+	var registered: Dictionary = {}
+	for fname in info.get("files", []):
+		registered[str(fname)] = true
+	if registered.is_empty():
+		return total
+	# The quality-aware texture path stores url-textures as "hashed_{hex}_q{N}"
+	# while the registry holds the base "hashed_{hex}" — match by base name so
+	# every stored quality variant is counted.
+	var dir: DirAccess = DirAccess.open("user://content")
+	if dir == null:
+		return total
+	dir.list_dir_begin()
+	var disk_name: String = dir.get_next()
+	while disk_name != "":
+		if not dir.current_is_dir() and registered.has(_external_base_name(disk_name)):
+			total += _file_size(disk_name)
+		disk_name = dir.get_next()
+	dir.list_dir_end()
+	return total
+
+
+## "hashed_{hex}_q{N}" -> "hashed_{hex}"; anything else unchanged. The hex part
+## never contains 'q', so rfind("_q") can only match the quality suffix.
+func _external_base_name(fname: String) -> String:
+	if not fname.begins_with("hashed_"):
+		return fname
+	var qpos: int = fname.rfind("_q")
+	if qpos > 6:
+		return fname.substr(0, qpos)
+	return fname
+
+
 ## Whole-app render/memory stats. These are engine-global (single shared
 ## viewport) and CANNOT be attributed to one scene.
 static func global_stats() -> Dictionary:
 	return {
 		"fps": int(Performance.get_monitor(Performance.TIME_FPS)),
 		"draw_calls": int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
-		"texture_vram": int(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)),
-		"video_mem": int(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)),
 		"static_mem": _process_memory_bytes(),
 	}
 

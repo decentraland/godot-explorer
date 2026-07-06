@@ -56,6 +56,7 @@ var _debug_panel_from_settings: bool = false
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 @onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
+@onready var hbox_debug_tools: HBoxContainer = %HBoxContainer_DebugTools
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -1115,10 +1116,12 @@ func _update_debug_ui():
 			debug_panel = (
 				load("res://src/ui/components/organisms/debug_panel/debug_panel.tscn").instantiate()
 			)
-			safe_margin_container_debug.add_child(debug_panel)
+			hbox_debug_tools.add_child(debug_panel)
+			# Console always sits left of the scene-stats overlay in the row.
+			hbox_debug_tools.move_child(debug_panel, 0)
 	else:
 		if is_instance_valid(debug_panel):
-			safe_margin_container_debug.remove_child(debug_panel)
+			hbox_debug_tools.remove_child(debug_panel)
 			debug_panel.queue_free()
 			debug_panel = null
 
@@ -1126,6 +1129,7 @@ func _update_debug_ui():
 		debug_panel.set_reload_scene_visible(should_show)
 
 	Global.set_scene_log_enabled(should_show)
+	_update_debug_layer_visibility()
 
 
 ## Scene-stats overlay. Instantiated in preview, or in any realm when the
@@ -1140,17 +1144,24 @@ func _update_scene_stats_ui() -> void:
 				load("res://src/ui/components/organisms/scene_stats_panel/scene_stats_panel.tscn")
 				. instantiate()
 			)
-			# Host inside the safe-area HUD layer so it respects device safe
-			# insets (notch) like the other top-right HUD elements.
-			var host: Node = ui_root.get_node_or_null("LeftRightSafeContainer/InteractableHUD")
-			if host == null:
-				host = ui_root
-			host.add_child(scene_stats_panel)
+			# Shares the top-right debug tools row with the console, so both
+			# lay out side by side instead of overlapping.
+			hbox_debug_tools.add_child(scene_stats_panel)
 		scene_stats_panel.set_scene(_preview_scene_id())
 	else:
 		if is_instance_valid(scene_stats_panel):
 			scene_stats_panel.queue_free()
 			scene_stats_panel = null
+	_update_debug_layer_visibility()
+
+
+## The debug layer hosts the console + scene-stats row; show it only while one
+## of them exists. It must be shown explicitly: it was once saved hidden in the
+## editor (PR #1894), which silently disabled the whole layer.
+func _update_debug_layer_visibility() -> void:
+	safe_margin_container_debug.visible = (
+		is_instance_valid(debug_panel) or is_instance_valid(scene_stats_panel)
+	)
 
 
 ## The single scene being previewed (one scene may span multiple parcels):

@@ -373,6 +373,31 @@ vertical_alignment = 1
 unique_name_in_owner = true
 layout_mode = 1
 
+[node name="SafeMarginContainerDebug" type="MarginContainer" parent="UI" unique_id=868273897]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 110
+theme_override_constants/margin_right = 12
+script = ExtResource("5_c8ksg")
+use_right = false
+use_top = false
+use_bottom = false
+metadata/_edit_lock_ = true
+
+[node name="HBoxContainer_DebugTools" type="HBoxContainer" parent="UI/SafeMarginContainerDebug"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 12
+
 [node name="Timer_FPSLabel" type="Timer" parent="UI" unique_id=926156601]
 autostart = true
 
@@ -441,23 +466,6 @@ layout_mode = 1
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
-
-[node name="SafeMarginContainerDebug" type="MarginContainer" parent="UI" unique_id=868273897]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/margin_right = 0
-script = ExtResource("5_c8ksg")
-use_right = false
-use_top = false
-use_bottom = false
-metadata/_edit_lock_ = true
 
 [node name="Loading" parent="UI" unique_id=894556648 instance=ExtResource("17_0blod")]
 unique_name_in_owner = true

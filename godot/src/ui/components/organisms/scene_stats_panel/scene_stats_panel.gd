@@ -95,6 +95,7 @@ func _refresh() -> void:
 
 	var stats: Dictionary = _collector.collect_scene(_scene_id)
 	stats["content_size"] = _collector.content_bytes(_scene_id)
+	stats["external_size"] = _collector.external_bytes(_scene_id)
 	var glob: Dictionary = SceneStatsCollector.global_stats()
 
 	for meta in SceneLimits.metric_order():

@@ -41,24 +41,22 @@ const FIXED: Dictionary = {
 		"soft": 120 * MB,
 		"hard": 150 * MB
 	},
-	"texture_vram":
+	"external_size":
+	# Runtime downloads from external links (url textures on disk + JS fetch()
+	# bytes). No canonical Decentraland budget exists — 50 MB max as the
+	# tunable default.
 	{
-		"label": "Texture VRAM",
-		"group": "global",
+		"label": "External content",
+		"group": "scene",
 		"unit": "bytes",
-		"soft": 560 * MB,
-		"hard": 700 * MB
-	},
-	"video_mem":
-	{
-		"label": "Video memory",
-		"group": "global",
-		"unit": "bytes",
-		"soft": 560 * MB,
-		"hard": 700 * MB
+		"soft": 40 * MB,
+		"hard": 50 * MB
 	},
 	"static_mem":
-	{"label": "CPU memory", "group": "global", "unit": "bytes", "soft": 560 * MB, "hard": 700 * MB},
+	# Whole-process RSS. Memory is unified on phones (GPU allocations live in
+	# the same pool), so this single row replaces the old separate
+	# Texture VRAM / Video memory monitors.
+	{"label": "Memory", "group": "global", "unit": "bytes", "soft": 1638 * MB, "hard": 2048 * MB},
 	"draw_calls":
 	{"label": "Draw calls", "group": "global", "unit": "count", "soft": 1000, "hard": 2000},
 	"fps":
@@ -83,8 +81,7 @@ const ORDER: Array = [
 	"textures",
 	"colliders",
 	"content_size",
-	"texture_vram",
-	"video_mem",
+	"external_size",
 	"static_mem",
 	"draw_calls",
 	"fps",

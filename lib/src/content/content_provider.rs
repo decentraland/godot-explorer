@@ -1403,7 +1403,8 @@ impl ContentProvider {
         //  https://github.com/decentraland/godot-explorer/issues/363
         if file_hash.starts_with("http") {
             // get file_hash from url
-            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
+            let new_file_hash =
+                crate::content::external_content::external_texture_file_name(&file_hash_godot);
             let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
             self.cache_promise(file_hash, &promise);
             return promise;
@@ -1512,7 +1513,8 @@ impl ContentProvider {
 
         // Handle URL-based textures
         if file_hash.starts_with("http") {
-            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash_u32());
+            let new_file_hash =
+                crate::content::external_content::external_texture_file_name(&file_hash_godot);
             let promise = self.fetch_texture_by_url_with_quality(
                 GString::from(&new_file_hash),
                 file_hash_godot,
