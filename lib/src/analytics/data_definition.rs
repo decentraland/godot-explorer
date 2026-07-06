@@ -1,3 +1,4 @@
+use chrono::{DateTime, SecondsFormat, Utc};
 use godot::{classes::Os, obj::Singleton};
 use serde::Serialize;
 
@@ -8,6 +9,14 @@ pub struct SegmentMetricEventBody {
     event: String,
     #[serde(rename = "userId")]
     user_id: String,
+    // Client-generated unique id. Segment deduplicates on this (>=24h window, ~170d in
+    // practice), which makes retries idempotent. Must be <100 chars — a UUID v4 is 36.
+    #[serde(rename = "messageId")]
+    message_id: String,
+    // Segment-reserved event time, captured when the event was created on the device (NOT at
+    // flush). Segment stores this as `originalTimestamp` and, together with the batch-level
+    // `sentAt`, corrects device clock skew into the canonical `timestamp` column.
+    timestamp: String,
     properties: serde_json::Value,
 }
 
@@ -459,6 +468,13 @@ pub fn build_segment_event_batch_item(
     user_id: String,
     common: &SegmentEventCommonExplorerFields,
     event_data: SegmentEvent,
+    // Captured when the event was queued on the device (see Metrics::queue_event), NOT at
+    // flush time — this is what gives per-event chronology instead of a batch collapsing to
+    // one instant.
+    created_at: DateTime<Utc>,
+    // Stable per-event id generated at queue time. Reused verbatim across retries so Segment
+    // can deduplicate re-sends.
+    message_id: String,
 ) -> SegmentMetricEventBody {
     let (event_name, event_properties, override_position) = match event_data {
         SegmentEvent::PerformanceMetrics(event) => (
@@ -558,10 +574,20 @@ pub fn build_segment_event_batch_item(
         properties["position"] = serde_json::Value::String(position);
     }
 
+    // ISO-8601 UTC with millisecond precision, e.g. "2026-07-02T13:38:08.243Z".
+    let iso_ts = created_at.to_rfc3339_opts(SecondsFormat::Millis, true);
+
+    // Custom, client-owned event time that no Segment clock-skew correction or warehouse
+    // mapping can rewrite — the ground-truth chronology. Lives in `properties` next to
+    // `renderer_version` so every event carries it, independent of the reserved `timestamp`.
+    properties["client_timestamp"] = serde_json::Value::String(iso_ts.clone());
+
     SegmentMetricEventBody {
         r#type: "track".to_string(),
         event: event_name,
         user_id,
+        message_id,
+        timestamp: iso_ts,
         properties,
     }
 }
