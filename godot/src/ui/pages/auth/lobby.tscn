@@ -28,6 +28,8 @@
 [ext_resource type="LabelSettings" uid="uid://btf4wblw0y5bf" path="res://assets/themes/lobby_subtitle.tres" id="22_eula"]
 [ext_resource type="PackedScene" uid="uid://d0hixhgq3pfdu" path="res://src/ui/pages/settings/underlined_button.tscn" id="23_65md3"]
 [ext_resource type="Script" uid="uid://ds5fipbkuuh6" path="res://src/ui/components/atoms/labels/text_with_links/text_with_links.gd" id="24_65md3"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="25_dkwv7"]
+[ext_resource type="PackedScene" uid="uid://18n0y7iu0obv" path="res://src/ui/components/atoms/inputs/dcl_text_edit.tscn" id="26_drc85"]
 [ext_resource type="Texture2D" uid="uid://c55bxhde80ljl" path="res://assets/ui/sign-in/back-chevron.svg" id="back_chevron"]
 
 [sub_resource type="Shader" id="Shader_ijrai"]
@@ -104,6 +106,49 @@ line_spacing = 0.0
 font = ExtResource("15_vtvnx")
 font_size = 72
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_lurit"]
+font = ExtResource("25_dkwv7")
+font_size = 30
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_jj6xa"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dkwv7"]
+content_margin_left = 16.0
+content_margin_top = 17.0
+content_margin_right = 46.0
+content_margin_bottom = 12.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_drc85"]
+content_margin_left = 16.0
+content_margin_top = 17.0
+content_margin_right = 42.0
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lurit"]
+content_margin_left = 16.0
+content_margin_top = 17.0
+content_margin_right = 46.0
+content_margin_bottom = 12.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [node name="Lobby" type="Control" unique_id=756610133]
 layout_mode = 3
@@ -553,6 +598,7 @@ icon_alignment = 2
 
 [node name="AvatarCustomize" type="Control" parent="Main" unique_id=1314744326]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/AvatarCustomize" unique_id=370001754]
@@ -876,7 +922,6 @@ font_size = 30
 
 [node name="SignIn" type="Control" parent="Main" unique_id=1717754795]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/SignIn" unique_id=256010208]
@@ -896,6 +941,7 @@ layout_mode = 2
 
 [node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=1737794804]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 0
@@ -954,6 +1000,88 @@ fit_content = true
 scroll_active = false
 horizontal_alignment = 1
 script = ExtResource("24_65md3")
+
+[node name="VBoxContainer_SignInWithEmail" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=290166878]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="SignInTitle" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail" unique_id=1255422065]
+custom_minimum_size = Vector2(425, 176)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_ghcwt")
+text = "Sign in with your email"
+label_settings = SubResource("LabelSettings_dkwv7")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator5" type="Control" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail" unique_id=118575263]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail" unique_id=76009490]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Label_Subtitle" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer" unique_id=1624240724]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Enter your email"
+label_settings = SubResource("LabelSettings_lurit")
+
+[node name="HSeparator_Content" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer" unique_id=1713100784]
+layout_mode = 2
+theme_override_constants/separation = 18
+theme_override_styles/separator = SubResource("StyleBoxEmpty_jj6xa")
+
+[node name="Container" type="Control" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer" unique_id=899110326]
+custom_minimum_size = Vector2(20, 140)
+layout_mode = 2
+
+[node name="DclTextEdit" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer/Container" unique_id=1583726089 instance=ExtResource("26_drc85")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 87)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_right = 0.0
+offset_bottom = 76.0
+grow_horizontal = 2
+place_holder = "name@email.com"
+has_max_length = false
+is_optional = false
+validate_email = true
+
+[node name="TextEdit" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer/Container/DclTextEdit/TextEditContainer" parent_id_path=PackedInt32Array(1583726089, 1976220458) index="0" unique_id=861440361]
+custom_minimum_size = Vector2(0, 84)
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_dkwv7")
+theme_override_styles/focus = SubResource("StyleBoxFlat_drc85")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_lurit")
+placeholder_text = "name@email.com"
+
+[node name="MarginContainer" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer/Container/DclTextEdit/TextEditContainer" parent_id_path=PackedInt32Array(1583726089, 1976220458) index="2" unique_id=722955294]
+theme_override_constants/margin_top = 28
+
+[node name="Label_Length" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer/Container/DclTextEdit/HBoxContainer" parent_id_path=PackedInt32Array(1583726089, 264687002) index="0" unique_id=397930972]
+visible = false
+
+[node name="Label_Error" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer/Container/DclTextEdit/HBoxContainer" parent_id_path=PackedInt32Array(1583726089, 264687002) index="1" unique_id=1623370836]
+horizontal_alignment = 0
+
+[node name="Button_Confirm" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer" unique_id=1091882028]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("9_ypsmd")
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 30
+text = "NEXT"
+icon_alignment = 2
 
 [node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=1774682901]
 unique_name_in_owner = true
@@ -1102,3 +1230,5 @@ metadata/_edit_lock_ = true
 [connection signal="jump_in" from="Main/DiscoverFtue/FTUE" to="." method="_on_ftue_jump_in"]
 [connection signal="jump_in_world" from="Main/DiscoverFtue/FTUE" to="." method="_on_ftue_jump_in_world"]
 [connection signal="pressed" from="SafeMarginContainer/Control/Button_Back" to="." method="_on_button_back_pressed"]
+
+[editable path="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInWithEmail/VBoxContainer/Container/DclTextEdit"]
