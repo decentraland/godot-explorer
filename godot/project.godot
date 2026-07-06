@@ -50,6 +50,7 @@ ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_ca
 AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
+LoadingProfiler="*res://src/logic/loading_profiler.gd"
 
 [debug]
 

@@ -69,6 +69,18 @@ func async_load_gltf():
 
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	Global.get_gltf_load_timeout_coalescer().schedule(self, 120_000)
+	(
+		LoadingProfiler
+		. mark(
+			"asset.gltf_start",
+			{
+				"scene_id": dcl_scene_id,
+				"entity": dcl_entity_id,
+				"hash": dcl_gltf_hash,
+				"src": dcl_gltf_src,
+			}
+		)
+	)
 
 	# Check CLI flags for asset loading mode
 	var has_optimized = Global.content_provider.optimized_asset_exists(file_hash)
@@ -113,8 +125,16 @@ func _async_load_optimized_asset(gltf_hash: String):
 		currently_loading_assets.append(gltf_hash)
 
 	# Download dependencies (textures, etc.)
+	LoadingProfiler.mark(
+		"asset.gltf_download_begin",
+		{"scene_id": dcl_scene_id, "entity": dcl_entity_id, "hash": gltf_hash}
+	)
 	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
 	var result = await PromiseUtils.async_awaiter(promise)
+	LoadingProfiler.mark(
+		"asset.gltf_downloaded",
+		{"scene_id": dcl_scene_id, "entity": dcl_entity_id, "hash": gltf_hash, "opt": true}
+	)
 	if result is PromiseError:
 		printerr("[GltfContainer] Failed to download optimized asset dependencies: ", gltf_hash)
 		_finish_with_error("failed to download optimized asset dependencies")
@@ -157,6 +177,10 @@ func _async_load_runtime_gltf():
 		currently_loading_assets.append(dcl_gltf_hash)
 
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	LoadingProfiler.mark(
+		"asset.gltf_download_begin",
+		{"scene_id": dcl_scene_id, "entity": dcl_entity_id, "hash": dcl_gltf_hash}
+	)
 	var promise = Global.content_provider.load_scene_gltf(dcl_gltf_src, content_mapping)
 
 	if promise == null:
@@ -165,6 +189,10 @@ func _async_load_runtime_gltf():
 
 	# Wait for the promise to resolve
 	await PromiseUtils.async_awaiter(promise)
+	LoadingProfiler.mark(
+		"asset.gltf_downloaded",
+		{"scene_id": dcl_scene_id, "entity": dcl_entity_id, "hash": dcl_gltf_hash, "opt": false}
+	)
 
 	# Check if we're still in a valid state (scene might have been unloaded)
 	if dcl_gltf_loading_state != GltfContainerLoadingState.LOADING:
@@ -228,6 +256,7 @@ func _async_load_and_instantiate(scene_path: String) -> Node3D:
 	# the RenderingServer command lock and intermittently DEADLOCKED the
 	# load on Mali (both threads parked in futex_wait). A main-thread load
 	# serializes the GPU upload with the frame loop.
+	var load_t0 := Time.get_ticks_usec()
 	var resource := ResourceLoader.load(scene_path)
 	if resource == null:
 		_last_load_error = "loaded resource is null"
@@ -235,6 +264,20 @@ func _async_load_and_instantiate(scene_path: String) -> Node3D:
 		return null
 
 	var gltf_node: Node3D = resource.instantiate()
+	# ResourceLoader.load + instantiate runs on the main thread and includes the
+	# texture GPU upload — this ms is the CPU-parse + texture-upload cost.
+	(
+		LoadingProfiler
+		. mark(
+			"asset.gltf_instantiated",
+			{
+				"scene_id": dcl_scene_id,
+				"entity": dcl_entity_id,
+				"hash": dcl_gltf_hash,
+				"ms": (Time.get_ticks_usec() - load_t0) / 1000.0,
+			}
+		)
+	)
 	apply_fixes(gltf_node)
 
 	# Set collision masks (colliders created with mask=0 initially)
@@ -256,15 +299,31 @@ func _async_add_gltf_to_tree(gltf_node: Node3D):
 	# the GLB is valid (the manager bakes per-mesh local poses against the
 	# container's current world). Without this step every mesh would land at
 	# the world origin.
+	var add_t0 := Time.get_ticks_usec()
 	add_child(gltf_node)
 
 	await get_tree().process_frame
 
-	_complete_load()
+	# Wall time spanning add_child → next frame: proxy for first-render pipeline
+	# compilation / GPU stall the newly-visible mesh causes on the render thread.
+	_complete_load((Time.get_ticks_usec() - add_t0) / 1000.0)
 
 
-func _complete_load():
+func _complete_load(gpu_ms: float = -1.0):
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
+	(
+		LoadingProfiler
+		. mark(
+			"asset.gltf_added",
+			{
+				"scene_id": dcl_scene_id,
+				"entity": dcl_entity_id,
+				"hash": dcl_gltf_hash,
+				"opt": optimized,
+				"gpu_ms": gpu_ms,
+			}
+		)
+	)
 	Global.get_gltf_load_timeout_coalescer().cancel(self)
 	_finish_loading_slot()
 
@@ -273,6 +332,10 @@ func _complete_load():
 
 func _finish_with_error(reason: String = "unknown"):
 	printerr("GLTF load error for ", dcl_gltf_src, ": ", reason)
+	LoadingProfiler.mark(
+		"asset.gltf_error",
+		{"scene_id": dcl_scene_id, "entity": dcl_entity_id, "hash": dcl_gltf_hash, "reason": reason}
+	)
 	# Report to resource tracker if we have a valid hash
 	if not dcl_gltf_hash.is_empty():
 		Global.content_provider.report_resource_failed(dcl_gltf_hash, reason)
