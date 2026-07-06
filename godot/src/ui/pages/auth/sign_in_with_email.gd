@@ -1,16 +1,28 @@
 class_name SignInWithEmail
 extends Control
 
+const SEPARATOR_HEIGHT_DEFAULT := 150
+const SEPARATOR_HEIGHT_KB_OPEN := 30
+
 var lobby: Lobby = null
 
 @onready var email_input: DclTextEdit = %DclTextEdit
 @onready var button_confirm: Button = %Button_Confirm
+@onready var vb_separator: Control = %VSeparatorVK
 
 
 func _ready() -> void:
 	email_input.validate_on_blur = true
-	button_confirm.pressed.connect(_async_on_button_confirm_pressed)
+	button_confirm.pressed.connect(_on_button_confirm_pressed)
 	email_input.dcl_text_edit_changed.connect(_on_email_input_changed)
+	Global.change_virtual_keyboard.connect(_on_virtual_keyboard_changed)
+
+
+func _on_virtual_keyboard_changed(keyboard_height: int) -> void:
+	if keyboard_height > 0:
+		vb_separator.custom_minimum_size.y = SEPARATOR_HEIGHT_KB_OPEN
+	else:
+		vb_separator.custom_minimum_size.y = SEPARATOR_HEIGHT_DEFAULT
 
 
 func set_lobby(new_lobby: Lobby) -> void:
@@ -26,8 +38,7 @@ func _on_email_input_changed() -> void:
 	button_confirm.disabled = email_input.error or email_input.get_text_value().is_empty()
 
 
-# gdlint:ignore = async-function-name
-func _async_on_button_confirm_pressed() -> void:
+func _on_button_confirm_pressed() -> void:
 	if email_input.error or email_input.get_text_value().is_empty():
 		return
 
@@ -48,6 +59,7 @@ func _async_on_button_confirm_pressed() -> void:
 		)
 		return
 
+	DisplayServer.virtual_keyboard_hide()
 	Global.metrics.track_screen_viewed("AUTH_OTP_ENTERCODE", "")
 	lobby.waiting_for_new_wallet = true
 	lobby.show_auth_browser_open_screen("Signing in...", "otp")

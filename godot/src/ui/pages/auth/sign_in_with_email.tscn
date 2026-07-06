@@ -35,7 +35,8 @@ label_settings = SubResource("LabelSettings_j10fx")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HSeparator5" type="Control" parent="." unique_id=1137533154]
+[node name="VSeparatorVK" type="Control" parent="." unique_id=1137533154]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 
