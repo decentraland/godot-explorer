@@ -13,7 +13,7 @@ var lobby: Lobby = null
 
 func _ready() -> void:
 	email_input.validate_on_blur = true
-	button_confirm.pressed.connect(_on_button_confirm_pressed)
+	button_confirm.pressed.connect(_async_on_button_confirm_pressed)
 	email_input.dcl_text_edit_changed.connect(_on_email_input_changed)
 	Global.change_virtual_keyboard.connect(_on_virtual_keyboard_changed)
 
@@ -38,7 +38,7 @@ func _on_email_input_changed() -> void:
 	button_confirm.disabled = email_input.error or email_input.get_text_value().is_empty()
 
 
-func _on_button_confirm_pressed() -> void:
+func _async_on_button_confirm_pressed() -> void:
 	if email_input.error or email_input.get_text_value().is_empty():
 		return
 
