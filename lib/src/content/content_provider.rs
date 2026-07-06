@@ -1876,8 +1876,11 @@ impl ContentProvider {
     /// land. Powers the preview scene-stats Content size / External content rows.
     #[func]
     pub fn get_cache_size_for_base_names(&self, base_names: PackedStringArray) -> i64 {
-        let wanted: std::collections::HashSet<String> =
-            base_names.as_slice().iter().map(|s| s.to_string()).collect();
+        let wanted: std::collections::HashSet<String> = base_names
+            .as_slice()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
         self.resource_provider
             .get_cache_size_for_base_names(&wanted)
     }
