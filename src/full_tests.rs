@@ -6,7 +6,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 
 use crate::consts::RUST_LIB_PROJECT_FOLDER;
 use crate::helpers::BinPaths;
-use crate::image_comparison::compare_images_similarity;
+use crate::image_comparison::{compare_images_similarity, SNAPSHOT_SIMILARITY_MIN};
 use crate::ui::{self, format_duration, MessageType, SummaryRow};
 use crate::{check_gdscript, run, tests, version_check};
 
@@ -517,7 +517,7 @@ fn collect_snapshot_comparisons() -> Vec<SnapshotComparison> {
                 comparison_path: path,
                 similarity,
                 error_msg,
-                passed: similarity.map_or(false, |s| s >= 0.90),
+                passed: similarity.map_or(false, |s| s >= SNAPSHOT_SIMILARITY_MIN),
             });
         }
     }

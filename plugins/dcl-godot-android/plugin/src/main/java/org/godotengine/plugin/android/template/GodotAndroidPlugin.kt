@@ -803,6 +803,49 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         return result
     }
 
+    /**
+     * Ends a Firebase Test Lab **Android Game Loop** run (started via the
+     * `com.google.intent.action.TEST_LOOP` intent). Logs the structured result to
+     * logcat — always captured by Test Lab, so it's the authoritative outcome —
+     * best-effort writes it to a results file descriptor Test Lab may attach to the
+     * launch intent, then finishes the Activity so Test Lab stops recording.
+     *
+     * Driven by the GameLoopRunner GDScript autoload. Reading the launch intent
+     * (action + `scenario` extra) already flows through getLaunchIntentData(), so
+     * this is the only native piece the Game Loop needs.
+     */
+    @UsedByGodot
+    fun gameLoopFinish(exitCode: Int, resultsJson: String) {
+        Log.i(pluginName, "[GAMELOOP][RESULT] exitCode=$exitCode json=$resultsJson")
+        val act = activity ?: run {
+            Log.w(pluginName, "[GAMELOOP] activity is null, cannot finish")
+            return
+        }
+
+        // Best-effort: if Test Lab attached a results file descriptor to the launch
+        // intent, write the JSON to it. Plain `adb am start` runs carry no fd — no-op.
+        try {
+            act.intent?.extras?.let { extras ->
+                for (key in extras.keySet()) {
+                    val value = extras.get(key)
+                    if (value is android.os.ParcelFileDescriptor) {
+                        FileOutputStream(value.fileDescriptor).use { out ->
+                            out.write(resultsJson.toByteArray())
+                            out.flush()
+                        }
+                        Log.i(pluginName, "[GAMELOOP] wrote results to fd extra '$key'")
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            Log.w(pluginName, "[GAMELOOP] results fd write failed: ${e.message}")
+        }
+
+        runOnUiThread {
+            act.finish()
+        }
+    }
+
     @UsedByGodot
     fun addCalendarEvent(
         title: String,

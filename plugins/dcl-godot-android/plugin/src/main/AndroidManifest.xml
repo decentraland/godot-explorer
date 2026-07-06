@@ -27,6 +27,28 @@
             android:name="org.godotengine.plugin.v2.${godotPluginName}"
             android:value="${godotPluginPackageName}.GodotAndroidPlugin"/>
 
+        <!--
+        Firebase Test Lab Android Game Loop entry point.
+
+        A dedicated EXPORTED activity-alias so Test Lab (and a local `adb shell
+        am start` with the TEST_LOOP action + a scenario extra) can launch the app
+        in Game Loop mode. Godot's real activity `com.godot.game.GodotApp` is
+        exported=false, so we add a separate exported alias that forwards the intent
+        to it. On launch getLaunchIntentData() sees the TEST_LOOP action + scenario
+        extra, which the GameLoopRunner autoload reads. This is a brand-new element
+        (not a merge onto Godot's own launcher), so it needs no tools:node operation.
+        -->
+        <activity-alias
+            android:name="com.godot.game.GameLoopLauncher"
+            android:targetActivity="com.godot.game.GodotApp"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.intent.action.TEST_LOOP"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="application/javascript"/>
+            </intent-filter>
+        </activity-alias>
+
         <!-- BroadcastReceiver for handling scheduled notifications -->
         <receiver
             android:name="${godotPluginPackageName}.NotificationReceiver"
