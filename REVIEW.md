@@ -116,7 +116,7 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 14. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
 15. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
 16. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
-17. **Test plan quality.** PR descriptions in this repo follow `## Summary` + `## Test plan` (bulleted checklist). A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team executes these steps by hand** — a case a tester couldn't reproduce cold (no setup, no concrete steps, no observable expected result, no platform) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
+17. **Test plan quality.** PR descriptions in this repo follow `## Summary` + `## Test plan` (bulleted checklist). A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
 18. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
 
 ---
@@ -139,46 +139,53 @@ Larger PRs often add a "Root Cause" section before Summary, a Video/Images secti
 
 ### Writing test steps QA can execute
 
-The `## Test plan` section is not just a reviewer checkbox — **the QA team reads it and runs each case by hand**, on a build they pull from the PR (Android APK from the sticky build-report comment; iOS via TestFlight once the `build` label is added; desktop from a local build). A tester who has never seen the code must be able to reproduce every case from the description alone. Freeform prose like *"needs a device, hold the joystick and press the buttons — they should respond"* is a hint, not a test step: it has no defined starting state and no pass/fail line, so two testers will run it differently and *"tested locally, works"* can't be re-verified.
+The `## Test plan` section is not just a reviewer checkbox — **the QA team runs each case by hand on a real phone**, using the build that is auto-distributed to them (iOS via **TestFlight**, Android via **Firebase App Distribution**). Because of that, the steps do **not** need build-download, version, or device setup — that's a given. **Start every case from opening the app** and describe plain user actions from there. A tester who has never seen the code must still be able to reproduce every case from the description alone; freeform prose like *"hold the joystick and press the buttons — they should respond"* is a hint, not a test step, because it has no starting point and no pass/fail line.
 
-Write **each case** as a self-contained block with four parts:
+Write **each case** as a short block:
 
-1. **Setup / preconditions** — the exact starting state a tester must reach before step 1: which build + platform, account (guest vs signed-in, and *which* profile if wearables/emotes matter), realm/scene and spawn coordinates, equipped items, and any deeplink params or feature flags (e.g. `decentraland://open?realm=…`). If the bug only repros in one state, that state belongs here.
-2. **Steps** — numbered, **one user action per line**, in the order performed. Use concrete values — coordinates, on-screen button names, menu paths, deeplinks — never "navigate to the relevant screen" or "trigger the flow".
-3. **Expected result** — the observable outcome, specific enough to mark pass/fail *without reading code*. "The jump button shows its pressed stylebox and a click SFX plays" — not "it works" / "looks correct" / "no crash".
-4. **Platforms** — every target the change must be verified on, and which are required vs regression-only. Cross-platform is the default here: a mobile-touch fix still needs a desktop mouse/keyboard regression pass, and vice versa. Call out touch vs mouse and portrait vs landscape when they change the outcome.
+1. **Setup — only when it's non-obvious.** Omit it for the normal case. Add a line only when the case needs a state a tester wouldn't be in by default: a signed-in profile with specific wearables/emotes equipped, a second account to interact with, guest-vs-signed-in when it matters, or a deeplink / feature flag. A real phone, the latest distributed build, and a normal signed-in session are **assumed** — never restate them.
+2. **Steps** — numbered, **one user action per line, starting from opening the app**. Use concrete values — "Enter Genesis Plaza", the on-screen button name, the menu path — never "navigate to the relevant screen" or "trigger the flow".
+3. **Expected result** — the observable outcome, specific enough to mark pass/fail *without reading code*. "The jump button shows its pressed state and a click SFX plays" — not "it works" / "looks correct" / "no crash".
 
-Add a **regression** line whenever the change touches shared code — the case that confirms the *old* path still works. Describe user actions, not internals: QA can't see an `_is_switching` guard, but they can "rotate the device rapidly while a teleport is loading".
+Add a **regression** line whenever the change touches shared code — the case that confirms the *old* path still works. Describe user actions, not internals: QA can't see an `_is_switching` guard, but they can "rotate the device rapidly while a teleport is loading". Only call out a **platform** when a case is iOS- or Android-specific (or also needs a desktop check) — otherwise both phones are the default.
 
 Format each case as a checklist so QA can tick it off. Full example:
 
 ```markdown
 ## Test plan
 
-### Case 1 — Emote wheel fires while a first finger is already down
-**Setup:** Android APK from this PR's build-report comment. Signed-in profile with at least
-2 equipped emotes. Spawn at Genesis Plaza (teleport to `0,0`). Portrait orientation.
+### Case 1 — Emote wheel fires while a finger is already down
+**Setup:** signed-in profile with at least 2 equipped emotes.
 **Steps:**
-1. Press and hold the movement joystick with your left thumb — keep it held for the whole case.
-2. With a second finger, long-press the emote button to open the emote wheel.
-3. Still holding the joystick, tap an emote slot on the wheel.
+1. Open the app and wait for the explorer to load.
+2. Enter Genesis Plaza.
+3. Press and hold the movement joystick with your left thumb — keep it held.
+4. With a second finger, open the emote wheel and tap an emote slot.
 
-- [ ] **Expected:** the tapped slot shows its pressed highlight, the emote plays on the
-      avatar, and the selection SFX fires — even though the joystick finger never lifted.
-- [ ] **Regression — single touch:** release the joystick, open the wheel and tap a slot with
-      one finger. Emote still plays exactly as before.
-- [ ] **Regression — desktop:** on a desktop build, open the wheel with the mouse and click a
-      slot. Behaviour unchanged.
+- [ ] **Expected:** the tapped slot highlights, the emote plays on the avatar, and the
+      selection SFX fires — even though the joystick finger never lifted.
+- [ ] **Regression — single touch:** release the joystick, reopen the wheel and tap a slot
+      with one finger. Emote still plays as before.
+```
 
-**Platforms:** Android (required), iOS (required — add the `build` label to get a TestFlight
-build), Desktop (regression only).
+The simplest cases are just the three lines the team already thinks in — no setup needed:
+
+```markdown
+### Case 2 — Emote plays in Genesis Plaza
+**Steps:**
+1. Open the app.
+2. Enter Genesis Plaza.
+3. Open the emote wheel and play an emote.
+
+- [ ] **Expected:** the emote plays on the avatar and its SFX fires; no stutter or freeze.
 ```
 
 Anti-patterns that make a case un-executable — a reviewer should ask the author to fix these (see Tier 3 item 17):
 - **"Tested locally, works."** — no steps, no expected result, not reproducible.
-- **Missing setup** — "open the backpack" without saying guest vs signed-in, which realm, or which wearables are equipped. The state is often *why* the bug repros.
+- **Steps that don't start from the app** — begin at "Open the app", then the in-app actions, so QA never has to guess the entry point.
+- **Restating the obvious** — "download the APK / install the TestFlight build / use a phone running vX". Distribution and device are a given; don't spend steps on them.
+- **Non-obvious state left unsaid** — a case that only repros with specific wearables equipped, as a guest, or with a second user present must say so up front.
 - **Vague expected result** — "the UI looks right", "no crash". State *what* correct looks like.
-- **No platform named** — for anything touching UI, input, virtual keyboard, safe-area, or native plugins, QA needs to know which devices to pull out.
 - **Steps that assume code knowledge** — referencing a private method, signal, or guard by name. Translate it into the user-visible action that exercises it.
 
 ### Naming (from `.gdlintrc`)
