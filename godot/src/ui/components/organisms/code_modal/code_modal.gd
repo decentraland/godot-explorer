@@ -193,7 +193,7 @@ func _async_resend_code() -> void:
 	_resending = false
 	var message: String = str(result.get("message", ""))
 	if not message.is_empty():
-		_show_error(message)
+		_show_error(_extract_error_message(message))
 		return
 	_start_resend_cooldown()
 	_hidden_input.editable = true
@@ -243,7 +243,7 @@ func _async_submit_code() -> void:
 		_set_verifying_children_visible(false)
 		confirmed.emit(code)
 	else:
-		_show_error(error_message)
+		_show_error(_extract_error_message(error_message))
 
 
 func _show_error(message: String = "") -> void:
@@ -297,6 +297,27 @@ func close() -> void:
 func _on_close_pressed() -> void:
 	cancelled.emit()
 	close()
+
+
+# Extracts the human-readable "message" field from a raw error string.
+# The server response may be "body=<json>" with a top-level "message" key,
+# or a JSON-wrapped JSON ({"error":"{\"message\":\"...\"}"}).
+# Falls back to a regex search for "message":"...", then the raw string.
+func _extract_error_message(raw: String) -> String:
+	var parsed = JSON.parse_string(raw)
+	if parsed is Dictionary:
+		if parsed.has("message") and parsed["message"] is String:
+			return parsed["message"]
+		if parsed.has("error") and parsed["error"] is String:
+			var inner = JSON.parse_string(parsed["error"])
+			if inner is Dictionary and inner.has("message") and inner["message"] is String:
+				return inner["message"]
+	var regex = RegEx.new()
+	regex.compile('"message"\\s*:\\s*"([^"]+)"')
+	var m = regex.search(raw)
+	if m:
+		return m.get_string(1)
+	return raw
 
 
 func _clear_inputs() -> void:
