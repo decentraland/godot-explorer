@@ -2,8 +2,9 @@
 //! runtime, powering the preview scene-stats "External content" row:
 //!
 //! - textures whose source is an http(s) URL — downloaded by the content
-//!   provider into `user://content/hashed_{hex}` (the GDScript collector reads
-//!   the sizes from disk, so only the cache file NAME is recorded here)
+//!   provider into `user://content/hashed_{hex}`; only the cache file NAME is
+//!   recorded here — sizes are summed from the ResourceProvider's in-memory
+//!   cache metadata (`ContentProvider.get_cache_size_for_base_names`)
 //! - bytes the scene's JS consumed through `fetch()` — never stored on disk,
 //!   so they are accumulated directly
 //!

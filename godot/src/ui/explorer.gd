@@ -71,7 +71,6 @@ var _debug_panel_from_settings: bool = false
 @onready var settings_panel: Control = %SettingsPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
-@onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
 @onready var mobile_ui = %MobileUI
 @onready var mobile_camera_input: Control = %MobileCameraInput
@@ -141,7 +140,6 @@ func _ready():
 
 	if DclGlobal.is_production():
 		label_fps.visible = false
-		label_ram.visible = false
 
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)

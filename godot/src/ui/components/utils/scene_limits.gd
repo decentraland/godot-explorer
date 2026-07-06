@@ -18,10 +18,11 @@ const MB: int = 1024 * 1024
 ##   inverse: higher-is-better (e.g. fps) — coloring flips, no overpass
 ##   dynamic_max: bar's full-scale + thresholds computed at runtime (see fps)
 ##
-## `hard` is the MAX (red boundary); `soft` (yellow warning band) is 80% of it.
+## `hard` is the MAX (red boundary); `soft` (yellow warning band) is ~80% of it,
+## rounded to memorable numbers.
 const FIXED: Dictionary = {
 	"triangles":
-	{"label": "Triangles", "group": "scene", "unit": "count", "soft": 960000, "hard": 1200000},
+	{"label": "Triangles", "group": "scene", "unit": "count", "soft": 1000000, "hard": 1200000},
 	"entities":
 	{"label": "Entities", "group": "scene", "unit": "count", "soft": 4800, "hard": 6000},
 	"bodies":

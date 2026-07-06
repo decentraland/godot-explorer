@@ -154,6 +154,10 @@ pub fn available_memory_mb() -> i32 {
 /// `phys_footprint` on iOS), or -1 when it cannot be determined (e.g. Windows,
 /// where the caller should fall back to another source).
 ///
+/// This is the ONE process-memory reader in the codebase: the mobile pressure
+/// monitor loop and `benchmark_report` both build on it — extend it here
+/// instead of adding another platform-specific copy.
+///
 /// Synchronous, cheap, and safe to call from the main thread every frame. Unlike
 /// Godot's `Performance.MEMORY_STATIC` / `OS.get_static_memory_usage()` — which
 /// only report Godot's OWN allocator and are compiled out of release / mobile
@@ -381,45 +385,18 @@ fn read_available_mb() -> i32 {
 
 #[cfg(target_os = "ios")]
 fn read_footprint_mb() -> i32 {
-    // `phys_footprint` via proc_pid_rusage(RUSAGE_INFO_V2) — the same value Xcode
-    // and jetsam use, GPU/IOSurface memory included. Pure syscall, off-thread
-    // safe.
-    let mut info = std::mem::MaybeUninit::<libc::rusage_info_v2>::zeroed();
-    // SAFETY: proc_pid_rusage fills a v2 rusage struct for our own pid; the
-    // buffer is a correctly-sized, zeroed rusage_info_v2.
-    let ret = unsafe {
-        libc::proc_pid_rusage(
-            std::process::id() as libc::c_int,
-            libc::RUSAGE_INFO_V2,
-            info.as_mut_ptr() as *mut libc::rusage_info_t,
-        )
-    };
-    if ret != 0 {
-        return -1;
-    }
-    // SAFETY: proc_pid_rusage returned 0, so `info` is initialized.
-    let info = unsafe { info.assume_init() };
-    (info.ri_phys_footprint / (1024 * 1024)) as i32
+    // On iOS the shared reader IS `phys_footprint` (see `used_memory_mb`).
+    used_memory_mb()
 }
 
 #[cfg(target_os = "android")]
 fn read_available_mb() -> i32 {
-    // Resident set size from /proc/self/statm (field 1 = resident pages).
-    let Ok(statm) = std::fs::read_to_string("/proc/self/statm") else {
-        return -1;
-    };
-    let Some(rss_pages) = statm
-        .split_whitespace()
-        .nth(1)
-        .and_then(|v| v.parse::<i64>().ok())
-    else {
-        return -1;
-    };
-    if rss_pages <= 0 {
+    // Headroom estimate: a budget fraction of MemTotal minus our resident set
+    // (shared reader: /proc/self/statm via `used_memory_mb`).
+    let rss_mb = used_memory_mb();
+    if rss_mb < 0 {
         return -1;
     }
-    let page_size: i64 = 4096;
-    let rss_mb = (rss_pages * page_size / (1024 * 1024)) as i32;
 
     let total_mb = read_mem_total_mb();
     if total_mb <= 0 {

@@ -1,127 +1,37 @@
 class_name SceneStatsCollector
 extends RefCounted
 
-## Preview-only metric collector for a single scene. Walks the scene's Godot
-## subtree to count geometry/colliders, reads entity count from the CRDT, and
-## sums on-disk content size. Per-mesh triangle counts and per-hash file sizes
-## are cached so repeated refresh ticks stay cheap.
+## Preview-only metric collector for a single scene. Counts scene resources via
+## the shared DebugCollector walker, and sums cached content sizes from the
+## ResourceProvider's in-memory metadata. Per-mesh triangle counts are cached
+## here so repeated refresh ticks stay cheap.
 
 var _tri_cache: Dictionary = {}  # mesh instance_id -> triangles
-var _file_size_cache: Dictionary = {}  # content filename -> bytes (immutable once written)
 
 
-## Clear per-scene caches. Call on scene change. File sizes are immutable on
-## disk, so that cache is kept (it is a shared disk-fact cache, not per-scene).
+## Clear per-scene caches. Call on scene change.
 func reset() -> void:
 	_tri_cache.clear()
 
 
 ## Per-scene counts for the live tree:
 ## { triangles, bodies, colliders, entities, geometries, materials, textures }.
+## Thin wrapper over the shared DebugCollector walker; this instance only owns
+## the triangle cache.
 func collect_scene(scene_id: int) -> Dictionary:
-	var acc: Dictionary = {"triangles": 0, "bodies": 0, "colliders": 0}
-	var geos: Dictionary = {}
-	var mats: Dictionary = {}
-	var texs: Dictionary = {}
-	var node: Node = _scene_node(scene_id)
-	if node != null:
-		_walk(node, acc, geos, mats, texs)
-	acc["geometries"] = geos.size()
-	acc["materials"] = mats.size()
-	acc["textures"] = texs.size()
-	acc["entities"] = 0
-	if is_instance_valid(Global.scene_runner):
-		acc["entities"] = Global.scene_runner.debug_list_entities(scene_id).size()
-	return acc
+	return DebugCollector.collect_scene_resources(scene_id, _tri_cache)
 
 
-func _scene_node(scene_id: int) -> Node:
-	if not is_instance_valid(Global.scene_runner):
-		return null
-	for child in Global.scene_runner.get_children():
-		if child is DclSceneNode and child.get_scene_id() == scene_id:
-			return child
-	return null
-
-
-func _walk(
-	node: Node, acc: Dictionary, geos: Dictionary, mats: Dictionary, texs: Dictionary
-) -> void:
-	if node is MeshInstance3D:
-		var mi: MeshInstance3D = node
-		acc["bodies"] += 1
-		var mesh: Mesh = mi.mesh
-		if mesh != null:
-			geos[mesh.get_instance_id()] = true
-			acc["triangles"] += _mesh_triangles(mesh)
-			for si in range(mesh.get_surface_count()):
-				var mat: Material = mi.get_active_material(si)
-				if mat != null:
-					mats[mat.get_instance_id()] = true
-					_collect_textures(mat, texs)
-	elif node is CollisionShape3D:
-		acc["colliders"] += 1
-	for c in node.get_children():
-		_walk(c, acc, geos, mats, texs)
-
-
-func _collect_textures(mat: Material, texs: Dictionary) -> void:
-	if not (mat is BaseMaterial3D):
-		return
-	var bm: BaseMaterial3D = mat
-	var candidates: Array = [
-		bm.albedo_texture,
-		bm.normal_texture,
-		bm.orm_texture,
-		bm.metallic_texture,
-		bm.roughness_texture,
-		bm.emission_texture,
-		bm.ao_texture,
-		bm.heightmap_texture,
-	]
-	for tex in candidates:
-		if tex != null:
-			texs[tex.get_instance_id()] = true
-
-
-func _mesh_triangles(mesh: Mesh) -> int:
-	var id: int = mesh.get_instance_id()
-	if _tri_cache.has(id):
-		return _tri_cache[id]
-	var tris: int = 0
-	for si in range(mesh.get_surface_count()):
-		var arrays: Array = mesh.surface_get_arrays(si)
-		if arrays.is_empty():
-			continue
-		var indices = arrays[Mesh.ARRAY_INDEX]
-		if indices is PackedInt32Array and indices.size() > 0:
-			tris += int(indices.size() / 3.0)
-		else:
-			var verts = arrays[Mesh.ARRAY_VERTEX]
-			if verts is PackedVector3Array:
-				tris += int(verts.size() / 3.0)
-	_tri_cache[id] = tris
-	return tris
-
-
-## Real on-disk content size (bytes) for the scene. Measures what actually lives
-## in local storage, which is what a creator cares about — not the manifest size.
+## Real local content size (bytes) for the scene — what actually lives in the
+## download cache, which is what a creator cares about, not the manifest size.
 ##
-## A scene asset can persist on disk under several names, all keyed by the same
-## content hash:
-##   - "{hash}"             raw download (textures, audio, crdt, js, ...)
-##   - "{hash}.scn"         runtime-processed GLTF (the raw glb is deleted after)
-##   - "{hash}-mobile.zip"  optimized asset pack (mobile / optimized realms)
-## Summing only the raw "{hash}" missed the processed ".scn" files (the bulk of a
-## desktop scene's footprint); ignoring "{hash}-mobile.zip" missed almost all of a
-## MOBILE scene's footprint — there the geometry/textures live inside the pack,
-## mounted virtually via load_resource_pack, so there is no separate ".scn" on
-## disk. We scan user://content once and add every file whose leading hash (see
-## _hash_prefix) is in the scene's content mapping, covering all three on-disk
-## forms. Desktop and mobile use mutually exclusive forms per hash, so summing
-## every matching file is the true local size on both. CID hashes contain no '.',
-## so the hash split is exact. Recomputed each call from the live listing, so it
-## converges as assets download.
+## A scene asset can persist under several names, all keyed by the same content
+## hash: "{hash}" (raw download), "{hash}.scn" (runtime-processed GLTF) and
+## "{hash}-mobile.zip" (optimized asset pack). The base-name matching that ties
+## them back to a mapping hash lives Rust-side (resource_provider.rs
+## cache_file_base_name), and sizes come from the ResourceProvider's in-memory
+## cache metadata — no disk I/O. Recomputed each call, so it converges as
+## assets download.
 func content_bytes(scene_id: int) -> int:
 	if scene_id == -1 or not is_instance_valid(Global.scene_fetcher):
 		return 0
@@ -131,105 +41,31 @@ func content_bytes(scene_id: int) -> int:
 	var mapping = scene_data.scene_entity_definition.get_content_mapping()
 	if mapping == null:
 		return 0
-	var hashes: Dictionary = {}
+	var hashes := PackedStringArray()
 	for file in mapping.get_files():
 		var content_hash: String = str(mapping.get_hash(file))
 		if not content_hash.is_empty():
-			hashes[content_hash] = true
+			hashes.append(content_hash)
 	if hashes.is_empty():
 		return 0
-	return _sum_disk_bytes(hashes)
-
-
-## Sum the size of every file in user://content whose leading hash is in `hashes`.
-func _sum_disk_bytes(hashes: Dictionary) -> int:
-	var dir: DirAccess = DirAccess.open("user://content")
-	if dir == null:
-		return 0
-	var total: int = 0
-	dir.list_dir_begin()
-	var fname: String = dir.get_next()
-	while fname != "":
-		if not dir.current_is_dir() and hashes.has(_hash_prefix(fname)):
-			total += _file_size(fname)
-		fname = dir.get_next()
-	dir.list_dir_end()
-	return total
-
-
-## Leading content hash of a content filename — the key that ties an on-disk file
-## back to a content-mapping hash. CID hashes ("bafk...", "bafy...", "Qm...")
-## contain no '.', so:
-##   - "{hash}-mobile.zip"  -> "{hash}"   (optimized pack; matched FIRST)
-##   - "{hash}.scn" / "{hash}.ext" -> "{hash}"   (text before the first '.')
-##   - "{hash}"             -> "{hash}"
-## The "-mobile.zip" case is handled before the '.' split because that split alone
-## would yield "{hash}-mobile", never a bare hash, and the pack (the whole scene on
-## mobile) would be dropped.
-func _hash_prefix(fname: String) -> String:
-	const OPTIMIZED_SUFFIX: String = "-mobile.zip"
-	if fname.ends_with(OPTIMIZED_SUFFIX):
-		return fname.substr(0, fname.length() - OPTIMIZED_SUFFIX.length())
-	var dot: int = fname.find(".")
-	if dot == -1:
-		return fname
-	return fname.substr(0, dot)
-
-
-## Size of a content file in bytes, cached (file contents are immutable on disk).
-func _file_size(fname: String) -> int:
-	if _file_size_cache.has(fname):
-		return _file_size_cache[fname]
-	var f: FileAccess = FileAccess.open("user://content/" + fname, FileAccess.READ)
-	if f == null:
-		return 0  # transiently unreadable (e.g. being written) — retry next tick
-	var size: int = f.get_length()
-	f.close()
-	_file_size_cache[fname] = size
-	return size
+	return Global.content_provider.get_cache_size_for_base_names(hashes)
 
 
 ## External (non-deployed) content the scene pulled at runtime: url-sourced
-## textures cached on disk as user://content/hashed_{hex} (sizes read from
-## disk, so the value converges as downloads land) plus bytes the scene's JS
-## consumed via fetch() (never stored on disk). External video is streamed and
-## not included. Rust side: content/external_content.rs registry, exposed by
-## SceneManager.get_scene_external_content().
+## textures cached as "hashed_{hex}[_q{N}]" (sizes from the ResourceProvider's
+## in-memory cache metadata, so the value converges as downloads land) plus
+## bytes the scene's JS consumed via fetch() (never stored on disk). External
+## video is streamed and not included. Rust side: content/external_content.rs
+## registry, exposed by SceneManager.get_scene_external_content().
 func external_bytes(scene_id: int) -> int:
 	if scene_id == -1 or not is_instance_valid(Global.scene_runner):
 		return 0
 	var info: Dictionary = Global.scene_runner.get_scene_external_content(scene_id)
 	var total: int = int(info.get("fetch_bytes", 0))
-	var registered: Dictionary = {}
-	for fname in info.get("files", []):
-		registered[str(fname)] = true
-	if registered.is_empty():
+	var files: PackedStringArray = info.get("files", PackedStringArray())
+	if files.is_empty():
 		return total
-	# The quality-aware texture path stores url-textures as "hashed_{hex}_q{N}"
-	# while the registry holds the base "hashed_{hex}" — match by base name so
-	# every stored quality variant is counted.
-	var dir: DirAccess = DirAccess.open("user://content")
-	if dir == null:
-		return total
-	dir.list_dir_begin()
-	var disk_name: String = dir.get_next()
-	while disk_name != "":
-		if not dir.current_is_dir() and registered.has(_external_base_name(disk_name)):
-			total += _file_size(disk_name)
-		disk_name = dir.get_next()
-	dir.list_dir_end()
-	return total
-
-
-## "hashed_{hex}_q{N}" -> "hashed_{hex}"; anything else unchanged. The hex part
-## never contains 'q', so rfind("_q") can only match the quality suffix.
-func _external_base_name(fname: String) -> String:
-	if not fname.begins_with("hashed_"):
-		return fname
-	var qpos: int = fname.rfind("_q")
-	if qpos > 6:
-		return fname.substr(0, qpos)
-	return fname
+	return total + Global.content_provider.get_cache_size_for_base_names(files)
 
 
 ## Whole-app render/memory stats. These are engine-global (single shared

@@ -1868,6 +1868,20 @@ impl ContentProvider {
         self.resource_provider.get_cache_total_size()
     }
 
+    /// Total tracked cache size in bytes for the given base names —
+    /// content-mapping hashes and/or url-texture "hashed_{hex}" names. Every
+    /// on-disk form of each entry is counted ("{hash}", "{hash}.scn",
+    /// "{hash}-mobile.zip", "hashed_{hex}_q{N}"). Reads the ResourceProvider's
+    /// in-memory metadata (no disk I/O), so the value converges as downloads
+    /// land. Powers the preview scene-stats Content size / External content rows.
+    #[func]
+    pub fn get_cache_size_for_base_names(&self, base_names: PackedStringArray) -> i64 {
+        let wanted: std::collections::HashSet<String> =
+            base_names.as_slice().iter().map(|s| s.to_string()).collect();
+        self.resource_provider
+            .get_cache_size_for_base_names(&wanted)
+    }
+
     /// Get current disk cache size in MiB for memory diagnostics
     #[func]
     pub fn get_cache_size_mb(&mut self) -> f64 {
