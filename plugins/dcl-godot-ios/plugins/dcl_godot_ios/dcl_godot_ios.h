@@ -48,6 +48,7 @@ public:
 	static String receivedUrl;
 
     void print_version();
+    String test_logging();
     void open_auth_url(String url);
     void open_safari_auth_url(String url);
     void open_webview_url(String url);
@@ -117,6 +118,11 @@ public:
     void attestation_generate_key();
     void attestation_attest_key(String key_id, PackedByteArray client_data_hash);
     void attestation_generate_assertion(String key_id, PackedByteArray client_data_hash);
+
+    // Device anchor — UUID persisted in Keychain. Survives uninstall on
+    // the same device because Keychain items outlive the app sandbox.
+    // Used as the silent-guest-login anchor.
+    String get_device_anchor_id();
 
     // Called from Objective-C when a deeplink is received
     static void emit_deeplink_received(String url);

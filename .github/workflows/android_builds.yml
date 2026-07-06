@@ -1,6 +1,32 @@
 name: 🤖 Android
 on:
   workflow_call:
+    inputs:
+      # All three are optional so the push path (runner.yml) keeps calling this with no `with:` block
+      # and behaves exactly as before. mobile_distribute passes them to rebuild a specific commit
+      # on demand (the superseded / self-sufficient case).
+      ref:
+        description: >
+          Branch/ref to build (drives the prod flag + the R2 key branch segment). Empty → defaults
+          to the triggering event's branch.
+        required: false
+        type: string
+        default: ''
+      sha:
+        description: >
+          Commit SHA to check out, allocate the build number for, and key the R2 upload by.
+          Empty → defaults to the triggering event's head SHA.
+        required: false
+        type: string
+        default: ''
+      concurrency_key:
+        description: >
+          Overrides the concurrency-group discriminator so an on-demand rebuild (mobile_distribute)
+          does not share a group with — and cancel — the push-triggered Android build for the same
+          actor/ref. Empty keeps the default push behavior.
+        required: false
+        type: string
+        default: ''
     secrets:
       ANDROID_KEYSTORE_BASE64:
         required: true
@@ -36,7 +62,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-android
+  # `inputs.concurrency_key` (set by mobile_distribute's on-demand rebuild) isolates that run from
+  # the push-triggered build so the two don't cancel each other; falls back to the original key.
+  group: ci-${{ github.actor }}-${{ inputs.concurrency_key || github.head_ref || github.run_number }}-${{ github.ref }}-android
   cancel-in-progress: true
 
 jobs:
@@ -58,7 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
       - name: Add safe directory
         run: |
           git config --global --add safe.directory $GITHUB_WORKSPACE
@@ -93,6 +121,16 @@ jobs:
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
 
+      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
+      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
+      # and so the APK + AAB exports below stamp the same versionCode for this commit.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
       - name: Build Rust libraries
         run: |
           cargo run -- build --release ${{ env.PROD_FLAG }}
@@ -106,15 +144,6 @@ jobs:
         with:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
-      
-      # Allocate the store build number once (from the Cloudflare Worker, idempotent per commit SHA);
-      # both the APK and AAB exports below read DCL_BUILD_NUMBER and stamp the same versionCode.
-      - name: Compute build number
-        uses: ./.github/actions/compute-build-number
-        with:
-          sha: ${{ github.event.pull_request.head.sha || github.sha }}
-          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
-          allocated-by: android
 
       - name: Export Android APK
         run: |
@@ -228,21 +257,44 @@ jobs:
             export PATH="/tmp/aws-bin:$PATH"
           fi
 
-          SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          BRANCH="${{ github.head_ref || github.ref_name }}"
+          SHA="${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}"
+          BRANCH="${{ inputs.ref || github.head_ref || github.ref_name }}"
           SAFE_BRANCH=$(echo "$BRANCH" | tr '/' '-')
           KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
           LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.apk"
 
           echo "📤 Uploading APK to s3://${AWS_S3_BUCKET}/${KEY}"
           aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-          aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          # Update the branch 'latest' pointer WITHOUT re-uploading. The managed `aws s3 cp s3:// s3://`
+          # is unusable on R2 (tagging headers NotImplemented), so use low-level copy-object; fall
+          # back to a plain re-upload if R2 rejects the copy.
+          aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_KEY" \
+            --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+            || aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
 
           PUBLIC_URL="${R2_PUBLIC_BASE_URL}/${KEY}"
           echo "✅ APK uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
           echo "🔗 Public URL: ${PUBLIC_URL}"
           # Surface the direct download link to later steps (build report comment).
           echo "APK_PUBLIC_URL=${PUBLIC_URL}" >> "$GITHUB_ENV"
+
+          # Sidecar: record the build number this APK was BAKED with, right next to it. The deploy
+          # orchestrator (mobile_distribute android-resolve) compares it against the authoritative
+          # allocation before reusing this APK — if the allocator has since bumped the number
+          # (a store shipped past it), the APK is stale and must be rebuilt, not reused. Mirrors the
+          # iOS sidecar in ios_r2_artifact.yml.
+          if [ -n "${DCL_BUILD_NUMBER:-}" ]; then
+            BUILD_NUMBER_KEY="android/${SAFE_BRANCH}/${SHA}/build_number.txt"
+            LATEST_BUILD_NUMBER_KEY="android/${SAFE_BRANCH}/latest/build_number.txt"
+            printf '%s' "$DCL_BUILD_NUMBER" > build_number.txt
+            echo "🔢 Writing build_number sidecar ($DCL_BUILD_NUMBER) → s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}"
+            aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+            aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_BUILD_NUMBER_KEY" \
+              --copy-source "${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+              || aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${LATEST_BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          else
+            echo "ℹ️  DCL_BUILD_NUMBER unset — no build_number sidecar (fork PR / allocator skipped)."
+          fi
 
           # The AAB is the Play Store artifact — only publish it for main/release.
           if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "release" ]; then
@@ -252,7 +304,11 @@ jobs:
               AAB_LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.aab"
               echo "📤 Uploading AAB to s3://${AWS_S3_BUCKET}/${AAB_KEY}"
               aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-              aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+              # Update the branch 'latest' pointer WITHOUT re-uploading (low-level copy-object;
+              # R2 rejects the managed server-side copy). Fall back to a re-upload on failure.
+              aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$AAB_LATEST_KEY" \
+                --copy-source "${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+                || aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
               echo "✅ AAB uploaded to R2"
               echo "🔗 Public URL: ${R2_PUBLIC_BASE_URL}/${AAB_KEY}"
             else

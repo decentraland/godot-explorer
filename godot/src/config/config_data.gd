@@ -153,11 +153,25 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 		last_parcel_position = value
 
 var terms_and_conditions_version: int = 0
+
+# Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
+# re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
+# request — which on Android returns immediately without a dialog — isn't re-attempted
+# (nor logged as a spurious reject) on every entry-flow button tap.
+var notif_permission_last_prompt_unix: int = 0
+
 # Lowercased wallet address that accepted the IAP terms, or "" if none. Scoped
 # per-wallet (not a plain bool) so one account's legal consent never carries
 # over to a different account signing in on the same device. See
 # IapManager.are_terms_accepted / accept_terms.
 var iap_terms_accepted_wallet: String = ""
+
+# Snapshot of owned item counts for the "NEW" tag (#2300), kept entirely local — no
+# endpoint timestamps. Shape: { category: { wallet_lower: { item_urn: count } } } with
+# category in {"wearable","emote"}. An item is tagged NEW when its current owned count
+# exceeds this snapshot (a new urn, or one extra copy). Seeded on the first backpack load
+# for a wallet and advanced on every load (see Backpack.newtag_evaluate).
+var backpack_owned_counts: Dictionary = {}
 
 # Unix timestamp until which the soft version-upgrade overlay is snoozed
 # (set when the user presses "Later"; ignored for required-minimum blocks).
@@ -442,8 +456,16 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
+	self.notif_permission_last_prompt_unix = settings_file.get_value(
+		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
+	)
+
 	self.iap_terms_accepted_wallet = settings_file.get_value(
 		"user", "iap_terms_accepted_wallet", data_default.iap_terms_accepted_wallet
+	)
+
+	self.backpack_owned_counts = settings_file.get_value(
+		"user", "backpack_owned_counts", data_default.backpack_owned_counts
 	)
 
 	self.version_gate_snooze_until = settings_file.get_value(
@@ -531,7 +553,11 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
+	new_settings_file.set_value(
+		"user", "notif_permission_last_prompt_unix", self.notif_permission_last_prompt_unix
+	)
 	new_settings_file.set_value("user", "iap_terms_accepted_wallet", self.iap_terms_accepted_wallet)
+	new_settings_file.set_value("user", "backpack_owned_counts", self.backpack_owned_counts)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)

@@ -1,5 +1,5 @@
 // TODO: TEMPORARY - Remove this module once a proper monitoring solution is in place.
-// It fetches Sentry metrics for godot-explorer and auth-mobile projects and optionally
+// It fetches Sentry metrics for the godot-explorer project and optionally
 // pushes a summary to Slack.
 
 use crate::ui::{print_divider, print_message, print_section, MessageType};
@@ -20,6 +20,8 @@ enum RateMode {
     /// Rate = (sessions - crashes) / sessions (ignores errors)
     CrashFree,
     /// Rate = (sessions - errors - crashes) / sessions
+    // Kept as available infrastructure even though no project currently uses it.
+    #[allow(dead_code)]
     ErrorFree,
 }
 
@@ -290,7 +292,6 @@ pub fn get_metrics(from: &str, to: &str) -> anyhow::Result<()> {
     print_divider();
 
     let ge_id = get_project_id(&config, "godot-explorer")?;
-    let am_id = get_project_id(&config, "auth-mobile")?;
 
     let ge_metrics = build_project_metrics(
         &config,
@@ -302,19 +303,6 @@ pub fn get_metrics(from: &str, to: &str) -> anyhow::Result<()> {
         Some("production"),
     )?;
     print_project_metrics(&ge_metrics);
-
-    print_divider();
-
-    let am_metrics = build_project_metrics(
-        &config,
-        "auth-mobile",
-        &am_id,
-        &start,
-        &end,
-        RateMode::ErrorFree,
-        Some("production"),
-    )?;
-    print_project_metrics(&am_metrics);
 
     Ok(())
 }
@@ -342,7 +330,6 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
     let end = format!("{}T00:00:00Z", end_date);
 
     let ge_id = get_project_id(&config, "godot-explorer")?;
-    let am_id = get_project_id(&config, "auth-mobile")?;
 
     let ge_metrics = build_project_metrics(
         &config,
@@ -353,28 +340,15 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
         RateMode::CrashFree,
         Some("production"),
     )?;
-    let am_metrics = build_project_metrics(
-        &config,
-        "auth-mobile",
-        &am_id,
-        &start,
-        &end,
-        RateMode::ErrorFree,
-        Some("production"),
-    )?;
 
     // Also print to terminal
     print_section("Sentry Metrics (TEMPORARY)");
     print_project_metrics(&ge_metrics);
     print_divider();
-    print_project_metrics(&am_metrics);
-    print_divider();
 
     let ge_emoji = rate_emoji(ge_metrics.healthy_rate);
-    let am_emoji = rate_emoji(am_metrics.healthy_rate);
 
     let ge_days_text = format_days_for_slack(&ge_metrics.days, ge_metrics.rate_mode);
-    let am_days_text = format_days_for_slack(&am_metrics.days, am_metrics.rate_mode);
 
     let slack_payload = serde_json::json!({
         "blocks": [
@@ -400,26 +374,6 @@ pub fn push_metrics(from: &str, to: &str) -> anyhow::Result<()> {
                 "text": {
                     "type": "mrkdwn",
                     "text": format!("```{}```", ge_days_text)
-                }
-            },
-            {
-                "type": "divider"
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": format!(
-                        "{} *auth-mobile* — {}: *{:.2}%*",
-                        am_emoji, am_metrics.rate_label, am_metrics.healthy_rate
-                    )
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": format!("```{}```", am_days_text)
                 }
             },
             {

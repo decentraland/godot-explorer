@@ -58,12 +58,42 @@ func _ready():
 func _setup_ios_marketplace_section():
 	if not Iap.is_available():
 		return
+	# Marketplace suggestions are purchaseable; hide them for an un-upgraded thirdweb guest
+	# (mirrors backpack / CreditsBalanceButton). Re-run setup when the account upgrades.
+	if not _is_marketplace_account_eligible():
+		if not Global.guest_upgrade_state_refreshed.is_connected(_on_marketplace_guest_upgraded):
+			Global.guest_upgrade_state_refreshed.connect(_on_marketplace_guest_upgraded)
+		return
 
 	_ios_marketplace_section = get_node_or_null("%MarketplaceRecommendedSection")
 	if _ios_marketplace_section == null:
 		return
+	# Surface purchaseable emotes at the TOP of the list, above the owned-emotes grid, for
+	# discoverability (#2299) — mirrors the wearable carousel move in backpack.gd. The
+	# section is the last child of VBoxContainer_EmotesAndSuggestions; move it to the front.
+	var section_parent := _ios_marketplace_section.get_parent()
+	if section_parent:
+		section_parent.move_child(_ios_marketplace_section, 0)
 	_ios_marketplace_section.item_selected.connect(_on_marketplace_emote_selected)
 	_ios_marketplace_section.update_category("emotes")
+
+
+## Marketplace suggestions are purchaseable; an un-upgraded thirdweb guest can't buy them,
+## so the recommended-emotes section stays hidden for those sessions.
+func _is_marketplace_account_eligible() -> bool:
+	if Global.player_identity == null:
+		return false
+	return (
+		not Global.player_identity.is_thirdweb_guest()
+		or Global.player_identity.is_thirdweb_guest_upgraded()
+	)
+
+
+func _on_marketplace_guest_upgraded(is_upgraded: bool) -> void:
+	if not is_upgraded:
+		return
+	Global.guest_upgrade_state_refreshed.disconnect(_on_marketplace_guest_upgraded)
+	_setup_ios_marketplace_section()
 
 
 func async_set_only_collectibles(new_state: bool):
@@ -84,8 +114,19 @@ func _add_default_emotes():
 
 func _async_load_remote_emotes():
 	var remote_emotes = await WearableRequest.async_request_all_emotes()
+	var emote_new := {}
 	if remote_emotes != null:
 		remote_emotes.elements.sort_custom(func(a, b): return a.transferet_at > b.transferet_at)
+		# NEW tag (#2300): count owned copies per item urn, then evaluate against the persisted
+		# per-wallet snapshot (shared with the wearable grid, no endpoint timestamps).
+		var counts := {}
+		for emote in remote_emotes.elements:
+			var item_urn := Backpack.newtag_item_urn(emote.urn, emote.token_id)
+			counts[item_urn] = int(counts.get(item_urn, 0)) + 1
+		var wallet := ""
+		if Global.player_identity != null:
+			wallet = Global.player_identity.get_address_str().to_lower()
+		emote_new = Backpack.newtag_evaluate("emote", wallet, counts)
 		var count := 0
 		for emote in remote_emotes.elements:
 			var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
@@ -94,10 +135,19 @@ func _async_load_remote_emotes():
 			emote_item.play_emote.connect(self._on_emote_item_play_emote.bind(emote_item))
 			emote_item.emote_name_ready.connect(self.emote_grid_selected.emit)
 			container_all_emotes.add_child(emote_item)
+			# Tag emotes whose owned count grew vs the snapshot (#2300).
+			var item_urn := Backpack.newtag_item_urn(emote.urn, emote.token_id)
+			emote_item.set_new_badge(bool(emote_new.get(item_urn, false)))
 			all_emote_items.push_back(emote_item)
 			count += 1
 			if count % 10 == 0:
 				await get_tree().process_frame
+
+	# Surface the most-recently-obtained owned emotes from the fast marketplace API
+	# (added only if not already listed via inject_owned_emote's dedupe), so a just-
+	# bought emote shows immediately instead of waiting for the catalyst lambda above.
+	for urn in await MarketplaceTracker.async_fetch_recent_owned("emote"):
+		inject_owned_emote(urn)
 
 	if not _only_collectibles:
 		_add_default_emotes()
@@ -115,6 +165,34 @@ func _async_load_emotes():
 	await _async_load_remote_emotes()
 	_update_empty_state()
 	_sync_grid_selection()
+
+
+## Injects a single just-purchased owned emote at the front of the grid, mirroring
+## _async_load_remote_emotes' per-item setup. Called by the backpack when the
+## MarketplaceTracker detects an emote arrival, so it shows immediately instead of
+## waiting for the catalyst lambda to catch up. No-op if already listed.
+func inject_owned_emote(urn: String) -> void:
+	if urn.is_empty():
+		return
+	for item in all_emote_items:
+		if item.emote_urn == urn:
+			return
+	var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
+	emote_item.button_group = button_group_all_emotes
+	# Fire-and-forget before add_child (same as the remote load): the await inside
+	# resumes only after the item is in the tree and its @onready nodes exist.
+	emote_item.async_load_from_urn(urn)
+	emote_item.play_emote.connect(self._on_emote_item_play_emote.bind(emote_item))
+	emote_item.emote_name_ready.connect(self.emote_grid_selected.emit)
+	container_all_emotes.add_child(emote_item)
+	container_all_emotes.move_child(emote_item, 0)
+	# A live/recent arrival (item_arrived or recent-owned) is brand-new (#2300). Mark it
+	# forced-NEW (survives a later grid reload's re-evaluate) and show the badge now.
+	Backpack.newtag_mark_arrived("emote", urn)
+	emote_item.set_new_badge(true)
+	all_emote_items.push_front(emote_item)
+	_update_empty_state()
+	_update_grid_equipped_state()
 
 
 func _update_empty_state():

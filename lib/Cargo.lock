@@ -861,7 +861,7 @@ dependencies = [
 
 [[package]]
 name = "dclgodot"
-version = "0.72.0"
+version = "1.11.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -888,6 +888,7 @@ dependencies = [
  "image",
  "jni",
  "json5",
+ "libc",
  "livekit",
  "log-panics",
  "meshopt",

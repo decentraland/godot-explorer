@@ -198,17 +198,12 @@ func _ready():
 
 	emote_wheel.avatar_node = player.avatar
 
-	loading_ui.enable_loading_screen()
+	loading_ui.enable_loading_screen(Global.get_config().last_realm_joined, "on_explorer_ready")
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
 	if Global.FORCE_TEST and cmd_location == null:
 		cmd_location = Global.FORCE_TEST_LOCATION
-	# LOADING_START metric
-	var loading_data = {
-		"position": str(cmd_location), "realm": str(cmd_realm), "when": "on_explorer_ready"
-	}
-	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 	# --spawn-avatars
 	if Global.cli.spawn_avatars:
@@ -226,19 +221,8 @@ func _ready():
 	if Global.deep_link_obj.livekit_debug:
 		_on_control_menu_request_livekit_debug(true)
 
-	# Scene Inspector: activate bridge if --scene-inspector or ?scene-inspector= is set
-	var scene_inspector_target := ""
-	if not Global.deep_link_obj.scene_inspector.is_empty():
-		scene_inspector_target = Global.deep_link_obj.scene_inspector
-	elif not Global.cli.scene_inspector.is_empty():
-		scene_inspector_target = Global.cli.scene_inspector
-	if not scene_inspector_target.is_empty():
-		# Activate Rust-side instrumentation before any scene is spawned
-		Global.scene_inspector_active = true
-		var bridge = SceneInspectorBridge.new()
-		bridge.set_name("scene_inspector_bridge")
-		add_child(bridge)
-		bridge.setup(scene_inspector_target)
+	# Scene Inspector: the bridge is now dialed from app startup (Global._ready),
+	# not here — so the channel is live from second 0, before login / world entry.
 	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
 	var scene_inspector_file: bool = (
 		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
@@ -343,7 +327,7 @@ func _ready():
 	Global.scene_runner.set_pause(false)
 
 	if Global.testing_scene_mode:
-		Global.player_identity.create_guest_account()
+		Global.player_identity.create_disposable_account()
 
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
@@ -969,14 +953,8 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 	)
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
-			loading_ui.enable_loading_screen()
-			# LOADING_START metric
-			var loading_data = {
-				"position": str(position),
-				"realm": Global.realm.get_realm_string(),
-				"when": "on_moveto"
-			}
-			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+			if not loading_ui.visible:
+				loading_ui.enable_loading_screen("", "on_moveto")
 
 
 func _async_try_change_realm(realm_string: String, when: String) -> void:
@@ -985,15 +963,11 @@ func _async_try_change_realm(realm_string: String, when: String) -> void:
 		"[color=#ccc]Trying to change to realm " + realm_string + "[/color]",
 		Time.get_unix_time_from_system()
 	)
+	Global.get_config().last_realm_joined = realm_string
+	loading_ui.enable_loading_screen(realm_string, when)
 	var success = await Global.realm.async_set_realm(realm_string, true)
-	if success:
-		loading_ui.enable_loading_screen()
-		var loading_data = {
-			"position": str(Global.scene_fetcher.current_position),
-			"realm": realm_string,
-			"when": when
-		}
-		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+	if not success:
+		loading_ui.hide_loading_screen()
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
@@ -1005,7 +979,8 @@ func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 		var success = await Global.realm.async_set_realm(realm)
 		if not success:
 			return
-		loading_ui.enable_loading_screen()
+		if not loading_ui.visible:
+			loading_ui.enable_loading_screen(realm, "on_teleport")
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
