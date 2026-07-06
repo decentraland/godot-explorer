@@ -75,9 +75,7 @@ var _guest_login_attempt: int = 0
 @onready var background: TextureRect = %Background
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
-@onready var container_sign_in_with_email: VBoxContainer = %VBoxContainer_SignInWithEmail
-@onready var email_input: Node = %DclTextEdit
-@onready var button_email_confirm: Button = %Button_Confirm
+@onready var sign_in_with_email: SignInWithEmail = %SignInWithEmail
 @onready var auth_spinner_container = %VBoxContainer_AuthSpinner
 @onready var auth_error_container = %VBoxContainer_AuthError
 @onready var auth_error_label_main = %AuthErrorLabel
@@ -262,7 +260,7 @@ func show_auth_home_screen():
 	track_lobby_screen(get_auth_home_screen_name())
 	container_sign_in_step1.show()
 	container_sign_in_step2.hide()
-	container_sign_in_with_email.hide()
+	sign_in_with_email.hide()
 	# When the guest path is gated this screen IS the root (no ACCOUNT_HOME to
 	# return to), so hide the back arrow; otherwise show it.
 	button_back.visible = not _is_guest_entry_disabled()
@@ -278,6 +276,7 @@ func show_auth_browser_open_screen(
 	Global.metrics.flush.call_deferred()
 	container_sign_in_step1.hide()
 	container_sign_in_step2.show()
+	sign_in_with_email.hide()
 	button_back.hide()
 	show_panel(control_signin)
 
@@ -294,75 +293,10 @@ func show_auth_email_screen():
 	Global.metrics.track_screen_viewed("AUTH_OTP_START", "")
 	container_sign_in_step1.hide()
 	container_sign_in_step2.hide()
-	container_sign_in_with_email.show()
+	sign_in_with_email.show()
+	sign_in_with_email.setup()
 	button_back.show()
 	show_panel(control_signin)
-
-
-# gdlint:ignore = async-function-name
-func _async_on_button_email_confirm_pressed() -> void:
-	if email_input.error or email_input.get_text_value().is_empty():
-		return
-
-	var email: String = email_input.get_text_value()
-	button_email_confirm.disabled = true
-
-	var promise: Promise = Global.player_identity.async_link_email_start(email)
-	var result = await PromiseUtils.async_awaiter(promise)
-
-	button_email_confirm.disabled = false
-
-	if result is PromiseError:
-		var raw: String = result.get_error()
-		push_warning("[OTP SignIn] send_code failed: " + raw)
-		Global.metrics.track_screen_viewed("AUTH_OTP_EMAIL_INVALID", "")
-		return
-
-	Global.metrics.track_screen_viewed("AUTH_OTP_ENTERCODE", "")
-	waiting_for_new_wallet = true
-
-	var code_modal = await Global.modal_manager.async_show_code_modal(email)
-	if code_modal:
-		code_modal.set_verifier(_async_otp_verify_code.bind(email))
-		code_modal.set_resend_handler(_async_otp_resend_code.bind(email))
-		code_modal.confirmed.connect(_async_otp_code_confirmed.bind(email))
-		code_modal.cancelled.connect(
-			func():
-				waiting_for_new_wallet = false
-				Global.modal_manager.close_code_modal()
-				show_auth_email_screen()
-		)
-
-
-# gdlint:ignore = async-function-name
-func _async_otp_verify_code(code: String, email: String) -> String:
-	Global.metrics.track_screen_viewed("AUTH_OTP_VERIFY", "")
-	var anchor: String = Global.get_device_anchor_id()
-	var promise: Promise = Global.player_identity.async_link_email_verify(email, code, anchor)
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		var raw: String = result.get_error()
-		push_warning("[OTP SignIn] verify failed: " + raw)
-		Global.metrics.track_screen_viewed("AUTH_OTP_ERROR", "")
-		return raw
-	return ""
-
-
-# gdlint:ignore = async-function-name
-func _async_otp_resend_code(email: String) -> Dictionary:
-	var promise: Promise = Global.player_identity.async_link_email_start(email)
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		return {"status": 2, "message": result.get_error()}
-	return {"status": 0}
-
-
-# gdlint:ignore = async-function-name
-func _async_otp_code_confirmed(_code: String, email: String) -> void:
-	Global.metrics.track_screen_viewed(
-		"AUTH_SUCCESS", JSON.stringify({"login_type": "otp", "email": email})
-	)
-	Global.modal_manager.close_code_modal()
 
 
 func show_discover_ftue_screen():
@@ -467,7 +401,6 @@ func async_close_sign_in():
 # gdlint:ignore = async-function-name
 func _ready():
 	print("[Startup] lobby._ready start: %dms" % (Time.get_ticks_msec() - Global._startup_time))
-	button_email_confirm.pressed.connect(_async_on_button_email_confirm_pressed)
 	# Back on a clean screen — release the sign-out re-entrancy guard so a future
 	# logout can run (no-op on normal startup, where it is already false).
 	Global._signing_out = false
@@ -508,6 +441,7 @@ func _ready():
 	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 
 	login.set_lobby(self)
+	sign_in_with_email.set_lobby(self)
 	login.show()
 
 	show_dcl_splash_screen()

@@ -418,6 +418,70 @@ impl DclPlayerIdentity {
         promise
     }
 
+    /// Native email login: verifies the OTP `code` sent to `email`, then mints
+    /// a local ephemeral keypair and delegates signing to the email wallet.
+    /// Unlike `async_link_email_verify` (which merges the email into an existing
+    /// guest), this signs in directly as the email identity — no guest session is
+    /// required or created. Resolves with the email wallet address string on
+    /// success; rejects with a human-readable error otherwise.
+    #[func]
+    fn async_login_email_verify(&mut self, email: GString, code: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let instance_id = self.base().instance_id();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let email = email.to_string();
+        let code = code.to_string();
+
+        handle.spawn(async move {
+            let result = perform_email_login(email, code).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::error!("thirdweb email_login: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok((address, ephemeral_auth_chain)) => {
+                    let address_str = format!("{:#x}", address);
+                    let ephemeral_chain_json = serde_json::to_string(&ephemeral_auth_chain)
+                        .expect("serialize ephemeral auth chain");
+
+                    if let Ok(mut identity) =
+                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                    {
+                        identity.call_deferred(
+                            "try_set_remote_wallet",
+                            &[
+                                address_str.clone().to_variant(),
+                                1_u64.to_variant(),
+                                ephemeral_chain_json.to_variant(),
+                            ],
+                        );
+                    }
+
+                    promise
+                        .bind_mut()
+                        .resolve_with_data(address_str.to_variant());
+                }
+                Err(e) => {
+                    tracing::error!("thirdweb email_login failed: {:?}", e);
+                    promise
+                        .bind_mut()
+                        .reject(GString::from(&format!("Could not verify code: {}", e)));
+                }
+            }
+        });
+
+        promise
+    }
+
     /// Queries thirdweb for the account's linked auth methods and refreshes the
     /// cached `is_thirdweb_guest_upgraded` flag. Resolves with `true` when the
     /// guest already has a non-`guest` profile (email/social), `false` when it
@@ -1205,7 +1269,7 @@ async fn perform_link_email(
     email: String,
     code: String,
 ) -> Result<H160, anyhow::Error> {
-    let email_jwt = thirdweb_guest::email_complete(&email, &code).await?;
+    let (email_jwt, _email_address) = thirdweb_guest::email_complete(&email, &code).await?;
 
     // Prefer a freshly minted guest session (idempotent: same anchor → same
     // wallet → fresh token). Fall back to the persisted token only if the
@@ -1239,6 +1303,34 @@ async fn perform_link_email(
     }
 
     Ok(session.wallet_address)
+}
+
+/// Native email login — verifies the OTP and mints a DCL ephemeral auth chain
+/// signed by the email identity's own wallet:
+///   1. `email_complete` → email JWT + email wallet address
+///   2. mint a local ephemeral keypair + Decentraland delegation message
+///   3. `sign_message` with the email JWT to sign the delegation
+///   4. assemble the EphemeralAuthChain
+async fn perform_email_login(
+    email: String,
+    code: String,
+) -> Result<(H160, EphemeralAuthChain), anyhow::Error> {
+    let (email_jwt, email_address) = thirdweb_guest::email_complete(&email, &code).await?;
+
+    let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
+
+    let signature_hex = thirdweb_guest::sign_message(&email_jwt, email_address, 1, &ephemeral_message).await?;
+
+    let signer_address_str = format!("{:#x}", email_address);
+    let chain = create_ephemeral_from_external_signature(
+        &signer_address_str,
+        &signature_hex,
+        &ephemeral_keys,
+        expiration,
+        &ephemeral_message,
+    )?;
+
+    Ok((email_address, chain))
 }
 
 /// Deletes the guest account server-side (issue #2335):
