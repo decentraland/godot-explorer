@@ -443,7 +443,7 @@ impl DclPlayerIdentity {
         handle.spawn(async move {
             let result = perform_email_login(email, code).await;
             let Some(mut promise) = get_promise() else {
-                tracing::error!("thirdweb email_login: promise dropped");
+                tracing::warn!("thirdweb email_login: promise dropped");
                 return;
             };
 
@@ -471,7 +471,7 @@ impl DclPlayerIdentity {
                         .resolve_with_data(address_str.to_variant());
                 }
                 Err(e) => {
-                    tracing::error!("thirdweb email_login failed: {:?}", e);
+                    tracing::warn!("thirdweb email_login failed: {:?}", e);
                     promise
                         .bind_mut()
                         .reject(GString::from(&format!("Could not verify code: {}", e)));
