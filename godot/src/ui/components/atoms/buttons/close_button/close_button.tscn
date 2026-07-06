@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://cqs5l0uuml56k"]
+
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_wpmf6"]
+[ext_resource type="StyleBox" uid="uid://dd32lmqc8hcar" path="res://src/ui/components/atoms/buttons/close_button/close_button_normal.tres" id="2_ra5sn"]
+[ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="2_wpmf6"]
+[ext_resource type="StyleBox" uid="uid://bhqn23dukd5q2" path="res://src/ui/components/atoms/buttons/close_button/close_button_pressed.tres" id="3_i4imk"]
+[ext_resource type="StyleBox" uid="uid://c52ib4bo6lu31" path="res://src/ui/components/atoms/buttons/close_button/close_button_disabled.tres" id="4_c67rh"]
+
+[node name="CloseButton" type="Button" unique_id=333937878]
+custom_minimum_size = Vector2(60, 60)
+size_flags_horizontal = 8
+size_flags_vertical = 0
+focus_mode = 0
+theme = ExtResource("1_wpmf6")
+theme_type_variation = &"SecondaryLittle"
+theme_override_colors/icon_focus_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
+theme_override_constants/icon_max_width = 35
+theme_override_styles/normal = ExtResource("2_ra5sn")
+theme_override_styles/normal_mirrored = ExtResource("2_ra5sn")
+theme_override_styles/pressed = ExtResource("3_i4imk")
+theme_override_styles/pressed_mirrored = ExtResource("3_i4imk")
+theme_override_styles/hover = ExtResource("2_ra5sn")
+theme_override_styles/hover_mirrored = ExtResource("2_ra5sn")
+theme_override_styles/hover_pressed = ExtResource("3_i4imk")
+theme_override_styles/hover_pressed_mirrored = ExtResource("3_i4imk")
+theme_override_styles/disabled = ExtResource("4_c67rh")
+theme_override_styles/disabled_mirrored = ExtResource("4_c67rh")
+theme_override_styles/focus = ExtResource("2_ra5sn")
+icon = ExtResource("2_wpmf6")
+icon_alignment = 1
+expand_icon = true
