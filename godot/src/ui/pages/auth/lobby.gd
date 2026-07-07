@@ -260,7 +260,6 @@ func show_auth_home_screen():
 	track_lobby_screen(get_auth_home_screen_name())
 	container_sign_in_step1.show()
 	container_sign_in_step2.hide()
-	sign_in_with_email.hide()
 	# When the guest path is gated this screen IS the root (no ACCOUNT_HOME to
 	# return to), so hide the back arrow; otherwise show it.
 	button_back.visible = not _is_guest_entry_disabled()
@@ -276,7 +275,6 @@ func show_auth_browser_open_screen(
 	Global.metrics.flush.call_deferred()
 	container_sign_in_step1.hide()
 	container_sign_in_step2.show()
-	sign_in_with_email.hide()
 	button_back.hide()
 	show_panel(control_signin)
 
@@ -289,14 +287,10 @@ func show_auth_browser_open_screen(
 
 
 func show_auth_email_screen():
-	current_screen_name = "AUTH_OTP_START"
-	Global.metrics.track_screen_viewed("AUTH_OTP_START", "")
-	container_sign_in_step1.hide()
-	container_sign_in_step2.hide()
-	sign_in_with_email.show()
+	track_lobby_screen("AUTH_OTP_START")
 	sign_in_with_email.setup()
 	button_back.show()
-	show_panel(control_signin)
+	show_panel(sign_in_with_email)
 
 
 func show_discover_ftue_screen():

@@ -6,6 +6,7 @@
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="3_pthdo"]
 [ext_resource type="PackedScene" uid="uid://18n0y7iu0obv" path="res://src/ui/components/atoms/inputs/dcl_text_edit.tscn" id="4_0fpke"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_22j5x"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="7_pthdo"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_j10fx"]
 line_spacing = 0.0
@@ -19,12 +20,38 @@ font_size = 30
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xe8al"]
 
-[node name="SignInWithEmail" type="VBoxContainer" unique_id=299044425]
-offset_right = 567.0
-offset_bottom = 714.0
+[sub_resource type="LabelSettings" id="LabelSettings_0fpke"]
+font = ExtResource("2_ds7q6")
+font_size = 40
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="SignInWithEmail" type="Control" unique_id=2043662496]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_sigeml")
 
-[node name="SignInTitle" type="Label" parent="." unique_id=183204996]
+[node name="EmailForm" type="MarginContainer" parent="." unique_id=1262824564]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 330
+theme_override_constants/margin_right = 64
+theme_override_constants/margin_bottom = 142
+
+[node name="SignInWithEmail" type="VBoxContainer" parent="EmailForm" unique_id=299044425]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SignInTitle" type="Label" parent="EmailForm/SignInWithEmail" unique_id=183204996]
 custom_minimum_size = Vector2(430, 176)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -35,31 +62,31 @@ label_settings = SubResource("LabelSettings_j10fx")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="VSeparatorVK" type="Control" parent="." unique_id=1137533154]
+[node name="VSeparatorVK" type="Control" parent="EmailForm/SignInWithEmail" unique_id=1137533154]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=241479714]
+[node name="VBoxContainer" type="VBoxContainer" parent="EmailForm/SignInWithEmail" unique_id=241479714]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Subtitle" type="Label" parent="VBoxContainer" unique_id=2023497837]
+[node name="Label_Subtitle" type="Label" parent="EmailForm/SignInWithEmail/VBoxContainer" unique_id=2023497837]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Enter your email"
 label_settings = SubResource("LabelSettings_6o1tx")
 
-[node name="HSeparator_Content" type="HSeparator" parent="VBoxContainer" unique_id=586083311]
+[node name="HSeparator_Content" type="HSeparator" parent="EmailForm/SignInWithEmail/VBoxContainer" unique_id=586083311]
 layout_mode = 2
 theme_override_constants/separation = 18
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xe8al")
 
-[node name="Container" type="Control" parent="VBoxContainer" unique_id=1819433600]
+[node name="Container" type="Control" parent="EmailForm/SignInWithEmail/VBoxContainer" unique_id=1819433600]
 custom_minimum_size = Vector2(20, 130)
 layout_mode = 2
 
-[node name="DclTextEdit" parent="VBoxContainer/Container" unique_id=1583726089 instance=ExtResource("4_0fpke")]
+[node name="DclTextEdit" parent="EmailForm/SignInWithEmail/VBoxContainer/Container" unique_id=1583726089 instance=ExtResource("4_0fpke")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 10
@@ -72,7 +99,7 @@ has_max_length = false
 is_optional = false
 validate_email = true
 
-[node name="Button_Confirm" type="Button" parent="VBoxContainer" unique_id=1770923801]
+[node name="Button_Next" type="Button" parent="EmailForm/SignInWithEmail/VBoxContainer" unique_id=1770923801]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
@@ -83,3 +110,32 @@ theme_override_fonts/font = ExtResource("1_0gmi8")
 theme_override_font_sizes/font_size = 30
 text = "NEXT"
 icon_alignment = 2
+
+[node name="Spinner" type="CenterContainer" parent="." unique_id=2045207327]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Spinner" unique_id=104954188]
+layout_mode = 2
+theme_override_constants/separation = 35
+
+[node name="TextureProgressBar" parent="Spinner/VBoxContainer" unique_id=1364957813 instance=ExtResource("7_pthdo")]
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Label" type="Label" parent="Spinner/VBoxContainer" unique_id=1115951620]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Confirming loging..."
+label_settings = SubResource("LabelSettings_0fpke")
+horizontal_alignment = 1
+autowrap_mode = 2

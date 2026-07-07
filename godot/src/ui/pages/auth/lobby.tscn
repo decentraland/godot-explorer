@@ -9,7 +9,7 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
 [ext_resource type="PackedScene" uid="uid://5x6lss2vy1x0" path="res://src/ui/pages/discover/first_time_user_experience.tscn" id="5_3tlbd"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_g62s5"]
-[ext_resource type="PackedScene" path="res://src/ui/components/molecules/dcl_splash/dcl_splash.tscn" id="5_l114c"]
+[ext_resource type="PackedScene" uid="uid://cncv6k4qr3wbd" path="res://src/ui/components/molecules/dcl_splash/dcl_splash.tscn" id="5_l114c"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/pages/backpack/backpack_portrait.tscn" id="9_qv8xq"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_ypsmd"]
 [ext_resource type="LabelSettings" uid="uid://cjsuieuof7bhf" path="res://assets/themes/lobby_title_small.tres" id="10_3tlbd"]
@@ -162,6 +162,7 @@ grow_vertical = 2
 
 [node name="DclSplash" parent="Main" unique_id=964062833 instance=ExtResource("5_l114c")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="TextureProgressBar" parent="Main/DclSplash" unique_id=774353178 instance=ExtResource("11_7iulh")]
@@ -859,6 +860,10 @@ color = Color(1, 1, 1, 0.7019608)
 font = ExtResource("15_vtvnx")
 font_size = 30
 
+[node name="SignInWithEmail" parent="Main" unique_id=299044425 instance=ExtResource("27_l114c")]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="SignIn" type="Control" parent="Main" unique_id=1717754795]
 unique_name_in_owner = true
 layout_mode = 2
@@ -1023,10 +1028,6 @@ icon_alignment = 2
 
 [node name="Control" type="Control" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=2066026985]
 custom_minimum_size = Vector2(0, 160)
-layout_mode = 2
-
-[node name="SignInWithEmail" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=299044425 instance=ExtResource("27_l114c")]
-unique_name_in_owner = true
 layout_mode = 2
 
 [node name="DiscoverFtue" type="Control" parent="Main" unique_id=1689811901]
