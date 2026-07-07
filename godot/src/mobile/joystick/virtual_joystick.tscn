@@ -110,4 +110,3 @@ unique_name_in_owner = true
 wait_time = 0.5
 
 [connection signal="resized" from="." to="." method="_on_resized"]
-[connection signal="pressed" from="Button_Camera" to="." method="_on_button_camera_pressed"]
