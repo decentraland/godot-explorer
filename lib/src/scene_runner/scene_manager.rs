@@ -1621,6 +1621,10 @@ impl SceneManager {
         };
         let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
 
+        // Drop the scene's external-content bookkeeping so a reload restarts
+        // its counters from zero.
+        crate::content::external_content::clear_scene(&scene.scene_entity_definition.id);
+
         // Cleanup trigger areas and release RIDs back to pool
         scene
             .trigger_areas
@@ -2310,6 +2314,39 @@ impl SceneManager {
     #[func]
     fn dismiss_memory_warning(&mut self) {
         self.memory_warning_dismissed = true;
+    }
+
+    /// Real process memory usage (resident set) in MB, or -1 when unavailable.
+    /// Cross-platform. Exposed for the preview scene-stats overlay:
+    /// `Performance.MEMORY_STATIC` only counts Godot's own allocator and is
+    /// compiled out of release / mobile export templates (returns 0 there), so
+    /// the overlay reads the real OS-level figure through here.
+    #[func]
+    fn get_process_memory_mb(&self) -> i32 {
+        crate::tools::memory_monitor::used_memory_mb()
+    }
+
+    /// External (non-deployed) content the scene pulled at runtime, for the
+    /// preview scene-stats overlay. Returns:
+    ///   { "files": PackedStringArray of user://content cache filenames
+    ///              (url-sourced textures; sizes are read from disk by the
+    ///              caller), "fetch_bytes": bytes consumed via the scene's JS
+    ///              fetch() (never stored on disk) }
+    /// Empty dictionary when the scene id is unknown. Passive read — no I/O.
+    #[func]
+    fn get_scene_external_content(&self, scene_id: i32) -> VarDictionary {
+        let mut dict = VarDictionary::new();
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return dict;
+        };
+        let (files, fetch_bytes) =
+            crate::content::external_content::snapshot(&scene.scene_entity_definition.id);
+        dict.set(
+            "files",
+            PackedStringArray::from_iter(files.iter().map(GString::from)),
+        );
+        dict.set("fetch_bytes", fetch_bytes as i64);
+        dict
     }
 }
 
