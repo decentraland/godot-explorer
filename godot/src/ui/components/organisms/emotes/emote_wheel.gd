@@ -114,6 +114,8 @@ func close() -> void:
 func open() -> void:
 	if control_wheel.visible:
 		return
+	if avatar_node != null:
+		_update_wheel(avatar_node.avatar_data.get_emotes())
 	control_wheel.show()
 	emote_wheel_opened.emit()
 	grab_focus()
