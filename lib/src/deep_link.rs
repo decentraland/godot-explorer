@@ -42,8 +42,9 @@ pub struct DeepLinkResult {
     pub gp_benchmark: bool,
     /// Show a transparent safe-area debug overlay on every screen
     pub safe_margin_debug: bool,
-    /// Force-enable the preview-only Scene Stats / limits overlay in any realm
-    /// (still never in production). Lets QA/creators turn it on outside preview.
+    /// Force-enable the Scene Stats / limits overlay in any realm, in every
+    /// build flavor (production included). Lets QA/creators turn it on
+    /// outside preview.
     pub scene_stats: bool,
 }
 

@@ -362,12 +362,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_top = 110
-theme_override_constants/margin_right = 12
 script = ExtResource("5_c8ksg")
-use_right = false
-use_top = false
 use_bottom = false
+min_margin_top = 110
+min_margin_right = 12
 metadata/_edit_lock_ = true
 
 [node name="HBoxContainer_DebugTools" type="HBoxContainer" parent="UI/SafeMarginContainerDebug"]
