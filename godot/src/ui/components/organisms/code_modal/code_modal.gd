@@ -38,7 +38,7 @@ func _ready() -> void:
 	Global.change_virtual_keyboard.connect(_on_virtual_keyboard_changed)
 	# The keyboard signal only fires on height *changes*. If the keyboard was already
 	# open (e.g. email input) when the modal appears, we must seed the offset ourselves.
-	call_deferred("_sync_keyboard_offset")
+	_sync_keyboard_offset.call_deferred()
 
 	for i in range(1, 7):
 		var line_edit: LineEdit = get_node("%" + "LineEdit_Code" + str(i))
