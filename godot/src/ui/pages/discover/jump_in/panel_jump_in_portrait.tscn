@@ -358,9 +358,12 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_u7byp")
 [node name="TextureRect_Image" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/Panel_Container_Image" unique_id=309673259]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
-layout_mode = 0
-offset_right = 624.0
-offset_bottom = 368.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 210.0
 theme = ExtResource("1_fg6xg")

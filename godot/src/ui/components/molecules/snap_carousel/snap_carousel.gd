@@ -123,6 +123,7 @@ func set_items(data_list: Array[Dictionary]) -> void:
 		card._card_index = i
 		card.set_card_mode(mode)
 		card.set_data(data_list[i])
+		card.card_body_tapped.connect(_on_card_body_tapped)
 		_cards.append(card)
 
 	selected_index = 0
@@ -273,6 +274,8 @@ func _gui_input(event: InputEvent) -> void:
 				_on_touch_released()
 				accept_event()
 			else:
+				_is_animating = false
+				_layout_cards()
 				card_tapped.emit(selected_index)
 				_restart_auto_scroll()
 			_is_touching = false
@@ -288,6 +291,16 @@ func _gui_input(event: InputEvent) -> void:
 				_drag_offset = delta_x
 				_layout_cards()
 				accept_event()
+
+
+func _on_card_body_tapped() -> void:
+	_is_animating = false
+	_is_touching = false
+	_is_dragging = false
+	_drag_offset = 0.0
+	_layout_cards()
+	card_tapped.emit(selected_index)
+	_restart_auto_scroll()
 
 
 func _on_touch_released() -> void:
