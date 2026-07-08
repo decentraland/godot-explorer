@@ -297,6 +297,12 @@ pub struct Scene {
     /// Number of consecutive frames where _process_scene returned false while waiting_process is true.
     /// Used to detect stuck scenes and force completion to unblock the scene thread.
     pub stuck_frames: u32,
+
+    /// Per-tick, per-component CPU time accumulator (`state_name -> micros`),
+    /// gated on `update_scene::SCENEPROF_ENABLED`. Accumulated across the
+    /// (possibly multi-frame) processing of one tick and flushed as a single
+    /// `[SCENEPROF]` line when the tick's component pass completes, then cleared.
+    pub tick_prof: HashMap<&'static str, u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -412,6 +418,7 @@ impl Scene {
             pending_impulses: Vec::new(),
             deno_memory_stats: None,
             stuck_frames: 0,
+            tick_prof: HashMap::new(),
         }
     }
 
@@ -491,6 +498,7 @@ impl Scene {
             pending_impulses: Vec::new(),
             deno_memory_stats: None,
             stuck_frames: 0,
+            tick_prof: HashMap::new(),
         }
     }
 

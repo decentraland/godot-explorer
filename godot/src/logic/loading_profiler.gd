@@ -144,6 +144,9 @@ func _try_connect() -> void:
 	realm.realm_changing.connect(_on_realm_changing)
 	realm.realm_changed.connect(_on_realm_changed)
 	realm.realm_change_failed.connect(_on_realm_change_failed)
+	# Turn on Rust per-tick, per-component scene profiling ([SCENEPROF] lines).
+	if sr.has_method("set_scene_tick_profiling"):
+		sr.set_scene_tick_profiling(true)
 	_connected = true
 	_log("profiler.connected")
 

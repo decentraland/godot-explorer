@@ -446,6 +446,15 @@ impl SceneManager {
         super::update_scene::reset_state_timing();
     }
 
+    /// Enable/disable per-tick, per-component scene profiling. When on, each
+    /// scene emits one `[SCENEPROF] scene=.. tick=.. total_us=.. <state>=us ..`
+    /// line per completed tick (accumulated into the scene's own buffer — no
+    /// global lock). Consumed by scripts/sceneprof_report.py.
+    #[func]
+    pub fn set_scene_tick_profiling(&mut self, enabled: bool) {
+        super::update_scene::set_scene_tick_profiling(enabled);
+    }
+
     /// Drain per-state CPU timing buckets as `State=us(count)\n...` lines.
     /// Call right after sampling; embed in benchmark JSON for analysis.
     #[func]

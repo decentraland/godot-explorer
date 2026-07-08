@@ -524,12 +524,25 @@ impl ResourceProvider {
     ) -> Result<(), String> {
         self.ensure_initialized().await?;
 
+        // [DLPROF] per-asset timing (issue #1602/#1640): separate queue-wait
+        // (dedup + semaphore) from wire time so a hang/slow-load can be pinned to
+        // "network" vs "queue" vs "processing". Gated on the same profiling toggle
+        // as [SCENEPROF]/[GLTFSYNC]; near-zero cost when off.
+        let dl_prof = crate::scene_runner::update_scene::scene_tick_profiling_enabled();
+        let t_enter = std::time::Instant::now();
+
         self.handle_pending_download(&file_hash, &absolute_file_path)
             .await?;
 
         let permit = self.semaphore.acquire().await;
+        let queue_us = (std::time::Instant::now() - t_enter).as_micros() as u64;
 
+        let mut wire_us: u64 = 0;
+        let mut dl_bytes: i64 = 0;
+        let cached;
         if tokio::fs::metadata(&absolute_file_path).await.is_err() {
+            cached = false;
+            let t_wire = std::time::Instant::now();
             self.download_file(
                 &url,
                 Path::new(&absolute_file_path),
@@ -537,19 +550,33 @@ impl ResourceProvider {
                 file_hash.clone(),
             )
             .await?;
+            wire_us = (std::time::Instant::now() - t_wire).as_micros() as u64;
 
             let metadata = tokio::fs::metadata(&absolute_file_path)
                 .await
                 .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
             let file_size = metadata.len() as i64;
+            dl_bytes = file_size;
 
             let mut existing_files = self.existing_files.write().await;
             self.ensure_space_for(&mut existing_files, file_size).await;
             self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
                 .await;
         } else {
+            cached = true;
             tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
             self.handle_existing_file(&absolute_file_path).await?;
+        }
+
+        if dl_prof {
+            tracing::info!(
+                "[DLPROF] hash={} cached={} queue_us={} wire_us={} bytes={}",
+                file_hash,
+                cached,
+                queue_us,
+                wire_us,
+                dl_bytes
+            );
         }
 
         let mut pending_downloads = self.pending_downloads.write().await;

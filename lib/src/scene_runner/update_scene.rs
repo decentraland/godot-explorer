@@ -24,6 +24,51 @@ static STATE_TIMING: Mutex<Option<HashMap<&'static str, (u64, u64)>>> = Mutex::n
 static STATE_TIMING_ENABLED: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
+/// Per-tick, per-component scene profiling. Unlike `STATE_TIMING` (a global
+/// aggregate guarded by a mutex, which measured a 50% FPS regression when
+/// always-on), this accumulates into each `Scene`'s own `tick_prof` field —
+/// no shared lock in the hot path — and emits a single `[SCENEPROF]` line per
+/// completed tick. Off by default; flip on from GDScript via
+/// `SceneManager.set_scene_tick_profiling(true)`.
+static SCENEPROF_ENABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_scene_tick_profiling(enabled: bool) {
+    SCENEPROF_ENABLED.store(enabled, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn scene_tick_profiling_enabled() -> bool {
+    SCENEPROF_ENABLED.load(Ordering::Relaxed)
+}
+
+/// Flush one tick's accumulated per-component timings as a single `[SCENEPROF]`
+/// line (`state=us` pairs, sorted heaviest-first) and clear the accumulator.
+fn emit_scene_tick_prof(scene: &mut super::scene::Scene) {
+    if scene.tick_prof.is_empty() {
+        return;
+    }
+    let mut entries: Vec<(&'static str, u64)> =
+        scene.tick_prof.iter().map(|(k, v)| (*k, *v)).collect();
+    entries.sort_unstable_by_key(|e| std::cmp::Reverse(e.1));
+    let total: u64 = entries.iter().map(|e| e.1).sum();
+    let mut parts = String::new();
+    for (name, us) in &entries {
+        parts.push(' ');
+        parts.push_str(name);
+        parts.push('=');
+        parts.push_str(&us.to_string());
+    }
+    tracing::info!(
+        "[SCENEPROF] scene={} tick={} total_us={} n={}{}",
+        scene.scene_id.0,
+        scene.tick_number,
+        total,
+        entries.len(),
+        parts
+    );
+    scene.tick_prof.clear();
+}
+
 #[inline]
 fn record_state_timing(state_name: &'static str, us: u64) {
     if !STATE_TIMING_ENABLED.load(Ordering::Relaxed) {
@@ -655,16 +700,23 @@ pub fn _process_scene(
                 // These states don't need the CRDT lock — handled above after lock is dropped
                 SceneUpdateState::ProcessRpcs
                 | SceneUpdateState::SendToThread
-                | SceneUpdateState::Processed => break,
+                | SceneUpdateState::Processed => {
+                    // Tick's component pass is done — flush its per-component timings.
+                    if SCENEPROF_ENABLED.load(Ordering::Relaxed) {
+                        emit_scene_tick_prof(scene);
+                    }
+                    break;
+                }
             };
 
             const TICK_TIME_LOGABLE_MS: i64 = 16000;
             let this_update_us =
                 (std::time::Instant::now() - before_compute_update).as_micros() as i64;
-            record_state_timing(
-                state_name(&scene.current_dirty.update_state),
-                this_update_us as u64,
-            );
+            let sname = state_name(&scene.current_dirty.update_state);
+            record_state_timing(sname, this_update_us as u64);
+            if SCENEPROF_ENABLED.load(Ordering::Relaxed) {
+                *scene.tick_prof.entry(sname).or_insert(0) += this_update_us.max(0) as u64;
+            }
             if this_update_us > TICK_TIME_LOGABLE_MS {
                 tracing::warn!(
                 "Scene \"{:?}\"(tick={:?}) in state {:?} takes more than {TICK_TIME_LOGABLE_MS}: {:?}us",

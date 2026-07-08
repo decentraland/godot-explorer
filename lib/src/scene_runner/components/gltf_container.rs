@@ -146,19 +146,41 @@ pub fn sync_gltf_loading_state(
     end_time_us: i64,
 ) -> bool {
     let mut current_time_us;
+
+    // Sub-instrumentation (gated on the same toggle as [SCENEPROF]) to settle
+    // where SyncGltfContainer's per-tick cost goes: the per-entity node lookup
+    // (try_get_node_as) vs the — believed dead — async_deferred_add_child call.
+    let prof = crate::scene_runner::update_scene::scene_tick_profiling_enabled();
+    let scene_id_i = scene.scene_id.0;
+    let tick = scene.tick_number;
+    let loading_len = scene.gltf_loading.len();
+    let mut n_iter: u64 = 0;
+    let mut lookup_us: u64 = 0;
+    let mut deferred_calls: u64 = 0;
+    let mut deferred_us: u64 = 0;
+    let mut done = true;
+
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let gltf_container_loading_state_component =
         SceneCrdtStateProtoComponents::get_gltf_container_loading_state_mut(crdt_state);
 
     for entity in scene.gltf_loading.clone().iter() {
+        n_iter += 1;
+        let t_lookup = if prof { Some(Instant::now()) } else { None };
         let gltf_node = godot_dcl_scene
             .ensure_node_3d(entity)
             .1
             .try_get_node_as::<DclGltfContainer>("GltfContainer");
+        if let Some(t) = t_lookup {
+            lookup_us += (Instant::now() - t).as_micros() as u64;
+        }
 
         if let Some(mut gltf_node) = gltf_node.clone() {
             if gltf_node.bind().get_dcl_pending_node().is_some() {
+                let t_def = Instant::now();
                 gltf_node.call("async_deferred_add_child", &[]);
+                deferred_calls += 1;
+                deferred_us += (Instant::now() - t_def).as_micros() as u64;
             }
         }
 
@@ -218,9 +240,59 @@ pub fn sync_gltf_loading_state(
 
         current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
         if current_time_us > end_time_us {
-            return false;
+            done = false;
+            break;
         }
     }
 
-    true
+    // Stuck-entity watchdog (issue #1640 "infinite loading"): once the loading
+    // set has shrunk to a small tail that isn't draining, periodically name each
+    // remaining entity (src + Godot loading state) so a hang can be traced to the
+    // exact asset that never reaches Finished/Error. Throttled + tail-gated so it
+    // stays silent during the bulk load. Cross-reference the entity/src against
+    // the LOADPROF `asset.gltf_start` line and the [DLPROF] download timing.
+    if prof && tick % 60 == 0 {
+        let remaining = scene.gltf_loading.len();
+        if remaining > 0 && remaining <= 8 {
+            for entity in scene.gltf_loading.iter() {
+                let node = godot_dcl_scene
+                    .ensure_node_3d(entity)
+                    .1
+                    .try_get_node_as::<DclGltfContainer>("GltfContainer");
+                let (state, src) = match node {
+                    Some(n) => {
+                        let b = n.bind();
+                        (
+                            b.get_dcl_gltf_loading_state(),
+                            b.get_dcl_gltf_src().to_string(),
+                        )
+                    }
+                    None => (-1, String::from("<no-node>")),
+                };
+                tracing::info!(
+                    "[GLTFSTUCK] scene={} tick={} entity={} state={} src={}",
+                    scene_id_i,
+                    tick,
+                    entity.as_i32(),
+                    state,
+                    src
+                );
+            }
+        }
+    }
+
+    if prof {
+        tracing::info!(
+            "[GLTFSYNC] scene={} tick={} loading_len={} iterated={} lookup_us={} deferred_calls={} deferred_us={} done={}",
+            scene_id_i,
+            tick,
+            loading_len,
+            n_iter,
+            lookup_us,
+            deferred_calls,
+            deferred_us,
+            done
+        );
+    }
+    done
 }
