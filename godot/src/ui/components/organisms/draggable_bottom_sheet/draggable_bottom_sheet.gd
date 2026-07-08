@@ -34,6 +34,10 @@ var _tween_callback: Callable
 var _tween_header_visible: bool
 var _tween_target_hidden: bool
 var _content_instance: Node
+var _ignore_input: bool = false
+var _focus_out_state: DragState = DragState.HALF
+var _state_at_touch_start: DragState = DragState.HALF
+var _last_touch_end_ms: int = 0
 
 @onready var panel_container_header: PanelContainer = %PanelContainer_Header
 @onready var panel_container_card: PanelContainer = %PanelContainer_Card
@@ -99,37 +103,84 @@ func reset_to_half() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		dragging = false
-		if drag_tween and drag_tween.is_running():
-			drag_tween.stop()
-			drag_tween = null
+		# Block input immediately so phantom touch-cancel events (delivered by iOS
+		# when the app backgrounds) cannot accidentally change the drag state.
+		_ignore_input = true
+		# On iOS (no home button), the swipe-up-to-home gesture delivers pressed=true
+		# then pressed=false to the app and fully completes BEFORE FOCUS_OUT fires.
+		# By the time we reach here, drag_state may already reflect the gesture's
+		# outcome (e.g. HALF→FULL). We detect this by checking whether a touch ended
+		# very recently: if so, we treat the pre-touch state as the authoritative
+		# state the user left the card in.
+		var ms_since_touch_end: int = Time.get_ticks_msec() - _last_touch_end_ms
+		if _last_touch_end_ms > 0 and ms_since_touch_end < 300:
+			_focus_out_state = _state_at_touch_start
+		else:
+			_focus_out_state = drag_state
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		_restore_drag_state.call_deferred()
+		# If the state changed between FOCUS_OUT and now it was driven by the
+		# swipe-up-to-home gesture (or a phantom touch that slipped through before
+		# FOCUS_OUT). Snap back to the state the user deliberately left the card in.
+		if drag_state != _focus_out_state:
+			_snap_to_state(_focus_out_state)
+		# Keep input blocked for a short window after FOCUS_IN. On iOS, phantom
+		# touches can also arrive between applicationWillEnterForeground (before
+		# FOCUS_IN) and applicationDidBecomeActive (FOCUS_IN), so holding the block
+		# past FOCUS_IN for 100 ms covers that gap too.
+		get_tree().create_timer(0.1).timeout.connect(_enable_input, CONNECT_ONE_SHOT)
 
 
-func _restore_drag_state() -> void:
-	if not is_visible_in_tree():
-		return
-	_card_half_position = _get_half_position()
+func _enable_input() -> void:
+	_ignore_input = false
+
+
+func _snap_to_state(state: DragState) -> void:
+	if drag_tween and drag_tween.is_running():
+		drag_tween.stop()
+		drag_tween = null
+	drag_state = state
 	panel_container_card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	match drag_state:
+	match state:
 		DragState.PEEK:
+			panel_container_header.hide()
+			_set_card_corner_radius(24, 24)
+			margin_container_show_more.show()
+			margin_container_show_more.self_modulate = Color.WHITE
 			panel_container_card.position.y = _get_peek_position()
 		DragState.HALF:
+			panel_container_header.hide()
+			_set_card_corner_radius(24, 24)
+			margin_container_show_more.show()
+			margin_container_show_more.self_modulate = Color.WHITE
 			panel_container_card.position.y = _card_half_position
 		DragState.FULL:
+			panel_container_header.show()
+			panel_container_header.self_modulate = Color.WHITE
+			_set_card_corner_radius(0, 0)
+			margin_container_show_more.hide()
 			panel_container_card.position.y = 0.0
+		DragState.HIDDEN:
+			panel_container_header.hide()
+			margin_container_show_more.show()
+			margin_container_show_more.self_modulate = Color.WHITE
+			panel_container_card.position.y = _get_hidden_position()
+	drag_state_changed.emit(state)
 
 
 func _input(event: InputEvent) -> void:
 	if not visible:
+		return
+	if _ignore_input:
 		return
 
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			start_pos = event.position
 			dragging = true
+			_state_at_touch_start = drag_state
 		elif dragging:
 			dragging = false
+			_last_touch_end_ms = Time.get_ticks_msec()
 			var drag_distance: float = event.position.y - start_pos.y
 			var drag_distance_x: float = absf(event.position.x - start_pos.x)
 			var gesture := DragGesture.IDLE
