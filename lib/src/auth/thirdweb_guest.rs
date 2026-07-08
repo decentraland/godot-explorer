@@ -503,6 +503,12 @@ struct UnlinkRequest<'a> {
     #[serde(rename = "type")]
     profile_type: &'a str,
     details: UnlinkDetails<'a>,
+    /// thirdweb guards against orphaning a wallet: unlinking the LAST auth method
+    /// is refused with `400 "user must have at least one account …"` unless this
+    /// is set. We always want the delete semantics, so it's `true`. It is a no-op
+    /// when the profile being unlinked is not the last one.
+    #[serde(rename = "allowAccountDeletion")]
+    allow_account_deletion: bool,
 }
 
 /// Builds the `details` identifier `/v1/auth/unlink` needs for a given profile:
@@ -543,6 +549,7 @@ async fn post_unlink(
     let body = UnlinkRequest {
         profile_type,
         details,
+        allow_account_deletion: true,
     };
 
     let response = reqwest::Client::builder()
