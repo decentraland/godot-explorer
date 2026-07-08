@@ -315,7 +315,7 @@ pub fn update_ios_xcode(
             MessageType::Warning,
             "Xcode project not found. Running export first...",
         );
-        crate::export::export(Some("ios"), "ipa", false)?;
+        crate::export::export(Some("ios"), "ipa", false, None)?;
 
         if !xcode_project_exists() {
             return Err(anyhow::anyhow!(

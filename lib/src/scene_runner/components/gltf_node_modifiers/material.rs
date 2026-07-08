@@ -87,6 +87,7 @@ pub fn apply_material_to_mesh(
     mesh: &mut Gd<MeshInstance3D>,
     material: &PbMaterial,
     content_mapping: &crate::content::content_mapping::ContentMappingAndUrlRef,
+    scene_ent_id: &str,
     surface_index: Option<i32>,
 ) -> Option<(DclMaterial, Gd<StandardMaterial3D>)> {
     let mat = material.material.as_ref()?;
@@ -96,6 +97,11 @@ pub fn apply_material_to_mesh(
     let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
     for tex in dcl_material.get_textures().into_iter().flatten() {
         if let DclSourceTex::Texture(hash) = &tex.source {
+            // url-sourced textures are external (non-deployed) content —
+            // record them for the preview stats row.
+            if hash.starts_with("http") {
+                crate::content::external_content::register_external_texture(scene_ent_id, hash);
+            }
             content_provider.call_deferred(
                 "fetch_texture_by_hash",
                 &[

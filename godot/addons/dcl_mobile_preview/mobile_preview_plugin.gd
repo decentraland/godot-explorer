@@ -2,12 +2,13 @@
 extends EditorPlugin
 
 # Device definitions: [label, portrait_w, portrait_h, landscape_w, landscape_h, is_ios, color]
+# "Default" matches the project's design base (display/window/size/viewport_*) so
+# selecting it never overwrites the base resolution that GraphicSettings reads.
 const DEVICES := [
-	["Default", 720, 720, 720, 720, false, Color(0.5, 0.5, 0.5)],
+	["Default", 720, 1600, 1600, 720, false, Color(0.5, 0.5, 0.5)],
 	["iPhone SE", 562, 1000, 1280, 720, true, Color(1.0, 0.4, 0.4)],
 	["iPhone 14 Pro", 590, 1280, 1561, 720, true, Color(0.35, 0.6, 1.0)],
 	["Moto Edge 60 Pro", 576, 1280, 1600, 720, false, Color(0.35, 0.85, 0.45)],
-	["Figma Base", 720, 1600, 1600, 720, false, Color(0.35, 0.85, 0.45)],
 ]
 
 const SCENE_META_KEY := "mobile_preview_orientation"
@@ -120,6 +121,10 @@ func _enter_tree() -> void:
 	var last_device: int = (
 		es.get_setting(SETTINGS_DEVICE_KEY) if es.has_setting(SETTINGS_DEVICE_KEY) else 0
 	)
+	# Clamp in case a previously-selected device (e.g. removed "Figma Base") is
+	# no longer in DEVICES — otherwise OptionButton.select would be out of range.
+	if last_device < 0 or last_device >= DEVICES.size():
+		last_device = 0
 	var last_orient: int = (
 		es.get_setting(SETTINGS_ORIENT_KEY) if es.has_setting(SETTINGS_ORIENT_KEY) else 0
 	)

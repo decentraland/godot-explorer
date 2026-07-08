@@ -21,6 +21,21 @@ pub fn update_gltf_container(
     ref_time: &Instant,
     end_time_us: i64,
 ) -> bool {
+    // Diagnostic: skip every GLTF instantiation when `--skip-gltf` is set.
+    // Used to measure the rendering/processing floor with no scene meshes
+    // visible (just sky + UI + avatar). Drains the dirty set so we don't
+    // re-process forever.
+    if crate::godot_classes::dcl_global::DclGlobal::try_singleton()
+        .map(|g| g.bind().cli.bind().skip_gltf_load)
+        .unwrap_or(false)
+    {
+        scene
+            .current_dirty
+            .lww_components
+            .remove(&SceneComponentId::GLTF_CONTAINER);
+        return true;
+    }
+
     let mut updated_count = 0;
     let mut current_time_us;
 
@@ -165,11 +180,6 @@ pub fn sync_gltf_loading_state(
         if current_state_godot != current_state {
             let pb_gltf_container_loading_state = PbGltfContainerLoadingState {
                 current_state: current_state_godot.to_i32(),
-                node_paths: Vec::new(),
-                mesh_names: Vec::new(),
-                material_names: Vec::new(),
-                skin_names: Vec::new(),
-                animation_names: Vec::new(),
             };
             gltf_container_loading_state_component
                 .put(*entity, Some(pb_gltf_container_loading_state));

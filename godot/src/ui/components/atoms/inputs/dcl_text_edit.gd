@@ -13,17 +13,30 @@ const LONG_PRESS_DURATION := 0.5
 @export var has_max_length: bool = true
 @export var max_length: int = 15
 @export var is_optional: bool = true
-@export var wrap_text: bool = true
+@export var wrap_text: bool = true:
+	set(value):
+		wrap_text = value
+		if text_edit:
+			if wrap_text:
+				text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+			else:
+				text_edit.wrap_mode = TextEdit.LINE_WRAPPING_NONE
 
 @export_group("Validation")
 @export var validate_url: bool = false
 @export var validate_date: bool = false
 @export var validate_no_symbols: bool = false
 @export var validate_no_edge_spaces: bool = false
+@export var validate_email: bool = false
+## When true the error label and style are only applied after the field loses
+## focus. The `error` flag is still updated on every change so the confirm
+## button stays disabled until the value is valid.
+@export var validate_on_blur: bool = false
 
 var length_error: bool = false
 var error: bool = false
 var _touched: bool = false
+var _focus_active: bool = false
 var _dragging: bool = false
 var _drag_start_y: float = 0.0
 var _drag_start_scroll: float = 0.0
@@ -57,6 +70,7 @@ func _ready() -> void:
 		label_length.text = "0/" + str(max_length)
 	else:
 		label_length.hide()
+		label_error.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_update_clear_button()
 	_check_error()
 
@@ -101,6 +115,12 @@ func _has_edge_spaces(value: String) -> bool:
 	return regex.search(value) != null
 
 
+func _is_valid_email(value: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+	return regex.search(value) != null
+
+
 func _check_error() -> void:
 	var errors: Array[String] = []
 	var text := text_edit.text
@@ -123,9 +143,12 @@ func _check_error() -> void:
 	if validate_no_edge_spaces and text.length() > 0 and _has_edge_spaces(text):
 		errors.append("No leading or trailing spaces")
 
+	if validate_email and text.length() > 0 and !_is_valid_email(text):
+		errors.append("Enter a valid email")
+
 	error = errors.size() > 0
 
-	if error and _touched:
+	if error and _touched and (not validate_on_blur or not _focus_active):
 		text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
 		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
 		if errors.size() > 1:
@@ -137,6 +160,19 @@ func _check_error() -> void:
 		text_edit.add_theme_stylebox_override("normal", LINE_EDIT)
 		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_FOCUSED)
 		label_error.hide()
+
+
+## Shows an externally-supplied error (e.g. a backend validation result) in the
+## same inline label + styling used for local format validation. It is cleared
+## on the next edit by `_check_error`, so the user sees it disappear as they fix
+## the field.
+func show_external_error(message: String) -> void:
+	_touched = true
+	error = true
+	text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
+	text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
+	label_error.text = message
+	label_error.show()
 
 
 func _on_text_edit_gui_input(event: InputEvent) -> void:
@@ -187,10 +223,14 @@ func _on_long_press() -> void:
 
 func _on_text_edit_focus_entered() -> void:
 	_touched = true
+	_focus_active = true
 	_update_clear_button()
 
 
 func _on_text_edit_focus_exited() -> void:
+	_focus_active = false
+	_check_error()
+	emit_signal("dcl_text_edit_changed")
 	call_deferred("_update_clear_button")
 
 

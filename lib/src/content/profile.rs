@@ -98,6 +98,17 @@ pub(crate) async fn request_lambda_profile(
     http_requester: Arc<HttpQueueRequester>,
 ) -> Result<UserProfile, anyhow::Error> {
     let url = format!("{}profiles/{:#x}", lamda_server_base_url, user_id);
+    request_lambda_profile_by_url(url, profile_base_url, http_requester).await
+}
+
+// Fetches and parses a lambda profile from an explicit URL. Used both by the
+// h160 path above and by the default-profile path (`profiles/default{N}`),
+// whose id is not an eth address.
+pub(crate) async fn request_lambda_profile_by_url(
+    url: String,
+    profile_base_url: &str,
+    http_requester: Arc<HttpQueueRequester>,
+) -> Result<UserProfile, anyhow::Error> {
     let response = http_requester
         .request(
             RequestOption::new(

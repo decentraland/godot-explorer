@@ -120,9 +120,8 @@ func _scroll_to_bottom() -> void:
 func _async_scroll_to_bottom_after_layout() -> void:
 	# _async_update_layout needs 3 frames: (1) reset sizes, (2) measure content,
 	# (3) Godot applies min sizes. If scroll is still off, increase frame count here.
-	await get_tree().process_frame
-	await get_tree().process_frame
-	await get_tree().process_frame
+	if not await _async_await_frames(3):
+		return
 	if not scroll_container_chats_list or not is_instance_valid(scroll_container_chats_list):
 		return
 
@@ -189,6 +188,8 @@ func _close_write_mode() -> void:
 	_header.show()
 	if Global.is_mobile():
 		DisplayServer.virtual_keyboard_hide()
+	# Hand ui_root focus back (the LineEdit took it) so movement re-enables.
+	Global.explorer_grab_focus()
 	on_exit_write_mode.emit()
 	_relayout_all_messages()
 
@@ -206,8 +207,8 @@ func async_start_chat():
 	# Re-layout all messages now that we have a valid width
 	_relayout_all_messages()
 	if !scrolled:
-		await get_tree().process_frame
-		_scroll_to_bottom()
+		if await _async_await_frames(1):
+			_scroll_to_bottom()
 
 
 func _relayout_all_messages() -> void:
@@ -221,10 +222,21 @@ func _async_deferred_relayout_all_messages() -> void:
 	# iOS needs 3 frames for orientation change to propagate the new window size
 	# before relayout can measure correctly. If layout glitches on orientation
 	# change, increase the frame count here.
-	await get_tree().process_frame
-	await get_tree().process_frame
-	await get_tree().process_frame
+	if not await _async_await_frames(3):
+		return
 	_relayout_all_messages()
+
+
+## Await `count` process frames, returning false if this node left the tree
+## mid-await. A queued coroutine (e.g. an orientation relayout) can outlive the
+## node when sign-out frees the chat between frames; resuming would then call
+## get_tree() on a null instance and crash. Callers must bail when this is false.
+func _async_await_frames(count: int) -> bool:
+	for _i in count:
+		if not is_inside_tree():
+			return false
+		await get_tree().process_frame
+	return is_inside_tree()
 
 
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
@@ -282,7 +294,8 @@ func reset_safe_area_insets() -> void:
 func async_apply_system_bar_insets() -> void:
 	if not OS.get_name() == "Android":
 		return
-	await get_tree().process_frame
+	if not await _async_await_frames(1):
+		return
 	var insets := _get_android_system_bar_insets()
 	var win_size := DisplayServer.window_get_size()
 	var viewport_size := get_viewport().get_visible_rect().size

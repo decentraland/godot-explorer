@@ -60,6 +60,12 @@ impl DclAssetServer {
             return;
         }
 
+        // Note: baked texture variants are now saved as plain ETC2 `Image`
+        // resources and impostor atlases as ETC2 `ImageTexture`s embedded in
+        // the `.scn` (no GPU readback on save, no PCT2 anywhere), so the
+        // process-wide `set_keep_all_compressed_buffers` PCT2 plumbing is no
+        // longer needed here.
+
         let port = self.port;
         tracing::info!("Starting asset optimization server on port {}", port);
 

@@ -62,6 +62,11 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     avatar_modifier_area_3d
                         .bind_mut()
                         .set_exclude_ids(exclude_ids);
+                    // Issue #2166: scenes commonly push excludeIds *after* the
+                    // avatar has already entered the area. The setter alone
+                    // does not re-trigger detection, so we nudge overlapping
+                    // detectors to re-evaluate.
+                    avatar_modifier_area_3d.call("refresh_overlapping_detectors", &[]);
                 } else {
                     let mut avatar_modifier_area = godot::tools::load::<PackedScene>(
                         "res://src/decentraland_components/avatar_modifier_area.tscn",

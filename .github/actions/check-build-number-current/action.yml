@@ -1,0 +1,62 @@
+name: Check build number is current
+description: >
+  Decide whether an artifact already in R2 is safe to REUSE, by comparing the build number it was
+  BAKED with (an R2 `build_number.txt` sidecar) against the authoritative number allocated for this
+  commit (passed in as `expected-number`). Shared by the iOS and Android resolve legs so both make
+  the identical reuse-vs-rebuild decision. Outputs `current=true` only when the sidecar exists and
+  equals the expected number; otherwise `current=false` (missing sidecar or superseded on a store →
+  rebuild). When `expected-number` is empty (fork PR / allocator skipped, no authoritative number to
+  compare against) it is a no-op and returns `current=true` — nothing is shipped to a store in that
+  case anyway. Reads AWS credentials from the ambient job environment (AWS_ACCESS_KEY_ID / _SECRET),
+  as set by the calling job.
+
+inputs:
+  bucket:
+    description: R2 bucket name (mobile-artifacts).
+    required: true
+  endpoint:
+    description: R2 S3 endpoint URL.
+    required: true
+  sidecar-key:
+    description: Object key of the build_number.txt sidecar next to the artifact.
+    required: true
+  expected-number:
+    description: >
+      The authoritative build number the artifact must have been baked with (from the single
+      allocation in `prepare`). Empty → the check is skipped (returns current=true).
+    required: false
+    default: ''
+
+outputs:
+  current:
+    description: '"true" if the artifact''s baked number is still current (safe to reuse), else "false".'
+    value: ${{ steps.check.outputs.current }}
+
+runs:
+  using: composite
+  steps:
+    - id: check
+      shell: bash
+      env:
+        BUCKET: ${{ inputs.bucket }}
+        ENDPOINT: ${{ inputs.endpoint }}
+        SIDECAR_KEY: ${{ inputs.sidecar-key }}
+        EXPECTED: ${{ inputs.expected-number }}
+      run: |
+        set -eu
+        if [ -z "${EXPECTED:-}" ]; then
+          echo "ℹ️  No authoritative build number (fork PR / allocator skipped) — skipping the guard."
+          echo "current=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        BAKED=$(aws s3 cp "s3://${BUCKET}/${SIDECAR_KEY}" - --endpoint-url "$ENDPOINT" 2>/dev/null | tr -dc '0-9' || true)
+        if [ -z "$BAKED" ]; then
+          echo "⚠️  No build_number sidecar at s3://${BUCKET}/${SIDECAR_KEY} → not current (rebuild to bake $EXPECTED)."
+          echo "current=false" >> "$GITHUB_OUTPUT"
+        elif [ "$BAKED" != "$EXPECTED" ]; then
+          echo "♻️→🔨 Artifact baked build $BAKED, but the allocator now assigns $EXPECTED (superseded on a store) → not current."
+          echo "current=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "✅ Artifact's baked build number ($BAKED) is still current."
+          echo "current=true" >> "$GITHUB_OUTPUT"
+        fi

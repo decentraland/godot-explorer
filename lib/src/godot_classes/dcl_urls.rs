@@ -106,8 +106,16 @@ impl DclUrls {
         urls::notifications_api().to_godot()
     }
     #[func]
+    pub fn credits_server() -> GString {
+        urls::credits_server().to_godot()
+    }
+    #[func]
     pub fn mobile_bff() -> GString {
         urls::mobile_bff().to_godot()
+    }
+    #[func]
+    pub fn attestation_bff() -> GString {
+        urls::attestation_bff().to_godot()
     }
 
     // Frontend
@@ -118,6 +126,14 @@ impl DclUrls {
     #[func]
     pub fn marketplace() -> GString {
         urls::marketplace().to_godot()
+    }
+    #[func]
+    pub fn marketplace_catalog_api() -> GString {
+        urls::marketplace_catalog_api().to_godot()
+    }
+    #[func]
+    pub fn marketplace_api() -> GString {
+        urls::marketplace_api().to_godot()
     }
     #[func]
     pub fn marketplace_claim_name() -> GString {

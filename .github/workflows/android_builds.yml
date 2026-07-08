@@ -1,6 +1,32 @@
-name: 🤖 Android (VR and Mobile)
+name: 🤖 Android
 on:
   workflow_call:
+    inputs:
+      # All three are optional so the push path (runner.yml) keeps calling this with no `with:` block
+      # and behaves exactly as before. mobile_distribute passes them to rebuild a specific commit
+      # on demand (the superseded / self-sufficient case).
+      ref:
+        description: >
+          Branch/ref to build (drives the prod flag + the R2 key branch segment). Empty → defaults
+          to the triggering event's branch.
+        required: false
+        type: string
+        default: ''
+      sha:
+        description: >
+          Commit SHA to check out, allocate the build number for, and key the R2 upload by.
+          Empty → defaults to the triggering event's head SHA.
+        required: false
+        type: string
+        default: ''
+      concurrency_key:
+        description: >
+          Overrides the concurrency-group discriminator so an on-demand rebuild (mobile_distribute)
+          does not share a group with — and cancel — the push-triggered Android build for the same
+          actor/ref. Empty keeps the default push behavior.
+        required: false
+        type: string
+        default: ''
     secrets:
       ANDROID_KEYSTORE_BASE64:
         required: true
@@ -16,18 +42,34 @@ on:
         required: true
       SENTRY_PROJECT:
         required: true
+      # R2 mobile-artifacts bucket where the signed APK is published for download.
+      # Optional: when unset the APK upload step is skipped (e.g. fork PRs).
+      MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID:
+        required: false
+      MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY:
+        required: false
+      MOBILE_ARTIFACTS_R2_ENDPOINT:
+        required: false
+      MOBILE_ARTIFACTS_R2_BUCKET:
+        required: false
+      # API key (bearer) for the Cloudflare Worker build-number allocator. Optional: when unset
+      # (e.g. fork PRs) the build keeps the committed placeholder versionCode (never shipped).
+      BUILD_NUMBER_SECRET:
+        required: false
 
 permissions:
   pull-requests: write
   contents: read
 
 concurrency:
-  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-android
+  # `inputs.concurrency_key` (set by mobile_distribute's on-demand rebuild) isolates that run from
+  # the push-triggered build so the two don't cancel each other; falls back to the original key.
+  group: ci-${{ github.actor }}-${{ inputs.concurrency_key || github.head_ref || github.run_number }}-${{ github.ref }}-android
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build VR and Mobile
+    name: Build Android
     runs-on: warp-ubuntu-latest-x64-4x
     timeout-minutes: 35
     container:
@@ -35,18 +77,41 @@ jobs:
       image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
+      # WarpBuild's cache action authenticates via this token, which exists on the runner
+      # host but is NOT propagated into the container unless forwarded explicitly. Without
+      # it the cache step is a silent no-op ("Authentication token is invalid"). See:
+      # https://github.com/WarpBuilds/cache#running-inside-a-container
+      env:
+        WARPBUILD_RUNNER_VERIFICATION_TOKEN: ${{ env.WARPBUILD_RUNNER_VERIFICATION_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
       - name: Add safe directory
         run: |
           git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
           toolchain: "1.90"
           components: clippy, rustfmt
+
+      # Cache the Rust build (host + Android target) so the dep tree isn't recompiled from
+      # scratch every push. Use the WarpBuild-native cache (raw target/, NO cleaning): the v8
+      # crate's prebuilt static lib (librusty_v8.a) lives under target/.../build/v8-*/out, and
+      # rust-cache's cleanup strips it while keeping v8's fingerprint → warm builds then fail to
+      # link. set-up-warp-cache keeps the full target/, so the lib survives (matches the iOS leg).
+      # Restore runs on every branch; the save (below) only writes on main, so PRs restore from
+      # main's cache without paying the multi-minute save on each push.
+      # WarpBuild's cache action shells out to wget; the builder image may not ship it.
+      - name: Ensure wget (WarpCache dependency)
+        run: command -v wget >/dev/null 2>&1 || (apt-get update && apt-get install -y wget)
+      - name: Set up build cache
+        id: cache
+        uses: ./.github/actions/set-up-warp-cache
+        with:
+          cache-name: android-build
+
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
@@ -56,12 +121,30 @@ jobs:
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
 
+      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
+      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
+      # and so the APK + AAB exports below stamp the same versionCode for this commit.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
       - name: Build Rust libraries
         run: |
           cargo run -- build --release ${{ env.PROD_FLAG }}
           cargo run -- build --release --target android ${{ env.PROD_FLAG }}
           cargo run -- import-assets
-      
+
+      # Persist the freshly built target/ — no-op off main (see save-warp-cache). Placed right
+      # after the build so a later export/sign failure can't lose a valid cache.
+      - name: Save build cache (main only)
+        uses: ./.github/actions/save-warp-cache
+        with:
+          cargo-key: ${{ steps.cache.outputs.cargo-key }}
+          rust-key: ${{ steps.cache.outputs.rust-key }}
+
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release
@@ -97,18 +180,22 @@ jobs:
           mv exports/decentraland.godot.client-signed.apk exports/decentraland.godot.client.apk
           rm exports/decentraland.godot.client-aligned.apk
 
+      # The AAB is the Play Store artifact — only build/sign/upload it on main/release.
       - name: Export Android AAB
+        if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
         run: |
           cargo run -- export --target android --format aab --release
 
       # Decode and setup keystore for AAB signing
       - name: Setup AAB Signing Keystore
+        if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > dclgodot.upload.jks
           ls -la dclgodot.upload.jks
 
       # Sign the AAB file
       - name: Sign Android AAB
+        if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
         run: |
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
             -keystore dclgodot.upload.jks \
@@ -135,6 +222,102 @@ jobs:
           mv exports/decentraland.godot.client.apk android-artifacts-apk/ || true
           mv exports/decentraland.godot.client.aab android-artifacts-aab/ || true
 
+      # Upload the signed artifacts to the R2 mobile-artifacts bucket so they can be
+      # downloaded directly (the PR build report and the Mobile Distribute Slack
+      # notification link here). Keyed by branch + commit SHA so a download can target
+      # an exact build. The APK is uploaded for every build; the AAB (Play Store
+      # artifact) only for main/release.
+      - name: Upload Android artifacts to R2
+        if: success()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+          # Public R2 domain mapped to the mobile-artifacts bucket root.
+          R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_S3_BUCKET" ] || [ -z "$AWS_ENDPOINT_URL" ]; then
+            echo "⚠️  R2 mobile-artifacts bucket not configured (MOBILE_ARTIFACTS_R2_* secrets), skipping APK upload"
+            exit 0
+          fi
+
+          APK_PATH="android-artifacts-apk/decentraland.godot.client.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "⚠️  APK not found at $APK_PATH, skipping R2 upload"
+            exit 0
+          fi
+
+          # The android builder image does not ship the AWS CLI; install v2 on demand.
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "Installing AWS CLI v2..."
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q /tmp/awscliv2.zip -d /tmp
+            /tmp/aws/install -i /tmp/aws-cli -b /tmp/aws-bin
+            export PATH="/tmp/aws-bin:$PATH"
+          fi
+
+          SHA="${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}"
+          BRANCH="${{ inputs.ref || github.head_ref || github.ref_name }}"
+          SAFE_BRANCH=$(echo "$BRANCH" | tr '/' '-')
+          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.apk"
+
+          echo "📤 Uploading APK to s3://${AWS_S3_BUCKET}/${KEY}"
+          aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          # Update the branch 'latest' pointer WITHOUT re-uploading. The managed `aws s3 cp s3:// s3://`
+          # is unusable on R2 (tagging headers NotImplemented), so use low-level copy-object; fall
+          # back to a plain re-upload if R2 rejects the copy.
+          aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_KEY" \
+            --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+            || aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+
+          PUBLIC_URL="${R2_PUBLIC_BASE_URL}/${KEY}"
+          echo "✅ APK uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
+          echo "🔗 Public URL: ${PUBLIC_URL}"
+          # Surface the direct download link to later steps (build report comment).
+          echo "APK_PUBLIC_URL=${PUBLIC_URL}" >> "$GITHUB_ENV"
+
+          # Sidecar: record the build number this APK was BAKED with, right next to it. The deploy
+          # orchestrator (mobile_distribute android-resolve) compares it against the authoritative
+          # allocation before reusing this APK — if the allocator has since bumped the number
+          # (a store shipped past it), the APK is stale and must be rebuilt, not reused. Mirrors the
+          # iOS sidecar in ios_r2_artifact.yml.
+          if [ -n "${DCL_BUILD_NUMBER:-}" ]; then
+            BUILD_NUMBER_KEY="android/${SAFE_BRANCH}/${SHA}/build_number.txt"
+            LATEST_BUILD_NUMBER_KEY="android/${SAFE_BRANCH}/latest/build_number.txt"
+            printf '%s' "$DCL_BUILD_NUMBER" > build_number.txt
+            echo "🔢 Writing build_number sidecar ($DCL_BUILD_NUMBER) → s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}"
+            aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+            aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_BUILD_NUMBER_KEY" \
+              --copy-source "${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+              || aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${LATEST_BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          else
+            echo "ℹ️  DCL_BUILD_NUMBER unset — no build_number sidecar (fork PR / allocator skipped)."
+          fi
+
+          # The AAB is the Play Store artifact — only publish it for main/release.
+          if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "release" ]; then
+            AAB_PATH="android-artifacts-aab/decentraland.godot.client.aab"
+            if [ -f "$AAB_PATH" ]; then
+              AAB_KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
+              AAB_LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.aab"
+              echo "📤 Uploading AAB to s3://${AWS_S3_BUCKET}/${AAB_KEY}"
+              aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+              # Update the branch 'latest' pointer WITHOUT re-uploading (low-level copy-object;
+              # R2 rejects the managed server-side copy). Fall back to a re-upload on failure.
+              aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$AAB_LATEST_KEY" \
+                --copy-source "${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+                || aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+              echo "✅ AAB uploaded to R2"
+              echo "🔗 Public URL: ${R2_PUBLIC_BASE_URL}/${AAB_KEY}"
+            else
+              echo "⚠️  AAB not found at $AAB_PATH, skipping AAB upload"
+            fi
+          else
+            echo "ℹ️  Branch '$BRANCH' is not main/release — skipping AAB upload (APK only)"
+          fi
+
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         if: success() || failure()
@@ -145,7 +328,7 @@ jobs:
 
       - name: Upload AAB Artifacts
         uses: actions/upload-artifact@v4
-        if: success() || failure()
+        if: (success() || failure()) && (github.ref_name == 'main' || github.ref_name == 'release')
         with:
           name: AndroidAAB
           path: android-artifacts-aab/
@@ -153,15 +336,15 @@ jobs:
 
       - name: Upload Android Debug Symbols
         uses: actions/upload-artifact@v4
-        if: success() || failure()
+        if: (success() || failure()) && (github.ref_name == 'main' || github.ref_name == 'release')
         with:
           name: Android Native Debug Symbols
           path: android-debug-symbols/
           if-no-files-found: error
         
-      # Upload debug symbols to Sentry for production builds
+      # Upload debug symbols to Sentry for production builds (main/release only)
       - name: Upload debug symbols to Sentry
-        if: success()
+        if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
         shell: bash
         run: |
           EXPLORER_VERSION=$(cargo run -- explorer-version)
@@ -268,15 +451,20 @@ jobs:
           # Determine build status
           if [ "${{ job.status }}" = "success" ]; then
             ANDROID_STATUS="✅ Success"
-            APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
-            AAB_LINK="[📦 Download AAB](${ARTIFACTS_URL}/artifacts)"
-            SYMBOLS_LINK="[🔧 Debug Symbols](${ARTIFACTS_URL}/artifacts)"
+            # Prefer the direct R2 download link when the APK was uploaded.
+            if [ -n "${APK_PUBLIC_URL:-}" ]; then
+              APK_LINK="[📱 Download APK](${APK_PUBLIC_URL})"
+            else
+              APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
+            fi
           else
             ANDROID_STATUS="❌ Failed"
             APK_LINK="Build failed"
-            AAB_LINK="Build failed"
-            SYMBOLS_LINK="Build failed"
           fi
+          # AAB and debug symbols are only built on main/release, never on PRs (this
+          # report only runs on PRs), so don't link to artifacts that won't exist.
+          AAB_LINK="_main/release builds only_"
+          SYMBOLS_LINK="_main/release builds only_"
 
           {
             echo "## 📦 Build Report"
@@ -293,7 +481,7 @@ jobs:
             echo ""
             echo "### 🍏 iOS"
             echo ""
-            echo "> iOS builds are triggered manually. Add the \`build-ios\` label to trigger an iOS build."
+            echo "> The signed APK is uploaded to R2 on every build (link above). Add the \`build\` label (alias: \`build-ios\`) to build & ship iOS to TestFlight and post a Slack \"Android build ready\" notification."
             echo ""
             echo "---"
             echo ""

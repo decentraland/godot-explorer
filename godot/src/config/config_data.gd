@@ -31,7 +31,6 @@ enum ConfigParams {
 	DYNAMIC_SKYBOX,
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
-	GAMEPAD_CAMERA_SENSITIVITY,
 	AVATAR_IMPOSTORS_ENABLED,
 }
 
@@ -114,7 +113,7 @@ var bloom_quality: int = 0:
 		param_changed.emit(ConfigParams.BLOOM_QUALITY)
 
 # 0: Very Low, 1: Low, 2: Medium, 3: High, 4: Custom
-var graphic_profile: int = 0:
+var graphic_profile: int = 3:
 	set(value):
 		graphic_profile = value
 		param_changed.emit(ConfigParams.GRAPHIC_PROFILE)
@@ -154,6 +153,25 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 		last_parcel_position = value
 
 var terms_and_conditions_version: int = 0
+
+# Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
+# re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
+# request — which on Android returns immediately without a dialog — isn't re-attempted
+# (nor logged as a spurious reject) on every entry-flow button tap.
+var notif_permission_last_prompt_unix: int = 0
+
+# Lowercased wallet address that accepted the IAP terms, or "" if none. Scoped
+# per-wallet (not a plain bool) so one account's legal consent never carries
+# over to a different account signing in on the same device. See
+# IapManager.are_terms_accepted / accept_terms.
+var iap_terms_accepted_wallet: String = ""
+
+# Snapshot of owned item counts for the "NEW" tag (#2300), kept entirely local — no
+# endpoint timestamps. Shape: { category: { wallet_lower: { item_urn: count } } } with
+# category in {"wearable","emote"}. An item is tagged NEW when its current owned count
+# exceeds this snapshot (a new urn, or one extra copy). Seeded on the first backpack load
+# for a wallet and advanced on every load (see Backpack.newtag_evaluate).
+var backpack_owned_counts: Dictionary = {}
 
 # Unix timestamp until which the soft version-upgrade overlay is snoozed
 # (set when the user presses "Later"; ignored for required-minimum blocks).
@@ -224,11 +242,6 @@ var audio_mic_amplification: float = 100.0:
 	set(value):
 		audio_mic_amplification = value
 
-var gamepad_camera_sensitivity: float = 50.0:
-	set(value):
-		gamepad_camera_sensitivity = maxf(value, 1.0)
-		param_changed.emit(ConfigParams.GAMEPAD_CAMERA_SENSITIVITY)
-
 var analytics_user_id: String = "":
 	set(value):
 		analytics_user_id = value
@@ -293,7 +306,7 @@ func load_from_default():
 	self.shadow_quality = 0  # disabled
 	self.bloom_quality = 0  # off
 	self.anti_aliasing = 0  # off
-	self.graphic_profile = 0  # Very Low (will be set by benchmark on first launch)
+	self.graphic_profile = 3  # High (HardwareBenchmark may downgrade on first launch)
 	self.first_launch_completed = false
 	self.benchmark_gpu_score = -1.0
 	self.benchmark_ram_gb = -1.0
@@ -378,7 +391,6 @@ func load_from_settings_file():
 	self.submit_message_closes_chat = settings_file.get_value(
 		"config", "submit_message_closes_chat", data_default.submit_message_closes_chat
 	)
-
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
 	self.resolution_3d_scale = settings_file.get_value(
@@ -413,10 +425,6 @@ func load_from_settings_file():
 		"config", "audio_mic_amplification", data_default.audio_mic_amplification
 	)
 
-	self.gamepad_camera_sensitivity = settings_file.get_value(
-		"config", "gamepad_camera_sensitivity", data_default.gamepad_camera_sensitivity
-	)
-
 	var profile_suffix := _get_profile_suffix()
 	self.session_account = settings_file.get_value(
 		"session", "account" + profile_suffix, data_default.session_account
@@ -446,6 +454,18 @@ func load_from_settings_file():
 
 	self.terms_and_conditions_version = settings_file.get_value(
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
+	)
+
+	self.notif_permission_last_prompt_unix = settings_file.get_value(
+		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
+	)
+
+	self.iap_terms_accepted_wallet = settings_file.get_value(
+		"user", "iap_terms_accepted_wallet", data_default.iap_terms_accepted_wallet
+	)
+
+	self.backpack_owned_counts = settings_file.get_value(
+		"user", "backpack_owned_counts", data_default.backpack_owned_counts
 	)
 
 	self.version_gate_snooze_until = settings_file.get_value(
@@ -513,9 +533,6 @@ func save_to_settings_file():
 		"config", "audio_avatar_and_emotes_volume", self.audio_avatar_and_emotes_volume
 	)
 	new_settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
-	new_settings_file.set_value(
-		"config", "gamepad_camera_sensitivity", self.gamepad_camera_sensitivity
-	)
 	new_settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 
 	# Preserve all existing session keys (other profile slots)
@@ -536,6 +553,11 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
 	)
+	new_settings_file.set_value(
+		"user", "notif_permission_last_prompt_unix", self.notif_permission_last_prompt_unix
+	)
+	new_settings_file.set_value("user", "iap_terms_accepted_wallet", self.iap_terms_accepted_wallet)
+	new_settings_file.set_value("user", "backpack_owned_counts", self.backpack_owned_counts)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)

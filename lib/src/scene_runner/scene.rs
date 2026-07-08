@@ -4,7 +4,11 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::NewAlloc, prelude::Gd, prelude::ToGodot};
+use godot::{
+    builtin::Vector3,
+    obj::NewAlloc,
+    prelude::{Gd, ToGodot},
+};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -117,6 +121,8 @@ pub enum SceneUpdateState {
     AudioStream,
     AvatarModifierArea,
     AvatarLocomotionSettings,
+    PhysicsCombinedForce,
+    PhysicsCombinedImpulse,
     CameraModeArea,
     InputModifier,
     SkyboxTime,
@@ -155,7 +161,9 @@ impl SceneUpdateState {
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::AvatarLocomotionSettings,
-            Self::AvatarLocomotionSettings => Self::CameraModeArea,
+            Self::AvatarLocomotionSettings => Self::PhysicsCombinedForce,
+            Self::PhysicsCombinedForce => Self::PhysicsCombinedImpulse,
+            Self::PhysicsCombinedImpulse => Self::CameraModeArea,
             Self::CameraModeArea => Self::InputModifier,
             Self::InputModifier => Self::SkyboxTime,
             Self::SkyboxTime => Self::TriggerArea,
@@ -265,6 +273,7 @@ pub struct Scene {
     pub gltf_node_modifier_states: HashMap<SceneEntityId, GltfNodeModifierState>,
     // Entities pending GltfNodeModifiers re-application after GLTF loads
     pub gltf_node_modifiers_pending: HashSet<SceneEntityId>,
+
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
     pub last_player_scene_id: SceneId,
@@ -272,6 +281,13 @@ pub struct Scene {
     pub virtual_camera: Gd<DclVirtualCamera>,
 
     pub locomotion_settings: Gd<DclLocomotionSettings>,
+
+    /// Continuous force from this scene's `PBPhysicsCombinedForce` on the player,
+    /// in Godot world axes. Only sampled when this is the current parcel scene.
+    pub active_external_force: Vector3,
+    /// One-shot impulses from this scene's `PBPhysicsCombinedImpulse`, drained
+    /// each physics tick by the player controller.
+    pub pending_impulses: Vec<Vector3>,
 
     pub paused: bool,
 
@@ -392,6 +408,8 @@ impl Scene {
             paused: false,
             virtual_camera: Default::default(),
             locomotion_settings: Default::default(),
+            active_external_force: Vector3::ZERO,
+            pending_impulses: Vec::new(),
             deno_memory_stats: None,
             stuck_frames: 0,
         }
@@ -469,6 +487,8 @@ impl Scene {
             paused: false,
             virtual_camera: Default::default(),
             locomotion_settings: Default::default(),
+            active_external_force: Vector3::ZERO,
+            pending_impulses: Vec::new(),
             deno_memory_stats: None,
             stuck_frames: 0,
         }

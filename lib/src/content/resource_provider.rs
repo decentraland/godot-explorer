@@ -1,6 +1,6 @@
 use futures_util::StreamExt;
 use reqwest::Client;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -33,6 +33,46 @@ pub struct ResourceProvider {
 }
 
 const UPDATE_THRESHOLD: u64 = 1_024 * 1_024; // 1 MB threshold
+
+/// Base identity of a cache-folder file name — the key that ties every on-disk
+/// form of an asset back to its content hash (or url-hash). CID hashes contain
+/// no '.', and the hex of "hashed_{hex}" url-texture names never contains 'q':
+///   - "{hash}-mobile.zip"         -> "{hash}"        (optimized asset pack)
+///   - "{hash}.scn" / "{hash}.ext" -> "{hash}"        (runtime-processed forms)
+///   - "hashed_{hex}_q{N}"         -> "hashed_{hex}"  (url-texture quality variant)
+///   - anything else               -> unchanged
+pub fn cache_file_base_name(file_name: &str) -> &str {
+    if let Some(base) = file_name.strip_suffix("-mobile.zip") {
+        return base;
+    }
+    let base = file_name.split('.').next().unwrap_or(file_name);
+    if let Some(hex_and_variant) = base.strip_prefix("hashed_") {
+        if let Some(pos) = hex_and_variant.rfind("_q") {
+            let digits = &hex_and_variant[pos + 2..];
+            if pos > 0 && !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()) {
+                return &base[.."hashed_".len() + pos];
+            }
+        }
+    }
+    base
+}
+
+/// Sum of tracked sizes for entries whose file's base name (see
+/// `cache_file_base_name`) is in `base_names`. Pure in-memory lookup.
+fn size_for_base_names(
+    existing_files: &HashMap<String, FileMetadata>,
+    base_names: &HashSet<String>,
+) -> i64 {
+    existing_files
+        .iter()
+        .filter_map(|(file_path, metadata)| {
+            let file_name = Path::new(file_path).file_name()?.to_str()?;
+            base_names
+                .contains(cache_file_base_name(file_name))
+                .then_some(metadata.file_size)
+        })
+        .sum()
+}
 
 impl ResourceProvider {
     // Synchronous constructor that sets up the ResourceProvider
@@ -171,6 +211,7 @@ impl ResourceProvider {
     /// Returns Ok(true) if file exists (2xx response), Ok(false) if not found (404),
     /// or Err for other errors (network issues, server errors, etc.)
     pub async fn check_remote_file_exists(&self, url: &str) -> Result<bool, String> {
+        tracing::debug!("[HTTP] HEAD {}", url);
         let response = self
             .client
             .head(url)
@@ -197,6 +238,7 @@ impl ResourceProvider {
         dest: &Path,
         #[cfg(feature = "use_resource_tracking")] file_hash: String,
     ) -> Result<(), String> {
+        tracing::debug!("[HTTP] GET {}", url);
         let tmp_dest = dest.with_extension("tmp");
         let response = self
             .client
@@ -274,6 +316,7 @@ impl ResourceProvider {
         dest: &Path,
         #[cfg(feature = "use_resource_tracking")] file_hash: String,
     ) -> Result<Vec<u8>, String> {
+        tracing::debug!("[HTTP] GET {}", url);
         let tmp_dest = dest.with_extension("tmp");
         let response = self
             .client
@@ -654,6 +697,16 @@ impl ResourceProvider {
         let existing_files = self.existing_files.blocking_read();
         self.total_size(&existing_files)
     }
+
+    /// Sum of tracked cache-file sizes whose base name (see
+    /// `cache_file_base_name`) is in `base_names`. Reads the in-memory
+    /// metadata only — no disk I/O — so, like `get_cache_total_size`, the
+    /// value converges as downloads land. Call from outside the tokio
+    /// runtime (e.g. the Godot main thread).
+    pub fn get_cache_size_for_base_names(&self, base_names: &HashSet<String>) -> i64 {
+        let existing_files = self.existing_files.blocking_read();
+        size_for_base_names(&existing_files, base_names)
+    }
 }
 
 #[cfg(test)]
@@ -662,6 +715,50 @@ mod tests {
     use futures_util::future::join_all;
     use tokio::io::Result;
 
+    #[test]
+    fn test_cache_file_base_name() {
+        // Raw download, processed form, optimized pack — same base.
+        assert_eq!(cache_file_base_name("bafkreiabc"), "bafkreiabc");
+        assert_eq!(cache_file_base_name("bafkreiabc.scn"), "bafkreiabc");
+        assert_eq!(cache_file_base_name("bafkreiabc-mobile.zip"), "bafkreiabc");
+        assert_eq!(cache_file_base_name("Qm123.png"), "Qm123");
+        // Url-texture quality variants collapse onto the base url-hash.
+        assert_eq!(cache_file_base_name("hashed_a1b2c3"), "hashed_a1b2c3");
+        assert_eq!(cache_file_base_name("hashed_a1b2c3_q2"), "hashed_a1b2c3");
+        assert_eq!(cache_file_base_name("hashed_a1b2c3_q12"), "hashed_a1b2c3");
+        // Not quality suffixes: no digits / empty hex.
+        assert_eq!(cache_file_base_name("hashed_a1b2_qx"), "hashed_a1b2_qx");
+        assert_eq!(cache_file_base_name("hashed__q2"), "hashed__q2");
+    }
+
+    #[test]
+    fn test_size_for_base_names() {
+        let mut files: HashMap<String, FileMetadata> = HashMap::new();
+        for (path, size) in [
+            ("/cache/bafkhash1", 10),
+            ("/cache/bafkhash1.scn", 20),
+            ("/cache/bafkhash1-mobile.zip", 40),
+            ("/cache/bafkhash2", 100), // not requested
+            ("/cache/hashed_abc123", 3),
+            ("/cache/hashed_abc123_q2", 7),
+            ("/cache/hashed_ffff_q1", 1000), // not requested
+        ] {
+            files.insert(
+                path.to_string(),
+                FileMetadata {
+                    file_size: size,
+                    last_accessed: Instant::now(),
+                },
+            );
+        }
+        let wanted: HashSet<String> = ["bafkhash1", "hashed_abc123"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(size_for_base_names(&files, &wanted), 10 + 20 + 40 + 3 + 7);
+        assert_eq!(size_for_base_names(&files, &HashSet::new()), 0);
+    }
+
     async fn setup_cache_folder(path: &str) -> Result<()> {
         if tokio::fs::metadata(path).await.is_err() {
             tokio::fs::create_dir_all(path).await?;
@@ -669,9 +766,52 @@ mod tests {
         Ok(())
     }
 
+    /// Spawn an ephemeral localhost HTTP server that returns a fixed image body for any GET.
+    /// Replaces the old dependency on the public `httpbin.org` service, which made this test
+    /// flake whenever that service returned a transient 5xx. `ResourceProvider` keys cached
+    /// entries by the caller-supplied file hash (it never hashes the bytes), so an arbitrary
+    /// non-empty body is a valid stand-in for the image.
+    async fn spawn_fake_image_server() -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        const BODY: &[u8] = b"\x89PNG\r\n\x1a\n--fake-image-bytes-for-resource-provider-test--";
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind ephemeral test server");
+        let addr = listener.local_addr().expect("read local addr");
+
+        tokio::spawn(async move {
+            while let Ok((mut socket, _)) = listener.accept().await {
+                tokio::spawn(async move {
+                    // Read and discard the request; we serve the same body regardless.
+                    let mut buf = [0u8; 1024];
+                    let _ = socket.read(&mut buf).await;
+                    let head = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        BODY.len()
+                    );
+                    let _ = socket.write_all(head.as_bytes()).await;
+                    let _ = socket.write_all(BODY).await;
+                    let _ = socket.flush().await;
+                });
+            }
+        });
+
+        format!("http://{}/image.png", addr)
+    }
+
     #[tokio::test]
     async fn test_fetch_resource_or_wait() {
-        let path = "./cache";
+        // Serve the image bytes from localhost instead of the public httpbin.org service,
+        // which made this test flake on its transient 5xx responses.
+        let base_url = spawn_fake_image_server().await;
+
+        // Unique cache dir per process so a leftover dir from a previous or parallel run can't
+        // change behavior (the old hardcoded "./cache" was shared and polluted the repo dir).
+        let dir =
+            std::env::temp_dir().join(format!("dcl-resource-provider-test-{}", std::process::id()));
+        let path = dir.to_str().expect("temp dir path is valid utf-8");
         let max_cache_size = 1024 * 1024 * 1024; // Set the cache size to 1 GB
 
         setup_cache_folder(path)
@@ -692,15 +832,15 @@ mod tests {
 
         let files_to_download = vec![
             (
-                "https://httpbin.org/image/png",
+                base_url.clone(),
                 "bafkreibmrvrdgqthfrvehyell552sk7ivuas2ozzjdmlojbzttqlcrxiya",
             ),
             (
-                "https://httpbin.org/image/png",
+                base_url.clone(),
                 "bafkreic4osvzsjzyqutwjxt2xmyd4hjrwukrxzclvixke3putyrihggmam",
             ),
             (
-                "https://httpbin.org/image/png",
+                base_url.clone(),
                 "bafkreibhjuitdcu3jwu7khjcg2fo6xf2h3hilnfv4liy4p5h2olxj6tcce",
             ),
         ];
@@ -724,8 +864,11 @@ mod tests {
             })
             .collect();
 
-        // Await all the handles
-        join_all(handles).await;
+        // Await all the handles, surfacing any panicked download task instead of letting
+        // join_all swallow the JoinError (which would resurface as a confusing assertion below).
+        for result in join_all(handles).await {
+            result.expect("download task panicked");
+        }
 
         // Extract file hashes from the files_to_download vector
         let file_hashes: Vec<_> = files_to_download
@@ -752,5 +895,7 @@ mod tests {
             assert!(provider.total_size(&existing_files) == 0);
             assert!(existing_files.is_empty());
         }
+
+        let _ = tokio::fs::remove_dir_all(path).await;
     }
 }

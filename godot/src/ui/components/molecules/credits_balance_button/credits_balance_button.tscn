@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/molecules/credits_balance_button/credits_balance_button.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_dcl"]
+[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="3_icon"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pill"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[node name="CreditsBalanceButton" type="Button"]
+focus_mode = 0
+mouse_filter = 1
+script = ExtResource("1_script")
+theme = ExtResource("2_dcl")
+theme_type_variation = &"SettingsButton"
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 0.49803922)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 0.69803923)
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 0.49803922)
+theme_override_constants/h_separation = 8
+theme_override_constants/icon_max_width = 48
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_pill")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pill")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_pill")
+theme_override_styles/focus = SubResource("StyleBoxFlat_pill")
+text = "0"
+icon = ExtResource("3_icon")
+alignment = 0

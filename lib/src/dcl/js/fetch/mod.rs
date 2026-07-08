@@ -207,6 +207,7 @@ async fn op_fetch_custom(
         }
     };
 
+    tracing::debug!("[HTTP] {} {} (scene)", method.as_str(), url);
     let result = request.send().await;
     let mut state = op_state.borrow_mut();
     let fetch_request = state.borrow_mut::<FetchRequestsState>();
@@ -328,6 +329,11 @@ async fn op_fetch_consume_text(
         None
     };
 
+    let scene_ent_id = {
+        let state = op_state.borrow();
+        state.borrow::<Arc<SceneEntityDefinition>>().id.clone()
+    };
+
     let response = {
         let mut state = op_state.borrow_mut();
         let fetch_request = state.borrow_mut::<FetchRequestsState>();
@@ -348,6 +354,10 @@ async fn op_fetch_consume_text(
                     }
                 }
 
+                crate::content::external_content::add_fetch_bytes(
+                    &scene_ent_id,
+                    response.len() as u64,
+                );
                 tracing::debug!("op_fetch_consume_text response: {}", response);
                 return Ok(response);
             }
@@ -417,6 +427,11 @@ async fn op_fetch_consume_bytes(
         None
     };
 
+    let scene_ent_id = {
+        let state = op_state.borrow();
+        state.borrow::<Arc<SceneEntityDefinition>>().id.clone()
+    };
+
     let response = {
         let mut state = op_state.borrow_mut();
         let fetch_request = state.borrow_mut::<FetchRequestsState>();
@@ -439,6 +454,10 @@ async fn op_fetch_consume_bytes(
                     }
                 }
 
+                crate::content::external_content::add_fetch_bytes(
+                    &scene_ent_id,
+                    response.len() as u64,
+                );
                 return Ok(response);
             }
             Err(err) => {

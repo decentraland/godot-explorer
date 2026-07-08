@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://ns3o3p227rk7"]
+
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="1_a2f16"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_s8vxu"]
+[ext_resource type="Script" uid="uid://fqd6tsn16vpl" path="res://src/ui/components/molecules/marketplace_cta_card/marketplace_cta_button.gd" id="2_s8vxu"]
+
+[node name="MarketplaceCtaCard" type="Button" unique_id=1631596652]
+custom_minimum_size = Vector2(0, 74)
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("1_s8vxu")
+theme_type_variation = &"SecondaryOutlinedButton"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("1_a2f16")
+theme_override_font_sizes/font_size = 28
+script = ExtResource("2_s8vxu")

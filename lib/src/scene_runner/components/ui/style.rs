@@ -3,8 +3,8 @@ use godot::prelude::Color;
 use crate::dcl::components::{
     proto_components::{
         sdk::components::{
-            PbUiTransform, PointerFilterMode, ShowScrollBar, YgAlign, YgDisplay, YgFlexDirection,
-            YgJustify, YgOverflow, YgPositionType, YgUnit, YgWrap,
+            PbUiTransform, PointerFilterMode, YgAlign, YgDisplay, YgFlexDirection, YgJustify,
+            YgOverflow, YgPositionType, YgUnit, YgWrap,
         },
         WrapToGodot,
     },
@@ -304,26 +304,15 @@ impl From<&PbUiTransform> for UiTransform {
                         taffy::style::LengthPercentage::Length(0.0),
                         LengthPercentage
                     );
-                    // Reserve gutter space for the scrollbar(s) this entity
-                    // is allowed to display. The scrollbar widget itself
-                    // auto-hides when content fits (AUTO mode in
-                    // dcl_ui_scroll.rs), but the gutter stays so children
-                    // never overlap the area where the scrollbar may appear.
+                    // Reserve gutter space for the scrollbars on a scrollable
+                    // entity. @dcl/protocol@next has no scroll_visible field to
+                    // select axes, so we reserve both (matching the former
+                    // ShowScrollBar.SSB_BOTH default). The scrollbar widget
+                    // itself auto-hides when content fits, but the gutter stays
+                    // so children never overlap the area where it may appear.
                     if value.overflow() == YgOverflow::YgoScroll {
-                        let allow_v = matches!(
-                            value.scroll_visible(),
-                            ShowScrollBar::SsbBoth | ShowScrollBar::SsbOnlyVertical
-                        );
-                        let allow_h = matches!(
-                            value.scroll_visible(),
-                            ShowScrollBar::SsbBoth | ShowScrollBar::SsbOnlyHorizontal
-                        );
-                        if allow_v {
-                            padding.right = add_px(padding.right, SCROLLBAR_GUTTER_PX);
-                        }
-                        if allow_h {
-                            padding.bottom = add_px(padding.bottom, SCROLLBAR_GUTTER_PX);
-                        }
+                        padding.right = add_px(padding.right, SCROLLBAR_GUTTER_PX);
+                        padding.bottom = add_px(padding.bottom, SCROLLBAR_GUTTER_PX);
                     }
                     padding
                 },

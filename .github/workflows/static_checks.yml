@@ -14,13 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
           toolchain: "1.90"
           components: rustfmt
 
       - name: Set up Python
         uses: actions/setup-python@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Install gdtoolkit 4
         run: pip3 install git+https://github.com/dcl-regenesislabs/godot-gdscript-toolkit.git
@@ -34,3 +39,6 @@ jobs:
       - name: cargo fmt
         working-directory: lib
         run: cargo fmt --all -- --check
+
+      - name: WebSocket JS shim unit tests
+        run: node --test lib/src/dcl/js/js_modules/ws.test.cjs

@@ -88,7 +88,12 @@ impl<T: 'static + FromDclReader + ToDclWriter> GenericGrowOnlySetComponent for G
         writer: &mut DclWriter,
     ) -> Result<(), String> {
         if let Some(entry) = self.values.get(&entity) {
-            let element_index = entry.len() - reverse_element_index - 1;
+            // Guard the subtraction: `entry.len() - reverse_element_index - 1`
+            // underflowed when called with an out-of-range probe index. Return
+            // the same `Err` the existing call sites already handle.
+            let Some(element_index) = entry.len().checked_sub(reverse_element_index + 1) else {
+                return Err("Index out of range".into());
+            };
 
             if let Some(value) = entry.get(element_index) {
                 value.to_writer(writer);

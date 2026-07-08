@@ -3,8 +3,8 @@ use std::time::Instant;
 use godot::{
     builtin::math::FloatExt,
     classes::{physics_server_3d::BodyMode, PhysicsServer3D, StaticBody3D},
-    obj::Singleton,
-    prelude::{Node, Transform3D, Vector3},
+    obj::{Gd, Singleton},
+    prelude::{Node, Node3D, Quaternion, Transform3D, Vector3},
 };
 
 use crate::{
@@ -67,29 +67,7 @@ pub fn update_transform_and_parent(
 
             let old_parent = godot_entity_node.desired_parent_3d;
             let mut transform = value.unwrap_or_default();
-            if !transform.rotation.is_normalized() {
-                if transform.rotation.length_squared() == 0.0 {
-                    transform.rotation = godot::prelude::Quaternion::default();
-                } else {
-                    transform.rotation = transform.rotation.normalized();
-                }
-            }
-
-            if !transform.rotation.is_finite() {
-                transform.rotation = godot::prelude::Quaternion::default();
-            }
-
-            node_3d.set_transform(transform.to_godot_transform_3d_without_scaled());
-            if transform.scale.x.is_zero_approx() {
-                transform.scale.x = 0.00001;
-            }
-            if transform.scale.y.is_zero_approx() {
-                transform.scale.y = 0.00001;
-            }
-            if transform.scale.z.is_zero_approx() {
-                transform.scale.z = 0.00001;
-            }
-            node_3d.set_scale(transform.scale);
+            apply_dcl_transform_to_node_3d(&mut transform, &mut node_3d);
 
             godot_entity_node.desired_parent_3d = transform.parent;
             if godot_entity_node.desired_parent_3d != old_parent {
@@ -207,6 +185,38 @@ pub fn update_transform_and_parent(
     }
 
     true
+}
+
+/// Applies an SDK Transform to a Godot Node3D, normalizing rotation (replacing
+/// zero/non-finite quaternions with identity) and clamping near-zero scale
+/// components to 0.00001 so Godot doesn't degenerate the basis. The
+/// `transform` argument is mutated in place with the normalized values; the
+/// `parent` field is untouched so callers can still read it afterward.
+pub fn apply_dcl_transform_to_node_3d(
+    transform: &mut DclTransformAndParent,
+    node_3d: &mut Gd<Node3D>,
+) {
+    if !transform.rotation.is_normalized() {
+        if transform.rotation.length_squared() == 0.0 {
+            transform.rotation = Quaternion::default();
+        } else {
+            transform.rotation = transform.rotation.normalized();
+        }
+    }
+    if !transform.rotation.is_finite() {
+        transform.rotation = Quaternion::default();
+    }
+    node_3d.set_transform(transform.to_godot_transform_3d_without_scaled());
+    if transform.scale.x.is_zero_approx() {
+        transform.scale.x = 0.00001;
+    }
+    if transform.scale.y.is_zero_approx() {
+        transform.scale.y = 0.00001;
+    }
+    if transform.scale.z.is_zero_approx() {
+        transform.scale.z = 0.00001;
+    }
+    node_3d.set_scale(transform.scale);
 }
 
 fn detect_entity_id_in_parent_chain(
