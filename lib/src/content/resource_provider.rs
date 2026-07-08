@@ -4,10 +4,11 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::fs;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Notify, OnceCell, RwLock};
-use tokio::time::Instant;
+use tokio::time::{timeout, Instant};
 
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
@@ -33,6 +34,16 @@ pub struct ResourceProvider {
 }
 
 const UPDATE_THRESHOLD: u64 = 1_024 * 1_024; // 1 MB threshold
+
+// Asset-download timeouts (F-1 / RC-1). These bound *dead* connections without killing
+// *slow-but-alive* downloads: on a constrained link a single legitimate asset was observed
+// taking ~198s of wire time, so we deliberately set NO total-request timeout. Instead we
+// bound (a) connection establishment, (b) time-to-first-response (headers), and (c) the
+// idle gap between body chunks. A stalled/half-open connection now surfaces as `Err`
+// (→ the GLTF container reaches FinishedWithError) instead of hanging forever.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
+const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
+const IDLE_CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Base identity of a cache-folder file name — the key that ties every on-disk
 /// form of an asset back to its content hash (or url-hash). CID hashes contain
@@ -87,7 +98,10 @@ impl ResourceProvider {
             existing_files: RwLock::new(HashMap::new()),
             max_cache_size: AtomicI64::new(max_cache_size),
             pending_downloads: RwLock::new(HashMap::new()),
-            client: Client::new(),
+            client: Client::builder()
+                .connect_timeout(CONNECT_TIMEOUT)
+                .build()
+                .expect("Failed to build ResourceProvider HTTP client"),
             initialized: OnceCell::new(),
             semaphore: Arc::new(CappedSemaphore::new(max_concurrent_downloads)),
             low_priority_semaphore: Arc::new(CappedSemaphore::new(max_concurrent_downloads)),
@@ -240,11 +254,9 @@ impl ResourceProvider {
     ) -> Result<(), String> {
         tracing::debug!("[HTTP] GET {}", url);
         let tmp_dest = dest.with_extension("tmp");
-        let response = self
-            .client
-            .get(url)
-            .send()
+        let response = timeout(RESPONSE_TIMEOUT, self.client.get(url).send())
             .await
+            .map_err(|_| format!("Response timeout ({RESPONSE_TIMEOUT:?}): {url}"))?
             .map_err(|e| format!("Request error: {:?}", e))?;
 
         #[cfg(feature = "use_resource_tracking")]
@@ -264,7 +276,10 @@ impl ResourceProvider {
 
         let mut accumulated_size = 0;
 
-        while let Some(chunk) = stream.next().await {
+        while let Some(chunk) = timeout(IDLE_CHUNK_TIMEOUT, stream.next())
+            .await
+            .map_err(|_| format!("Idle timeout ({IDLE_CHUNK_TIMEOUT:?}) while downloading {url}"))?
+        {
             let chunk = chunk.map_err(|e| format!("Stream error: {:?}", e))?;
             file.write_all(&chunk)
                 .await
@@ -318,11 +333,9 @@ impl ResourceProvider {
     ) -> Result<Vec<u8>, String> {
         tracing::debug!("[HTTP] GET {}", url);
         let tmp_dest = dest.with_extension("tmp");
-        let response = self
-            .client
-            .get(url)
-            .send()
+        let response = timeout(RESPONSE_TIMEOUT, self.client.get(url).send())
             .await
+            .map_err(|_| format!("Response timeout ({RESPONSE_TIMEOUT:?}): {url}"))?
             .map_err(|e| format!("Request error: {:?}", e))?;
 
         if !response.status().is_success() {
@@ -342,7 +355,10 @@ impl ResourceProvider {
 
         let mut accumulated_size = 0;
 
-        while let Some(chunk) = stream.next().await {
+        while let Some(chunk) = timeout(IDLE_CHUNK_TIMEOUT, stream.next())
+            .await
+            .map_err(|_| format!("Idle timeout ({IDLE_CHUNK_TIMEOUT:?}) while downloading {url}"))?
+        {
             let chunk = chunk.map_err(|e| format!("Stream error: {:?}", e))?;
             file.write_all(&chunk)
                 .await
