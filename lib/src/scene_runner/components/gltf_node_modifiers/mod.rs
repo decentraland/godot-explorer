@@ -77,6 +77,7 @@ pub fn update_gltf_node_modifiers(
 
     // Clone content_mapping reference before mutable borrows
     let content_mapping = scene.content_mapping.clone();
+    let scene_ent_id = scene.scene_entity_definition.id.clone();
 
     // Combine both sources of entities to process
     let entities_to_process: Vec<SceneEntityId> = {
@@ -218,9 +219,13 @@ pub fn update_gltf_node_modifiers(
 
                     // Apply material if specified (to all surfaces)
                     if let Some(material) = &modifier_match.modifier.material {
-                        if let Some((dcl_material, godot_material)) =
-                            apply_material_to_mesh(&mut mesh, material, &content_mapping, None)
-                        {
+                        if let Some((dcl_material, godot_material)) = apply_material_to_mesh(
+                            &mut mesh,
+                            material,
+                            &content_mapping,
+                            &scene_ent_id,
+                            None,
+                        ) {
                             // Track material for texture loading
                             state.pending_materials.insert(
                                 path.clone(),
@@ -249,6 +254,7 @@ pub fn update_gltf_node_modifiers(
                                 &mut mesh,
                                 material,
                                 &content_mapping,
+                                &scene_ent_id,
                                 Some(surface_idx),
                             ) {
                                 // Track material for texture loading with surface-specific key

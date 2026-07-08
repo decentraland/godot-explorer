@@ -84,6 +84,14 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 for tex in dcl_material.get_textures().into_iter().flatten() {
                     match &tex.source {
                         DclSourceTex::Texture(hash) => {
+                            // url-sourced textures are external (non-deployed)
+                            // content — record them for the preview stats row.
+                            if hash.starts_with("http") {
+                                crate::content::external_content::register_external_texture(
+                                    &scene.scene_entity_definition.id,
+                                    hash,
+                                );
+                            }
                             content_provider.call_deferred(
                                 "fetch_texture_by_hash",
                                 &[
