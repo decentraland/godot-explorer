@@ -99,6 +99,25 @@ func reset_to_half() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		dragging = false
+		if drag_tween and drag_tween.is_running():
+			drag_tween.stop()
+			drag_tween = null
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_restore_drag_state.call_deferred()
+
+
+func _restore_drag_state() -> void:
+	if not is_visible_in_tree():
+		return
+	_card_half_position = _get_half_position()
+	panel_container_card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	match drag_state:
+		DragState.PEEK:
+			panel_container_card.position.y = _get_peek_position()
+		DragState.HALF:
+			panel_container_card.position.y = _card_half_position
+		DragState.FULL:
+			panel_container_card.position.y = 0.0
 
 
 func _input(event: InputEvent) -> void:
