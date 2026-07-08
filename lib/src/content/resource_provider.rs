@@ -455,6 +455,17 @@ impl ResourceProvider {
         Ok(())
     }
 
+    /// Release the `pending_downloads` slot for `file_hash`: remove the entry and wake any
+    /// waiters. Must run on EVERY exit path of a fetch (success or failure), otherwise a
+    /// failed download leaks the `Notify` — duplicate waiters hang forever and the hash is
+    /// poisoned permanently so retries can never succeed (RC-2 / F-2).
+    async fn finish_pending_download(&self, file_hash: &str) {
+        let mut pending_downloads = self.pending_downloads.write().await;
+        if let Some(notify) = pending_downloads.remove(file_hash) {
+            notify.notify_waiters();
+        }
+    }
+
     pub async fn file_exists(&self, file_hash: &str) -> bool {
         let existing_files = self.existing_files.read().await;
         let absolute_file_path = self.cache_folder.join(file_hash);
@@ -545,37 +556,40 @@ impl ResourceProvider {
 
         let permit = self.semaphore.acquire().await;
 
-        if tokio::fs::metadata(&absolute_file_path).await.is_err() {
-            self.download_file(
-                &url,
-                Path::new(&absolute_file_path),
-                #[cfg(feature = "use_resource_tracking")]
-                file_hash.clone(),
-            )
-            .await?;
+        // Run the fallible download/cache work, then ALWAYS release the pending-download
+        // slot below — success or failure — so a failed download can't poison the hash (F-2).
+        let result: Result<(), String> = async {
+            if tokio::fs::metadata(&absolute_file_path).await.is_err() {
+                self.download_file(
+                    &url,
+                    Path::new(&absolute_file_path),
+                    #[cfg(feature = "use_resource_tracking")]
+                    file_hash.clone(),
+                )
+                .await?;
 
-            let metadata = tokio::fs::metadata(&absolute_file_path)
-                .await
-                .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
-            let file_size = metadata.len() as i64;
+                let metadata = tokio::fs::metadata(&absolute_file_path)
+                    .await
+                    .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
+                let file_size = metadata.len() as i64;
 
-            let mut existing_files = self.existing_files.write().await;
-            self.ensure_space_for(&mut existing_files, file_size).await;
-            self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
-                .await;
-        } else {
-            tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
-            self.handle_existing_file(&absolute_file_path).await?;
+                let mut existing_files = self.existing_files.write().await;
+                self.ensure_space_for(&mut existing_files, file_size).await;
+                self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
+                    .await;
+            } else {
+                tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
+                self.handle_existing_file(&absolute_file_path).await?;
+            }
+            Ok(())
         }
+        .await;
 
-        let mut pending_downloads = self.pending_downloads.write().await;
-        if let Some(notify) = pending_downloads.remove(&file_hash) {
-            notify.notify_waiters();
-        }
+        self.finish_pending_download(&file_hash).await;
 
         drop(permit);
 
-        Ok(())
+        result
     }
 
     /// Fetch a resource with low priority. Low-priority downloads must acquire both
@@ -595,37 +609,39 @@ impl ResourceProvider {
         let _low_priority_permit = self.low_priority_semaphore.acquire().await;
         let permit = self.semaphore.acquire().await;
 
-        if tokio::fs::metadata(&absolute_file_path).await.is_err() {
-            self.download_file(
-                &url,
-                Path::new(&absolute_file_path),
-                #[cfg(feature = "use_resource_tracking")]
-                file_hash.clone(),
-            )
-            .await?;
+        // Always release the pending-download slot below, success or failure (F-2).
+        let result: Result<(), String> = async {
+            if tokio::fs::metadata(&absolute_file_path).await.is_err() {
+                self.download_file(
+                    &url,
+                    Path::new(&absolute_file_path),
+                    #[cfg(feature = "use_resource_tracking")]
+                    file_hash.clone(),
+                )
+                .await?;
 
-            let metadata = tokio::fs::metadata(&absolute_file_path)
-                .await
-                .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
-            let file_size = metadata.len() as i64;
+                let metadata = tokio::fs::metadata(&absolute_file_path)
+                    .await
+                    .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
+                let file_size = metadata.len() as i64;
 
-            let mut existing_files = self.existing_files.write().await;
-            self.ensure_space_for(&mut existing_files, file_size).await;
-            self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
-                .await;
-        } else {
-            tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
-            self.handle_existing_file(&absolute_file_path).await?;
+                let mut existing_files = self.existing_files.write().await;
+                self.ensure_space_for(&mut existing_files, file_size).await;
+                self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
+                    .await;
+            } else {
+                tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
+                self.handle_existing_file(&absolute_file_path).await?;
+            }
+            Ok(())
         }
+        .await;
 
-        let mut pending_downloads = self.pending_downloads.write().await;
-        if let Some(notify) = pending_downloads.remove(&file_hash) {
-            notify.notify_waiters();
-        }
+        self.finish_pending_download(&file_hash).await;
 
         drop(permit);
 
-        Ok(())
+        result
     }
 
     // Method to fetch resource and wait for the data
@@ -641,36 +657,37 @@ impl ResourceProvider {
             .await?;
 
         let permit = self.semaphore.acquire().await;
-        let data = if tokio::fs::metadata(&absolute_file_path).await.is_err() {
-            let data = self
-                .download_file_with_buffer(
-                    url,
-                    Path::new(absolute_file_path),
-                    #[cfg(feature = "use_resource_tracking")]
-                    file_hash.clone(),
-                )
-                .await?;
-            let metadata = tokio::fs::metadata(absolute_file_path)
-                .await
-                .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
-            let file_size = metadata.len() as i64;
-            let mut existing_files = self.existing_files.write().await;
-            self.ensure_space_for(&mut existing_files, file_size).await;
-            self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
-                .await;
-            data
-        } else {
-            self.handle_existing_file(absolute_file_path).await?
-        };
-
-        let mut pending_downloads = self.pending_downloads.write().await;
-        if let Some(notify) = pending_downloads.remove(file_hash) {
-            notify.notify_waiters();
+        // Always release the pending-download slot below, success or failure (F-2).
+        let result: Result<Vec<u8>, String> = async {
+            if tokio::fs::metadata(&absolute_file_path).await.is_err() {
+                let data = self
+                    .download_file_with_buffer(
+                        url,
+                        Path::new(absolute_file_path),
+                        #[cfg(feature = "use_resource_tracking")]
+                        file_hash.clone(),
+                    )
+                    .await?;
+                let metadata = tokio::fs::metadata(absolute_file_path)
+                    .await
+                    .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
+                let file_size = metadata.len() as i64;
+                let mut existing_files = self.existing_files.write().await;
+                self.ensure_space_for(&mut existing_files, file_size).await;
+                self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
+                    .await;
+                Ok(data)
+            } else {
+                self.handle_existing_file(absolute_file_path).await
+            }
         }
+        .await;
+
+        self.finish_pending_download(file_hash).await;
 
         drop(permit);
 
-        Ok(data)
+        result
     }
 
     // Method to clear the cache and delete all files from the file system
@@ -815,6 +832,89 @@ mod tests {
         });
 
         format!("http://{}/image.png", addr)
+    }
+
+    /// Spawn a localhost server that answers every GET with `500 Internal Server Error`, so
+    /// `download_file` fails deterministically (used by the F-2 pending-slot-leak test).
+    async fn spawn_failing_server() -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind ephemeral failing server");
+        let addr = listener.local_addr().expect("read local addr");
+
+        tokio::spawn(async move {
+            while let Ok((mut socket, _)) = listener.accept().await {
+                tokio::spawn(async move {
+                    let mut buf = [0u8; 1024];
+                    let _ = socket.read(&mut buf).await;
+                    let head = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                    let _ = socket.write_all(head.as_bytes()).await;
+                    let _ = socket.flush().await;
+                });
+            }
+        });
+
+        format!("http://{}/fail.bin", addr)
+    }
+
+    /// F-2 regression: a failed download must release its `pending_downloads` slot, otherwise
+    /// the hash is poisoned forever — duplicate waiters hang and even retries can never
+    /// succeed (RC-2). Before the fix, the retry below would block indefinitely.
+    #[tokio::test]
+    async fn test_failed_download_releases_pending_slot() {
+        let fail_url = spawn_failing_server().await;
+
+        let dir = std::env::temp_dir().join(format!("dcl-rp-f2-test-{}", std::process::id()));
+        let path = dir.to_str().expect("temp dir path is valid utf-8");
+        setup_cache_folder(path)
+            .await
+            .expect("Failed to create cache folder");
+
+        #[cfg(feature = "use_resource_tracking")]
+        let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
+        let provider = Arc::new(ResourceProvider::new(
+            path,
+            1024 * 1024,
+            2,
+            #[cfg(feature = "use_resource_tracking")]
+            resource_download_tracking.clone(),
+        ));
+        provider.clear().await;
+
+        let file_hash = "bafkreibmrvrdgqthfrvehyell552sk7ivuas2ozzjdmlojbzttqlcrxiya".to_string();
+        let absolute_file_path = format!("{}/{}", path, file_hash);
+
+        // First attempt fails (server 500).
+        let first = provider
+            .fetch_resource(
+                fail_url.clone(),
+                file_hash.clone(),
+                absolute_file_path.clone(),
+            )
+            .await;
+        assert!(first.is_err(), "expected the 500 download to fail");
+
+        // The pending-download slot must have been released, not leaked.
+        {
+            let pending = provider.pending_downloads.read().await;
+            assert!(
+                !pending.contains_key(&file_hash),
+                "failed download leaked its pending_downloads entry (hash poisoned)"
+            );
+        }
+
+        // A retry against a working server must now succeed (proves the hash isn't poisoned
+        // and no waiter is stranded). This would hang forever before the fix.
+        let good_url = spawn_fake_image_server().await;
+        provider
+            .fetch_resource(good_url, file_hash.clone(), absolute_file_path.clone())
+            .await
+            .expect("retry after a failed download should succeed, not hang");
+
+        provider.clear().await;
+        let _ = tokio::fs::remove_dir_all(path).await;
     }
 
     #[tokio::test]
