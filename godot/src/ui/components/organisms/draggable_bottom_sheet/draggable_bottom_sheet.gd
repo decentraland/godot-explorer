@@ -96,6 +96,11 @@ func reset_to_half() -> void:
 	drag_state_changed.emit(drag_state)
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		dragging = false
+
+
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
