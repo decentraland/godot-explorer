@@ -527,6 +527,54 @@ impl DclPlayerIdentity {
         promise
     }
 
+    /// Like `async_delete_guest_account` but for an **upgraded** guest: unlinks
+    /// BOTH the `guest` and the linked `email` profile (double unlink), fully
+    /// deleting the recoverable thirdweb user rather than merely stripping it
+    /// back to a bare guest. A fresh guest JWT is re-derived from the anchor (a
+    /// guest login on an upgraded account returns that same user's token).
+    ///
+    /// This bypasses the `unlink_guest_profile` safety refusal, so it MUST only
+    /// be called behind the non-prod + `enable-upgraded-deletion` deeplink gate
+    /// (enforced in GDScript). Best-effort: resolves `true` on success, `false`
+    /// on failure — it never rejects — so the caller can still wipe local
+    /// storage and sign out regardless of the network outcome.
+    #[func]
+    fn async_delete_upgraded_account(&mut self, device_anchor_id: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let anchor = device_anchor_id.to_string();
+
+        handle.spawn(async move {
+            let result = perform_delete_upgraded_account(anchor).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::error!("thirdweb delete_upgraded: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok(()) => {
+                    tracing::info!("thirdweb delete_upgraded: upgraded account deleted");
+                    promise.bind_mut().resolve_with_data(true.to_variant());
+                }
+                Err(e) => {
+                    // Non-fatal: the caller wipes local state + signs out anyway.
+                    tracing::warn!("thirdweb delete_upgraded failed (non-fatal): {:?}", e);
+                    promise.bind_mut().resolve_with_data(false.to_variant());
+                }
+            }
+        });
+
+        promise
+    }
+
     #[func]
     fn try_connect_account(&mut self) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
@@ -1249,4 +1297,15 @@ async fn perform_link_email(
 async fn perform_delete_guest_account(device_anchor_id: String) -> Result<(), anyhow::Error> {
     let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
     thirdweb_guest::unlink_guest_profile(&session.token).await
+}
+
+/// Fully deletes an UPGRADED guest account server-side (enable-upgraded-deletion):
+///   1. re-derive a FRESH guest JWT from the anchor (a guest login on an
+///      upgraded account returns that same user's token)
+///   2. `unlink_upgraded_account` unlinks BOTH the `guest` and the `email` (plus
+///      any other) profile, deleting the whole thirdweb user so the account is
+///      gone and the sessionId is freed for a brand-new wallet.
+async fn perform_delete_upgraded_account(device_anchor_id: String) -> Result<(), anyhow::Error> {
+    let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
+    thirdweb_guest::unlink_upgraded_account(&session.token).await
 }

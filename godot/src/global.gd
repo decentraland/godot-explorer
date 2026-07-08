@@ -169,6 +169,13 @@ var attestation: AttestationService = null
 
 var _is_portrait: bool = true
 
+# Opt-in, set by a `decentraland://open?enable-upgraded-deletion=true` deeplink
+# (see deep_link_router.gd). Gates the account-deletion flow so an UPGRADED
+# (email-linked) guest can be fully deleted via a double unlink — see
+# account_deletion_popup.gd and is_upgraded_deletion_enabled(). Sticky for the
+# session once seen; only takes effect on a NON-production build.
+var _enable_upgraded_deletion: bool = false
+
 # Scene Inspector bridge, created lazily at boot when a target is configured.
 var _scene_inspector_bridge: Node = null
 
@@ -949,6 +956,15 @@ func clear_guest_device_storage() -> int:
 	get_config().guest_profile = {}
 	get_config().save_to_settings_file()
 	return removed
+
+
+## True only when deletion of an UPGRADED (email/social-linked) guest is allowed:
+## the `enable-upgraded-deletion=true` deeplink was seen AND this is a
+## NON-production build. Off by default and hard-disabled in prod, so a
+## recoverable account is never force-deleted on a release cut; the upgraded path
+## does a double unlink (guest + email) — see account_deletion_popup.gd.
+func is_upgraded_deletion_enabled() -> bool:
+	return _enable_upgraded_deletion and not is_production()
 
 
 func sign_out() -> void:
