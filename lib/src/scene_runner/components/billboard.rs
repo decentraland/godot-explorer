@@ -117,6 +117,7 @@ mod test {
             entity,
             Some(PbBillboard {
                 billboard_mode: Some(3),
+                target_entity: None,
             }),
         );
 
