@@ -1060,6 +1060,25 @@ impl DclPlayerIdentity {
 
         match UserProfile::from_lambda_response(&request_response, base_url.as_str()) {
             Ok(profile) => {
+                // Never replace the local profile with an OLDER copy. Every realm change
+                // re-fetches the profile (PlayerIdentity._on_realm_changed) and the lambda
+                // can still serve the pre-deploy version right after the user saved an
+                // avatar change — applying it would revert the just-equipped wearables
+                // (#2489). Mirrors the peer-profile version guard in message_processor.
+                // Returns true: a stale response is handled, not a parse failure (false
+                // would make the GDScript caller reset to the default profile).
+                if let Some(current) = self.profile.as_ref() {
+                    let current_version = current.bind().inner.version;
+                    if profile.version < current_version {
+                        tracing::warn!(
+                            "profile > ignoring stale lambda profile v{} (local is v{})",
+                            profile.version,
+                            current_version
+                        );
+                        return true;
+                    }
+                }
+
                 let new_profile = DclUserProfile::from_gd(profile);
                 self.profile = Some(new_profile.clone());
                 tracing::info!("profile > set profile from lambda",);

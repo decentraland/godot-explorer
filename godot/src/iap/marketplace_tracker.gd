@@ -75,6 +75,13 @@ var _restore_landscape_on_close: bool = false
 # a streak (the signal worth alerting on) and suppress repeats until a fetch succeeds. Reset per
 # tracking session in _arm() so each session reports its own outage onset.
 var _owned_fetch_failing: Dictionary = {}
+# item urn -> owned token-instance urn (…:<itemId>:<tokenId>) accumulated from every
+# owned-NFTs fetch. Profile deployments must reference on-chain items by the
+# token-instance urn (the catalyst rejects tokenless collections-v2 pointers with
+# HTTP 400 "The URN must include the tokenId"), while the grid/inject paths key by the
+# item urn — this map lets equip resolve the deployable form of a just-bought item the
+# catalyst lambda doesn't list yet (#2489). Session-lived, additive only.
+var _owned_token_urns: Dictionary = {}
 
 
 func _ready() -> void:
@@ -240,7 +247,7 @@ func _async_check(token: int) -> void:
 
 
 # Public: the most-recently-obtained owned urns of one category ("wearable"/"emote"),
-# as a Dictionary keyed by token-instance urn, or an empty dict on failure / no wallet.
+# as a Dictionary keyed by ITEM urn, or an empty dict on failure / no wallet.
 # The backpack and emote editor call this to surface a just-bought item on open — fast
 # (marketplace API, top _OWNED_FETCH_LIMIT), without waiting for the catalyst lambda.
 # Augments the lambda list; never the sole source.
@@ -255,8 +262,15 @@ func async_fetch_recent_owned(category: String) -> Dictionary:
 	return result if result != null else {}
 
 
+# The token-instance urn (…:<itemId>:<tokenId>) for an owned item urn, or "" when no
+# owned-NFTs fetch has reported a tokenId for it this session. Callers writing into the
+# avatar profile use this to keep deployments valid (see _owned_token_urns).
+func get_token_urn(item_urn: String) -> String:
+	return str(_owned_token_urns.get(item_urn, ""))
+
+
 # Returns a Dictionary of the player's most-recently-added owned wearables + emotes,
-# keyed by token-instance urn with the marketplace category ("wearable"/"emote") as
+# keyed by ITEM urn with the marketplace category ("wearable"/"emote") as
 # the value, or null on a fetch failure — callers must treat null as "unknown", never
 # as "empty". A failure in ANY category fails the whole snapshot, since a missing
 # category would otherwise look like "nothing owned there" and break the baseline
@@ -329,4 +343,9 @@ func _async_fetch_owned_urns_for(wallet: String, category: String):
 		# form (…:<itemId>:<tokenId>) does NOT resolve in get_wearable(), so appending the
 		# tokenId here was breaking the live inject of a just-bought item.
 		owned[item_urn] = category
+		# But DO remember the token-instance form: profile deploys need it (see
+		# _owned_token_urns / get_token_urn).
+		var token_id := str(nft.get("tokenId", ""))
+		if not token_id.is_empty():
+			_owned_token_urns[item_urn] = item_urn + ":" + token_id
 	return owned
