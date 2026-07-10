@@ -495,6 +495,13 @@ func _show_wearables():
 	margin_container_no_items.visible = not has_items
 	grid_container_wearables_list.visible = has_items
 
+	# The profile may store token-instance urns (…:<itemId>:<tokenId>) while the grid keys by the
+	# item urn; collapse the equipped list to item urns so on-chain equipped wearables highlight
+	# correctly (and are therefore unequippable).
+	var equipped_item_urns := {}
+	for equipped_urn in Global.player_identity.get_mutable_avatar().get_wearables():
+		equipped_item_urns[to_item_urn(equipped_urn)] = true
+
 	for wearable_id in filtered_data:
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		var wearable = wearable_data[wearable_id]
@@ -507,9 +514,9 @@ func _show_wearables():
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
 		wearable_item.unequip.connect(self._on_wearable_unequip.bind(wearable_id))
 
-		# Check if the item is equipped
+		# Check if the item is equipped (compare on the collapsed item urn — see to_item_urn)
 		var is_wearable_pressed = (
-			Global.player_identity.get_mutable_avatar().get_wearables().has(wearable_id)
+			equipped_item_urns.has(wearable_id)
 			or Global.player_identity.get_mutable_avatar().get_body_shape() == wearable_id
 		)
 		wearable_item.set_pressed_no_signal(is_wearable_pressed)
@@ -644,8 +651,10 @@ func _on_wearable_equip(wearable_id: String):
 		var to_remove = []
 		# Unequip current wearable with category
 		for current_wearable_id in new_avatar_wearables:
-			# TODO: put the fetch wearable function
-			var wearable = wearable_data.get(current_wearable_id)
+			# Normalize to the item urn: the profile may hold a token-instance urn
+			# (…:<itemId>:<tokenId>) while wearable_data is keyed by the item urn, so a raw lookup
+			# misses and the old same-category wearable is never replaced (leaves duplicates).
+			var wearable = wearable_data.get(to_item_urn(current_wearable_id))
 			if wearable != null and wearable.get_category() == category:
 				to_remove.push_back(current_wearable_id)
 
@@ -672,9 +681,12 @@ func _on_wearable_unequip(wearable_id: String):
 	var new_avatar_wearables: PackedStringArray = (
 		Global.player_identity.get_mutable_avatar().get_wearables()
 	)
-	var index = new_avatar_wearables.find(wearable_id)
-	if index != -1:
-		new_avatar_wearables.remove_at(index)
+	# Remove every entry that collapses to this item urn — covers the token-instance urn the
+	# profile stores (…:<itemId>:<tokenId>) plus any item-level duplicate. A plain
+	# find(wearable_id) misses the token form and leaves the wearable stuck on the avatar.
+	for i in range(new_avatar_wearables.size() - 1, -1, -1):
+		if to_item_urn(new_avatar_wearables[i]) == wearable_id:
+			new_avatar_wearables.remove_at(i)
 
 	Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 	request_update_avatar = true
@@ -728,7 +740,8 @@ func _async_marketplace_preview_equip(urn: String, wearable: DclItemEntityDefini
 	var preview_wearables = _marketplace_saved_wearables.duplicate()
 	var to_remove = []
 	for current_id in preview_wearables:
-		var current_wearable = wearable_data.get(current_id)
+		# Same item/token urn normalization as the equip path (see to_item_urn).
+		var current_wearable = wearable_data.get(to_item_urn(current_id))
 		if current_wearable != null and current_wearable.get_category() == category:
 			to_remove.push_back(current_id)
 	for remove_id in to_remove:
@@ -917,6 +930,21 @@ static func newtag_item_urn(urn: String, token_id: String) -> String:
 	if not token_id.is_empty() and urn.ends_with(":" + token_id):
 		return urn.trim_suffix(":" + token_id)
 	return urn
+
+
+# Collapse ANY wearable urn to its ITEM form, stripping a trailing :<tokenId> when present.
+# Mirrors the Rust ContentProvider.get_wearable normalization (truncate at the 6th ':'), the
+# canonical item urn that wearable_data / can_equip / the avatar profile use. A profile may
+# store either the item urn or the token-instance urn (…:<itemId>:<tokenId>), so equipped-state
+# / unequip / same-category-replace must compare on this collapsed form — otherwise on-chain
+# wearables already equipped in the profile read as un-equipped and can never be removed.
+# Off-chain/base urns (< 6 ':') pass through unchanged. Unlike newtag_item_urn this needs no
+# pre-parsed tokenId, so it works on arbitrary urns coming from the avatar wearable list.
+static func to_item_urn(urn: String) -> String:
+	var parts := urn.split(":")
+	if parts.size() <= 6:
+		return urn
+	return ":".join(parts.slice(0, 6))
 
 
 # Evaluates the NEW tags for a category from the current owned counts and persists the

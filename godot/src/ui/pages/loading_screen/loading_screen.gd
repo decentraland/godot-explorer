@@ -164,6 +164,14 @@ func _on_timer_check_progress_timeout_timeout():
 
 
 func _on_loading_screen_progress_logic_loading_show_requested():
+	# Dismiss any on-screen keyboard and exit chat mode so neither overlaps the
+	# loading UI when navigation starts while a search/chat input is active (#2491).
+	# close_chat also hides the chat's own keyboard; the explicit hide covers
+	# keyboards opened from other inputs (e.g. Discover search).
+	if Global.is_mobile():
+		DisplayServer.virtual_keyboard_hide()
+	Global.close_chat.emit()
+
 	var now = Time.get_ticks_msec()
 	last_activity_time = now
 	loading_start_time = now
