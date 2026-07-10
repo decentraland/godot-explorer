@@ -100,6 +100,11 @@ var _secondary_btn: Button
 func _ready() -> void:
 	for btn in _combo_action_buttons:
 		btn.touch_action_changed.connect(_on_combo_action_changed)
+	# Toggle the combo menu from raw touch so it opens with a second finger too
+	# (Godot's emulated mouse only covers the primary touch). button_mask = 0 keeps
+	# a single, consistent input path.
+	button_combo.button_mask = 0
+	button_combo.gui_input.connect(_on_button_combo_gui_input)
 	_set_attenuated_sound_for_buttons(self)
 	_apply_jump_icon(ICON_DOUBLE_JUMP)
 
@@ -123,6 +128,13 @@ func _ready() -> void:
 		_tc_default_text[action] = btn.text
 
 	_relayout_gamepad({})
+
+
+func _on_button_combo_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and event.pressed:
+		# Flipping button_pressed emits `toggled`, which opens/closes the combo menu.
+		button_combo.button_pressed = not button_combo.button_pressed
+		button_combo.accept_event()
 
 
 func _process(_dt: float) -> void:

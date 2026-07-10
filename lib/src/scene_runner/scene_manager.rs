@@ -358,9 +358,10 @@ impl SceneManager {
     #[func]
     fn kill_scene(&mut self, scene_id: i32) -> bool {
         let scene_id = SceneId(scene_id);
+        let now_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         if let Some(scene) = self.scenes.get_mut(&scene_id) {
             if let SceneState::Alive = scene.state {
-                scene.state = SceneState::ToKill;
+                scene.state = SceneState::ToKill(now_us);
                 self.dying_scene_ids.push(scene_id);
                 return true;
             }
@@ -370,9 +371,10 @@ impl SceneManager {
 
     #[func]
     fn kill_all_scenes(&mut self) {
+        let now_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for (scene_id, scene) in self.scenes.iter_mut() {
             if let SceneState::Alive = scene.state {
-                scene.state = SceneState::ToKill;
+                scene.state = SceneState::ToKill(now_us);
                 self.dying_scene_ids.push(*scene_id);
             }
         }
@@ -1503,10 +1505,36 @@ impl SceneManager {
     /// scenes killed on sign-out or realm change are guaranteed to be torn down
     /// (V8/Deno threads joined, Godot nodes freed) even after the lobby pauses the
     /// runner. Without this, killed scenes would linger forever as ToKill.
+    /// Force-terminate a scene's V8 isolate via its handle. Last resort when the
+    /// graceful kill can't be delivered or the thread won't exit on its own. Takes
+    /// no `&self` so it can be called from inside `reap_dying_scenes`'s loop while a
+    /// scene is mutably borrowed. No-op when built without `use_deno`.
+    fn force_terminate_scene_v8(scene_id: &SceneId) {
+        #[cfg(feature = "use_deno")]
+        {
+            if let Ok(handles) = crate::dcl::js::VM_HANDLES.lock() {
+                if let Some(handle) = handles.get(scene_id) {
+                    handle.terminate_execution();
+                    tracing::info!("V8 execution terminated for scene {:?}", scene_id);
+                }
+            }
+        }
+        #[cfg(not(feature = "use_deno"))]
+        {
+            let _ = scene_id;
+        }
+    }
+
     fn reap_dying_scenes(&mut self) {
         if self.dying_scene_ids.is_empty() {
             return;
         }
+
+        // Force-terminate a scene this long after the kill was *requested* if it
+        // still hasn't finished — whether or not we ever managed to deliver the
+        // graceful kill signal. Measured against the kill-request time for
+        // `ToKill` and the kill-signal time for `KillSignal`.
+        const KILL_SCENE_TIMEOUT_US: i64 = 10 * 1_000_000;
 
         let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
@@ -1521,7 +1549,7 @@ impl SceneManager {
                 continue;
             };
             match scene.state {
-                SceneState::ToKill => {
+                SceneState::ToKill(request_time_us) => {
                     match scene
                         .dcl_scene
                         .main_sender_to_thread
@@ -1542,8 +1570,27 @@ impl SceneManager {
                             );
                             scene.state = SceneState::KillSignal(current_time_us);
                         }
-                        // Capacity-1 channel with the receiver still alive; retry next tick.
-                        Err(TrySendError::Full(_)) => {}
+                        // Capacity-1 channel and the scene thread hasn't drained the
+                        // previous RendererResponse (its JS is wedged and never calls
+                        // op_crdt_recv_wait). We can't deliver the graceful kill, so
+                        // without a timeout here the scene would stay ToKill forever and
+                        // its Godot nodes would never be freed — leaving the old scene
+                        // rendered on top of the new one after a teleport (issue #2229).
+                        // The V8 force-terminate below doesn't need the channel, so apply
+                        // it once we're past the timeout measured from the kill *request*.
+                        Err(TrySendError::Full(_)) => {
+                            let elapsed_from_request_us = current_time_us - request_time_us;
+                            if elapsed_from_request_us > KILL_SCENE_TIMEOUT_US {
+                                tracing::error!(
+                                    "timeout delivering kill to scene {:?} (channel full for {}s), forcing V8 termination",
+                                    scene_id,
+                                    elapsed_from_request_us / 1_000_000
+                                );
+                                Self::force_terminate_scene_v8(scene_id);
+                                // Mark as dead - thread should exit soon after V8 termination
+                                scene.state = SceneState::Dead;
+                            }
+                        }
                     }
                 }
                 SceneState::KillSignal(kill_time_us) => {
@@ -1551,27 +1598,13 @@ impl SceneManager {
                         scene.state = SceneState::Dead;
                     } else {
                         let elapsed_from_kill_us = current_time_us - kill_time_us;
-                        if elapsed_from_kill_us > 10 * 1e6 as i64 {
-                            // 10 seconds from the kill signal - force terminate V8
+                        if elapsed_from_kill_us > KILL_SCENE_TIMEOUT_US {
+                            // Timeout from the kill signal - force terminate V8
                             tracing::error!(
                                 "timeout killing scene {:?}, forcing V8 termination",
                                 scene_id
                             );
-
-                            // Use the V8 isolate handle to force-terminate execution
-                            #[cfg(feature = "use_deno")]
-                            {
-                                if let Ok(handles) = crate::dcl::js::VM_HANDLES.lock() {
-                                    if let Some(handle) = handles.get(scene_id) {
-                                        handle.terminate_execution();
-                                        tracing::info!(
-                                            "V8 execution terminated for scene {:?}",
-                                            scene_id
-                                        );
-                                    }
-                                }
-                            }
-
+                            Self::force_terminate_scene_v8(scene_id);
                             // Mark as dead - thread should exit soon after V8 termination
                             scene.state = SceneState::Dead;
                         }
@@ -1620,6 +1653,10 @@ impl SceneManager {
             return;
         };
         let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+
+        // Drop the scene's external-content bookkeeping so a reload restarts
+        // its counters from zero.
+        crate::content::external_content::clear_scene(&scene.scene_entity_definition.id);
 
         // Cleanup trigger areas and release RIDs back to pool
         scene
@@ -2311,6 +2348,39 @@ impl SceneManager {
     #[func]
     fn dismiss_memory_warning(&mut self) {
         self.memory_warning_dismissed = true;
+    }
+
+    /// Real process memory usage (resident set) in MB, or -1 when unavailable.
+    /// Cross-platform. Exposed for the preview scene-stats overlay:
+    /// `Performance.MEMORY_STATIC` only counts Godot's own allocator and is
+    /// compiled out of release / mobile export templates (returns 0 there), so
+    /// the overlay reads the real OS-level figure through here.
+    #[func]
+    fn get_process_memory_mb(&self) -> i32 {
+        crate::tools::memory_monitor::used_memory_mb()
+    }
+
+    /// External (non-deployed) content the scene pulled at runtime, for the
+    /// preview scene-stats overlay. Returns:
+    ///   { "files": PackedStringArray of user://content cache filenames
+    ///              (url-sourced textures; sizes are read from disk by the
+    ///              caller), "fetch_bytes": bytes consumed via the scene's JS
+    ///              fetch() (never stored on disk) }
+    /// Empty dictionary when the scene id is unknown. Passive read — no I/O.
+    #[func]
+    fn get_scene_external_content(&self, scene_id: i32) -> VarDictionary {
+        let mut dict = VarDictionary::new();
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return dict;
+        };
+        let (files, fetch_bytes) =
+            crate::content::external_content::snapshot(&scene.scene_entity_definition.id);
+        dict.set(
+            "files",
+            PackedStringArray::from_iter(files.iter().map(GString::from)),
+        );
+        dict.set("fetch_bytes", fetch_bytes as i64);
+        dict
     }
 }
 

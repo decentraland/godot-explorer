@@ -31,11 +31,13 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-// Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG).
-// Set this to `Some("<tarball-url>")` only to temporarily pin a specific build
-// (e.g. a per-PR protocol tarball); leave it `None` to track @next.
+// Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG),
+// unless PROTOCOL_FIXED_VERSION_URL pins a specific tarball.
+//
 // Pinned here to the controls-customization protocol build (PR #426 rebased on main) that
-// ships the new mobile_input_controls/ui_input_binding components alongside current main.
+// ships the new mobile_input_controls/ui_input_binding components. This intentionally
+// overrides main's 1.11.0 RC pin (protocol-1.0.0-28974105118.commit-a598406); when this
+// branch merges, re-point to a protocol build that includes both PR #426 and main's pin.
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-28537371424.commit-9b4f100.tgz");
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
