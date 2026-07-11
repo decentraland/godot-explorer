@@ -1247,6 +1247,13 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
+	# While tearing down the session toward a portrait-only screen (sign-out ->
+	# lobby, or return-to-discover -> Discover), ignore stray landscape flips. The
+	# explorer's loading-screen/chat machinery reacts to the realm being cleared
+	# during teardown and would otherwise flip back to landscape right before the
+	# swap, stranding the lobby/login in landscape (issue #2508).
+	if _signing_out or _returning_to_discover:
+		return
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
