@@ -226,6 +226,17 @@ func _normalize_emote_urn(urn: String) -> String:
 	return urn
 
 
+# The urn to store in the avatar profile for an equipped emote. Lambda-listed owned emotes
+# already use the token-instance urn (…:<itemId>:<tokenId>) as their grid urn, but a
+# just-bought emote injected from the fast marketplace API (inject_owned_emote) only has
+# the ITEM urn — and the catalyst rejects deployments whose on-chain pointers lack the
+# tokenId, silently failing the save (#2489). Ask the tracker for the token form; base and
+# already-tokenized urns pass through unchanged.
+func _profile_emote_urn(urn: String) -> String:
+	var token_urn := MarketplaceTracker.get_token_urn(urn)
+	return token_urn if not token_urn.is_empty() else urn
+
+
 func _on_emote_editor_item_select_emote(_emote_urn: String, index: int):
 	if is_instance_valid(avatar) and not _emote_urn.is_empty():
 		avatar.async_play_emote(_emote_urn)
@@ -255,7 +266,7 @@ func _on_emote_item_equip_emote(equip: bool, _emote_urn: String, emote_item: Emo
 		emote_equipped.emit(false)
 		return
 	var emote_urns = avatar.avatar_data.get_emotes()
-	emote_urns[current_selected_index] = _emote_urn
+	emote_urns[current_selected_index] = _profile_emote_urn(_emote_urn)
 	avatar.avatar_data.set_emotes(emote_urns)
 	set_new_emotes.emit(emote_urns)
 	last_equipped_emote_urn = _emote_urn
