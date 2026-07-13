@@ -28,7 +28,7 @@ var _scroll_detected: bool = false
 @onready var async_image: AsyncImage = %AsyncImage
 @onready var button_jump_in: Button = %Button_JumpIn_Banner
 @onready var label_title: Label = %Label_Title
-@onready var control_content: Control = %Control_Content
+@onready var margin_container_content: MarginContainer = %MarginContainer_Content
 
 
 func _ready() -> void:
@@ -115,8 +115,8 @@ func _apply_size() -> void:
 
 
 func _update_content_visibility() -> void:
-	if is_instance_valid(control_content):
-		control_content.visible = _card_mode == CardMode.BANNER
+	if is_instance_valid(margin_container_content):
+		margin_container_content.visible = _card_mode == CardMode.BANNER
 
 
 func set_data(place_data: Dictionary) -> void:
@@ -139,3 +139,7 @@ func get_creator() -> String:
 
 func get_place_data() -> Dictionary:
 	return _data
+
+
+func get_texture() -> Texture2D:
+	return async_image.texture_image.texture

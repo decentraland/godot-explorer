@@ -2,9 +2,18 @@
 
 [ext_resource type="Script" uid="uid://b5cers4xltxt0" path="res://src/ui/components/molecules/snap_carousel/snap_carousel_card.gd" id="1_card"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_ifxdv"]
+[ext_resource type="Shader" uid="uid://hm1f1bm7ql4g" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_px.gdshader" id="3_omnfi"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="5_pjqmr"]
 [ext_resource type="Texture2D" uid="uid://bpaccmjtefhdy" path="res://src/ui/pages/discover/icons/jump-in.svg" id="6_jx4n8"]
 [ext_resource type="PackedScene" uid="uid://chxo1eeeses1w" path="res://src/ui/components/atoms/images/async_image/async_image.tscn" id="7_async"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_g8rt2"]
+shader = ExtResource("3_omnfi")
+shader_parameter/corner_radius_px = 12.0
+shader_parameter/round_top_left = false
+shader_parameter/round_top_right = false
+shader_parameter/round_bottom_left = true
+shader_parameter/round_bottom_right = true
 
 [sub_resource type="Gradient" id="Gradient_ifxdv"]
 colors = PackedColorArray(0.08627451, 0.08235294, 0.09411765, 0.8980392, 0.08627451, 0.08235294, 0.09411765, 0)
@@ -13,12 +22,6 @@ colors = PackedColorArray(0.08627451, 0.08235294, 0.09411765, 0.8980392, 0.08627
 gradient = SubResource("Gradient_ifxdv")
 fill_from = Vector2(0, 1)
 fill_to = Vector2(0, 0)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rpuq4"]
-bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8980392)
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-corner_detail = 12
 
 [sub_resource type="LabelSettings" id="LabelSettings_omnfi"]
 line_spacing = -3.0
@@ -118,7 +121,7 @@ unique_name_in_owner = true
 layout_mode = 1
 forced_quality = 2
 
-[node name="Control_Content" type="Control" parent="." unique_id=322677926]
+[node name="MarginContainer_Content" type="MarginContainer" parent="." unique_id=1130362401]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -126,49 +129,32 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+theme_override_constants/margin_left = 1
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 1
+theme_override_constants/margin_bottom = 1
 
-[node name="VBoxContainer_Gradient" type="VBoxContainer" parent="Control_Content" unique_id=709899396]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -169.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_constants/separation = 0
-
-[node name="TextureRect" type="TextureRect" parent="Control_Content/VBoxContainer_Gradient" unique_id=572477499]
-custom_minimum_size = Vector2(0, 157)
+[node name="TextureRect" type="TextureRect" parent="MarginContainer_Content" unique_id=572477499]
+material = SubResource("ShaderMaterial_g8rt2")
+custom_minimum_size = Vector2(0, 169)
 layout_mode = 2
+size_flags_vertical = 8
 texture = SubResource("GradientTexture2D_omnfi")
 
-[node name="PanelContainer" type="PanelContainer" parent="Control_Content/VBoxContainer_Gradient" unique_id=1031218019]
-clip_children = 2
-custom_minimum_size = Vector2(0, 12)
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Content" unique_id=1201377378]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_rpuq4")
-
-[node name="MarginContainer" type="MarginContainer" parent="Control_Content" unique_id=1201377378]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 32
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 32
 theme_override_constants/margin_bottom = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Control_Content/MarginContainer" unique_id=942253526]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer_Content/MarginContainer" unique_id=942253526]
 custom_minimum_size = Vector2(0, 62)
 layout_mode = 2
 size_flags_vertical = 8
 
-[node name="Label_Title" type="Label" parent="Control_Content/MarginContainer/HBoxContainer" unique_id=201260027]
+[node name="Label_Title" type="Label" parent="MarginContainer_Content/MarginContainer/HBoxContainer" unique_id=201260027]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 63)
 layout_mode = 2
@@ -181,7 +167,7 @@ autowrap_mode = 2
 text_overrun_behavior = 5
 max_lines_visible = 2
 
-[node name="Button_JumpIn_Banner" type="Button" parent="Control_Content/MarginContainer/HBoxContainer" unique_id=1045377035]
+[node name="Button_JumpIn_Banner" type="Button" parent="MarginContainer_Content/MarginContainer/HBoxContainer" unique_id=1045377035]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(56, 54)
 layout_mode = 2

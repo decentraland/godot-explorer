@@ -70,7 +70,11 @@ func _ready():
 func _on_featured_card_tapped(index: int) -> void:
 	var cards = places_featured.get_cards()
 	if index >= 0 and index < cards.size():
-		var data = cards[index].get_place_data()
+		var card = cards[index]
+		var data = card.get_place_data().duplicate()
+		var tex = card.get_texture()
+		if tex:
+			data["_preloaded_texture"] = tex
 		jump_in.set_data(data)
 		jump_in.open_panel.call_deferred()
 
