@@ -7,6 +7,7 @@ enum SceneLogLevel {
 }
 
 const ICON_COLUMN_WIDTH = 20
+const NAVBAR_GAP: float = 12.0
 
 var icon_log: Texture2D = preload("res://src/ui/components/organisms/debug_panel/icons/Log.svg")
 var icon_error: Texture2D = preload("res://src/ui/components/organisms/debug_panel/icons/Error.svg")
@@ -24,6 +25,7 @@ var icon_visible: Texture2D = preload(
 	"res://src/ui/components/organisms/debug_panel/icons/GuiVisibilityVisible.svg"
 )
 
+@onready var top_buttons_row: HBoxContainer = %HBoxContainer_TopButtons
 @onready var text_edit_expression: TextEdit = %TextEdit_Expression
 @onready var label_expression: TextEdit = %Label_Expression
 
@@ -42,9 +44,59 @@ func _ready():
 	if Global.has_javascript_debugger:
 		button_debug_js.text = "Debug JS"
 
+	# Outside dev builds only the Console tab is available: Expression and
+	# Misc&Debugger are developer tools, and with a single tab left the tab
+	# bar itself is just noise.
+	if not DclGlobal.is_dev():
+		tab_container_debug_panel.current_tab = 0
+		tab_container_debug_panel.tabs_visible = false
+		for tab_idx in range(1, tab_container_debug_panel.get_tab_count()):
+			tab_container_debug_panel.set_tab_hidden(tab_idx, true)
+
 	clear_console()
 	if tab_container_debug_panel.visible:
 		_on_button_show_hide_pressed()
+
+	# Dock the Console / Reload Scene buttons into the top-right HUD row, left
+	# of the scene-stats monitor toggle, so they read as part of the preview
+	# navbar. Deferred so the rest of the HUD is fully laid out first.
+	_dock_buttons_into_navbar.call_deferred()
+
+
+## The buttons row may have been docked into the HUD (outside this panel) —
+## free it explicitly on teardown, mirroring SceneStatsPanel's toggle cleanup.
+func _exit_tree() -> void:
+	if is_instance_valid(top_buttons_row) and not is_ancestor_of(top_buttons_row):
+		top_buttons_row.queue_free()
+
+
+## Reparent the top-buttons row next to the camera button, reserving the slot
+## the scene-stats monitor toggle occupies between them (see
+## SceneStatsPanel._create_toggle_button). When there is no camera button the
+## row simply stays inside the panel, above the console.
+func _dock_buttons_into_navbar() -> void:
+	var cam := _find_camera_button()
+	if cam == null:
+		return
+	top_buttons_row.get_parent().remove_child(top_buttons_row)
+	cam.get_parent().add_child(top_buttons_row)
+	top_buttons_row.anchor_left = cam.anchor_left
+	top_buttons_row.anchor_top = cam.anchor_top
+	top_buttons_row.anchor_right = cam.anchor_right
+	top_buttons_row.anchor_bottom = cam.anchor_bottom
+	top_buttons_row.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	top_buttons_row.offset_top = cam.offset_top
+	top_buttons_row.offset_bottom = cam.offset_bottom
+	var monitor_slot: float = SceneStatsPanel.TOGGLE_SIZE + SceneStatsPanel.TOGGLE_GAP
+	var right_edge: float = cam.offset_left - monitor_slot - NAVBAR_GAP
+	top_buttons_row.offset_right = right_edge
+	top_buttons_row.offset_left = right_edge - top_buttons_row.get_combined_minimum_size().x
+
+
+func _find_camera_button() -> Control:
+	if not is_inside_tree():
+		return null
+	return get_tree().get_root().find_child("Button_Camera", true, false) as Control
 
 
 func clear_console():

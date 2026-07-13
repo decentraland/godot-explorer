@@ -75,7 +75,10 @@ pub struct Dirty {
 #[derive(PartialEq)]
 pub enum SceneState {
     Alive,
-    ToKill,
+    /// Marked for removal. Carries the time (in the SceneManager's `begin_time`
+    /// clock, microseconds) at which the kill was requested, so `reap_dying_scenes`
+    /// can force-terminate a scene that never manages to receive the kill signal.
+    ToKill(i64),
     KillSignal(i64),
     Dead,
 }
