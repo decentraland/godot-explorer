@@ -38,9 +38,9 @@ const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back t
 const SCENE_CRASH_PRIMARY = "RELOAD"
 const SCENE_CRASH_SECONDARY = "BACK"
 
-const LOW_MEMORY_TITLE = "Running low on memory"
-const LOW_MEMORY_BODY = "This scene is using a lot of memory and might make the app close unexpectedly. You can continue anyway or go back to Discover."
-const LOW_MEMORY_PRIMARY = "CONTINUE ANYWAY"
+const LOW_MEMORY_TITLE = "Low memory"
+const LOW_MEMORY_BODY = "This place may not run smoothly on your device and could close unexpectedly. You can continue or go back to Discover."
+const LOW_MEMORY_PRIMARY = "CONTINUE"
 const LOW_MEMORY_SECONDARY = "BACK TO DISCOVER"
 
 const BAN_PRE_CHECK_TITLE = "You can't enter"
