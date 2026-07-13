@@ -65,17 +65,32 @@ runs:
         # container that doesn't ship jq. sha (git hex) and allocated-by (a literal
         # label like "android"/"ios") are controlled values, so a printf is safe.
         PAYLOAD=$(printf '{"sha":"%s","allocatedBy":"%s"}' "$SHA" "$ALLOCATED_BY")
-        RESP=""
-        for attempt in 1 2 3; do
-          if RESP=$(curl -fsS -X POST "$URL" \
+        # Retry with exponential backoff to ride out transient Cloudflare Durable Object
+        # blips (the allocator is a single global DO; a regional incident makes it flap
+        # 500 "object reset" bursts interleaved with 200s — see the 2026-07-03 writeup).
+        # -sS but NOT -f: keep the Worker's error body so a 500/1101 reaches the CI log
+        # instead of <empty>; we gate on the HTTP status ourselves. Retrying is safe: the
+        # allocator is idempotent per SHA. Non-transient 4xx (e.g. a bad bearer) fail fast.
+        RESP=""; HTTP_CODE=""; ATTEMPTS=5; BACKOFF=2
+        for attempt in $(seq 1 "$ATTEMPTS"); do
+          RESP=$(curl -sS -m 20 -w $'\n%{http_code}' -X POST "$URL" \
             -H 'content-type: application/json' \
             -H "authorization: Bearer ${SECRET}" \
-            -d "$PAYLOAD"); then
-            break
+            -d "$PAYLOAD" || true)
+          HTTP_CODE=$(printf '%s' "$RESP" | tail -n1)
+          RESP=$(printf '%s' "$RESP" | sed '$d')
+          case "$HTTP_CODE" in
+            2??) break ;;
+            429|5??|000|'') ;;  # transient (incl. DO reset / connect fail / timeout) → retry
+            *)  echo "❌ compute-build-number: non-retryable HTTP ${HTTP_CODE} from $URL: ${RESP:-<empty>}"
+                exit 1 ;;
+          esac
+          echo "⚠️  allocate attempt $attempt/$ATTEMPTS failed (HTTP ${HTTP_CODE:-none}): ${RESP:-<empty>}"
+          if [ "$attempt" -lt "$ATTEMPTS" ]; then
+            echo "    retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+            BACKOFF=$((BACKOFF * 2))
           fi
-          echo "⚠️  build-number allocate attempt $attempt failed; retrying in 3s..."
-          RESP=""
-          sleep 3
         done
         # Extract the (unquoted, integer) buildNumber without jq. `|| true` keeps a
         # non-matching response (e.g. an error body) from tripping pipefail before the

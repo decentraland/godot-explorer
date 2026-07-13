@@ -28,6 +28,10 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal upgrade_to_otp
+## Fired by GuestUpgradeCard after the thirdweb network check resolves so other
+## UI (e.g. UpgradeBadge) can sync without duplicating the network call.
+signal guest_upgrade_state_refreshed(is_upgraded: bool)
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 ## Sync settings "Hide View Profile" / "Hide World Interactions" / etc. checkboxes.
@@ -72,11 +76,39 @@ const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
+# DEBUG ONLY. When `true`, get_device_anchor_id() ignores the platform-native
+# device anchor (Android SSAID / iOS Keychain UUID) and uses the per-install
+# UUID in `user://device_anchor.txt` on EVERY platform, so the guest wallet is
+# tied to the app's user data: deleting `user://` (clear app data / reinstall —
+# or the "RESET GUEST WALLET" debug button in the lobby) mints a fresh anchor
+# and a fresh wallet. When `false` the original shipping behavior returns: the
+# device-bound native anchor that survives reinstall.
+#
+# HARD-GATED to non-production: get_device_anchor_id() (and the lobby debug
+# button) only honor this flag when `not is_production()`, so a release cut from
+# main always uses the device-bound native anchor even if this is left `true`.
+const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = false
+
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
+# Hide the Play-as-Guest entry path on iOS while Apple reviews the guest + IAP flow
+# (issue #2308): the lobby skips the ACCOUNT_HOME chooser and lands directly on the
+# sign-in screen. Flip to false (or pass ?disable-guest-gating=true) to restore guest.
+const IOS_GUEST_ENTRY_DISABLED := true
+
 # Increase this value when local assets cache format changes (invalidates cache)
 const LOCAL_ASSETS_CACHE_VERSION: int = 4
+
+# On-disk guest identity artifacts, owned by Rust (keep in sync with
+# lib/src/auth/device_anchor.rs + thirdweb_guest.rs) plus the mobile-BFF
+# attestation session. Wiped when a non-upgraded guest deletes their account
+# (issue #2335) and by the non-prod lobby "reset guest wallet" debug button.
+const GUEST_DEVICE_STORAGE_FILES: Array[String] = [
+	"user://device_anchor.txt",
+	"user://thirdweb_session.json",
+	"user://attest_session.json",
+]
 
 ## Global classes (singleton pattern)
 
@@ -434,6 +466,10 @@ func _ready():
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
+
+		# scene-stats overlay is applied by explorer.gd:_update_scene_stats_ui();
+		# just log here so CLI/QA can confirm the param parsed.
+		print("[DEEPLINK] scene-stats=", deep_link_obj.scene_stats)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -895,6 +931,26 @@ func get_explorer() -> Explorer:
 ## realm, scene-fetcher state and the Rust player identity — then returns to a
 ## fresh lobby so the next login starts as if the app had restarted. Every UI
 ## logout button and the disconnect handler funnel through here.
+## Deletes every on-disk guest identity artifact so the next "Play as guest"
+## derives a BRAND-NEW wallet instead of rehydrating the old one, and drops the
+## cached guest look. Returns how many files were removed. This does NOT end the
+## session — pair it with [sign_out] (see the guest account-deletion flow) to
+## actually log the user out. Shared by that flow and the lobby debug reset.
+func clear_guest_device_storage() -> int:
+	var removed := 0
+	for path in GUEST_DEVICE_STORAGE_FILES:
+		if FileAccess.file_exists(path):
+			var err := DirAccess.remove_absolute(path)
+			if err == OK:
+				removed += 1
+			else:
+				push_error("[guest] delete: failed to remove %s (err %d)" % [path, err])
+	# The cached guest profile would otherwise be reused by the fresh wallet.
+	get_config().guest_profile = {}
+	get_config().save_to_settings_file()
+	return removed
+
+
 func sign_out() -> void:
 	if _signing_out:
 		return
@@ -1175,6 +1231,13 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
+	# While tearing down the session toward a portrait-only screen (sign-out ->
+	# lobby, or return-to-discover -> Discover), ignore stray landscape flips. The
+	# explorer's loading-screen/chat machinery reacts to the realm being cleared
+	# during teardown and would otherwise flip back to landscape right before the
+	# swap, stranding the lobby/login in landscape (issue #2508).
+	if _signing_out or _returning_to_discover:
+		return
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
@@ -1291,7 +1354,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen()
+		explorer.loading_ui.enable_loading_screen(new_realm, "on_teleport")
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
@@ -1311,18 +1374,12 @@ func async_join_world(world_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen()
+		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
 			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
 			Time.get_unix_time_from_system()
 		)
-		var loading_data = {
-			"position": str(Global.scene_fetcher.current_position),
-			"realm": world_realm,
-			"when": "on_world"
-		}
-		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 		Global.realm.async_set_realm(world_realm, true)
 		explorer.hide_menu()
 		Global.close_menu.emit()
@@ -1494,3 +1551,36 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 		return
 	camera_mode_blocked = blocked
 	camera_mode_block_changed.emit(blocked)
+
+
+# Anchor used to derive the thirdweb guest session/wallet. Shared by the lobby
+# guest-login flow and the "Upgrade to OTP" modal so both derive the same wallet.
+#
+# Resolution order:
+#   1. DEBUG_GUEST_ROTATE_ANCHOR_ID on AND non-production build → return "" so
+#      Rust falls back to the resettable per-install UUID in
+#      `user://device_anchor.txt` (delete user:// → fresh guest wallet) on every
+#      platform. The production gate means this can never ship accidentally.
+#   2. Otherwise (shipping): the device-bound native anchor (Android SSAID / iOS
+#      Keychain UUID), which survives reinstall. Desktop has none → returns ""
+#      and Rust uses the user:// UUID anyway.
+#
+# Android note: `has_method()` always returns false for JNISingleton methods
+# (Object.has_method consults ClassDB, the Android plugin method_map is
+# separate). Don't guard the Android call with has_method or it silently no-ops.
+# See: https://github.com/godotengine/godot/issues/106436
+func get_device_anchor_id() -> String:
+	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
+	#    Gated to non-production so it can never ship even if the flag is left on.
+	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():
+		return ""
+	# 2. Shipping: device-bound native anchor (persists across reinstall).
+	if self.is_android():
+		var plugin = Engine.get_singleton("dcl-godot-android")
+		if plugin != null:
+			return plugin.getDeviceAnchorId()
+	elif self.is_ios():
+		var plugin = Engine.get_singleton("DclGodotiOS")
+		if plugin != null and plugin.has_method("get_device_anchor_id"):
+			return plugin.get_device_anchor_id()
+	return ""

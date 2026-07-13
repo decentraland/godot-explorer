@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3 uid="uid://rect_skel_placeholder"]
+
+[ext_resource type="Script" uid="uid://bkmbb7krwpjej" path="res://src/ui/components/atoms/controls/rectangle_skeleton/rectangle_skeleton.gd" id="1_scr"]
+[ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/pages/discover/carrousel/discover_carrousel_skeleton_material.tres" id="2_mat"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(1, 1, 1, 0.08)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[node name="RectangleSkeleton" type="PanelContainer"]
+material = ExtResource("2_mat")
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+script = ExtResource("1_scr")

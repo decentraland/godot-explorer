@@ -35,7 +35,7 @@ use godot::{
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    sync::atomic::AtomicU32,
+    sync::atomic::{AtomicU32, Ordering},
     time::{Duration, Instant},
 };
 use tokio::sync::mpsc::error::TrySendError;
@@ -103,6 +103,17 @@ pub struct SceneManager {
     crashed_scene_ids: Vec<SceneId>,
     global_scene_ids: Vec<SceneId>,
 
+    // Graceful memory management (issue #2002). Frames to wait after a
+    // memory-pressure kill before acting again, so freed memory is reflected.
+    memory_settle_frames: i32,
+    // Latched while a low-memory warning we triggered is on screen, so we don't
+    // re-emit it every frame. Cleared once pressure recovers (level back to OK).
+    memory_modal_active: bool,
+    // Set when the user chose "Continue anyway" on the low-memory warning: from
+    // then on we stop warning and let the scene run (with verbose memory logging)
+    // so we can observe how far it gets before an eventual OOM. Session-scoped.
+    memory_warning_dismissed: bool,
+
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
     last_proximity_entity: Option<(SceneId, SceneEntityId)>,
@@ -145,6 +156,11 @@ pub static GLOBAL_TIMESTAMP: AtomicU32 = AtomicU32::new(0);
 const MAX_TIME_PER_SCENE_TICK_US: i64 = 8333; // 50% of update time at 60fps
 const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tick_us (4 scenes per frame)
 
+// Frames to wait after a memory-pressure kill before acting again (~1.5s at
+// 60fps), so the scene thread can tear down and Godot/GPU memory is reclaimed
+// before we measure pressure again. See `handle_memory_pressure`.
+const MEMORY_SETTLE_FRAMES: i32 = 90;
+
 #[godot_api]
 impl SceneManager {
     #[signal]
@@ -155,6 +171,14 @@ impl SceneManager {
 
     #[signal]
     fn scene_crashed(scene_id: i32, entity_id: GString);
+
+    /// Emitted when the background memory monitor detects critical pressure and
+    /// there is no farther scene left to evict (only the current parcel +
+    /// globals remain). Instead of killing the scene unilaterally, GDScript shows
+    /// a warning modal letting the user "Continue anyway" or go "Back to
+    /// Discover". Emitted once per pressure episode (issue #2002).
+    #[signal]
+    fn low_memory_warning(scene_id: i32, entity_id: GString, footprint_mb: i32, available_mb: i32);
 
     // Loading session signals
     #[signal]
@@ -334,9 +358,10 @@ impl SceneManager {
     #[func]
     fn kill_scene(&mut self, scene_id: i32) -> bool {
         let scene_id = SceneId(scene_id);
+        let now_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         if let Some(scene) = self.scenes.get_mut(&scene_id) {
             if let SceneState::Alive = scene.state {
-                scene.state = SceneState::ToKill;
+                scene.state = SceneState::ToKill(now_us);
                 self.dying_scene_ids.push(scene_id);
                 return true;
             }
@@ -346,9 +371,10 @@ impl SceneManager {
 
     #[func]
     fn kill_all_scenes(&mut self) {
+        let now_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for (scene_id, scene) in self.scenes.iter_mut() {
             if let SceneState::Alive = scene.state {
-                scene.state = SceneState::ToKill;
+                scene.state = SceneState::ToKill(now_us);
                 self.dying_scene_ids.push(*scene_id);
             }
         }
@@ -1204,6 +1230,12 @@ impl SceneManager {
         // V8/Deno threads. Reaping here guarantees background teardown either way.
         self.reap_dying_scenes();
 
+        // Act on memory pressure detected by the background monitor (issue #2002).
+        // Runs even while paused (the lobby pauses the runner) because a heavy
+        // scene can be loading behind the loading screen — exactly when an OOM
+        // kill strikes.
+        self.handle_memory_pressure();
+
         if self.pause {
             return;
         }
@@ -1379,16 +1411,130 @@ impl SceneManager {
         }
     }
 
+    /// Consume the pressure level published by the background memory monitor
+    /// (issue #2002) and free memory before the OS kills the app. Detection runs
+    /// off-thread so it survives a main-thread freeze; this acts the instant the
+    /// main loop gets a slice of CPU.
+    ///
+    /// Policy: evict the farthest disposable parcel first (silent — the player is
+    /// not in it). When only the current parcel and globals remain and we are
+    /// still CRITICAL, warn once via `low_memory_warning` and let the user decide
+    /// ("Continue anyway" / "Back to Discover") rather than kill the scene they
+    /// are standing in. A settle window after each kill avoids thrashing while
+    /// freed memory is reclaimed.
+    fn handle_memory_pressure(&mut self) {
+        let level = crate::tools::memory_monitor::PRESSURE_LEVEL.load(Ordering::Relaxed);
+
+        if level == 0 {
+            // Pressure cleared: re-arm the warning and drop any settle countdown.
+            self.memory_modal_active = false;
+            self.memory_settle_frames = 0;
+            return;
+        }
+
+        if self.memory_settle_frames > 0 {
+            self.memory_settle_frames -= 1;
+            return;
+        }
+
+        // Pick the farthest non-current, non-global, alive parcel scene.
+        let current = self.current_parcel_scene_id;
+        let mut farthest: Option<(SceneId, f32)> = None;
+        for (id, scene) in self.scenes.iter() {
+            if !matches!(scene.state, SceneState::Alive) {
+                continue;
+            }
+            if *id == current || matches!(scene.scene_type, SceneType::Global(_)) {
+                continue;
+            }
+            if farthest.is_none_or(|(_, best)| scene.distance > best) {
+                farthest = Some((*id, scene.distance));
+            }
+        }
+
+        let available = crate::tools::memory_monitor::AVAILABLE_MB.load(Ordering::Relaxed);
+
+        if let Some((scene_id, distance)) = farthest {
+            let title = self
+                .scenes
+                .get(&scene_id)
+                .map(|s| s.scene_entity_definition.get_title())
+                .unwrap_or_default();
+            crate::tools::memory_monitor::emit_log(&format!(
+                "[MemMonitor] level={} available={}MB -> evict far scene id={} dist={:.1} '{}'",
+                level, available, scene_id.0, distance, title
+            ));
+            self.kill_scene(scene_id.0);
+            self.memory_settle_frames = MEMORY_SETTLE_FRAMES;
+            return;
+        }
+
+        // Nothing disposable left (only the current parcel + globals). Rather
+        // than kill the scene the player is in, warn once under CRITICAL and let
+        // the user decide. If they already chose to continue, stay silent.
+        if level >= 2 && !self.memory_modal_active && !self.memory_warning_dismissed {
+            let entity_id = self
+                .scenes
+                .get(&current)
+                .filter(|s| matches!(s.state, SceneState::Alive))
+                .map(|s| s.scene_entity_definition.id.clone());
+
+            if let Some(entity_id) = entity_id {
+                let footprint = crate::tools::memory_monitor::FOOTPRINT_MB.load(Ordering::Relaxed);
+                crate::tools::memory_monitor::emit_log(&format!(
+                    "[MemMonitor] CRITICAL available={}MB footprint={}MB -> warn user (scene id={})",
+                    available, footprint, current.0
+                ));
+                self.memory_modal_active = true;
+                self.base_mut().emit_signal(
+                    "low_memory_warning",
+                    &[
+                        current.0.to_variant(),
+                        entity_id.to_godot().to_variant(),
+                        footprint.to_variant(),
+                        available.to_variant(),
+                    ],
+                );
+            }
+        }
+    }
+
     /// Advance the kill state machine for every dying scene and free those that
     /// have finished. Runs every frame from the top of `scene_runner_update`,
     /// unconditionally — before the `pause` / avatar-validity early-returns — so
     /// scenes killed on sign-out or realm change are guaranteed to be torn down
     /// (V8/Deno threads joined, Godot nodes freed) even after the lobby pauses the
     /// runner. Without this, killed scenes would linger forever as ToKill.
+    /// Force-terminate a scene's V8 isolate via its handle. Last resort when the
+    /// graceful kill can't be delivered or the thread won't exit on its own. Takes
+    /// no `&self` so it can be called from inside `reap_dying_scenes`'s loop while a
+    /// scene is mutably borrowed. No-op when built without `use_deno`.
+    fn force_terminate_scene_v8(scene_id: &SceneId) {
+        #[cfg(feature = "use_deno")]
+        {
+            if let Ok(handles) = crate::dcl::js::VM_HANDLES.lock() {
+                if let Some(handle) = handles.get(scene_id) {
+                    handle.terminate_execution();
+                    tracing::info!("V8 execution terminated for scene {:?}", scene_id);
+                }
+            }
+        }
+        #[cfg(not(feature = "use_deno"))]
+        {
+            let _ = scene_id;
+        }
+    }
+
     fn reap_dying_scenes(&mut self) {
         if self.dying_scene_ids.is_empty() {
             return;
         }
+
+        // Force-terminate a scene this long after the kill was *requested* if it
+        // still hasn't finished — whether or not we ever managed to deliver the
+        // graceful kill signal. Measured against the kill-request time for
+        // `ToKill` and the kill-signal time for `KillSignal`.
+        const KILL_SCENE_TIMEOUT_US: i64 = 10 * 1_000_000;
 
         let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
@@ -1403,7 +1549,7 @@ impl SceneManager {
                 continue;
             };
             match scene.state {
-                SceneState::ToKill => {
+                SceneState::ToKill(request_time_us) => {
                     match scene
                         .dcl_scene
                         .main_sender_to_thread
@@ -1424,8 +1570,27 @@ impl SceneManager {
                             );
                             scene.state = SceneState::KillSignal(current_time_us);
                         }
-                        // Capacity-1 channel with the receiver still alive; retry next tick.
-                        Err(TrySendError::Full(_)) => {}
+                        // Capacity-1 channel and the scene thread hasn't drained the
+                        // previous RendererResponse (its JS is wedged and never calls
+                        // op_crdt_recv_wait). We can't deliver the graceful kill, so
+                        // without a timeout here the scene would stay ToKill forever and
+                        // its Godot nodes would never be freed — leaving the old scene
+                        // rendered on top of the new one after a teleport (issue #2229).
+                        // The V8 force-terminate below doesn't need the channel, so apply
+                        // it once we're past the timeout measured from the kill *request*.
+                        Err(TrySendError::Full(_)) => {
+                            let elapsed_from_request_us = current_time_us - request_time_us;
+                            if elapsed_from_request_us > KILL_SCENE_TIMEOUT_US {
+                                tracing::error!(
+                                    "timeout delivering kill to scene {:?} (channel full for {}s), forcing V8 termination",
+                                    scene_id,
+                                    elapsed_from_request_us / 1_000_000
+                                );
+                                Self::force_terminate_scene_v8(scene_id);
+                                // Mark as dead - thread should exit soon after V8 termination
+                                scene.state = SceneState::Dead;
+                            }
+                        }
                     }
                 }
                 SceneState::KillSignal(kill_time_us) => {
@@ -1433,27 +1598,13 @@ impl SceneManager {
                         scene.state = SceneState::Dead;
                     } else {
                         let elapsed_from_kill_us = current_time_us - kill_time_us;
-                        if elapsed_from_kill_us > 10 * 1e6 as i64 {
-                            // 10 seconds from the kill signal - force terminate V8
+                        if elapsed_from_kill_us > KILL_SCENE_TIMEOUT_US {
+                            // Timeout from the kill signal - force terminate V8
                             tracing::error!(
                                 "timeout killing scene {:?}, forcing V8 termination",
                                 scene_id
                             );
-
-                            // Use the V8 isolate handle to force-terminate execution
-                            #[cfg(feature = "use_deno")]
-                            {
-                                if let Ok(handles) = crate::dcl::js::VM_HANDLES.lock() {
-                                    if let Some(handle) = handles.get(scene_id) {
-                                        handle.terminate_execution();
-                                        tracing::info!(
-                                            "V8 execution terminated for scene {:?}",
-                                            scene_id
-                                        );
-                                    }
-                                }
-                            }
-
+                            Self::force_terminate_scene_v8(scene_id);
                             // Mark as dead - thread should exit soon after V8 termination
                             scene.state = SceneState::Dead;
                         }
@@ -1502,6 +1653,10 @@ impl SceneManager {
             return;
         };
         let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+
+        // Drop the scene's external-content bookkeeping so a reload restarts
+        // its counters from zero.
+        crate::content::external_content::clear_scene(&scene.scene_entity_definition.id);
 
         // Cleanup trigger areas and release RIDs back to pool
         scene
@@ -2178,6 +2333,54 @@ impl SceneManager {
             .filter(|scene| scene.state == SceneState::Alive)
             .count() as i32
     }
+
+    /// Enable/disable full-resolution memory logging (issue #2002). Used by the
+    /// "Continue anyway" path on the low-memory warning to capture the run-up to
+    /// a possible crash at every sample instead of ~every 2s.
+    #[func]
+    fn set_memory_verbose_logging(&self, on: bool) {
+        crate::tools::memory_monitor::set_verbose(on);
+    }
+
+    /// The user chose "Continue anyway" on the low-memory warning (issue #2002):
+    /// stop warning for the rest of the session and keep the scene running.
+    #[func]
+    fn dismiss_memory_warning(&mut self) {
+        self.memory_warning_dismissed = true;
+    }
+
+    /// Real process memory usage (resident set) in MB, or -1 when unavailable.
+    /// Cross-platform. Exposed for the preview scene-stats overlay:
+    /// `Performance.MEMORY_STATIC` only counts Godot's own allocator and is
+    /// compiled out of release / mobile export templates (returns 0 there), so
+    /// the overlay reads the real OS-level figure through here.
+    #[func]
+    fn get_process_memory_mb(&self) -> i32 {
+        crate::tools::memory_monitor::used_memory_mb()
+    }
+
+    /// External (non-deployed) content the scene pulled at runtime, for the
+    /// preview scene-stats overlay. Returns:
+    ///   { "files": PackedStringArray of user://content cache filenames
+    ///              (url-sourced textures; sizes are read from disk by the
+    ///              caller), "fetch_bytes": bytes consumed via the scene's JS
+    ///              fetch() (never stored on disk) }
+    /// Empty dictionary when the scene id is unknown. Passive read — no I/O.
+    #[func]
+    fn get_scene_external_content(&self, scene_id: i32) -> VarDictionary {
+        let mut dict = VarDictionary::new();
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return dict;
+        };
+        let (files, fetch_bytes) =
+            crate::content::external_content::snapshot(&scene.scene_entity_definition.id);
+        dict.set(
+            "files",
+            PackedStringArray::from_iter(files.iter().map(GString::from)),
+        );
+        dict.set("fetch_bytes", fetch_bytes as i64);
+        dict
+    }
 }
 
 #[godot_api]
@@ -2185,6 +2388,10 @@ impl INode for SceneManager {
     fn init(base: Base<Node>) -> Self {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
+
+        // Start the background memory-pressure monitor (issue #2002). Idempotent
+        // and a no-op on platforms without an OOM killer to anticipate.
+        crate::tools::memory_monitor::start();
 
         let mut base_ui = DclUiControl::new_alloc();
         base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
@@ -2203,6 +2410,9 @@ impl INode for SceneManager {
             dying_scene_ids: vec![],
             crashed_scene_ids: vec![],
             global_scene_ids: vec![],
+            memory_settle_frames: 0,
+            memory_modal_active: false,
+            memory_warning_dismissed: false,
             current_parcel_scene_id: SceneId(0),
             last_current_parcel_scene_id: SceneId::INVALID,
 
@@ -2259,6 +2469,12 @@ impl INode for SceneManager {
     }
 
     fn physics_process(&mut self, delta: f64) {
+        // Main-thread liveness heartbeat (issue #2002). Incremented unconditionally
+        // at the very top, before any early-return, so the background memory
+        // monitor can tell a real main-thread freeze (heartbeat stops) from a mere
+        // paused/idle runner. Must stay the first statement here.
+        crate::tools::memory_monitor::MAIN_THREAD_HEARTBEAT.fetch_add(1, Ordering::Relaxed);
+
         self.scene_runner_update(delta);
 
         // Check loading session timeouts

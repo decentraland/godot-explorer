@@ -80,6 +80,11 @@ pub struct DclParseDeepLink {
     /// Show transparent safe-area debug overlay (deep link param: safemargindebug=true)
     #[var]
     safe_margin_debug: bool,
+
+    /// Force-enable the Scene Stats / limits overlay outside preview
+    /// (deep link param: scene-stats=true). Never shown in production builds.
+    #[var]
+    scene_stats: bool,
 }
 
 #[godot_api]
@@ -112,6 +117,7 @@ impl DclParseDeepLink {
             low_spec_warning: false,
             gp_benchmark: false,
             safe_margin_debug: false,
+            scene_stats: false,
         }
     }
 
@@ -145,6 +151,7 @@ impl DclParseDeepLink {
             low_spec_warning: r.low_spec_warning,
             gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
+            scene_stats: r.scene_stats,
         }
     }
 }

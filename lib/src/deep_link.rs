@@ -42,6 +42,10 @@ pub struct DeepLinkResult {
     pub gp_benchmark: bool,
     /// Show a transparent safe-area debug overlay on every screen
     pub safe_margin_debug: bool,
+    /// Force-enable the Scene Stats / limits overlay in any realm, in every
+    /// build flavor (production included). Lets QA/creators turn it on
+    /// outside preview.
+    pub scene_stats: bool,
 }
 
 impl DeepLinkResult {
@@ -187,6 +191,9 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "safemargindebug" => {
                 result.safe_margin_debug = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "scene-stats" => {
+                result.scene_stats = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
@@ -552,6 +559,24 @@ mod tests {
     fn safe_margin_debug_default_off() {
         let r = parse("decentraland://open");
         assert!(!r.safe_margin_debug);
+    }
+
+    #[test]
+    fn scene_stats_true() {
+        let r = parse("decentraland://open?scene-stats=true");
+        assert!(r.scene_stats);
+    }
+
+    #[test]
+    fn scene_stats_one() {
+        let r = parse("decentraland://open?scene-stats=1");
+        assert!(r.scene_stats);
+    }
+
+    #[test]
+    fn scene_stats_default_off() {
+        let r = parse("decentraland://open");
+        assert!(!r.scene_stats);
     }
 
     // ---- Edge cases ---------------------------------------------------------

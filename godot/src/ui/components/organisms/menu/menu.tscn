@@ -2,6 +2,7 @@
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/organisms/menu/menu.gd" id="2_cgghr"]
+[ext_resource type="Texture2D" uid="uid://djhqqgo0jyq4t" path="res://assets/backgrounds/gradient-background.png" id="3_57a8l"]
 [ext_resource type="Script" uid="uid://c8wv7cyh00l4o" path="res://src/ui/layouts/clean_orientation.gd" id="3_rdch8"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="4_2fqoa"]
 [ext_resource type="PackedScene" uid="uid://cqnj0gb2vybsi" path="res://src/ui/components/atoms/buttons/static_button/static_button.tscn" id="4_lhdku"]
@@ -12,6 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://cvxfoyvj0kqtw" path="res://src/ui/components/organisms/menu/icons/settings-outlined.svg" id="11_rdch8"]
 [ext_resource type="Texture2D" uid="uid://dp6cvwbfawfsa" path="res://src/ui/components/organisms/menu/icons/settings.svg" id="12_7v87b"]
 [ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/pages/discover/discover_button.gd" id="13_2fqoa"]
+[ext_resource type="PackedScene" uid="uid://chpydicpuiujx" path="res://src/ui/components/atoms/controls/upgrade_badge/upgrade_badge.tscn" id="15_o10hj"]
 [ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="16_7v87b"]
 [ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/pages/backpack/backpack_button.gd" id="16_p7nyr"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="17_rdch8"]
@@ -19,18 +21,25 @@
 [ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/pages/settings/settings_button.gd" id="18_3id7u"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/molecules/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
 [ext_resource type="PackedScene" uid="uid://b3e5xybvamaqr" path="res://src/ui/components/organisms/menu/account_deletion_popup.tscn" id="31_kkhkt"]
-
-[sub_resource type="Gradient" id="Gradient_6v8vt"]
-colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0.945098, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_8oh0n"]
-gradient = SubResource("Gradient_6v8vt")
+[ext_resource type="PackedScene" uid="uid://b7wwfp7f38typ" path="res://src/ui/components/organisms/menu/upgrade_otp_popup.tscn" id="32_otp01"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2tihm"]
 bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
 shadow_color = Color(0, 0, 0, 0.2509804)
 shadow_size = 4
 shadow_offset = Vector2(0, -4)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_57a8l"]
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_udswp"]
 resource_local_to_scene = false
@@ -68,7 +77,8 @@ theme_override_constants/separation = 0
 show_behind_parent = true
 layout_mode = 2
 size_flags_vertical = 3
-texture = SubResource("GradientTexture2D_8oh0n")
+texture = ExtResource("3_57a8l")
+expand_mode = 1
 
 [node name="Menus" type="Control" parent="VBoxContainer/ColorRect_Background" unique_id=1809653402]
 layout_mode = 1
@@ -163,6 +173,19 @@ ignore_texture_size = true
 stretch_mode = 0
 script = ExtResource("18_3id7u")
 
+[node name="UpgradeBadge" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel/StaticButton_Settings" unique_id=814216259 instance=ExtResource("15_o10hj")]
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -34.0
+offset_top = 9.0
+offset_right = -12.0
+offset_bottom = 31.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_57a8l")
+
 [node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/BottomSafeMarginContainer/VBoxContainer/HBoxContainer_ButtonsPanel" unique_id=1917832739 instance=ExtResource("22_n1jkd")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(72, 72)
@@ -171,6 +194,7 @@ button_group = SubResource("ButtonGroup_udswp")
 
 [node name="Control_DeployingProfile" type="ColorRect" parent="." unique_id=1347661727]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -178,6 +202,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
+
+[node name="BackBufferCopy" type="BackBufferCopy" parent="Control_DeployingProfile" unique_id=1962847105]
+editor_description = "Forces a fresh screen capture for BackgrundBlur. Godot captures the screen once per frame for all hint_screen_texture materials: in the backpack, AvatarVFX (addition_shader) claims that capture early in draw order, so without this node the blur samples a stale snapshot taken before the bottom bar and this overlay's dim were drawn (#2487)."
+copy_mode = 2
 
 [node name="BackgrundBlur" type="ColorRect" parent="Control_DeployingProfile" unique_id=2073397854]
 material = ExtResource("16_7v87b")
@@ -216,6 +244,7 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 
 [node name="TextureProgressBar" parent="Control_DeployingProfile/PanelContainer/MarginContainer/VBoxContainer" unique_id=1110742010 instance=ExtResource("17_tc0me")]
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
 size_flags_horizontal = 4
 show_background = true
@@ -233,6 +262,10 @@ theme_override_font_sizes/font_size = 40
 text = "Updating profile..."
 
 [node name="AccountDeletionPopUp" parent="." unique_id=1784076804 instance=ExtResource("31_kkhkt")]
+visible = false
+layout_mode = 1
+
+[node name="UpgradeOtpPopUp" parent="." unique_id=1784076805 instance=ExtResource("32_otp01")]
 visible = false
 layout_mode = 1
 

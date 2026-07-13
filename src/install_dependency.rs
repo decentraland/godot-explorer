@@ -20,8 +20,8 @@ use crate::ui::{create_spinner, print_message, print_section, MessageType};
 
 use crate::consts::{
     godot_editor_base_url, godot_editor_base_url_for_branch, godot_release_tag,
-    sanitize_branch_for_url, BIN_FOLDER, GODOT_BUILD_SHA, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
-    RUST_LIB_PROJECT_FOLDER,
+    sanitize_branch_for_url, BIN_FOLDER, GODOT_BUILD_SHA, GODOT_CURRENT_VERSION, GODOT_USE_BRANCH,
+    PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER,
 };
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
@@ -31,10 +31,19 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-// Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG).
-// Set this to `Some("<tarball-url>")` only to temporarily pin a specific build
-// (e.g. a per-PR protocol tarball); leave it `None` to track @next.
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = None;
+// Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG),
+// unless PROTOCOL_FIXED_VERSION_URL pins a specific tarball.
+//
+// Pinned for the 1.11.0 RC: tracking `next` re-resolves on every CI run, so an
+// upstream protocol publish can break or change builds with no repo change
+// (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
+// Bump the pin deliberately — grab the new tarball URL from
+// `https://registry.npmjs.org/@dcl/protocol/next` (dist.tarball), update any
+// affected generated-struct usages, and set it here. Reset to `None` to track
+// @next again after the release is cut.
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
+    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-28974105118.commit-a598406.tgz",
+);
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
@@ -526,7 +535,12 @@ pub fn install(
         &format!("Platform: {}", platform.display_name),
     );
 
-    if let Some(b) = branch {
+    // Explicit `--branch` takes precedence; otherwise fall back to the GODOT_USE_BRANCH override.
+    // Used for binary validation and cache keys below; the URLs resolve the same override in their
+    // consts helpers.
+    let effective_branch = branch.or(GODOT_USE_BRANCH);
+
+    if let Some(b) = effective_branch {
         print_message(
             MessageType::Info,
             &format!(
@@ -616,7 +630,7 @@ pub fn install(
     // A stale binary (same version, different fork SHA) is replaced; the SHA-tagged cache key below
     // guarantees a cache miss so the fresh fork build is fetched, not the stale cached zip. Branch
     // builds use existence-only (their fork SHA isn't tracked at const time).
-    let needs_godot = match (branch, validate_installed_godot_binary()) {
+    let needs_godot = match (effective_branch, validate_installed_godot_binary()) {
         (Some(_), GodotBinaryStatus::Missing) => true,
         (Some(_), _) => false,
         (None, GodotBinaryStatus::Ok) => false,
@@ -643,7 +657,7 @@ pub fn install(
     };
     if needs_godot {
         print_section("Installing Godot Engine");
-        let godot_cache_key = match branch {
+        let godot_cache_key = match effective_branch {
             Some(b) => format!(
                 "{GODOT_CURRENT_VERSION}.branch-{}.executable.zip",
                 sanitize_branch_for_url(b)

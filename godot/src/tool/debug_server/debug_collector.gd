@@ -48,6 +48,104 @@ static func collect_scenes_summary() -> Array:
 	return out
 
 
+## Single-scene resource counts from the live Godot subtree plus the CRDT
+## entity count — the ONE scene-scoped resource walker (also feeds the preview
+## SceneStatsPanel); extend it here instead of adding another subtree walk.
+## Returns: { triangles, bodies, colliders, entities, geometries, materials,
+## textures }. `tri_cache` (mesh instance_id -> triangles) is caller-owned so
+## repeated refresh ticks stay cheap; pass {} to skip caching.
+static func collect_scene_resources(scene_id: int, tri_cache: Dictionary) -> Dictionary:
+	var acc: Dictionary = {"triangles": 0, "bodies": 0, "colliders": 0}
+	var geos: Dictionary = {}
+	var mats: Dictionary = {}
+	var texs: Dictionary = {}
+	var node: Node = _scene_root_node(scene_id)
+	if node != null:
+		_walk_scene_resources(node, acc, geos, mats, texs, tri_cache)
+	acc["geometries"] = geos.size()
+	acc["materials"] = mats.size()
+	acc["textures"] = texs.size()
+	acc["entities"] = 0
+	if is_instance_valid(Global.scene_runner):
+		acc["entities"] = Global.scene_runner.debug_list_entities(scene_id).size()
+	return acc
+
+
+static func _walk_scene_resources(
+	node: Node,
+	acc: Dictionary,
+	geos: Dictionary,
+	mats: Dictionary,
+	texs: Dictionary,
+	tri_cache: Dictionary
+) -> void:
+	if node is MeshInstance3D:
+		var mi: MeshInstance3D = node
+		acc["bodies"] += 1
+		var mesh: Mesh = mi.mesh
+		if mesh != null:
+			geos[mesh.get_instance_id()] = true
+			acc["triangles"] += _mesh_triangles(mesh, tri_cache)
+			for si in range(mesh.get_surface_count()):
+				var mat: Material = mi.get_active_material(si)
+				if mat != null:
+					mats[mat.get_instance_id()] = true
+					_collect_material_textures(mat, texs)
+	elif node is CollisionShape3D:
+		acc["colliders"] += 1
+	for c in node.get_children():
+		_walk_scene_resources(c, acc, geos, mats, texs, tri_cache)
+
+
+static func _collect_material_textures(mat: Material, texs: Dictionary) -> void:
+	if not (mat is BaseMaterial3D):
+		return
+	var bm: BaseMaterial3D = mat
+	var candidates: Array = [
+		bm.albedo_texture,
+		bm.normal_texture,
+		bm.orm_texture,
+		bm.metallic_texture,
+		bm.roughness_texture,
+		bm.emission_texture,
+		bm.ao_texture,
+		bm.heightmap_texture,
+	]
+	for tex in candidates:
+		if tex != null:
+			texs[tex.get_instance_id()] = true
+
+
+static func _mesh_triangles(mesh: Mesh, tri_cache: Dictionary) -> int:
+	var id: int = mesh.get_instance_id()
+	if tri_cache.has(id):
+		return tri_cache[id]
+	var tris: int = 0
+	for si in range(mesh.get_surface_count()):
+		var arrays: Array = mesh.surface_get_arrays(si)
+		if arrays.is_empty():
+			continue
+		var indices = arrays[Mesh.ARRAY_INDEX]
+		if indices is PackedInt32Array and indices.size() > 0:
+			tris += int(indices.size() / 3.0)
+		else:
+			var verts = arrays[Mesh.ARRAY_VERTEX]
+			if verts is PackedVector3Array:
+				tris += int(verts.size() / 3.0)
+	tri_cache[id] = tris
+	return tris
+
+
+## The scene's root DclSceneNode in the live tree, or null if not loaded.
+static func _scene_root_node(scene_id: int) -> Node:
+	if not is_instance_valid(Global.scene_runner):
+		return null
+	for child in Global.scene_runner.get_children():
+		if child is DclSceneNode and child.get_scene_id() == scene_id:
+			return child
+	return null
+
+
 static func collect_scene(scene_id: int, filters: Dictionary) -> Dictionary:
 	if not _scene_loaded(scene_id):
 		return {"error": "scene %d not loaded" % scene_id}
@@ -566,13 +664,12 @@ static func _find_entity_node(scene_id: int, entity_id: int, tree: String) -> No
 			return null
 		var node = instance_from_id(iid)
 		return node if node is Node else null
-	# "3d" fallback — walk the per-scene `DclSceneNode` children.
-	for scene_child in Global.scene_runner.get_children():
-		if scene_child is DclSceneNode and scene_child.get_scene_id() == scene_id:
-			for entity_child in scene_child.get_children():
-				if entity_child is DclNodeEntity3d and entity_child.e_id() == entity_id:
-					return entity_child
-			break
+	# "3d" fallback — look under the scene's root DclSceneNode.
+	var scene_root: Node = _scene_root_node(scene_id)
+	if scene_root != null:
+		for entity_child in scene_root.get_children():
+			if entity_child is DclNodeEntity3d and entity_child.e_id() == entity_id:
+				return entity_child
 	return null
 
 
