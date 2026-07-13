@@ -2,7 +2,6 @@ class_name SignInWithEmail
 extends Control
 
 const SEPARATOR_HEIGHT_DEFAULT := 150
-const SEPARATOR_HEIGHT_KB_OPEN := 30
 
 var lobby: Lobby = null
 
@@ -22,7 +21,14 @@ func _ready() -> void:
 
 func _on_virtual_keyboard_changed(keyboard_height: int) -> void:
 	if keyboard_height > 0:
-		vb_separator.custom_minimum_size.y = SEPARATOR_HEIGHT_KB_OPEN
+		var viewport_size = get_viewport().get_visible_rect().size
+		var window_size = Vector2(DisplayServer.window_get_size())
+		var y_factor: float = viewport_size.y / window_size.y
+		var kb_top: float = viewport_size.y - keyboard_height * y_factor
+		var button_bottom = button_next.global_position.y + button_next.size.y
+		var overlap = button_bottom + 15 - kb_top
+		if overlap > 0:
+			vb_separator.custom_minimum_size.y = maxf(SEPARATOR_HEIGHT_DEFAULT - overlap, 0.0)
 	else:
 		vb_separator.custom_minimum_size.y = SEPARATOR_HEIGHT_DEFAULT
 
