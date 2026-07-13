@@ -39,7 +39,7 @@ const SCENE_CRASH_PRIMARY = "RELOAD"
 const SCENE_CRASH_SECONDARY = "BACK"
 
 const LOW_MEMORY_TITLE = "Low memory"
-const LOW_MEMORY_BODY = "This place may not run smoothly on your device and could close unexpectedly. You can continue or go back to Discover."
+const LOW_MEMORY_BODY = "This place may not run smoothly on your device and could close unexpectedly."
 const LOW_MEMORY_PRIMARY = "CONTINUE"
 const LOW_MEMORY_SECONDARY = "BACK TO DISCOVER"
 
