@@ -206,7 +206,9 @@ func set_search_filter_text(new_text: String) -> void:
 		places_my_places.visible = places_my_places.has_items()
 		places_most_active.title = "Most Actives"
 		if guest_upgrade_card:
-			guest_upgrade_card.show()
+			# Don't force it visible — let the card re-evaluate its own upgrade state
+			# so already-upgraded users never see it flash (#2483).
+			guest_upgrade_card.refresh_visibility()
 	else:
 		friends_online.hide()
 		last_visited.hide()

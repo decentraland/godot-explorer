@@ -261,6 +261,14 @@ impl ProfileService {
         // ADR-290: Remove snapshots from avatar before deployment
         profile.content.avatar.snapshots = None;
 
+        // A cleared emote slot is stored locally as an empty urn, but the catalyst
+        // rejects any deployment whose emote pointers aren't urns ("Invalid pointer:
+        // ()"), failing the whole profile save. Drop empty slots from the deployed
+        // copy only — the local 10-slot wire format is untouched.
+        if let Some(emotes) = profile.content.avatar.emotes.as_mut() {
+            emotes.retain(|emote| !emote.urn.is_empty());
+        }
+
         // Prepare deployment data
         let unix_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

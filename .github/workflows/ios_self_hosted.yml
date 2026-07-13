@@ -163,6 +163,25 @@ jobs:
           # the source tree stays correct — only the build cache survives.
           clean: false
 
+      # The persistent build cache above grows with every branch built and the VM has a single
+      # disk shared by all iOS builds — without a guard it eventually fills and cargo dies
+      # mid-link with "No space left on device". Prune the Rust caches (NOT .bin/, whose
+      # re-download is the expensive part) only when free space drops below the threshold;
+      # the next build is cold (~30 min) but self-heals instead of failing.
+      - name: Disk guard — auto-prune build caches when low on space
+        env:
+          MIN_FREE_GB: "40"
+        run: |
+          free_gb=$(df -g . | awk 'NR==2 {print $4}')
+          echo "Runner free disk: ${free_gb} GB (threshold: ${MIN_FREE_GB} GB)"
+          if [ "$free_gb" -lt "$MIN_FREE_GB" ]; then
+            echo "::warning::Low disk on iOS runner (${free_gb} GB free < ${MIN_FREE_GB} GB) — pruning Rust build caches; this build runs cold"
+            du -sh lib/target target 2>/dev/null || true
+            rm -rf lib/target target
+            rm -rf "${TMPDIR:-/tmp}/"rustc* 2>/dev/null || true
+            df -g . | awk 'NR==2 {print "After prune: " $4 " GB free"}'
+          fi
+
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
           toolchain: "1.90"

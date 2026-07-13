@@ -64,6 +64,14 @@ var _initial_focus_snapped: bool = false
 var _wearable_owned_counts: Dictionary = {}
 var _wearable_is_new: Dictionary = {}
 
+# item_urn -> owned token-instance urn (…:<itemId>:<tokenId>), from the catalyst lambda's
+# individualData. The grid keys by the ITEM urn (see _to_item_urn), but a deployed profile
+# must reference on-chain wearables by the token-instance urn — the catalyst rejects a
+# tokenless collections-v2 pointer with HTTP 400 ("The URN must include the tokenId"), the
+# deploy silently fails, and the next profile fetch reverts the equip (#2489). Equip
+# therefore writes _profile_urn_for(), never the grid key.
+var _wearable_token_urns: Dictionary = {}
+
 @onready var color_carrousel = %ColorCarrousel
 @onready var carrousel_separator = %CarrouselSeparator
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
@@ -207,6 +215,7 @@ func _ready():
 	# NEW tag (#2300): owned counts are rebuilt below from the owned list, then evaluated
 	# against the persisted per-wallet snapshot.
 	_wearable_owned_counts.clear()
+	_wearable_token_urns.clear()
 
 	# Surface the most-recently-obtained owned wearables from the fast marketplace API
 	# first (added only if not already listed), so an item just bought on the web shows
@@ -228,6 +237,10 @@ func _ready():
 			# dedupes against the recent-owned API / live inject (see _to_item_urn).
 			var item_urn := _to_item_urn(wearable_item.urn, wearable_item.token_id)
 			wearable_data[item_urn] = null
+			# Keep the token-instance form for equips (first hit = newest transfer):
+			# deploys need it (see _wearable_token_urns).
+			if wearable_item.urn != item_urn and not _wearable_token_urns.has(item_urn):
+				_wearable_token_urns[item_urn] = wearable_item.urn
 			# Count owned token instances per item for the NEW tag (#2300).
 			_wearable_owned_counts[item_urn] = int(_wearable_owned_counts.get(item_urn, 0)) + 1
 	# Fast-API items the lambda hasn't listed yet (just bought) count as one.
@@ -495,6 +508,13 @@ func _show_wearables():
 	margin_container_no_items.visible = not has_items
 	grid_container_wearables_list.visible = has_items
 
+	# The profile may store token-instance urns (…:<itemId>:<tokenId>) while the grid keys by the
+	# item urn; collapse the equipped list to item urns so on-chain equipped wearables highlight
+	# correctly (and are therefore unequippable).
+	var equipped_item_urns := {}
+	for equipped_urn in Global.player_identity.get_mutable_avatar().get_wearables():
+		equipped_item_urns[to_item_urn(equipped_urn)] = true
+
 	for wearable_id in filtered_data:
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		var wearable = wearable_data[wearable_id]
@@ -507,9 +527,9 @@ func _show_wearables():
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
 		wearable_item.unequip.connect(self._on_wearable_unequip.bind(wearable_id))
 
-		# Check if the item is equipped
+		# Check if the item is equipped (compare on the collapsed item urn — see to_item_urn)
 		var is_wearable_pressed = (
-			Global.player_identity.get_mutable_avatar().get_wearables().has(wearable_id)
+			equipped_item_urns.has(wearable_id)
 			or Global.player_identity.get_mutable_avatar().get_body_shape() == wearable_id
 		)
 		wearable_item.set_pressed_no_signal(is_wearable_pressed)
@@ -644,8 +664,10 @@ func _on_wearable_equip(wearable_id: String):
 		var to_remove = []
 		# Unequip current wearable with category
 		for current_wearable_id in new_avatar_wearables:
-			# TODO: put the fetch wearable function
-			var wearable = wearable_data.get(current_wearable_id)
+			# Normalize to the item urn: the profile may hold a token-instance urn
+			# (…:<itemId>:<tokenId>) while wearable_data is keyed by the item urn, so a raw lookup
+			# misses and the old same-category wearable is never replaced (leaves duplicates).
+			var wearable = wearable_data.get(to_item_urn(current_wearable_id))
 			if wearable != null and wearable.get_category() == category:
 				to_remove.push_back(current_wearable_id)
 
@@ -653,10 +675,23 @@ func _on_wearable_equip(wearable_id: String):
 			var index = new_avatar_wearables.find(to_remove_id)
 			new_avatar_wearables.remove_at(index)
 
-		new_avatar_wearables.append(wearable_id)
+		new_avatar_wearables.append(_profile_urn_for(wearable_id))
 		Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 
 	request_update_avatar = true
+
+
+# The urn to store in the avatar profile for a grid item: the owned token-instance urn
+# (…:<itemId>:<tokenId>) when one is known — from the catalyst lambda's individualData or,
+# for a just-bought item the lambda doesn't list yet, from the marketplace owned-NFTs API —
+# else the grid key itself (base/off-chain items pass through). The catalyst rejects
+# deployments whose collections-v2 pointers lack the tokenId, so equipping the bare item
+# urn makes every later profile save fail and revert (#2489).
+func _profile_urn_for(item_urn: String) -> String:
+	var token_urn := str(_wearable_token_urns.get(item_urn, ""))
+	if token_urn.is_empty():
+		token_urn = MarketplaceTracker.get_token_urn(item_urn)
+	return token_urn if not token_urn.is_empty() else item_urn
 
 
 func _on_wearable_unequip(wearable_id: String):
@@ -672,9 +707,12 @@ func _on_wearable_unequip(wearable_id: String):
 	var new_avatar_wearables: PackedStringArray = (
 		Global.player_identity.get_mutable_avatar().get_wearables()
 	)
-	var index = new_avatar_wearables.find(wearable_id)
-	if index != -1:
-		new_avatar_wearables.remove_at(index)
+	# Remove every entry that collapses to this item urn — covers the token-instance urn the
+	# profile stores (…:<itemId>:<tokenId>) plus any item-level duplicate. A plain
+	# find(wearable_id) misses the token form and leaves the wearable stuck on the avatar.
+	for i in range(new_avatar_wearables.size() - 1, -1, -1):
+		if to_item_urn(new_avatar_wearables[i]) == wearable_id:
+			new_avatar_wearables.remove_at(i)
 
 	Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 	request_update_avatar = true
@@ -728,7 +766,8 @@ func _async_marketplace_preview_equip(urn: String, wearable: DclItemEntityDefini
 	var preview_wearables = _marketplace_saved_wearables.duplicate()
 	var to_remove = []
 	for current_id in preview_wearables:
-		var current_wearable = wearable_data.get(current_id)
+		# Same item/token urn normalization as the equip path (see to_item_urn).
+		var current_wearable = wearable_data.get(to_item_urn(current_id))
 		if current_wearable != null and current_wearable.get_category() == category:
 			to_remove.push_back(current_id)
 	for remove_id in to_remove:
@@ -919,6 +958,21 @@ static func newtag_item_urn(urn: String, token_id: String) -> String:
 	return urn
 
 
+# Collapse ANY wearable urn to its ITEM form, stripping a trailing :<tokenId> when present.
+# Mirrors the Rust ContentProvider.get_wearable normalization (truncate at the 6th ':'), the
+# canonical item urn that wearable_data / can_equip / the avatar profile use. A profile may
+# store either the item urn or the token-instance urn (…:<itemId>:<tokenId>), so equipped-state
+# / unequip / same-category-replace must compare on this collapsed form — otherwise on-chain
+# wearables already equipped in the profile read as un-equipped and can never be removed.
+# Off-chain/base urns (< 6 ':') pass through unchanged. Unlike newtag_item_urn this needs no
+# pre-parsed tokenId, so it works on arbitrary urns coming from the avatar wearable list.
+static func to_item_urn(urn: String) -> String:
+	var parts := urn.split(":")
+	if parts.size() <= 6:
+		return urn
+	return ":".join(parts.slice(0, 6))
+
+
 # Evaluates the NEW tags for a category from the current owned counts and persists the
 # snapshot so tags clear next session. Returns { item_urn: bool }. The comparison baseline is
 # captured once per app session per category (static), so it stays stable across the grid
@@ -1054,6 +1108,9 @@ func _async_refresh_owned_wearables() -> void:
 		# dedupes against entries already added by the recent-owned API / live inject.
 		var item_urn := _to_item_urn(wearable_item.urn, wearable_item.token_id)
 		_wearable_owned_counts[item_urn] = int(_wearable_owned_counts.get(item_urn, 0)) + 1
+		# Keep the token-instance form for equips — deploys need it (see _wearable_token_urns).
+		if wearable_item.urn != item_urn and not _wearable_token_urns.has(item_urn):
+			_wearable_token_urns[item_urn] = wearable_item.urn
 		if not wearable_data.has(item_urn):
 			wearable_data[item_urn] = null
 			new_keys.append(item_urn)
