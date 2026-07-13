@@ -166,20 +166,34 @@ jobs:
       # The persistent build cache above grows with every branch built and the VM has a single
       # disk shared by all iOS builds — without a guard it eventually fills and cargo dies
       # mid-link with "No space left on device". Prune the Rust caches (NOT .bin/, whose
-      # re-download is the expensive part) only when free space drops below the threshold;
+      # re-download is the expensive part) only when free space drops below MIN_FREE_GB;
       # the next build is cold (~30 min) but self-heals instead of failing.
-      - name: Disk guard — auto-prune build caches when low on space
+      #
+      # Pruning alone is not always enough. A cold rebuild (~9 GB) plus the iOS export tree
+      # (two ~2.3 GB unstripped libgodot.a static libs) needs real headroom. If we push on with
+      # too little disk, the export runs out of space mid-write, truncates libgodot.a to 0 bytes
+      # WITHOUT failing the Godot export, and a broken tarball ships to R2 — which then explodes
+      # downstream in godot-asc-deploy with `ld: file is empty in 'libgodot.a'`. So after pruning,
+      # hard-fail HERE (loudly, on the right job) when free disk is still below REQUIRED_FREE_GB.
+      # The real fix is to grow/clean the dcl-ios VM disk, then re-run.
+      - name: Disk guard — prune caches, fail early if disk is insufficient
         env:
           MIN_FREE_GB: "40"
+          REQUIRED_FREE_GB: "25"
         run: |
           free_gb=$(df -g . | awk 'NR==2 {print $4}')
-          echo "Runner free disk: ${free_gb} GB (threshold: ${MIN_FREE_GB} GB)"
+          echo "Runner free disk: ${free_gb} GB (prune threshold: ${MIN_FREE_GB} GB, required: ${REQUIRED_FREE_GB} GB)"
           if [ "$free_gb" -lt "$MIN_FREE_GB" ]; then
             echo "::warning::Low disk on iOS runner (${free_gb} GB free < ${MIN_FREE_GB} GB) — pruning Rust build caches; this build runs cold"
             du -sh lib/target target 2>/dev/null || true
             rm -rf lib/target target
             rm -rf "${TMPDIR:-/tmp}/"rustc* 2>/dev/null || true
-            df -g . | awk 'NR==2 {print "After prune: " $4 " GB free"}'
+            free_gb=$(df -g . | awk 'NR==2 {print $4}')
+            echo "After prune: ${free_gb} GB free"
+          fi
+          if [ "$free_gb" -lt "$REQUIRED_FREE_GB" ]; then
+            echo "::error::Insufficient disk on dcl-ios runner: ${free_gb} GB free (< ${REQUIRED_FREE_GB} GB required). The iOS export writes ~2x2.3 GB unstripped libgodot.a on top of a cold Rust rebuild; continuing would truncate libgodot.a to 0 bytes and silently upload a broken export (downstream: 'ld: file is empty in libgodot.a'). Grow or clean the dcl-ios VM disk, then re-run."
+            exit 1
           fi
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
@@ -298,6 +312,21 @@ jobs:
 
           echo "exports/ contents:"; ls -la exports/
           echo "dylibs found:"; find exports -name "*.dylib" 2>/dev/null || true
+
+          # Integrity gate: a disk-exhausted export truncates libgodot.a to 0 bytes but still
+          # exits 0, so the broken tree only blows up downstream in godot-asc-deploy at link
+          # time (`ld: file is empty in 'libgodot.a'`). Healthy libgodot.a is ~2.3 GB; treat a
+          # missing or <100 MB library as corrupt and refuse to upload it.
+          if [ -z "$(find exports -name 'libgodot.a' -type f)" ]; then
+            echo "❌ No libgodot.a found in export — the iOS export is incomplete, refusing to upload"
+            exit 1
+          fi
+          if find exports -name 'libgodot.a' -type f -size -100M | grep -q .; then
+            echo "❌ Truncated libgodot.a in export (likely disk exhaustion) — refusing to upload:"
+            find exports -name 'libgodot.a' -type f -size -100M -exec ls -la {} +
+            exit 1
+          fi
+          echo "libgodot.a integrity OK:"; find exports -name 'libgodot.a' -type f -exec ls -la {} +
 
           tar -czf export.tar.gz -C exports .
           echo "Export tarball size: $(du -h export.tar.gz | cut -f1)"

@@ -218,6 +218,21 @@ jobs:
           echo "exports/ contents:"; ls -la exports/
           echo "dylibs found:"; find exports -name "*.dylib" 2>/dev/null || true
 
+          # Integrity gate: a disk-exhausted export truncates libgodot.a to 0 bytes but still
+          # exits 0, so the broken tree only blows up downstream in godot-asc-deploy at link
+          # time (`ld: file is empty in 'libgodot.a'`). Healthy libgodot.a is ~2.3 GB; treat a
+          # missing or <100 MB library as corrupt and refuse to upload it.
+          if [ -z "$(find exports -name 'libgodot.a' -type f)" ]; then
+            echo "❌ No libgodot.a found in export — the iOS export is incomplete, refusing to upload"
+            exit 1
+          fi
+          if find exports -name 'libgodot.a' -type f -size -100M | grep -q .; then
+            echo "❌ Truncated libgodot.a in export (likely disk exhaustion) — refusing to upload:"
+            find exports -name 'libgodot.a' -type f -size -100M -exec ls -la {} +
+            exit 1
+          fi
+          echo "libgodot.a integrity OK:"; find exports -name 'libgodot.a' -type f -exec ls -la {} +
+
           # Tar the export TREE (Xcode project + embedded libdclgodot.dylib + assets). The
           # deploy repo untars this and runs xcodebuild archive + manual sign.
           tar -czf export.tar.gz -C exports .
