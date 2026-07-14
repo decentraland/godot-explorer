@@ -473,7 +473,9 @@ fn main() -> io::Result<()> {
     let quant_path = Path::new(&env::var("OUT_DIR").unwrap()).join("pulse_quant.rs");
     build_quant::generate(&descriptor_bytes, &quant_path);
     println!("cargo:rerun-if-changed=build_quant.rs");
-    println!("cargo:rerun-if-changed={PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto");
+    println!(
+        "cargo:rerun-if-changed={PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto"
+    );
 
     #[cfg(feature = "use_livekit")]
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {

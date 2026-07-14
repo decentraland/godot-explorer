@@ -910,6 +910,7 @@ dependencies = [
  "rand",
  "regex",
  "reqwest",
+ "rusty_enet",
  "serde",
  "serde_json",
  "simple-easing",
@@ -3964,6 +3965,14 @@ name = "rustversion"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e819f2bc632f285be6d7cd36e25940d45b2391dd6d9b939e79de557f7014248"
+
+[[package]]
+name = "rusty_enet"
+version = "0.4.0"
+source = "git+https://github.com/robtfm/rusty_enet?rev=6fa651d50554f6db8f8a4bd98aaf95ef3238b408#6fa651d50554f6db8f8a4bd98aaf95ef3238b408"
+dependencies = [
+ "js-sys",
+]
 
 [[package]]
 name = "ryu"

@@ -174,6 +174,16 @@ pub struct DclCli {
     pub avatar_impostor_benchmark_output: GString,
     #[var(get)]
     pub saved_profile: GString,
+
+    // Pulse transport (opt-in; see comms/pulse/). `pulse_server` empty = default endpoint.
+    #[var(get)]
+    pub pulse: bool,
+    #[var(get)]
+    pub pulse_server: GString,
+    // Dual-channel movement kill switch: when set, movement stops going over LiveKit while
+    // Pulse is established (it always resumes if Pulse drops, so it can't cause invisibility).
+    #[var(get)]
+    pub no_livekit_movement: bool,
 }
 
 impl DclCli {
@@ -555,6 +565,25 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
+            // Comms
+            ArgDefinition {
+                name: "--pulse".to_string(),
+                description: "Enable the Pulse transport (ENet/UDP avatar-state relay); coexists with LiveKit".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
+                name: "--pulse-server".to_string(),
+                description: "Pulse server endpoint as host:port (implies --pulse); PULSE_SERVER env var works too".to_string(),
+                arg_type: ArgType::Value("<host:port>".to_string()),
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-livekit-movement".to_string(),
+                description: "Stop sending movement over LiveKit while Pulse is established (dual-channel movement off; auto-resumes if Pulse drops)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
+            },
         ]
     }
 
@@ -809,6 +838,21 @@ impl INode for DclCli {
             .map(|n| GString::from(&n.to_string()))
             .unwrap_or_default();
 
+        // Pulse transport activation (opt-in). --pulse-server implies --pulse; the PULSE_SERVER
+        // env var (desktop; bevy parity) implies both. Empty pulse_server = default endpoint
+        // (urls::pulse_server() : PULSE_SERVER_PORT).
+        let pulse_server = args_map
+            .get("--pulse-server")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_else(|| {
+                std::env::var("PULSE_SERVER")
+                    .map(|s| GString::from(s.as_str()))
+                    .unwrap_or_default()
+            });
+        let pulse = args_map.contains_key("--pulse") || !pulse_server.is_empty();
+        let no_livekit_movement = args_map.contains_key("--no-livekit-movement");
+
         // Convert combined args back to PackedStringArray for storage
         let args: PackedStringArray = args_vec.iter().cloned().collect();
 
@@ -873,6 +917,9 @@ impl INode for DclCli {
             fi_benchmark_output,
             avatar_impostor_benchmark_output,
             saved_profile,
+            pulse,
+            pulse_server,
+            no_livekit_movement,
         }
     }
 }

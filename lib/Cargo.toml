@@ -65,6 +65,12 @@ futures-util = "0.3.30"
 
 livekit = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", features=["rustls-tls-webpki-roots"], optional = true }
 
+# Pulse (ENet/UDP avatar-state relay). MUST be this fork: it's a pure-Rust ENet retargeted to
+# the nxrighthere ENet-CSharp "modified protocol" the Pulse server runs — stock lsalzman ENet
+# (including Godot's built-in one) is wire-incompatible. Pinned by rev per repo policy
+# (branch: decentraland-pulse).
+rusty_enet = { git = "https://github.com/robtfm/rusty_enet", rev = "6fa651d50554f6db8f8a4bd98aaf95ef3238b408", optional = true }
+
 taffy = "0.5.2"
 tracing-test = "0.2.4"
 
@@ -103,8 +109,11 @@ oslog = "0.2"
 libc = "0.2"
 
 [features]
-default = ["use_livekit", "use_deno"]
+default = ["use_livekit", "use_deno", "use_pulse"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
+# Compiled in by default (pure-Rust dep, keeps CI/mobile builds from bitrotting);
+# runtime activation is opt-in via --pulse / --pulse-server / PULSE_SERVER.
+use_pulse = ["dep:rusty_enet"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
 use_voice_chat = []

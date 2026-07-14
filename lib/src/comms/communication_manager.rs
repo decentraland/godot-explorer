@@ -97,7 +97,17 @@ impl MainRoom {
 
 #[cfg(feature = "use_livekit")]
 use crate::comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom};
+#[cfg(feature = "use_pulse")]
+use crate::comms::pulse::{
+    pulse_room::{PulseRoom, PulseRoomEvent},
+    transport::PulseTransportConfig,
+};
 use crate::http_request::http_queue_requester::HttpQueueRequester;
+
+/// Consecutive never-established Pulse connection attempts before giving up for the whole
+/// session (Unity parity: 5 attempts, then permanent LiveKit-only fallback until restart).
+#[cfg(feature = "use_pulse")]
+const PULSE_SESSION_FAILURE_LIMIT: u32 = 5;
 
 #[allow(clippy::large_enum_variant)]
 enum CommsConnection {
@@ -159,6 +169,31 @@ pub struct CommunicationManager {
     scene_room: Option<LivekitRoom>,
     current_scene_id: Option<GString>,
 
+    // Pulse (ENet avatar-state relay) — an always-on parallel room, not a MainRoom variant:
+    // its death must never surface as a session disconnect (LiveKit keeps the session alive).
+    #[cfg(feature = "use_pulse")]
+    pulse_room: Option<PulseRoom>,
+    /// Consecutive attempts that never reached Established; survives clean() so realm changes
+    /// don't reset the strike count. At PULSE_SESSION_FAILURE_LIMIT → one-way session disable.
+    #[cfg(feature = "use_pulse")]
+    pulse_session_failures: u32,
+    #[cfg(feature = "use_pulse")]
+    pulse_disabled_for_session: bool,
+    /// The initial TeleportRequest is deferred until both a valid realm name and a broadcast
+    /// position exist (sending a bogus realm would silo us into a phantom partition).
+    #[cfg(feature = "use_pulse")]
+    pulse_teleport_pending: bool,
+    /// Local player position in DCL world convention, cached from broadcast_movement; feeds
+    /// the Pulse TeleportRequest.
+    #[cfg(feature = "use_pulse")]
+    last_dcl_position: Option<Vector3>,
+    /// Dual-channel movement: while true (default), movement keeps going over LiveKit exactly
+    /// as today even when Pulse is established. Turned off via --no-livekit-movement or the
+    /// setter, movement is Pulse-only *while established* — LiveKit sending auto-resumes the
+    /// moment Pulse drops, so this can never make the player invisible.
+    #[cfg(feature = "use_pulse")]
+    livekit_movement_dual_channel: bool,
+
     // Reconnection timer for scene rooms
     #[cfg(feature = "use_livekit")]
     scene_room_reconnect_at: Option<Instant>,
@@ -203,6 +238,18 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_livekit")]
             scene_room: None,
             current_scene_id: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_room: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_session_failures: 0,
+            #[cfg(feature = "use_pulse")]
+            pulse_disabled_for_session: false,
+            #[cfg(feature = "use_pulse")]
+            pulse_teleport_pending: false,
+            #[cfg(feature = "use_pulse")]
+            last_dcl_position: None,
+            #[cfg(feature = "use_pulse")]
+            livekit_movement_dual_channel: true,
             #[cfg(feature = "use_livekit")]
             scene_room_reconnect_at: None,
             #[cfg(feature = "use_livekit")]
@@ -478,6 +525,10 @@ impl INode for CommunicationManager {
             self.scene_room_reconnect_at = Some(Instant::now() + Duration::from_secs(5));
         }
 
+        // Poll the Pulse room (state machine + inbound bridging)
+        #[cfg(feature = "use_pulse")]
+        self.poll_pulse_room();
+
         // Periodic ProfileVersion broadcasting (every 10 seconds)
         if self.last_profile_version_broadcast.elapsed().as_secs() >= 10 {
             self.broadcast_profile_version();
@@ -546,6 +597,120 @@ impl CommunicationManager {
                 .as_ref()
                 .unwrap()
                 .get_message_sender()
+        }
+    }
+
+    /// Create the Pulse room if activation is on and it doesn't exist yet. Endpoint precedence:
+    /// `--pulse-server` / `PULSE_SERVER` (host:port) > default `urls::pulse_server():7777`.
+    #[cfg(feature = "use_pulse")]
+    fn ensure_pulse_room(&mut self) {
+        if self.pulse_room.is_some() || self.pulse_disabled_for_session || self.comms_on_hold {
+            return;
+        }
+
+        let global = DclGlobal::singleton();
+        let cli = global.bind().cli.clone();
+        let cli = cli.bind();
+        if !cli.pulse {
+            return;
+        }
+        if cli.no_livekit_movement {
+            self.livekit_movement_dual_channel = false;
+        }
+
+        let endpoint = cli.pulse_server.to_string();
+        let (host, port) = if endpoint.is_empty() {
+            (
+                crate::urls::pulse_server(),
+                crate::comms::consts::PULSE_SERVER_PORT,
+            )
+        } else {
+            match endpoint
+                .rsplit_once(':')
+                .and_then(|(h, p)| p.parse::<u16>().ok().map(|p| (h.to_owned(), p)))
+            {
+                Some(parsed) => parsed,
+                None => (endpoint, crate::comms::consts::PULSE_SERVER_PORT),
+            }
+        };
+
+        let processor_sender = self.ensure_message_processor();
+        tracing::info!("pulse: room created for {host}:{port}");
+        self.pulse_room = Some(PulseRoom::new(
+            PulseTransportConfig { host, port },
+            processor_sender,
+        ));
+    }
+
+    #[cfg(feature = "use_pulse")]
+    fn poll_pulse_room(&mut self) {
+        let events = {
+            let Some(pulse_room) = self.pulse_room.as_mut() else {
+                return;
+            };
+            pulse_room.poll(Instant::now(), || {
+                let player_identity = DclGlobal::singleton().bind().get_player_identity();
+                let player_identity = player_identity.bind();
+                let ephemeral = player_identity.try_get_ephemeral_auth_chain()?;
+                let profile_version = player_identity
+                    .clone_profile()
+                    .map(|p| p.version as i32)
+                    .unwrap_or(0);
+                Some((ephemeral, profile_version))
+            })
+        };
+
+        for event in events {
+            match event {
+                PulseRoomEvent::Established => {
+                    self.pulse_session_failures = 0;
+                    // Mandatory first gameplay message; deferred until realm + position exist.
+                    self.pulse_teleport_pending = true;
+                }
+                PulseRoomEvent::AttemptFailed => {
+                    self.pulse_session_failures += 1;
+                    if self.pulse_session_failures >= PULSE_SESSION_FAILURE_LIMIT {
+                        tracing::warn!(
+                            "pulse: {} consecutive failed attempts — falling back to LiveKit-only for this session",
+                            self.pulse_session_failures
+                        );
+                        self.pulse_disabled_for_session = true;
+                        if let Some(mut pulse_room) = self.pulse_room.take() {
+                            pulse_room.clean();
+                        }
+                        return;
+                    }
+                }
+                PulseRoomEvent::Dead => {
+                    // Terminal code — parked until the next change_adapter rebuilds the room.
+                    tracing::warn!("pulse: room dead until next adapter change");
+                }
+            }
+        }
+
+        if self.pulse_teleport_pending {
+            self.try_send_pulse_teleport();
+        }
+    }
+
+    /// Send the initial/announce TeleportRequest once a valid realm name and a cached position
+    /// are both available. Sending the `realm.gd` fallback name would silo the player into a
+    /// phantom realm — invisible to everyone, with zero errors — so wait instead.
+    #[cfg(feature = "use_pulse")]
+    fn try_send_pulse_teleport(&mut self) {
+        let Some(position) = self.last_dcl_position else {
+            return;
+        };
+        let realm = DclGlobal::singleton().bind().get_realm();
+        let realm_name = realm.bind().get_realm_name().to_string();
+        if realm_name.is_empty() || realm_name == "no_realm_name" {
+            return;
+        }
+        if let Some(pulse_room) = self.pulse_room.as_mut() {
+            if pulse_room.is_established() {
+                pulse_room.send_teleport(position, &realm_name);
+                self.pulse_teleport_pending = false;
+            }
         }
     }
 
@@ -830,6 +995,29 @@ impl CommunicationManager {
         self.voice_chat_enabled
     }
 
+    /// Dual-channel movement toggle (default ON): whether movement keeps going over LiveKit
+    /// while Pulse is established. Turning it off makes movement Pulse-only *while established*;
+    /// LiveKit sending auto-resumes if Pulse drops. No-op without the use_pulse feature.
+    #[func]
+    fn set_livekit_movement_dual_channel(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.livekit_movement_dual_channel = enabled;
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
+    }
+
+    #[func]
+    fn is_livekit_movement_dual_channel(&self) -> bool {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.livekit_movement_dual_channel
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        true
+    }
+
     #[func]
     #[allow(clippy::too_many_arguments)]
     fn broadcast_movement(
@@ -852,6 +1040,13 @@ impl CommunicationManager {
         #[cfg(feature = "use_livekit")]
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
             archipelago.update_position(position);
+        }
+
+        // Cache the DCL-convention position (z negated, matching the rfc4 packet below) for the
+        // Pulse TeleportRequest.
+        #[cfg(feature = "use_pulse")]
+        {
+            self.last_dcl_position = Some(Vector3::new(position.x, position.y, -position.z));
         }
 
         let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
@@ -1446,6 +1641,14 @@ impl CommunicationManager {
             }
         };
 
+        // Pulse rides alongside every real adapter (it has no adapter string of its own —
+        // endpoint is fixed/CLI-provided). Recreating it here gives realm changes a fresh
+        // handshake + TeleportRequest with the new realm name for free.
+        #[cfg(feature = "use_pulse")]
+        if protocol != "offline" {
+            self.ensure_pulse_room();
+        }
+
         let voice_chat_enabled = self.voice_chat_enabled.to_variant();
         self.base_mut().emit_signal(
             "on_adapter_changed",
@@ -1454,6 +1657,12 @@ impl CommunicationManager {
     }
 
     fn clean(&mut self) {
+        #[cfg(feature = "use_pulse")]
+        if let Some(mut pulse_room) = self.pulse_room.take() {
+            pulse_room.clean();
+            self.pulse_teleport_pending = false;
+        }
+
         match &mut self.current_connection {
             CommsConnection::None
             | CommsConnection::SignedLogin(_)

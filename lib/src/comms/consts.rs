@@ -32,6 +32,11 @@ pub const PROFILE_REQUEST_INTERVAL_SECS: f32 = 10.0;
 // Protocol version
 pub const DEFAULT_PROTOCOL_VERSION: u32 = 100;
 
+// Pulse (ENet avatar-state relay) game port. The endpoint host comes from
+// crate::urls::pulse_server(), overridable via --pulse-server / PULSE_SERVER.
+#[cfg(feature = "use_pulse")]
+pub const PULSE_SERVER_PORT: u16 = 7777;
+
 /// Truncates a string to at most `max_bytes` while respecting UTF-8 character boundaries.
 /// Returns the original string if it's already within the limit.
 pub fn truncate_utf8_safe(s: &str, max_bytes: usize) -> &str {
