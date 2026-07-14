@@ -176,6 +176,29 @@ impl DclAvatar {
         self.update_parcel_position(self.lerp_state.target_position);
     }
 
+    /// Instant reposition (teleport): place the avatar at the target with no interpolation —
+    /// lerping across a discontinuous jump would drag the avatar through the world.
+    #[func]
+    pub fn snap_to_position(&mut self, new_target: Transform3D) {
+        self.walk = false;
+        self.run = false;
+        self.jog = false;
+        self.rise = false;
+        self.fall = false;
+        self.land = true;
+
+        self.lerp_state.initial_position = new_target.origin;
+        self.lerp_state.target_position = new_target.origin;
+        self.lerp_state.factor = 1.0;
+        self.lerp_state.initial_velocity_y = 0.0;
+
+        self.base_mut()
+            .set_global_rotation(new_target.basis.get_euler());
+        self.base_mut().set_global_position(new_target.origin);
+
+        self.update_parcel_position(new_target.origin);
+    }
+
     // This function is called when a parcel scene is created,
     //  it handles the corner case where the avatar is already in the parcel
     //  that is being created

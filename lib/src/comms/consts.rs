@@ -37,6 +37,12 @@ pub const DEFAULT_PROTOCOL_VERSION: u32 = 100;
 #[cfg(feature = "use_pulse")]
 pub const PULSE_SERVER_PORT: u16 = 7777;
 
+/// The `IncomingMessage::room_id` for everything bridged from Pulse. A load-bearing room id
+/// (like the `"scene-"`/`"livekit-"` prefixes): MessageProcessor keys the per-peer transport
+/// preference and the inactivity-sweep exemption on it. Unconditional (not `use_pulse`-gated)
+/// so MessageProcessor's gate logic compiles in every feature combination.
+pub const PULSE_ROOM_ID: &str = "pulse";
+
 /// Truncates a string to at most `max_bytes` while respecting UTF-8 character boundaries.
 /// Returns the original string if it's already within the limit.
 pub fn truncate_utf8_safe(s: &str, max_bytes: usize) -> &str {

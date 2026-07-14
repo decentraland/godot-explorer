@@ -12,7 +12,6 @@ mod native;
 pub mod pulse_room;
 pub mod transport;
 
-/// The `IncomingMessage::room_id` for everything bridged from Pulse. A load-bearing room id
-/// (like `"scene-"`/`"livekit-"` prefixes): `MessageProcessor` keys the per-peer transport
-/// preference and the inactivity-sweep exemption on it.
-pub const PULSE_ROOM_ID: &str = "pulse";
+/// See `comms::consts::PULSE_ROOM_ID` (lives there, unconditional, so MessageProcessor's
+/// transport-preference gate compiles without the `use_pulse` feature).
+pub use crate::comms::consts::PULSE_ROOM_ID;

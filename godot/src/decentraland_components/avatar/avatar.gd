@@ -1807,6 +1807,13 @@ func async_play_emote(emote_urn: String):
 	await emote_controller.async_play_emote(emote_urn)
 
 
+## Stop a looping emote on network request (rfc4 PlayerEmote.is_stopping /
+## Pulse EmoteStopped). Called from Rust (AvatarScene::stop_emote).
+func stop_emote_from_network():
+	if emote_controller:
+		emote_controller.stop_emote()
+
+
 ## Register scene emote content info for later retrieval.
 ## Called from Rust before async_play_emote for scene emotes.
 func register_scene_emote_content(
