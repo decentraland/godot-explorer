@@ -808,6 +808,7 @@ impl SceneManager {
             emote_urn: emote_id.to_string(),
             r#loop: looping,
             timestamp: 0,
+            mask: None,
         };
 
         // Primary player send to all the scenes
