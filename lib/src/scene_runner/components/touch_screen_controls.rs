@@ -3,7 +3,8 @@ use godot::prelude::*;
 use crate::{
     dcl::{
         components::{
-            proto_components::sdk::components::common::InputAction, SceneComponentId, SceneEntityId,
+            proto_components::{common::texture_union::Tex, sdk::components::common::InputAction},
+            SceneComponentId, SceneEntityId,
         },
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
@@ -70,7 +71,18 @@ pub fn update_touch_screen_controls(
                 dict.set("hide", input.hide);
                 // Resolve the scene-relative icon path to a content hash + URL so the
                 // (scene-less) global joypad can fetch it. Unresolved -> empty (built-in glyph).
-                let icon_path = input.icon.as_deref().unwrap_or("");
+                // Only the `Texture` variant of TextureUnion is supported for button icons;
+                // avatar / video textures fall back to the built-in glyph (with a warning).
+                let icon_path = match input.icon.as_ref().and_then(|tex| tex.tex.as_ref()) {
+                    Some(Tex::Texture(texture)) => texture.src.as_str(),
+                    Some(Tex::AvatarTexture(_)) | Some(Tex::VideoTexture(_)) => {
+                        godot_warn!(
+                            "PBTouchScreenControls: avatar/video textures are not supported for button icons; using the built-in glyph"
+                        );
+                        ""
+                    }
+                    None => "",
+                };
                 let (icon_hash, icon_url) = match scene.content_mapping.get_hash(icon_path) {
                     Some(hash) => (
                         hash.clone(),
