@@ -91,6 +91,16 @@ text = "F"
 trigger_action = "ia_secondary"
 editor_description = "Satellite: F (ia_secondary). Figma SecondaryButton; arc slot position in joypad.gd LAYOUTS."
 
+[node name="Button_Quaternary" parent="Button_Press/Control" unique_id=1522992834 instance=ExtResource("1_81cx4")]
+layout_mode = 1
+anchors_preset = 0
+offset_left = -57.0
+offset_top = -219.0
+offset_right = 8.0
+offset_bottom = -154.0
+mouse_force_pass_scroll_events = false
+editor_description = "Satellite slot 4 (no fixed action). Occupies the topmost arc position when exactly 5 buttons are visible, so the '+' toggle isn't needed; hidden and replaced by the '+' when there are more. Any action can be rendered here — see joypad.gd _render_action_on."
+
 [node name="Button_Combo" type="Button" parent="Button_Press/Control" unique_id=1321390859]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(65, 65)
@@ -120,8 +130,7 @@ offset_right = 65.0
 offset_bottom = -8.0
 mouse_filter = 2
 theme_override_constants/separation = 8
-alignment = 1
-editor_description = "Figma: Frame 3089 - the 1/2/3/4 combo column. Revealed by the 12 toggle; collapsed by default. Positioned above the toggle by joypad.gd _relayout_gamepad."
+editor_description = "Figma: Frame 3089 - the 1/2/3/4 combo column. Revealed by the 12 toggle; collapsed by default. Positioned + sized to its visible buttons by joypad.gd _assign_slots."
 
 [node name="Button_Combo4" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=1373996340 instance=ExtResource("1_81cx4")]
 unique_name_in_owner = true
