@@ -1,4 +1,10 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicU8, Ordering},
+        Arc,
+    },
+};
 
 use ethers_core::types::H160;
 use futures_util::StreamExt;
@@ -34,6 +40,12 @@ use super::{
 // Constants
 const CHANNEL_SIZE: usize = 1000;
 
+// Connection state values shared with the background livekit thread
+const LK_STATE_CONNECTING: u8 = 0;
+const LK_STATE_CONNECTED: u8 = 1;
+const LK_STATE_RECONNECTING: u8 = 2;
+const LK_STATE_DISCONNECTED: u8 = 3;
+
 pub struct NetworkMessage {
     pub data: Vec<u8>,
     pub unreliable: bool,
@@ -51,6 +63,7 @@ pub struct LivekitRoom {
     message_processor_sender: Option<
         tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>,
     >,
+    connection_state: Arc<AtomicU8>,
 }
 
 impl LivekitRoom {
@@ -97,6 +110,8 @@ impl LivekitRoom {
             let url = realm.bind().get_lambda_server_base_url().to_string();
             url
         };
+        let connection_state = Arc::new(AtomicU8::new(LK_STATE_CONNECTING));
+        let connection_state_for_thread = connection_state.clone();
         let _ = std::thread::Builder::new()
             .name("livekit dcl thread".into())
             .spawn(move || {
@@ -108,6 +123,7 @@ impl LivekitRoom {
                     room_id_clone,
                     auto_subscribe,
                     lambdas_endpoint,
+                    connection_state_for_thread,
                 );
             })
             .unwrap();
@@ -119,6 +135,16 @@ impl LivekitRoom {
             receiver_from_thread,
             room_id,
             message_processor_sender: None,
+            connection_state,
+        }
+    }
+
+    pub fn connection_state_str(&self) -> &'static str {
+        match self.connection_state.load(Ordering::Relaxed) {
+            LK_STATE_CONNECTED => "connected",
+            LK_STATE_RECONNECTING => "reconnecting",
+            LK_STATE_DISCONNECTED => "disconnected",
+            _ => "connecting",
         }
     }
 
@@ -243,8 +269,13 @@ impl Adapter for LivekitRoom {
         // Scene messages are now handled by MessageProcessor
         Vec::new()
     }
+
+    fn connection_state_str(&self) -> &'static str {
+        self.connection_state_str()
+    }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_livekit_task(
     remote_address: String,
     mut receiver: tokio::sync::mpsc::Receiver<NetworkMessage>,
@@ -253,6 +284,7 @@ fn spawn_livekit_task(
     room_id: String,
     auto_subscribe: bool,
     lambdas_endpoint: String,
+    connection_state: Arc<AtomicU8>,
 ) {
     let url = Uri::try_from(remote_address).unwrap();
     let address = format!(
@@ -278,17 +310,21 @@ fn spawn_livekit_task(
 
     let rt2 = rt.clone();
 
+    let connection_state_in_task = connection_state.clone();
     let task = rt.spawn(async move {
+        let connection_state = connection_state_in_task;
         tracing::debug!("🔌 LiveKit connecting - room: '{}', auto_subscribe: {}", room_id, auto_subscribe);
         let connect_result = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await;
 
         let (room, mut network_rx) = match connect_result {
             Ok(result) => {
                 tracing::debug!("🔌 LiveKit connection successful - room: '{}'", room_id);
+                connection_state.store(LK_STATE_CONNECTED, Ordering::Relaxed);
                 result
             }
             Err(e) => {
                 tracing::warn!("🔌 LiveKit connection failed - room: '{}', error: {:?}", room_id, e);
+                connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
                 return;
             }
         };
@@ -725,7 +761,16 @@ fn spawn_livekit_task(
                                 tracing::warn!("Failed to send PeerLeft: {}", e);
                             }
                         }
+                        livekit::RoomEvent::Reconnecting => {
+                            tracing::debug!("🔌 LiveKit reconnecting - room: '{}'", room_id);
+                            connection_state.store(LK_STATE_RECONNECTING, Ordering::Relaxed);
+                        }
+                        livekit::RoomEvent::Reconnected => {
+                            tracing::debug!("🔌 LiveKit reconnected - room: '{}'", room_id);
+                            connection_state.store(LK_STATE_CONNECTED, Ordering::Relaxed);
+                        }
                         livekit::RoomEvent::Disconnected { reason } => {
+                            connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
                             // Log LiveKit session end with reason
                             tracing::debug!(
                                 "🔌 LiveKit session ended - room: '{}', reason: {:?}",
@@ -820,12 +865,15 @@ fn spawn_livekit_task(
         }
 
         tracing::debug!("🔌 LiveKit room closing - room: '{}'", room_id);
+        connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
         if let Err(e) = room.close().await {
             tracing::warn!("🔌 LiveKit room.close() failed - room: '{}', error: {}", room_id, e);
         }
     });
 
     let _ = rt.block_on(task);
+    // Covers a panicked/aborted task too — anyone still holding the handle sees disconnected
+    connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
 }
 
 #[cfg(target_os = "android")]

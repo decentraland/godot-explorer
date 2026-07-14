@@ -1,0 +1,123 @@
+extends PanelContainer
+
+const MAX_PEER_ROWS := 10
+
+@onready var rich_text_label: RichTextLabel = %RichTextLabel
+@onready var timer: Timer = %Timer
+
+
+func _ready():
+	timer.timeout.connect(_on_timer_timeout)
+	timer.start()
+	_on_timer_timeout()
+
+
+func _state_color(state: String) -> String:
+	match state:
+		"connected", "established":
+			return "green"
+		"disconnected", "dead", "none":
+			return "red"
+		"off", "unavailable", "disabled_for_session", "unknown":
+			return "gray"
+		_:
+			# connecting / reconnecting / identifying / signing / idle / ...
+			return "yellow"
+
+
+func _colored_state(state: String) -> String:
+	return "[color=%s]%s[/color]" % [_state_color(state), state]
+
+
+func _short_address(address: String) -> String:
+	if address.length() <= 12:
+		return address
+	return address.substr(0, 6) + ".." + address.right(4)
+
+
+func _on_timer_timeout():
+	if not is_instance_valid(Global.comms):
+		return
+
+	var info: Dictionary = Global.comms.get_debug_room_info()
+	var lines := PackedStringArray()
+	lines.append("[b]Multiplayer Debug[/b]")
+
+	var realm_name := ""
+	if is_instance_valid(Global.realm):
+		realm_name = String(Global.realm.realm_name)
+	if not realm_name.is_empty():
+		lines.append("Realm: %s" % realm_name)
+
+	var adapter: String = info.get("adapter", "")
+	var connection_state: String = info.get("connection_state", "unknown")
+	lines.append("Adapter: %s [%s]" % [adapter, connection_state])
+
+	if info.get("comms_on_hold", false):
+		lines.append("[color=yellow]COMMS ON HOLD[/color]")
+
+	var main_room_type: String = info.get("main_room_type", "none")
+	var main_room_state: String = info.get("main_room_state", "none")
+	# In archipelago mode the island room (below) is the effective main room
+	if main_room_type != "none" or connection_state != "archipelago":
+		lines.append("Main room (%s): %s" % [main_room_type, _colored_state(main_room_state)])
+
+	if connection_state == "archipelago":
+		var archipelago_state: String = info.get("archipelago_state", "none")
+		var island_id: String = info.get("island_id", "")
+		var island_room_state: String = info.get("island_room_state", "none")
+		var island_label := island_id if not island_id.is_empty() else "-"
+		lines.append(
+			(
+				"Archipelago: %s | island %s (%s)"
+				% [
+					_colored_state(archipelago_state),
+					island_label,
+					_colored_state(island_room_state)
+				]
+			)
+		)
+
+	var scene_room: String = info.get("scene_room", "")
+	var scene_room_state: String = info.get("scene_room_state", "none")
+	var scene_label := scene_room if not scene_room.is_empty() else "-"
+	lines.append("Scene room: %s %s" % [scene_label, _colored_state(scene_room_state)])
+
+	lines.append(_build_pulse_line(info))
+	if info.get("pulse_disabled_for_session", false):
+		lines.append("[color=red]Pulse disabled for session[/color]")
+
+	lines.append_array(_peer_lines())
+
+	rich_text_label.text = "\n".join(lines)
+
+
+func _build_pulse_line(info: Dictionary) -> String:
+	if not info.get("pulse_available", false):
+		return "Pulse: [color=gray]not in build[/color]"
+	if not info.get("pulse_enabled", false):
+		return "Pulse: [color=gray]OFF[/color]"
+
+	var pulse_state: String = info.get("pulse_state", "unavailable")
+	var pulse_endpoint: String = info.get("pulse_endpoint", "")
+	var pulse_failures: int = info.get("pulse_failures", 0)
+	var dual_channel_label: String = "ON" if info.get("dual_channel", true) else "OFF"
+	return (
+		"Pulse: %s @ %s | fails %d | dual-ch %s"
+		% [_colored_state(pulse_state), pulse_endpoint, pulse_failures, dual_channel_label]
+	)
+
+
+func _peer_lines() -> PackedStringArray:
+	var lines := PackedStringArray()
+	var peers: Array = Global.comms.get_debug_peer_rooms()
+	lines.append("Peers: %d" % peers.size())
+	var shown: int = mini(peers.size(), MAX_PEER_ROWS)
+	for i in range(shown):
+		var peer: Dictionary = peers[i]
+		var address: String = peer.get("address", "")
+		var rooms: String = peer.get("rooms", "")
+		lines.append("  %s  %s" % [_short_address(address), rooms])
+	if peers.size() > MAX_PEER_ROWS:
+		lines.append("  … +%d more" % (peers.size() - MAX_PEER_ROWS))
+	return lines

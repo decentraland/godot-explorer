@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://hif3grdgg3c4"]
 
-[ext_resource type="Script" uid="uid://be8ew7ydyt5fw" path="res://src/ui/components/organisms/livekit_debug/livekit_debug_panel.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://be8ew7ydyt5fw" path="res://src/ui/components/organisms/multiplayer_debug/multiplayer_debug_panel.gd" id="1_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
 content_margin_left = 12.0
@@ -13,12 +13,12 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="LiveKitDebugPanel" type="PanelContainer" unique_id=273984283]
+[node name="MultiplayerDebugPanel" type="PanelContainer" unique_id=273984283]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -150.0
-offset_right = 150.0
+offset_left = -220.0
+offset_right = 220.0
 offset_bottom = 120.0
 grow_horizontal = 2
 mouse_filter = 2
@@ -29,10 +29,10 @@ script = ExtResource("1_script")
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/default_color = Color(0.3, 0.9, 0.3, 1)
+theme_override_colors/default_color = Color(0.85, 0.85, 0.85, 1)
 theme_override_font_sizes/normal_font_size = 12
 bbcode_enabled = true
-text = "[b]LiveKit Debug[/b]"
+text = "[b]Multiplayer Debug[/b]"
 fit_content = true
 
 [node name="Timer" type="Timer" parent="." unique_id=233221733]

@@ -146,6 +146,22 @@ impl PulseRoom {
         matches!(self.state, Connection::Established)
     }
 
+    pub fn state_name(&self) -> &'static str {
+        match self.state {
+            Connection::Down { .. } => "down",
+            Connection::Connecting => "connecting",
+            Connection::Idle { .. } => "idle",
+            Connection::Signing => "signing",
+            Connection::AwaitingResponse { .. } => "awaiting_response",
+            Connection::Established => "established",
+            Connection::Dead => "dead",
+        }
+    }
+
+    pub fn endpoint(&self) -> String {
+        format!("{}:{}", self.config.host, self.config.port)
+    }
+
     /// Drive the room one frame: drain driver status, advance the connection state machine
     /// (signing when `identity` yields one), then decode + bridge inbound. `identity` is called
     /// at most once, only when a handshake is actually about to be signed; it returns the
@@ -682,6 +698,29 @@ mod tests {
 
     /// Full happy path: Connected → Idle → Signing → handshake frame on the wire →
     /// HandshakeResponse{success} → Established event.
+    #[test]
+    fn state_name_and_endpoint_reflect_config_and_lifecycle() {
+        let (sender, _keep) = processor_channel();
+        let mut room = PulseRoom::new(
+            PulseTransportConfig {
+                host: "test.invalid".into(),
+                port: 7777,
+            },
+            sender,
+        );
+        assert_eq!(room.state_name(), "down");
+        assert_eq!(room.endpoint(), "test.invalid:7777");
+
+        room.state = Connection::Connecting;
+        assert_eq!(room.state_name(), "connecting");
+        room.state = Connection::Signing;
+        assert_eq!(room.state_name(), "signing");
+        room.state = Connection::Established;
+        assert_eq!(room.state_name(), "established");
+        room.state = Connection::Dead;
+        assert_eq!(room.state_name(), "dead");
+    }
+
     #[tokio::test]
     async fn connect_sign_handshake_established() {
         let (sender, _keep) = processor_channel();

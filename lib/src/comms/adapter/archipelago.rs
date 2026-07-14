@@ -106,6 +106,27 @@ impl ArchipelagoManager {
         self.adapter.as_ref()
     }
 
+    pub fn state_name(&self) -> &'static str {
+        match self.state {
+            ArchipelagoState::Connecting => "connecting",
+            ArchipelagoState::Connected => "ws_open",
+            ArchipelagoState::IdentMessageSent => "identifying",
+            ArchipelagoState::ChallengeMessageSent => "challenge_sent",
+            ArchipelagoState::WelcomeMessageReceived => "connected",
+        }
+    }
+
+    pub fn island_id(&self) -> Option<&str> {
+        self.last_island_id.as_deref()
+    }
+
+    pub fn island_room_state(&self) -> &'static str {
+        self.adapter
+            .as_ref()
+            .map(|adapter| adapter.connection_state_str())
+            .unwrap_or("none")
+    }
+
     fn ws_internal_send<T>(&mut self, packet: T, only_when_active: bool) -> bool
     where
         T: Message,

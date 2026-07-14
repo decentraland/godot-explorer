@@ -93,6 +93,22 @@ impl MainRoom {
             MainRoom::LiveKit(livekit_room) => livekit_room.support_voice_chat(),
         }
     }
+
+    fn type_str(&self) -> &'static str {
+        match self {
+            MainRoom::WebSocket(_) => "websocket",
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(_) => "livekit",
+        }
+    }
+
+    fn connection_state_str(&self) -> &'static str {
+        match self {
+            MainRoom::WebSocket(ws_room) => ws_room.state_name(),
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.connection_state_str(),
+        }
+    }
 }
 
 #[cfg(feature = "use_livekit")]
@@ -156,9 +172,9 @@ pub struct CommunicationManager {
     realm_min_bounds: Vector2i,
     realm_max_bounds: Vector2i,
 
-    // LiveKit debug mode
-    livekit_debug: bool,
-    livekit_debug_last_update: Instant,
+    // Multiplayer debug mode (in-world panel + avatar room labels)
+    multiplayer_debug: bool,
+    multiplayer_debug_last_update: Instant,
 
     // Shared message processor for all adapters
     message_processor: Option<MessageProcessor>,
@@ -238,8 +254,8 @@ impl INode for CommunicationManager {
             block_auto_reconnect: false,
             comms_on_hold: false,
             saved_adapter_for_resume: GString::default(),
-            livekit_debug: false,
-            livekit_debug_last_update: Instant::now(),
+            multiplayer_debug: false,
+            multiplayer_debug_last_update: Instant::now(),
             message_processor: None,
             main_room: None,
             #[cfg(feature = "use_livekit")]
@@ -546,9 +562,9 @@ impl INode for CommunicationManager {
             self.last_profile_version_broadcast = Instant::now();
         }
 
-        // LiveKit debug: update avatar room labels (~1/sec)
-        if self.livekit_debug && self.livekit_debug_last_update.elapsed().as_secs() >= 1 {
-            self.livekit_debug_last_update = Instant::now();
+        // Multiplayer debug: update avatar room labels (~1/sec)
+        if self.multiplayer_debug && self.multiplayer_debug_last_update.elapsed().as_secs() >= 1 {
+            self.multiplayer_debug_last_update = Instant::now();
             if let Some(processor) = &self.message_processor {
                 let avatar_scene = DclGlobal::singleton().bind().get_avatars();
                 for (address, rooms) in processor.get_peer_room_info() {
@@ -646,11 +662,25 @@ impl CommunicationManager {
             self.livekit_movement_dual_channel = false;
         }
 
+        let (host, port) = self.resolve_pulse_endpoint(&cli);
+
+        let processor_sender = self.ensure_message_processor();
+        tracing::info!("pulse: room created for {host}:{port}");
+        self.pulse_room = Some(PulseRoom::new(
+            PulseTransportConfig { host, port },
+            processor_sender,
+        ));
+    }
+
+    /// Endpoint precedence: deeplink `pulse-server=` override > CLI `--pulse-server` /
+    /// `PULSE_SERVER` env > env-resolved default host at the standard port.
+    #[cfg(feature = "use_pulse")]
+    fn resolve_pulse_endpoint(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> (String, u16) {
         let endpoint = self
             .pulse_endpoint_override
             .clone()
             .unwrap_or_else(|| cli.pulse_server.to_string());
-        let (host, port) = if endpoint.is_empty() {
+        if endpoint.is_empty() {
             (
                 crate::urls::pulse_server(),
                 crate::comms::consts::PULSE_SERVER_PORT,
@@ -663,14 +693,7 @@ impl CommunicationManager {
                 Some(parsed) => parsed,
                 None => (endpoint, crate::comms::consts::PULSE_SERVER_PORT),
             }
-        };
-
-        let processor_sender = self.ensure_message_processor();
-        tracing::info!("pulse: room created for {host}:{port}");
-        self.pulse_room = Some(PulseRoom::new(
-            PulseTransportConfig { host, port },
-            processor_sender,
-        ));
+        }
     }
 
     #[cfg(feature = "use_pulse")]
@@ -2191,8 +2214,8 @@ impl CommunicationManager {
     }
 
     #[func]
-    pub fn set_livekit_debug(&mut self, enabled: bool) {
-        self.livekit_debug = enabled;
+    pub fn set_multiplayer_debug(&mut self, enabled: bool) {
+        self.multiplayer_debug = enabled;
         if !enabled {
             // Clear all avatar room debug labels
             let avatar_scene = DclGlobal::singleton().bind().get_avatars();
@@ -2212,8 +2235,8 @@ impl CommunicationManager {
     }
 
     #[func]
-    pub fn get_livekit_debug(&self) -> bool {
-        self.livekit_debug
+    pub fn get_multiplayer_debug(&self) -> bool {
+        self.multiplayer_debug
     }
 
     #[func]
@@ -2224,7 +2247,20 @@ impl CommunicationManager {
             self.current_connection_str.to_variant(),
         );
 
-        // Main room / archipelago status
+        let connection_state = match &self.current_connection {
+            CommsConnection::None => "none",
+            CommsConnection::WaitingForIdentity(_) => "waiting_identity",
+            CommsConnection::SignedLogin(_) => "signed_login",
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(_) => "archipelago",
+            CommsConnection::Connected(_) => "connected",
+        };
+        dict.set(
+            "connection_state".to_variant(),
+            connection_state.to_variant(),
+        );
+
+        // Legacy coarse flag: a room struct exists (says nothing about the actual link)
         let main_connected = self.main_room.is_some()
             || matches!(&self.current_connection, CommsConnection::Connected(_))
             || {
@@ -2239,6 +2275,32 @@ impl CommunicationManager {
             };
         dict.set("main_connected".to_variant(), main_connected.to_variant());
 
+        let (main_room_type, main_room_state) = match &self.main_room {
+            Some(room) => (room.type_str(), room.connection_state_str()),
+            None => ("none", "none"),
+        };
+        dict.set("main_room_type".to_variant(), main_room_type.to_variant());
+        dict.set("main_room_state".to_variant(), main_room_state.to_variant());
+
+        let mut archipelago_state = "none";
+        let mut island_id = String::new();
+        let mut island_room_state = "none";
+        #[cfg(feature = "use_livekit")]
+        if let CommsConnection::Archipelago(archipelago) = &self.current_connection {
+            archipelago_state = archipelago.state_name();
+            island_id = archipelago.island_id().unwrap_or("").to_owned();
+            island_room_state = archipelago.island_room_state();
+        }
+        dict.set(
+            "archipelago_state".to_variant(),
+            archipelago_state.to_variant(),
+        );
+        dict.set("island_id".to_variant(), island_id.to_variant());
+        dict.set(
+            "island_room_state".to_variant(),
+            island_room_state.to_variant(),
+        );
+
         // Scene room status
         let scene_room_id = self.current_scene_id.clone().unwrap_or_default();
         dict.set("scene_room".to_variant(), scene_room_id.to_variant());
@@ -2250,11 +2312,74 @@ impl CommunicationManager {
         {
             let scene_connected = self.scene_room.is_some();
             dict.set("scene_connected".to_variant(), scene_connected.to_variant());
+            let scene_room_state = self
+                .scene_room
+                .as_ref()
+                .map(|room| room.connection_state_str())
+                .unwrap_or("none");
+            dict.set(
+                "scene_room_state".to_variant(),
+                scene_room_state.to_variant(),
+            );
         }
         #[cfg(not(feature = "use_livekit"))]
         {
             dict.set("scene_connected".to_variant(), false.to_variant());
+            dict.set("scene_room_state".to_variant(), "unavailable".to_variant());
         }
+
+        #[cfg(feature = "use_pulse")]
+        {
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let cli = cli.bind();
+            let pulse_enabled = self.pulse_runtime_enabled.unwrap_or(cli.pulse);
+            let pulse_state = if self.pulse_disabled_for_session {
+                "disabled_for_session"
+            } else if let Some(pulse_room) = &self.pulse_room {
+                pulse_room.state_name()
+            } else {
+                "off"
+            };
+            // The room's actual endpoint when it exists; what a rebuild would resolve otherwise
+            let pulse_endpoint = match &self.pulse_room {
+                Some(pulse_room) => pulse_room.endpoint(),
+                None => {
+                    let (host, port) = self.resolve_pulse_endpoint(&cli);
+                    format!("{host}:{port}")
+                }
+            };
+            dict.set("pulse_available".to_variant(), true.to_variant());
+            dict.set("pulse_enabled".to_variant(), pulse_enabled.to_variant());
+            dict.set("pulse_state".to_variant(), pulse_state.to_variant());
+            dict.set("pulse_endpoint".to_variant(), pulse_endpoint.to_variant());
+            dict.set(
+                "pulse_failures".to_variant(),
+                (self.pulse_session_failures as i64).to_variant(),
+            );
+            dict.set(
+                "pulse_disabled_for_session".to_variant(),
+                self.pulse_disabled_for_session.to_variant(),
+            );
+            dict.set(
+                "dual_channel".to_variant(),
+                self.livekit_movement_dual_channel.to_variant(),
+            );
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        {
+            dict.set("pulse_available".to_variant(), false.to_variant());
+            dict.set("pulse_enabled".to_variant(), false.to_variant());
+            dict.set("pulse_state".to_variant(), "unavailable".to_variant());
+            dict.set("pulse_endpoint".to_variant(), "".to_variant());
+            dict.set("pulse_failures".to_variant(), 0i64.to_variant());
+            dict.set(
+                "pulse_disabled_for_session".to_variant(),
+                false.to_variant(),
+            );
+            dict.set("dual_channel".to_variant(), true.to_variant());
+        }
+
         dict
     }
 
