@@ -1064,6 +1064,7 @@ func return_to_discover() -> void:
 	if _returning_to_discover or _signing_out:
 		return
 	_returning_to_discover = true
+	LoadingProfiler.mark("nav.return_to_discover")
 
 	# 1. Tear down the live Explorer first, while it is still in the tree, so its
 	#    autoload-signal callbacks and retry timers are severed before the steps
@@ -1367,6 +1368,7 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 
 
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
+	LoadingProfiler.mark("entry.teleport", {"parcel": str(parcel_position), "realm": new_realm})
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
@@ -1387,6 +1389,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 
 
 func async_join_world(world_realm: String) -> void:
+	LoadingProfiler.mark("entry.join_world", {"realm": world_realm})
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene

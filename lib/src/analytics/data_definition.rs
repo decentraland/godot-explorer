@@ -74,6 +74,11 @@ pub enum SegmentEvent {
     AttestationAttempt(SegmentEventAttestationAttempt),
     AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded),
     IosStoreKitEnvironment(SegmentEventIosStoreKitEnvironment),
+    // Loading-pipeline funnel + diagnostics (see SegmentEventLoadingPayload).
+    SceneLoadingStarted(SegmentEventLoadingPayload),
+    SceneLoadingCompleted(SegmentEventLoadingPayload),
+    SceneLoadingAssetFailure(SegmentEventLoadingPayload),
+    RealmChangeFailed(SegmentEventLoadingPayload),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -233,6 +238,18 @@ pub struct SegmentEventExplorerSceneLoadTimes {
     elapsed: f32,
     // Boolean flag indicating wether the scene loaded without errors.
     success: bool,
+}
+
+/// Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450). The `properties` object is
+/// built in `loading_profiler.gd` from the per-episode milestone summary (`[LOADPROF-SUM]`) plus
+/// live ContentProvider / loading-session counters, then flattened here so every field lands as a
+/// top-level, queryable Segment property. Values are bucketed/rounded — no PII, no parcel coords,
+/// no URLs. Emitted through the four `track_scene_loading_*` / `track_realm_change_failed`
+/// `#[func]`s in metrics.rs. GDScript owns the schema; Rust just forwards it.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventLoadingPayload {
+    #[serde(flatten)]
+    pub properties: serde_json::Value,
 }
 
 // TODO: maybe important what realm?
@@ -559,6 +576,26 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::IosStoreKitEnvironment(event) => (
             "iOS StoreKit Environment".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::SceneLoadingStarted(event) => (
+            "Scene Loading Started".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::SceneLoadingCompleted(event) => (
+            "Scene Loading Completed".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::SceneLoadingAssetFailure(event) => (
+            "Scene Loading Asset Failure".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::RealmChangeFailed(event) => (
+            "Realm Change Failed".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

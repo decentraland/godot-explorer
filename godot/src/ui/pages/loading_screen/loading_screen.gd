@@ -41,6 +41,9 @@ func enable_loading_screen(intended_realm: String = "", when: String = "") -> vo
 	close_button.show()
 	_loading_cancelled = false
 	_intended_realm = intended_realm if Realm.is_dcl_ens(intended_realm) else ""
+	LoadingProfiler.begin_episode(
+		when, _intended_realm if not _intended_realm.is_empty() else Global.realm.get_realm_string()
+	)
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
@@ -83,6 +86,8 @@ func async_hide_loading_screen_effect():
 	tween.tween_property(self, "modulate", Color.TRANSPARENT, 1.0)
 	await tween.finished
 	hide()
+	LoadingProfiler.mark("screen.hidden")
+	LoadingProfiler.end_episode("hidden")
 	modulate = Color.WHITE
 	self.position.y = 0
 
@@ -242,6 +247,7 @@ func set_place_data(data: Dictionary) -> void:
 	_place_data_set = true
 	var title = data.get("title", "")
 	var creator = data.get("contact_name", "")
+	LoadingProfiler.mark("screen.place_data", {"title": str(title)})
 	set_place_name(title if title is String else "")
 	set_place_creator(creator if creator is String else "")
 	var image_url = data.get("image", "")
