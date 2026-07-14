@@ -68,16 +68,10 @@ pub enum ServiceGroup {
     /// dev server (`http://localhost:5173`) instead of
     /// `decentraland.<env>/marketplace` — used with the in-app dev relay on iOS.
     Marketplace,
-    /// The Pulse avatar-state relay (ENet). Split from `Comms` so
-    /// `dclenv=pulse::zone,org` can point ONLY Pulse at the zone deployment
-    /// while the gatekeeper/social/etc. stay on the default env. Pulse has
-    /// org + zone deployments only; `today` resolves to zone (see
-    /// `urls::pulse_server`).
-    Pulse,
 }
 
 impl ServiceGroup {
-    pub const COUNT: usize = 12;
+    pub const COUNT: usize = 11;
 
     pub fn index(self) -> usize {
         match self {
@@ -92,7 +86,6 @@ impl ServiceGroup {
             Self::CreditsServer => 8,
             Self::Profile => 9,
             Self::Marketplace => 10,
-            Self::Pulse => 11,
         }
     }
 
@@ -109,7 +102,6 @@ impl ServiceGroup {
             Self::CreditsServer => "creditsserver",
             Self::Profile => "profile",
             Self::Marketplace => "marketplace",
-            Self::Pulse => "pulse",
         }
     }
 
@@ -126,7 +118,6 @@ impl ServiceGroup {
             "creditsserver" => Some(Self::CreditsServer),
             "profile" => Some(Self::Profile),
             "marketplace" => Some(Self::Marketplace),
-            "pulse" => Some(Self::Pulse),
             _ => None,
         }
     }
@@ -143,7 +134,6 @@ impl ServiceGroup {
         Self::CreditsServer,
         Self::Profile,
         Self::Marketplace,
-        Self::Pulse,
     ];
 }
 

@@ -630,7 +630,8 @@ impl CommunicationManager {
     /// Create the Pulse room if activation is on and it doesn't exist yet.
     /// Activation: deeplink override (`pulse=`/`pulse-server=`) > CLI `--pulse` / env.
     /// Endpoint: deeplink `pulse-server=` > `--pulse-server` / `PULSE_SERVER` > default
-    /// `urls::pulse_server():7777` (env-resolved; `dclenv=pulse::zone,org` targets zone).
+    /// `urls::pulse_server():7777` (env-resolved via the `comms` group; `dclenv=zone`
+    /// or `dclenv=comms::zone,org` both target the zone deployment).
     #[cfg(feature = "use_pulse")]
     fn ensure_pulse_room(&mut self) {
         if self.pulse_room.is_some() || self.pulse_disabled_for_session || self.comms_on_hold {
