@@ -35,10 +35,11 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // unless PROTOCOL_FIXED_VERSION_URL pins a specific tarball.
 //
 // Pinned here to the controls-customization protocol build (PR #426 rebased on main) that
-// ships the new mobile_input_controls/ui_input_binding components. This intentionally
-// overrides main's 1.11.0 RC pin (protocol-1.0.0-28974105118.commit-a598406); when this
-// branch merges, re-point to a protocol build that includes both PR #426 and main's pin.
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-28537371424.commit-9b4f100.tgz");
+// ships the new TouchScreenControls/UiInputBinding components (with the TextureUnion `icon`
+// field). This intentionally overrides main's 1.11.0 RC pin
+// (protocol-1.0.0-28974105118.commit-a598406); when this branch merges, re-point to a
+// protocol build that includes both PR #426 and main's pin.
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-29349550611.commit-6d59503.tgz");
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
