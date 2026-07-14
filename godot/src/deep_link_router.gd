@@ -51,6 +51,14 @@ func process_deep_link(url: String) -> void:
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
 
+	# Opt-in gate for deleting an UPGRADED (email-linked) guest. Sticky-on for the
+	# session; only takes effect on a NON-production build (see
+	# Global.is_upgraded_deletion_enabled() + account_deletion_popup.gd).
+	var upgraded_deletion_value = Global.deep_link_obj.params.get("enable-upgraded-deletion", "")
+	if upgraded_deletion_value.to_lower() in ["true", "1", "yes"]:
+		Global._enable_upgraded_deletion = true
+		print("[DEEPLINK] enable-upgraded-deletion=true")
+
 	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
 	# runner from Global._ready, but on mobile the deep link is not parsed by
 	# then — spawn here once the deeplink lands and only if no runner exists.

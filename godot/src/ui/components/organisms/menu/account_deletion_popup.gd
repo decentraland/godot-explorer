@@ -1,9 +1,16 @@
 extends TextureRect
 
-# True when the current deletion targets a non-upgraded guest → automatic
-# on-device deletion (no /deletion request, no "Deletion Requested" modal).
-# Decided authoritatively in async_start_flow() before the confirmation dialog.
+# True when the current deletion takes the automatic on-device path (no /deletion
+# request, no "Deletion Requested" modal): a non-upgraded guest, or — behind the
+# gate — an upgraded guest. Decided authoritatively in async_start_flow() before
+# the confirmation dialog.
 var _guest_auto_delete: bool = false
+
+# True when _guest_auto_delete targets an UPGRADED (email-linked) guest, allowed
+# only by Global.is_upgraded_deletion_enabled() (non-prod + enable-upgraded-deletion
+# deeplink). Selects the double-unlink path (guest + email) instead of the single
+# guest unlink.
+var _upgraded_deletion: bool = false
 
 @onready var confirmation_dialog: VBoxContainer = %ConfirmationDialog
 @onready var processing_screen: VBoxContainer = %ProcessingScreen
@@ -47,9 +54,10 @@ func async_start_flow() -> void:
 	processing_screen.show()
 
 	# Non-upgraded guests get an automatic on-device deletion (issue #2335): no
-	# server request and no "Deletion Requested" modal. Everyone else (upgraded
-	# guest / real wallet) keeps the manual /deletion request flow below.
-	_guest_auto_delete = await _async_is_non_upgraded_guest()
+	# server request and no "Deletion Requested" modal. Upgraded guests take that
+	# same automatic path ONLY behind the enable-upgraded-deletion gate (via a
+	# double unlink); everyone else keeps the manual /deletion request flow below.
+	_guest_auto_delete = await _async_resolve_auto_delete()
 	if _guest_auto_delete:
 		_hide_all()
 		confirmation_dialog.show()
@@ -86,13 +94,16 @@ func async_start_flow() -> void:
 		confirmation_dialog.show()
 
 
-# Decides whether the active session is a non-upgraded guest, which takes the
-# automatic-deletion path. The upgrade check is AUTHORITATIVE (a fresh thirdweb
+# Decides whether the active session takes the automatic on-device deletion path
+# and, as a side effect, sets _upgraded_deletion when it targets an upgraded
+# guest (double unlink). The upgrade check is AUTHORITATIVE (a fresh thirdweb
 # query) rather than the cached flag: the card that warms that cache is
 # portrait-only, so in landscape the cache is cold and would misclassify an
 # upgraded guest. Falls back to the cached flag only if the query fails, so a
-# recoverable (upgraded) account is never auto-deleted on a transient error.
-func _async_is_non_upgraded_guest() -> bool:
+# recoverable (upgraded) account is never auto-deleted on a transient error
+# unless the gate explicitly allows it.
+func _async_resolve_auto_delete() -> bool:
+	_upgraded_deletion = false
 	var identity = Global.player_identity
 	if identity == null:
 		return false
@@ -111,7 +122,18 @@ func _async_is_non_upgraded_guest() -> bool:
 		upgraded = identity.is_thirdweb_guest_upgraded()
 	else:
 		upgraded = bool(result)
-	return not upgraded
+
+	if not upgraded:
+		# Non-upgraded guest: automatic single-unlink deletion (issue #2335).
+		return true
+
+	# Upgraded guest: auto-delete only behind the non-prod + deeplink gate, via a
+	# double unlink (guest + email). Otherwise fall through to the manual
+	# /deletion request flow.
+	if Global.is_upgraded_deletion_enabled():
+		_upgraded_deletion = true
+		return true
+	return false
 
 
 # Automatic guest deletion (issue #2335): best-effort unlink of the thirdweb
@@ -126,7 +148,13 @@ func _async_perform_guest_auto_delete() -> void:
 	var identity = Global.player_identity
 	if identity != null and identity.is_thirdweb_guest():
 		var anchor: String = Global.get_device_anchor_id()
-		var promise: Promise = identity.async_delete_guest_account(anchor)
+		# Upgraded guests need a double unlink (guest + email) to fully delete the
+		# recoverable account; non-upgraded guests unlink only the sole guest profile.
+		var promise: Promise = (
+			identity.async_delete_upgraded_account(anchor)
+			if _upgraded_deletion
+			else identity.async_delete_guest_account(anchor)
+		)
 		var result = await PromiseUtils.async_awaiter(promise)
 		if result is PromiseError:
 			printerr("Guest deletion (thirdweb unlink) failed: ", result.get_error())

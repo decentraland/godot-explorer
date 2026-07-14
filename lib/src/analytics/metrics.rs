@@ -1,6 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
+use chrono::{DateTime, SecondsFormat, Utc};
 use godot::{classes::Timer, prelude::*};
+use uuid::Uuid;
 
 use crate::{
     godot_classes::{
@@ -34,6 +39,17 @@ enum MobilePlatform {
     Android,
 }
 
+/// A Segment event together with the metadata captured the moment it was queued. Holding the
+/// creation time (and a stable message id) here — rather than stamping it at flush — is what
+/// keeps per-event chronology: a batch no longer collapses to a single flush instant.
+struct QueuedSegmentEvent {
+    event: SegmentEvent,
+    // Wall-clock time when the event was queued on the device.
+    created_at: DateTime<Utc>,
+    // Stable per-event id (UUID v4). Kept identical across retries so Segment can deduplicate.
+    message_id: String,
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct Metrics {
@@ -48,8 +64,14 @@ pub struct Metrics {
     common: SegmentEventCommonExplorerFields,
 
     // Collect events to send
-    events: Vec<SegmentEvent>,
+    events: Vec<QueuedSegmentEvent>,
     serialized_events: Vec<String>,
+
+    // Events from a batch whose HTTP send failed. Drained back into `serialized_events` on the
+    // next flush so transient network failures (common on mobile) don't silently drop data. The
+    // JSON here already carries the original `timestamp`/`messageId`, so re-sends keep the true
+    // event time and Segment deduplicates them. Shared with the detached send task via Arc/Mutex.
+    retry_buffer: Arc<Mutex<Vec<String>>>,
 
     // Which mobile platform is available (checked once at ready)
     mobile_platform: Option<MobilePlatform>,
@@ -81,6 +103,10 @@ pub struct Metrics {
 const SEGMENT_EVENT_SIZE_LIMIT_BYTES: usize = 32000;
 const SEGMENT_BATCH_SIZE_LIMIT_BYTES: usize = 500000;
 
+// Upper bound on how many failed-send events we hold for retry. Bounds memory during a long
+// outage; once exceeded we drop the oldest (they're the most likely to be stale) and log it.
+const MAX_RETRY_BUFFER_EVENTS: usize = 1000;
+
 // Default flush cadence used outside the lobby. The lobby overrides this to a snappier 2s via
 // set_flush_interval so onboarding/auth events ship fast; the rest of the app batches at 10s.
 const DEFAULT_FLUSH_INTERVAL_SECONDS: f64 = 10.0;
@@ -96,6 +122,7 @@ impl INode for Metrics {
             frame: Frame::new(),
             events: Vec::new(),
             serialized_events: Vec::new(),
+            retry_buffer: Arc::new(Mutex::new(Vec::new())),
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
@@ -165,7 +192,7 @@ impl INode for Metrics {
         if let Some(mut frame_data) = self.frame.process(1000.0 * delta as f32) {
             // Enrich the event with mobile/device/network data
             self.populate_event_metrics(&mut frame_data);
-            self.events.push(frame_data);
+            self.queue_event("Performance Metrics", frame_data);
         }
     }
 }
@@ -196,8 +223,7 @@ impl Metrics {
         let event = SegmentEvent::FirebaseInit(SegmentEventFirebaseInit {
             firebase_user_id: id_str,
         });
-        self.events.push(event.clone());
-        self.debug_print_event("Firebase Init", &event);
+        self.queue_event("Firebase Init", event);
     }
 
     #[func]
@@ -211,8 +237,8 @@ impl Metrics {
         // Poll install referrer (Android only, auto-completes after first success)
         if let Some(ref mut referrer) = self.install_referrer {
             if let Some(event) = referrer.poll() {
-                self.events.push(event);
                 self.install_referrer = None;
+                self.queue_event("Install Attribution", event);
             }
         }
 
@@ -255,6 +281,7 @@ impl Metrics {
             frame: Frame::new(),
             events: Vec::new(),
             serialized_events: Vec::new(),
+            retry_buffer: Arc::new(Mutex::new(Vec::new())),
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
@@ -285,8 +312,7 @@ impl Metrics {
                 old_parcel: self.common.position.clone(),
             },
         );
-        self.events.push(event.clone());
-        self.debug_print_event("Explorer Move To Parcel", &event);
+        self.queue_event("Explorer Move To Parcel", event);
         self.common.position = position;
     }
 
@@ -319,8 +345,7 @@ impl Metrics {
                 Some(screen_name)
             },
         });
-        self.events.push(event.clone());
-        self.debug_print_event("Chat Message Sent", &event);
+        self.queue_event("Chat Message Sent", event);
     }
 
     #[func]
@@ -339,8 +364,7 @@ impl Metrics {
                 Some(extra_properties)
             },
         });
-        self.events.push(event.clone());
-        self.debug_print_event("Click Button", &event);
+        self.queue_event("Click Button", event);
     }
 
     /// Reports the iOS StoreKit environment to Segment. Fired once at startup
@@ -374,8 +398,7 @@ impl Metrics {
             app_environment,
             can_make_payments,
         });
-        self.events.push(event.clone());
-        self.debug_print_event("iOS StoreKit Environment", &event);
+        self.queue_event("iOS StoreKit Environment", event);
     }
 
     #[func]
@@ -388,15 +411,13 @@ impl Metrics {
                 Some(extra_properties)
             },
         });
-        self.events.push(event.clone());
-        self.debug_print_event("Screen Viewed", &event);
+        self.queue_event("Screen Viewed", event);
     }
 
     #[func]
     pub fn track_request_friend(&mut self, receiver_id: String) {
         let event = SegmentEvent::RequestFriend(SegmentEventRequestFriend { receiver_id });
-        self.events.push(event.clone());
-        self.debug_print_event("Friend Request", &event);
+        self.queue_event("Friend Request", event);
     }
 
     #[func]
@@ -409,8 +430,7 @@ impl Metrics {
                 Some(friendship_id)
             },
         });
-        self.events.push(event.clone());
-        self.debug_print_event("Friend Accept", &event);
+        self.queue_event("Friend Accept", event);
     }
 
     #[func]
@@ -419,15 +439,13 @@ impl Metrics {
             receiver_id,
             is_friend,
         });
-        self.events.push(event.clone());
-        self.debug_print_event("Block User", &event);
+        self.queue_event("Block User", event);
     }
 
     #[func]
     pub fn track_unfriend(&mut self, receiver_id: String) {
         let event = SegmentEvent::Unfriend(SegmentEventUnfriend { receiver_id });
-        self.events.push(event.clone());
-        self.debug_print_event("Unfriend", &event);
+        self.queue_event("Unfriend", event);
     }
 
     /// Per-attempt event from AttestationService's FSM. See
@@ -495,8 +513,7 @@ impl Metrics {
             post_session_ms: opt_u32(4),
             session_ttl_s: opt_i64(5),
         });
-        self.events.push(event.clone());
-        self.debug_print_event("Attestation Attempt", &event);
+        self.queue_event("Attestation Attempt", event);
     }
 
     /// Boot-time cache probe event. `remaining_s` is -1 (becomes None) for any
@@ -519,8 +536,7 @@ impl Metrics {
                 },
             },
         );
-        self.events.push(event.clone());
-        self.debug_print_event("Attestation Session Cache Loaded", &event);
+        self.queue_event("Attestation Session Cache Loaded", event);
     }
 
     #[func]
@@ -647,6 +663,17 @@ impl Metrics {
     }
 
     fn process_and_send_events(&mut self, ignore_batch_limit: bool) {
+        // Re-enqueue anything a previous send failed to deliver, BEFORE the empty-check below, so
+        // a retry still fires even when no new events were produced this tick. The buffered JSON
+        // keeps its original timestamp/messageId, so re-sends preserve event time and dedup.
+        {
+            let mut retry = self.retry_buffer.lock().unwrap();
+            if !retry.is_empty() {
+                tracing::debug!("Re-queuing {} events from retry buffer", retry.len());
+                self.serialized_events.append(&mut retry);
+            }
+        }
+
         tracing::debug!(
             "process_and_send_events: events={}, serialized={}, ignore_limit={}",
             self.events.len(),
@@ -668,9 +695,14 @@ impl Metrics {
         let mut accumulated_length: usize = self.serialized_events.iter().map(|s| s.len()).sum();
 
         tracing::debug!("Starting event processing loop");
-        while let Some(event) = self.events.pop() {
-            let raw_event =
-                build_segment_event_batch_item(self.user_id.clone(), &self.common, event);
+        while let Some(queued) = self.events.pop() {
+            let raw_event = build_segment_event_batch_item(
+                self.user_id.clone(),
+                &self.common,
+                queued.event,
+                queued.created_at,
+                queued.message_id,
+            );
 
             let json_body =
                 serde_json::to_string(&raw_event).expect("Failed to serialize event body");
@@ -686,8 +718,15 @@ impl Metrics {
                 let http_requester = http_requester.clone();
                 let write_key = self.write_key.clone();
                 let serialized_events = std::mem::take(&mut self.serialized_events);
+                let retry_buffer = self.retry_buffer.clone();
                 TokioRuntime::spawn(async move {
-                    Self::send_segment_batch(http_requester, &write_key, &serialized_events).await;
+                    Self::send_segment_batch(
+                        http_requester,
+                        &write_key,
+                        serialized_events,
+                        retry_buffer,
+                    )
+                    .await;
                 });
 
                 // This event is queued until the next time is available to send events
@@ -708,12 +747,19 @@ impl Metrics {
             let http_requester = http_requester.clone();
             let write_key = self.write_key.clone();
             let serialized_events = std::mem::take(&mut self.serialized_events);
+            let retry_buffer = self.retry_buffer.clone();
             tracing::debug!(
                 "Spawning async task to send {} events",
                 serialized_events.len()
             );
             TokioRuntime::spawn(async move {
-                Self::send_segment_batch(http_requester, &write_key, &serialized_events).await;
+                Self::send_segment_batch(
+                    http_requester,
+                    &write_key,
+                    serialized_events,
+                    retry_buffer,
+                )
+                .await;
             });
         } else {
             tracing::debug!("No serialized events to send");
@@ -722,15 +768,42 @@ impl Metrics {
 }
 
 impl Metrics {
-    /// Print debug information for a queued event (full JSON when enabled)
-    fn debug_print_event(&self, event_name: &str, event: &SegmentEvent) {
+    /// Stamp an event with its creation time and a stable message id, print it in debug mode, and
+    /// queue it for the next flush. Every event path goes through here so the per-event
+    /// `timestamp`/`messageId` are captured at creation — NOT at flush, which is what preserves
+    /// chronology and makes retries deduplicable.
+    fn queue_event(&mut self, event_name: &str, event: SegmentEvent) {
+        let created_at = Utc::now();
+        let message_id = Uuid::new_v4().to_string();
+        self.debug_print_event(event_name, &event, created_at, &message_id);
+        self.events.push(QueuedSegmentEvent {
+            event,
+            created_at,
+            message_id,
+        });
+    }
+
+    /// Print debug information for a queued event (full JSON when enabled), using the same
+    /// creation metadata that will actually be sent so the log mirrors the real payload.
+    fn debug_print_event(
+        &self,
+        event_name: &str,
+        event: &SegmentEvent,
+        created_at: DateTime<Utc>,
+        message_id: &str,
+    ) {
         if self.debug_level == 0 {
             return; // Disabled
         }
 
         // Build the complete event as it would be sent to Segment
-        let event_body =
-            build_segment_event_batch_item(self.user_id.clone(), &self.common, event.clone());
+        let event_body = build_segment_event_batch_item(
+            self.user_id.clone(),
+            &self.common,
+            event.clone(),
+            created_at,
+            message_id.to_string(),
+        );
 
         let json = serde_json::to_string_pretty(&event_body)
             .unwrap_or_else(|e| format!("<serialization error: {}>", e));
@@ -884,7 +957,8 @@ impl Metrics {
     async fn send_segment_batch(
         http_requester: Arc<HttpQueueRequester>,
         write_key: &str,
-        events: &[String],
+        events: Vec<String>,
+        retry_buffer: Arc<Mutex<Vec<String>>>,
     ) {
         // Log the events being sent
         tracing::debug!("Sending segment batch with {} events", events.len());
@@ -898,9 +972,14 @@ impl Metrics {
             }
         }
 
+        // Batch-level `sentAt`, stamped at the actual moment of sending. Segment pairs this with
+        // each event's `timestamp` (stored as `originalTimestamp`) to correct device clock skew:
+        // canonical `timestamp` = receivedAt - (sentAt - originalTimestamp).
+        let sent_at = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
         let json_body = format!(
-            "{{\"writeKey\":\"{}\",\"batch\":[{}]}}",
+            "{{\"writeKey\":\"{}\",\"sentAt\":\"{}\",\"batch\":[{}]}}",
             write_key,
+            sent_at,
             events.join(",")
         );
 
@@ -917,7 +996,27 @@ impl Metrics {
             None,
         );
         if let Err(err) = http_requester.request(request, 0).await {
-            tracing::warn!("Failed to send segment batch: {:?}", err);
+            // Transport failure (offline, timeout, DNS…). Buffer the events so the next flush
+            // retries them instead of dropping data. HTTP 4xx/5xx responses arrive as Ok here and
+            // are NOT retried, which avoids spinning forever on a permanently-rejected payload.
+            let count = events.len();
+            let mut retry = retry_buffer.lock().unwrap();
+            retry.extend(events);
+            if retry.len() > MAX_RETRY_BUFFER_EVENTS {
+                let overflow = retry.len() - MAX_RETRY_BUFFER_EVENTS;
+                retry.drain(0..overflow);
+                tracing::warn!(
+                    "Segment retry buffer exceeded {} events; dropped {} oldest",
+                    MAX_RETRY_BUFFER_EVENTS,
+                    overflow
+                );
+            }
+            tracing::warn!(
+                "Failed to send segment batch ({} events); buffered for retry (buffer now {}): {:?}",
+                count,
+                retry.len(),
+                err
+            );
         } else {
             tracing::debug!("Segment batch sent successfully");
         }

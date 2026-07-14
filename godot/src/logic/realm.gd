@@ -178,6 +178,18 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		_emit_realm_change_failed(new_realm_string, reason)
 		return false
 
+	# Guard malformed /about `content` BEFORE committing realm state. A null/missing
+	# `content` or a non-String `content.publicUrl` would otherwise throw at
+	# `content_base_url` below — after realm state was already partially committed and with
+	# NO `realm_change_failed` emitted — leaving a silently stuck loading screen (F-11 / RC-6).
+	# (`or` short-circuits, so `.get()` is never called on a non-Dictionary `content`.)
+	var about_content = json.get("content")
+	if not about_content is Dictionary or not about_content.get("publicUrl") is String:
+		var reason := "/about missing or malformed content.publicUrl"
+		printerr("[REALM] ", reason, " for ", new_realm_string)
+		_emit_realm_change_failed(new_realm_string, reason)
+		return false
+
 	# /about was validated — now it's safe to commit the new realm state.
 	realm_string = new_realm_string
 	realm_url = candidate_realm_url

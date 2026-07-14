@@ -174,6 +174,13 @@ var attestation: AttestationService = null
 
 var _is_portrait: bool = true
 
+# Opt-in, set by a `decentraland://open?enable-upgraded-deletion=true` deeplink
+# (see deep_link_router.gd). Gates the account-deletion flow so an UPGRADED
+# (email-linked) guest can be fully deleted via a double unlink — see
+# account_deletion_popup.gd and is_upgraded_deletion_enabled(). Sticky for the
+# session once seen; only takes effect on a NON-production build.
+var _enable_upgraded_deletion: bool = false
+
 # Scene Inspector bridge, created lazily at boot when a target is configured.
 var _scene_inspector_bridge: Node = null
 
@@ -471,6 +478,10 @@ func _ready():
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
+
+		# scene-stats overlay is applied by explorer.gd:_update_scene_stats_ui();
+		# just log here so CLI/QA can confirm the param parsed.
+		print("[DEEPLINK] scene-stats=", deep_link_obj.scene_stats)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -952,6 +963,15 @@ func clear_guest_device_storage() -> int:
 	return removed
 
 
+## True only when deletion of an UPGRADED (email/social-linked) guest is allowed:
+## the `enable-upgraded-deletion=true` deeplink was seen AND this is a
+## NON-production build. Off by default and hard-disabled in prod, so a
+## recoverable account is never force-deleted on a release cut; the upgraded path
+## does a double unlink (guest + email) — see account_deletion_popup.gd.
+func is_upgraded_deletion_enabled() -> bool:
+	return _enable_upgraded_deletion and not is_production()
+
+
 func sign_out() -> void:
 	if _signing_out:
 		return
@@ -1232,6 +1252,13 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
+	# While tearing down the session toward a portrait-only screen (sign-out ->
+	# lobby, or return-to-discover -> Discover), ignore stray landscape flips. The
+	# explorer's loading-screen/chat machinery reacts to the realm being cleared
+	# during teardown and would otherwise flip back to landscape right before the
+	# swap, stranding the lobby/login in landscape (issue #2508).
+	if _signing_out or _returning_to_discover:
+		return
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():

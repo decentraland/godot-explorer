@@ -17,6 +17,7 @@ var dirty_save_position: bool = false
 
 var debug_panel = null
 var livekit_debug_panel = null
+var scene_stats_panel = null
 var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
@@ -55,6 +56,7 @@ var _debug_panel_from_settings: bool = false
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 @onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
+@onready var hbox_debug_tools: HBoxContainer = %HBoxContainer_DebugTools
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -69,7 +71,6 @@ var _debug_panel_from_settings: bool = false
 @onready var settings_panel: Control = %SettingsPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
-@onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
 @onready var mobile_ui = %MobileUI
 @onready var mobile_camera_input: Control = %MobileCameraInput
@@ -139,7 +140,6 @@ func _ready():
 
 	if DclGlobal.is_production():
 		label_fps.visible = false
-		label_ram.visible = false
 
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
@@ -216,6 +216,9 @@ func _ready():
 
 	# Show debug panel and reload button if in preview mode or --debug-panel
 	_update_debug_ui()
+
+	# Preview-only scene-stats / limits overlay (never created in production)
+	_update_scene_stats_ui()
 
 	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
 	if Global.deep_link_obj.livekit_debug:
@@ -1111,10 +1114,12 @@ func _update_debug_ui():
 			debug_panel = (
 				load("res://src/ui/components/organisms/debug_panel/debug_panel.tscn").instantiate()
 			)
-			safe_margin_container_debug.add_child(debug_panel)
+			hbox_debug_tools.add_child(debug_panel)
+			# Console always sits left of the scene-stats overlay in the row.
+			hbox_debug_tools.move_child(debug_panel, 0)
 	else:
 		if is_instance_valid(debug_panel):
-			safe_margin_container_debug.remove_child(debug_panel)
+			hbox_debug_tools.remove_child(debug_panel)
 			debug_panel.queue_free()
 			debug_panel = null
 
@@ -1122,6 +1127,56 @@ func _update_debug_ui():
 		debug_panel.set_reload_scene_visible(should_show)
 
 	Global.set_scene_log_enabled(should_show)
+	_update_debug_layer_visibility()
+
+
+## Scene-stats overlay. Instantiated in preview, or in any realm when the
+## `scene-stats=true` deep link forces it on — in every build flavor,
+## production included, so creators can measure scenes on store builds. A
+## normal run (no preview, no deep link) still instantiates nothing, so the
+## zero-cost guarantee holds, mirroring _update_debug_ui.
+func _update_scene_stats_ui() -> void:
+	var should_show := _is_in_preview_realm() or Global.deep_link_obj.scene_stats
+	if should_show:
+		if not is_instance_valid(scene_stats_panel):
+			scene_stats_panel = (
+				load("res://src/ui/components/organisms/scene_stats_panel/scene_stats_panel.tscn")
+				. instantiate()
+			)
+			# Shares the top-right debug tools row with the console, so both
+			# lay out side by side instead of overlapping.
+			hbox_debug_tools.add_child(scene_stats_panel)
+		scene_stats_panel.set_scene(_preview_scene_id())
+	else:
+		if is_instance_valid(scene_stats_panel):
+			scene_stats_panel.queue_free()
+			scene_stats_panel = null
+	_update_debug_layer_visibility()
+
+
+## The debug layer hosts the console + scene-stats row; show it only while one
+## of them exists. It must be shown explicitly: it was once saved hidden in the
+## editor (PR #1894), which silently disabled the whole layer.
+func _update_debug_layer_visibility() -> void:
+	safe_margin_container_debug.visible = (
+		is_instance_valid(debug_panel) or is_instance_valid(scene_stats_panel)
+	)
+
+
+## The single scene being previewed (one scene may span multiple parcels):
+## prefer the non-global scene at the player's parcel, else the first non-global
+## scene loaded; -1 if none.
+func _preview_scene_id() -> int:
+	if not is_instance_valid(Global.scene_runner):
+		return -1
+	var sid := int(Global.scene_runner.get_scene_id_by_parcel_position(parcel_position))
+	for child in Global.scene_runner.get_children():
+		if child is DclSceneNode and not child.is_global() and child.get_scene_id() == sid:
+			return sid
+	for node in Global.scene_runner.get_children():
+		if node is DclSceneNode and not node.is_global():
+			return node.get_scene_id()
+	return -1
 
 
 func _on_timer_fps_label_timeout():
@@ -1201,6 +1256,7 @@ func _is_in_preview_realm() -> bool:
 
 func _update_preview_ui(_in_preview: bool) -> void:
 	_update_debug_ui()
+	_update_scene_stats_ui()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:

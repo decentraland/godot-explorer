@@ -19,9 +19,14 @@ signal email_added(email: String)
 		side_margin = value
 		_apply_full_width()
 
-## True once the network check has been attempted (prevents re-checking every time
-## the parent becomes visible after a successful initial check).
+## True once the network check has completed with an authoritative result
+## (prevents re-checking every time the parent becomes visible afterwards).
 var _upgrade_checked: bool = false
+## True while the network check is in flight. Concurrent calls — e.g. the repeated
+## orientation_changed emissions Discover fires during a menu transition — must not
+## take the cached fast path against the not-yet-populated flag, which defaults to
+## "not upgraded" and would flash the card for an already-upgraded user (#2483).
+var _upgrade_check_in_flight: bool = false
 
 @onready var button_add_email: Button = %Button_AddEmail
 
@@ -78,10 +83,18 @@ func _async_update_visibility() -> void:
 		visible = not Global.player_identity.is_thirdweb_guest_upgraded()
 		return
 
-	_upgrade_checked = true
+	if _upgrade_check_in_flight:
+		# A check is already running; stay hidden (the default) until it resolves.
+		# Reading the cached flag now would return the default "not upgraded" and
+		# wrongly flash the card for an already-upgraded user (#2483).
+		return
+
+	_upgrade_check_in_flight = true
 	var anchor: String = Global.get_device_anchor_id()
 	var promise: Promise = Global.player_identity.async_refresh_thirdweb_upgrade_state(anchor)
 	var result = await PromiseUtils.async_awaiter(promise)
+	_upgrade_check_in_flight = false
+	_upgrade_checked = true
 	var is_upgraded: bool
 	if result is PromiseError:
 		# Couldn't confirm against thirdweb — fall back to the last-known cached
