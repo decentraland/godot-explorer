@@ -1786,8 +1786,10 @@ impl MessageProcessor {
     }
 
     /// Returns room connectivity info for each peer.
-    /// Each entry is (address, room_description) where room_description is
-    /// "Scene", "Archipelago", or "Both".
+    /// Each entry is (address, room_description) where room_description lists every
+    /// room the peer is seen in, joined with " + " — e.g. "PULSE + SCENE + ARCHIPELAGO",
+    /// "SCENE + ARCHIPELAGO", "PULSE", or "NONE". A trailing '*' on PULSE marks that
+    /// Pulse is the source currently driving the avatar (transport-preference gate).
     pub fn get_peer_room_info(&self) -> Vec<(H160, String)> {
         let mut result = Vec::new();
         for (address, peer) in &self.peer_identities {
@@ -1803,24 +1805,22 @@ impl MessageProcessor {
                     has_archipelago = true;
                 }
             }
-            let mut room_desc = match (has_scene, has_archipelago) {
-                (true, true) => "Both".to_string(),
-                (true, false) => "Scene".to_string(),
-                (false, true) => "Archipelago".to_string(),
-                (false, false) if has_pulse => String::new(),
-                (false, false) => "None".to_string(),
-            };
+            let mut parts: Vec<&str> = Vec::new();
             if has_pulse {
-                if room_desc.is_empty() {
-                    room_desc = "Pulse".to_string();
-                } else {
-                    room_desc.push_str("+Pulse");
-                }
                 // Mark which source is actually driving the avatar right now.
-                if peer.pulse_live {
-                    room_desc.push('*');
-                }
+                parts.push(if peer.pulse_live { "PULSE*" } else { "PULSE" });
             }
+            if has_scene {
+                parts.push("SCENE");
+            }
+            if has_archipelago {
+                parts.push("ARCHIPELAGO");
+            }
+            let room_desc = if parts.is_empty() {
+                "NONE".to_string()
+            } else {
+                parts.join(" + ")
+            };
             result.push((*address, room_desc));
         }
         result

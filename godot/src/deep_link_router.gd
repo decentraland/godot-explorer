@@ -46,6 +46,14 @@ func process_deep_link(url: String) -> void:
 	if not pulse_value.is_empty():
 		print("[DEEPLINK] pulse=", pulse_value)
 		Global.comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
+	# `dual-channel=true/false` (default true): whether movement keeps going over
+	# LiveKit while Pulse is established. false = Pulse-only movement while up.
+	var dual_channel_value = Global.deep_link_obj.params.get("dual-channel", "")
+	if not dual_channel_value.is_empty():
+		print("[DEEPLINK] dual-channel=", dual_channel_value)
+		Global.comms.set_livekit_movement_dual_channel(
+			dual_channel_value.to_lower() in ["true", "1", "yes"]
+		)
 
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 

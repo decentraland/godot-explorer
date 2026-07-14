@@ -480,6 +480,12 @@ func _ready():
 		if not pulse_value.is_empty():
 			print("[DEEPLINK] pulse=", pulse_value)
 			comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
+		var dual_channel_value = deep_link_obj.params.get("dual-channel", "")
+		if not dual_channel_value.is_empty():
+			print("[DEEPLINK] dual-channel=", dual_channel_value)
+			comms.set_livekit_movement_dual_channel(
+				dual_channel_value.to_lower() in ["true", "1", "yes"]
+			)
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
