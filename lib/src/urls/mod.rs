@@ -129,9 +129,11 @@ pub fn identity_content() -> Option<String> {
 /// Pulse (ENet avatar-state relay) host — no scheme/port; the game port is
 /// `comms::consts::PULSE_SERVER_PORT` (UDP 7777). Pulse only has org + zone
 /// deployments (Unity: `pulse-server.decentraland.{ENV}`), so Today maps to zone.
+/// Its own service group: `dclenv=pulse::zone,org` (CLI or deeplink) points ONLY
+/// Pulse at zone while everything else stays on the default env.
 #[cfg(feature = "use_pulse")]
 pub fn pulse_server() -> String {
-    let suffix = match resolved_env(ServiceGroup::Comms) {
+    let suffix = match resolved_env(ServiceGroup::Pulse) {
         DclEnvironment::Org => "org",
         _ => "zone",
     };

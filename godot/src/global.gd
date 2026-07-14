@@ -470,6 +470,17 @@ func _ready():
 
 		_apply_optimized_content_base_url(deep_link_obj)
 
+		# Pulse transport params (mirrors deep_link_router.process_deep_link — this
+		# fake-deeplink path doesn't route through it). pulse-server implies enabling.
+		var pulse_server_value = deep_link_obj.params.get("pulse-server", "")
+		if not pulse_server_value.is_empty():
+			print("[DEEPLINK] pulse-server=", pulse_server_value)
+			comms.set_pulse_server(pulse_server_value)
+		var pulse_value = deep_link_obj.params.get("pulse", "")
+		if not pulse_value.is_empty():
+			print("[DEEPLINK] pulse=", pulse_value)
+			comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
+
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)

@@ -193,6 +193,13 @@ pub struct CommunicationManager {
     /// moment Pulse drops, so this can never make the player invisible.
     #[cfg(feature = "use_pulse")]
     livekit_movement_dual_channel: bool,
+    /// Runtime activation override (deeplink `pulse=true/false`): `None` follows the CLI/env.
+    #[cfg(feature = "use_pulse")]
+    pulse_runtime_enabled: Option<bool>,
+    /// Runtime endpoint override (deeplink `pulse-server=host:port`, shareable so a group can
+    /// join the same server). Wins over --pulse-server / PULSE_SERVER / the default endpoint.
+    #[cfg(feature = "use_pulse")]
+    pulse_endpoint_override: Option<String>,
 
     // Reconnection timer for scene rooms
     #[cfg(feature = "use_livekit")]
@@ -250,6 +257,10 @@ impl INode for CommunicationManager {
             last_dcl_position: None,
             #[cfg(feature = "use_pulse")]
             livekit_movement_dual_channel: true,
+            #[cfg(feature = "use_pulse")]
+            pulse_runtime_enabled: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_endpoint_override: None,
             #[cfg(feature = "use_livekit")]
             scene_room_reconnect_at: None,
             #[cfg(feature = "use_livekit")]
@@ -600,8 +611,10 @@ impl CommunicationManager {
         }
     }
 
-    /// Create the Pulse room if activation is on and it doesn't exist yet. Endpoint precedence:
-    /// `--pulse-server` / `PULSE_SERVER` (host:port) > default `urls::pulse_server():7777`.
+    /// Create the Pulse room if activation is on and it doesn't exist yet.
+    /// Activation: deeplink override (`pulse=`/`pulse-server=`) > CLI `--pulse` / env.
+    /// Endpoint: deeplink `pulse-server=` > `--pulse-server` / `PULSE_SERVER` > default
+    /// `urls::pulse_server():7777` (env-resolved; `dclenv=pulse::zone,org` targets zone).
     #[cfg(feature = "use_pulse")]
     fn ensure_pulse_room(&mut self) {
         if self.pulse_room.is_some() || self.pulse_disabled_for_session || self.comms_on_hold {
@@ -609,16 +622,34 @@ impl CommunicationManager {
         }
 
         let global = DclGlobal::singleton();
+
+        // The shared MessageProcessor (and the Pulse handshake itself) need an identity.
+        // A deeplink can land before login (Global._ready) — keep the runtime overrides and
+        // defer; change_adapter re-runs this once the identity exists.
+        if global
+            .bind()
+            .get_player_identity()
+            .bind()
+            .try_get_address()
+            .is_none()
+        {
+            tracing::debug!("pulse: no identity yet; deferring room creation");
+            return;
+        }
+
         let cli = global.bind().cli.clone();
         let cli = cli.bind();
-        if !cli.pulse {
+        if !self.pulse_runtime_enabled.unwrap_or(cli.pulse) {
             return;
         }
         if cli.no_livekit_movement {
             self.livekit_movement_dual_channel = false;
         }
 
-        let endpoint = cli.pulse_server.to_string();
+        let endpoint = self
+            .pulse_endpoint_override
+            .clone()
+            .unwrap_or_else(|| cli.pulse_server.to_string());
         let (host, port) = if endpoint.is_empty() {
             (
                 crate::urls::pulse_server(),
@@ -1023,6 +1054,54 @@ impl CommunicationManager {
         }
         #[cfg(not(feature = "use_pulse"))]
         true
+    }
+
+    /// Runtime (deeplink `pulse-server=host:port`): join a specific Pulse server. Shareable —
+    /// everyone opening the same deeplink lands on the same instance. Overrides the CLI/env
+    /// endpoint, clears any session fallback (an explicit user action earns a fresh chance),
+    /// and rebuilds the room immediately.
+    #[func]
+    pub fn set_pulse_server(&mut self, host_port: GString) {
+        #[cfg(feature = "use_pulse")]
+        {
+            let endpoint = host_port.to_string();
+            if endpoint.is_empty() {
+                return;
+            }
+            tracing::info!("pulse: runtime endpoint set to {endpoint}");
+            self.pulse_endpoint_override = Some(endpoint);
+            self.pulse_runtime_enabled = Some(true);
+            self.pulse_disabled_for_session = false;
+            self.pulse_session_failures = 0;
+            if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+            }
+            self.ensure_pulse_room();
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = host_port;
+    }
+
+    /// Runtime (deeplink `pulse=true/false`): toggle the Pulse transport with the configured
+    /// endpoint. Enabling clears any session fallback; disabling tears the room down.
+    #[func]
+    pub fn set_pulse_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.pulse_runtime_enabled = Some(enabled);
+            if enabled {
+                self.pulse_disabled_for_session = false;
+                self.pulse_session_failures = 0;
+                self.ensure_pulse_room();
+            } else if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+            }
+            tracing::info!("pulse: runtime enabled = {enabled}");
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
     }
 
     /// The local player was instantly repositioned (explorer.gd move_to: UI teleports and
