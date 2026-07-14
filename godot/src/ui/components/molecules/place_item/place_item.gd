@@ -383,7 +383,7 @@ func set_location(_location: Vector2i):
 func set_scene_event_name(scene_name: String) -> void:
 	var event_location_name = _get_label_event_location_name()
 	if event_location_name:
-		event_location_name.text = scene_name
+		event_location_name.text = format_name(scene_name, 30)
 
 
 func set_world(world: String, unlimited: bool = false):

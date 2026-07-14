@@ -118,6 +118,8 @@ font = ExtResource("6_ds20p")
 font_size = 22
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ikdkm"]
+
 [sub_resource type="LabelSettings" id="LabelSettings_hxdex"]
 font = ExtResource("19_gpni3")
 font_size = 30
@@ -547,6 +549,11 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "(37,-4)"
 label_settings = SubResource("LabelSettings_ygmng")
+
+[node name="VSeparator" type="VSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description/MarginContainer/HBoxContainer" unique_id=1594307813]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ikdkm")
 
 [node name="Button_JumpToEventSmall" type="Button" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description/MarginContainer/HBoxContainer" unique_id=1207726274]
 unique_name_in_owner = true
