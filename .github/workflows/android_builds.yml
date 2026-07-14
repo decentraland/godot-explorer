@@ -151,15 +151,31 @@ jobs:
           mkdir -p android-debug-symbols
           cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
 
-      # Decode and setup keystore for APK signing
-      - name: Setup APK Signing Keystore
+      # Re-sign the exported APK with the production distribution key so every published
+      # build shares one stable signing identity (Android requires the same key across
+      # upgrades). The export step above already signs the APK with an auto-generated
+      # keystore, so this is a re-sign — not the APK's only signature.
+      #
+      # Fork PRs don't receive repo secrets, so the keystore is unavailable there. In that
+      # case skip the re-sign and keep the export-signed APK — a valid, installable build
+      # for testing. Mirrors the graceful degradation of the R2-upload / build-number steps
+      # (an empty secret used to decode to a 0-byte keystore and hard-fail apksigner).
+      - name: Sign Android APK
+        env:
+          APK_ANDROID_KEYSTORE_BASE64: ${{ secrets.APK_ANDROID_KEYSTORE_BASE64 }}
+          APK_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          echo "${{ secrets.APK_ANDROID_KEYSTORE_BASE64 }}" | base64 -d > apk-release.keystore
+          if [ -z "$APK_ANDROID_KEYSTORE_BASE64" ]; then
+            echo "⚠️  APK signing keystore unavailable (fork PR — repo secrets are not exposed to forks)."
+            echo "    Keeping the APK as signed by the Godot export step; production re-signing runs"
+            echo "    only on same-repo branches (main/release and internal PRs)."
+            exit 0
+          fi
+
+          # Decode the production release keystore from the secret.
+          echo "$APK_ANDROID_KEYSTORE_BASE64" | base64 -d > apk-release.keystore
           ls -la apk-release.keystore
 
-      # Sign the APK file
-      - name: Sign Android APK
-        run: |
           # Find Android build-tools
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
           echo "Using build-tools: $BUILD_TOOLS_DIR"
@@ -169,7 +185,7 @@ jobs:
 
           # Sign the APK
           ${BUILD_TOOLS_DIR}apksigner sign --ks apk-release.keystore \
-            --ks-pass pass:"${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}" \
+            --ks-pass pass:"$APK_ANDROID_KEYSTORE_PASSWORD" \
             --out exports/decentraland.godot.client-signed.apk \
             exports/decentraland.godot.client-aligned.apk
 
@@ -490,8 +506,13 @@ jobs:
             echo "🔄 **Updated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           } > build-report.md
 
+      # On fork PRs the GITHUB_TOKEN is read-only regardless of the declared
+      # `pull-requests: write` permission, so posting the comment fails with "Resource not
+      # accessible by integration". Let it fail soft: the comment just won't appear on fork
+      # PRs, but the Android build itself must not be marked failed because of it.
       - name: Comment PR with Build Report
         if: github.event_name == 'pull_request' && always()
+        continue-on-error: true
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: build-report
