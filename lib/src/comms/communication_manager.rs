@@ -861,6 +861,13 @@ impl CommunicationManager {
                     );
                 }
             }
+
+            // Dual-send to Pulse. PulseRoom dedups on version internally — the 10s rebroadcast
+            // loop is a LiveKit liveness idiom, pure noise on a reliable server-stored channel.
+            #[cfg(feature = "use_pulse")]
+            if let Some(pulse_room) = &mut self.pulse_room {
+                pulse_room.send_profile_version(player_profile.version);
+            }
         }
     }
 
@@ -1018,6 +1025,31 @@ impl CommunicationManager {
         true
     }
 
+    /// The local player was instantly repositioned (explorer.gd move_to: UI teleports and
+    /// scene movePlayerTo both funnel through it). Announce it to the Pulse server as a
+    /// same-realm TeleportRequest so remote peers snap instead of interpolating across the
+    /// jump. `position` is in Godot world convention (same as broadcast_movement's).
+    ///
+    /// Latches pulse_teleport_pending rather than sending directly: process() flushes at most
+    /// one teleport per frame (teleports share the server's 20/s discrete-event budget with
+    /// emotes — a scene spamming movePlayerTo must not burn it) and re-checks the realm guard.
+    #[func]
+    pub fn notify_player_teleported(&mut self, position: Vector3) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.last_dcl_position = Some(Vector3::new(position.x, position.y, -position.z));
+            if self
+                .pulse_room
+                .as_ref()
+                .is_some_and(|pulse| pulse.is_established())
+            {
+                self.pulse_teleport_pending = true;
+            }
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = position;
+    }
+
     #[func]
     #[allow(clippy::too_many_arguments)]
     fn broadcast_movement(
@@ -1060,6 +1092,57 @@ impl CommunicationManager {
         // during every long fall.
         let needs_uncompressed = jump_count >= 2 || glide_state != 0;
         let use_compressed = compressed && !needs_uncompressed;
+
+        // Always built (not just for the uncompressed wire path): it is also the Pulse
+        // PlayerStateInput source, quantized via decoder::from_movement.
+        let uncompressed_movement = {
+            // Get elapsed time since start
+            let timestamp = self.start_time.elapsed().as_secs_f32();
+
+            // Calculate movement blend value based on velocity and movement type
+            let movement_blend_value = if run {
+                3.0
+            } else if jog {
+                2.0
+            } else if walk {
+                1.0
+            } else {
+                0.0
+            };
+
+            rfc4::Movement {
+                timestamp,
+                position_x: position.x,
+                position_y: position.y,
+                position_z: -position.z,
+                velocity_x: velocity.x,
+                velocity_y: velocity.y,
+                velocity_z: velocity.z,
+                // Negate + rad→deg to match Unity Foundation Client
+                // (rfc4.Movement.rotation_y is degrees in [0, 360)).
+                rotation_y: (-rotation_y).to_degrees(),
+                movement_blend_value,
+                slide_blend_value: 0.0,
+                is_grounded,
+                is_jumping: rise,
+                jump_count,
+                is_long_jump: false,
+                is_long_fall: false,
+                is_falling: fall,
+                is_stunned: false,
+                glide_state,
+                is_instant: false,
+                is_emoting: self.is_emoting,
+                head_ik_yaw_enabled: false, // TODO: implement head sync
+                head_ik_pitch_enabled: false,
+                head_yaw: 0.0,
+                head_pitch: 0.0,
+                point_at_x: 0.0, // TODO: implement point-at
+                point_at_y: 0.0,
+                point_at_z: 0.0,
+                is_pointing_at: false,
+            }
+        };
 
         let get_packet = || {
             if use_compressed {
@@ -1110,74 +1193,46 @@ impl CommunicationManager {
                     protocol_version: DEFAULT_PROTOCOL_VERSION,
                 }
             } else {
-                // Create regular Movement packet with all required fields
-
-                // Get elapsed time since start
-                let timestamp = self.start_time.elapsed().as_secs_f32();
-
-                // Calculate movement blend value based on velocity and movement type
-                let movement_blend_value = if run {
-                    3.0
-                } else if jog {
-                    2.0
-                } else if walk {
-                    1.0
-                } else {
-                    0.0
-                };
-
-                let movement_packet = rfc4::Movement {
-                    timestamp,
-                    position_x: position.x,
-                    position_y: position.y,
-                    position_z: -position.z,
-                    velocity_x: velocity.x,
-                    velocity_y: velocity.y,
-                    velocity_z: velocity.z,
-                    // Negate + rad→deg to match Unity Foundation Client
-                    // (rfc4.Movement.rotation_y is degrees in [0, 360)).
-                    rotation_y: (-rotation_y).to_degrees(),
-                    movement_blend_value,
-                    slide_blend_value: 0.0,
-                    is_grounded,
-                    is_jumping: rise,
-                    jump_count,
-                    is_long_jump: false,
-                    is_long_fall: false,
-                    is_falling: fall,
-                    is_stunned: false,
-                    glide_state,
-                    is_instant: false,
-                    is_emoting: self.is_emoting,
-                    head_ik_yaw_enabled: false, // TODO: implement head sync
-                    head_ik_pitch_enabled: false,
-                    head_yaw: 0.0,
-                    head_pitch: 0.0,
-                    point_at_x: 0.0, // TODO: implement point-at
-                    point_at_y: 0.0,
-                    point_at_z: 0.0,
-                    is_pointing_at: false,
-                };
-
                 rfc4::Packet {
-                    message: Some(rfc4::packet::Message::Movement(movement_packet)),
+                    message: Some(rfc4::packet::Message::Movement(
+                        uncompressed_movement.clone(),
+                    )),
                     protocol_version: DEFAULT_PROTOCOL_VERSION,
                 }
             }
         };
 
+        // Dual-channel movement (see plan_pulse/06): while the flag is on (default), movement
+        // rides LiveKit exactly as today even when Pulse is established (Unity prod contract —
+        // LiveKit-only peers must still see us). With the flag off, the island movement sends
+        // (main room + archipelago) are skipped ONLY while Pulse is established, so a Pulse drop
+        // auto-resumes LiveKit movement — the flag can never make the player invisible.
+        #[cfg(feature = "use_pulse")]
+        let pulse_established = self
+            .pulse_room
+            .as_ref()
+            .is_some_and(|pulse| pulse.is_established());
+        #[cfg(not(feature = "use_pulse"))]
+        let pulse_established = false;
+        #[cfg(feature = "use_pulse")]
+        let island_movement_over_livekit = self.livekit_movement_dual_channel || !pulse_established;
+        #[cfg(not(feature = "use_pulse"))]
+        let island_movement_over_livekit = true;
+
         // Send to main room if available
-        let mut message_sent = if let Some(main_room) = &mut self.main_room {
-            let sent = main_room.send_rfc4(get_packet(), true);
-            if sent {
-                tracing::debug!("📡 Movement sent to main room");
+        let mut message_sent = match &mut self.main_room {
+            Some(main_room) if island_movement_over_livekit => {
+                let sent = main_room.send_rfc4(get_packet(), true);
+                if sent {
+                    tracing::debug!("📡 Movement sent to main room");
+                }
+                sent
             }
-            sent
-        } else {
-            false
+            _ => false,
         };
 
-        // Also send to scene room if available (dual broadcasting)
+        // Also send to scene room if available (dual broadcasting). Never gated by the
+        // dual-channel flag: scene auth-servers don't speak Pulse.
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
             let scene_sent = scene_room.send_rfc4(get_packet(), true);
@@ -1189,13 +1244,25 @@ impl CommunicationManager {
 
         // Also send through archipelago's adapter if available
         #[cfg(feature = "use_livekit")]
-        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
-            if let Some(adapter) = archipelago.adapter_as_mut() {
-                let sent = adapter.send_rfc4(get_packet(), true);
-                if sent {
-                    tracing::debug!("📡 Movement also sent through archipelago");
-                    message_sent = true;
+        if island_movement_over_livekit {
+            if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
+                    let sent = adapter.send_rfc4(get_packet(), true);
+                    if sent {
+                        tracing::debug!("📡 Movement also sent through archipelago");
+                        message_sent = true;
+                    }
                 }
+            }
+        }
+
+        // Tee to Pulse (quantized PlayerStateInput, unreliable-sequenced). The 10Hz/1Hz cadence
+        // is inherited from broadcast_position.gd — under the server's 20Hz disconnect cap.
+        #[cfg(feature = "use_pulse")]
+        if pulse_established {
+            if let Some(pulse_room) = &mut self.pulse_room {
+                pulse_room.send_movement(&uncompressed_movement);
+                message_sent = true;
             }
         }
 
@@ -1338,11 +1405,25 @@ impl CommunicationManager {
             sent = scene_room.send_rfc4(packet, false) || sent;
         }
 
+        // Dual-send to Pulse (reliable EmoteStart, attaches the last sent PlayerState).
+        #[cfg(feature = "use_pulse")]
+        if let Some(pulse_room) = &mut self.pulse_room {
+            pulse_room.send_emote_start(&emote_urn.to_string());
+        }
+
         sent
     }
 
     #[func]
     pub fn set_emoting(&mut self, emoting: bool) {
+        // A true→false transition is the local emote ending — tell Pulse (reliable EmoteStop;
+        // only meaningful for looping emotes, one-shots expire server-side).
+        #[cfg(feature = "use_pulse")]
+        if self.is_emoting && !emoting {
+            if let Some(pulse_room) = &mut self.pulse_room {
+                pulse_room.send_emote_stop();
+            }
+        }
         self.is_emoting = emoting;
     }
 

@@ -951,6 +951,9 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 		player.avatar.emote_controller.set_teleport_grace()
 
 	player.move_to(position, check_stuck)
+	# Announce the instant reposition to the Pulse transport so remote peers
+	# snap to it instead of interpolating across the jump (no-op when inactive).
+	Global.comms.notify_player_teleported(position)
 	var cur_parcel_position = Vector2i(
 		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
 	)
