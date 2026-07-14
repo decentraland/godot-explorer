@@ -905,6 +905,7 @@ dependencies = [
  "poll-promise",
  "prost 0.11.9",
  "prost-build 0.11.9",
+ "prost-reflect",
  "protobuf",
  "rand",
  "regex",
@@ -3544,6 +3545,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.87",
+]
+
+[[package]]
+name = "prost-reflect"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b823de344848e011658ac981009100818b322421676740546f8b52ed5249428"
+dependencies = [
+ "once_cell",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
 ]
 
 [[package]]

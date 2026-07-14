@@ -1,14 +1,12 @@
 use ethers_core::types::H160;
 use godot::prelude::*;
 use http::Uri;
-#[cfg(feature = "use_livekit")]
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "use_livekit")]
-use crate::{
-    auth::wallet, comms::consts::DISABLE_ARCHIPELAGO, scene_runner::tokio_runtime::TokioRuntime,
-};
+use crate::comms::consts::DISABLE_ARCHIPELAGO;
+use crate::{auth::wallet, scene_runner::tokio_runtime::TokioRuntime};
 use crate::{
     comms::{
         adapter::{
@@ -98,10 +96,8 @@ impl MainRoom {
 }
 
 #[cfg(feature = "use_livekit")]
-use crate::{
-    comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom},
-    http_request::http_queue_requester::HttpQueueRequester,
-};
+use crate::comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom};
+use crate::http_request::http_queue_requester::HttpQueueRequester;
 
 #[allow(clippy::large_enum_variant)]
 enum CommsConnection {
@@ -1129,6 +1125,7 @@ impl CommunicationManager {
                 urn: emote_urn.to_string(),
                 incremental_id: self.last_emote_incremental_id,
                 timestamp: self.start_time.elapsed().as_secs_f32(),
+                is_stopping: None,
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };

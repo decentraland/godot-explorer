@@ -121,6 +121,9 @@ enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 [build-dependencies]
 webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", optional = true }
 prost-build = "0.11.8"
+# Reads the Pulse quantization field options out of the FileDescriptorSet (build_quant.rs).
+# 0.11.x pairs with prost 0.11 (same pairing bevy-explorer uses).
+prost-reflect = "0.11"
 chrono = "0.4.31"
 # Pinned to a commit (not a branch) so CI builds are immutable — a moved branch must not
 # change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
