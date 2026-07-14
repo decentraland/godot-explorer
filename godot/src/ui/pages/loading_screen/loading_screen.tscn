@@ -6,11 +6,12 @@
 [ext_resource type="Shader" uid="uid://bhjcims48e1cf" path="res://src/ui/components/atoms/images/blur_background/quick_blur.gdshader" id="3_7rccc"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_w6anr"]
 [ext_resource type="FontVariation" uid="uid://c8boldemoji" path="res://assets/themes/fonts/inter_bold_emoji_fallback.tres" id="7_xmi2h"]
+[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="8_7rccc"]
 [ext_resource type="Script" uid="uid://e0mj54iaijbw" path="res://src/ui/components/atoms/controls/trimmed_rich_text_label/trimmed_rich_text_label.gd" id="8_cdm7v"]
 [ext_resource type="Texture2D" uid="uid://dp5xw8in28b5x" path="res://assets/ui/loading/world-background.png" id="9_i03vb"]
 [ext_resource type="Script" uid="uid://cu4rtpvdc5b65" path="res://src/ui/pages/loading_screen/loading_screen_progress_logic.gd" id="10_xsh10"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="11_4vh5o"]
-[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="12_4vh5o"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="11_7rccc"]
 [ext_resource type="PackedScene" uid="uid://bk7bchyii05cp" path="res://src/ui/components/molecules/tip_card/tip_card.tscn" id="13_xmi2h"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="14_7rccc"]
 [ext_resource type="PackedScene" uid="uid://cqs5l0uuml56k" path="res://src/ui/components/atoms/buttons/close_button/close_button.tscn" id="14_cdm7v"]
@@ -32,11 +33,11 @@ gradient = SubResource("Gradient_gt6ke")
 
 [sub_resource type="LabelSettings" id="LabelSettings_ky3me"]
 font = ExtResource("14_7rccc")
-font_size = 18
+font_size = 17
 
 [sub_resource type="LabelSettings" id="LabelSettings_alcn7"]
 font = ExtResource("11_4vh5o")
-font_size = 22
+font_size = 24
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cdm7v"]
 bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8980392)
@@ -154,7 +155,9 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_fonts/normal_font = ExtResource("7_xmi2h")
+theme_override_constants/line_separation = -2
+theme_override_fonts/normal_font = ExtResource("8_7rccc")
+theme_override_fonts/bold_font = ExtResource("8_7rccc")
 theme_override_fonts/bold_italics_font = ExtResource("7_xmi2h")
 theme_override_fonts/italics_font = ExtResource("7_xmi2h")
 theme_override_fonts/mono_font = ExtResource("7_xmi2h")
@@ -163,7 +166,7 @@ theme_override_font_sizes/bold_font_size = 42
 theme_override_font_sizes/bold_italics_font_size = 42
 theme_override_font_sizes/italics_font_size = 42
 theme_override_font_sizes/mono_font_size = 42
-text = "Enjoy your experience"
+text = "Enjoy your Experience"
 fit_content = true
 scroll_active = false
 autowrap_mode = 2
@@ -172,15 +175,17 @@ script = ExtResource("8_cdm7v")
 
 [node name="HSeparator2" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer/VBoxContainer_Data" unique_id=1987483422]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 5
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 
 [node name="RichTextLabel" type="RichTextLabel" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer/VBoxContainer_Data" unique_id=1497587327]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_fonts/normal_font = ExtResource("12_4vh5o")
+theme_override_fonts/normal_font = ExtResource("11_7rccc")
+theme_override_fonts/bold_font = ExtResource("14_7rccc")
 theme_override_font_sizes/normal_font_size = 26
+theme_override_font_sizes/bold_font_size = 26
 bbcode_enabled = true
 text = "[color=#DF9CFF]By[/color] Decentraland"
 fit_content = true
@@ -196,7 +201,7 @@ layout_mode = 2
 
 [node name="HSeparator4" type="HSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer" unique_id=1647476192]
 layout_mode = 2
-theme_override_constants/separation = 90
+theme_override_constants/separation = 159
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 
 [node name="VBoxContainer_Progress" type="VBoxContainer" parent="SafeMarginContainer/MarginContainer_Content" unique_id=960033568]
@@ -211,20 +216,16 @@ layout_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(351, 0)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "0000/0000 resouces at 000.00 mb/s - Opt"
 label_settings = SubResource("LabelSettings_ky3me")
-
-[node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=826283927]
-custom_minimum_size = Vector2(0, 24)
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_constants/separation = 60
 
 [node name="Label_LoadingProgress" type="Label" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=1665532642]
 unique_name_in_owner = true
 layout_mode = 2
 text = "00%"
 label_settings = SubResource("LabelSettings_alcn7")
+horizontal_alignment = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress" unique_id=1148164352]
 clip_children = 2
@@ -240,6 +241,7 @@ nine_patch_stretch = true
 texture_progress = SubResource("GradientTexture1D_ky3me")
 
 [node name="SafeMarginContainer2" type="MarginContainer" parent="." unique_id=1369081059]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -259,6 +261,7 @@ metadata/_edit_lock_ = true
 [node name="CloseButton" parent="SafeMarginContainer2/MarginContainer_Close" unique_id=333937878 instance=ExtResource("14_cdm7v")]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_constants/icon_max_width = 24
 
 [connection signal="timeout" from="Timer_CheckProgressTimeout" to="." method="_on_timer_check_progress_timeout_timeout"]
 [connection signal="loading_show_requested" from="LoadingScreenProgressLogic" to="." method="_on_loading_screen_progress_logic_loading_show_requested"]
