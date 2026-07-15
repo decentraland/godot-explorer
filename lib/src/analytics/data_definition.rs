@@ -315,6 +315,11 @@ pub struct SegmentEventLoading {
     /// accounting is zero by construction on any completed load. This is the process backlog, and
     /// `> 0` alongside `dismissed_by = "completion"` is the real signal — the loading screen went
     /// away while the client still owed content.
+    ///
+    /// TODO: attribute this per-load. It needs the ContentProvider to record *who* requested each
+    /// resource (which scene / subsystem) instead of only the two global `fetch_add` counters;
+    /// until then a load cannot separate its own outstanding content from the rest of the process,
+    /// and this stays a whole-process reading.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub process_assets_pending_at_end: Option<i64>,
     /// Peak of the same process-wide backlog during the load. Same scope caveat.
