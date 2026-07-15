@@ -85,11 +85,13 @@ theme_override_constants/margin_right = 16
 
 [node name="ClearButton" type="TextureButton" parent="TextEditContainer/MarginContainer" unique_id=887865242]
 unique_name_in_owner = true
+visible = false
 self_modulate = Color(0.9098039, 0.7254902, 1, 1)
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
+focus_mode = 0
 texture_normal = ExtResource("5_ewgm8")
 ignore_texture_size = true
 stretch_mode = 0
