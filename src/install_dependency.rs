@@ -34,15 +34,18 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG),
 // unless PROTOCOL_FIXED_VERSION_URL pins a specific tarball.
 //
-// Pinned for the 1.11.0 RC: tracking `next` re-resolves on every CI run, so an
+// Pinning rationale: tracking `next` re-resolves on every CI run, so an
 // upstream protocol publish can break or change builds with no repo change
 // (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
-// Bump the pin deliberately — grab the new tarball URL from
-// `https://registry.npmjs.org/@dcl/protocol/next` (dist.tarball), update any
-// affected generated-struct usages, and set it here. Reset to `None` to track
-// @next again after the release is cut.
+// Bump the pin deliberately and update any affected generated-struct usages.
+//
+// Currently pinned to the protocol PR #429 branch build (feat/pulse-prd,
+// commit 45edead) — it ships the decentraland/pulse protos, options.proto
+// (quantization FieldOptions) and rfc4 PlayerEmote.is_stopping that the Pulse
+// transport needs. Once that PR merges, repoint at the released tarball from
+// `https://registry.npmjs.org/@dcl/protocol/next` (dist.tarball).
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
-    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-28974105118.commit-a598406.tgz",
+    "https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-29255694007.commit-45edead.tgz",
 );
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 

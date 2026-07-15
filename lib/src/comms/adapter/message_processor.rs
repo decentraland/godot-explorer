@@ -1263,7 +1263,7 @@ impl MessageProcessor {
                             "{}...",
                             truncate_utf8_safe(&chat.message, MAX_CHAT_MESSAGE_SIZE)
                         ),
-                        timestamp: chat.timestamp,
+                        ..chat
                     }
                 } else {
                     chat

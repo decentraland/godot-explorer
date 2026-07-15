@@ -67,9 +67,9 @@ livekit = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e469357
 
 # Pulse (ENet/UDP avatar-state relay). MUST be this fork: it's a pure-Rust ENet retargeted to
 # the nxrighthere ENet-CSharp "modified protocol" the Pulse server runs — stock lsalzman ENet
-# (including Godot's built-in one) is wire-incompatible. Pinned by rev per repo policy
-# (branch: decentraland-pulse).
-rusty_enet = { git = "https://github.com/robtfm/rusty_enet", rev = "6fa651d50554f6db8f8a4bd98aaf95ef3238b408", optional = true }
+# (including Godot's built-in one) is wire-incompatible. DCL-org mirror of
+# robtfm/rusty_enet branch decentraland-pulse (rev 6fa651d, tree-identical); pinned by rev.
+rusty_enet = { git = "https://github.com/dcl-regenesislabs/rusty_enet", rev = "8023f9b39e12d4b11a2a054ade49fa8365a5e250", optional = true }
 
 taffy = "0.5.2"
 tracing-test = "0.2.4"

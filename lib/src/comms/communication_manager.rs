@@ -1455,6 +1455,7 @@ impl CommunicationManager {
             message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
                 message: text.to_string(),
                 timestamp: ole_timestamp_now(),
+                forwarded_from: None,
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
@@ -1491,6 +1492,7 @@ impl CommunicationManager {
                 incremental_id: self.last_emote_incremental_id,
                 timestamp: self.start_time.elapsed().as_secs_f32(),
                 is_stopping: None,
+                ..Default::default()
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };

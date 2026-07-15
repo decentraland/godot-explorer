@@ -551,6 +551,7 @@ impl PulseRoom {
                                 urn,
                                 timestamp: 0.0,
                                 is_stopping: Some(false),
+                                ..Default::default()
                             }),
                         );
                     }
@@ -562,6 +563,7 @@ impl PulseRoom {
                                 urn: String::new(),
                                 timestamp: 0.0,
                                 is_stopping: Some(true),
+                                ..Default::default()
                             }),
                         );
                     }

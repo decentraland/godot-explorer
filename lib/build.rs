@@ -16,9 +16,6 @@ struct Component {
 }
 
 const PROTO_FILES_BASE_DIR: &str = "src/dcl/components/proto/";
-// Git-tracked overlay for protos the pinned npm @dcl/protocol package doesn't ship yet
-// (Pulse). A second protoc include root; see the pulse push-site comment below.
-const PROTO_OVERLAY_BASE_DIR: &str = "proto_overlay/";
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
 const GROW_ONLY_SET_COMPONENTS: [&str; 4] = [
     "PointerEventsResult",
@@ -394,26 +391,21 @@ fn main() -> io::Result<()> {
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
     );
-    proto_files.push(patched_rfc4_comms_proto());
+    proto_files
+        .push(format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto").into());
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/v3/archipelago.proto").into(),
     );
 
-    // Pulse comms protos, vendored under the git-TRACKED lib/proto_overlay/ (see the files'
-    // headers). They can't live in PROTO_FILES_BASE_DIR: that tree is gitignored and wiped by
-    // `cargo run -- install`, which re-extracts the pinned npm @dcl/protocol tarball — and that
-    // package does not ship the pulse protos yet (protocol PR #429 unmerged). Delete the overlay
-    // and move these into the npm set once the pin catches up. Compiled unconditionally — runtime
-    // code is gated by the `use_pulse` feature instead, keeping the build script feature-free.
-    // options.proto must be in the compile set so the FileDescriptorSet carries the quantization
-    // extension values.
-    proto_files.push(format!("{PROTO_OVERLAY_BASE_DIR}decentraland/common/options.proto").into());
-    proto_files
-        .push(format!("{PROTO_OVERLAY_BASE_DIR}decentraland/pulse/pulse_shared.proto").into());
-    proto_files
-        .push(format!("{PROTO_OVERLAY_BASE_DIR}decentraland/pulse/pulse_client.proto").into());
-    proto_files
-        .push(format!("{PROTO_OVERLAY_BASE_DIR}decentraland/pulse/pulse_server.proto").into());
+    // Pulse comms protos, shipped by the pinned @dcl/protocol tarball (protocol PR #429 branch
+    // build — see PROTOCOL_FIXED_VERSION_URL in src/install_dependency.rs). Compiled
+    // unconditionally — runtime code is gated by the `use_pulse` feature instead, keeping the
+    // build script feature-free. options.proto must be in the compile set so the
+    // FileDescriptorSet carries the quantization extension values for build_quant.
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/common/options.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_shared.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_client.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_server.proto").into());
 
     // Social service protos (with RPC services)
     proto_files
@@ -456,18 +448,7 @@ fn main() -> io::Result<()> {
     // field options (the .proto stays the single source of truth for the wire ABI).
     let descriptor_path = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_descriptor_set.bin");
     prost_config.file_descriptor_set_path(&descriptor_path);
-    // Include roots, most-specific first: the OUT_DIR patch root (build-time-patched rfc4), the
-    // tracked overlay (Pulse), then the npm-extracted tree. Nothing imports rfc4, and the overlay
-    // files don't exist in the npm tree yet, so the roots never race for the same import.
-    let patched_root = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_patched");
-    prost_config.compile_protos(
-        &proto_files,
-        &[
-            patched_root.to_str().unwrap(),
-            PROTO_OVERLAY_BASE_DIR,
-            PROTO_FILES_BASE_DIR,
-        ],
-    )?;
+    prost_config.compile_protos(&proto_files, &[PROTO_FILES_BASE_DIR])?;
 
     let descriptor_bytes = fs::read(&descriptor_path).expect("read proto descriptor set");
     let quant_path = Path::new(&env::var("OUT_DIR").unwrap()).join("pulse_quant.rs");
@@ -495,42 +476,6 @@ fn main() -> io::Result<()> {
 fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
     let mut f = File::create(path).unwrap();
     f.write_all(text).unwrap()
-}
-
-/// The npm-pinned rfc4 `comms.proto` predates the upstream `PlayerEmote.is_stopping` field
-/// (needed to bridge Pulse `EmoteStopped`, and already sent by Unity peers over LiveKit). The
-/// npm tree is gitignored and wiped by `cargo run -- install`, so it can't be edited in place;
-/// instead, patch a copy under OUT_DIR/proto_patched/ and compile that one. Once the npm pin
-/// catches up (field present upstream), the patch is a no-op copy — delete it then.
-fn patched_rfc4_comms_proto() -> std::path::PathBuf {
-    const RFC4_REL: &str = "decentraland/kernel/comms/rfc4/comms.proto";
-    let source = fs::read_to_string(format!("{PROTO_FILES_BASE_DIR}{RFC4_REL}"))
-        .expect("read rfc4 comms.proto (run `cargo run -- install` to fetch protos)");
-
-    let patched = if source.contains("is_stopping") {
-        source
-    } else {
-        let marker = "message PlayerEmote {";
-        let start = source
-            .find(marker)
-            .expect("rfc4 comms.proto: PlayerEmote message not found — update the is_stopping patch in build.rs");
-        let close = source[start..]
-            .find('}')
-            .map(|offset| start + offset)
-            .expect("rfc4 comms.proto: PlayerEmote closing brace not found");
-        format!(
-            "{}  optional bool is_stopping = 4;\n{}",
-            &source[..close],
-            &source[close..]
-        )
-    };
-
-    let dest = Path::new(&env::var("OUT_DIR").unwrap())
-        .join("proto_patched")
-        .join(RFC4_REL);
-    fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
-    fs::write(&dest, patched).expect("write patched rfc4 comms.proto");
-    dest
 }
 
 fn check_safe_repo() -> Result<(), String> {
