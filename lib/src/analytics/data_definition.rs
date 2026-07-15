@@ -260,19 +260,22 @@ pub struct SegmentEventLoading {
     /// Schema/grammar version (LOADING_SCHEMA_VERSION).
     pub schema: u32,
     /// Coarse realm class: "world" | "genesis" | "other" | "unknown" (no URL/PII).
+    ///
+    /// **Segment on the `completed` event's value, not `started`'s.** At begin the destination
+    /// realm is only known for worlds, so on `started` any other destination reports the realm
+    /// being left (a world -> Genesis teleport reads `world` there). The `completed` event is
+    /// computed from the resolved destination and is the authoritative one.
     pub realm_bucket: String,
 
     // --- type = "started" (context) ---
-    /// Navigation entry point: "on_teleport" | "on_join_world" | "auto" | "-".
+    /// Navigation entry point: "on_teleport" | "on_join_world" | "auto" | "-". Also on `completed`
+    /// so a load can be filtered without joining: `auto` marks a background streaming episode
+    /// (walking into a parcel, no loading screen), not a user-visible load.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub when: Option<String>,
+    /// Whether the realm is a dcl world. Same caveat as `realm_bucket`: trust the `completed` one.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_world: Option<bool>,
-    /// No resources were cached at load start (first-time / cold boot).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cold_cache: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub network_estimate_mbs: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu_count: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -281,18 +284,18 @@ pub struct SegmentEventLoading {
     // --- type = "completed" (the funnel) ---
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration_ms: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reached_ready: Option<bool>,
     /// How the load ended: "completion" | "wall_clock_timeout" | "error" | "superseded" |
-    /// "cancelled". `wall_clock_timeout` with `reached_ready=false` is the infinite-loading signal.
+    /// "cancelled". `wall_clock_timeout` == the screen was dismissed before the pipeline reached
+    /// `done` — the infinite / abandoned-load signal.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dismissed_by: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub first_spawn_ms: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_ready_ms: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub complete_ms: Option<i64>,
+    /// When the parcel scene under the player reported ready. Best-effort: the loading session is
+    /// dropped the instant it completes, so this milestone is missed on a fair share of loads and
+    /// reads -1. Usable as evidence when set; not usable as a rate.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scene_rendered_ms: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -304,16 +307,35 @@ pub struct SegmentEventLoading {
     pub time_in_25_30_band_ms: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phase_breakdown: Option<LoadingPhaseBreakdown>,
+    /// Resources still in flight **process-wide** when the load ended (downloads, avatars,
+    /// wearables — not just this load's scenes; the counters are global and cumulative).
+    ///
+    /// Deliberately not "this load's missing assets": the loading session gates its own
+    /// `Assets -> Ready` transition on every asset it tracks having loaded, so per-session
+    /// accounting is zero by construction on any completed load. This is the process backlog, and
+    /// `> 0` alongside `dismissed_by = "completion"` is the real signal — the loading screen went
+    /// away while the client still owed content.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub assets_expected: Option<i64>,
+    pub process_assets_pending_at_end: Option<i64>,
+    /// Peak of the same process-wide backlog during the load. Same scope caveat.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub assets_loaded: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub assets_unfinished: Option<i64>,
+    pub process_assets_pending_peak: Option<i64>,
+    /// Asset-group failures the GLTF coordinator reported during this load. Per-load and honest,
+    /// but note that throttled downloads hang rather than fail, so a stalled load reports 0 here.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub assets_errored: Option<i64>,
+    /// Mean download throughput across the load, in **megabytes/s** (not Mbit/s). This is the
+    /// field to bucket on to segment slow-connection loads.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub peak_pending_assets: Option<i64>,
+    pub network_avg_mb_s: Option<f64>,
+    /// Best 1-second download throughput seen during the load, in **megabytes/s**.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_peak_mb_s: Option<f64>,
+    /// Time with resources outstanding but ~nothing arriving: stalled fetches. Near 0 on a healthy
+    /// load; grows with throttling. The client-side signal for downloads that hang instead of
+    /// failing (no HTTP timeout), which is why they never show up in `assets_errored`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_stall_ms: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub frames: Option<i64>,
 

@@ -41,8 +41,12 @@ func enable_loading_screen(intended_realm: String = "", when: String = "") -> vo
 	close_button.show()
 	_loading_cancelled = false
 	_intended_realm = intended_realm if Realm.is_dcl_ens(intended_realm) else ""
+	# Pass the caller's realm as given, not `_intended_realm`: that one is narrowed to a bare dcl
+	# ENS for the places API below, so forwarding it would drop every non-world destination and
+	# fall back to the realm being *left* — bucketing a teleport to Genesis as wherever we came
+	# from. The funnel classifies both the bare and resolved-URL shapes.
 	Global.scene_runner.loading_begin_episode(
-		when, _intended_realm if not _intended_realm.is_empty() else Global.realm.get_realm_string()
+		when, intended_realm if not intended_realm.is_empty() else Global.realm.get_realm_string()
 	)
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
@@ -303,4 +307,8 @@ func _on_close_button_pressed() -> void:
 	Global.metrics.track_click_button("CANCEL_LOADING", "LOADING", "")
 	_clear_place_ui()
 	_loading_cancelled = true
+	# return_to_discover() tears the Explorer down without running the hide effect, so the
+	# episode would stay open until the next load supersedes it and be misreported as
+	# `superseded`. Close it here so the user-initiated abort is recorded as `cancelled`.
+	Global.scene_runner.loading_end_episode("cancelled")
 	Global.return_to_discover()

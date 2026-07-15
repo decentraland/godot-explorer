@@ -687,9 +687,8 @@ impl SceneManager {
         };
         let progress = session.calculate_progress();
         let (ready, total) = session.get_scene_counts();
-        // Loading funnel: accumulate the 25-30% plateau band + first-ready milestone.
-        self.loading_funnel
-            .on_progress(progress, ready as i32, Instant::now());
+        // Loading funnel: accumulate the 25-30% plateau band.
+        self.loading_funnel.on_progress(progress, Instant::now());
         self.base_mut().emit_signal(
             "loading_progress",
             &[
@@ -855,9 +854,17 @@ impl SceneManager {
     pub fn loading_end_episode(&mut self, reason: GString) {
         let (loaded, loading, _) = self.loading_content_counts();
         let frames = Self::loading_process_frames();
-        let events =
-            self.loading_funnel
-                .end(&reason.to_string(), loaded, loading, frames, Instant::now());
+        // Re-read the realm here: by end time it has resolved to the destination, which is the
+        // only point where a non-world target (Genesis) is knowable. See `LoadingFunnel::end`.
+        let realm = self.current_realm_string();
+        let events = self.loading_funnel.end(
+            &reason.to_string(),
+            &realm,
+            loaded,
+            loading,
+            frames,
+            Instant::now(),
+        );
         self.emit_loading_events(events);
     }
 
@@ -890,7 +897,6 @@ impl SceneManager {
     }
 
     fn make_loading_begin_context(&self, when: String, realm: String) -> LoadingBeginContext {
-        let (loaded, loading, mbs) = self.loading_content_counts();
         let realm = if realm.is_empty() {
             self.current_realm_string()
         } else {
@@ -900,9 +906,6 @@ impl SceneManager {
         LoadingBeginContext {
             when,
             realm,
-            res_loaded: loaded,
-            res_loading: loading,
-            network_mbs: mbs,
             cpu_count: os.get_processor_count(),
             platform: os.get_name().to_string(),
             process_frames: Self::loading_process_frames(),
@@ -2637,10 +2640,11 @@ impl INode for SceneManager {
         // Check loading session timeouts
         self.check_loading_timeouts();
 
-        // Loading funnel: track peak pending assets while a load is active.
+        // Loading funnel: track peak pending assets and network throughput while a load is active.
         if self.loading_funnel.is_active() {
-            let (loaded, loading, _) = self.loading_content_counts();
-            self.loading_funnel.note_pending(loading - loaded);
+            let (loaded, loading, mb_s) = self.loading_content_counts();
+            self.loading_funnel
+                .note_tick(loading - loaded, mb_s, Instant::now());
         }
 
         // SceneManager is owned by DclGlobal (autoload) and outlives the Explorer scene.
