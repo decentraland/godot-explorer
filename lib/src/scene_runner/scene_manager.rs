@@ -854,8 +854,8 @@ impl SceneManager {
     pub fn loading_end_episode(&mut self, reason: GString) {
         let (loaded, loading, _) = self.loading_content_counts();
         let frames = Self::loading_process_frames();
-        // Re-read the realm here: by end time it has resolved to the destination, which is the
-        // only point where a non-world target (Genesis) is knowable. See `LoadingFunnel::end`.
+        // Only a fallback for a load that began with no realm at all — the funnel keeps what it
+        // knew at begin otherwise. See `LoadingFunnel::end`.
         let realm = self.current_realm_string();
         let events = self.loading_funnel.end(
             &reason.to_string(),

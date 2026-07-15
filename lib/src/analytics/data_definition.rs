@@ -261,10 +261,10 @@ pub struct SegmentEventLoading {
     pub schema: u32,
     /// Coarse realm class: "world" | "genesis" | "other" | "unknown" (no URL/PII).
     ///
-    /// **Segment on the `completed` event's value, not `started`'s.** At begin the destination
-    /// realm is only known for worlds, so on `started` any other destination reports the realm
-    /// being left (a world -> Genesis teleport reads `world` there). The `completed` event is
-    /// computed from the resolved destination and is the authoritative one.
+    /// The destination the navigation intended, taken at begin and repeated unchanged on
+    /// `completed`, so both events of a load agree. `unknown` means the load began with no realm
+    /// known and none had resolved by the time it ended — background `auto` episodes that live
+    /// entirely inside a realm switch land here.
     pub realm_bucket: String,
 
     // --- type = "started" (context) ---
@@ -273,7 +273,7 @@ pub struct SegmentEventLoading {
     /// (walking into a parcel, no loading screen), not a user-visible load.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub when: Option<String>,
-    /// Whether the realm is a dcl world. Same caveat as `realm_bucket`: trust the `completed` one.
+    /// Whether the destination realm is a dcl world. Tracks `realm_bucket == "world"`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_world: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

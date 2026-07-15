@@ -137,12 +137,14 @@ impl LoadingFunnel {
     /// End the current load and produce its funnel event(s): the `type="completed"` event, plus a
     /// `type="asset_failure"` aggregate when any asset group failed. Empty if no load is active.
     ///
-    /// `realm` is re-read by the caller at end time and is what `realm_bucket` is computed from.
-    /// The realm known at begin is the one being *left*: the loading screen only forwards an
-    /// intended realm for worlds (a dcl ENS), so any other destination — Genesis above all — falls
-    /// back to the current realm and would bucket as wherever the user came from. Verified
-    /// on-device: a deadsurge.dcl.eth -> Genesis teleport bucketed as `world`. By end time the
-    /// realm has resolved to the destination, so this is the only trustworthy source.
+    /// `realm` is the caller's end-time reading, used **only** as a fallback when the load began
+    /// without a known realm (a background `auto` episode, or a caller that passed none).
+    ///
+    /// The realm the load began with wins otherwise, because it is the *intended destination* the
+    /// navigation handed us, while the end-time reading is only the destination once the realm has
+    /// actually resolved. A load that dies first still reads the realm being left, so preferring it
+    /// corrupts good data: on-device, a CozyFarm -> Genesis teleport superseded after 61ms began
+    /// correctly as `genesis` and an unconditional end-time override rewrote it to `world`.
     pub fn end(
         &mut self,
         reason: &str,
@@ -155,7 +157,7 @@ impl LoadingFunnel {
         if !self.active {
             return Vec::new();
         }
-        if !realm.is_empty() {
+        if self.realm.is_empty() && !realm.is_empty() {
             self.realm = realm.to_string();
         }
         // Close an open plateau-band interval so its time is counted.
@@ -177,9 +179,8 @@ impl LoadingFunnel {
         let bucket = realm_bucket(&self.realm);
 
         let completed = SegmentEventLoading {
-            // Carried here too (not just on `started`) because this is the one computed from the
-            // resolved destination realm — on `started` it can only describe where the load came
-            // from. This is the authoritative pair for segmenting a load.
+            // Repeated from `started` so this event stands alone; same value unless the load began
+            // knowing no realm and the end-time fallback filled one in.
             is_world: Some(is_world_realm(&self.realm)),
             // Repeated from `started` so this event stands alone: `when="auto"` marks a background
             // streaming episode (walking into a parcel, no loading screen), which is not a
@@ -530,34 +531,44 @@ mod tests {
         assert_eq!(out[0].network_avg_mb_s, Some(2.0));
     }
 
-    /// On-device regression: a deadsurge.dcl.eth -> Genesis teleport began while the realm was
-    /// still the world being left, and bucketed as `world`. The end-time realm must win.
+    /// On-device regression: a CozyFarm -> Genesis teleport superseded after 61ms. The navigation
+    /// handed us the Genesis destination at begin and the load died before the realm switched, so
+    /// the end-time reading was still the world being left. Overriding with it rewrote a correct
+    /// `genesis` to `world` — the realm known at begin must win.
     #[test]
-    fn end_realm_overrides_the_realm_being_left() {
+    fn begin_realm_wins_over_a_stale_end_reading() {
         let mut f = LoadingFunnel::default();
         let t0 = Instant::now();
-        let started = f.begin(ctx("on_teleport", "deadsurge.dcl.eth"), t0);
-        assert_eq!(started.realm_bucket, "world"); // all begin can know: where we came from
-        assert_eq!(started.is_world, Some(true));
+        let started = f.begin(
+            ctx(
+                "on_teleport",
+                "https://realm-provider-ea.decentraland.org/main/",
+            ),
+            t0,
+        );
+        assert_eq!(started.realm_bucket, "genesis");
 
         let out = f.end(
-            "hidden",
-            "https://realm-provider-ea.decentraland.org/main/",
+            "superseded",
+            "https://worlds-content-server.decentraland.org/world/cozyfarm.dcl.eth/",
             1,
             1,
             200,
-            t0 + Duration::from_millis(1000),
+            t0 + Duration::from_millis(61),
         );
         assert_eq!(out[0].realm_bucket, "genesis");
         assert_eq!(out[0].is_world, Some(false));
     }
 
-    /// The reverse direction must keep working: Genesis -> world resolves to `world` at end.
+    /// The end-time reading is the fallback that covers a load which began knowing no realm at all
+    /// (a background `auto` episode, or a caller that passed none).
     #[test]
-    fn end_realm_resolves_world_destination() {
+    fn end_realm_fills_in_when_begin_knew_nothing() {
         let mut f = LoadingFunnel::default();
         let t0 = Instant::now();
-        f.begin(ctx("on_teleport", "https://peer.decentraland.org"), t0);
+        let started = f.begin(ctx("auto", ""), t0);
+        assert_eq!(started.realm_bucket, "unknown");
+
         let out = f.end(
             "hidden",
             "https://worlds-content-server.decentraland.org/world/towerofmadness.dcl.eth/",
