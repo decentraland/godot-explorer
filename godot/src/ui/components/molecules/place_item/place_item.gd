@@ -541,11 +541,15 @@ func set_data(item_data):
 	set_recurrent(_get_or_empty_string(item_data, "recurrent_frequency"))
 	set_recurrent_dates(item_data)
 	if _get_texture_image():
-		var image_url = item_data.get("image", "")
-		if not image_url.is_empty():
-			_async_download_image(image_url)
+		var preloaded = item_data.get("_preloaded_texture")
+		if preloaded is Texture2D:
+			set_image(preloaded)
 		else:
-			show_image_container(false)
+			var image_url = item_data.get("image", "")
+			if not image_url.is_empty():
+				_async_download_image(image_url)
+			else:
+				show_image_container(false)
 
 	set_creator(_get_or_empty_string(item_data, "contact_name"))
 
@@ -610,7 +614,11 @@ func _on_texture_button_close_pressed() -> void:
 
 
 func _on_pressed():
-	item_pressed.emit(_data)
+	var emit_data = _data.duplicate()
+	var tex_rect = _get_texture_image()
+	if tex_rect and tex_rect.texture:
+		emit_data["_preloaded_texture"] = tex_rect.texture
+	item_pressed.emit(emit_data)
 
 
 func _format_number(num: int) -> String:
@@ -789,7 +797,11 @@ func _format_duration(duration: int) -> String:
 
 func _on_event_pressed() -> void:
 	if _data is Dictionary and not _data.is_empty():
-		event_pressed.emit(_data)
+		var emit_data = _data.duplicate()
+		var tex_rect = _get_texture_image()
+		if tex_rect and tex_rect.texture:
+			emit_data["_preloaded_texture"] = tex_rect.texture
+		event_pressed.emit(emit_data)
 	else:
 		event_pressed.emit(event_id)
 
