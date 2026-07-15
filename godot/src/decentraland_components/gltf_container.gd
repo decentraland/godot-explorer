@@ -60,18 +60,6 @@ func async_load_gltf():
 
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	Global.get_gltf_load_timeout_coalescer().schedule(self, 120_000)
-	(
-		LoadingProfiler
-		. mark(
-			"asset.gltf_start",
-			{
-				"scene_id": dcl_scene_id,
-				"entity": dcl_entity_id,
-				"hash": dcl_gltf_hash,
-				"src": dcl_gltf_src,
-			}
-		)
-	)
 
 	# Decide optimized-vs-runtime once; the coordinator shares the actual work.
 	var has_optimized = Global.content_provider.optimized_asset_exists(file_hash)
@@ -118,22 +106,9 @@ func _instantiate_and_add(packed_scene: PackedScene) -> void:
 		_finish_with_error("scene unloaded during load")
 		return
 
-	var instantiate_t0 := Time.get_ticks_usec()
 	var gltf_node: Node3D = packed_scene.instantiate()
 	# instantiate() clones the node tree but references the already-loaded,
 	# already-GPU-resident meshes/textures — CPU-only and cheap.
-	(
-		LoadingProfiler
-		. mark(
-			"asset.gltf_instantiated",
-			{
-				"scene_id": dcl_scene_id,
-				"entity": dcl_entity_id,
-				"hash": dcl_gltf_hash,
-				"ms": (Time.get_ticks_usec() - instantiate_t0) / 1000.0,
-			}
-		)
-	)
 	apply_fixes(gltf_node)
 
 	# Set collision masks (colliders created with mask=0 initially)
@@ -165,21 +140,8 @@ func _on_shared_load_error(reason: String) -> void:
 #region Completion
 
 
-func _complete_load(gpu_ms: float = -1.0):
+func _complete_load(_gpu_ms: float = -1.0):
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
-	(
-		LoadingProfiler
-		. mark(
-			"asset.gltf_added",
-			{
-				"scene_id": dcl_scene_id,
-				"entity": dcl_entity_id,
-				"hash": dcl_gltf_hash,
-				"opt": optimized,
-				"gpu_ms": gpu_ms,
-			}
-		)
-	)
 	Global.get_gltf_load_timeout_coalescer().cancel(self)
 
 	self.check_animations()
@@ -187,10 +149,6 @@ func _complete_load(gpu_ms: float = -1.0):
 
 func _finish_with_error(reason: String = "unknown"):
 	printerr("GLTF load error for ", dcl_gltf_src, ": ", reason)
-	LoadingProfiler.mark(
-		"asset.gltf_error",
-		{"scene_id": dcl_scene_id, "entity": dcl_entity_id, "hash": dcl_gltf_hash, "reason": reason}
-	)
 	# Report to resource tracker if we have a valid hash
 	if not dcl_gltf_hash.is_empty():
 		Global.content_provider.report_resource_failed(dcl_gltf_hash, reason)

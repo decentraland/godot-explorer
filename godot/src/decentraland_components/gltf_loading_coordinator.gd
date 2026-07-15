@@ -68,9 +68,6 @@ var _downloading_count := 0
 # pump (one processed per frame)
 var _load_queue: Array = []
 var _load_pump_running := false
-## Session-cumulative count of source-groups that hit STATE_ERROR (fetch or load failed).
-## LoadingProfiler snapshots the delta per loading episode for the assets_errored metric.
-var _failed_groups_total := 0
 
 #region Public API — called by gltf_container.gd
 
@@ -106,8 +103,7 @@ func request(
 			# Realized in the batch when the shared download + load completes.
 			pass
 		STATE_FETCHED, STATE_REALIZING:
-			# Bytes already on disk — this late waiter "downloaded" instantly.
-			_mark_download(container, hash, optimized)
+			# Bytes already on disk — this late waiter attaches to the shared load.
 			if not _load_queue.has(group):
 				_load_queue.append(group)
 			_ensure_load_pump()
@@ -170,8 +166,6 @@ func _has_current_scene_waiter(group: LoadGroup) -> bool:
 
 # gdlint:ignore = async-function-name
 func _async_download_group(group: LoadGroup) -> void:
-	_mark_all_downloads_begin(group)
-
 	var scene_path := ""
 	if group.optimized:
 		var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(group.hash)
@@ -200,7 +194,6 @@ func _async_download_group(group: LoadGroup) -> void:
 			return
 		scene_path = data
 
-	_mark_all_downloads_done(group)
 	group.scene_path = scene_path
 	group.state = STATE_FETCHED
 	_release_download_slot()
@@ -317,7 +310,8 @@ func _retire_group(group: LoadGroup) -> void:
 
 func _notify_group_error(group: LoadGroup, reason: String) -> void:
 	group.state = STATE_ERROR
-	_failed_groups_total += 1
+	# Feed the loading funnel (Rust) so the load's `assets_errored` reflects this failure.
+	Global.scene_runner.loading_note_asset_failure(1)
 	for waiter in group.waiters:
 		if is_instance_valid(waiter):
 			waiter._on_shared_load_error(reason)
@@ -326,54 +320,9 @@ func _notify_group_error(group: LoadGroup, reason: String) -> void:
 	_groups.erase(group.hash)
 
 
-## Session-cumulative count of failed source-groups (fetch or load). LoadingProfiler
-## diffs this across a loading episode to report assets_errored without per-episode state.
-func get_failed_groups_total() -> int:
-	return _failed_groups_total
-
-
 #endregion
 
-#region Instrumentation helpers
-
-
-func _mark_all_downloads_begin(group: LoadGroup) -> void:
-	for waiter in group.waiters:
-		if is_instance_valid(waiter):
-			_mark_download_begin(waiter, group.hash)
-
-
-func _mark_all_downloads_done(group: LoadGroup) -> void:
-	for waiter in group.waiters:
-		if is_instance_valid(waiter):
-			_mark_download_done(waiter, group.hash, group.optimized)
-
-
-func _mark_download(container, hash: String, optimized: bool) -> void:
-	_mark_download_begin(container, hash)
-	_mark_download_done(container, hash, optimized)
-
-
-func _mark_download_begin(container, hash: String) -> void:
-	LoadingProfiler.mark(
-		"asset.gltf_download_begin",
-		{"scene_id": container.dcl_scene_id, "entity": container.dcl_entity_id, "hash": hash}
-	)
-
-
-func _mark_download_done(container, hash: String, optimized: bool) -> void:
-	(
-		LoadingProfiler
-		. mark(
-			"asset.gltf_downloaded",
-			{
-				"scene_id": container.dcl_scene_id,
-				"entity": container.dcl_entity_id,
-				"hash": hash,
-				"opt": optimized,
-			}
-		)
-	)
+#region Waiter maintenance
 
 
 func _prune_dead_waiters(group: LoadGroup) -> void:

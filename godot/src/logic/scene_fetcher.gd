@@ -302,7 +302,7 @@ func _is_there_any_new_scene_to_load() -> bool:
 func _async_on_desired_scene_changed():
 	var desired_scenes = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = desired_scenes.get("loadable_scenes", [])
-	LoadingProfiler.mark("discovery.desired_changed", {"loadable": loadable_scenes.size()})
+	Global.scene_runner.loading_mark_discovery()
 
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter

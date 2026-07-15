@@ -26,22 +26,12 @@ use super::{
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventFirebaseInit, SegmentEventIosStoreKitEnvironment, SegmentEventLoadingPayload,
+        SegmentEventFirebaseInit, SegmentEventIosStoreKitEnvironment, SegmentEventLoading,
         SegmentEventRequestFriend, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
     install_referrer::InstallReferrer,
 };
-
-/// Parse a GDScript-built JSON object for a loading funnel event. Non-object or invalid input
-/// falls back to an empty object so serde `flatten` always sees a map (build_segment_event_batch_item
-/// unwraps `.as_object()`), and the event still carries the common explorer fields.
-fn parse_loading_props(props_json: &str) -> serde_json::Value {
-    match serde_json::from_str::<serde_json::Value>(props_json) {
-        Ok(v @ serde_json::Value::Object(_)) => v,
-        _ => serde_json::json!({}),
-    }
-}
 
 #[derive(Clone, Copy)]
 enum MobilePlatform {
@@ -425,56 +415,17 @@ impl Metrics {
     }
 
     // ---------------------------------------------------------------------------
-    // Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450). The properties
-    // object is assembled in loading_profiler.gd and passed here as a JSON string; Rust
-    // just forwards it to Segment. See SegmentEventLoadingPayload for the contract.
+    // Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450). A SINGLE
+    // "Loading Event", discriminated by `type` and correlated across one full load by
+    // `loading_id`. The typed payload is built by the pure `LoadingFunnel`
+    // (scene_runner/loading_funnel.rs) and emitted from `DclSceneManager` — there is no
+    // JSON round-trip and no GDScript-owned schema. See SegmentEventLoading.
     // ---------------------------------------------------------------------------
 
-    /// Once per loading-screen episode, at begin. Context only (realm_bucket, is_world,
-    /// cold_cache, network_estimate_mbs, device_tier).
-    #[func]
-    pub fn track_scene_loading_started(&mut self, props_json: String) {
-        self.queue_event(
-            "Scene Loading Started",
-            SegmentEvent::SceneLoadingStarted(SegmentEventLoadingPayload {
-                properties: parse_loading_props(&props_json),
-            }),
-        );
-    }
-
-    /// Once per loading-screen episode, at end. The funnel: duration_ms, reached_ready,
-    /// dismissed_by, phase_breakdown, assets_*, queue/wire fractions, milestone timings.
-    #[func]
-    pub fn track_scene_loading_completed(&mut self, props_json: String) {
-        self.queue_event(
-            "Scene Loading Completed",
-            SegmentEvent::SceneLoadingCompleted(SegmentEventLoadingPayload {
-                properties: parse_loading_props(&props_json),
-            }),
-        );
-    }
-
-    /// Aggregated per episode (sampled): asset download failures by reason
-    /// (timeout / network / notfound / parse).
-    #[func]
-    pub fn track_scene_loading_asset_failure(&mut self, props_json: String) {
-        self.queue_event(
-            "Scene Loading Asset Failure",
-            SegmentEvent::SceneLoadingAssetFailure(SegmentEventLoadingPayload {
-                properties: parse_loading_props(&props_json),
-            }),
-        );
-    }
-
-    /// Realm resolution failed (the FM-4 "no destination" class): { reason, realm_bucket }.
-    #[func]
-    pub fn track_realm_change_failed(&mut self, props_json: String) {
-        self.queue_event(
-            "Realm Change Failed",
-            SegmentEvent::RealmChangeFailed(SegmentEventLoadingPayload {
-                properties: parse_loading_props(&props_json),
-            }),
-        );
+    /// Queue one already-built loading funnel event. Called from Rust (DclSceneManager),
+    /// not GDScript — the funnel owns the schema end-to-end.
+    pub fn queue_loading_event(&mut self, event: SegmentEventLoading) {
+        self.queue_event("Loading Event", SegmentEvent::Loading(Box::new(event)));
     }
 
     #[func]

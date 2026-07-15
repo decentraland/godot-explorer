@@ -149,7 +149,6 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		"[REALM] async_set_realm", new_realm_string, search_new_pos, "resolved", candidate_realm_url
 	)
 	realm_changing.emit()
-	LoadingProfiler.mark("realm.about_fetch_start", {"realm": new_realm_string})
 
 	var promise: Promise = Global.http_requester.request_json(
 		candidate_realm_url + "about", HTTPClient.METHOD_GET, "", {}
@@ -172,7 +171,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		return false
 
 	var response: RequestResponse = res
-	LoadingProfiler.mark("realm.about_fetch_end")
+	Global.scene_runner.loading_mark_about_end()
 	var json = response.get_string_response_as_json()
 	if json == null or not json is Dictionary:
 		var reason := "invalid /about response"
@@ -298,6 +297,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 
 
 func _emit_realm_change_failed(new_realm_string: String, reason: String) -> void:
+	Global.scene_runner.loading_realm_change_failed(new_realm_string, reason)
 	realm_change_failed.emit(new_realm_string, reason)
 
 

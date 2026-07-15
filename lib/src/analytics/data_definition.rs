@@ -74,11 +74,10 @@ pub enum SegmentEvent {
     AttestationAttempt(SegmentEventAttestationAttempt),
     AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded),
     IosStoreKitEnvironment(SegmentEventIosStoreKitEnvironment),
-    // Loading-pipeline funnel + diagnostics (see SegmentEventLoadingPayload).
-    SceneLoadingStarted(SegmentEventLoadingPayload),
-    SceneLoadingCompleted(SegmentEventLoadingPayload),
-    SceneLoadingAssetFailure(SegmentEventLoadingPayload),
-    RealmChangeFailed(SegmentEventLoadingPayload),
+    // Loading-pipeline funnel + diagnostics, emitted as a SINGLE "Loading Event"
+    // discriminated by `type` and correlated across one full load by `loading_id`
+    // (see SegmentEventLoading). Boxed: it is the largest variant by far.
+    Loading(Box<SegmentEventLoading>),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -240,16 +239,128 @@ pub struct SegmentEventExplorerSceneLoadTimes {
     success: bool,
 }
 
-/// Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450). The `properties` object is
-/// built in `loading_profiler.gd` from the per-episode milestone summary (`[LOADPROF-SUM]`) plus
-/// live ContentProvider / loading-session counters, then flattened here so every field lands as a
-/// top-level, queryable Segment property. Values are bucketed/rounded — no PII, no parcel coords,
-/// no URLs. Emitted through the four `track_scene_loading_*` / `track_realm_change_failed`
-/// `#[func]`s in metrics.rs. GDScript owns the schema; Rust just forwards it.
+/// Loading-event grammar version. Bump when the field set below changes.
+pub const LOADING_SCHEMA_VERSION: u32 = 1;
+
+/// Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450), emitted as ONE Segment event
+/// (`"Loading Event"`) discriminated by `event_type` and correlated across a whole load by
+/// `loading_id`. A "load" is one loading-screen-bounded episode; every event of that load
+/// (`started` → `completed`, plus any `asset_failure`) shares its `loading_id`, so the funnel
+/// reassembles in Segment by grouping on it. Built by the pure `LoadingFunnel`
+/// (`scene_runner/loading_funnel.rs`) and emitted from `DclSceneManager` via
+/// `Metrics::queue_loading_event`. Every type-specific field is `Option` and only populated for
+/// its `type`. Values are bucketed/rounded — no PII, no parcel coords, no URLs.
+#[derive(Serialize, Clone, Default)]
+pub struct SegmentEventLoading {
+    /// Discriminator: "started" | "completed" | "asset_failure" | "realm_change_failed".
+    #[serde(rename = "type")]
+    pub event_type: String,
+    /// Correlation id for one complete load (episode). Shared by every event of that load.
+    pub loading_id: u64,
+    /// Schema/grammar version (LOADING_SCHEMA_VERSION).
+    pub schema: u32,
+    /// Coarse realm class: "world" | "genesis" | "other" | "unknown" (no URL/PII).
+    pub realm_bucket: String,
+
+    // --- type = "started" (context) ---
+    /// Navigation entry point: "on_teleport" | "on_join_world" | "auto" | "-".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub when: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_world: Option<bool>,
+    /// No resources were cached at load start (first-time / cold boot).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cold_cache: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_estimate_mbs: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub platform: Option<String>,
+
+    // --- type = "completed" (the funnel) ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reached_ready: Option<bool>,
+    /// How the load ended: "completion" | "wall_clock_timeout" | "error" | "superseded" |
+    /// "cancelled". `wall_clock_timeout` with `reached_ready=false` is the infinite-loading signal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dismissed_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_spawn_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_ready_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub complete_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scene_rendered_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub about_end_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discovery_ms: Option<i64>,
+    /// Wall-clock ms the progress bar sat in the 25–30% plateau (the F-7 "looks frozen" signal).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_in_25_30_band_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phase_breakdown: Option<LoadingPhaseBreakdown>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assets_expected: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assets_loaded: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assets_unfinished: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assets_errored: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub peak_pending_assets: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frames: Option<i64>,
+
+    // --- type = "asset_failure" | "realm_change_failed" ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count: Option<i64>,
+}
+
+impl SegmentEventLoading {
+    /// Base event with the always-present fields set and every type-specific field left `None`.
+    /// Callers fill the fields for their `event_type` via struct-update (`..base`).
+    pub fn base(event_type: &str, loading_id: u64, realm_bucket: String) -> Self {
+        Self {
+            event_type: event_type.to_string(),
+            loading_id,
+            schema: LOADING_SCHEMA_VERSION,
+            realm_bucket,
+            ..Default::default()
+        }
+    }
+}
+
+/// Entry ms of each loading phase since load begin (-1 = phase never reached). Analysts diff
+/// consecutive phases for per-phase duration.
 #[derive(Serialize, Clone)]
-pub struct SegmentEventLoadingPayload {
-    #[serde(flatten)]
-    pub properties: serde_json::Value,
+pub struct LoadingPhaseBreakdown {
+    pub metadata: i64,
+    pub spawning: i64,
+    pub assets: i64,
+    pub ready: i64,
+    pub floating_islands: i64,
+    pub done: i64,
+}
+
+impl Default for LoadingPhaseBreakdown {
+    fn default() -> Self {
+        Self {
+            metadata: -1,
+            spawning: -1,
+            assets: -1,
+            ready: -1,
+            floating_islands: -1,
+            done: -1,
+        }
+    }
 }
 
 // TODO: maybe important what realm?
@@ -579,24 +690,9 @@ pub fn build_segment_event_batch_item(
             serde_json::to_value(event).unwrap(),
             None,
         ),
-        SegmentEvent::SceneLoadingStarted(event) => (
-            "Scene Loading Started".to_string(),
-            serde_json::to_value(event).unwrap(),
-            None,
-        ),
-        SegmentEvent::SceneLoadingCompleted(event) => (
-            "Scene Loading Completed".to_string(),
-            serde_json::to_value(event).unwrap(),
-            None,
-        ),
-        SegmentEvent::SceneLoadingAssetFailure(event) => (
-            "Scene Loading Asset Failure".to_string(),
-            serde_json::to_value(event).unwrap(),
-            None,
-        ),
-        SegmentEvent::RealmChangeFailed(event) => (
-            "Realm Change Failed".to_string(),
-            serde_json::to_value(event).unwrap(),
+        SegmentEvent::Loading(event) => (
+            "Loading Event".to_string(),
+            serde_json::to_value(*event).unwrap(),
             None,
         ),
     };
