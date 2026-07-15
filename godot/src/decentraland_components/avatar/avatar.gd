@@ -174,6 +174,14 @@ var _lod_state: int = LODState.FULL
 var _use_2d_nameplate: bool = false
 var _nametag_gate_visible: bool = true
 var _nameplate_occluded: bool = false
+# False until a real profile has been applied (async_update_avatar_from_profile). Until
+# then a remote avatar still shows the NicknameUI scene-default placeholder
+# ("nickname#xxxx"), which we hide in production / replace with a status in dev.
+var _profile_ready: bool = false
+# Comms-side profile-fetch state (pushed from message_processor.rs via AvatarScene). Used
+# for the dev pending nameplate: banned => "Failed", otherwise "Loading".
+var _profile_request_failures: int = 0
+var _profile_request_banned: bool = false
 var _impostor_layer: int = -1
 var _lod_phase: int = 0
 var _mesh_lod_visibility_captured: bool = false
@@ -297,13 +305,28 @@ func _ready():
 func _exit_tree() -> void:
 	AvatarLODCoordinator.unregister(self)
 
-	# The 2D nameplate lives in the shared layer, not under this avatar, so it
-	# won't be auto-freed — free it explicitly.
-	if _use_2d_nameplate:
-		NameplateLayer.detach(self)
+	# The 2D nameplate lives in the shared NameplateLayer, not under this avatar, so it is
+	# NOT auto-freed with the subtree. We must NOT free it here either: _exit_tree also
+	# fires on a transient reparent (e.g. lobby.gd moves avatar_preview between containers),
+	# and since _ready() only runs once it would never be re-created — leaving nickname_ui
+	# permanently freed while the avatar stays alive (the avatar.gd:539 "previously freed"
+	# bug). Instead just hide it while out of the tree; NameplateLayer.update() (driven by
+	# our _process) is paused meanwhile, so a last-visible tag would otherwise linger frozen.
+	# The real free happens in _notification(NOTIFICATION_PREDELETE) when the avatar dies.
+	if _use_2d_nameplate and is_instance_valid(nickname_ui):
+		nickname_ui.modulate.a = 0.0
+		nickname_ui.hide()
 
 	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
 	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
+
+
+func _notification(what: int) -> void:
+	# Free the reparented nickname_ui only when the avatar object is actually deleted (not
+	# on transient tree exits) — see _exit_tree for why. NameplateLayer.detach() guards
+	# is_instance_valid, so a full-teardown double-free is harmless.
+	if what == NOTIFICATION_PREDELETE and _use_2d_nameplate:
+		NameplateLayer.detach(self)
 
 
 ## Setup trigger detection for this avatar (local player and remote avatars only).
@@ -389,6 +412,10 @@ func set_hidden(value):
 		try_show()
 		# Re-enable click detection
 		_set_click_area_enabled(true)
+	# Blocked/hidden avatars must also hide their nameplate. The 2D nameplate is
+	# reparented out of this node into a shared screen-space layer, so hide() above
+	# doesn't reach it — re-evaluate the gate (which now includes `hidden`) explicitly.
+	_apply_nickname_visibility()
 
 
 # The impostor MultiMesh lives on AvatarScene (parent), not on the Avatar node,
@@ -440,11 +467,13 @@ func _unset_avatar_modifier_area():
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
+	_profile_ready = true
 	var avatar = profile.get_avatar()
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
-	nickname_ui.name_claimed = profile.has_claimed_name()
+	if is_instance_valid(nickname_ui):
+		nickname_ui.name_claimed = profile.has_claimed_name()
 
 	var avatar_id_changed := avatar_id != profile.get_ethereum_address()
 	avatar_id = profile.get_ethereum_address()
@@ -524,14 +553,15 @@ func async_update_avatar(
 		# Only update the name if it changed
 		if get_avatar_name() != new_avatar_name:
 			set_avatar_name(new_avatar_name)
-			var splitted_nickname = new_avatar_name.split("#", false)
-			if splitted_nickname.size() > 1:
-				nickname_ui.nickname = splitted_nickname[0]
-				nickname_ui.tag = splitted_nickname[1]
-			else:
-				nickname_ui.nickname = new_avatar_name
-				nickname_ui.tag = ""
-			nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
+			if is_instance_valid(nickname_ui):
+				var splitted_nickname = new_avatar_name.split("#", false)
+				if splitted_nickname.size() > 1:
+					nickname_ui.nickname = splitted_nickname[0]
+					nickname_ui.tag = splitted_nickname[1]
+				else:
+					nickname_ui.nickname = new_avatar_name
+					nickname_ui.tag = ""
+				nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
 			# Re-trigger UPDATE_ONCE so the SubViewport repaints with the new text
 			_apply_nickname_visibility()
 		return
@@ -545,12 +575,13 @@ func async_update_avatar(
 	if splitted_nickname.size() > 1:
 		nickname_ui.nickname = splitted_nickname[0]
 		nickname_ui.tag = splitted_nickname[1]
-	else:
+	elif is_instance_valid(nickname_ui):
 		nickname_ui.nickname = new_avatar_name
 		nickname_ui.tag = ""
 
-	nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
-	nickname_ui.mic_enabled = false
+	if is_instance_valid(nickname_ui):
+		nickname_ui.nickname_color = DclAvatar.get_nickname_color(new_avatar_name)
+		nickname_ui.mic_enabled = false
 
 	_apply_nickname_visibility()
 
@@ -629,6 +660,11 @@ func _request_nickname_redraw() -> void:
 func _apply_nickname_visibility() -> void:
 	if nickname_quad == null:
 		return
+	# Profile not received yet: the NicknameUI still shows its scene-default placeholder
+	# ("nickname#xxxx"). Hide it in production; in dev/staging surface the request state.
+	var profile_pending: bool = not _profile_ready and not is_avatar_shape
+	if profile_pending and not Global.is_production():
+		_apply_pending_profile_nameplate()
 	# Hide nickname for AvatarShapes only when the scene didn't set a real name
 	# (the proto default is "NPC", which is noise). Also hide on FAR LOD —
 	# unreadable at impostor distance and each quad is an extra draw call.
@@ -638,12 +674,23 @@ func _apply_nickname_visibility() -> void:
 	)
 	var far_lod: bool = _lod_state == LODState.FAR
 	var should_hide := (
-		avatar_shape_has_no_name or hide_name or _force_hide_name or far_lod or nametag_hidden
+		avatar_shape_has_no_name
+		or hide_name
+		or _force_hide_name
+		or far_lod
+		or nametag_hidden
+		or hidden
+		or (profile_pending and Global.is_production())
 	)
 	if _use_2d_nameplate:
 		# _update_nameplate_2d() positions/shows when allowed; hide now if gated off.
 		_nametag_gate_visible = not should_hide
 		if should_hide and nickname_ui != null:
+			# Hard reset alpha too: NameplateLayer.update() recomputes visibility from
+			# move_toward()'d alpha every frame, so a plain hide() would be undone and the
+			# stale tag would linger as a ~6-frame fade-out. Zeroing alpha makes the hide
+			# instant; the gate reopening fades it back in cleanly from 0.
+			nickname_ui.modulate.a = 0.0
 			nickname_ui.hide()
 		return
 	if should_hide:
@@ -656,6 +703,30 @@ func _apply_nickname_visibility() -> void:
 			# UPDATE_ONCE: redraw one frame here, then the SubViewport idles until
 			# something nickname-related changes (see _request_nickname_redraw).
 			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## Dev/staging only: while the profile is still pending, replace the meaningless
+## "nickname#xxxx" placeholder with the request state so we can see what's happening.
+## (In production the tag is hidden instead — see _apply_nickname_visibility.)
+func _apply_pending_profile_nameplate() -> void:
+	if nickname_ui == null:
+		return
+	nickname_ui.name_claimed = false
+	# banned (>= 2 consecutive fetch failures) => the comms layer gave up for now.
+	var failed: bool = _profile_request_banned
+	nickname_ui.nickname = "Failed" if failed else "Loading"
+	nickname_ui.tag = avatar_id.right(4) if not avatar_id.is_empty() else "…"
+	nickname_ui.nickname_color = Color(0.85, 0.4, 0.4) if failed else Color(0.7, 0.7, 0.7)
+	_request_nickname_redraw()
+
+
+## Pushed from comms (message_processor.rs -> AvatarScene) when a profile fetch fails or
+## gets banned. Refresh the dev pending nameplate so it flips "Loading" -> "Failed".
+func set_profile_request_state(failures: int, banned: bool) -> void:
+	_profile_request_failures = failures
+	_profile_request_banned = banned
+	if not _profile_ready:
+		_apply_nickname_visibility()
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:

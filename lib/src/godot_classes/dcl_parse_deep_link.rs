@@ -81,9 +81,10 @@ pub struct DclParseDeepLink {
     #[var]
     safe_margin_debug: bool,
 
-    /// Enable IAP UI and StoreKit listening (deep link param: iap_enabled=true)
+    /// Force-enable the Scene Stats / limits overlay outside preview
+    /// (deep link param: scene-stats=true). Never shown in production builds.
     #[var]
-    iap_enabled: bool,
+    scene_stats: bool,
 }
 
 #[godot_api]
@@ -116,7 +117,7 @@ impl DclParseDeepLink {
             low_spec_warning: false,
             gp_benchmark: false,
             safe_margin_debug: false,
-            iap_enabled: false,
+            scene_stats: false,
         }
     }
 
@@ -150,7 +151,7 @@ impl DclParseDeepLink {
             low_spec_warning: r.low_spec_warning,
             gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
-            iap_enabled: r.iap_enabled,
+            scene_stats: r.scene_stats,
         }
     }
 }

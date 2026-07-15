@@ -76,6 +76,18 @@ corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_newbadge"]
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="LabelSettings" id="LabelSettings_new"]
+font = ExtResource("10_nwsor")
+font_size = 18
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
 [node name="WearableItem" type="Button" unique_id=631880418]
 custom_minimum_size = Vector2(192, 192)
 offset_right = 160.0
@@ -187,6 +199,30 @@ mouse_filter = 2
 texture = ExtResource("7_h4p8s")
 expand_mode = 1
 stretch_mode = 4
+
+[node name="PanelContainer_NewBadge" type="PanelContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=800000001]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(52, 22)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -58.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = 28.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_newbadge")
+
+[node name="Label_New" type="Label" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/PanelContainer_NewBadge" unique_id=800000002]
+layout_mode = 2
+mouse_filter = 2
+text = "NEW"
+label_settings = SubResource("LabelSettings_new")
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer_White/TextureRect_Preview" unique_id=1707035680]
 layout_mode = 1

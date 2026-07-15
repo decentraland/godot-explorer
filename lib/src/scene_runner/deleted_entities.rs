@@ -45,7 +45,13 @@ pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
         scene.audio_streams.remove(deleted_entity);
         scene.video_players.remove(deleted_entity);
         scene.dup_animator.remove(deleted_entity);
-        scene.gltf_loading.remove(deleted_entity);
+        // If a GLTF was still loading when its entity was deleted, count it as finished so
+        // the loading session's asset accounting stays balanced. Mirrors the
+        // component-removal and normal-completion paths in `gltf_container.rs`; without
+        // this the Assets phase never reaches 100% and the loading screen hangs (RC-10).
+        if scene.gltf_loading.remove(deleted_entity) {
+            scene.gltf_loading_finished_count += 1;
+        }
         scene.continuos_raycast.remove(deleted_entity);
         scene.tweens.remove(deleted_entity);
         scene.texture_animations.remove(deleted_entity);

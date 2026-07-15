@@ -567,74 +567,13 @@ impl BenchmarkReport {
     }
 
     fn get_process_memory_usage_mb(&self) -> f64 {
-        // Get process memory from Linux /proc/self/status
-        #[cfg(target_os = "linux")]
-        {
-            if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
-                for line in status.lines() {
-                    if line.starts_with("VmRSS:") {
-                        // VmRSS:    1234567 kB (Resident Set Size - actual physical memory used)
-                        if let Some(value_str) = line.split_whitespace().nth(1) {
-                            if let Ok(kb) = value_str.parse::<f64>() {
-                                return kb / 1024.0; // Convert kB to MiB
-                            }
-                        }
-                    }
-                }
-            }
+        // Shared cross-platform resident-memory reader; -1 means unknown.
+        let mb = crate::tools::memory_monitor::used_memory_mb();
+        if mb < 0 {
+            0.0
+        } else {
+            mb as f64
         }
-
-        // macOS: Use mach_task_basic_info to get resident memory
-        #[cfg(target_os = "macos")]
-        {
-            use std::mem::MaybeUninit;
-
-            #[repr(C)]
-            struct MachTaskBasicInfo {
-                virtual_size: u64,
-                resident_size: u64,
-                resident_size_max: u64,
-                user_time: u64,
-                system_time: u64,
-                policy: i32,
-                suspend_count: i32,
-            }
-
-            extern "C" {
-                fn mach_task_self() -> u32;
-                fn task_info(
-                    target_task: u32,
-                    flavor: i32,
-                    task_info_out: *mut MachTaskBasicInfo,
-                    task_info_outCnt: *mut u32,
-                ) -> i32;
-            }
-
-            const MACH_TASK_BASIC_INFO: i32 = 20;
-            const MACH_TASK_BASIC_INFO_COUNT: u32 =
-                (std::mem::size_of::<MachTaskBasicInfo>() / std::mem::size_of::<u32>()) as u32;
-
-            unsafe {
-                let mut info = MaybeUninit::<MachTaskBasicInfo>::uninit();
-                let mut count = MACH_TASK_BASIC_INFO_COUNT;
-
-                let result = task_info(
-                    mach_task_self(),
-                    MACH_TASK_BASIC_INFO,
-                    info.as_mut_ptr(),
-                    &mut count,
-                );
-
-                if result == 0 {
-                    let info = info.assume_init();
-                    // resident_size is in bytes, convert to MiB
-                    return info.resident_size as f64 / 1_048_576.0;
-                }
-            }
-        }
-
-        // Return 0.0 if not available
-        0.0
     }
 
     fn format_individual_report(&self, metrics: &BenchmarkMetrics) -> String {

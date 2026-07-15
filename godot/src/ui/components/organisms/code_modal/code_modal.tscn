@@ -1,0 +1,387 @@
+[gd_scene format=3 uid="uid://cfxixufe6wkqv"]
+
+[ext_resource type="Script" uid="uid://dpuqc5g5s3ctx" path="res://src/ui/components/organisms/code_modal/code_modal.gd" id="1_gd1ag"]
+[ext_resource type="Script" uid="uid://b5n8gac80dncv" path="res://src/ui/layouts/responsive_container.gd" id="2_qo1yg"]
+[ext_resource type="Texture2D" uid="uid://bth12b5lxd4ul" path="res://assets/ui/modal-background.png" id="3_sbs76"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_pqqra"]
+[ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="4_xauep"]
+[ext_resource type="Texture2D" uid="uid://djpso8onkia4j" path="res://assets/themes/icons/email.svg" id="5_ico41"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="5_ko0mn"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_xauep"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_xauep"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="8_8bykb"]
+[ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="8_uldt8"]
+
+[sub_resource type="Shader" id="Shader_ijrai"]
+code = "shader_type canvas_item;
+
+uniform float blur_amount : hint_range(0.0, 8.0) = 2.0;
+
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+
+void fragment() {
+	vec4 color = textureLod(screen_texture, SCREEN_UV, blur_amount);
+	COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5r5ws"]
+shader = SubResource("Shader_ijrai")
+shader_parameter/blur_amount = 3.0000001425
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ap1g7"]
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fasoj"]
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vtc1u"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6ee1p"]
+content_margin_left = 39.0
+content_margin_top = 39.0
+content_margin_right = 39.0
+content_margin_bottom = 39.0
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="LabelSettings" id="LabelSettings_5r5ws"]
+font = ExtResource("4_pqqra")
+font_size = 43
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ico41"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_6ee1p"]
+font = ExtResource("5_xauep")
+font_size = 20
+font_color = Color(1, 0.1764706, 0.33333334, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_8bykb"]
+font = ExtResource("6_xauep")
+font_size = 24
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="CodeModal" type="ColorRect" unique_id=889307729]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+script = ExtResource("1_gd1ag")
+metadata/mobile_preview_orientation = "portrait"
+
+[node name="Blur" type="ColorRect" parent="." unique_id=561793148]
+material = SubResource("ShaderMaterial_5r5ws")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.63529414)
+
+[node name="PanelContainer2" type="PanelContainer" parent="Blur" unique_id=1032389535]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -304.0
+offset_top = -413.5
+offset_right = 304.0
+offset_bottom = 413.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ap1g7")
+script = ExtResource("2_qo1yg")
+portrait_width = 0.85
+portrait_min_height = 0.1
+landscape_min_height = 0.1
+simulate_portrait = true
+
+[node name="PanelContainer_Background" type="PanelContainer" parent="Blur/PanelContainer2" unique_id=599553400]
+clip_children = 1
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fasoj")
+
+[node name="TextureRect" type="TextureRect" parent="Blur/PanelContainer2/PanelContainer_Background" unique_id=2054279500]
+layout_mode = 2
+texture = ExtResource("3_sbs76")
+expand_mode = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="Blur/PanelContainer2" unique_id=755220687]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Blur/PanelContainer2/MarginContainer" unique_id=18486340]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="TextureButton_Close" type="TextureButton" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=967401264]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4
+texture_normal = ExtResource("4_xauep")
+texture_pressed = ExtResource("4_xauep")
+texture_hover = ExtResource("4_xauep")
+ignore_texture_size = true
+stretch_mode = 5
+flip_h = true
+
+[node name="HSeparator_Title2" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=349137317]
+layout_mode = 2
+theme_override_constants/separation = 32
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
+
+[node name="PanelContainer" type="PanelContainer" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=2087370335]
+custom_minimum_size = Vector2(156, 156)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_6ee1p")
+
+[node name="TextureRect2" type="TextureRect" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/PanelContainer" unique_id=980997342]
+layout_mode = 2
+texture = ExtResource("5_ico41")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator_Title3" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=2021702732]
+layout_mode = 2
+theme_override_constants/separation = 36
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
+
+[node name="Label_Title" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1851632747]
+layout_mode = 2
+text = "Enter verification code"
+label_settings = SubResource("LabelSettings_5r5ws")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator_Title" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=88206464]
+layout_mode = 2
+theme_override_constants/separation = 22
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
+
+[node name="Label_Subtitle" type="RichTextLabel" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1085977058]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 26
+theme_override_font_sizes/bold_font_size = 26
+theme_override_font_sizes/bold_italics_font_size = 26
+theme_override_font_sizes/italics_font_size = 26
+theme_override_font_sizes/mono_font_size = 26
+bbcode_enabled = true
+text = "One time password sent to [b]your@email.com[/b]. Please enter the code below to complete verification."
+fit_content = true
+autowrap_mode = 2
+horizontal_alignment = 1
+
+[node name="HSeparator_Content" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1607643053]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
+
+[node name="Container" type="VBoxContainer" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=381144657]
+custom_minimum_size = Vector2(20, 162)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container" unique_id=1543266366]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="LineEdit_Code1" type="LineEdit" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container/HBoxContainer" unique_id=1597065262]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 130)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/caret_width = 1
+theme_override_constants/minimum_character_width = 1
+theme_override_fonts/font = ExtResource("6_xauep")
+theme_override_font_sizes/font_size = 48
+theme_override_styles/normal = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/focus = ExtResource("8_uldt8")
+text = "A"
+alignment = 1
+max_length = 1
+context_menu_enabled = false
+emoji_menu_enabled = false
+virtual_keyboard_enabled = false
+
+[node name="LineEdit_Code2" type="LineEdit" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container/HBoxContainer" unique_id=459165669]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 130)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/caret_width = 1
+theme_override_constants/minimum_character_width = 1
+theme_override_fonts/font = ExtResource("6_xauep")
+theme_override_font_sizes/font_size = 48
+theme_override_styles/normal = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/focus = ExtResource("8_uldt8")
+text = "A"
+alignment = 1
+max_length = 1
+context_menu_enabled = false
+emoji_menu_enabled = false
+virtual_keyboard_enabled = false
+
+[node name="LineEdit_Code3" type="LineEdit" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container/HBoxContainer" unique_id=192864850]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 130)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/caret_width = 1
+theme_override_constants/minimum_character_width = 1
+theme_override_fonts/font = ExtResource("6_xauep")
+theme_override_font_sizes/font_size = 48
+theme_override_styles/normal = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/focus = ExtResource("8_uldt8")
+text = "A"
+alignment = 1
+max_length = 1
+context_menu_enabled = false
+emoji_menu_enabled = false
+virtual_keyboard_enabled = false
+
+[node name="LineEdit_Code4" type="LineEdit" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container/HBoxContainer" unique_id=399900605]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 130)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/caret_width = 1
+theme_override_constants/minimum_character_width = 1
+theme_override_fonts/font = ExtResource("6_xauep")
+theme_override_font_sizes/font_size = 48
+theme_override_styles/normal = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/focus = ExtResource("8_uldt8")
+text = "A"
+alignment = 1
+max_length = 1
+context_menu_enabled = false
+emoji_menu_enabled = false
+virtual_keyboard_enabled = false
+
+[node name="LineEdit_Code5" type="LineEdit" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container/HBoxContainer" unique_id=1418637518]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 130)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/caret_width = 1
+theme_override_constants/minimum_character_width = 1
+theme_override_fonts/font = ExtResource("6_xauep")
+theme_override_font_sizes/font_size = 48
+theme_override_styles/normal = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/focus = ExtResource("8_uldt8")
+text = "A"
+alignment = 1
+max_length = 1
+context_menu_enabled = false
+emoji_menu_enabled = false
+virtual_keyboard_enabled = false
+
+[node name="LineEdit_Code6" type="LineEdit" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container/HBoxContainer" unique_id=1725192291]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 130)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/caret_width = 1
+theme_override_constants/minimum_character_width = 1
+theme_override_fonts/font = ExtResource("6_xauep")
+theme_override_font_sizes/font_size = 48
+theme_override_styles/normal = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_ico41")
+theme_override_styles/focus = ExtResource("8_uldt8")
+text = "A"
+alignment = 1
+max_length = 1
+context_menu_enabled = false
+emoji_menu_enabled = false
+virtual_keyboard_enabled = false
+
+[node name="Label_Error" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container" unique_id=1219482550]
+unique_name_in_owner = true
+layout_mode = 2
+text = "The code is invalid or expired. Please resend code."
+label_settings = SubResource("LabelSettings_6ee1p")
+horizontal_alignment = 1
+
+[node name="HSeparator_Content2" type="HSeparator" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=296299329]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1698584370]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="HBoxContainer_Verifying" type="HBoxContainer" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer" unique_id=1514464203]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_constants/separation = 7
+alignment = 1
+
+[node name="TextureProgressBar" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer_Verifying" unique_id=1364957813 instance=ExtResource("8_8bykb")]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Label_Title2" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer_Verifying" unique_id=934715643]
+custom_minimum_size = Vector2(128, 0)
+layout_mode = 2
+text = "Verifying..."
+label_settings = SubResource("LabelSettings_8bykb")
+autowrap_mode = 2
+
+[node name="RichTextLabel_ResendCode" type="RichTextLabel" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer" unique_id=2097791159]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/normal_font = ExtResource("5_ko0mn")
+theme_override_font_sizes/normal_font_size = 26
+theme_override_font_sizes/bold_font_size = 26
+theme_override_font_sizes/bold_italics_font_size = 26
+theme_override_font_sizes/italics_font_size = 26
+theme_override_font_sizes/mono_font_size = 26
+bbcode_enabled = true
+text = "Didn't get an email? [u][color=A0ABFF]Resend email"
+fit_content = true
+autowrap_mode = 2
+horizontal_alignment = 1
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

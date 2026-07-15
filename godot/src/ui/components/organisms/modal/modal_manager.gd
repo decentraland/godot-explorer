@@ -14,6 +14,8 @@ signal session_ended_exit
 
 const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
+const INPUT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/input_modal/input_modal.tscn"
+const CODE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/code_modal/code_modal.tscn"
 
 # Modal text constants
 const EXTERNAL_LINK_TITLE = "Open external link?"
@@ -35,6 +37,11 @@ const SCENE_CRASH_TITLE = "Scene error"
 const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back to discover."
 const SCENE_CRASH_PRIMARY = "RELOAD"
 const SCENE_CRASH_SECONDARY = "BACK"
+
+const LOW_MEMORY_TITLE = "Low memory"
+const LOW_MEMORY_BODY = "This place may not run smoothly on your device and could close unexpectedly."
+const LOW_MEMORY_PRIMARY = "CONTINUE"
+const LOW_MEMORY_SECONDARY = "BACK TO DISCOVER"
 
 const BAN_PRE_CHECK_TITLE = "You can't enter"
 const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
@@ -61,12 +68,24 @@ const PURCHASE_IN_FLIGHT_TITLE = "Purchase in progress"
 const PURCHASE_IN_FLIGHT_BODY = "A purchase is already being processed. Please wait for it to complete before starting a new one."
 const PURCHASE_IN_FLIGHT_PRIMARY = "OK"
 
-const IAP_TERMS_TITLE = "Terms of use"
-# TODO: replace placeholder URLs with final ones
+# Shown at quote time when the server hit its global daily credit ceiling — nothing
+# was charged, the user should try again later.
+const PURCHASE_UNAVAILABLE_TITLE = "Temporarily\nunavailable"
+const PURCHASE_UNAVAILABLE_BODY = "Credit purchases are temporarily unavailable. Please try again later."
+const PURCHASE_UNAVAILABLE_PRIMARY = "OK"
+
+# Shown after a successful charge whose credits are still being applied (the server
+# was at its daily ceiling; the Apple webhook will credit shortly).
+const PURCHASE_PROCESSING_TITLE = "Almost there"
+const PURCHASE_PROCESSING_BODY = "Your purchase went through and your credits will be added shortly."
+const PURCHASE_PROCESSING_PRIMARY = "OK"
+
+const IAP_TERMS_TITLE = "Terms of Use"
 const IAP_TERMS_CHECKBOX_BBCODE = (
-	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms/"]Terms of Service[/url][/color], '
-	+ '[color=#E8B9FF][url="https://decentraland.org/privacy/"]Privacy Policy[/url][/color] and '
-	+ '[color=#E8B9FF][url="https://decentraland.org/content/"]Content Policy[/url][/color].'
+	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms"]Terms of Use[/url][/color], '
+	+ '[color=#E8B9FF][url="https://decentraland.org/privacy"]Privacy Policy[/url][/color], '
+	+ '[color=#E8B9FF][url="https://decentraland.org/content"]Content Policy[/url][/color] and '
+	+ '[color=#E8B9FF][url="https://decentraland.org/credits-terms"]Credits Terms of Use[/url][/color].'
 )
 const IAP_TERMS_PRIMARY = "CONFIRM"
 const IAP_TERMS_SECONDARY = "CANCEL"
@@ -83,13 +102,19 @@ const SESSION_ENDED_SECONDARY = "EXIT"
 
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
+var current_input_modal: InputModal = null
+var current_code_modal: CodeModal = null
 var modal_scene: PackedScene = null
 var travel_modal_scene: PackedScene = null
+var input_modal_scene: PackedScene = null
+var code_modal_scene: PackedScene = null
 var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
 var _canvas_layer: CanvasLayer = null
 var _travel_canvas_layer: CanvasLayer = null
+var _input_canvas_layer: CanvasLayer = null
+var _code_canvas_layer: CanvasLayer = null
 
 
 func _ready() -> void:
@@ -99,6 +124,12 @@ func _ready() -> void:
 	travel_modal_scene = load(TRAVEL_MODAL_SCENE_PATH)
 	if not travel_modal_scene:
 		push_error("ModalManager: Could not load travel modal scene at: " + TRAVEL_MODAL_SCENE_PATH)
+	input_modal_scene = load(INPUT_MODAL_SCENE_PATH)
+	if not input_modal_scene:
+		push_error("ModalManager: Could not load input modal scene at: " + INPUT_MODAL_SCENE_PATH)
+	code_modal_scene = load(CODE_MODAL_SCENE_PATH)
+	if not code_modal_scene:
+		push_error("ModalManager: Could not load code modal scene at: " + CODE_MODAL_SCENE_PATH)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
@@ -282,6 +313,51 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_scene_crash_reload.bind(entity_id))
 	current_modal.button_secondary.pressed.connect(_on_scene_crash_back)
+
+
+## Shows a LOW_MEMORY warning modal (issue #2002): the memory monitor detected
+## critical pressure with nothing left to evict but the current scene. Rather
+## than kill it, let the user choose. Reuses the crash modal design (alert icon).
+## - "CONTINUE ANYWAY": keep the scene; enable verbose memory logging so we can
+##   observe how far it gets before a possible OOM; stop nagging this session.
+## - "BACK TO DISCOVER": leave the scene.
+## @param _entity_id: The entity ID of the current scene (unused for now)
+func async_show_low_memory_warning_modal(
+	entity_id: String, footprint_mb: int = -1, available_mb: int = -1
+) -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.blocker = true
+	current_modal.set_title(LOW_MEMORY_TITLE)
+	current_modal.set_body(LOW_MEMORY_BODY)
+	current_modal.set_primary_button_text(LOW_MEMORY_PRIMARY)
+	current_modal.set_secondary_button_text(LOW_MEMORY_SECONDARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_low_memory_continue)
+	current_modal.button_secondary.pressed.connect(_on_low_memory_back)
+
+	# Measure how often the low-memory warning surfaces, on which scene/device and at
+	# what memory level (issue #2002). Flush eagerly: the app may be jetsam-killed by the
+	# OS shortly after this warning, so we can't rely on the periodic flush to send it.
+	if Global.metrics != null:
+		Global.metrics.track_screen_viewed(
+			"LOW_MEMORY_WARNING",
+			JSON.stringify(
+				{
+					"entity_id": entity_id,
+					"footprint_mb": footprint_mb,
+					"available_mb": available_mb,
+					"platform": OS.get_name()
+				}
+			)
+		)
+		Global.metrics.flush.call_deferred()
 
 
 ## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
@@ -488,6 +564,42 @@ func async_show_purchase_in_flight_modal() -> void:
 	current_modal.button_primary.pressed.connect(close_current_modal)
 
 
+## Shows a modal when credit purchases are temporarily unavailable (server daily cap)
+func async_show_purchase_unavailable_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(PURCHASE_UNAVAILABLE_TITLE)
+	current_modal.set_body(PURCHASE_UNAVAILABLE_BODY)
+	current_modal.set_primary_button_text(PURCHASE_UNAVAILABLE_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
+## Shows a modal when a purchase succeeded but its credits are still being applied
+func async_show_purchase_processing_modal() -> void:
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.set_title(PURCHASE_PROCESSING_TITLE)
+	current_modal.set_body(PURCHASE_PROCESSING_BODY)
+	current_modal.set_primary_button_text(PURCHASE_PROCESSING_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
 ## Shows IAP terms of use modal with a checkbox that must be accepted before confirming
 func async_show_iap_terms_modal() -> void:
 	if not current_modal:
@@ -538,6 +650,31 @@ func clear_suppress_ban_kicked() -> void:
 	_suppress_ban_kicked = false
 
 
+## Shows a generic input modal. Returns the InputModal instance so callers
+## can connect to its confirmed/cancelled signals.
+func async_show_input_modal(
+	title: String,
+	subtitle: String,
+	placeholder: String,
+	confirm_text: String,
+	cancel_text: String,
+	validation: Callable,
+) -> InputModal:
+	var modal = await _async_create_input_modal()
+	if not modal:
+		return null
+	modal.setup(title, subtitle, placeholder, confirm_text, cancel_text, validation)
+	modal.open()
+	return modal
+
+
+## Closes the current input modal if it exists
+func close_input_modal() -> void:
+	if current_input_modal:
+		current_input_modal.close()
+		_remove_input_modal()
+
+
 ## Closes the current travel modal if it exists
 func close_travel_modal() -> void:
 	if current_travel_modal:
@@ -568,7 +705,22 @@ func _disconnect_button_signals() -> void:
 			current_modal.button_secondary.pressed.disconnect(connection.callable)
 
 
+## When any modal opens, tear down the chat's text-input ("write") mode so the
+## on-screen keyboard is dismissed and focus is handed back. Otherwise a modal
+## (e.g. the crash blocker) can appear over an active chat, leaving the mobile
+## virtual keyboard stuck on screen with no way to dismiss it — a dead end.
+## Idempotent and safe to call unconditionally before every modal. See #2427.
+func _dismiss_chat_input_for_modal() -> void:
+	var explorer = Global.get_explorer()
+	if not is_instance_valid(explorer):
+		return
+	var chat_panel = explorer.chat_panel
+	if is_instance_valid(chat_panel) and is_instance_valid(chat_panel.chat):
+		chat_panel.chat.close_write_mode_if_active()
+
+
 func _async_create_modal() -> Modal:
+	_dismiss_chat_input_for_modal()
 	# If there's already a modal open, close it first
 	if current_modal:
 		close_current_modal()
@@ -615,6 +767,7 @@ func _async_create_modal() -> Modal:
 
 
 func _async_create_travel_modal() -> TravelModal:
+	_dismiss_chat_input_for_modal()
 	if current_travel_modal:
 		close_travel_modal()
 
@@ -787,6 +940,22 @@ func _on_scene_crash_back() -> void:
 	close_current_modal()
 
 
+# Low-memory warning (issue #2002) — "Continue anyway": keep the scene running,
+# turn on verbose memory logging to capture the run-up to a possible OOM, and
+# tell the runner to stop warning for the rest of the session.
+func _on_low_memory_continue() -> void:
+	if Global.scene_runner != null:
+		Global.scene_runner.set_memory_verbose_logging(true)
+		Global.scene_runner.dismiss_memory_warning()
+	close_current_modal()
+
+
+# Low-memory warning — "Back to Discover": leave the heavy scene.
+func _on_low_memory_back() -> void:
+	Global.open_discover.emit()
+	close_current_modal()
+
+
 func _on_ban_pre_check_go_to_discover() -> void:
 	close_current_modal()
 	_suppress_ban_kicked = true
@@ -887,3 +1056,123 @@ func _remove_travel_modal() -> void:
 	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
 		_travel_canvas_layer.queue_free()
 		_travel_canvas_layer = null
+
+
+func _async_create_input_modal() -> InputModal:
+	if current_input_modal:
+		close_input_modal()
+
+	if not input_modal_scene:
+		push_error("ModalManager: Input modal scene is not loaded")
+		return null
+
+	var modal = input_modal_scene.instantiate() as InputModal
+	if not modal:
+		push_error("ModalManager: Could not instantiate input modal")
+		return null
+
+	if _input_canvas_layer and is_instance_valid(_input_canvas_layer):
+		_input_canvas_layer.get_parent().remove_child(_input_canvas_layer)
+		_input_canvas_layer.queue_free()
+
+	_input_canvas_layer = CanvasLayer.new()
+	_input_canvas_layer.layer = 100
+
+	var root = get_tree().root
+	if not root:
+		push_error("ModalManager: Could not get scene tree root")
+		return null
+
+	root.add_child(_input_canvas_layer)
+	_input_canvas_layer.add_child(modal)
+	current_input_modal = modal
+
+	current_input_modal.tree_exited.connect(_on_input_modal_tree_exited)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	return modal
+
+
+func _on_input_modal_tree_exited() -> void:
+	if current_input_modal:
+		current_input_modal = null
+
+
+func _remove_input_modal() -> void:
+	if current_input_modal:
+		if current_input_modal.tree_exited.is_connected(_on_input_modal_tree_exited):
+			current_input_modal.tree_exited.disconnect(_on_input_modal_tree_exited)
+		current_input_modal.queue_free()
+		current_input_modal = null
+	if _input_canvas_layer and is_instance_valid(_input_canvas_layer):
+		_input_canvas_layer.queue_free()
+		_input_canvas_layer = null
+
+
+func async_show_code_modal(email: String = "") -> CodeModal:
+	var modal = await _async_create_code_modal()
+	if not modal:
+		return null
+	modal.open(email)
+	return modal
+
+
+func close_code_modal() -> void:
+	if current_code_modal:
+		current_code_modal.close()
+		_remove_code_modal()
+
+
+func _async_create_code_modal() -> CodeModal:
+	if current_code_modal:
+		close_code_modal()
+
+	if not code_modal_scene:
+		push_error("ModalManager: Code modal scene is not loaded")
+		return null
+
+	var modal = code_modal_scene.instantiate() as CodeModal
+	if not modal:
+		push_error("ModalManager: Could not instantiate code modal")
+		return null
+
+	if _code_canvas_layer and is_instance_valid(_code_canvas_layer):
+		_code_canvas_layer.get_parent().remove_child(_code_canvas_layer)
+		_code_canvas_layer.queue_free()
+
+	_code_canvas_layer = CanvasLayer.new()
+	_code_canvas_layer.layer = 100
+
+	var root = get_tree().root
+	if not root:
+		push_error("ModalManager: Could not get scene tree root")
+		return null
+
+	root.add_child(_code_canvas_layer)
+	_code_canvas_layer.add_child(modal)
+	current_code_modal = modal
+
+	current_code_modal.tree_exited.connect(_on_code_modal_tree_exited)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	return modal
+
+
+func _on_code_modal_tree_exited() -> void:
+	if current_code_modal:
+		current_code_modal = null
+
+
+func _remove_code_modal() -> void:
+	if current_code_modal:
+		if current_code_modal.tree_exited.is_connected(_on_code_modal_tree_exited):
+			current_code_modal.tree_exited.disconnect(_on_code_modal_tree_exited)
+		current_code_modal.queue_free()
+		current_code_modal = null
+	if _code_canvas_layer and is_instance_valid(_code_canvas_layer):
+		_code_canvas_layer.queue_free()
+		_code_canvas_layer = null

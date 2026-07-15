@@ -1,6 +1,0 @@
-app_identifier("org.decentraland.godotexplorer")
-
-# Apple Developer Portal team used for code signing (Apple Distribution cert +
-# App Store provisioning profile). App Store Connect auth is handled via the
-# ASC API key passed to the lane, so no Apple ID / itc_team_id is needed here.
-team_id("8T73XM973P")

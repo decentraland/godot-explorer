@@ -70,10 +70,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 100.79999
-offset_top = 517.5
-offset_right = -100.79999
-offset_bottom = -517.5
+offset_left = 70.5
+offset_top = 330.5
+offset_right = -70.5
+offset_bottom = -330.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_figov")
@@ -95,10 +95,10 @@ expand_mode = 1
 [node name="MarginContainer_Content" type="MarginContainer" parent="PanelContainer" unique_id=131929422]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/margin_left = 56
-theme_override_constants/margin_top = 64
-theme_override_constants/margin_right = 56
-theme_override_constants/margin_bottom = 60
+theme_override_constants/margin_left = 44
+theme_override_constants/margin_top = 51
+theme_override_constants/margin_right = 44
+theme_override_constants/margin_bottom = 48
 script = ExtResource("3_146x8")
 height_portrait = 1600.0
 top_portrait = 64.0
@@ -109,6 +109,7 @@ top_landscape = 80.0
 right_landscape = 80.0
 bottom_landscape = 70.0
 left_landscape = 80.0
+simulate_portrait = true
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer_Content" unique_id=1082425933]
 layout_mode = 2
@@ -209,6 +210,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("5_bdjpj")
 theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 24
 text = "SECONDARY"
 
 [node name="Button_Primary" type="Button" parent="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons" unique_id=1926265071]
@@ -217,6 +219,7 @@ custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("5_bdjpj")
+theme_override_font_sizes/font_size = 24
 text = "PRIMARY"
 
 [node name="Control" type="Control" parent="PanelContainer" unique_id=457213197]
