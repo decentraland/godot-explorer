@@ -216,6 +216,12 @@ pub struct CommunicationManager {
     /// join the same server). Wins over --pulse-server / PULSE_SERVER / the default endpoint.
     #[cfg(feature = "use_pulse")]
     pulse_endpoint_override: Option<String>,
+    /// Pulse EmoteStart deferred from `send_emote` (press time) to `set_emoting` (playback
+    /// start). Pressing the wheel precedes the async emote load and the idle gate — an
+    /// EmoteStart at press time gets chased by the per-frame animation poll's EmoteStop,
+    /// cancelling it remotely before it ever plays. Overwritten by every new trigger.
+    #[cfg(feature = "use_pulse")]
+    pending_pulse_emote_urn: Option<String>,
     /// Runtime "pulse-only" switch (deeplink `livekit=false`, CLI `--no-livekit`): `None`
     /// follows the CLI. While disabled, no LiveKit-backed rooms are created or kept (main
     /// livekit room, archipelago island room, scene rooms) — chat/voice/scene messages are
@@ -283,6 +289,8 @@ impl INode for CommunicationManager {
             pulse_runtime_enabled: None,
             #[cfg(feature = "use_pulse")]
             pulse_endpoint_override: None,
+            #[cfg(feature = "use_pulse")]
+            pending_pulse_emote_urn: None,
             #[cfg(feature = "use_livekit")]
             livekit_runtime_enabled: None,
             #[cfg(feature = "use_livekit")]
@@ -1300,9 +1308,10 @@ impl CommunicationManager {
                 velocity_x: velocity.x,
                 velocity_y: velocity.y,
                 velocity_z: velocity.z,
-                // Negate + rad→deg to match Unity Foundation Client
-                // (rfc4.Movement.rotation_y is degrees in [0, 360)).
-                rotation_y: (-rotation_y).to_degrees(),
+                // Negate + rad→deg to match Unity Foundation Client, then wrap so the value
+                // actually lands in the documented [0, 360) range — rfc4 receivers tolerate
+                // signed degrees, but the Pulse quantizer clamps them to 0.
+                rotation_y: (-rotation_y).to_degrees().rem_euclid(360.0),
                 movement_blend_value,
                 slide_blend_value: 0.0,
                 is_grounded,
@@ -1563,7 +1572,6 @@ impl CommunicationManager {
         ));
 
         self.last_emote_incremental_id += 1;
-        self.is_emoting = true;
 
         let packet = rfc4::Packet {
             message: Some(rfc4::packet::Message::PlayerEmote(rfc4::PlayerEmote {
@@ -1589,10 +1597,16 @@ impl CommunicationManager {
             sent = scene_room.send_rfc4(packet, false) || sent;
         }
 
-        // Dual-send to Pulse (reliable EmoteStart, attaches the last sent PlayerState).
+        // Pulse EmoteStart is deferred to set_emoting (actual playback start), NOT sent here:
+        // the trigger fires before the emote is async-loaded and idle-gated, and sending now
+        // means the per-frame animation poll reports "not emoting" next frame, chasing this
+        // with an EmoteStop that cancels it remotely before it ever plays (first-use emotes
+        // never propagated). Deferring also makes the PlayerState attached to the EmoteStart
+        // an idle one — Unity parks remote emote intents while the networked movement blend
+        // is > 0.1, so a press-time state (still decelerating) delays/loses the emote there.
         #[cfg(feature = "use_pulse")]
-        if let Some(pulse_room) = &mut self.pulse_room {
-            pulse_room.send_emote_start(&emote_urn.to_string());
+        {
+            self.pending_pulse_emote_urn = Some(emote_urn.to_string());
         }
 
         sent
@@ -1600,12 +1614,26 @@ impl CommunicationManager {
 
     #[func]
     pub fn set_emoting(&mut self, emoting: bool) {
-        // A true→false transition is the local emote ending — tell Pulse (reliable EmoteStop;
-        // only meaningful for looping emotes, one-shots expire server-side).
+        // Called every frame by the local avatar with its actual animation state.
         #[cfg(feature = "use_pulse")]
-        if self.is_emoting && !emoting {
-            if let Some(pulse_room) = &mut self.pulse_room {
-                pulse_room.send_emote_stop();
+        {
+            if emoting {
+                // Playback is live — flush the deferred EmoteStart (see send_emote). Checked on
+                // every `true`, not just the false→true edge, so re-triggering while an emote is
+                // already playing (no edge) still announces the new emote.
+                if let Some(urn) = self.pending_pulse_emote_urn.take() {
+                    if let Some(pulse_room) = &mut self.pulse_room {
+                        pulse_room.send_emote_start(&urn);
+                    }
+                }
+            } else if self.is_emoting {
+                // true→false: the local emote ended or was cancelled — reliable EmoteStop. Also
+                // load-bearing for one-shots: our EmoteStart carries no duration_ms, so the
+                // server never auto-completes them — without this stop the server ledger keeps
+                // us emoting forever and every later movement snapshot says is_emoting=true.
+                if let Some(pulse_room) = &mut self.pulse_room {
+                    pulse_room.send_emote_stop();
+                }
             }
         }
         self.is_emoting = emoting;

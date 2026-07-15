@@ -326,6 +326,20 @@ impl DclAvatar {
                         .lerp(self.lerp_state.target_position, self.lerp_state.factor);
 
                     self.base_mut().set_global_position(new_position);
+                } else if self.lerp_state.factor > 3.0
+                    && (self.walk || self.jog || self.run || self.rise || self.fall)
+                {
+                    // The locomotion flags are derived per-update in set_target_position from
+                    // the distance to the previous target, so they latch until the next packet.
+                    // LiveKit streams ~10 Hz and self-corrects, but Pulse goes silent when the
+                    // peer stands still (delta protocol) — decay to idle once the stream pauses
+                    // (factor 1.0 == one 100 ms packet interval; 3.0 == 300 ms of silence).
+                    self.walk = false;
+                    self.jog = false;
+                    self.run = false;
+                    self.rise = false;
+                    self.fall = false;
+                    self.land = true;
                 }
             }
         }

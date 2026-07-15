@@ -242,7 +242,10 @@ impl PulseRoom {
         );
     }
 
-    /// Reliable `EmoteStop` (looping emotes only; one-shots expire server-side).
+    /// Reliable `EmoteStop`. Required for one-shots too, not just looping emotes: the server
+    /// only auto-completes emotes that carry `duration_ms`, and our `EmoteStart` never sets it —
+    /// without an explicit stop the server ledger keeps the peer emoting forever. Sending a stop
+    /// with no active emote is harmless (server logs a warning and ignores it).
     pub fn send_emote_stop(&mut self) {
         if !self.is_established() {
             return;

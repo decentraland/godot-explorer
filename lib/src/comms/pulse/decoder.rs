@@ -399,7 +399,11 @@ impl PulseDecoder {
             PulseEvent::Movement {
                 address,
                 movement: Box::new(movement),
-                teleport: false,
+                // A peer entering the interest set has no prior position to interpolate
+                // from — snap (is_instant). Lerping from the avatar's previous/default
+                // target makes it sprint across the scene, and the delta-derived run flag
+                // then latches until the next update (never, for a stationary peer).
+                teleport: true,
             },
         ]
     }
@@ -604,7 +608,10 @@ pub fn from_movement(movement: &rfc4::Movement, grid: &PulseParcelGrid) -> pulse
         velocity_x: P::velocity_x_quantized(movement.velocity_x),
         velocity_y: P::velocity_y_quantized(movement.velocity_y),
         velocity_z: P::velocity_z_quantized(movement.velocity_z),
-        rotation_y: P::rotation_y_quantized(movement.rotation_y),
+        // Quantized over [0, 360] with clamping (Unity: Quantize.Encode) — wrap signed degrees
+        // so a negative yaw doesn't clamp to 0 (Unity sends transform.eulerAngles.y, already
+        // [0, 360); rfc4 receivers tolerate signed values, the Pulse quantizer does not).
+        rotation_y: P::rotation_y_quantized(movement.rotation_y.rem_euclid(360.0)),
         movement_blend: P::movement_blend_quantized(movement.movement_blend_value),
         slide_blend: P::slide_blend_quantized(movement.slide_blend_value),
         // Head angles quantize over the unsigned [0, 360] range; wrap negatives so a left/up look
@@ -734,6 +741,15 @@ mod tests {
             .expect("no Joined event");
         assert_eq!(join, (SUBJECT, wallet(), 7));
 
+        // Joins must snap (teleport → is_instant): there is no prior position to lerp from,
+        // and a non-instant first update latches a bogus run flag on a stationary peer.
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, PulseEvent::Movement { teleport: true, .. })),
+            "join Movement must carry teleport=true"
+        );
+
         let movement = only_movement(events);
         approx(movement.position_x, 161.0);
         approx(movement.position_z, 323.0);
@@ -762,6 +778,44 @@ mod tests {
         approx(movement.position_x, 168.031);
         approx(movement.position_y, 2.0);
         approx(movement.position_z, 323.0);
+    }
+
+    #[test]
+    fn rotation_round_trips_signed_yaw() {
+        // rotation_y quantizes over [0, 360] with clamping (Unity Quantize.Encode parity).
+        // A signed rfc4 yaw (e.g. -90°) must wrap to its [0, 360) equivalent (270°), not
+        // clamp to 0 — clamping made every negative heading face the same direction on Unity.
+        let grid = PulseParcelGrid::default();
+        let movement = rfc4::Movement {
+            position_x: 161.0,
+            position_y: 2.0,
+            position_z: 323.0,
+            rotation_y: -90.0,
+            ..Default::default()
+        };
+        let state = from_movement(&movement, &grid);
+
+        let mut decoder = PulseDecoder::new(grid);
+        let out = only_movement(decoder.handle(server_msg(
+            pulse::server_message::Message::PlayerJoined(pulse::PlayerJoined {
+                user_id: WALLET.to_string(),
+                profile_version: 1,
+                state: Some(pulse::PlayerStateFull {
+                    subject_id: SUBJECT,
+                    sequence: 1,
+                    server_tick: 1000,
+                    state: Some(state),
+                }),
+                realm: "main".to_owned(),
+            }),
+        )));
+
+        // 7 bits over 360° ≈ 2.83°/step.
+        assert!(
+            (out.rotation_y - 270.0).abs() < 3.0,
+            "rotation_y {}",
+            out.rotation_y
+        );
     }
 
     #[test]
