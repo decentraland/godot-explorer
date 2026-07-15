@@ -3,7 +3,7 @@ extends PanelContainer
 
 const TIPS: Array[String] = [
 	"Wearables shape how you appear over time. Made by the community.",
-	"Use Emotes to wave, react, or celebrate. Press B to open the Emote Wheel.",
+	"Use Emotes to wave, react, or celebrate. Tap the Emote icon to open the Emote Wheel.",
 	"Use the Creator Hub to build your own places and experiences.",
 	"Decentraland is better with friends. Meet new people and see where they’re hanging out."
 ]

@@ -75,6 +75,7 @@ var _guest_login_attempt: int = 0
 @onready var background: TextureRect = %Background
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
+@onready var sign_in_with_email: SignInWithEmail = %SignInWithEmail
 @onready var auth_spinner_container = %VBoxContainer_AuthSpinner
 @onready var auth_error_container = %VBoxContainer_AuthError
 @onready var auth_error_label_main = %AuthErrorLabel
@@ -285,6 +286,13 @@ func show_auth_browser_open_screen(
 	button_try_again.hide()
 
 
+func show_auth_email_screen():
+	track_lobby_screen("AUTH_OTP_START")
+	sign_in_with_email.setup()
+	button_back.show()
+	show_panel(sign_in_with_email)
+
+
 func show_discover_ftue_screen():
 	current_screen_name = "DISCOVER_FTUE"
 	button_back.hide()
@@ -427,6 +435,7 @@ func _ready():
 	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 
 	login.set_lobby(self)
+	sign_in_with_email.set_lobby(self)
 	login.show()
 
 	show_dcl_splash_screen()

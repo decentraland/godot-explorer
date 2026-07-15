@@ -44,6 +44,10 @@ impl SpawnPosition {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SpawnPoint {
     pub name: Option<String>,
+    // `default` is optional in the SDK scene schema; a spawn point without it is not the default.
+    // Without `#[serde(default)]`, a missing field aborts the whole scene-metadata parse, which
+    // silently drops the scene (e.g. pixelarcade.dcl.eth has a spawn point with no `default`).
+    #[serde(default)]
     pub default: bool,
     pub position: SpawnPosition,
 }
