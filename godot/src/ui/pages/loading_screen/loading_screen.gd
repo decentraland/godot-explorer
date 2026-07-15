@@ -262,7 +262,7 @@ func set_place_creator(creator: String) -> void:
 		rich_text_label_creator.hide()
 		return
 	rich_text_label_creator.show()
-	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] [b]" + creator
+	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] [b]" + creator + "[/b]"
 
 
 func set_place_image(image_url: String) -> void:
