@@ -123,6 +123,21 @@ static func get_ui_zoom_available(root: Window) -> Dictionary:
 # Simple DPI-based scaling without aggressive resolution clamp
 static func apply_ui_zoom(root: Window):
 	var screen_size: Vector2 = root.size
+	if screen_size.x <= 0 or screen_size.y <= 0:
+		return
+
+	# On real mobile devices the OS can transiently report swapped dimensions
+	# (portrait height as width and vice-versa) during iOS background/foreground
+	# transitions. Applying the scale at that moment would produce an incorrect
+	# content_scale_factor that makes the UI lay out in landscape while the screen
+	# is actually portrait (card wider than display, etc.). Guard against this by
+	# skipping any resize event whose orientation contradicts the authoritative
+	# orientation tracked by Global.
+	if Global.is_mobile() and not Global.is_virtual_mobile():
+		var size_says_portrait: bool = screen_size.y > screen_size.x
+		if size_says_portrait != Global.is_orientation_portrait():
+			return
+
 	var base_resolution: Vector2 = get_base_resolution(screen_size)
 	var scale_x = screen_size.x / base_resolution.x
 	var scale_y = screen_size.y / base_resolution.y
