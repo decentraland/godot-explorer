@@ -170,17 +170,6 @@ func is_chat_visible() -> bool:
 	return chat.visible
 
 
-func is_interactive_area_at(position: Vector2) -> bool:
-	# In portrait with chat open, block all touch input for camera/joystick
-	if Global.is_orientation_portrait() and _current_state != ChatState.CLOSED:
-		return true
-	if chatbar.visible and chatbar.is_point_inside(position):
-		return true
-	if chat.visible and chat.is_interactive_area_at(position):
-		return true
-	return false
-
-
 func _on_orientation_changed(is_portrait: bool) -> void:
 	# Delegate layout/font updates and write-mode close to chat first.
 	# If chat was in write mode, _close_write_mode emits on_exit_write_mode

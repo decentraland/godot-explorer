@@ -17,6 +17,11 @@ enum JoystickMode { FIXED, DYNAMIC }
 ## Visible on touch screens only
 enum VisibilityMode { ALWAYS, TOUCHSCREEN_ONLY }
 
+# Touch indices coming from gui_input are >= 0; this sentinel marks a gesture
+# handed off from scene UI (finger started on a UI element then swiped into the
+# joystick zone) so it never collides with a real gui touch.
+const EXTERNAL_TOUCH_INDEX: int = -2
+
 ## If the input is inside this range, the output is zero.
 @export_range(0, 200, 1) var deadzone_size: float = 0
 
@@ -62,6 +67,7 @@ var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
 var _joystick_visible := false
 var _is_navbar_open := false
+var _camera_touch_index: int = -1
 
 @onready var _sprint_timer := %SprintTimer
 
@@ -84,7 +90,15 @@ func _ready() -> void:
 	):
 		hide()
 
-	_active_area.connect("input_received", _on_input)
+	_active_area.gui_input.connect(_on_gui_input)
+
+	# Drive the camera button from raw touch so it works for every finger, not just
+	# the primary one Godot synthesizes a mouse event from. toggle_mode unlocks
+	# set_pressed_no_signal() for press feedback; button_mask = 0 makes the base
+	# Button ignore the emulated mouse so we keep a single, consistent path.
+	_button_camera.toggle_mode = true
+	_button_camera.button_mask = 0
+	_button_camera.gui_input.connect(_on_button_camera_gui_input)
 
 	Global.loading_started.connect(_on_loading_scene)
 	Global.camera_mode_set.connect(_on_camera_mode_set)
@@ -127,44 +141,82 @@ func _refresh_camera_button_visibility() -> void:
 	_button_camera.visible = should_show
 
 
-func _on_input(event: InputEvent) -> void:
-	if Global.is_mobile():
-		if event is InputEventScreenTouch:
-			if event.pressed:
-				if (
-					_is_point_inside_joystick_area(event.position)
-					and touch_index == -1
-					and not _is_hud_ui_at_position(event.position)
-				):
-					if (
-						joystick_mode == JoystickMode.DYNAMIC
-						or (
-							joystick_mode == JoystickMode.FIXED
-							and _is_point_inside_base(event.position)
-						)
-					):
-						if joystick_mode == JoystickMode.DYNAMIC:
-							_move_base(event.position)
-							get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
-						touch_index = event.index
-						_update_joystick(event.position)
-						if (
-							not Global.scene_runner.raycast_use_cursor_position
-							and not _is_scene_ui_at_position(event.position)
-						):
-							get_viewport().set_input_as_handled()
-			elif event.index == touch_index:
-				_reset()
-				if _joystick_visible:
-					_dynamic_material.set_shader_parameter("state", 2)
-					_joystick_visible = false
-				emit_signal("stick_position", Vector2.ZERO)
-				if not Global.scene_runner.raycast_use_cursor_position:
-					get_viewport().set_input_as_handled()
-		elif event is InputEventScreenDrag:
-			if event.index == touch_index:
-				_update_joystick(event.position)
-				get_viewport().set_input_as_handled()
+func _on_gui_input(event: InputEvent) -> void:
+	if not Global.is_mobile():
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			# Pressing the joystick zone must hand keyboard/GUI focus back to the
+			# explorer. Player movement is gated on ui_root having focus
+			# (player.gd zeroes input_dir when not explorer_has_focus), but any
+			# panel we came from (e.g. the profile passport's buttons) leaves focus
+			# on itself. Because the joystick consumes its own touches, they never
+			# reach mobile_camera_input, which is the only other place that regrabs
+			# focus — so without this the joystick animates but the avatar won't
+			# move after dismissing such a panel (#2361).
+			if not Global.explorer_has_focus():
+				Global.explorer_grab_focus()
+			if touch_index != -1:
+				return
+			if joystick_mode == JoystickMode.FIXED and not _is_point_inside_base(event.position):
+				return
+			if joystick_mode == JoystickMode.DYNAMIC:
+				_move_base(event.position)
+				get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
+			touch_index = event.index
+			_update_joystick(event.position)
+			_consume_if_not_cinematic()
+		elif event.index == touch_index:
+			_reset()
+			if _joystick_visible:
+				_dynamic_material.set_shader_parameter("state", 2)
+				_joystick_visible = false
+			emit_signal("stick_position", Vector2.ZERO)
+			_consume_if_not_cinematic()
+	elif event is InputEventScreenDrag:
+		if event.index == touch_index:
+			_update_joystick(event.position)
+			_consume_if_not_cinematic()
+
+
+func _consume_if_not_cinematic() -> void:
+	# Cinematic camera mode lets the event bubble to ui_root.gui_input so
+	# explorer.gd can fire ia_pointer for scene click handlers.
+	if not Global.scene_runner.raycast_use_cursor_position:
+		_active_area.accept_event()
+
+
+## Begin a joystick gesture from an arbitrary screen point. Used when a scene-UI
+## press is swiped out into the joystick zone: the base is placed at the original
+## touch position so movement keys engage immediately.
+func external_begin(start_position: Vector2) -> void:
+	if touch_index != -1:
+		return
+	touch_index = EXTERNAL_TOUCH_INDEX
+	_move_base(start_position)
+	_dynamic_material.set_shader_parameter("state", 1)
+	_joystick_visible = true
+	_update_joystick(start_position)
+
+
+func external_update(position: Vector2) -> void:
+	if touch_index != EXTERNAL_TOUCH_INDEX:
+		return
+	_update_joystick(position)
+
+
+func external_end() -> void:
+	if touch_index != EXTERNAL_TOUCH_INDEX:
+		return
+	_reset()
+	if _joystick_visible:
+		_dynamic_material.set_shader_parameter("state", 2)
+		_joystick_visible = false
+	emit_signal("stick_position", Vector2.ZERO)
+
+
+func get_active_area_global_rect() -> Rect2:
+	return _active_area.get_global_rect()
 
 
 func _on_show_joystick_timer() -> void:
@@ -180,36 +232,6 @@ func _move_base(new_position: Vector2) -> void:
 
 func _move_tip(vector: Vector2) -> void:
 	_dynamic_material.set_shader_parameter("tip_position", vector)
-
-
-func _is_point_inside_joystick_area(point: Vector2) -> bool:
-	var x: bool = (
-		point.x >= _active_area.global_position.x
-		and (
-			point.x
-			<= (
-				_active_area.global_position.x
-				+ (
-					_active_area.size.x
-					* _active_area.get_global_transform_with_canvas().get_scale().x
-				)
-			)
-		)
-	)
-	var y: bool = (
-		point.y >= _active_area.global_position.y
-		and (
-			point.y
-			<= (
-				_active_area.global_position.y
-				+ (
-					_active_area.size.y
-					* _active_area.get_global_transform_with_canvas().get_scale().y
-				)
-			)
-		)
-	)
-	return x and y
 
 
 func _is_point_inside_base(point: Vector2) -> bool:
@@ -314,32 +336,19 @@ func _on_resized() -> void:
 	_reset()
 
 
-func _is_scene_ui_at_position(touch_position: Vector2) -> bool:
-	var base_ui = Global.scene_runner.base_ui
-	if not is_instance_valid(base_ui) or not base_ui.visible:
-		return false
-	return _check_children_for_pointer_control(base_ui, touch_position)
-
-
-func _is_hud_ui_at_position(touch_position: Vector2) -> bool:
-	var explorer = Global.get_explorer()
-	if not is_instance_valid(explorer):
-		return false
-	var chat_panel = explorer.chat_panel
-	if is_instance_valid(chat_panel):
-		return chat_panel.is_interactive_area_at(touch_position)
-	return false
-
-
-func _check_children_for_pointer_control(node: Node, touch_position: Vector2) -> bool:
-	for child in node.get_children():
-		if child is Control and child.visible and child.mouse_filter == Control.MOUSE_FILTER_STOP:
-			if child.get_global_rect().has_point(touch_position):
-				return true
-		if child.get_child_count() > 0:
-			if _check_children_for_pointer_control(child, touch_position):
-				return true
-	return false
+func _on_button_camera_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventScreenTouch):
+		return
+	if event.pressed:
+		if _camera_touch_index == -1:
+			_camera_touch_index = event.index
+			_button_camera.set_pressed_no_signal(true)
+		_button_camera.accept_event()
+	elif event.index == _camera_touch_index:
+		_button_camera.set_pressed_no_signal(false)
+		_camera_touch_index = -1
+		_on_button_camera_pressed()
+		_button_camera.accept_event()
 
 
 func _on_button_camera_pressed() -> void:

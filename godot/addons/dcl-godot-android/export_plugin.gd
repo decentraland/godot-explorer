@@ -50,7 +50,9 @@ class AndroidExportPlugin extends EditorExportPlugin:
 			"com.android.installreferrer:installreferrer:2.2",
 			# Reown/WalletConnect Sign SDK for native wallet connection
 			"com.reown:android-core:1.5.2",
-			"com.reown:sign:1.5.2"
+			"com.reown:sign:1.5.2",
+			# Play Integrity — server-side platform attestation
+			"com.google.android.play:integrity:1.4.0"
 		])
 
 	func _get_android_dependencies_maven_repos(platform, debug):

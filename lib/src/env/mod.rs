@@ -40,6 +40,14 @@ impl DclEnvironment {
 }
 
 /// Service groups for per-group environment overrides.
+///
+/// `Attestation` is a sub-group of mobile-bff used exclusively for the
+/// /attest/* endpoints. The base host is identical to `MobileBff`
+/// (mobile-bff.decentraland.{suffix}), but `dclenv=attestation::xxx,...`
+/// lets QA point attestation traffic at a different env from the rest of
+/// mobile-bff (places, destinations, etc.). The override is consumed only
+/// by `attestation_service.gd` in dev builds — release builds resolve via
+/// `MobileBff` and ignore the override (see `DclGlobal::is_dev()`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ServiceGroup {
     Auth,
@@ -48,11 +56,22 @@ pub enum ServiceGroup {
     Events,
     Places,
     MobileBff,
+    Attestation,
     Notifications,
+    CreditsServer,
+    /// The player's own profile/identity catalyst. Normally the same host as
+    /// `Catalyst`, but an explicit override (e.g. `profile::zone`) pins identity
+    /// (profile, wearables, backpack, avatar) to a different env than the realm
+    /// used for scenes — enables "scenes from org, identity from zone" testing.
+    Profile,
+    /// Marketplace web frontend. `marketplace::today` points it at the local
+    /// dev server (`http://localhost:5173`) instead of
+    /// `decentraland.<env>/marketplace` — used with the in-app dev relay on iOS.
+    Marketplace,
 }
 
 impl ServiceGroup {
-    pub const COUNT: usize = 7;
+    pub const COUNT: usize = 11;
 
     pub fn index(self) -> usize {
         match self {
@@ -62,7 +81,11 @@ impl ServiceGroup {
             Self::Events => 3,
             Self::Places => 4,
             Self::MobileBff => 5,
-            Self::Notifications => 6,
+            Self::Attestation => 6,
+            Self::Notifications => 7,
+            Self::CreditsServer => 8,
+            Self::Profile => 9,
+            Self::Marketplace => 10,
         }
     }
 
@@ -74,7 +97,11 @@ impl ServiceGroup {
             Self::Events => "events",
             Self::Places => "places",
             Self::MobileBff => "mobilebff",
+            Self::Attestation => "attestation",
             Self::Notifications => "notifications",
+            Self::CreditsServer => "creditsserver",
+            Self::Profile => "profile",
+            Self::Marketplace => "marketplace",
         }
     }
 
@@ -86,7 +113,11 @@ impl ServiceGroup {
             "events" => Some(Self::Events),
             "places" => Some(Self::Places),
             "mobilebff" => Some(Self::MobileBff),
+            "attestation" => Some(Self::Attestation),
             "notifications" => Some(Self::Notifications),
+            "creditsserver" => Some(Self::CreditsServer),
+            "profile" => Some(Self::Profile),
+            "marketplace" => Some(Self::Marketplace),
             _ => None,
         }
     }
@@ -98,7 +129,11 @@ impl ServiceGroup {
         Self::Events,
         Self::Places,
         Self::MobileBff,
+        Self::Attestation,
         Self::Notifications,
+        Self::CreditsServer,
+        Self::Profile,
+        Self::Marketplace,
     ];
 }
 
@@ -286,6 +321,10 @@ mod tests {
         assert_eq!(
             ServiceGroup::parse("mobilebff"),
             Some(ServiceGroup::MobileBff)
+        );
+        assert_eq!(
+            ServiceGroup::parse("attestation"),
+            Some(ServiceGroup::Attestation)
         );
         assert_eq!(
             ServiceGroup::parse("notifications"),

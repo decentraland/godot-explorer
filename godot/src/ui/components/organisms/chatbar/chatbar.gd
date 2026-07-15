@@ -101,7 +101,3 @@ func show_load_scenes_button() -> void:
 
 func hide_load_scenes_button() -> void:
 	panel_load_scenes.hide()
-
-
-func is_point_inside(position: Vector2) -> bool:
-	return hbox.get_global_rect().has_point(position)

@@ -22,5 +22,6 @@ func _async_on_profile_changed(profile: DclUserProfile):
 
 
 func _on_button_logout_pressed():
-	Global.scene_runner.set_pause(true)
-	Global.comms.disconnect(true)
+	# Route through the single canonical teardown (kills scenes, closes comms,
+	# clears identity, resets realm) instead of just pausing + dropping comms.
+	Global.sign_out()

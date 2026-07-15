@@ -1,6 +1,6 @@
 shader_type canvas_item;
 
-// Radio de las esquinas en UV (0.5 = círculo completo, menor = esquinas más rectas)
+// Corner radius in UV (0.5 = full circle, smaller = sharper corners)
 uniform float corner_radius : hint_range(0.0, 0.5, 0.01) = 0.5;
 
 float rounded_box_sdf(vec2 p, vec2 size, float radius) {

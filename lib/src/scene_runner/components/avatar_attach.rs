@@ -6,7 +6,9 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{
+        components::transform_and_parent::apply_dcl_transform_to_node_3d, scene::Scene,
+    },
 };
 use godot::prelude::*;
 
@@ -32,7 +34,18 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 if let Some(mut avatar_attach_node) = existing {
                     avatar_attach_node.queue_free();
                     node_3d.remove_child(&avatar_attach_node);
-                    // TODO: resolve the current transform
+                    // Restore the entity's local transform from CRDT state so the
+                    // node reverts to where the SDK Transform places it (matches
+                    // Unity Renderer behavior — typically the scene origin if the
+                    // scene only set AvatarAttach without an explicit Transform).
+                    // Without this the node stays frozen at the last bone-aligned
+                    // pose that avatar_attach.gd wrote.
+                    let mut transform = crdt_state
+                        .get_transform()
+                        .get(entity)
+                        .and_then(|entry| entry.value.clone())
+                        .unwrap_or_default();
+                    apply_dcl_transform_to_node_3d(&mut transform, &mut node_3d);
                 }
             } else if let Some(new_value) = new_value {
                 let (mut avatar_attach_node, is_new) = if let Some(avatar_attach_node) = existing {

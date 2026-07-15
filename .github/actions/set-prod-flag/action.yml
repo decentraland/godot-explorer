@@ -1,9 +1,9 @@
 name: Set Prod Flag
-description: Set PROD_FLAG environment variable based on the current branch (--prod for release, --staging for main and other branches)
+description: Set PROD_FLAG environment variable based on the current branch (--prod for any release* branch, --staging for main and other branches)
 
 inputs:
   ref:
-    description: 'Override ref to check (defaults to github.ref). Accepts both refs/heads/release and bare release formats.'
+    description: 'Override ref to check (defaults to github.ref). Accepts both refs/heads/release* and bare release* formats.'
     required: false
     default: ''
 
@@ -17,13 +17,19 @@ runs:
         if [ -z "$REF" ]; then
           REF="${{ github.ref }}"
         fi
-        if [ "$REF" = "refs/heads/release" ] || [ "$REF" = "release" ]; then
-          echo "PROD_FLAG=--prod" >> $GITHUB_ENV
-          echo "Running on release branch - setting PROD_FLAG=--prod (ref=$REF)"
-        else
-          echo "PROD_FLAG=--staging" >> $GITHUB_ENV
-          echo "Running on $REF - setting PROD_FLAG=--staging"
-        fi
+        # Any branch whose name starts with "release" is a prod build
+        # (e.g. release, release-1.10, release/1.10). Accepts both the
+        # refs/heads/<branch> and bare <branch> forms.
+        case "$REF" in
+          refs/heads/release* | release*)
+            echo "PROD_FLAG=--prod" >> $GITHUB_ENV
+            echo "Running on a release* branch - setting PROD_FLAG=--prod (ref=$REF)"
+            ;;
+          *)
+            echo "PROD_FLAG=--staging" >> $GITHUB_ENV
+            echo "Running on $REF - setting PROD_FLAG=--staging"
+            ;;
+        esac
     - name: Set branch name for Sentry tags
       shell: bash
       run: |

@@ -148,19 +148,25 @@ cargo run -- strip-ios-templates
 > cargo run -- install --targets ios --no-strip
 > ```
 
-#### Triggering iOS CI Builds
+#### Android APK Hosting & Mobile Distribution
 
-iOS builds are skipped by default to save CI resources. To trigger an iOS build:
+Every Android CI build uploads the signed APK to the R2 mobile-artifacts bucket and
+links it from the PR build-report comment (served at
+`https://mobile-artifacts.dclregenesislabs.xyz/`).
+
+The `build` label (or the legacy alias `build-ios`) triggers `mobile_distribute.yml`:
+iOS → TestFlight, plus a Slack "🤖 Android Build Ready" notification once the commit's
+APK is in R2. It does not rebuild Android or push to a store.
 
 ```bash
-# On a PR: add the build-ios label
-gh pr edit --add-label "build-ios"
+# On a PR: add the build label (iOS TestFlight + Android Slack notification)
+gh pr edit --add-label "build"
 
-# Manual trigger: use the GitHub Actions UI or gh CLI
-gh workflow run "🍏 iOS" --ref main
+# Manual trigger on main/release (GitHub Actions UI or gh CLI)
+gh workflow run "📱 Mobile Build & Distribute (iOS TestFlight + Android APK)" --ref main
 ```
 
-The label is automatically removed after the build completes on PRs.
+The label is automatically removed after the build is triggered on PRs.
 
 ## 🧪 Testing
 

@@ -76,8 +76,6 @@ Every path is relative to `godot/src/ui/`. Old paths describe where each file li
 | `button_reminder.tscn` | `pages/events/` | `components/events/` | Event-reminder button |
 | `friends_panel.tscn` | `pages/friends/` | `components/friends/` | Friends side panel |
 | `loading_screen.tscn` | `pages/loading_screen/` | `components/loading_screen/` | Full-screen loading view |
-| `carousel.tscn` | `pages/loading_screen/` | `components/loading_screen/` | Loading-screen tip carousel |
-| `carousel_viewport.tscn` | `pages/loading_screen/` | `components/loading_screen/` | Carousel viewport |
 | `profile.tscn` | `pages/profile/` | `components/profile/` | Profile root |
 | `profile_container.tscn` | `pages/profile/` | `components/profile/` | Profile panel container |
 | `profile_portrait.tscn` | `pages/profile/` | `components/profile/` | Portrait profile layout |

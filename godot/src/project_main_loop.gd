@@ -60,6 +60,10 @@ func _initialize() -> void:
 			options.release = release_string
 			options.before_send = _before_send
 			options.attach_log = self.attach_log_sampled
+			# Disambiguate builds that share a release string (cross-platform
+			# CI runs, debug vs release of the same commit).
+			options.dist = "%s-%s" % [OS.get_name(), DclGlobal.get_commit_hash()]
+			options.send_default_pii = false
 
 			# Set environment based on build type
 			# production: report to production env
@@ -80,6 +84,19 @@ func _initialize() -> void:
 
 	# Tag every event so we can filter sampled-vs-unsampled in the Sentry UI.
 	SentrySDK.set_tag("attach_log_sampled", str(self.attach_log_sampled))
+
+	# Static tags that never change after process start.
+	SentrySDK.set_tag("platform", OS.get_name())
+	SentrySDK.set_tag("build_type", "debug" if OS.is_debug_build() else "release")
+	SentrySDK.set_tag("gpu_vendor", RenderingServer.get_video_adapter_vendor())
+	SentrySDK.set_tag("locale", OS.get_locale())
+
+	var graphics_ctx := {
+		"name": RenderingServer.get_video_adapter_name(),
+		"vendor": RenderingServer.get_video_adapter_vendor(),
+		"version": RenderingServer.get_video_adapter_api_version(),
+	}
+	SentrySDK.set_context("graphics", graphics_ctx)
 
 	# Add Sentry tags for staging and development builds (for filtering)
 	if self.is_staging_version or self.is_dev_version:

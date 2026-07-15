@@ -1,6 +1,6 @@
 mod adaptation_layer_helper;
 mod comms;
-mod engine;
+pub mod engine;
 mod ethereum_controller;
 mod events;
 mod fetch;
@@ -510,7 +510,7 @@ pub(crate) fn scene_thread(
         if should_debug {
             tick_counter += 1;
             // Sync to OpState so op_crdt_send_to_renderer and
-            // op_crdt_recv_from_renderer log the correct frame tick.
+            // op_crdt_recv_wait log the correct frame tick.
             state
                 .borrow()
                 .borrow::<engine::SceneTickCounter>()

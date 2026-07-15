@@ -48,9 +48,11 @@ pub fn update_ui_transform(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     style.min_size.height,
                     node.has_background
                 );
-                node.base_control.set_clip_contents(
-                    node.ui_transform.overflow == crate::dcl::components::proto_components::sdk::components::YgOverflow::YgoHidden,
-                );
+                node.base_control.set_clip_contents(matches!(
+                    node.ui_transform.overflow,
+                    crate::dcl::components::proto_components::sdk::components::YgOverflow::YgoHidden
+                        | crate::dcl::components::proto_components::sdk::components::YgOverflow::YgoScroll
+                ));
 
                 let opacity = pb_ui_transform.opacity.unwrap_or(1.0);
                 let mut modulate = node.base_control.get_modulate();

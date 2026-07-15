@@ -7,8 +7,9 @@ use super::{
 use godot::{
     builtin::{GString, PackedByteArray, Variant, Vector2i},
     classes::{
-        image::CompressMode, image::Format as GodotFormat, AnimatedTexture, DirAccess, Image,
-        ImageTexture, ResourceLoader, Texture2D,
+        image::CompressMode, image::Format as GodotFormat, portable_compressed_texture_2d,
+        AnimatedTexture, DirAccess, Image, ImageTexture, PortableCompressedTexture2D, Resource,
+        ResourceLoader, ResourceSaver, Texture2D,
     },
     global::Error,
     meta::ToGodot,
@@ -17,6 +18,7 @@ use godot::{
 };
 use image::{codecs::gif::GifDecoder, codecs::webp::WebPDecoder, AnimationDecoder};
 use std::io::Cursor;
+use std::sync::Once;
 
 /// Creates a valid 2x2 magenta placeholder texture.
 /// This ensures the GPU has valid texture data to work with, preventing crashes
@@ -420,8 +422,26 @@ fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
 
 /// Creates a texture from a compressed image, resizing if needed.
 /// Uses ETC2 compression for better memory usage on mobile platforms.
+///
+/// The ETC2 image is wrapped in a `PortableCompressedTexture2D` with
+/// `set_keep_compressed_buffer(true)`. PCT2 ships its compressed CPU
+/// buffer verbatim through `save_node_as_scene`, bypassing the GPU
+/// readback that `ImageTexture::create_from_image` triggers on the
+/// asset-server's llvmpipe stack — that readback corrupts the ETC2
+/// bytes, so every mesh material baked into the optimized `.scn`
+/// shipped from prod renders as per-allocation noise on device (every
+/// mesh surface looks like static). PCT2 round-trips cleanly under
+/// `--rendering-driver opengl3` once the DCL Godot fork's PCT2
+/// serialization fix is in (PR decentraland/godotengine#14, merged
+/// 2026-06-03 as `4.6.2.stable.gh.9ee6af7ab`). Older fork binaries
+/// (`stable.gh.7e5bfa428` and earlier) ship PCT2 with no compressed
+/// buffer and would render magenta on device — confirm the container's
+/// `decentraland.godot.client.x86_64 --version` is `gh.9ee6af7ab` or
+/// newer before deploying.
+///
 /// Falls back to uncompressed texture if compression fails.
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
+    assert_pct2_serialization_ok();
     resize_image(image, max_size);
 
     if !image.is_compressed() {
@@ -438,17 +458,21 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
         }
     }
 
-    match ImageTexture::create_from_image(&*image) {
-        Some(texture) => texture.upcast(),
-        None => {
-            tracing::error!(
-                "Failed to create ImageTexture ({}x{}), using placeholder",
-                image.get_width(),
-                image.get_height()
-            );
-            create_placeholder_texture()
-        }
+    let mut pct2 = PortableCompressedTexture2D::new_gd();
+    pct2.set_keep_compressed_buffer(true);
+    pct2.create_from_image(
+        &*image,
+        portable_compressed_texture_2d::CompressionMode::ETC2,
+    );
+    if pct2.get_width() == 0 || pct2.get_height() == 0 {
+        tracing::error!(
+            "Failed to create PCT2 from image ({}x{}), using placeholder",
+            image.get_width(),
+            image.get_height()
+        );
+        return create_placeholder_texture();
     }
+    pct2.upcast()
 }
 
 /// Hard cap on any single dimension, regardless of pixel budget.
@@ -493,4 +517,72 @@ pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
     image.resize(new_w, new_h);
     tracing::debug!("Resize! {}x{} to {}x{}", w, h, new_w, new_h);
     true
+}
+
+/// First-call self-test for the PCT2 serialization path used by
+/// `create_compressed_texture`. The DCL Godot fork's
+/// `PortableCompressedTexture2D` is broken on binaries older than
+/// `4.6.2.stable.gh.9ee6af7ab` (PR decentraland/godotengine#14, merged
+/// 2026-06-03) — `_set_data` is a no-op there, so a saved `.scn`'s PCT2
+/// reload returns `null` from `get_image()` and every mesh material
+/// renders magenta on device. Without this assertion, an asset-server
+/// image regression silently bakes thousands of broken `.scn` files.
+///
+/// The self-test packs a tiny ETC2-compressed PCT2 to a `.res` on disk,
+/// reloads it, and checks `get_image()` returns the expected dimensions.
+/// `panic!` on failure — every baked asset would be broken anyway, so
+/// failing fast at startup is strictly better than shipping the bake.
+fn assert_pct2_serialization_ok() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        // 4x4 RGBA8 (ETC2's block size) — smallest valid input
+        let pixels = PackedByteArray::from_vec(&[255u8; 4 * 4 * 4]);
+        let Some(mut img) = Image::create_from_data(4, 4, false, GodotFormat::RGBA8, &pixels)
+        else {
+            tracing::error!("[pct2-selfcheck] failed to build probe image; skipping");
+            return;
+        };
+        if img.compress(CompressMode::ETC2) != Error::OK {
+            tracing::error!("[pct2-selfcheck] ETC2 compress failed on probe image; skipping");
+            return;
+        }
+        let mut pct2 = PortableCompressedTexture2D::new_gd();
+        pct2.set_keep_compressed_buffer(true);
+        pct2.create_from_image(&img, portable_compressed_texture_2d::CompressionMode::ETC2);
+        let probe_path = "user://_pct2_selfcheck.res";
+        let save_err = ResourceSaver::singleton()
+            .save_ex(&pct2.clone().upcast::<Resource>())
+            .path(probe_path)
+            .done();
+        if save_err != Error::OK {
+            tracing::error!(
+                "[pct2-selfcheck] ResourceSaver.save failed ({:?}); skipping",
+                save_err
+            );
+            return;
+        }
+        let reloaded = ResourceLoader::singleton()
+            .load(probe_path)
+            .and_then(|r| r.try_cast::<PortableCompressedTexture2D>().ok());
+        let _ = DirAccess::remove_absolute(probe_path);
+        let Some(reloaded) = reloaded else {
+            panic!(
+                "[pct2-selfcheck] PCT2 reload returned null — fork binary missing \
+                 the PortableCompressedTexture2D serialization fix (PR \
+                 decentraland/godotengine#14). Upgrade the asset-server's Godot \
+                 binary to 4.6.2.stable.gh.9ee6af7ab or newer."
+            );
+        };
+        if reloaded.get_image().is_none() || reloaded.get_width() != 4 || reloaded.get_height() != 4
+        {
+            panic!(
+                "[pct2-selfcheck] PCT2.get_image() returned null after reload — \
+                 fork binary is missing the PortableCompressedTexture2D \
+                 serialization fix (PR decentraland/godotengine#14). Upgrade \
+                 the asset-server's Godot binary to 4.6.2.stable.gh.9ee6af7ab \
+                 or newer."
+            );
+        }
+        tracing::info!("[pct2-selfcheck] PortableCompressedTexture2D round-trip OK");
+    });
 }

@@ -1,0 +1,152 @@
+[gd_scene format=3 uid="uid://b1dimd1o1mojt"]
+
+[ext_resource type="Script" uid="uid://di32uge8lwbkj" path="res://src/ui/components/organisms/iap_purchase_success_modal/iap_purchase_success_modal.gd" id="1_modal"]
+[ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="2_1pw57"]
+[ext_resource type="Texture2D" uid="uid://0lfbabkebas5" path="res://assets/ui/iap/background.png" id="3_voa0s"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_3kk5x"]
+[ext_resource type="Texture2D" uid="uid://brv1r2nl20htg" path="res://assets/ui/iap/icon.png" id="4_kkbo3"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="5_grb1i"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kkbo3"]
+bg_color = Color(0.847059, 0.839216, 0.862745, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.356863)
+shadow_size = 2
+shadow_offset = Vector2(2, 2)
+
+[sub_resource type="LabelSettings" id="LabelSettings_tisg0"]
+font = ExtResource("5_grb1i")
+font_size = 44
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_j6mpc"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_inh8x"]
+font = ExtResource("4_3kk5x")
+font_size = 32
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_grb1i"]
+font = ExtResource("4_3kk5x")
+font_size = 32
+shadow_color = Color(0, 0, 0, 0.49803922)
+shadow_offset = Vector2(0, 3)
+
+[node name="IapPurchaseSuccessModal" type="CanvasLayer" unique_id=674957117]
+layer = 101
+script = ExtResource("1_modal")
+
+[node name="Backdrop" type="ColorRect" parent="." unique_id=2102445275]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.33333334)
+
+[node name="Blur" type="ColorRect" parent="Backdrop" unique_id=12093398]
+material = ExtResource("2_1pw57")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.63529414)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Backdrop/Blur" unique_id=2068822570]
+layout_mode = 1
+anchors_preset = 13
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -141.5
+offset_right = 141.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 28
+alignment = 1
+
+[node name="Panel" type="PanelContainer" parent="Backdrop/Blur/VBoxContainer" unique_id=792583688]
+clip_children = 1
+custom_minimum_size = Vector2(624, 590)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_kkbo3")
+
+[node name="TextureRect" type="TextureRect" parent="Backdrop/Blur/VBoxContainer/Panel" unique_id=1487536614]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("3_voa0s")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TextureRect" type="TextureRect" parent="Backdrop/Blur/VBoxContainer/Panel/TextureRect" unique_id=773695394]
+custom_minimum_size = Vector2(433, 433)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+texture = ExtResource("4_kkbo3")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="Margin" type="MarginContainer" parent="Backdrop/Blur/VBoxContainer/Panel/TextureRect" unique_id=1478608377]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 50
+
+[node name="Column" type="VBoxContainer" parent="Backdrop/Blur/VBoxContainer/Panel/TextureRect/Margin" unique_id=1092867622]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Title" type="Label" parent="Backdrop/Blur/VBoxContainer/Panel/TextureRect/Margin/Column" unique_id=579258070]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Purchase
+Successful"
+label_settings = SubResource("LabelSettings_tisg0")
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Backdrop/Blur/VBoxContainer/Panel/TextureRect/Margin/Column" unique_id=1272168071]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_j6mpc")
+
+[node name="CreditsLabel" type="Label" parent="Backdrop/Blur/VBoxContainer/Panel/TextureRect/Margin/Column" unique_id=502154950]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Credits x0"
+label_settings = SubResource("LabelSettings_inh8x")
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Backdrop/Blur/VBoxContainer" unique_id=899559344]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Tap to continue"
+label_settings = SubResource("LabelSettings_grb1i")
+horizontal_alignment = 1
+
+[connection signal="gui_input" from="Backdrop" to="." method="_on_backdrop_gui_input"]

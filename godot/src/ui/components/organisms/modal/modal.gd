@@ -20,10 +20,14 @@ var blocker: bool = false
 @onready var panel_container: PanelContainer = $PanelContainer
 @onready var buttons_separator: HSeparator = %HSeparator_ButtonsSeparator
 @onready var buttons_container: HBoxContainer = %HBoxContainer_Buttons
+@onready var checkbox_container: HBoxContainer = %CheckBox_Container
+@onready var checkbox: CheckBox = %CheckBox
+@onready var checkbox_text: RichTextLabel = %CheckBox_Text
 
 
 func _ready() -> void:
 	hide()
+	checkbox_container.hide()
 
 
 func _notification(what: int) -> void:
@@ -93,6 +97,20 @@ func hide_url() -> void:
 
 
 ## Updates the modal size to fit its content
+func show_checkbox(bbcode_text: String) -> void:
+	checkbox.button_pressed = false
+	checkbox_text.text = bbcode_text
+	checkbox_container.show()
+	label_body.hide()
+	_async_update_modal_size()
+
+
+func hide_checkbox() -> void:
+	checkbox_container.hide()
+	checkbox.button_pressed = false
+	label_body.show()
+
+
 func _async_update_modal_size() -> void:
 	if not is_inside_tree():
 		return

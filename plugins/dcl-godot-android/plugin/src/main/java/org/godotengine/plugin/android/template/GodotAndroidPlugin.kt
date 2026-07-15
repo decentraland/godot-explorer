@@ -19,6 +19,7 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.provider.CalendarContract
+import android.provider.Settings
 import android.util.Log
 import android.webkit.WebResourceRequest
 import android.widget.FrameLayout
@@ -48,6 +49,10 @@ import com.reown.android.CoreClient
 import com.reown.android.relay.ConnectionType
 import com.reown.sign.client.Sign
 import com.reown.sign.client.SignClient
+
+// Play Integrity — server-side platform attestation for /sign-message.
+import com.google.android.play.core.integrity.IntegrityManagerFactory
+import com.google.android.play.core.integrity.IntegrityTokenRequest
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
@@ -90,12 +95,21 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // Emitted once when Firebase Analytics resolves the app instance id (ga_pseudo_user_id).
             // The Rust side uses this as the trigger to queue the Segment `Firebase Init` event,
             // which is the cross-system correlation anchor (Segment <-> Firebase).
-            SignalInfo("firebase_app_instance_id_ready", String::class.java)
+            SignalInfo("firebase_app_instance_id_ready", String::class.java),
+            // Play Integrity completion (one shot per getPlayIntegrityToken() call).
+            // `token` is empty when `error` is non-empty.
+            SignalInfo("play_integrity_token_ready", String::class.java, String::class.java),
+            // POST_NOTIFICATIONS dialog result. requestNotificationPermission() returns
+            // before the user answers, so the real outcome ("granted"/"denied") is
+            // delivered here once onMainRequestPermissionsResult fires.
+            SignalInfo("notification_permission_result", String::class.java)
         )
     }
 
     override fun onGodotSetupCompleted() {
         super.onGodotSetupCompleted()
+        // Per-component init log. Grep [INIT] to confirm the plugin came up.
+        Log.i(pluginName, "[INIT] GodotAndroidPlugin")
         // Initialize notification database
         activity?.let {
             notificationDatabase = NotificationDatabase(it.applicationContext)
@@ -356,6 +370,23 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             Log.v(pluginName, message)
         }
+    }
+
+    /**
+     * Logging self-test for the Kotlin/Android stack: log at every level via every
+     * Android form, so the unified channel can be verified. Log.w/.e are the
+     * Sentry-relevant levels. Invoked from GDScript's `_run_logging_selftest()` via
+     * `DclAndroidPlugin.test_logging()`.
+     */
+    @UsedByGodot
+    fun testLogging() {
+        Log.v(pluginName, "[LOGTEST][kotlin] verbose via Log.v")
+        Log.d(pluginName, "[LOGTEST][kotlin] debug via Log.d")
+        Log.i(pluginName, "[LOGTEST][kotlin] info via Log.i")
+        Log.w(pluginName, "[LOGTEST][kotlin] warn via Log.w (expect Sentry)")
+        Log.e(pluginName, "[LOGTEST][kotlin] error via Log.e (expect Sentry)")
+        println("[LOGTEST][kotlin] info via println (System.out)")
+        System.err.println("[LOGTEST][kotlin] error via System.err.println")
     }
 
     @UsedByGodot
@@ -976,6 +1007,28 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
         // For Android 12 and below, permission is automatically granted
         return true
+    }
+
+    /**
+     * Receives the POST_NOTIFICATIONS dialog outcome. Godot forwards every Activity
+     * permission result to all plugins via this hook, so requestNotificationPermission()
+     * can return immediately and the actual user choice is reported asynchronously here.
+     * Only then does GDScript record accept/reject — the prior synchronous bool always
+     * read "not yet granted" and logged a spurious reject on every attempt.
+     */
+    override fun onMainRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>?,
+        grantResults: IntArray?
+    ) {
+        if (requestCode != NOTIFICATION_PERMISSION_REQUEST_CODE) {
+            return
+        }
+        val granted = grantResults != null &&
+            grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        Log.d(pluginName, "POST_NOTIFICATIONS result: ${if (granted) "granted" else "denied"}")
+        emitSignal("notification_permission_result", if (granted) "granted" else "denied")
     }
 
     /**
@@ -2328,6 +2381,84 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         pending["status"] = "pending"
         Log.i(pluginName, "[IR] Returning pending (callback will fire later)")
         return pending
+    }
+
+    // --- Play Integrity (platform attestation for /sign-message) ---
+
+    /**
+     * Request an integrity token bound to the SHA256 of the request body the
+     * caller is about to send. The token is delivered asynchronously via the
+     * `play_integrity_token_ready(token, error)` signal — `error` is "" on
+     * success, otherwise `token` is "".
+     *
+     * `requestHashB64` is `base64(SHA256(rawBody))` (standard base64, with or
+     * without padding — the backend normalizes). The GDScript side is
+     * responsible for hashing the exact bytes the HTTP layer will send.
+     */
+    @UsedByGodot
+    fun requestPlayIntegrityToken(requestHashB64: String) {
+        val ctx = activity?.applicationContext ?: run {
+            Log.w(pluginName, "[PlayIntegrity] applicationContext null — cannot start")
+            emitSignal("play_integrity_token_ready", "", "applicationContext not ready")
+            return
+        }
+        try {
+            val manager = IntegrityManagerFactory.create(ctx)
+            val request = IntegrityTokenRequest.builder()
+                .setNonce(requestHashB64)
+                .build()
+            val task = manager.requestIntegrityToken(request)
+            task.addOnSuccessListener { response ->
+                val token = response?.token() ?: ""
+                if (token.isEmpty()) {
+                    Log.w(pluginName, "[PlayIntegrity] success but empty token")
+                    emitSignal("play_integrity_token_ready", "", "empty integrity token")
+                } else {
+                    Log.i(pluginName, "[PlayIntegrity] token ready (len=${token.length})")
+                    emitSignal("play_integrity_token_ready", token, "")
+                }
+            }
+            task.addOnFailureListener { e ->
+                Log.w(pluginName, "[PlayIntegrity] failure: ${e.message}", e)
+                emitSignal("play_integrity_token_ready", "", "${e.javaClass.simpleName}: ${e.message}")
+            }
+        } catch (e: Throwable) {
+            Log.e(pluginName, "[PlayIntegrity] setup error: ${e.javaClass.name}: ${e.message}", e)
+            emitSignal("play_integrity_token_ready", "", "${e.javaClass.simpleName}: ${e.message}")
+        }
+    }
+
+    // --- Device anchor (Android ID / SSAID) ---
+
+    /**
+     * Returns the Android ID (SSAID) for this app on this device. Scoped per
+     * (signing key, user, device) since Android O — survives uninstall as
+     * long as the APK signature stays stable.
+     *
+     * Returns `""` when SSAID is unavailable or matches the well-known buggy
+     * value `9774d56d682e549c` (some pre-Oreo OEMs hardcoded that for many
+     * devices). The caller should fall back to its own UUID storage in that
+     * case.
+     */
+    @UsedByGodot
+    fun getDeviceAnchorId(): String {
+        val ctx = activity?.applicationContext ?: run {
+            Log.w(pluginName, "[DeviceAnchor] applicationContext null — cannot read SSAID")
+            return ""
+        }
+        return try {
+            val ssaid = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+            if (ssaid.isEmpty() || ssaid.equals("9774d56d682e549c", ignoreCase = true)) {
+                Log.w(pluginName, "[DeviceAnchor] SSAID unavailable or matches known-bug value")
+                ""
+            } else {
+                Log.i(pluginName, "[DeviceAnchor] SSAID resolved (len=${ssaid.length})")
+                ssaid
+            }
+        } catch (e: Throwable) {
+            Log.e(pluginName, "[DeviceAnchor] failed to read SSAID: ${e.message}", e)
+            ""
+        }
     }
 
 }

@@ -6,6 +6,10 @@ extends Node
 ## preview channel).
 
 signal command_received(cmd: String, args: Dictionary, request_id: String)
+## Fired on the open/close transition so the bridge can gate capture on an
+## actually-connected consumer (no buffering without a peer).
+signal connected
+signal disconnected
 
 ## 64 MB outbound buffer — connections are local, never drop messages.
 const OUTBOUND_BUFFER_SIZE := 64 * 1024 * 1024
@@ -65,9 +69,15 @@ func _process(delta):
 	if state == WebSocketPeer.STATE_OPEN:
 		if not _was_open:
 			_was_open = true
+			connected.emit()
 		_reconnect_delay = RECONNECT_INITIAL_DELAY
 		_reconnect_timer = 0.0
 		return
+
+	# No longer open. If we just dropped, notify once so capture can be gated off.
+	if _was_open:
+		_was_open = false
+		disconnected.emit()
 
 	# Auto-reconnect on disconnect with exponential backoff (1s → 2s → 4s … 30s).
 	if state == WebSocketPeer.STATE_CLOSED and not _target_url.is_empty():
