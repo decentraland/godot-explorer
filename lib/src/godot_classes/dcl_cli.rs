@@ -184,6 +184,10 @@ pub struct DclCli {
     // Pulse is established (it always resumes if Pulse drops, so it can't cause invisibility).
     #[var(get)]
     pub no_livekit_movement: bool,
+    // Pulse-only mode: no LiveKit-backed rooms at all (no chat/voice/scene messages).
+    // Dev/testing switch; deeplink `livekit=false` is the runtime equivalent.
+    #[var(get)]
+    pub no_livekit: bool,
 }
 
 impl DclCli {
@@ -584,6 +588,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
             },
+            ArgDefinition {
+                name: "--no-livekit".to_string(),
+                description: "Pulse-only mode: skip all LiveKit rooms (main/island/scene — no chat, voice or scene messages). Dev/testing".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
+            },
         ]
     }
 
@@ -852,6 +862,7 @@ impl INode for DclCli {
             });
         let pulse = args_map.contains_key("--pulse") || !pulse_server.is_empty();
         let no_livekit_movement = args_map.contains_key("--no-livekit-movement");
+        let no_livekit = args_map.contains_key("--no-livekit");
 
         // Convert combined args back to PackedStringArray for storage
         let args: PackedStringArray = args_vec.iter().cloned().collect();
@@ -920,6 +931,7 @@ impl INode for DclCli {
             pulse,
             pulse_server,
             no_livekit_movement,
+            no_livekit,
         }
     }
 }

@@ -56,6 +56,9 @@ func _on_timer_timeout():
 	if info.get("comms_on_hold", false):
 		lines.append("[color=yellow]COMMS ON HOLD[/color]")
 
+	if not info.get("livekit_enabled", true):
+		lines.append("[color=orange]LIVEKIT DISABLED (pulse-only mode)[/color]")
+
 	var main_room_type: String = info.get("main_room_type", "none")
 	var main_room_state: String = info.get("main_room_state", "none")
 	# In archipelago mode the island room (below) is the effective main room

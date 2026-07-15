@@ -486,6 +486,10 @@ func _ready():
 			comms.set_livekit_movement_dual_channel(
 				dual_channel_value.to_lower() in ["true", "1", "yes"]
 			)
+		var livekit_value = deep_link_obj.params.get("livekit", "")
+		if not livekit_value.is_empty():
+			print("[DEEPLINK] livekit=", livekit_value)
+			comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:

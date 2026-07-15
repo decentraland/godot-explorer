@@ -216,6 +216,12 @@ pub struct CommunicationManager {
     /// join the same server). Wins over --pulse-server / PULSE_SERVER / the default endpoint.
     #[cfg(feature = "use_pulse")]
     pulse_endpoint_override: Option<String>,
+    /// Runtime "pulse-only" switch (deeplink `livekit=false`, CLI `--no-livekit`): `None`
+    /// follows the CLI. While disabled, no LiveKit-backed rooms are created or kept (main
+    /// livekit room, archipelago island room, scene rooms) — chat/voice/scene messages are
+    /// gone with them. Pulse and ws-room realms are unaffected. Dev/testing switch.
+    #[cfg(feature = "use_livekit")]
+    livekit_runtime_enabled: Option<bool>,
 
     // Reconnection timer for scene rooms
     #[cfg(feature = "use_livekit")]
@@ -277,6 +283,8 @@ impl INode for CommunicationManager {
             pulse_runtime_enabled: None,
             #[cfg(feature = "use_pulse")]
             pulse_endpoint_override: None,
+            #[cfg(feature = "use_livekit")]
+            livekit_runtime_enabled: None,
             #[cfg(feature = "use_livekit")]
             scene_room_reconnect_at: None,
             #[cfg(feature = "use_livekit")]
@@ -671,6 +679,17 @@ impl CommunicationManager {
             PulseTransportConfig { host, port },
             processor_sender,
         ));
+    }
+
+    /// Whether LiveKit-backed rooms may be created (see `livekit_runtime_enabled`).
+    #[cfg(feature = "use_livekit")]
+    fn livekit_enabled(&self) -> bool {
+        self.livekit_runtime_enabled.unwrap_or_else(|| {
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let no_livekit = cli.bind().no_livekit;
+            !no_livekit
+        })
     }
 
     /// Endpoint precedence: deeplink `pulse-server=` override > CLI `--pulse-server` /
@@ -1126,6 +1145,66 @@ impl CommunicationManager {
         }
         #[cfg(not(feature = "use_pulse"))]
         let _ = enabled;
+    }
+
+    /// Runtime (deeplink `livekit=false`, CLI `--no-livekit`): pulse-only mode. Disabling
+    /// tears down every LiveKit-backed room (main livekit room, archipelago island room,
+    /// scene room) — chat, voice and scene messages go with them; avatar sync continues over
+    /// Pulse only. Re-enabling rebuilds the current adapter and reconnects the scene room.
+    /// ws-room realms are not LiveKit and are unaffected. Dev/testing switch.
+    #[func]
+    pub fn set_livekit_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_livekit")]
+        {
+            self.livekit_runtime_enabled = Some(enabled);
+            tracing::info!("livekit: runtime enabled = {enabled}");
+            if enabled {
+                let adapter = self.current_connection_str.clone();
+                if !adapter.is_empty() {
+                    self.change_adapter(adapter);
+                }
+                if self.current_scene_id.is_some() {
+                    self.reconnect_scene_room();
+                }
+            } else {
+                #[cfg(feature = "use_pulse")]
+                if !self.pulse_room.as_ref().is_some_and(|p| p.is_established()) {
+                    tracing::warn!(
+                        "livekit disabled while Pulse is not established — no avatar sync source"
+                    );
+                }
+                if matches!(self.main_room, Some(MainRoom::LiveKit(_))) {
+                    if let Some(mut main_room) = self.main_room.take() {
+                        main_room.clean();
+                    }
+                }
+                if matches!(self.current_connection, CommsConnection::Archipelago(_)) {
+                    if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection
+                    {
+                        archipelago.clean();
+                    }
+                    self.current_connection = CommsConnection::None;
+                }
+                if let Some(scene_room) = &mut self.scene_room {
+                    scene_room.clean();
+                }
+                self.scene_room = None;
+                self.scene_room_reconnect_at = None;
+                self.voice_chat_enabled = false;
+            }
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        let _ = enabled;
+    }
+
+    #[func]
+    pub fn is_livekit_enabled(&self) -> bool {
+        #[cfg(feature = "use_livekit")]
+        {
+            self.livekit_enabled()
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        false
     }
 
     /// The local player was instantly repositioned (explorer.gd move_to: UI teleports and
@@ -1750,22 +1829,28 @@ impl CommunicationManager {
 
             #[cfg(feature = "use_livekit")]
             "livekit" => {
-                // Ensure shared message processor is created
-                let processor_sender = self.ensure_message_processor();
+                if !self.livekit_enabled() {
+                    tracing::warn!("🔇 LiveKit disabled (pulse-only mode) — skipping main room");
+                    // Pulse and avatars still need the shared processor
+                    let _ = self.ensure_message_processor();
+                } else {
+                    // Ensure shared message processor is created
+                    let processor_sender = self.ensure_message_processor();
 
-                // Create LiveKit room with shared message processor
-                // Main rooms use auto_subscribe: true (default) to automatically receive all peers
-                let mut livekit_room = LivekitRoom::new(
-                    comms_address.to_string(),
-                    format!("livekit-{}", comms_address),
-                );
-                livekit_room.set_message_processor_sender(processor_sender);
+                    // Create LiveKit room with shared message processor
+                    // Main rooms use auto_subscribe: true (default) to automatically receive all peers
+                    let mut livekit_room = LivekitRoom::new(
+                        comms_address.to_string(),
+                        format!("livekit-{}", comms_address),
+                    );
+                    livekit_room.set_message_processor_sender(processor_sender);
 
-                // Store the room - no need to change connection type
-                self.main_room = Some(MainRoom::LiveKit(livekit_room));
+                    // Store the room - no need to change connection type
+                    self.main_room = Some(MainRoom::LiveKit(livekit_room));
 
-                // Announce initial profile to the room
-                self.announce_initial_profile();
+                    // Announce initial profile to the room
+                    self.announce_initial_profile();
+                }
             }
 
             #[cfg(not(feature = "use_livekit"))]
@@ -1782,6 +1867,10 @@ impl CommunicationManager {
                     tracing::debug!(
                         "⚠️  Archipelago connections are disabled (DISABLE_ARCHIPELAGO = true)"
                     );
+                } else if !self.livekit_enabled() {
+                    tracing::warn!("🔇 LiveKit disabled (pulse-only mode) — skipping archipelago");
+                    // Pulse and avatars still need the shared processor
+                    let _ = self.ensure_message_processor();
                 } else {
                     // Ensure we have a message processor
                     let processor_sender = self.ensure_message_processor();
@@ -2012,6 +2101,14 @@ impl CommunicationManager {
                 scene_id,
                 livekit_url,
             } => {
+                // An async gatekeeper result may land after a runtime disable — drop it
+                if !self.livekit_enabled() {
+                    tracing::debug!(
+                        "🔇 LiveKit disabled — dropping scene room connect for '{}'",
+                        scene_id
+                    );
+                    return;
+                }
                 tracing::debug!(
                     "🔌 Processing scene room connection request for scene '{}' with URL: {}",
                     scene_id,
@@ -2097,6 +2194,12 @@ impl CommunicationManager {
         // Check if scene rooms are disabled
         if DISABLE_SCENE_ROOM {
             tracing::debug!("⚠️  Scene room connections are disabled (DISABLE_SCENE_ROOM = true)");
+            return;
+        }
+
+        // current_scene_id stays set above so re-enabling can reconnect_scene_room()
+        if !self.livekit_enabled() {
+            tracing::debug!("🔇 LiveKit disabled (pulse-only mode) — skipping scene room");
             return;
         }
 
@@ -2261,6 +2364,11 @@ impl CommunicationManager {
         dict.set(
             "connection_state".to_variant(),
             connection_state.to_variant(),
+        );
+
+        dict.set(
+            "livekit_enabled".to_variant(),
+            self.is_livekit_enabled().to_variant(),
         );
 
         // Legacy coarse flag: a room struct exists (says nothing about the actual link)

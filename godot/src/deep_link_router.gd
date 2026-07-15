@@ -54,6 +54,12 @@ func process_deep_link(url: String) -> void:
 		Global.comms.set_livekit_movement_dual_channel(
 			dual_channel_value.to_lower() in ["true", "1", "yes"]
 		)
+	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
+	# scene messages). Dev/testing switch; `livekit=true` re-enables.
+	var livekit_value = Global.deep_link_obj.params.get("livekit", "")
+	if not livekit_value.is_empty():
+		print("[DEEPLINK] livekit=", livekit_value)
+		Global.comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
 
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 
