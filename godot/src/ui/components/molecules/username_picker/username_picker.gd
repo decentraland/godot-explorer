@@ -74,7 +74,11 @@ func get_name_value() -> String:
 
 
 func get_is_claimed() -> bool:
-	return _is_claimed
+	var current_name = dcl_text_edit_username.get_text_value()
+	for minted_name in _minted_names:
+		if minted_name == current_name:
+			return true
+	return false
 
 
 func _update_tag_visibility() -> void:
@@ -102,14 +106,14 @@ func _async_load_names(generation: int) -> void:
 	dropdown_list.placeholder_index = DROPDOWN_PLACEHOLDER_INDEX
 	dropdown_list.select(DROPDOWN_PLACEHOLDER_INDEX)
 
-	var current_name_lower = dcl_text_edit_username.get_text_value().to_lower()
+	var current_name = dcl_text_edit_username.get_text_value()
 	var preselect_index = 0
 
 	for i in range(response.elements.size()):
 		var element_name: String = response.elements[i].name
 		_minted_names.append(element_name)
 		dropdown_list.add_item(element_name, i + 1)
-		if _is_claimed and element_name.to_lower() == current_name_lower:
+		if _is_claimed and element_name == current_name:
 			preselect_index = i + 1
 
 	if preselect_index > 0:
@@ -124,10 +128,10 @@ func _async_load_names(generation: int) -> void:
 func _on_text_changed() -> void:
 	if _updating_from_dropdown:
 		return
-	var typed = dcl_text_edit_username.get_text_value().to_lower()
+	var typed = dcl_text_edit_username.get_text_value()
 	_is_claimed = false
 	for minted_name in _minted_names:
-		if minted_name.to_lower() == typed:
+		if minted_name == typed:
 			_is_claimed = true
 			break
 	_update_tag_visibility()
