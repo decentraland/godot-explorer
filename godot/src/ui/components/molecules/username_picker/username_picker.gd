@@ -10,7 +10,6 @@ var has_error: bool:
 var _is_claimed: bool = false
 var _wallet_address: String = ""
 var _minted_names: Array[String] = []
-var _updating_from_dropdown: bool = false
 var _load_generation: int = 0
 
 @onready var dcl_text_edit_username: DclTextEdit = %DclTextEdit_Username
@@ -69,10 +68,16 @@ func populate(current_name: String, wallet_address: String, is_claimed: bool) ->
 
 
 func get_name_value() -> String:
+	if button_unique.button_pressed:
+		var idx = dropdown_list.selected
+		if idx >= 0 and idx < _minted_names.size():
+			return _minted_names[idx]
 	return dcl_text_edit_username.get_text_value()
 
 
 func get_is_claimed() -> bool:
+	if button_unique.button_pressed:
+		return dropdown_list.selected >= 0 and dropdown_list.selected < _minted_names.size()
 	var current_name = dcl_text_edit_username.get_text_value()
 	for minted_name in _minted_names:
 		if minted_name == current_name:
@@ -81,7 +86,7 @@ func get_is_claimed() -> bool:
 
 
 func _update_tag_visibility() -> void:
-	if _is_claimed or _wallet_address.length() < 4:
+	if get_is_claimed() or _wallet_address.length() < 4:
 		label_tag.hide()
 	else:
 		label_tag.text = "#" + _wallet_address.substr(_wallet_address.length() - 4, 4)
@@ -121,27 +126,11 @@ func _async_load_names(generation: int) -> void:
 
 
 func _on_text_changed() -> void:
-	if _updating_from_dropdown:
-		return
-	var typed = dcl_text_edit_username.get_text_value()
-	_is_claimed = false
-	for minted_name in _minted_names:
-		if minted_name == typed:
-			_is_claimed = true
-			break
 	_update_tag_visibility()
 	name_changed.emit()
 
 
-func _on_name_selected(index: int) -> void:
-	var name_index = index
-	if name_index < 0 or name_index >= _minted_names.size():
-		return
-	var selected_name: String = _minted_names[name_index]
-	_updating_from_dropdown = true
-	dcl_text_edit_username.set_text_value(selected_name)
-	_updating_from_dropdown = false
-	_is_claimed = true
+func _on_name_selected(_index: int) -> void:
 	_update_tag_visibility()
 	name_changed.emit()
 
@@ -157,13 +146,7 @@ func _on_button_unique_toggled(toggled_on: bool) -> void:
 		return
 	if not _minted_names.is_empty():
 		dropdown_list.show()
-	var name_index = dropdown_list.selected
-	if name_index >= 0 and name_index < _minted_names.size():
-		_updating_from_dropdown = true
-		dcl_text_edit_username.set_text_value(_minted_names[name_index])
-		_updating_from_dropdown = false
-		_is_claimed = true
-		_update_tag_visibility()
+	_update_tag_visibility()
 	name_changed.emit()
 
 
@@ -171,7 +154,7 @@ func _on_button_non_unique_toggled(toggled_on: bool) -> void:
 	_hide_all()
 	if not toggled_on:
 		return
+	dcl_text_edit_username.set_text_value("")
 	control_text_edit.show()
-	_is_claimed = false
 	_update_tag_visibility()
 	name_changed.emit()
