@@ -31,8 +31,7 @@ var _last_keyboard_height: int = 0
 @onready var button_add_link: Button = %Button_AddLink
 @onready var profile_new_link_popup = %ProfileNewLinkPopup
 @onready var dcl_text_edit_description: DclTextEdit = %DclTextEdit_Description
-@onready var dcl_text_edit_username: DclTextEdit = %DclTextEdit_Username
-@onready var label_tag: Label = %Label_Tag
+@onready var username_picker: UsernamePicker = %UsernamePicker
 
 
 func _ready() -> void:
@@ -41,7 +40,7 @@ func _ready() -> void:
 	_populate_dropdown(dropdown_list_sexual_orientation, ProfileConstants.SEXUAL_ORIENTATIONS)
 	_populate_dropdown(dropdown_list_relationship, ProfileConstants.RELATIONSHIP_STATUS)
 
-	dcl_text_edit_username.dcl_text_edit_changed.connect(_on_field_changed)
+	username_picker.name_changed.connect(_on_field_changed)
 	dcl_text_edit_description.dcl_text_edit_changed.connect(_on_field_changed)
 	dcl_text_edit_country.dcl_text_edit_changed.connect(_on_field_changed)
 	dcl_text_edit_employment_status.dcl_text_edit_changed.connect(_on_field_changed)
@@ -73,13 +72,7 @@ func populate(profile: DclUserProfile) -> void:
 	social_data.has_claimed_name = profile.has_claimed_name()
 	social_data.profile_picture_url = profile.get_avatar().get_snapshots_face_url()
 
-	dcl_text_edit_username.set_text_value(social_data.name)
-	if social_data.has_claimed_name:
-		label_tag.text = ""
-		label_tag.hide()
-	else:
-		label_tag.show()
-		label_tag.text = ("#" + social_data.address.substr(social_data.address.length() - 4, 4))
+	username_picker.populate(social_data.name, social_data.address, social_data.has_claimed_name)
 
 	profile_picture.async_update_profile_picture(social_data)
 
@@ -177,7 +170,7 @@ func _on_dropdown_changed(_index: int) -> void:
 
 func _has_any_error() -> bool:
 	return (
-		dcl_text_edit_username.error
+		username_picker.has_error
 		or dcl_text_edit_description.error
 		or dcl_text_edit_country.error
 		or dcl_text_edit_employment_status.error
@@ -197,7 +190,7 @@ func _check_dirty() -> void:
 
 	var is_dirty := false
 
-	if dcl_text_edit_username.get_text_value() != _original_values.get("username", ""):
+	if username_picker.get_name_value() != _original_values.get("username", ""):
 		is_dirty = true
 	elif dcl_text_edit_description.get_text_value() != _original_values.get("description", ""):
 		is_dirty = true
@@ -240,10 +233,10 @@ func _async_save_profile() -> void:
 	if mutable_profile == null:
 		return
 
-	var current_username = dcl_text_edit_username.get_text_value()
+	var current_username = username_picker.get_name_value()
 	if current_username != _original_values.get("username", ""):
 		mutable_profile.set_name(current_username)
-		mutable_profile.set_has_claimed_name(false)
+		mutable_profile.set_has_claimed_name(username_picker.get_is_claimed())
 
 	var current_description = dcl_text_edit_description.get_text_value()
 	if current_description != _original_values.get("description", ""):

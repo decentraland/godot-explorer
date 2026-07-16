@@ -8,6 +8,7 @@
 [ext_resource type="LabelSettings" uid="uid://ohnf401gg7y0" path="res://assets/themes/unselected_dropdown_settings.tres" id="6_4fa15"]
 [ext_resource type="LabelSettings" uid="uid://c8gi64m66smxl" path="res://assets/themes/description_settings.tres" id="6_f66t4"]
 [ext_resource type="Texture2D" uid="uid://cjtlaexth4ts0" path="res://src/ui/components/molecules/dropdown_list/icons/arrow-down.svg" id="6_ymsf1"]
+[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="7_3klua"]
 [ext_resource type="Shader" uid="uid://d27gxdyw3uebd" path="res://assets/shaders/shadow_blur.gdshader" id="7_shadow_blur"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4fa15"]
@@ -40,13 +41,15 @@ corner_radius_bottom_left = 12
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 250.0
+offset_right = 405.0
 offset_bottom = 161.0
 mouse_filter = 2
 script = ExtResource("1_script")
+are_names = null
 title = "Title"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=396696068]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -56,7 +59,11 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Label_Title" type="Label" parent="VBoxContainer" unique_id=1919591347]
+[node name="VBoxContainer_Title" type="VBoxContainer" parent="VBoxContainer" unique_id=1767809601]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/VBoxContainer_Title" unique_id=1919591347]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -65,7 +72,7 @@ theme_override_font_sizes/font_size = 14
 text = "Title"
 label_settings = ExtResource("3_tiq7w")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1688174912]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/VBoxContainer_Title" unique_id=1688174912]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 20
@@ -82,20 +89,33 @@ theme_override_styles/panel = ExtResource("4_ymsf1")
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer_Button" unique_id=1025473977]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 8
 
 [node name="Label_Selected" type="Label" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=1393568308]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.086, 0.082, 0.094, 1)
 theme_override_fonts/font = ExtResource("3_regular")
 theme_override_font_sizes/font_size = 16
 text = "Selected"
 label_settings = ExtResource("6_4fa15")
-clip_text = true
-text_overrun_behavior = 3
 
-[node name="TextureRect_Arrow" type="TextureRect" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=2085570171]
+[node name="TextureRect_Verified" type="TextureRect" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=2085570171]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("7_3klua")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Control" type="Control" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=1982804261]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="TextureRect_Arrow" type="TextureRect" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=801534979]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2

@@ -17,6 +17,11 @@ const TOUCH_DRAG_THRESHOLD: float = 20.0
 ## Maximum number of items visible at once before the popup scrolls.
 @export var max_visible_items: int = 5
 
+## When true, item 0 is always a plain placeholder and items 1+ render as names
+## (using Label_Name + colour states). Also shows a verified icon on the button
+## when a real name is selected.
+@export var are_names: bool = false
+
 ## Title displayed above the dropdown button. Hidden when empty.
 @export var title: String = "":
 	set(value):
@@ -44,6 +49,7 @@ var selected: int = -1
 var placeholder_index: int = -1
 var _items: Array[Dictionary] = []
 var _is_open: bool = false
+var _verified_icon: TextureRect = null
 var _style_normal: StyleBoxFlat = load("res://assets/themes/dropdown_normal.tres")
 var _style_pressed: StyleBoxFlat = load("res://assets/themes/dropdown_selected.tres")
 var _style_disabled: StyleBoxFlat = load("res://assets/themes/dropdown_disabled.tres")
@@ -51,6 +57,7 @@ var _style_disabled: StyleBoxFlat = load("res://assets/themes/dropdown_disabled.
 ## Touch handling: distinguish tap from scroll gesture.
 var _touch_press_pos: Vector2 = Vector2.ZERO
 var _touch_is_dragging: bool = false
+var _button_press_active: bool = false
 
 @onready var _vbox: VBoxContainer = $VBoxContainer
 @onready var _title_label: Label = %Label_Title
@@ -63,6 +70,7 @@ var _touch_is_dragging: bool = false
 @onready var _shadow_rect: ColorRect = %ColorRect_Shadow
 @onready var _scroll_container: ScrollContainer = %ScrollContainer
 @onready var _items_container: VBoxContainer = %VBoxContainer_Items
+@onready var v_box_container_title: VBoxContainer = %VBoxContainer_Title
 
 
 func _ready():
@@ -72,6 +80,7 @@ func _ready():
 	if Engine.is_editor_hint():
 		return
 
+	_verified_icon = get_node_or_null("%TextureRect_Verified")
 	_update_selected_text()
 
 	_button_panel.gui_input.connect(_on_button_gui_input)
@@ -85,9 +94,9 @@ func _ready():
 # -- OptionButton-compatible API ---------------------------------------------
 
 
-func add_item(label: String, id: int = -1) -> void:
+func add_item(label: String, id: int = -1, is_name: bool = false) -> void:
 	var actual_id := id if id >= 0 else _items.size()
-	_items.append({text = label, id = actual_id})
+	_items.append({text = label, id = actual_id, is_name = is_name})
 
 
 func clear() -> void:
@@ -238,9 +247,12 @@ func _async_open_popup() -> void:
 
 
 func _close_popup(silent: bool = false):
+	if not _is_open:
+		return
 	_is_open = false
 	_popup_layer.visible = false
 	_button_panel.add_theme_stylebox_override("panel", _style_normal)
+	_button_press_active = false
 	if not silent:
 		toggled.emit(false)
 
@@ -252,6 +264,7 @@ func _sync_popup_items():
 
 	for i in _items.size():
 		var item: DropdownItem = DROPDOWN_ITEM_SCENE.instantiate()
+		item.is_name = are_names and i > 0
 		item.setup(i, _items[i].text, i == selected)
 		item.pressed.connect(_on_item_pressed.bind(i))
 		_items_container.add_child(item)
@@ -263,7 +276,8 @@ func _sync_popup_items():
 func _update_title():
 	if _title_label:
 		_title_label.text = title
-		_title_label.visible = not title.is_empty()
+		v_box_container_title.visible = not title.is_empty()
+		
 		update_minimum_size()
 
 
@@ -300,6 +314,14 @@ func _update_selected_text():
 				_selected_label.label_settings = load(
 					"res://assets/themes/unselected_dropdown_settings.tres"
 				)
+		_update_verified_icon()
+
+
+func _update_verified_icon() -> void:
+	if _verified_icon == null:
+		return
+	var is_placeholder: bool = placeholder_index >= 0 and selected == placeholder_index
+	_verified_icon.visible = are_names and selected >= 0 and not is_placeholder
 
 
 func _apply_disabled_state():
@@ -327,17 +349,27 @@ func _on_button_gui_input(event: InputEvent):
 	if disabled:
 		return
 
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+	var is_mouse = event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT
+	var is_touch = event is InputEventScreenTouch
+
+	if is_mouse or is_touch:
 		if event.pressed:
-			_touch_press_pos = event.global_position
+			_touch_press_pos = event.global_position if is_mouse else event.position
 			_touch_is_dragging = false
-		elif not _touch_is_dragging:
+			_button_press_active = true
+		elif _button_press_active and not _touch_is_dragging:
+			_button_press_active = false
 			_toggle_popup()
 			get_viewport().set_input_as_handled()
+		else:
+			_button_press_active = false
 		return
 
 	if event is InputEventMouseMotion:
 		if event.global_position.distance_to(_touch_press_pos) > TOUCH_DRAG_THRESHOLD:
+			_touch_is_dragging = true
+	elif event is InputEventScreenDrag:
+		if event.position.distance_to(_touch_press_pos) > TOUCH_DRAG_THRESHOLD:
 			_touch_is_dragging = true
 
 
@@ -354,10 +386,10 @@ func _on_button_mouse_exited():
 
 
 func _on_popup_layer_gui_input(event: InputEvent):
-	if event is InputEventMouseButton and event.pressed:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		_close_popup()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventScreenTouch and event.pressed:
+	elif event is InputEventScreenTouch and not event.pressed:
 		_close_popup()
 		get_viewport().set_input_as_handled()
 
