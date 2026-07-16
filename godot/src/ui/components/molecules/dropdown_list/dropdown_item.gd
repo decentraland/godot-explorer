@@ -12,8 +12,8 @@ const COLOR_ACTIVE = Color(0.9098039, 0.7254902, 1, 1)
 var index: int = -1
 var _name_text: String = ""
 
-@onready var label_name: Label = %Label_Name
 @onready var h_box_container_name: HBoxContainer = %HBoxContainer_Name
+@onready var label_name: Label = %Label_Name
 
 
 func setup(item_index: int, item_text: String, is_selected: bool) -> void:

@@ -13,6 +13,7 @@ var _is_claimed: bool = false
 var _wallet_address: String = ""
 var _minted_names: Array[String] = []
 var _updating_from_dropdown: bool = false
+var _load_generation: int = 0
 
 @onready var dcl_text_edit_username: DclTextEdit = %DclTextEdit_Username
 @onready var label_tag: Label = %Label_Tag
@@ -64,7 +65,8 @@ func populate(current_name: String, wallet_address: String, is_claimed: bool) ->
 		button_unique.set_pressed_no_signal(false)
 		control_text_edit.show()
 
-	_async_load_names()
+	_load_generation += 1
+	_async_load_names(_load_generation)
 
 
 func get_name_value() -> String:
@@ -83,9 +85,9 @@ func _update_tag_visibility() -> void:
 		label_tag.show()
 
 
-func _async_load_names() -> void:
+func _async_load_names(generation: int) -> void:
 	var response = await NamesRequest.async_request_all_names()
-	if not is_instance_valid(self):
+	if not is_instance_valid(self) or generation != _load_generation:
 		return
 	if response == null or response.elements.is_empty():
 		# No minted names: hide tabs, show text edit with current name

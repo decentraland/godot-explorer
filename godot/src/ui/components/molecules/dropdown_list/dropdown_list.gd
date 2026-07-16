@@ -62,6 +62,10 @@ var _button_press_active: bool = false
 @onready var _vbox: VBoxContainer = $VBoxContainer
 @onready var _title_label: Label = %Label_Title
 @onready var _description_label: Label = %Label_Description
+# Label_Selected intentionally has no expand/clip flags so the verified icon
+# appears flush with the text. All current dropdown options fit within the
+# button width, but if long text is ever added, text_overrun_behavior should
+# be restored on the label in the scene.
 @onready var _selected_label: Label = %Label_Selected
 @onready var _arrow_icon: TextureRect = %TextureRect_Arrow
 @onready var _button_panel: PanelContainer = %PanelContainer_Button

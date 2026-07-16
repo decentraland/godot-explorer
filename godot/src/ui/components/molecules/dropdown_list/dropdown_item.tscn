@@ -22,9 +22,6 @@ corner_radius_bottom_left = 12
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_30kbm"]
 
-[sub_resource type="LabelSettings" id="LabelSettings_30kbm"]
-font_size = 30
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5lhf1"]
 
 [node name="DropdownItem" type="Button" unique_id=804628124]
@@ -52,7 +49,6 @@ alignment = 0
 text_overrun_behavior = 3
 icon_alignment = 2
 script = ExtResource("1_script")
-is_name = null
 
 [node name="HBoxContainer_Name" type="HBoxContainer" parent="." unique_id=71403233]
 unique_name_in_owner = true
@@ -75,11 +71,11 @@ layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 0
 
-[node name="Label_Name" type="Label" parent="HBoxContainer_Name/VBoxContainer" unique_id=1001473619]
+[node name="Label_Name" type="Label" parent="HBoxContainer_Name/VBoxContainer" unique_id=728407509]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
 text = "Name"
-label_settings = SubResource("LabelSettings_30kbm")
 
 [node name="HSeparator" type="HSeparator" parent="HBoxContainer_Name/VBoxContainer" unique_id=2133343713]
 layout_mode = 2
