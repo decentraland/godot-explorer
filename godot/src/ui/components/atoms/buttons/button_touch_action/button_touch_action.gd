@@ -9,7 +9,8 @@ var _is_action_active: bool = false  # Tracks if we're actually sending the acti
 
 # Optional scene-provided icon (PBTouchScreenControls), rendered on a dedicated overlay so
 # it never interferes with the button's native glyph (icon/text). Toggle via set/clear.
-var _custom_icon: TextureRect
+# The overlay node lives in button_touch_action.tscn (hidden by default).
+@onready var _custom_icon: TextureRect = $CustomIcon
 
 
 func _ready() -> void:
@@ -21,19 +22,6 @@ func _ready() -> void:
 	#   auto-toggles or fights our manual state; the button stays momentary.
 	toggle_mode = true
 	button_mask = 0
-
-	_custom_icon = TextureRect.new()
-	_custom_icon.name = "CustomIcon"
-	_custom_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_custom_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_custom_icon.offset_left = 6
-	_custom_icon.offset_top = 6
-	_custom_icon.offset_right = -6
-	_custom_icon.offset_bottom = -6
-	_custom_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_custom_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_custom_icon.hide()
-	add_child(_custom_icon)
 
 
 ## Show a scene-provided icon on the overlay (leaves the native glyph untouched underneath).
