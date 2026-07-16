@@ -5,14 +5,14 @@ signal name_changed
 
 const DROPDOWN_PLACEHOLDER_INDEX = 0
 
+var has_error: bool:
+	get:
+		return dcl_text_edit_username.error
+
 var _is_claimed: bool = false
 var _wallet_address: String = ""
 var _minted_names: Array[String] = []
 var _updating_from_dropdown: bool = false
-
-var has_error: bool:
-	get:
-		return dcl_text_edit_username.error
 
 @onready var dcl_text_edit_username: DclTextEdit = %DclTextEdit_Username
 @onready var label_tag: Label = %Label_Tag
@@ -20,6 +20,7 @@ var has_error: bool:
 @onready var control_text_edit: Control = %Control_TextEdit
 @onready var button_unique: Button = %Button_Unique
 @onready var button_non_unique: Button = %Button_NonUnique
+@onready var v_box_container_tabs: VBoxContainer = %VBoxContainer_Tabs
 
 
 func _ready() -> void:
@@ -36,6 +37,7 @@ func _ready() -> void:
 
 	dropdown_list.hide()
 	control_text_edit.hide()
+	v_box_container_tabs.hide()
 
 
 func populate(current_name: String, wallet_address: String, is_claimed: bool) -> void:
@@ -50,10 +52,14 @@ func populate(current_name: String, wallet_address: String, is_claimed: bool) ->
 	dropdown_list.hide()
 
 	if is_claimed:
+		# We know names exist — show tabs immediately to avoid flash
+		v_box_container_tabs.show()
 		button_unique.set_pressed_no_signal(true)
 		button_non_unique.set_pressed_no_signal(false)
 		control_text_edit.hide()
 	else:
+		# Unknown if names exist yet — default to text edit while loading
+		v_box_container_tabs.hide()
 		button_non_unique.set_pressed_no_signal(true)
 		button_unique.set_pressed_no_signal(false)
 		control_text_edit.show()
@@ -82,6 +88,10 @@ func _async_load_names() -> void:
 	if not is_instance_valid(self):
 		return
 	if response == null or response.elements.is_empty():
+		# No minted names: hide tabs, show text edit with current name
+		v_box_container_tabs.hide()
+		dropdown_list.hide()
+		control_text_edit.show()
 		return
 
 	_minted_names.clear()
@@ -103,6 +113,8 @@ func _async_load_names() -> void:
 	if preselect_index > 0:
 		dropdown_list.select(preselect_index)
 
+	# Names exist: ensure tabs are visible
+	v_box_container_tabs.show()
 	if button_unique.button_pressed:
 		dropdown_list.show()
 
@@ -158,7 +170,6 @@ func _on_button_non_unique_toggled(toggled_on: bool) -> void:
 	_hide_all()
 	if not toggled_on:
 		return
-	dcl_text_edit_username.set_text_value("")
 	control_text_edit.show()
 	_is_claimed = false
 	_update_tag_visibility()

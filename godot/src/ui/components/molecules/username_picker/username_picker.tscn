@@ -63,15 +63,16 @@ layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1703624710]
+[node name="VBoxContainer_Tabs" type="VBoxContainer" parent="." unique_id=1703624710]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1413369109]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Tabs" unique_id=1413369109]
 layout_mode = 2
 theme_override_constants/separation = 27
 
-[node name="Button_Unique" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=1396990962]
+[node name="Button_Unique" type="Button" parent="VBoxContainer_Tabs/HBoxContainer" unique_id=1396990962]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8117647, 0.8039216, 0.83137256, 1)
@@ -88,7 +89,7 @@ toggle_mode = true
 button_pressed = true
 text = "UNIQUE NAME"
 
-[node name="Button_NonUnique" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=948873676]
+[node name="Button_NonUnique" type="Button" parent="VBoxContainer_Tabs/HBoxContainer" unique_id=948873676]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8117647, 0.8039216, 0.83137256, 1)
@@ -104,7 +105,7 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_vb6sw")
 toggle_mode = true
 text = "NON-UNIQUE NAME"
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer" unique_id=155376971]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer_Tabs" unique_id=155376971]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 16
@@ -170,5 +171,5 @@ mouse_filter = 2
 theme_override_constants/separation = 60
 theme_override_styles/separator = SubResource("StyleBoxEmpty_30yxk")
 
-[connection signal="toggled" from="VBoxContainer/HBoxContainer/Button_Unique" to="." method="_on_button_unique_toggled"]
-[connection signal="toggled" from="VBoxContainer/HBoxContainer/Button_NonUnique" to="." method="_on_button_non_unique_toggled"]
+[connection signal="toggled" from="VBoxContainer_Tabs/HBoxContainer/Button_Unique" to="." method="_on_button_unique_toggled"]
+[connection signal="toggled" from="VBoxContainer_Tabs/HBoxContainer/Button_NonUnique" to="." method="_on_button_non_unique_toggled"]

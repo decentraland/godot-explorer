@@ -32,6 +32,7 @@ var _last_keyboard_height: int = 0
 @onready var profile_new_link_popup = %ProfileNewLinkPopup
 @onready var dcl_text_edit_description: DclTextEdit = %DclTextEdit_Description
 @onready var username_picker: UsernamePicker = %UsernamePicker
+@onready var v_box_container_content: VBoxContainer = %VBoxContainer_Content
 
 
 func _ready() -> void:
@@ -404,10 +405,9 @@ func _async_ensure_field_visible() -> void:
 	if overlap <= 0:
 		return
 
-	var scroll_content := scroll_container.get_child(0)
 	if _keyboard_spacer == null:
 		_keyboard_spacer = Control.new()
-		scroll_content.add_child(_keyboard_spacer)
+		v_box_container_content.add_child(_keyboard_spacer)
 	_keyboard_spacer.custom_minimum_size.y = _last_keyboard_height * y_factor
 
 	await get_tree().process_frame
