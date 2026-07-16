@@ -17,10 +17,13 @@ const TOUCH_DRAG_THRESHOLD: float = 20.0
 ## Maximum number of items visible at once before the popup scrolls.
 @export var max_visible_items: int = 5
 
-## When true, item 0 is always a plain placeholder and items 1+ render as names
-## (using Label_Name + colour states). Also shows a verified icon on the button
-## when a real name is selected.
+## When true, items render as names (using Label_Name + colour states) and shows
+## a verified icon on the button when a real name is selected.
 @export var are_names: bool = false
+
+## When true, the dropdown has no placeholder: always starts with item 0 selected
+## and there is no way to return to an unselected state from within the dropdown.
+@export var without_placeholder: bool = false
 
 ## Title displayed above the dropdown button. Hidden when empty.
 @export var title: String = "":
@@ -324,8 +327,14 @@ func _update_selected_text():
 func _update_verified_icon() -> void:
 	if _verified_icon == null:
 		return
-	var is_placeholder: bool = placeholder_index >= 0 and selected == placeholder_index
-	_verified_icon.visible = are_names and selected >= 0 and not is_placeholder
+	var is_real_selection: bool
+	if without_placeholder:
+		is_real_selection = selected >= 0
+	else:
+		is_real_selection = (
+			selected >= 0 and not (placeholder_index >= 0 and selected == placeholder_index)
+		)
+	_verified_icon.visible = are_names and is_real_selection
 
 
 func _apply_disabled_state():

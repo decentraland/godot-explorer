@@ -3,8 +3,6 @@ extends VBoxContainer
 
 signal name_changed
 
-const DROPDOWN_PLACEHOLDER_INDEX = 0
-
 var has_error: bool:
 	get:
 		return dcl_text_edit_username.error
@@ -33,6 +31,7 @@ func _ready() -> void:
 	button_non_unique.button_group = button_group
 
 	dropdown_list.are_names = true
+	dropdown_list.without_placeholder = true
 	dcl_text_edit_username.dcl_text_edit_changed.connect(_on_text_changed)
 	dropdown_list.item_selected.connect(_on_name_selected)
 
@@ -102,9 +101,6 @@ func _async_load_names(generation: int) -> void:
 
 	_minted_names.clear()
 	dropdown_list.clear()
-	dropdown_list.add_item("Select a name", 0)
-	dropdown_list.placeholder_index = DROPDOWN_PLACEHOLDER_INDEX
-	dropdown_list.select(DROPDOWN_PLACEHOLDER_INDEX)
 
 	var current_name = dcl_text_edit_username.get_text_value()
 	var preselect_index = 0
@@ -112,12 +108,11 @@ func _async_load_names(generation: int) -> void:
 	for i in range(response.elements.size()):
 		var element_name: String = response.elements[i].name
 		_minted_names.append(element_name)
-		dropdown_list.add_item(element_name, i + 1)
+		dropdown_list.add_item(element_name)
 		if _is_claimed and element_name == current_name:
-			preselect_index = i + 1
+			preselect_index = i
 
-	if preselect_index > 0:
-		dropdown_list.select(preselect_index)
+	dropdown_list.select(preselect_index)
 
 	# Names exist: ensure tabs are visible
 	v_box_container_tabs.show()
@@ -139,7 +134,7 @@ func _on_text_changed() -> void:
 
 
 func _on_name_selected(index: int) -> void:
-	var name_index = index - 1
+	var name_index = index
 	if name_index < 0 or name_index >= _minted_names.size():
 		return
 	var selected_name: String = _minted_names[name_index]
@@ -162,7 +157,7 @@ func _on_button_unique_toggled(toggled_on: bool) -> void:
 		return
 	if not _minted_names.is_empty():
 		dropdown_list.show()
-	var name_index = dropdown_list.selected - 1
+	var name_index = dropdown_list.selected
 	if name_index >= 0 and name_index < _minted_names.size():
 		_updating_from_dropdown = true
 		dcl_text_edit_username.set_text_value(_minted_names[name_index])
