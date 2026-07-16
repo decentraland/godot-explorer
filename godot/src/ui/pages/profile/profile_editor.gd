@@ -122,6 +122,7 @@ func populate(profile: DclUserProfile) -> void:
 
 	_original_values = {
 		"username": social_data.name,
+		"has_claimed_name": social_data.has_claimed_name,
 		"description": description_val,
 		"country": country_val,
 		"pronouns": pronouns_idx,
@@ -193,6 +194,8 @@ func _check_dirty() -> void:
 
 	if username_picker.get_name_value() != _original_values.get("username", ""):
 		is_dirty = true
+	elif username_picker.get_is_claimed() != _original_values.get("has_claimed_name", false):
+		is_dirty = true
 	elif dcl_text_edit_description.get_text_value() != _original_values.get("description", ""):
 		is_dirty = true
 	elif dcl_text_edit_country.get_text_value() != _original_values.get("country", ""):
@@ -237,6 +240,7 @@ func _async_save_profile() -> void:
 	var current_username = username_picker.get_name_value()
 	if current_username != _original_values.get("username", ""):
 		mutable_profile.set_name(current_username)
+	if username_picker.get_is_claimed() != _original_values.get("has_claimed_name", false):
 		mutable_profile.set_has_claimed_name(username_picker.get_is_claimed())
 
 	var current_description = dcl_text_edit_description.get_text_value()

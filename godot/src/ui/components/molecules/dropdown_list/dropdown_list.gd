@@ -98,9 +98,9 @@ func _ready():
 # -- OptionButton-compatible API ---------------------------------------------
 
 
-func add_item(label: String, id: int = -1, is_name: bool = false) -> void:
+func add_item(label: String, id: int = -1) -> void:
 	var actual_id := id if id >= 0 else _items.size()
-	_items.append({text = label, id = actual_id, is_name = is_name})
+	_items.append({text = label, id = actual_id})
 
 
 func clear() -> void:
