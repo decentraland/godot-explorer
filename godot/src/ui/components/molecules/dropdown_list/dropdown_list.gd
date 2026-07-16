@@ -59,7 +59,6 @@ var _touch_press_pos: Vector2 = Vector2.ZERO
 var _touch_is_dragging: bool = false
 var _button_press_active: bool = false
 
-@onready var v_box_container_title: VBoxContainer = %VBoxContainer_Title
 @onready var _vbox: VBoxContainer = $VBoxContainer
 @onready var _title_label: Label = %Label_Title
 @onready var _description_label: Label = %Label_Description
@@ -71,6 +70,7 @@ var _button_press_active: bool = false
 @onready var _shadow_rect: ColorRect = %ColorRect_Shadow
 @onready var _scroll_container: ScrollContainer = %ScrollContainer
 @onready var _items_container: VBoxContainer = %VBoxContainer_Items
+@onready var _v_box_container_title: VBoxContainer = %VBoxContainer_Title
 
 
 func _ready():
@@ -276,7 +276,7 @@ func _sync_popup_items():
 func _update_title():
 	if _title_label:
 		_title_label.text = title
-		v_box_container_title.visible = not title.is_empty()
+		_v_box_container_title.visible = not title.is_empty()
 
 		update_minimum_size()
 
