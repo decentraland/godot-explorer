@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs::create_dir_all, path::Path};
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
 use export::import_assets;
-use image_comparison::compare_images_folders;
+use image_comparison::{compare_images_folders, FOLDER_COMPARE_SIMILARITY_MIN};
 use tests::test_godot_tools;
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
@@ -21,6 +21,7 @@ mod download_file;
 mod export;
 mod fi_benchmark;
 mod full_tests;
+mod game_loop;
 mod helpers;
 mod image_comparison;
 mod install_dependency;
@@ -238,6 +239,79 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("results image folder for comparison")
                         .takes_value(true)
                         .required(true),
+                ),
+        )
+        .subcommand(
+            Command::new("game-loop")
+                .about("Run an Android Game Loop scenario on a connected device (adb) and compare screenshots against goldens")
+                .arg(
+                    Arg::new("scenario")
+                        .short('s')
+                        .long("scenario")
+                        .help("Scenario to run: a number, a comma-separated list (e.g. 1,3), or `all` (see game_loop_runner.gd registry)")
+                        .takes_value(true)
+                        .default_value("3"),
+                )
+                .arg(
+                    Arg::new("guest-seed")
+                        .long("guest-seed")
+                        .help("Golden mode: force a deterministic guest via a seed-derived anchor (standard Play-as-Guest flow, harness-only)")
+                        .takes_value(true)
+                        .required(false),
+                )
+                .arg(
+                    Arg::new("device")
+                        .short('d')
+                        .long("device")
+                        .help("adb device serial (defaults to the single connected device)")
+                        .takes_value(true)
+                        .required(false),
+                )
+                .arg(
+                    Arg::new("install")
+                        .long("install")
+                        .help("Install (-r) the exported debug APK before launching")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("clear")
+                        .long("clear")
+                        .help("pm clear the app before launching (fresh guest / clean state)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("timeout")
+                        .long("timeout")
+                        .help("Seconds to wait for the scenario RESULT line")
+                        .takes_value(true)
+                        .default_value("180"),
+                )
+                .arg(
+                    Arg::new("out")
+                        .long("out")
+                        .help("Directory for this run's pulled screenshots (default target/gameloop/scenario_<N>)")
+                        .takes_value(true)
+                        .required(false),
+                )
+                .arg(
+                    Arg::new("golden")
+                        .long("golden")
+                        .help("Golden baseline directory (default tests/snapshots/gameloop/scenario_<N>)")
+                        .takes_value(true)
+                        .required(false),
+                )
+                .arg(
+                    Arg::new("bless")
+                        .long("bless")
+                        .help("Save this run's screenshots as the golden baseline instead of comparing")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("threshold")
+                        .long("threshold")
+                        .help("Per-image similarity floor (0..1) for a golden to pass. Pure-UI screens hit ~100%; avatar screens carry ~0.1-0.5% sub-pixel AA noise, so 0.995 tolerates that while still catching real (whole-percent) regressions")
+                        .takes_value(true)
+                        .default_value("0.995"),
                 ),
         )
         .subcommand(
@@ -612,8 +686,46 @@ fn main() -> Result<(), anyhow::Error> {
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
             let result_folder = Path::new(sm.value_of("result").unwrap());
-            compare_images_folders(snapshot_folder, result_folder, 0.995)
-                .map_err(|e| anyhow::anyhow!(e))
+            compare_images_folders(
+                snapshot_folder,
+                result_folder,
+                FOLDER_COMPARE_SIMILARITY_MIN,
+            )
+            .map_err(|e| anyhow::anyhow!(e))
+        }
+        ("game-loop", sm) => {
+            let scenario_arg = sm.value_of("scenario").unwrap_or("3");
+            let scenarios: Vec<u32> = if scenario_arg.eq_ignore_ascii_case("all") {
+                game_loop::ALL_SCENARIOS.to_vec()
+            } else {
+                scenario_arg
+                    .split(',')
+                    .map(|s| s.trim().parse::<u32>())
+                    .collect::<Result<Vec<_>, _>>()
+                    .context("--scenario must be `all` or a comma-separated list of numbers")?
+            };
+            let timeout_secs: u64 = sm
+                .value_of("timeout")
+                .unwrap_or("180")
+                .parse()
+                .context("--timeout must be a number of seconds")?;
+            let threshold: f64 = sm
+                .value_of("threshold")
+                .unwrap_or("0.995")
+                .parse()
+                .context("--threshold must be a float between 0 and 1")?;
+            game_loop::run(game_loop::GameLoopOptions {
+                scenarios,
+                guest_seed: sm.value_of("guest-seed").map(String::from),
+                device: sm.value_of("device").map(String::from),
+                install: sm.is_present("install"),
+                clear: sm.is_present("clear"),
+                timeout: std::time::Duration::from_secs(timeout_secs),
+                out_override: sm.value_of("out").map(std::path::PathBuf::from),
+                golden_override: sm.value_of("golden").map(std::path::PathBuf::from),
+                bless: sm.is_present("bless"),
+                threshold,
+            })
         }
         ("debug-hub", sm) => {
             let device_port: u16 = sm

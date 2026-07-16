@@ -161,6 +161,23 @@ func _process(delta: float) -> void:
 	)
 
 
+## Snap the camera pan/zoom and avatar rotation straight to their lerp targets and
+## pause smoothing, so a screenshot is deterministic. The exponential lerp in
+## _process is asymptotic — at any given frame it hasn't fully converged, so the
+## avatar sits at a slightly different sub-pixel rotation/framing each run, which
+## shows up as a ~1px silhouette shift when diffing two captures. Snapping removes it.
+func snap_camera_for_capture() -> void:
+	_lerp_paused = true
+	camera_center.position.y = _target_camera_center_y
+	camera_3d.size = _target_camera_size
+	avatar.rotation.y = _target_avatar_rotation_y
+
+
+## Resume interactive camera smoothing after a capture.
+func resume_after_capture() -> void:
+	_lerp_paused = false
+
+
 func focus_camera_on(type, instant: bool = false):
 	if not can_drag:
 		_camera_focus = "overall"

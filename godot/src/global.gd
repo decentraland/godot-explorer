@@ -143,6 +143,11 @@ var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
 
+# Test/golden override: force a deterministic seeded guest (set by the Game Loop from a
+# `guest-seed` intent extra). -1 = not forced. Consumed by get_device_anchor_id(), which
+# turns it into a stable seed-derived anchor for the standard Play-as-Guest flow.
+var forced_guest_seed_override: int = -1
+
 ## true when the env came from --dclenv or a deeplink dclenv=… (incl. dclenv=org).
 ## When true, Iap's sandbox auto-switch must NOT override the explicit choice.
 var dcl_env_explicit: bool = false
@@ -1586,6 +1591,13 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 # separate). Don't guard the Android call with has_method or it silently no-ops.
 # See: https://github.com/godotengine/godot/issues/106436
 func get_device_anchor_id() -> String:
+	# 0. Game Loop golden runs: a forced seed yields a DETERMINISTIC anchor (not the
+	#    device's native anchor), so the STANDARD Play-as-Guest flow mints a reproducible
+	#    thirdweb guest across runs AND devices (resolve_anchor keccak256's this string
+	#    into the wallet, so any stable value works). Non-production only (same gate as the
+	#    debug rotate flag) and set solely by the Game Loop harness — no deeplink/UI path.
+	if forced_guest_seed_override >= 0 and not is_production():
+		return "gameloop-seed-%016x" % forced_guest_seed_override
 	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
 	#    Gated to non-production so it can never ship even if the flag is left on.
 	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():

@@ -2,7 +2,11 @@ use std::{collections::HashMap, path::Path};
 
 use anyhow::Ok;
 
-use crate::{copy_files::move_dir_recursive, image_comparison::compare_images_folders, run};
+use crate::{
+    copy_files::move_dir_recursive,
+    image_comparison::{compare_images_folders, SNAPSHOT_SIMILARITY_MIN},
+    run,
+};
 
 /// Run Godot and tolerate a non-zero exit code (e.g. SIGABRT on shutdown) if output was produced.
 fn run_godot_tolerating_shutdown_crash(
@@ -65,8 +69,12 @@ pub fn test_avatar_generation(
     move_dir_recursive(&avatar_output.canonicalize()?, &comparison_folder)?;
 
     // Images comparison
-    compare_images_folders(&avatar_snapshot_folder, &comparison_folder, 0.90)
-        .map_err(|e| anyhow::anyhow!(e))?;
+    compare_images_folders(
+        &avatar_snapshot_folder,
+        &comparison_folder,
+        SNAPSHOT_SIMILARITY_MIN,
+    )
+    .map_err(|e| anyhow::anyhow!(e))?;
 
     Ok(())
 }
@@ -96,8 +104,12 @@ pub fn test_scene_generation(
     move_dir_recursive(&scene_output.canonicalize()?, &comparison_folder)?;
 
     // Images comparison
-    compare_images_folders(&scene_renderer_snapshot_folder, &comparison_folder, 0.90)
-        .map_err(|e| anyhow::anyhow!(e))?;
+    compare_images_folders(
+        &scene_renderer_snapshot_folder,
+        &comparison_folder,
+        SNAPSHOT_SIMILARITY_MIN,
+    )
+    .map_err(|e| anyhow::anyhow!(e))?;
 
     Ok(())
 }
