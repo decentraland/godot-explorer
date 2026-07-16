@@ -34,12 +34,13 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG),
 // unless PROTOCOL_FIXED_VERSION_URL pins a specific tarball.
 //
-// Pinned here to the controls-customization protocol build (PR #426 rebased on main) that
-// ships the new TouchScreenControls/UiInputBinding components (with the TextureUnion `icon`
-// field). This intentionally overrides main's 1.11.0 RC pin
-// (protocol-1.0.0-28974105118.commit-a598406); when this branch merges, re-point to a
-// protocol build that includes both PR #426 and main's pin.
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-29349550611.commit-6d59503.tgz");
+// Pinned to the `@dcl/protocol@next` (protocol `main`) build that includes the merged
+// controls-customization change (PR #426: TouchScreenControls/UiInputBinding, TextureUnion
+// `icon`). Now that #426 is on `main`, this tracks the published main channel; it still
+// intentionally overrides main's 1.11.0 RC pin
+// (protocol-1.0.0-28974105118.commit-a598406) until godot `main` bumps its own pin, at which
+// point the two converge.
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-29501656680.commit-6a4362a.tgz");
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
