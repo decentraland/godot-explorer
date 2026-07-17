@@ -245,14 +245,17 @@ pub const LOADING_SCHEMA_VERSION: u32 = 1;
 /// Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450), emitted as ONE Segment event
 /// (`"Loading Event"`) discriminated by `event_type` and correlated across a whole load by
 /// `loading_id`. A "load" is one loading-screen-bounded episode; every event of that load
-/// (`started` → `completed`, plus any `asset_failure`) shares its `loading_id`, so the funnel
-/// reassembles in Segment by grouping on it. Built by the pure `LoadingFunnel`
-/// (`scene_runner/loading_funnel.rs`) and emitted from `DclSceneManager` via
+/// (`started` → any `progress` pulses → `completed`, plus any `asset_failure`) shares its
+/// `loading_id`, so the funnel reassembles in Segment by grouping on it. A `progress` pulse ships
+/// every 10s while a slow/stuck load is in flight and carries the same accumulated snapshot as
+/// `completed` (minus `dismissed_by`/`frames`), so a load abandoned before it completes — the user
+/// quits, or the client is killed — still has a last-known state on record. Built by the pure
+/// `LoadingFunnel` (`scene_runner/loading_funnel.rs`) and emitted from `DclSceneManager` via
 /// `Metrics::queue_loading_event`. Every type-specific field is `Option` and only populated for
 /// its `type`. Values are bucketed/rounded — no PII, no parcel coords, no URLs.
 #[derive(Serialize, Clone, Default)]
 pub struct SegmentEventLoading {
-    /// Discriminator: "started" | "completed" | "asset_failure" | "realm_change_failed".
+    /// Discriminator: "started" | "progress" | "completed" | "asset_failure" | "realm_change_failed".
     #[serde(rename = "type")]
     pub event_type: String,
     /// Correlation id for one complete load (episode). Shared by every event of that load.
@@ -281,7 +284,9 @@ pub struct SegmentEventLoading {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub platform: Option<String>,
 
-    // --- type = "completed" (the funnel) ---
+    // --- type = "completed" / "progress" (the funnel) ---
+    // A `progress` pulse carries this whole block except `dismissed_by` and `frames`; `completed`
+    // carries all of it. Grouped here because both are the accumulated-snapshot fields.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration_ms: Option<i64>,
     /// How the load ended: "completion" | "wall_clock_timeout" | "error" | "superseded" |

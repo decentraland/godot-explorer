@@ -24,6 +24,13 @@ use super::loading_session::LoadingPhase;
 /// is arriving" rather than "slow but progressing".
 const NET_STALL_MB_S: f64 = 0.005;
 
+/// How often, while a load is in flight, to emit a `progress` snapshot. This is the recovery path
+/// for loads that never reach `completed`: if the user quits or the client is killed mid-load, the
+/// last `progress` event already shipped is the only record of how far the load got. A healthy
+/// load finishes well under this, so it emits no `progress` events at all — only slow/stuck loads,
+/// which are exactly the ones worth watching, produce them.
+const PULSE_MS: i64 = 10_000;
+
 /// Context captured at load begin (all the values that require Godot access, read once by the
 /// caller and passed in so the funnel stays Godot-free).
 pub struct LoadingBeginContext {
@@ -77,6 +84,8 @@ pub struct LoadingFunnel {
     net_peak_mb_s: f64,
     net_stall_ms: i64,
     last_tick: Option<Instant>,
+    /// Timestamp of the last `progress` pulse (see `PULSE_MS`); reset at begin.
+    last_pulse: Option<Instant>,
     /// Asset-group failures reported during the load (pushed from the GLTF coordinator).
     asset_failures: i64,
     /// Whether a realm-change failure was observed during this load (feeds `dismissed_by=error`).
@@ -122,6 +131,7 @@ impl LoadingFunnel {
         self.net_peak_mb_s = 0.0;
         self.net_stall_ms = 0;
         self.last_tick = None;
+        self.last_pulse = Some(now);
         self.asset_failures = 0;
         self.saw_realm_fail = false;
 
@@ -165,7 +175,6 @@ impl LoadingFunnel {
             self.band_ms += ms_between(enter, now);
         }
 
-        let duration_ms = self.elapsed_ms(now);
         // Reaching the `done` phase is the only trustworthy completion signal: the session is
         // dropped the instant it completes, so any milestone that depends on a later tick is
         // unreliable. `complete_ms` is set from the phase transition itself and was -1 on exactly
@@ -176,9 +185,33 @@ impl LoadingFunnel {
         // the whole process, so their difference is the current global backlog rather than a delta
         // this episode owns. Named for what it is; see the schema docs.
         let pending_at_end = (res_loading - res_loaded).max(0);
-        let bucket = realm_bucket(&self.realm);
 
-        let completed = SegmentEventLoading {
+        // The completed event is the same accumulated snapshot a `progress` pulse carries (including
+        // `duration_ms`), plus the two fields only meaningful at the end: how it was dismissed, and
+        // the rendered-frame count.
+        let mut completed = self.snapshot_event("completed", pending_at_end, now);
+        completed.dismissed_by = Some(dismissed_by);
+        completed.frames = Some((process_frames - self.start_frame).max(0));
+
+        let mut out = vec![completed];
+        if self.asset_failures > 0 {
+            out.push(SegmentEventLoading {
+                reason: Some("gltf_group_failed".to_string()),
+                count: Some(self.asset_failures),
+                ..SegmentEventLoading::base("asset_failure", self.id, realm_bucket(&self.realm))
+            });
+        }
+
+        self.active = false;
+        out
+    }
+
+    /// Build one accumulated snapshot of the load so far. Shared by the `completed` event and every
+    /// `progress` pulse, so both carry an identical field-set and a Segment query can read the last
+    /// `progress` of an abandoned load exactly as it would read its `completed`. The pulse-specific
+    /// caller leaves `dismissed_by` (the load is not dismissed yet) and `frames` unset.
+    fn snapshot_event(&self, event_type: &str, pending: i64, now: Instant) -> SegmentEventLoading {
+        SegmentEventLoading {
             // Repeated from `started` so this event stands alone; same value unless the load began
             // knowing no realm and the end-time fallback filled one in.
             is_world: Some(is_world_realm(&self.realm)),
@@ -187,8 +220,7 @@ impl LoadingFunnel {
             // user-visible load and would skew any completion-rate aggregate. Without it here,
             // excluding those means joining back to `started` on `loading_id`.
             when: Some(self.when.clone()),
-            duration_ms: Some(duration_ms),
-            dismissed_by: Some(dismissed_by),
+            duration_ms: Some(self.elapsed_ms(now)),
             first_spawn_ms: Some(self.first_spawn_ms),
             complete_ms: Some(self.complete_ms),
             scene_rendered_ms: Some(self.scene_rendered_ms),
@@ -196,27 +228,14 @@ impl LoadingFunnel {
             discovery_ms: Some(self.discovery_ms),
             time_in_25_30_band_ms: Some(self.band_ms),
             phase_breakdown: Some(self.phase_breakdown.clone()),
-            process_assets_pending_at_end: Some(pending_at_end),
+            process_assets_pending_at_end: Some(pending),
             process_assets_pending_peak: Some(self.peak_pending),
             assets_errored: Some(self.asset_failures),
             network_avg_mb_s: Some(self.net_avg_mb_s()),
             network_peak_mb_s: Some(self.net_peak_mb_s),
             network_stall_ms: Some(self.net_stall_ms),
-            frames: Some((process_frames - self.start_frame).max(0)),
-            ..SegmentEventLoading::base("completed", self.id, bucket.clone())
-        };
-
-        let mut out = vec![completed];
-        if self.asset_failures > 0 {
-            out.push(SegmentEventLoading {
-                reason: Some("gltf_group_failed".to_string()),
-                count: Some(self.asset_failures),
-                ..SegmentEventLoading::base("asset_failure", self.id, bucket)
-            });
+            ..SegmentEventLoading::base(event_type, self.id, realm_bucket(&self.realm))
         }
-
-        self.active = false;
-        out
     }
 
     /// Build a `type="realm_change_failed"` event (may fire outside an active load; correlated to
@@ -291,10 +310,18 @@ impl LoadingFunnel {
     /// Poll from the scene tick while a load is active: peak pending assets plus network
     /// throughput (mean/peak) and stalled-download time. `speed_mb_s` is the ContentProvider's
     /// last-second download volume in MB/s; `pending` is `loading - loaded`.
-    pub fn note_tick(&mut self, pending: i64, speed_mb_s: f64, now: Instant) {
+    ///
+    /// Returns a `progress` snapshot every [`PULSE_MS`] so a load that never completes still leaves
+    /// its last-known state in Segment (see the const's docs). `None` on the ticks in between.
+    pub fn note_tick(
+        &mut self,
+        pending: i64,
+        speed_mb_s: f64,
+        now: Instant,
+    ) -> Option<SegmentEventLoading> {
         if !self.active {
             self.last_tick = None;
-            return;
+            return None;
         }
         if pending > self.peak_pending {
             self.peak_pending = pending;
@@ -312,6 +339,14 @@ impl LoadingFunnel {
             }
         }
         self.last_tick = Some(now);
+
+        match self.last_pulse {
+            Some(prev) if ms_between(prev, now) >= PULSE_MS => {
+                self.last_pulse = Some(now);
+                Some(self.snapshot_event("progress", pending, now))
+            }
+            _ => None,
+        }
     }
 
     fn net_avg_mb_s(&self) -> f64 {
@@ -529,6 +564,51 @@ mod tests {
         assert_eq!(out[0].network_stall_ms, Some(0));
         assert_eq!(out[0].network_peak_mb_s, Some(2.0));
         assert_eq!(out[0].network_avg_mb_s, Some(2.0));
+    }
+
+    /// The `progress` pulse: nothing before PULSE_MS, then a correlated snapshot every PULSE_MS
+    /// while the load drags on, so an abandoned load (quit / kill) leaves its last-known state —
+    /// how far it got — on record. It carries the accumulated snapshot but neither `dismissed_by`
+    /// (not dismissed) nor `frames` (end-only); it stops at end, and `completed` still fires.
+    #[test]
+    fn progress_pulses_snapshot_the_load_until_it_ends() {
+        let mut f = LoadingFunnel::default();
+        let t0 = Instant::now();
+        f.begin(
+            ctx(
+                "on_teleport",
+                "https://realm-provider-ea.decentraland.org/main/",
+            ),
+            t0,
+        );
+        f.on_scene_spawned(t0 + Duration::from_secs(2));
+
+        // Nothing within the first 10s window.
+        assert!(f.note_tick(20, 0.1, t0 + Duration::from_secs(9)).is_none());
+
+        // First pulse past 10s: correlated, carrying how far it got, no dismissal / frames.
+        let p1 = f
+            .note_tick(18, 0.1, t0 + Duration::from_secs(11))
+            .expect("pulse ~10s");
+        assert_eq!(p1.event_type, "progress");
+        assert_eq!(p1.loading_id, 1);
+        assert_eq!(p1.realm_bucket, "genesis");
+        assert_eq!(p1.duration_ms, Some(11_000));
+        assert_eq!(p1.first_spawn_ms, Some(2_000)); // reflects the stage reached
+        assert_eq!(p1.complete_ms, Some(-1)); // not done — the abandoned-load case
+        assert_eq!(p1.process_assets_pending_at_end, Some(18));
+        assert!(p1.dismissed_by.is_none());
+        assert!(p1.frames.is_none());
+
+        // No second pulse until another PULSE_MS elapses, then one fires.
+        assert!(f.note_tick(18, 0.1, t0 + Duration::from_secs(15)).is_none());
+        assert!(f.note_tick(15, 0.1, t0 + Duration::from_secs(21)).is_some());
+
+        // Pulses stop at end; `completed` still fires; a later tick emits nothing.
+        f.on_complete(t0 + Duration::from_secs(22));
+        let out = f.end("hidden", "", 15, 15, 100, t0 + Duration::from_secs(23));
+        assert_eq!(out[0].event_type, "completed");
+        assert!(f.note_tick(0, 0.0, t0 + Duration::from_secs(34)).is_none());
     }
 
     /// On-device regression: a CozyFarm -> Genesis teleport superseded after 61ms. The navigation

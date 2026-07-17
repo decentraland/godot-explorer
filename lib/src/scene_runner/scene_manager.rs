@@ -957,6 +957,10 @@ impl SceneManager {
         for ev in events {
             metrics.queue_loading_event(ev);
         }
+        // Flush right after every loading event so `started` and each `progress` pulse ship
+        // immediately: a load can be abandoned (quit / kill) before the periodic 10s flush would
+        // fire, and the whole point of these events is to survive that.
+        metrics.flush();
     }
 
     // ============== End Loading Session API ==============
@@ -2641,10 +2645,16 @@ impl INode for SceneManager {
         self.check_loading_timeouts();
 
         // Loading funnel: track peak pending assets and network throughput while a load is active.
+        // Every PULSE_MS the tick returns a `progress` snapshot so a load that never completes
+        // (user quits / client killed mid-load) still leaves its last-known state in Segment.
         if self.loading_funnel.is_active() {
             let (loaded, loading, mb_s) = self.loading_content_counts();
-            self.loading_funnel
-                .note_tick(loading - loaded, mb_s, Instant::now());
+            if let Some(ev) = self
+                .loading_funnel
+                .note_tick(loading - loaded, mb_s, Instant::now())
+            {
+                self.emit_loading_events(vec![ev]);
+            }
         }
 
         // SceneManager is owned by DclGlobal (autoload) and outlives the Explorer scene.
