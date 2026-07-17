@@ -1,0 +1,418 @@
+[gd_scene format=3 uid="uid://chdlyu284qlnq"]
+
+[ext_resource type="Script" uid="uid://bmf5mdtbpi62i" path="res://src/ui/components/organisms/reward_modal/reward_modal.gd" id="1_ckn50"]
+[ext_resource type="Texture2D" uid="uid://bth12b5lxd4ul" path="res://assets/ui/modal-background.png" id="1_lxw2s"]
+[ext_resource type="Texture2D" uid="uid://dtu32x8oroptu" path="res://src/ui/components/organisms/reward_modal/dog-reward.png" id="3_3sajc"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_qrkm3"]
+[ext_resource type="Texture2D" uid="uid://blxtexjabkvq2" path="res://src/ui/components/organisms/reward_modal/rays.svg" id="5_3w55n"]
+[ext_resource type="Texture2D" uid="uid://hg42snfhm6ei" path="res://src/mobile/joystick/textures/joyknobpng.png" id="5_hv66r"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_ni4n8"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_sgp5i"]
+
+[sub_resource type="Shader" id="Shader_blur"]
+code = "shader_type canvas_item;
+
+uniform float blur_amount : hint_range(0.0, 8.0) = 2.0;
+
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+
+void fragment() {
+	vec4 color = textureLod(screen_texture, SCREEN_UV, blur_amount);
+	COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_blur"]
+shader = SubResource("Shader_blur")
+shader_parameter/blur_amount = 3.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jrcq4"]
+bg_color = Color(0.08627451, 0.011764706, 0.21960784, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="Animation" id="Animation_3sajc"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CenterContainer/Control/TextureRect_Rays:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("%TextureRect_Rays:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("CenterContainer/Control/Control:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(-20, -20)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("CenterContainer/Control/CPUParticles2D:emitting")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+
+[sub_resource type="Animation" id="Animation_ckn50"]
+resource_name = "rotate_rays"
+length = 300.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CenterContainer/Control/TextureRect_Rays:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 300, 2160),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.0, 125.66370614359172, 6.283185307179586]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("%TextureRect_Rays:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.26666668, 300),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(0, 0), Vector2(1, 1), Vector2(1, 1)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("CenterContainer/Control/Control:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.100000024, 300),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(-20, -60), Vector2(-20, -20), Vector2(-20, -20)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("CenterContainer/Control/CPUParticles2D:emitting")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_hv66r"]
+_data = {
+&"RESET": SubResource("Animation_3sajc"),
+&"claim": SubResource("Animation_ckn50")
+}
+
+[sub_resource type="Animation" id="Animation_hv66r"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CenterContainer/Control/Control/TextureRect_Reward:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(1, 1)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("CenterContainer/Control/Control/TextureRect_Reward:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(-158, -120)]
+}
+
+[sub_resource type="Animation" id="Animation_qrkm3"]
+resource_name = "bounce_reward"
+length = 2.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CenterContainer/Control/Control/TextureRect_Reward:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 1, 1.1333333, 1.2666667),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(1, 1), Vector2(1, 0.9), Vector2(1, 1), Vector2(1, 1), Vector2(1, 0.9), Vector2(1, 1)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("CenterContainer/Control/Control/TextureRect_Reward:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(-158, -120), Vector2(-158, -110)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_ni4n8"]
+_data = {
+&"RESET": SubResource("Animation_hv66r"),
+&"bounce_reward": SubResource("Animation_qrkm3")
+}
+
+[sub_resource type="Curve" id="Curve_qrkm3"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.51488096, 0.7733885), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_ni4n8"]
+offsets = PackedFloat32Array(0, 0.16828479, 0.42880258, 1)
+colors = PackedColorArray(0, 0, 0, 0, 0.627451, 0.67058825, 1, 1, 0.626627, 0.66962695, 0.9986267, 0.96498054, 0.6039216, 0.6431373, 0.9607843, 0)
+
+[sub_resource type="LabelSettings" id="LabelSettings_cdbdq"]
+font = ExtResource("4_qrkm3")
+font_size = 44
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_f7bpt"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_jepox"]
+font = ExtResource("5_ni4n8")
+font_size = 26
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_vfn1r"]
+font = ExtResource("5_ni4n8")
+font_size = 32
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+shadow_color = Color(0, 0, 0, 0.49803922)
+
+[node name="RewardModal" type="ColorRect" unique_id=33032563]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(1, 1.0011955)
+mouse_force_pass_scroll_events = false
+color = Color(0, 0, 0, 0.333333)
+script = ExtResource("1_ckn50")
+metadata/mobile_preview_orientation = "both"
+
+[node name="Blur" type="ColorRect" parent="." unique_id=58522777]
+material = SubResource("ShaderMaterial_blur")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.635294)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=859663127]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer" unique_id=1556143522]
+clip_children = 2
+custom_minimum_size = Vector2(512, 620)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_jrcq4")
+
+[node name="TextureRect_Background" type="TextureRect" parent="VBoxContainer/PanelContainer" unique_id=1797127434]
+layout_mode = 2
+texture = ExtResource("1_lxw2s")
+expand_mode = 1
+
+[node name="MarginContainer_Reward" type="MarginContainer" parent="VBoxContainer/PanelContainer" unique_id=186466510]
+layout_mode = 2
+theme_override_constants/margin_top = 73
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="VBoxContainer/PanelContainer/MarginContainer_Reward" unique_id=88139232]
+libraries/ = SubResource("AnimationLibrary_hv66r")
+
+[node name="AnimationPlayer2" type="AnimationPlayer" parent="VBoxContainer/PanelContainer/MarginContainer_Reward" unique_id=1640257635]
+libraries/ = SubResource("AnimationLibrary_ni4n8")
+autoplay = &"bounce_reward"
+
+[node name="CenterContainer" type="CenterContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Reward" unique_id=900715673]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer" unique_id=1406736036]
+layout_mode = 2
+
+[node name="TextureRect_Rays" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer/Control" unique_id=644273218]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0.5137255)
+layout_mode = 0
+offset_left = -314.0
+offset_top = -311.0
+offset_right = 314.0
+offset_bottom = 311.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(1e-05, 1e-05)
+pivot_offset = Vector2(314, 311)
+texture = ExtResource("5_3w55n")
+
+[node name="Control" type="Control" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer/Control" unique_id=1790291926]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect_Reward" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer/Control/Control" unique_id=1000606302]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -178.0
+offset_top = -140.0
+offset_right = 137.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(157, 120)
+texture = ExtResource("3_3sajc")
+
+[node name="CPUParticles2D" type="CPUParticles2D" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer/Control" unique_id=936758621]
+scale = Vector2(-1.2908275, 0.9143959)
+emitting = false
+amount = 20
+texture = ExtResource("5_hv66r")
+lifetime = 0.5
+one_shot = true
+explosiveness = 1.0
+emission_shape = 1
+emission_sphere_radius = 128.0
+gravity = Vector2(0, -700)
+scale_amount_min = 0.0
+scale_amount_max = 0.01
+scale_amount_curve = SubResource("Curve_qrkm3")
+color_ramp = SubResource("Gradient_ni4n8")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer" unique_id=604152988]
+layout_mode = 2
+theme_override_constants/margin_left = 56
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 56
+theme_override_constants/margin_bottom = 60
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer" unique_id=1899392406]
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 2
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1674789910]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "You're all set"
+label_settings = SubResource("LabelSettings_cdbdq")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1553908818]
+layout_mode = 2
+theme_override_constants/separation = 16
+theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
+
+[node name="Label_Text" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1579565577]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "Your email has been verified. 
+Enjoy the free wearable!"
+label_settings = SubResource("LabelSettings_jepox")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Spacer" type="Control" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1600963776]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Button_Claim" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=967609012]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("6_sgp5i")
+theme_override_font_sizes/font_size = 24
+text = "CLAIM REWARD"
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1356476217]
+layout_mode = 2
+theme_override_constants/separation = 28
+theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
+
+[node name="Label" type="Label" parent="VBoxContainer" unique_id=1807737563]
+layout_mode = 2
+text = "Tap to continue"
+label_settings = SubResource("LabelSettings_vfn1r")
+horizontal_alignment = 1
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/Button_Claim" to="." method="_on_button_claim_pressed"]

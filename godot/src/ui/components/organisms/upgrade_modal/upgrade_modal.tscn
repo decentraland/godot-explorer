@@ -1,0 +1,178 @@
+[gd_scene format=3 uid="uid://dq0ayu7qb3vcj"]
+
+[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="1_jda00"]
+[ext_resource type="Texture2D" uid="uid://co8hlsh0h2xyl" path="res://src/ui/components/organisms/upgrade_modal/gradient.png" id="1_rtijo"]
+[ext_resource type="Texture2D" uid="uid://daunrut0m5p23" path="res://src/ui/components/organisms/upgrade_modal/background.png" id="2_vno5a"]
+[ext_resource type="Texture2D" uid="uid://d0v7la10bt5m2" path="res://src/ui/components/organisms/upgrade_modal/card.png" id="3_h4m87"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_48o53"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_b5pi2"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="11_omn3q"]
+
+[sub_resource type="Shader" id="Shader_blur"]
+code = "shader_type canvas_item;
+
+uniform float blur_amount : hint_range(0.0, 8.0) = 2.0;
+
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+
+void fragment() {
+	vec4 color = textureLod(screen_texture, SCREEN_UV, blur_amount);
+	COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_blur"]
+shader = SubResource("Shader_blur")
+shader_parameter/blur_amount = 3.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jrcq4"]
+bg_color = Color(0.08627451, 0.011764706, 0.21960784, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="LabelSettings" id="LabelSettings_0ersv"]
+font = ExtResource("1_jda00")
+font_size = 48
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_f7bpt"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_v81pj"]
+line_spacing = -2.0
+font = ExtResource("8_48o53")
+font_size = 32
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_6ib3n"]
+font = ExtResource("11_omn3q")
+font_size = 32
+font_color = Color(0.8745098, 0.6117647, 1, 1)
+
+[node name="UpgradeModal" type="ColorRect" unique_id=33032563]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_force_pass_scroll_events = false
+color = Color(0, 0, 0, 0.333333)
+metadata/mobile_preview_orientation = "both"
+
+[node name="Blur" type="ColorRect" parent="." unique_id=58522777]
+material = SubResource("ShaderMaterial_blur")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.635294)
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=1556143522]
+clip_children = 2
+custom_minimum_size = Vector2(624, 1006)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -312.0
+offset_top = -503.0
+offset_right = 312.0
+offset_bottom = 503.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_jrcq4")
+
+[node name="Gradient" type="TextureRect" parent="PanelContainer" unique_id=351474121]
+layout_mode = 2
+size_flags_vertical = 8
+texture = ExtResource("1_rtijo")
+
+[node name="Avatar" type="TextureRect" parent="PanelContainer" unique_id=1996058437]
+layout_mode = 2
+size_flags_vertical = 0
+texture = ExtResource("2_vno5a")
+
+[node name="MarginContainer_Card" type="MarginContainer" parent="PanelContainer" unique_id=1326320640]
+layout_mode = 2
+theme_override_constants/margin_top = 138
+theme_override_constants/margin_right = 52
+
+[node name="Card" type="TextureRect" parent="PanelContainer/MarginContainer_Card" unique_id=743232544]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+texture = ExtResource("3_h4m87")
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer" unique_id=604152988]
+layout_mode = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 38
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer" unique_id=1899392406]
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 2
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1674789910]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "Unlock the full experience"
+label_settings = SubResource("LabelSettings_0ersv")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1553908818]
+layout_mode = 2
+theme_override_constants/separation = 14
+theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
+
+[node name="Label2" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1579565577]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "Add email to unlock Decentraland accross devices and claim an"
+label_settings = SubResource("LabelSettings_v81pj")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Label3" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1457413560]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "exclusive Wearable."
+label_settings = SubResource("LabelSettings_6ib3n")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator2" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1091073088]
+layout_mode = 2
+theme_override_constants/separation = 54
+theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
+
+[node name="Button_AddEmail" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=967609012]
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("10_b5pi2")
+theme_override_font_sizes/font_size = 24
+text = "ADD EMAIL"
+
+[node name="HSeparator3" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=2118208594]
+layout_mode = 2
+theme_override_constants/separation = 32
+theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
+
+[node name="Button_MaybeLater" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=218859755]
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("10_b5pi2")
+theme_type_variation = &"SecondaryButton"
+theme_override_font_sizes/font_size = 24
+text = "MAYBE LATER"
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
