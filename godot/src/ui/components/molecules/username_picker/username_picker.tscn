@@ -116,6 +116,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 100)
 layout_mode = 2
 are_names = true
+without_placeholder = true
 title = ""
 
 [node name="Control_TextEdit" type="Control" parent="." unique_id=1073887705]

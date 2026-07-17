@@ -11,6 +11,7 @@ var _is_claimed: bool = false
 var _wallet_address: String = ""
 var _minted_names: Array[String] = []
 var _load_generation: int = 0
+var _suppressing_text_signal: bool = false
 
 @onready var dcl_text_edit_username: DclTextEdit = %DclTextEdit_Username
 @onready var label_tag: Label = %Label_Tag
@@ -68,7 +69,7 @@ func populate(current_name: String, wallet_address: String, is_claimed: bool) ->
 
 
 func get_name_value() -> String:
-	if button_unique.button_pressed:
+	if button_unique.button_pressed and not _minted_names.is_empty():
 		var idx = dropdown_list.selected
 		if idx >= 0 and idx < _minted_names.size():
 			return _minted_names[idx]
@@ -126,6 +127,8 @@ func _async_load_names(generation: int) -> void:
 
 
 func _on_text_changed() -> void:
+	if _suppressing_text_signal:
+		return
 	_update_tag_visibility()
 	name_changed.emit()
 
@@ -154,7 +157,9 @@ func _on_button_non_unique_toggled(toggled_on: bool) -> void:
 	_hide_all()
 	if not toggled_on:
 		return
+	_suppressing_text_signal = true
 	dcl_text_edit_username.set_text_value("")
+	_suppressing_text_signal = false
 	control_text_edit.show()
 	_update_tag_visibility()
 	name_changed.emit()
