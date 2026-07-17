@@ -1056,6 +1056,7 @@ impl AvatarScene {
             emote_urn: emote_id.to_string(),
             r#loop: looping,
             timestamp: 0,
+            mask: None,
         };
 
         // Push dirty state only in active scenes

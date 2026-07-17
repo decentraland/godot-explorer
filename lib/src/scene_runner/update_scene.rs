@@ -99,6 +99,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::PhysicsCombinedImpulse => "PhysicsCombinedImpulse",
         S::CameraModeArea => "CameraModeArea",
         S::InputModifier => "InputModifier",
+        S::TouchScreenControls => "TouchScreenControls",
         S::SkyboxTime => "SkyboxTime",
         S::TriggerArea => "TriggerArea",
         S::VirtualCameras => "VirtualCameras",
@@ -136,6 +137,7 @@ use super::{
         realm_info::sync_realm_info,
         skybox_time::update_skybox_time,
         text_shape::update_text_shape,
+        touch_screen_controls::update_touch_screen_controls,
         transform_and_parent::update_transform_and_parent,
         trigger_area::update_trigger_area,
         tween::update_tween,
@@ -507,6 +509,10 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::InputModifier => {
                     update_input_modifier(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::TouchScreenControls => {
+                    update_touch_screen_controls(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
                 SceneUpdateState::SkyboxTime => {

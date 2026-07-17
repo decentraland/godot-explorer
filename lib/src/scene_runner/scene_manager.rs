@@ -808,6 +808,7 @@ impl SceneManager {
             emote_urn: emote_id.to_string(),
             r#loop: looping,
             timestamp: 0,
+            mask: None,
         };
 
         // Primary player send to all the scenes
@@ -2036,6 +2037,7 @@ impl SceneManager {
         if let Some(mut global) = DclGlobal::try_singleton() {
             let mut global_bind = global.bind_mut();
             global_bind.reset_input_modifiers();
+            global_bind.reset_touch_controls();
             let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
             drop(global_bind);
