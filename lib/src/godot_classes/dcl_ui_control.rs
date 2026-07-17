@@ -3,6 +3,7 @@ use std::{cell::RefCell, rc::Rc, sync::atomic::Ordering};
 use godot::{
     classes::{
         control::{FocusMode, MouseFilter},
+        notify::ControlNotification,
         Control, IControl, Input, InputEvent, InputEventMouseButton, InputEventScreenDrag,
         InputEventScreenTouch, Node,
     },
@@ -79,6 +80,19 @@ impl IControl for DclUiControl {
 
     fn ready(&mut self) {
         self.base_mut().set_focus_mode(FocusMode::NONE);
+    }
+
+    fn on_notification(&mut self, what: ControlNotification) {
+        // Release any held bound input actions (PBUiInputBinding) when this control leaves the
+        // tree. Full scene teardown frees the node via `base_ui.take()` + `queue_free` without
+        // going through CRDT deletion, so `clear_input_binding` is never called — without this
+        // a scene torn down while the player is pressing a bound UI element (e.g. teleporting
+        // mid-press) would leave the actions stuck in the `Input` singleton (phantom
+        // movement/jumps). `press_bound_actions` is idempotent, so this is a no-op when nothing
+        // is held.
+        if what == ControlNotification::EXIT_TREE {
+            self.press_bound_actions(false);
+        }
     }
 }
 
