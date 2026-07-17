@@ -26,8 +26,8 @@ use super::{
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventFirebaseInit, SegmentEventIosStoreKitEnvironment, SegmentEventRequestFriend,
-        SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventFirebaseInit, SegmentEventIosStoreKitEnvironment, SegmentEventLoading,
+        SegmentEventRequestFriend, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
     install_referrer::InstallReferrer,
@@ -412,6 +412,20 @@ impl Metrics {
             },
         });
         self.queue_event("Screen Viewed", event);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450). A SINGLE
+    // "Loading Event", discriminated by `type` and correlated across one full load by
+    // `loading_id`. The typed payload is built by the pure `LoadingFunnel`
+    // (scene_runner/loading_funnel.rs) and emitted from `DclSceneManager` — there is no
+    // JSON round-trip and no GDScript-owned schema. See SegmentEventLoading.
+    // ---------------------------------------------------------------------------
+
+    /// Queue one already-built loading funnel event. Called from Rust (DclSceneManager),
+    /// not GDScript — the funnel owns the schema end-to-end.
+    pub fn queue_loading_event(&mut self, event: SegmentEventLoading) {
+        self.queue_event("Loading Event", SegmentEvent::Loading(Box::new(event)));
     }
 
     #[func]

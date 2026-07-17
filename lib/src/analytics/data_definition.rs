@@ -74,6 +74,10 @@ pub enum SegmentEvent {
     AttestationAttempt(SegmentEventAttestationAttempt),
     AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded),
     IosStoreKitEnvironment(SegmentEventIosStoreKitEnvironment),
+    // Loading-pipeline funnel + diagnostics, emitted as a SINGLE "Loading Event"
+    // discriminated by `type` and correlated across one full load by `loading_id`
+    // (see SegmentEventLoading). Boxed: it is the largest variant by far.
+    Loading(Box<SegmentEventLoading>),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -233,6 +237,165 @@ pub struct SegmentEventExplorerSceneLoadTimes {
     elapsed: f32,
     // Boolean flag indicating wether the scene loaded without errors.
     success: bool,
+}
+
+/// Loading-event grammar version. Bump when the field set below changes.
+pub const LOADING_SCHEMA_VERSION: u32 = 1;
+
+/// Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450), emitted as ONE Segment event
+/// (`"Loading Event"`) discriminated by `event_type` and correlated across a whole load by
+/// `loading_id`. A "load" is one loading-screen-bounded episode; every event of that load
+/// (`started` → any `progress` pulses → `completed`, plus any `asset_failure`) shares its
+/// `loading_id`, so the funnel reassembles in Segment by grouping on it. A `progress` pulse ships
+/// every 10s while a slow/stuck load is in flight and carries the same accumulated snapshot as
+/// `completed` (minus `dismissed_by`/`frames`), so a load abandoned before it completes — the user
+/// quits, or the client is killed — still has a last-known state on record. Built by the pure
+/// `LoadingFunnel` (`scene_runner/loading_funnel.rs`) and emitted from `DclSceneManager` via
+/// `Metrics::queue_loading_event`. Every type-specific field is `Option` and only populated for
+/// its `type`. Values are bucketed/rounded — no PII, no parcel coords, no URLs.
+#[derive(Serialize, Clone, Default)]
+pub struct SegmentEventLoading {
+    /// Discriminator: "started" | "progress" | "completed" | "asset_failure" | "realm_change_failed".
+    #[serde(rename = "type")]
+    pub event_type: String,
+    /// Correlation id for one complete load (episode). Shared by every event of that load.
+    pub loading_id: u64,
+    /// Schema/grammar version (LOADING_SCHEMA_VERSION).
+    pub schema: u32,
+    /// Coarse realm class: "world" | "genesis" | "other" | "unknown" (no URL/PII).
+    ///
+    /// The destination the navigation intended, taken at begin and repeated unchanged on
+    /// `completed`, so both events of a load agree. `unknown` means the load began with no realm
+    /// known and none had resolved by the time it ended — background `auto` episodes that live
+    /// entirely inside a realm switch land here.
+    pub realm_bucket: String,
+
+    // --- type = "started" (context) ---
+    /// Navigation entry point. "on_explorer_ready" is the one cold lobby -> world entry (pre-world);
+    /// every other value happens with a world already running (in-world): "on_teleport", "on_world",
+    /// "on_moveto" (walk-teleport), "on_goto_realm" / "on_changerealm" (chat commands), and "auto"
+    /// (background parcel streaming). "-" == none. Also on `completed`/`progress` so a load can be
+    /// filtered without joining: `auto` marks a background streaming episode
+    /// (walking into a parcel, no loading screen), not a user-visible load.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub when: Option<String>,
+    /// Whether the destination realm is a dcl world. Tracks `realm_bucket == "world"`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_world: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub platform: Option<String>,
+
+    // --- type = "completed" / "progress" (the funnel) ---
+    // A `progress` pulse carries this whole block except `dismissed_by` and `frames`; `completed`
+    // carries all of it. Grouped here because both are the accumulated-snapshot fields.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<i64>,
+    /// How the load ended: "completion" | "wall_clock_timeout" | "error" | "superseded" |
+    /// "cancelled". `wall_clock_timeout` == the screen was dismissed before the pipeline reached
+    /// `done` — the infinite / abandoned-load signal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dismissed_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_spawn_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub complete_ms: Option<i64>,
+    /// When the parcel scene under the player reported ready. Best-effort: the loading session is
+    /// dropped the instant it completes, so this milestone is missed on a fair share of loads and
+    /// reads -1. Usable as evidence when set; not usable as a rate.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scene_rendered_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub about_end_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discovery_ms: Option<i64>,
+    /// Wall-clock ms the progress bar sat in the 25–30% plateau (the F-7 "looks frozen" signal).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_in_25_30_band_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phase_breakdown: Option<LoadingPhaseBreakdown>,
+    /// Resources still in flight **process-wide** when the load ended (downloads, avatars,
+    /// wearables — not just this load's scenes; the counters are global and cumulative).
+    ///
+    /// Deliberately not "this load's missing assets": the loading session gates its own
+    /// `Assets -> Ready` transition on every asset it tracks having loaded, so per-session
+    /// accounting is zero by construction on any completed load. This is the process backlog, and
+    /// `> 0` alongside `dismissed_by = "completion"` is the real signal — the loading screen went
+    /// away while the client still owed content.
+    ///
+    /// TODO: attribute this per-load. It needs the ContentProvider to record *who* requested each
+    /// resource (which scene / subsystem) instead of only the two global `fetch_add` counters;
+    /// until then a load cannot separate its own outstanding content from the rest of the process,
+    /// and this stays a whole-process reading.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub process_assets_pending_at_end: Option<i64>,
+    /// Peak of the same process-wide backlog during the load. Same scope caveat.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub process_assets_pending_peak: Option<i64>,
+    /// Asset-group failures the GLTF coordinator reported during this load. Per-load and honest,
+    /// but note that throttled downloads hang rather than fail, so a stalled load reports 0 here.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assets_errored: Option<i64>,
+    /// Mean download throughput across the load, in **megabytes/s** (not Mbit/s). This is the
+    /// field to bucket on to segment slow-connection loads.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_avg_mb_s: Option<f64>,
+    /// Best 1-second download throughput seen during the load, in **megabytes/s**.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_peak_mb_s: Option<f64>,
+    /// Time with resources outstanding but ~nothing arriving: stalled fetches. Near 0 on a healthy
+    /// load; grows with throttling. The client-side signal for downloads that hang instead of
+    /// failing (no HTTP timeout), which is why they never show up in `assets_errored`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_stall_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frames: Option<i64>,
+
+    // --- type = "asset_failure" | "realm_change_failed" ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count: Option<i64>,
+}
+
+impl SegmentEventLoading {
+    /// Base event with the always-present fields set and every type-specific field left `None`.
+    /// Callers fill the fields for their `event_type` via struct-update (`..base`).
+    pub fn base(event_type: &str, loading_id: u64, realm_bucket: String) -> Self {
+        Self {
+            event_type: event_type.to_string(),
+            loading_id,
+            schema: LOADING_SCHEMA_VERSION,
+            realm_bucket,
+            ..Default::default()
+        }
+    }
+}
+
+/// Entry ms of each loading phase since load begin (-1 = phase never reached). Analysts diff
+/// consecutive phases for per-phase duration.
+#[derive(Serialize, Clone)]
+pub struct LoadingPhaseBreakdown {
+    pub metadata: i64,
+    pub spawning: i64,
+    pub assets: i64,
+    pub ready: i64,
+    pub floating_islands: i64,
+    pub done: i64,
+}
+
+impl Default for LoadingPhaseBreakdown {
+    fn default() -> Self {
+        Self {
+            metadata: -1,
+            spawning: -1,
+            assets: -1,
+            ready: -1,
+            floating_islands: -1,
+            done: -1,
+        }
+    }
 }
 
 // TODO: maybe important what realm?
@@ -560,6 +723,11 @@ pub fn build_segment_event_batch_item(
         SegmentEvent::IosStoreKitEnvironment(event) => (
             "iOS StoreKit Environment".to_string(),
             serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::Loading(event) => (
+            "Loading Event".to_string(),
+            serde_json::to_value(*event).unwrap(),
             None,
         ),
     };
