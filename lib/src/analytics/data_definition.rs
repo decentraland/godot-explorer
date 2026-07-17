@@ -271,8 +271,11 @@ pub struct SegmentEventLoading {
     pub realm_bucket: String,
 
     // --- type = "started" (context) ---
-    /// Navigation entry point: "on_teleport" | "on_join_world" | "auto" | "-". Also on `completed`
-    /// so a load can be filtered without joining: `auto` marks a background streaming episode
+    /// Navigation entry point. "on_explorer_ready" is the one cold lobby -> world entry (pre-world);
+    /// every other value happens with a world already running (in-world): "on_teleport", "on_world",
+    /// "on_moveto" (walk-teleport), "on_goto_realm" / "on_changerealm" (chat commands), and "auto"
+    /// (background parcel streaming). "-" == none. Also on `completed`/`progress` so a load can be
+    /// filtered without joining: `auto` marks a background streaming episode
     /// (walking into a parcel, no loading screen), not a user-visible load.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub when: Option<String>,

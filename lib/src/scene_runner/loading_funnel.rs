@@ -34,7 +34,9 @@ const PULSE_MS: i64 = 10_000;
 /// Context captured at load begin (all the values that require Godot access, read once by the
 /// caller and passed in so the funnel stays Godot-free).
 pub struct LoadingBeginContext {
-    /// Navigation entry point: "on_teleport" | "on_join_world" | "auto" | "".
+    /// Navigation entry point: "on_explorer_ready" (cold lobby -> world entry) | "on_teleport" |
+    /// "on_world" | "on_moveto" | "on_goto_realm" | "on_changerealm" | "auto" (background streaming)
+    /// | "".
     pub when: String,
     /// Full realm string (bucketed to a coarse class before it leaves the funnel — never sent raw).
     pub realm: String,
