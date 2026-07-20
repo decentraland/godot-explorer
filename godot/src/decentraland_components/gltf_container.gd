@@ -351,6 +351,9 @@ func apply_fixes(gltf_instance: Node3D):
 
 
 func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
+	# Camera proximity fade (issue #1814): dissolve geometry the camera clips into
+	ProximityFade.apply_material(mat)
+
 	# Induced rules for metallic specular roughness
 	# - If material has metallic texture then metallic value should be
 	# multiplied by .5
