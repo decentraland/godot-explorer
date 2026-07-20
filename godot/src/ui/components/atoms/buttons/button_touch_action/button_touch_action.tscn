@@ -15,4 +15,21 @@ text = "E"
 icon_alignment = 1
 script = ExtResource("2_c0jk1")
 
+[node name="CustomIcon" type="TextureRect" parent="." unique_id=1532661068]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+visible = false
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+editor_description = "Scene-provided icon overlay (PBTouchScreenControls). Hidden by default; toggled by button_touch_action.gd set_custom_icon / clear_custom_icon so it never disturbs the native glyph."
+
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
