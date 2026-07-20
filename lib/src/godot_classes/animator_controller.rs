@@ -671,10 +671,17 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
             if let Some(clip_name) = resolved_clip {
                 let anim_name = StringName::from(&clip_name);
                 anim_player.set_speed_scale(state.speed.unwrap_or(1.0));
-                if state.r#loop.unwrap_or(true) {
-                    if let Some(mut anim) = anim_player.get_animation(&anim_name) {
-                        anim.set_loop_mode(godot::classes::animation::LoopMode::LINEAR);
-                    }
+                // Always set the loop mode explicitly. Only setting it when looping
+                // leaves the animation carrying whatever loop mode it was imported
+                // with, which on mobile can be a non-NONE mode, causing it to keep
+                // looping even when Loop is disabled.
+                if let Some(mut anim) = anim_player.get_animation(&anim_name) {
+                    let loop_mode = if state.r#loop.unwrap_or(true) {
+                        godot::classes::animation::LoopMode::LINEAR
+                    } else {
+                        godot::classes::animation::LoopMode::NONE
+                    };
+                    anim.set_loop_mode(loop_mode);
                 }
                 anim_player.play_ex().name(&anim_name).done();
             }
