@@ -80,12 +80,12 @@ struct EmailCompleteRequest<'a> {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct EmailCompleteResponse {
-    /// The EMAIL identity JWT — this is the only field we consume; it becomes
-    /// `accountAuthTokenToConnect` in the `/link` call. The `walletAddress`
-    /// returned alongside is the email identity's OWN address (not the final
-    /// one), so it is deliberately ignored.
     token: String,
+    /// The email identity's own wallet address. Used for login; ignored for
+    /// the upgrade/link flow (the guest address is preserved instead).
+    wallet_address: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -332,10 +332,10 @@ pub async fn email_initiate(email: &str) -> Result<(), anyhow::Error> {
 }
 
 /// Call B — verifies the OTP and returns the EMAIL identity JWT. That token is
-/// fed to `link_email` as `accountAuthTokenToConnect`. The `walletAddress`
-/// returned by this endpoint is the email identity's own address and is NOT
-/// the final wallet — it is intentionally not parsed.
-pub async fn email_complete(email: &str, code: &str) -> Result<String, anyhow::Error> {
+/// Verifies the OTP code and returns `(email_jwt, email_wallet_address)`.
+/// The JWT is used either to link the email to an existing guest account
+/// (`link_email`) or directly as the auth token for a native email login.
+pub async fn email_complete(email: &str, code: &str) -> Result<(String, H160), anyhow::Error> {
     let url = format!("{}/v1/auth/complete", THIRDWEB_API_BASE);
     let body = EmailCompleteRequest {
         method: "email",
@@ -367,11 +367,17 @@ pub async fn email_complete(email: &str, code: &str) -> Result<String, anyhow::E
     }
 
     let parsed: EmailCompleteResponse = response.json().await?;
+    let address = parsed
+        .wallet_address
+        .as_str()
+        .as_h160()
+        .ok_or_else(|| anyhow::anyhow!("thirdweb email_complete: invalid wallet address"))?;
     tracing::info!(
-        "thirdweb email_complete: success, email_jwt_len={}",
+        "thirdweb email_complete: success, address={:#x}, email_jwt_len={}",
+        address,
         parsed.token.len()
     );
-    Ok(parsed.token)
+    Ok((parsed.token, address))
 }
 
 /// Call C — links the email identity (`email_jwt`) into the existing guest

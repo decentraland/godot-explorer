@@ -39,7 +39,8 @@ use crate::{
 };
 
 use super::{
-    ui_dropdown::update_ui_dropdown, ui_input::update_ui_input, ui_scroll::update_ui_scroll,
+    ui_dropdown::update_ui_dropdown, ui_input::update_ui_input,
+    ui_input_binding::update_ui_input_binding, ui_scroll::update_ui_scroll,
 };
 
 fn assign_z_index_recursive(
@@ -112,12 +113,13 @@ impl UiResults {
     }
 }
 
-const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
+const UI_COMPONENT_IDS: [SceneComponentId; 6] = [
     SceneComponentId::UI_TRANSFORM,
     SceneComponentId::UI_TEXT,
     SceneComponentId::UI_INPUT,
     SceneComponentId::UI_DROPDOWN,
     SceneComponentId::UI_BACKGROUND,
+    SceneComponentId::UI_INPUT_BINDING,
 ];
 
 enum ContextNode {
@@ -596,6 +598,9 @@ pub fn update_scene_ui(
         && dirty_lww_components
             .get(&SceneComponentId::UI_INPUT)
             .is_none()
+        && dirty_lww_components
+            .get(&SceneComponentId::UI_INPUT_BINDING)
+            .is_none()
         && !need_update_ui_canvas;
 
     if need_skip {
@@ -607,6 +612,7 @@ pub fn update_scene_ui(
         update_ui_text(scene, crdt_state);
         update_ui_input(scene, crdt_state);
         update_ui_dropdown(scene, crdt_state);
+        update_ui_input_binding(scene, crdt_state);
         update_layout(scene, crdt_state, ui_canvas_information);
 
         update_input_result(scene, crdt_state);

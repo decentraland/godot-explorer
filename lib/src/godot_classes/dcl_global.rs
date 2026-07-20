@@ -270,6 +270,22 @@ pub struct DclGlobal {
     #[var]
     pub input_modifier_disable_gliding: bool,
 
+    // On-screen touch controls - set by scenes via PBTouchScreenControls on the ROOT entity.
+    // `touch_controls_active` is true while the component is present. `touch_controls_inputs`
+    // is a denylist of per-button overrides (each a dictionary {action, hide, icon}); buttons
+    // not listed keep their default (shown). `touch_controls_main_action` is the godot action
+    // name for the large central button (empty = keep default jump).
+    #[var]
+    pub touch_controls_active: bool,
+    #[var]
+    pub touch_controls_hide_joystick: bool,
+    #[var]
+    pub touch_controls_hide_crosshair: bool,
+    #[var]
+    pub touch_controls_main_action: GString,
+    #[var]
+    pub touch_controls_inputs: VarArray,
+
     // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
     #[var]
     pub sdk_skybox_time_active: bool,
@@ -473,6 +489,13 @@ impl INode for DclGlobal {
             input_modifier_disable_emote: false,
             input_modifier_disable_double_jump: false,
             input_modifier_disable_gliding: false,
+
+            // On-screen touch controls start inactive (default joystick + gamepad shown)
+            touch_controls_active: false,
+            touch_controls_hide_joystick: false,
+            touch_controls_hide_crosshair: false,
+            touch_controls_main_action: GString::new(),
+            touch_controls_inputs: VarArray::new(),
 
             // SDK skybox time starts as inactive
             sdk_skybox_time_active: false,
@@ -679,6 +702,15 @@ impl DclGlobal {
         self.input_modifier_disable_emote = false;
         self.input_modifier_disable_double_jump = false;
         self.input_modifier_disable_gliding = false;
+    }
+
+    /// Reset on-screen touch controls to defaults (joystick + full gamepad shown)
+    pub fn reset_touch_controls(&mut self) {
+        self.touch_controls_active = false;
+        self.touch_controls_hide_joystick = false;
+        self.touch_controls_hide_crosshair = false;
+        self.touch_controls_main_action = GString::new();
+        self.touch_controls_inputs = VarArray::new();
     }
 
     /// Reset SDK skybox time to inactive state

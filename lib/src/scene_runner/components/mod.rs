@@ -21,6 +21,7 @@ pub mod raycast;
 pub mod realm_info;
 pub mod skybox_time;
 pub mod text_shape;
+pub mod touch_screen_controls;
 pub mod transform_and_parent;
 pub mod trigger_area;
 pub mod tween;

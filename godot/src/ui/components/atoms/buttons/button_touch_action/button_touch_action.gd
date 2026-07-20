@@ -7,6 +7,11 @@ signal touch_action_changed(pressed: bool)
 var _touch_index: int = -1
 var _is_action_active: bool = false  # Tracks if we're actually sending the action
 
+# Optional scene-provided icon (PBTouchScreenControls), rendered on a dedicated overlay so
+# it never interferes with the button's native glyph (icon/text). Toggle via set/clear.
+# The overlay node lives in button_touch_action.tscn (hidden by default).
+@onready var _custom_icon: TextureRect = $CustomIcon
+
 
 func _ready() -> void:
 	# Drive the pressed state manually from raw touch so it works for every finger,
@@ -17,6 +22,22 @@ func _ready() -> void:
 	#   auto-toggles or fights our manual state; the button stays momentary.
 	toggle_mode = true
 	button_mask = 0
+
+
+## Show a scene-provided icon on the overlay (leaves the native glyph untouched underneath).
+func set_custom_icon(texture: Texture2D) -> void:
+	if _custom_icon == null:
+		return
+	_custom_icon.texture = texture
+	_custom_icon.show()
+
+
+## Hide the scene-provided icon overlay, revealing the native glyph again.
+func clear_custom_icon() -> void:
+	if _custom_icon == null:
+		return
+	_custom_icon.texture = null
+	_custom_icon.hide()
 
 
 func _on_gui_input(event: InputEvent) -> void:
