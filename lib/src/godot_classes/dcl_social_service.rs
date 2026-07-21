@@ -1334,6 +1334,13 @@ impl DclSocialService {
     }
 
     fn emit_block_update_signal(node: &mut Gd<DclSocialService>, update: BlockUpdate) {
+        // Empty payloads decode as a default BlockUpdate (stream keep-alive/teardown
+        // artifact) — not a real block event, so don't forward it to GDScript
+        if update.address.is_empty() {
+            tracing::debug!("Ignoring empty BlockUpdate (stream keep-alive/teardown artifact)");
+            return;
+        }
+
         // BlockUpdate has fields: address (string) and is_blocked (bool)
         let address = update.address;
         let is_blocked = update.is_blocked;
