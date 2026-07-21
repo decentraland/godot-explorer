@@ -1786,11 +1786,13 @@ impl MessageProcessor {
     }
 
     /// Returns room connectivity info for each peer.
-    /// Each entry is (address, room_description) where room_description lists every
-    /// room the peer is seen in, joined with " + " — e.g. "PULSE + SCENE + ARCHIPELAGO",
-    /// "SCENE + ARCHIPELAGO", "PULSE", or "NONE". A trailing '*' on PULSE marks that
-    /// Pulse is the source currently driving the avatar (transport-preference gate).
-    pub fn get_peer_room_info(&self) -> Vec<(H160, String)> {
+    /// Each entry is (address, room_description, name) where room_description lists
+    /// every room the peer is seen in, joined with " + " — e.g. "PULSE + SCENE +
+    /// ARCHIPELAGO", "SCENE + ARCHIPELAGO", "PULSE", or "NONE". A trailing '*' on
+    /// PULSE marks that Pulse is the source currently driving the avatar
+    /// (transport-preference gate). `name` is the profile display name, empty while
+    /// the profile hasn't been resolved yet.
+    pub fn get_peer_room_info(&self) -> Vec<(H160, String, String)> {
         let mut result = Vec::new();
         for (address, peer) in &self.peer_identities {
             let mut has_scene = false;
@@ -1821,7 +1823,12 @@ impl MessageProcessor {
             } else {
                 parts.join(" + ")
             };
-            result.push((*address, room_desc));
+            let name = peer
+                .profile
+                .as_ref()
+                .map(|profile| profile.content.name.clone())
+                .unwrap_or_default();
+            result.push((*address, room_desc, name));
         }
         result
     }

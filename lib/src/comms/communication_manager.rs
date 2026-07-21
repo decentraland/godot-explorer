@@ -583,7 +583,7 @@ impl INode for CommunicationManager {
             self.multiplayer_debug_last_update = Instant::now();
             if let Some(processor) = &self.message_processor {
                 let avatar_scene = DclGlobal::singleton().bind().get_avatars();
-                for (address, rooms) in processor.get_peer_room_info() {
+                for (address, rooms, _) in processor.get_peer_room_info() {
                     let address_str = format!("{:#x}", address);
                     let mut avatar_scene_ref = avatar_scene.clone();
                     avatar_scene_ref
@@ -2354,7 +2354,7 @@ impl CommunicationManager {
             // Clear all avatar room debug labels
             let avatar_scene = DclGlobal::singleton().bind().get_avatars();
             if let Some(processor) = &self.message_processor {
-                for (address, _) in processor.get_peer_room_info() {
+                for (address, _, _) in processor.get_peer_room_info() {
                     let address_str = format!("{:#x}", address);
                     let mut avatar_scene_ref = avatar_scene.clone();
                     avatar_scene_ref
@@ -2526,11 +2526,12 @@ impl CommunicationManager {
     pub fn get_debug_peer_rooms(&self) -> VarArray {
         let mut arr = VarArray::new();
         if let Some(processor) = &self.message_processor {
-            for (address, rooms) in processor.get_peer_room_info() {
+            for (address, rooms, name) in processor.get_peer_room_info() {
                 let mut dict = VarDictionary::new();
                 let address_str = format!("{:#x}", address);
                 dict.set("address".to_variant(), address_str.to_variant());
                 dict.set("rooms".to_variant(), rooms.to_variant());
+                dict.set("name".to_variant(), name.to_variant());
                 arr.push(&dict.to_variant());
             }
         }

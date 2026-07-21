@@ -1,15 +1,28 @@
 extends PanelContainer
 
 const MAX_PEER_ROWS := 10
+const TOKEN_SUMMARY_CHARS := 16
+
+var collapsed := false
 
 @onready var rich_text_label: RichTextLabel = %RichTextLabel
+@onready var collapse_button: Button = %CollapseButton
 @onready var timer: Timer = %Timer
 
 
 func _ready():
 	timer.timeout.connect(_on_timer_timeout)
+	collapse_button.pressed.connect(_on_collapse_button_pressed)
 	timer.start()
 	_on_timer_timeout()
+
+
+func _on_collapse_button_pressed():
+	collapsed = not collapsed
+	rich_text_label.visible = not collapsed
+	collapse_button.text = "▸" if collapsed else "▾"
+	if not collapsed:
+		_on_timer_timeout()
 
 
 func _state_color(state: String) -> String:
@@ -35,13 +48,36 @@ func _short_address(address: String) -> String:
 	return address.substr(0, 6) + ".." + address.right(4)
 
 
+# Long credentials (LiveKit JWTs) blow up the adapter line — keep the first
+# TOKEN_SUMMARY_CHARS characters of the token value and elide the rest.
+func _summarize_access_token(adapter: String) -> String:
+	var key := "access_token="
+	var idx := adapter.find(key)
+	if idx == -1:
+		return adapter
+	var start := idx + key.length()
+	var end := adapter.find("&", start)
+	if end == -1:
+		end = adapter.length()
+	if end - start <= TOKEN_SUMMARY_CHARS:
+		return adapter
+	return adapter.substr(0, start + TOKEN_SUMMARY_CHARS) + "..." + adapter.substr(end)
+
+
+# Peer names come from the wire — escape the bbcode delimiter so a bracket in a
+# name can't inject markup into the RichTextLabel.
+func _escape_bbcode(text_value: String) -> String:
+	return text_value.replace("[", "[lb]")
+
+
 func _on_timer_timeout():
+	if collapsed:
+		return
 	if not is_instance_valid(Global.comms):
 		return
 
 	var info: Dictionary = Global.comms.get_debug_room_info()
 	var lines := PackedStringArray()
-	lines.append("[b]Multiplayer Debug[/b]")
 
 	var realm_name := ""
 	if is_instance_valid(Global.realm):
@@ -49,7 +85,7 @@ func _on_timer_timeout():
 	if not realm_name.is_empty():
 		lines.append("Realm: %s" % realm_name)
 
-	var adapter: String = info.get("adapter", "")
+	var adapter: String = _summarize_access_token(info.get("adapter", ""))
 	var connection_state: String = info.get("connection_state", "unknown")
 	lines.append("Adapter: %s [%s]" % [adapter, connection_state])
 
@@ -120,7 +156,11 @@ func _peer_lines() -> PackedStringArray:
 		var peer: Dictionary = peers[i]
 		var address: String = peer.get("address", "")
 		var rooms: String = peer.get("rooms", "")
-		lines.append("  %s  %s" % [_short_address(address), rooms])
+		var peer_name: String = peer.get("name", "")
+		var who := _short_address(address)
+		if not peer_name.is_empty():
+			who = "%s %s" % [_escape_bbcode(peer_name), who]
+		lines.append("  %s  %s" % [who, rooms])
 	if peers.size() > MAX_PEER_ROWS:
 		lines.append("  … +%d more" % (peers.size() - MAX_PEER_ROWS))
 	return lines
