@@ -20,12 +20,12 @@ font_size = 20
 font_color = Color(1, 0.1764706, 0.33333334, 1)
 
 [node name="DclTextEdit" type="VBoxContainer" unique_id=1583726089]
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(300, 0)
 offset_right = 352.0
-offset_bottom = 101.0
+offset_bottom = 100.0
 size_flags_horizontal = 3
 size_flags_vertical = 0
-theme_override_constants/separation = 8
+theme_override_constants/separation = 7
 script = ExtResource("1_iibrq")
 
 [node name="TextEditContainer" type="Control" parent="." unique_id=1976220458]
