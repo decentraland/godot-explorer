@@ -1031,6 +1031,7 @@ func sign_out() -> void:
 	# avatar editor (issue #1658). Also drop the saved guest look on explicit
 	# sign-out to close the guest->guest leak vector.
 	get_config().guest_profile = {}
+	NamesRequest.invalidate_cache()
 	player_identity.reset_identity()
 	get_config().save_to_settings_file()
 
