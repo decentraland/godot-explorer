@@ -52,9 +52,9 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
 
 	# Touch-feedback debug overlay (issue #2562): off by default, enabled on demand.
-	var touch_feedback_value = Global.deep_link_obj.params.get("touch-feedback", "")
+	var touch_feedback_value: String = Global.deep_link_obj.params.get("touch-feedback", "")
 	if not touch_feedback_value.is_empty():
-		var touch_feedback_enable := touch_feedback_value.to_lower() in ["true", "1", "yes"]
+		var touch_feedback_enable: bool = touch_feedback_value.to_lower() in ["true", "1", "yes"]
 		TouchFeedback.set_enabled(touch_feedback_enable)
 		print("[DEEPLINK] touch-feedback=", touch_feedback_enable)
 
