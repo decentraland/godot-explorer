@@ -422,8 +422,6 @@ func _ready():
 	show_dcl_splash_screen()
 	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
 	print("[Startup] lobby.show_dcl_splash_screen: %dms" % startup_time_ms)
-	# DEBUG-2386: hold the lobby DclSplash+spinner to iterate on startup visuals
-	await get_tree().create_timer(5.0).timeout
 
 	if Global.is_mobile():
 		var gate_decision := await _async_run_version_gate()

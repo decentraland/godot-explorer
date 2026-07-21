@@ -20,8 +20,7 @@ const FADE_SECONDS := 0.4
 const SpinnerScene := preload(
 	"res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn"
 )
-# DEBUG-2386-DIAG: CYAN logo = SplashOverlay. Revert to res://decentraland_logo.png after.
-const LogoTexture := preload("res://assets/ui/splash-diag-overlay.png")
+const LogoTexture := preload("res://decentraland_logo.png")
 
 var _content: Control
 var _spinner: Control

@@ -95,8 +95,6 @@ func _start():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
 		print("Running in regular mode")
-		# DEBUG-2386: hold the main.tscn DclSplash (isotype, no spinner) to iterate on startup visuals
-		await get_tree().create_timer(5.0).timeout
 		# EULA check is handled inside lobby.gd — always go to lobby
 		get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
 

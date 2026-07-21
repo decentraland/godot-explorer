@@ -28,11 +28,9 @@ config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
 run/main_loop_type="ProjectMainLoop"
 config/features=PackedStringArray("4.6")
-; DEBUG-2386-DIAG: per-surface colored logos (RED=storyboard, GREEN=boot, CYAN=overlay).
-; Diagnosing WHY the GREEN engine-boot logo renders pixelated (hiding it is a no-go).
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/stretch_mode=0
-boot_splash/image="res://assets/ui/splash-diag-boot.png"
+boot_splash/image="res://assets/ui/splash-isotype.png"
 boot_splash/show_image=true
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
