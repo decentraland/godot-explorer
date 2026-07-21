@@ -7,6 +7,10 @@ var _startup_time: int = Time.get_ticks_msec()
 func _ready():
 	print("[Startup] main._ready: %dms" % (Time.get_ticks_msec() - _startup_time))
 	Global.set_orientation_portrait()
+	# #2386: apply the UI content-scale synchronously here — before the first frame is
+	# presented — so the SplashOverlay (and all UI) render at their final scale from frame 0
+	# instead of popping 1.0 -> content_scale_factor a frame later when start() runs.
+	GraphicSettings.apply_ui_zoom(get_window())
 	start.call_deferred()
 
 
@@ -47,6 +51,8 @@ func start():
 	self._start.call_deferred()
 
 
+# DEBUG-2386: _start awaits a timer to hold the splash; remove with the rest of DEBUG-2386.
+# gdlint:ignore = async-function-name
 func _start():
 	print("[Startup] main._start: %dms" % (Time.get_ticks_msec() - _startup_time))
 	if Global.cli.asset_server:
@@ -89,6 +95,8 @@ func _start():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
 		print("Running in regular mode")
+		# DEBUG-2386: hold the main.tscn DclSplash (isotype, no spinner) to iterate on startup visuals
+		await get_tree().create_timer(5.0).timeout
 		# EULA check is handled inside lobby.gd — always go to lobby
 		get_tree().change_scene_to_file("res://src/ui/pages/auth/lobby.tscn")
 
