@@ -614,6 +614,16 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").into()
     }
 
+    /// Clean-semver release string for Sentry (`{major.minor.patch}+{build}`), so
+    /// `release.version` / `release.build` filtering, adoption and regression tracking
+    /// work. Distinct from `get_version()`, which keeps the human/log-facing full string
+    /// (commit hash + `-{env}` suffix). Commit hash and environment reach Sentry via
+    /// `dist` and `environment`. Built in build.rs (`GODOT_EXPLORER_SENTRY_RELEASE`).
+    #[func]
+    pub fn get_sentry_release() -> GString {
+        env!("GODOT_EXPLORER_SENTRY_RELEASE").into()
+    }
+
     /// Get version string with environment suffix (e.g., "v1.0.0 - zone")
     /// Hidden when environment is plain "org" (production default).
     #[func]
