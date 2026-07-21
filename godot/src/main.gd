@@ -51,8 +51,6 @@ func start():
 	self._start.call_deferred()
 
 
-# DEBUG-2386: _start awaits a timer to hold the splash; remove with the rest of DEBUG-2386.
-# gdlint:ignore = async-function-name
 func _start():
 	print("[Startup] main._start: %dms" % (Time.get_ticks_msec() - _startup_time))
 	if Global.cli.asset_server:

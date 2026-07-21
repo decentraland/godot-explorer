@@ -10,7 +10,7 @@ extends Control
 ##   AVATAR_CUSTOMIZE    -> %AvatarCustomize        (backpack avatar editor)
 ##   AVATAR_NAMING       -> %AvatarNaming           (choose-name mode)
 ##   COMEBACK            -> %RestoreAndChooseName  (restore mode: welcome back)
-##   DCL_SPLASH          -> %DclSplash              (spinner)
+##   DCL_SPLASH          -> SplashOverlay autoload  (global spinner)
 ##   DISCOVER_FTUE       -> %DiscoverFtue            (first time user experience)
 ##
 ## Auth flow (Create Account / Sign In only changes the label):
@@ -62,7 +62,6 @@ var _guest_login_attempt: int = 0
 
 @onready var control_main = %Main
 @onready var dcl_line_edit: VBoxContainer = %DclLineEdit
-@onready var control_dcl_splash = %DclSplash
 @onready var control_version_upgrade = %VersionUpgrade
 @onready var control_signin = %SignIn
 @onready var control_account_home = %AccountHome
@@ -110,9 +109,7 @@ func show_panel(child_node: Control, subpanel: Control = null):
 	# #2386: reaching show_panel means we're revealing interactive content, so dismiss the
 	# global startup splash overlay (the splash no longer routes through show_panel).
 	SplashOverlay.fade_out()
-	if child_node == control_dcl_splash:
-		set_background(BG_GRADIENT)
-	elif control_with_discover_bg.has(child_node):
+	if control_with_discover_bg.has(child_node):
 		set_background(BG_DISCOVER)
 	elif child_node == control_avatar_naming or child_node == control_avatar_create:
 		set_background(BG_AVATAR)
