@@ -1,7 +1,8 @@
 extends Control
 
 ## Tracks active touch points and draws one circle per finger. Hosted by the
-## TouchFeedback CanvasLayer (production-only); see touch_feedback_overlay.gd.
+## TouchFeedback CanvasLayer (deeplink-activated, never on production); see
+## touch_feedback_overlay.gd.
 
 const RADIUS := 44.0
 const FILL_COLOR := Color(1.0, 1.0, 1.0, 0.22)
