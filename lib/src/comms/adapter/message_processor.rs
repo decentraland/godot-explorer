@@ -312,6 +312,23 @@ impl MessageProcessor {
         a.trim_end_matches('/') == b.trim_end_matches('/')
     }
 
+    /// Validates a peer-advertised `lambdasEndpoint` (untrusted LiveKit
+    /// metadata). Anything that isn't a plausible http(s) URL is discarded so
+    /// the profile fetch keeps using the realm's own lambda endpoint instead.
+    fn sanitize_lambdas_endpoint(endpoint: &str) -> Option<&str> {
+        let trimmed = endpoint.trim();
+        let host_and_path = trimmed
+            .strip_prefix("https://")
+            .or_else(|| trimmed.strip_prefix("http://"))?;
+        if host_and_path.is_empty()
+            || host_and_path.starts_with('/')
+            || trimmed.chars().any(char::is_whitespace)
+        {
+            return None;
+        }
+        Some(trimmed)
+    }
+
     /// Returns true if the address looks like a real player (non-synthetic Ethereum address).
     /// Synthetic addresses (like H160::from_low_u64_be(1) for the auth server) are non-player.
     fn is_player_address(address: H160) -> bool {
@@ -994,7 +1011,11 @@ impl MessageProcessor {
                             }
                         }
                     }
-                    if let Some(endpoint) = json.get("lambdasEndpoint").and_then(|v| v.as_str()) {
+                    if let Some(endpoint) = json
+                        .get("lambdasEndpoint")
+                        .and_then(|v| v.as_str())
+                        .and_then(Self::sanitize_lambdas_endpoint)
+                    {
                         if let Some(peer) = self.peer_identities.get_mut(&message.address) {
                             if peer.lambdas_endpoint.as_deref() != Some(endpoint) {
                                 tracing::debug!(
@@ -1395,7 +1416,7 @@ impl MessageProcessor {
                         let version_ok = |r: &Result<UserProfile, _>| matches!(r, Ok(p) if p.version >= announced_version_for_retry);
 
                         // Determine fetch endpoint: peer's lambdas endpoint if available, else realm lambda
-                        let fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
+                        let mut fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
                             Some(endpoint)
                                 if !Self::is_same_lambda_endpoint(
                                     endpoint,
@@ -1431,6 +1452,36 @@ impl MessageProcessor {
                             .await;
                             if version_ok(&result) {
                                 break;
+                            }
+                            // A hard error from the peer-advertised endpoint (bad metadata,
+                            // unreachable catalyst) must not burn the whole retry chain:
+                            // switch to the realm endpoint for the remaining attempts and
+                            // try it right away. An Ok-but-stale response keeps retrying
+                            // the same endpoint — that's catalyst propagation lag, not a
+                            // broken URL.
+                            if result.is_err()
+                                && !Self::is_same_lambda_endpoint(
+                                    &fetch_endpoint,
+                                    &lamda_server_base_url,
+                                )
+                            {
+                                tracing::debug!(
+                                    "peer lambdas endpoint {} failed for {:#x}, falling back to realm endpoint {}",
+                                    fetch_endpoint,
+                                    address,
+                                    lamda_server_base_url
+                                );
+                                fetch_endpoint = lamda_server_base_url.clone();
+                                result = request_lambda_profile(
+                                    address,
+                                    fetch_endpoint.as_str(),
+                                    profile_base_url.as_str(),
+                                    http_requester.clone(),
+                                )
+                                .await;
+                                if version_ok(&result) {
+                                    break;
+                                }
                             }
                         }
 
@@ -1910,5 +1961,38 @@ mod tests {
             "https://peer.decentraland.org/lambdas",
             "https://peer-ec2.decentraland.org/lambdas/"
         ));
+    }
+
+    #[test]
+    fn sanitize_lambdas_endpoint_accepts_only_plausible_http_urls() {
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(" https://peer.decentraland.org/lambdas "),
+            Some("https://peer.decentraland.org/lambdas")
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("http://localhost:7070/lambdas/"),
+            Some("http://localhost:7070/lambdas/")
+        );
+        assert_eq!(MessageProcessor::sanitize_lambdas_endpoint(""), None);
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("not a url"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("ftp://peer.decentraland.org/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https:///lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://peer.decentraland.org/lam bdas"),
+            None
+        );
     }
 }
