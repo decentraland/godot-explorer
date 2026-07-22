@@ -529,6 +529,7 @@ func _ready():
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
+	self.realm.realm_access_denied.connect(_on_realm_access_denied)
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
@@ -1551,6 +1552,31 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 		"error",
 		"alert"
 	)
+
+
+func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> void:
+	# The world restricts access and this user is not on its allow-list (#1725). Only
+	# Global.realm is wired here — transient Realm instances (portable experiences) just
+	# fail to load, same as they do for the generic failure toast.
+	_clear_boot_realm_if_denied(world_name)
+	Global.modal_manager.async_show_private_world_modal(world_name)
+
+
+## async_join_world / async_teleport_to persist the destination *before* the explorer scene
+## gets to run the private-world gate, so a refused world would otherwise stay as the boot
+## realm and re-open this modal on every cold start. Point it back at the main realm.
+func _clear_boot_realm_if_denied(world_name: String) -> void:
+	var config = Global.get_config()
+	var stored: String = config.last_realm_joined
+	if stored.is_empty():
+		return
+	var stored_world := WorldPermissionsHelper.world_name_from_realm(
+		stored, Realm.resolve_realm_url(stored)
+	)
+	if stored_world != world_name:
+		return
+	config.last_realm_joined = DclUrls.main_realm()
+	config.save_to_settings_file()
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:

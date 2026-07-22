@@ -47,6 +47,10 @@ const BAN_PRE_CHECK_TITLE = "You can't enter"
 const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
 const BAN_PRE_CHECK_PRIMARY = "BACK TO DISCOVER"
 
+const PRIVATE_WORLD_TITLE = "%s is private"
+const PRIVATE_WORLD_BODY = "Only invited people can enter."
+const PRIVATE_WORLD_PRIMARY = "BACK TO DISCOVER"
+
 const BAN_KICKED_TITLE = "You've been banned"
 const BAN_KICKED_BODY = "Please contact support for more information."
 const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
@@ -109,8 +113,11 @@ var travel_modal_scene: PackedScene = null
 var input_modal_scene: PackedScene = null
 var code_modal_scene: PackedScene = null
 var ban_pre_check_active: bool = false
+## Same idea as `ban_pre_check_active`, for a private world the user can't enter (#1725).
+var private_world_block_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
+var _private_world_block_name: String = ""
 var _canvas_layer: CanvasLayer = null
 var _travel_canvas_layer: CanvasLayer = null
 var _input_canvas_layer: CanvasLayer = null
@@ -130,7 +137,7 @@ func _ready() -> void:
 	code_modal_scene = load(CODE_MODAL_SCENE_PATH)
 	if not code_modal_scene:
 		push_error("ModalManager: Could not load code modal scene at: " + CODE_MODAL_SCENE_PATH)
-	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
+	Global.on_menu_close.connect(_on_menu_close_blocked_entry_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
 
@@ -379,6 +386,31 @@ func async_show_ban_pre_check_modal() -> void:
 
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_ban_pre_check_go_to_discover)
+
+
+## Shows the private-world modal (#1725): the target world restricts access to an
+## allow-list the user is not on, so the realm change was refused before loading.
+## @param world_name: The world being refused, e.g. "myworld.dcl.eth"
+func async_show_private_world_modal(world_name: String) -> void:
+	_force_hide_loading_screen()
+
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	_private_world_block_name = world_name
+
+	current_modal.blocker = true
+	current_modal.set_title(PRIVATE_WORLD_TITLE % world_name.trim_suffix(".dcl.eth"))
+	current_modal.set_body(PRIVATE_WORLD_BODY)
+	current_modal.set_primary_button_text(PRIVATE_WORLD_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_private_world_go_to_discover)
 
 
 ## Shows a ban kicked modal (when kicked from a scene in real-time)
@@ -981,6 +1013,26 @@ func _on_ban_pre_check_go_to_discover() -> void:
 	# Case 3: Already in discover — modal closed, discover is already behind
 
 
+func _on_private_world_go_to_discover() -> void:
+	close_current_modal()
+
+	if Global.is_orientation_portrait():
+		# Already in Discover — the modal was the only thing on top of it.
+		return
+
+	_force_hide_loading_screen()
+	Global.set_orientation_portrait()
+	Global.open_discover.emit()
+
+	# Only trap the user in Discover when the refusal left them with no realm at all
+	# (cold start straight into a private world). If they were already somewhere, closing
+	# Discover has to take them back to the realm they came from.
+	# Armed AFTER opening discover so on_menu_close signals fired during the transition
+	# don't trigger a premature reshow.
+	if Global.realm.get_realm_string().is_empty():
+		private_world_block_active = true
+
+
 func _on_ban_go_to_discover() -> void:
 	close_current_modal()
 	Global.set_orientation_portrait()
@@ -1013,11 +1065,24 @@ func _force_hide_loading_screen() -> void:
 	explorer.loading_ui.loading_screen_progress_logic.hide_loading_screen()
 
 
-func _on_menu_close_ban_recheck() -> void:
-	if not ban_pre_check_active:
-		return
-	# Re-show the ban modal and re-open discover
-	async_show_ban_pre_check_modal.call_deferred()
+func _on_menu_close_blocked_entry_recheck() -> void:
+	# Re-show whichever blocking modal is still active and re-open discover
+	if ban_pre_check_active:
+		async_show_ban_pre_check_modal.call_deferred()
+	elif private_world_block_active:
+		async_show_private_world_modal.call_deferred(_private_world_block_name)
+
+
+## Re-shows the blocking modal that is still keeping the user out of the explorer, if any.
+## Returns true when one was re-shown, so callers can stop their own navigation.
+func reshow_blocked_entry_modal() -> bool:
+	if ban_pre_check_active:
+		async_show_ban_pre_check_modal()
+		return true
+	if private_world_block_active:
+		async_show_private_world_modal(_private_world_block_name)
+		return true
+	return false
 
 
 ## Clear suppress flag after loading finishes.
