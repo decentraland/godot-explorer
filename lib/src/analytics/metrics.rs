@@ -26,8 +26,9 @@ use super::{
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventFirebaseInit, SegmentEventIosStoreKitEnvironment, SegmentEventLoading,
-        SegmentEventRequestFriend, SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
+        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventRequestFriend,
+        SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
     install_referrer::InstallReferrer,
@@ -528,6 +529,40 @@ impl Metrics {
             session_ttl_s: opt_i64(5),
         });
         self.queue_event("Attestation Attempt", event);
+    }
+
+    /// One per silent thirdweb guest-login attempt. See
+    /// data_definition::SegmentEventGuestWalletCreation for field meanings.
+    ///
+    /// GDScript-friendly sentinels (gdext doesn't surface Option<T> across FFI):
+    ///   - `failure_reason`: empty string ("") == None (success path).
+    ///   - `http_status`: -1 == None.
+    ///   - `duration_ms`: clamped to >= 0.
+    #[func]
+    pub fn track_guest_wallet_creation(
+        &mut self,
+        outcome: String,
+        is_new_user: bool,
+        failure_reason: String,
+        http_status: i64,
+        duration_ms: i64,
+    ) {
+        let event = SegmentEvent::GuestWalletCreation(SegmentEventGuestWalletCreation {
+            outcome,
+            is_new_user,
+            failure_reason: if failure_reason.is_empty() {
+                None
+            } else {
+                Some(failure_reason)
+            },
+            http_status: if http_status < 0 {
+                None
+            } else {
+                Some(http_status as u32)
+            },
+            duration_ms: duration_ms.max(0) as u32,
+        });
+        self.queue_event("Guest Wallet Creation", event);
     }
 
     /// Boot-time cache probe event. `remaining_s` is -1 (becomes None) for any

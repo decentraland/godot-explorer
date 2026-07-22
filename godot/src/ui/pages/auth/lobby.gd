@@ -10,7 +10,7 @@ extends Control
 ##   AVATAR_CUSTOMIZE    -> %AvatarCustomize        (backpack avatar editor)
 ##   AVATAR_NAMING       -> %AvatarNaming           (choose-name mode)
 ##   COMEBACK            -> %RestoreAndChooseName  (restore mode: welcome back)
-##   DCL_SPLASH          -> %DclSplash              (spinner)
+##   DCL_SPLASH          -> SplashOverlay autoload  (global spinner)
 ##   DISCOVER_FTUE       -> %DiscoverFtue            (first time user experience)
 ##
 ## Auth flow (Create Account / Sign In only changes the label):
@@ -62,7 +62,6 @@ var _guest_login_attempt: int = 0
 
 @onready var control_main = %Main
 @onready var dcl_line_edit: VBoxContainer = %DclLineEdit
-@onready var control_dcl_splash = %DclSplash
 @onready var control_version_upgrade = %VersionUpgrade
 @onready var control_signin = %SignIn
 @onready var control_account_home = %AccountHome
@@ -107,9 +106,10 @@ func set_background(texture: Texture2D) -> void:
 
 
 func show_panel(child_node: Control, subpanel: Control = null):
-	if child_node == control_dcl_splash:
-		set_background(BG_GRADIENT)
-	elif control_with_discover_bg.has(child_node):
+	# #2386: reaching show_panel means we're revealing interactive content, so dismiss the
+	# global startup splash overlay (the splash no longer routes through show_panel).
+	SplashOverlay.fade_out()
+	if control_with_discover_bg.has(child_node):
 		set_background(BG_DISCOVER)
 	elif child_node == control_avatar_naming or child_node == control_avatar_create:
 		set_background(BG_AVATAR)
@@ -161,7 +161,9 @@ func show_avatar_naming_screen():
 func show_dcl_splash_screen():
 	current_screen_name = "DCL_SPLASH"
 	button_back.hide()
-	show_panel(control_dcl_splash)
+	# #2386: the splash now lives in the global SplashOverlay autoload, which persists across
+	# scene changes (no per-scene DclSplash, no gray swap flash). Show the spinner state.
+	SplashOverlay.show_spinner()
 
 
 func show_version_upgrade_screen():
@@ -504,8 +506,16 @@ func _ready():
 		get_tree().change_scene_to_file.call_deferred(
 			"res://src/ui/components/organisms/menu/menu.tscn"
 		)
+		# #2386: dismiss the startup splash overlay once the menu scene is up.
+		SplashOverlay.fade_out.call_deferred()
 	else:
 		show_account_home_screen()
+
+
+func _exit_tree() -> void:
+	# #2386: leaving the lobby (to explorer or menu, via any change_scene path) dismisses the
+	# global startup splash overlay. Safety net so it can never get stuck covering a new scene.
+	SplashOverlay.fade_out()
 
 
 func _notification(what: int) -> void:
@@ -586,6 +596,8 @@ func _debug_clear_guest_state() -> int:
 
 func go_to_explorer():
 	if is_inside_tree():
+		# #2386: dismiss the startup splash overlay so the explorer's own loading screen shows.
+		SplashOverlay.fade_out()
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 

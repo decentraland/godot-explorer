@@ -794,6 +794,7 @@ func _hide_friendship_buttons() -> void:
 
 
 func _on_button_edit_profile_pressed() -> void:
+	NamesRequest.pre_fetch()
 	close()
 	Global.set_orientation_portrait()
 	Global.open_profile_editor.emit()
