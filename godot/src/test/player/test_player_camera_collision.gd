@@ -46,7 +46,8 @@ func _initialize() -> void:
 	await _test_default_scene_collider_shortens_arm()
 	await _test_clamp_full_offset_when_clear()
 	await _test_clamp_catches_lateral_wall()
-	await _test_clamp_floors_at_min_distance()
+	await _test_clamp_back_to_wall_overlap()
+	await _test_clamp_fully_blocked_stays_out_of_wall()
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
 	_test_scene_pivot_centered_and_masked()
@@ -176,12 +177,15 @@ func _add_box(world: Node3D, center: Vector3, size: Vector3) -> void:
 	world.add_child(wall)
 
 
+# Physics frames settle the spring; process frames run the clamp (which lives
+# in _process). Extend smoothing uses real-time delta, so give it several.
 # gdlint:ignore = async-function-name
 func _settle() -> void:
 	await physics_frame
 	await physics_frame
 	await physics_frame
-	await process_frame
+	for i in range(20):
+		await process_frame
 
 
 # No walls: the clamp must preserve the exact over-shoulder framing — camera at
@@ -224,37 +228,59 @@ func _test_clamp_catches_lateral_wall() -> void:
 		)
 
 	var cam: Camera3D = rig["cam"]
-	# Pulled in front of the box's near face (2.5) minus the sphere radius (0.3),
+	# Pulled in front of the box's near face (2.5) minus the sphere radius (0.4),
 	# and clearly not collapsed to the pivot.
-	if cam.global_position.z > 2.3:
+	if cam.global_position.z > 2.2:
 		_fail(
 			(
-				"lateral wall: camera still inside the wall volume (pos=%s, z expected < 2.3)"
+				"lateral wall: camera still inside the wall volume (pos=%s, z expected < 2.2)"
 				% cam.global_position
 			)
 		)
-	if cam.global_position.length() < CameraRig.CLAMP_MIN_DISTANCE - 0.01:
+	if cam.global_position.z < 1.0:
 		_fail("lateral wall: camera over-shrunk (pos=%s)" % cam.global_position)
 	rig["world"].queue_free()
 
 
-# Fully blocked (wall right behind the pivot): never pulls inside the avatar's
-# head — floors at CLAMP_MIN_DISTANCE.
+# THE probe case: player's back against a wall (pivot 0.25m from the wall
+# face). An r=0.4 sphere cast FROM the pivot already overlaps the wall, and
+# cast_motion ignores start overlaps (reports all-clear) — the camera used to
+# sail through. The mount-forward shifted cast must catch it and keep the
+# camera out of the wall (z must stay below the 0.25 wall face).
 # gdlint:ignore = async-function-name
-func _test_clamp_floors_at_min_distance() -> void:
+func _test_clamp_back_to_wall_overlap() -> void:
 	var rig := _build_clamp_rig()
-	_add_box(rig["world"], Vector3(0, 0, 1.0), Vector3(4, 4, 1))
+	# Wall face at z=0.25 (box z: 0.25..0.45), pivot at the origin.
+	_add_box(rig["world"], Vector3(0, 0, 0.35), Vector3(4, 4, 0.2))
 	await _settle()
 
 	var cam: Camera3D = rig["cam"]
-	var dist := cam.global_position.length()
-	if dist > 0.6:
-		_fail("blocked wall: camera not pulled in (dist=%.2f, expected near min)" % dist)
-	if dist < CameraRig.CLAMP_MIN_DISTANCE - 0.05:
+	if cam.global_position.z > 0.2:
+		_fail(
+			"back-to-wall: camera inside the wall (pos=%s, z expected <= 0.2)" % cam.global_position
+		)
+	if cam.global_position.z < -0.6:
+		_fail("back-to-wall: camera shot off too far forward (pos=%s)" % cam.global_position)
+	rig["world"].queue_free()
+
+
+# Fully blocked (wall right behind the pivot): the camera pulls in front of
+# the wall face keeping the sphere's standoff — no artificial distance floor.
+# gdlint:ignore = async-function-name
+func _test_clamp_fully_blocked_stays_out_of_wall() -> void:
+	var rig := _build_clamp_rig()
+	_add_box(rig["world"], Vector3(0, 0, 1.0), Vector3(4, 4, 1))  # face at z=0.5
+	await _settle()
+
+	var cam: Camera3D = rig["cam"]
+	# Must stop clearly in front of the 0.5 wall face (the camera is projected
+	# back onto the arm's line, so it stands a bit closer than the sphere's
+	# center does — what matters is it never enters the wall).
+	if cam.global_position.z > 0.35:
 		_fail(
 			(
-				"blocked wall: camera pulled inside min distance (dist=%.2f, min=%.2f)"
-				% [dist, CameraRig.CLAMP_MIN_DISTANCE]
+				"blocked wall: camera too close to/inside the wall (pos=%s, z expected <= 0.35)"
+				% cam.global_position
 			)
 		)
 	rig["world"].queue_free()
