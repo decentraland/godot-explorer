@@ -156,6 +156,12 @@ var _prop_last_glide_state: int = 0
 var _prop_sync_pending: bool = true
 var _glide_forward_blend: float = 0.0
 
+# Network emote that arrived while the avatar was still loading — Pulse replays
+# the peer's last emote announcement at join, and LiveKit emotes can race the
+# profile fetch. Playing it now would resolve against the default body shape and
+# be wiped by the rebuild anyway, so it's latched and replayed on avatar_ready.
+var _pending_network_emote: String = ""
+
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
 
@@ -1212,6 +1218,13 @@ func async_load_wearables():
 		remove_meta("pending_expression_trigger")
 		_async_play_expression_trigger(pending_emote)
 
+	# Replay a network emote that arrived while the avatar was loading (e.g. the
+	# stored announcement Pulse delivers at join for a peer already mid-emote).
+	if not _pending_network_emote.is_empty():
+		var pending_network_urn := _pending_network_emote
+		_pending_network_emote = ""
+		async_play_emote(pending_network_urn)
+
 
 func apply_color_and_facial():
 	for child in body_shape_skeleton_3d.get_children():
@@ -1804,12 +1817,16 @@ func _play_emote_audio(file_hash: String):
 
 
 func async_play_emote(emote_urn: String):
+	if not avatar_ready:
+		_pending_network_emote = emote_urn
+		return
 	await emote_controller.async_play_emote(emote_urn)
 
 
 ## Stop a looping emote on network request (rfc4 PlayerEmote.is_stopping /
 ## Pulse EmoteStopped). Called from Rust (AvatarScene::stop_emote).
 func stop_emote_from_network():
+	_pending_network_emote = ""
 	if emote_controller:
 		emote_controller.stop_emote()
 
