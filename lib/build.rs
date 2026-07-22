@@ -15,11 +15,14 @@ struct Component {
 
 const PROTO_FILES_BASE_DIR: &str = "src/dcl/components/proto/";
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
-const GROW_ONLY_SET_COMPONENTS: [&str; 4] = [
+const GROW_ONLY_SET_COMPONENTS: [&str; 5] = [
     "PointerEventsResult",
     "VideoEvent",
     "AvatarEmoteCommand",
     "TriggerAreaResult",
+    // The renderer appends one value per per-asset transition; the scene-side
+    // SDK reads AssetLoadLoadingState as a GrowOnlyValueSet (protocol PR #339).
+    "AssetLoadLoadingState",
 ];
 
 pub fn snake_to_pascal(input: &str) -> String {
