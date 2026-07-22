@@ -2,8 +2,8 @@ use std::cell::RefCell;
 
 use godot::{
     classes::{
-        Control, INinePatchRect, Material, NinePatchRect, Node, ResourceLoader, Shader,
-        ShaderMaterial, Texture2D, TextureRect,
+        canvas_item::TextureRepeat, Control, INinePatchRect, Material, NinePatchRect, Node,
+        ResourceLoader, Shader, ShaderMaterial, Texture2D, TextureRect,
     },
     prelude::*,
 };
@@ -12,7 +12,10 @@ use crate::{
     content::content_mapping::{ContentMappingAndUrlRef, DclContentMappingAndUrl},
     dcl::components::{
         material::{DclSourceTex, DclTexture},
-        proto_components::sdk::components::{BackgroundTextureMode, PbUiBackground},
+        proto_components::{
+            common::{TextureUnion, TextureWrapMode},
+            sdk::components::{BackgroundTextureMode, PbUiBackground},
+        },
     },
     godot_classes::dcl_config::TextureQuality,
 };
@@ -73,6 +76,22 @@ fn shared_rounded_clip_shader() -> Gd<Shader> {
             shader
         }
     })
+}
+
+/// Godot resolves texture repeat on the CanvasItem that samples the texture, not on
+/// the texture itself, so `wrapMode` only takes effect once projected onto the node.
+fn texture_repeat_from_texture(texture: &Option<TextureUnion>) -> TextureRepeat {
+    let wrap_mode = texture
+        .as_ref()
+        .and_then(Option::<DclTexture>::from)
+        .map(|texture| texture.wrap_mode)
+        .unwrap_or(TextureWrapMode::TwmClamp);
+
+    match wrap_mode {
+        TextureWrapMode::TwmRepeat => TextureRepeat::ENABLED,
+        TextureWrapMode::TwmMirror => TextureRepeat::MIRROR,
+        TextureWrapMode::TwmClamp => TextureRepeat::DISABLED,
+    }
 }
 
 #[derive(GodotClass)]
@@ -332,9 +351,12 @@ impl DclUiBackground {
             &Vector4::new(uvs[4], uvs[5], uvs[6], uvs[7]).to_variant(),
         );
 
+        let texture_repeat = texture_repeat_from_texture(&self.current_value.texture);
+
         // Set texture on the UV child and also as shader parameter
         if let Some(child) = &mut self.uv_child {
             child.set_texture(texture);
+            child.set_texture_repeat(texture_repeat);
         }
 
         // Also apply modulate color to the UV child
@@ -745,5 +767,60 @@ impl DclUiBackground {
             .unwrap_or(godot::prelude::Color::WHITE);
 
         self.base_mut().set_modulate(modulate_color);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dcl::components::proto_components::common::{texture_union::Tex, Texture};
+
+    fn texture_with_wrap_mode(wrap_mode: Option<i32>) -> Option<TextureUnion> {
+        Some(TextureUnion {
+            tex: Some(Tex::Texture(Texture {
+                src: "atlas.png".to_string(),
+                wrap_mode,
+                ..Default::default()
+            })),
+        })
+    }
+
+    #[test]
+    fn repeat_wrap_mode_tiles() {
+        assert_eq!(
+            texture_repeat_from_texture(&texture_with_wrap_mode(Some(
+                TextureWrapMode::TwmRepeat as i32
+            ))),
+            TextureRepeat::ENABLED
+        );
+    }
+
+    #[test]
+    fn mirror_wrap_mode_mirrors() {
+        assert_eq!(
+            texture_repeat_from_texture(&texture_with_wrap_mode(Some(
+                TextureWrapMode::TwmMirror as i32
+            ))),
+            TextureRepeat::MIRROR
+        );
+    }
+
+    #[test]
+    fn clamp_wrap_mode_does_not_tile() {
+        assert_eq!(
+            texture_repeat_from_texture(&texture_with_wrap_mode(Some(
+                TextureWrapMode::TwmClamp as i32
+            ))),
+            TextureRepeat::DISABLED
+        );
+    }
+
+    #[test]
+    fn absent_wrap_mode_defaults_to_clamp() {
+        assert_eq!(
+            texture_repeat_from_texture(&texture_with_wrap_mode(None)),
+            TextureRepeat::DISABLED
+        );
+        assert_eq!(texture_repeat_from_texture(&None), TextureRepeat::DISABLED);
     }
 }
