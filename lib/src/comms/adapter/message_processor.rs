@@ -304,6 +304,14 @@ impl MessageProcessor {
         )
     }
 
+    /// Compares two lambdas endpoints ignoring trailing-slash style — Godot
+    /// publishes `…/lambdas/` in its LiveKit metadata while Unity publishes
+    /// `…/lambdas`, and the slash-only mismatch must not make the realm's own
+    /// endpoint look like a different catalyst.
+    fn is_same_lambda_endpoint(a: &str, b: &str) -> bool {
+        a.trim_end_matches('/') == b.trim_end_matches('/')
+    }
+
     /// Returns true if the address looks like a real player (non-synthetic Ethereum address).
     /// Synthetic addresses (like H160::from_low_u64_be(1) for the auth server) are non-player.
     fn is_player_address(address: H160) -> bool {
@@ -1388,7 +1396,12 @@ impl MessageProcessor {
 
                         // Determine fetch endpoint: peer's lambdas endpoint if available, else realm lambda
                         let fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
-                            Some(endpoint) if endpoint != lamda_server_base_url => {
+                            Some(endpoint)
+                                if !Self::is_same_lambda_endpoint(
+                                    endpoint,
+                                    &lamda_server_base_url,
+                                ) =>
+                            {
                                 endpoint.to_string()
                             }
                             _ => lamda_server_base_url.clone(),
@@ -1437,7 +1450,10 @@ impl MessageProcessor {
                         // Step 3: realm lambda fallback (if peer endpoint != realm and registry also failed)
                         let result = if version_ok(&result) {
                             result
-                        } else if fetch_endpoint != lamda_server_base_url {
+                        } else if !Self::is_same_lambda_endpoint(
+                            &fetch_endpoint,
+                            &lamda_server_base_url,
+                        ) {
                             tracing::debug!(
                                 "Falling back to realm lambda for {:#x}: {}",
                                 address,
@@ -1874,6 +1890,25 @@ mod tests {
         ));
         assert!(!MessageProcessor::is_gated_by_pulse_preference(
             &Message::ProfileResponse(rfc4::ProfileResponse::default())
+        ));
+    }
+
+    #[test]
+    fn lambda_endpoint_comparison_ignores_trailing_slash_style() {
+        // Godot metadata carries `…/lambdas/`, Unity metadata carries `…/lambdas` —
+        // same catalyst, must compare equal so the realm endpoint isn't treated
+        // as a different fetch target.
+        assert!(MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas",
+            "https://peer.decentraland.org/lambdas/"
+        ));
+        assert!(MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas/",
+            "https://peer.decentraland.org/lambdas/"
+        ));
+        assert!(!MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas",
+            "https://peer-ec2.decentraland.org/lambdas/"
         ));
     }
 }
