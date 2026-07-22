@@ -175,7 +175,8 @@ pub struct DclCli {
     #[var(get)]
     pub saved_profile: GString,
 
-    // Pulse transport (opt-in; see comms/pulse/). `pulse_server` empty = default endpoint.
+    // Pulse transport (ON by default, --no-pulse disables; see comms/pulse/).
+    // `pulse_server` empty = default endpoint.
     #[var(get)]
     pub pulse: bool,
     #[var(get)]
@@ -572,13 +573,20 @@ impl DclCli {
             // Comms
             ArgDefinition {
                 name: "--pulse".to_string(),
-                description: "Enable the Pulse transport (ENet/UDP avatar-state relay); coexists with LiveKit".to_string(),
+                description: "Enable the Pulse transport (ENet/UDP avatar-state relay); on by default — kept for compatibility".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-pulse".to_string(),
+                description: "Disable the Pulse transport for this run (LiveKit-only avatar sync)"
+                    .to_string(),
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
             },
             ArgDefinition {
                 name: "--pulse-server".to_string(),
-                description: "Pulse server endpoint as host:port (implies --pulse); PULSE_SERVER env var works too".to_string(),
+                description: "Pulse server endpoint as host:port (overrides the env default); PULSE_SERVER env var works too".to_string(),
                 arg_type: ArgType::Value("<host:port>".to_string()),
                 category: "Comms".to_string(),
             },
@@ -848,8 +856,10 @@ impl INode for DclCli {
             .map(|n| GString::from(&n.to_string()))
             .unwrap_or_default();
 
-        // Pulse transport activation (opt-in). --pulse-server implies --pulse; the PULSE_SERVER
-        // env var (desktop; bevy parity) implies both. Empty pulse_server = default endpoint
+        // Pulse transport activation (ON by default; disable with --no-pulse or a
+        // `pulse=false` deeplink). --pulse is kept as an accepted no-op for older
+        // scripts. --pulse-server / the PULSE_SERVER env var (desktop; bevy parity)
+        // override the endpoint; empty pulse_server = default endpoint
         // (urls::pulse_server() : PULSE_SERVER_PORT).
         let pulse_server = args_map
             .get("--pulse-server")
@@ -860,7 +870,7 @@ impl INode for DclCli {
                     .map(|s| GString::from(s.as_str()))
                     .unwrap_or_default()
             });
-        let pulse = args_map.contains_key("--pulse") || !pulse_server.is_empty();
+        let pulse = !args_map.contains_key("--no-pulse");
         let no_livekit_movement = args_map.contains_key("--no-livekit-movement");
         let no_livekit = args_map.contains_key("--no-livekit");
 
