@@ -1,13 +1,7 @@
 [gd_scene format=3 uid="uid://b0jonmd2rfupn"]
 
 [ext_resource type="Script" uid="uid://b17n1qqifgain" path="res://src/main.gd" id="1_2a1rx"]
-[ext_resource type="PackedScene" path="res://src/ui/components/molecules/dcl_splash/dcl_splash.tscn" id="2_gh0ne"]
 
 [node name="main" type="Node" unique_id=2004683069]
 script = ExtResource("1_2a1rx")
 metadata/mobile_preview_orientation = "portrait"
-
-[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=36137294]
-
-[node name="DclSplash" parent="CanvasLayer" unique_id=1736866845 instance=ExtResource("2_gh0ne")]
-layout_mode = 3
