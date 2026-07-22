@@ -78,6 +78,7 @@ pub enum SegmentEvent {
     // discriminated by `type` and correlated across one full load by `loading_id`
     // (see SegmentEventLoading). Boxed: it is the largest variant by far.
     Loading(Box<SegmentEventLoading>),
+    GuestWalletCreation(SegmentEventGuestWalletCreation),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -627,6 +628,36 @@ pub struct SegmentEventAttestationSessionCacheLoaded {
     pub remaining_s: Option<i64>,
 }
 
+// Emitted once per silent thirdweb guest-login attempt (see
+// auth/thirdweb_guest.rs). One event per attempt — the dashboard computes:
+//   - success rate    = count(outcome="success") / count(*)
+//   - wallets created  = count(outcome="success" AND is_new_user=true)
+//   - top failure     = group_by(failure_reason) where outcome="failure"
+//   - service down     = a spike in failure_reason in ("http_5xx","timeout","network")
+//
+// This is the guest-flow analog of SegmentEventAttestationAttempt and, unlike
+// AUTH_SUCCESS (a "Screen Viewed" whose login_type is a nested JSON string),
+// exposes every dimension as a first-class property.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventGuestWalletCreation {
+    // "success" | "failure".
+    pub outcome: String,
+    // Whether thirdweb minted a NEW wallet for this session (true) or returned
+    // the existing wallet for a returning device anchor (false). Only
+    // meaningful on success; always false on failure.
+    pub is_new_user: bool,
+    // Failure bucket: "http_4xx" | "http_5xx" | "timeout" | "network" |
+    // "bad_response" | "invalid_address" | "sign_message" | "ephemeral".
+    // None on success.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failure_reason: Option<String>,
+    // Upstream HTTP status when the failure was an HTTP error. None otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub http_status: Option<u32>,
+    // Wall-clock duration of the whole attempt, in milliseconds.
+    pub duration_ms: u32,
+}
+
 pub fn build_segment_event_batch_item(
     user_id: String,
     common: &SegmentEventCommonExplorerFields,
@@ -728,6 +759,11 @@ pub fn build_segment_event_batch_item(
         SegmentEvent::Loading(event) => (
             "Loading Event".to_string(),
             serde_json::to_value(*event).unwrap(),
+            None,
+        ),
+        SegmentEvent::GuestWalletCreation(event) => (
+            "Guest Wallet Creation".to_string(),
+            serde_json::to_value(event).unwrap(),
             None,
         ),
     };
