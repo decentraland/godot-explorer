@@ -78,6 +78,13 @@ func process_deep_link(url: String) -> void:
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
 
+	# Touch-feedback debug overlay (issue #2562): off by default, enabled on demand.
+	var touch_feedback_value: String = Global.deep_link_obj.params.get("touch-feedback", "")
+	if not touch_feedback_value.is_empty():
+		var touch_feedback_enable: bool = touch_feedback_value.to_lower() in ["true", "1", "yes"]
+		TouchFeedback.set_enabled(touch_feedback_enable)
+		print("[DEEPLINK] touch-feedback=", touch_feedback_enable)
+
 	# Opt-in gate for deleting an UPGRADED (email-linked) guest. Sticky-on for the
 	# session; only takes effect on a NON-production build (see
 	# Global.is_upgraded_deletion_enabled() + account_deletion_popup.gd).

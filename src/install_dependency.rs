@@ -39,13 +39,16 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
 // Bump the pin deliberately and update any affected generated-struct usages.
 //
-// Currently pinned to the protocol PR #429 branch build (feat/pulse-prd,
-// commit 45edead) — it ships the decentraland/pulse protos, options.proto
-// (quantization FieldOptions) and rfc4 PlayerEmote.is_stopping that the Pulse
-// transport needs. Once that PR merges, repoint at the released tarball from
-// `https://registry.npmjs.org/@dcl/protocol/next` (dist.tarball).
+// Pinned to the protocol PR #449 branch build (commit fdfb857) — it tracks
+// protocol `main` (so it ships PR #426 TouchscreenInputControls/UiInputBinding
+// that godot main's components need) and adds the decentraland/pulse protos +
+// options.proto (quantization FieldOptions) for the Pulse transport. It does
+// NOT carry the `experimental`-only rfc4 fields (PlayerEmote.is_stopping & co.,
+// Chat.forwarded_from) — those are re-added by the build-time patch in
+// lib/build.rs (`patched_rfc4_comms_proto`). Once #449 merges, repoint at the
+// released tarball from `https://registry.npmjs.org/@dcl/protocol/next`.
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
-    "https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-29255694007.commit-45edead.tgz",
+    "https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-29928336732.commit-fdfb857.tgz",
 );
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 

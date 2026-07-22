@@ -46,6 +46,7 @@ func setup() -> void:
 	# (lobby's handler is what calls `metrics.update_identity`, so `common.dcl_eth_address` is
 	# stale at this point). We connect here in Global._ready, before the lobby scene loads.
 	Global.player_identity.wallet_connected.connect(_on_wallet_connected_track_login)
+	Global.player_identity.guest_login_outcome.connect(_on_guest_login_outcome)
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
 
@@ -81,6 +82,20 @@ func _on_wallet_connected_track_login(
 	if Global.metrics == null:
 		return
 	Global.metrics.track_login(address, is_guest_value)
+
+
+## Forwards each silent thirdweb guest-login attempt to Segment as a "Guest Wallet Creation"
+## event (see SegmentEventGuestWalletCreation). Emitted by DclPlayerIdentity from the login
+## task; not gated on session recovery — a recovered session doesn't re-run guest_login, so
+## this only fires on genuine attempts. The EULA consent gate in Metrics still applies.
+func _on_guest_login_outcome(
+	outcome: String, is_new_user: bool, failure_reason: String, http_status: int, duration_ms: int
+) -> void:
+	if Global.metrics == null:
+		return
+	Global.metrics.track_guest_wallet_creation(
+		outcome, is_new_user, failure_reason, http_status, duration_ms
+	)
 
 
 func _on_loading_started() -> void:

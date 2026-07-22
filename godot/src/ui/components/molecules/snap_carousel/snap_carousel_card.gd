@@ -3,6 +3,7 @@ extends Control
 
 signal image_loaded
 signal jump_in_pressed
+signal card_body_tapped
 
 enum CardMode { FTUE, BANNER }
 
@@ -26,12 +27,14 @@ var _scroll_detected: bool = false
 
 @onready var async_image: AsyncImage = %AsyncImage
 @onready var button_jump_in: Button = %Button_JumpIn_Banner
+@onready var label_title: Label = %Label_Title
+@onready var margin_container_content: MarginContainer = %MarginContainer_Content
 
 
 func _ready() -> void:
 	button_jump_in.pressed.connect(_do_banner_jump_in)
 	async_image.image_loaded.connect(func(): image_loaded.emit())
-	_update_jump_in_visibility()
+	_update_content_visibility()
 
 
 func _input(event: InputEvent) -> void:
@@ -54,7 +57,7 @@ func _gui_input(event: InputEvent) -> void:
 			_touch_active = false
 			if event.position.distance_to(_touch_start) < TAP_THRESHOLD:
 				accept_event()
-				_do_banner_jump_in()
+				card_body_tapped.emit()
 	elif event is InputEventScreenDrag:
 		if _touch_active and event.position.distance_to(_touch_start) >= TAP_THRESHOLD:
 			_touch_active = false
@@ -92,13 +95,13 @@ func set_card_mode(mode: int) -> void:
 		async_image.border_radius = (
 			FTUE_BORDER_RADIUS if mode == CardMode.FTUE else BANNER_BORDER_RADIUS
 		)
-	_update_jump_in_visibility()
+	_update_content_visibility()
 
 
 func set_selected(selected: bool) -> void:
 	_is_selected = selected
 	_apply_size()
-	_update_jump_in_visibility()
+	_update_content_visibility()
 
 
 func get_target_size() -> Vector2:
@@ -111,13 +114,14 @@ func _apply_size() -> void:
 	custom_minimum_size = get_target_size()
 
 
-func _update_jump_in_visibility() -> void:
-	if is_instance_valid(button_jump_in):
-		button_jump_in.visible = _card_mode == CardMode.BANNER
+func _update_content_visibility() -> void:
+	if is_instance_valid(margin_container_content):
+		margin_container_content.visible = _card_mode == CardMode.BANNER
 
 
 func set_data(place_data: Dictionary) -> void:
 	_data = place_data
+	label_title.text = get_title()
 	var image_url: String = place_data.get("image", place_data.get("imageUrl", ""))
 	async_image.load_from_url(image_url)
 
@@ -135,3 +139,7 @@ func get_creator() -> String:
 
 func get_place_data() -> Dictionary:
 	return _data
+
+
+func get_texture() -> Texture2D:
+	return async_image.texture_image.texture

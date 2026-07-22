@@ -115,9 +115,9 @@ mod test {
         scene.godot_dcl_scene.ensure_node_3d(&entity);
         SceneCrdtStateProtoComponents::get_billboard_mut(&mut crdt_state).put(
             entity,
-            // needless_update is proto-vintage-dependent: with pre-target_entity protos
-            // billboard_mode is the only field, but the pinned npm protocol adds
-            // target_entity, where the update fills it. Keep it for both vintages.
+            // Whether `..Default::default()` is needed depends on the pinned @dcl/protocol:
+            // newer builds add optional PBBillboard fields (e.g. target_entity), older ones
+            // don't. Keep it so protocol bumps can't break this test again.
             #[allow(clippy::needless_update)]
             Some(PbBillboard {
                 billboard_mode: Some(3),

@@ -20,12 +20,12 @@ font_size = 20
 font_color = Color(1, 0.1764706, 0.33333334, 1)
 
 [node name="DclTextEdit" type="VBoxContainer" unique_id=1583726089]
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(300, 0)
 offset_right = 352.0
-offset_bottom = 101.0
+offset_bottom = 100.0
 size_flags_horizontal = 3
 size_flags_vertical = 0
-theme_override_constants/separation = 8
+theme_override_constants/separation = 7
 script = ExtResource("1_iibrq")
 
 [node name="TextEditContainer" type="Control" parent="." unique_id=1976220458]
@@ -85,11 +85,13 @@ theme_override_constants/margin_right = 16
 
 [node name="ClearButton" type="TextureButton" parent="TextEditContainer/MarginContainer" unique_id=887865242]
 unique_name_in_owner = true
+visible = false
 self_modulate = Color(0.9098039, 0.7254902, 1, 1)
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
+focus_mode = 0
 texture_normal = ExtResource("5_ewgm8")
 ignore_texture_size = true
 stretch_mode = 0

@@ -641,8 +641,16 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
         // Duplicate the AnimationLibrary so each instance has independent animation
         // state. PackedScene.instantiate() shares resources, so without this all
         // instances of the same GLTF would share the same animation objects.
+        //
+        // deep(true) (Godot's duplicate(subresources = true)) is required: a shallow
+        // duplicate copies the library container but keeps pointing at the SAME
+        // Animation sub-resources. Two GltfContainers referencing the same GLB content
+        // hash would then share one Animation, so set_loop_mode / set_speed_scale below
+        // on one instance would bleed into the other (e.g. a loop=false sibling forcing
+        // a loop=true clip to stop). See issue #2497.
         if let Some(shared_lib) = anim_player.get_animation_library("") {
-            let unique_lib: Gd<AnimationLibrary> = shared_lib.duplicate().unwrap().cast();
+            let unique_lib: Gd<AnimationLibrary> =
+                shared_lib.duplicate_ex().deep(true).done().unwrap().cast();
             anim_player.remove_animation_library("");
             anim_player.add_animation_library("", &unique_lib);
         }
@@ -671,10 +679,17 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
             if let Some(clip_name) = resolved_clip {
                 let anim_name = StringName::from(&clip_name);
                 anim_player.set_speed_scale(state.speed.unwrap_or(1.0));
-                if state.r#loop.unwrap_or(true) {
-                    if let Some(mut anim) = anim_player.get_animation(&anim_name) {
-                        anim.set_loop_mode(godot::classes::animation::LoopMode::LINEAR);
-                    }
+                // Always set the loop mode explicitly. Only setting it when looping
+                // leaves the animation carrying whatever loop mode it was imported
+                // with, which on mobile can be a non-NONE mode, causing it to keep
+                // looping even when Loop is disabled.
+                if let Some(mut anim) = anim_player.get_animation(&anim_name) {
+                    let loop_mode = if state.r#loop.unwrap_or(true) {
+                        godot::classes::animation::LoopMode::LINEAR
+                    } else {
+                        godot::classes::animation::LoopMode::NONE
+                    };
+                    anim.set_loop_mode(loop_mode);
                 }
                 anim_player.play_ex().name(&anim_name).done();
             }

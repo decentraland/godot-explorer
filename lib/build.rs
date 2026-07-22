@@ -17,11 +17,14 @@ struct Component {
 
 const PROTO_FILES_BASE_DIR: &str = "src/dcl/components/proto/";
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
-const GROW_ONLY_SET_COMPONENTS: [&str; 4] = [
+const GROW_ONLY_SET_COMPONENTS: [&str; 5] = [
     "PointerEventsResult",
     "VideoEvent",
     "AvatarEmoteCommand",
     "TriggerAreaResult",
+    // The renderer appends one value per-asset transition; the scene-side
+    // SDK reads AssetLoadLoadingState as a GrowOnlyValueSet (protocol PR #339).
+    "AssetLoadLoadingState",
 ];
 
 pub fn snake_to_pascal(input: &str) -> String {
@@ -391,13 +394,12 @@ fn main() -> io::Result<()> {
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
     );
-    proto_files
-        .push(format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto").into());
+    proto_files.push(patched_rfc4_comms_proto());
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/v3/archipelago.proto").into(),
     );
 
-    // Pulse comms protos, shipped by the pinned @dcl/protocol tarball (protocol PR #429 branch
+    // Pulse comms protos, shipped by the pinned @dcl/protocol tarball (protocol PR #449 branch
     // build — see PROTOCOL_FIXED_VERSION_URL in src/install_dependency.rs). Compiled
     // unconditionally — runtime code is gated by the `use_pulse` feature instead, keeping the
     // build script feature-free. options.proto must be in the compile set so the
@@ -448,7 +450,16 @@ fn main() -> io::Result<()> {
     // field options (the .proto stays the single source of truth for the wire ABI).
     let descriptor_path = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_descriptor_set.bin");
     prost_config.file_descriptor_set_path(&descriptor_path);
-    prost_config.compile_protos(&proto_files, &[PROTO_FILES_BASE_DIR])?;
+    // The patched root goes first so `decentraland/kernel/comms/rfc4/comms.proto`
+    // resolves to the patched copy, not the npm one (same canonical path).
+    let proto_patched_root = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_patched");
+    prost_config.compile_protos(
+        &proto_files,
+        &[
+            proto_patched_root.as_path(),
+            Path::new(PROTO_FILES_BASE_DIR),
+        ],
+    )?;
 
     let descriptor_bytes = fs::read(&descriptor_path).expect("read proto descriptor set");
     let quant_path = Path::new(&env::var("OUT_DIR").unwrap()).join("pulse_quant.rs");
@@ -471,6 +482,63 @@ fn main() -> io::Result<()> {
     set_godot_explorer_version();
 
     Ok(())
+}
+
+/// The pinned @dcl/protocol build (PR #449 branch) tracks protocol `main`, whose
+/// rfc4 `comms.proto` lacks fields the Pulse transport and Unity interop rely on
+/// (they live in protocol `experimental`): `PlayerEmote` 4..=11 (`is_stopping` &
+/// co., bridged from Pulse `EmoteStopped` and already sent by Unity peers over
+/// LiveKit) and `Chat.forwarded_from` (SFU forwarding). The npm tree is gitignored
+/// and wiped by `cargo run -- install`, so it can't be edited in place; instead,
+/// patch a copy under OUT_DIR/proto_patched/ and compile that one (that root is
+/// listed first so the canonical path resolves to the patched copy). Each patch
+/// no-ops once the pinned build ships its fields — delete this when both do.
+fn patched_rfc4_comms_proto() -> std::path::PathBuf {
+    const RFC4_REL: &str = "decentraland/kernel/comms/rfc4/comms.proto";
+    let mut source = fs::read_to_string(format!("{PROTO_FILES_BASE_DIR}{RFC4_REL}"))
+        .expect("read rfc4 comms.proto (run `cargo run -- install` to fetch protos)");
+
+    if !source.contains("is_stopping") {
+        source = insert_fields_before_message_close(
+            &source,
+            "message PlayerEmote {",
+            concat!(
+                "  optional bool is_stopping = 4; // true means the emote has been stopped in the sender's client\n",
+                "  optional bool is_repeating = 5; // true when it is not the first time the looping animation plays\n",
+                "  optional int32 interaction_id = 6; // identifies an interaction univocally\n",
+                "  optional int32 social_emote_outcome = 7; // -1 means it does not use an outcome animation\n",
+                "  optional bool is_reacting = 8; // to a social emote started by other user\n",
+                "  optional string social_emote_initiator = 9; // wallet address of the social emote initiator\n",
+                "  optional string target_avatar = 10; // wallet address of the directed emote target\n",
+                "  optional uint32 mask = 11; // mask for which bones an animation applies to\n",
+            ),
+        );
+    }
+    if !source.contains("forwarded_from") {
+        source = insert_fields_before_message_close(
+            &source,
+            "message Chat {",
+            "  optional string forwarded_from = 3; // original sender when forwarded through an SFU\n",
+        );
+    }
+
+    let dest = Path::new(&env::var("OUT_DIR").unwrap())
+        .join("proto_patched")
+        .join(RFC4_REL);
+    fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
+    fs::write(&dest, source).expect("write patched rfc4 comms.proto");
+    dest
+}
+
+fn insert_fields_before_message_close(source: &str, marker: &str, fields: &str) -> String {
+    let start = source.find(marker).unwrap_or_else(|| {
+        panic!("rfc4 comms.proto: `{marker}` not found — update the patch in build.rs")
+    });
+    let close = source[start..]
+        .find('}')
+        .map(|offset| start + offset)
+        .unwrap_or_else(|| panic!("rfc4 comms.proto: closing brace for `{marker}` not found"));
+    format!("{}{}{}", &source[..close], fields, &source[close..])
 }
 
 fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
@@ -629,6 +697,29 @@ fn set_godot_explorer_version() {
     };
 
     println!("cargo:rustc-env=GODOT_EXPLORER_VERSION={}", full_version);
+
+    // Sentry-friendly semver release: `{major.minor.patch}+{build}`.
+    //
+    // Sentry only exposes `release.version` / `release.build` (and adoption,
+    // regression detection, "resolved in next release") when the release parses
+    // as clean semver `pkg@major.minor.patch(+build)`. The full `GODOT_EXPLORER_VERSION`
+    // above does NOT: it trails the git hash + `-{env}` into the semver prerelease
+    // slot and puts the build in a 4th dotted segment, so `release.build` stays empty.
+    //
+    // Here the build number goes into the numeric `+build` metadata slot (build number
+    // is globally monotonic per commit, so `release.build:>=N` == "this build or newer").
+    // The commit hash and environment are intentionally dropped — they're already carried
+    // by Sentry `dist` and `environment` respectively (see project_main_loop.gd init).
+    // When no build number is allocated (local/fork builds) the bare `{version}` is still
+    // valid semver.
+    let sentry_release = match build_segment.strip_prefix('.') {
+        Some(build) if !build.is_empty() => format!("{}+{}", version, build),
+        _ => version.clone(),
+    };
+    println!(
+        "cargo:rustc-env=GODOT_EXPLORER_SENTRY_RELEASE={}",
+        sentry_release
+    );
 
     // Get full commit hash for Sentry tags
     let full_commit_hash = commit_hash.clone().unwrap_or_default();

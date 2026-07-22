@@ -16,6 +16,28 @@ use crate::{
 /// IaLeft / IaRight events to scenes.
 const ANALOG_ACTION_THRESHOLD: f32 = 0.5;
 
+/// Maps a DCL `InputAction` to the corresponding Godot input action name (`ia_*`).
+/// Returns `None` for meta/query actions with no concrete binding (`IaAny`, `IaModifier`).
+/// Shared by the input poller and UI input binding (`DclUiControl`).
+pub fn input_action_to_godot_action(action: InputAction) -> Option<&'static str> {
+    Some(match action {
+        InputAction::IaPointer => "ia_pointer",
+        InputAction::IaPrimary => "ia_primary",
+        InputAction::IaSecondary => "ia_secondary",
+        InputAction::IaForward => "ia_forward",
+        InputAction::IaBackward => "ia_backward",
+        InputAction::IaRight => "ia_right",
+        InputAction::IaLeft => "ia_left",
+        InputAction::IaJump => "ia_jump",
+        InputAction::IaWalk => "ia_walk",
+        InputAction::IaAction3 => "ia_action_3",
+        InputAction::IaAction4 => "ia_action_4",
+        InputAction::IaAction5 => "ia_action_5",
+        InputAction::IaAction6 => "ia_action_6",
+        InputAction::IaAny | InputAction::IaModifier => return None,
+    })
+}
+
 pub struct InputState {
     dcl_to_action: HashMap<InputAction, StringName>,
     pub state: HashMap<InputAction, bool>, // for now, only support bool states
@@ -23,22 +45,27 @@ pub struct InputState {
 
 impl InputState {
     pub fn default() -> Self {
-        // TODO: should this be a constant?
-        let dcl_to_action = HashMap::from([
-            (InputAction::IaPointer, StringName::from("ia_pointer")),
-            (InputAction::IaPrimary, StringName::from("ia_primary")),
-            (InputAction::IaSecondary, StringName::from("ia_secondary")),
-            (InputAction::IaForward, StringName::from("ia_forward")),
-            (InputAction::IaBackward, StringName::from("ia_backward")),
-            (InputAction::IaRight, StringName::from("ia_right")),
-            (InputAction::IaLeft, StringName::from("ia_left")),
-            (InputAction::IaJump, StringName::from("ia_jump")),
-            (InputAction::IaWalk, StringName::from("ia_walk")),
-            (InputAction::IaAction3, StringName::from("ia_action_3")),
-            (InputAction::IaAction4, StringName::from("ia_action_4")),
-            (InputAction::IaAction5, StringName::from("ia_action_5")),
-            (InputAction::IaAction6, StringName::from("ia_action_6")),
-        ]);
+        // Derive the action-name map from the single source of truth
+        // (`input_action_to_godot_action`) so the two can't drift apart. `IaAny` / `IaModifier`
+        // have no binding and are filtered out.
+        let dcl_to_action: HashMap<InputAction, StringName> = [
+            InputAction::IaPointer,
+            InputAction::IaPrimary,
+            InputAction::IaSecondary,
+            InputAction::IaForward,
+            InputAction::IaBackward,
+            InputAction::IaRight,
+            InputAction::IaLeft,
+            InputAction::IaJump,
+            InputAction::IaWalk,
+            InputAction::IaAction3,
+            InputAction::IaAction4,
+            InputAction::IaAction5,
+            InputAction::IaAction6,
+        ]
+        .into_iter()
+        .filter_map(|a| input_action_to_godot_action(a).map(|name| (a, StringName::from(name))))
+        .collect();
 
         let state = HashMap::from_iter(dcl_to_action.keys().map(|k| (*k, false)));
 

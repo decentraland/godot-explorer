@@ -27,6 +27,7 @@ func _on_visibility_changed() -> void:
 	if not is_node_ready():
 		return
 	if visible:
+		NamesRequest.pre_fetch()
 		hide_editor()
 		_show_avatar()
 		_refresh_content()
