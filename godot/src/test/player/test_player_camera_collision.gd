@@ -23,6 +23,7 @@ extends SceneTree
 #     --script res://src/test/player/test_player_camera_collision.gd
 
 const CameraRig := preload("res://src/logic/player/camera_rig_helpers.gd")
+const Clamp := preload("res://src/logic/player/camera_collision_clamp.gd")
 
 const SPRING_LENGTH := 3.0
 # The arm extends its children BEHIND the pivot (+Z, since forward is -Z), so the
@@ -43,9 +44,13 @@ func _initialize() -> void:
 	await _test_old_default_mask_misses_physics_wall()
 	await _test_pointer_only_wall_ignored()
 	await _test_default_scene_collider_shortens_arm()
+	await _test_clamp_full_offset_when_clear()
+	await _test_clamp_catches_lateral_wall()
+	await _test_clamp_floors_at_min_distance()
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
 	_test_scene_pivot_centered_and_masked()
+	_test_scene_has_collision_clamp()
 	_finish()
 
 
@@ -128,6 +133,133 @@ func _test_default_scene_collider_shortens_arm() -> void:
 		_fail("default scene collider (layer 1|2) not detected (resolved=%.2f)" % resolved)
 
 
+# --- CameraCollisionClamp: sphere swept to the ACTUAL offset camera position ---
+
+
+# Mirror of the player.tscn rig: Mount (SpringArm3D) -> CameraArm -> Camera3D,
+# plus the clamp node as a child of Mount. Returns the nodes for assertions.
+func _build_clamp_rig() -> Dictionary:
+	var world := Node3D.new()
+	root.add_child(world)
+
+	var mount := SpringArm3D.new()
+	mount.spring_length = CameraRig.THIRD_PERSON_CAMERA.z
+	mount.margin = 0.0
+	mount.collision_mask = CameraRig.CAMERA_COLLISION_MASK
+	world.add_child(mount)
+
+	var arm := Node3D.new()
+	arm.name = "CameraArm"
+	mount.add_child(arm)
+
+	var cam := Camera3D.new()
+	cam.name = "Camera3D"
+	arm.add_child(cam)
+
+	var clamp_node: CameraCollisionClamp = Clamp.new()
+	mount.add_child(clamp_node)
+	clamp_node.lateral_offset = CameraRig.THIRD_PERSON_CAMERA.x
+
+	return {"world": world, "mount": mount, "arm": arm, "cam": cam}
+
+
+func _add_box(world: Node3D, center: Vector3, size: Vector3) -> void:
+	var wall := StaticBody3D.new()
+	wall.collision_layer = CL_PHYSICS
+	wall.collision_mask = 0
+	var col := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = size
+	col.shape = box
+	wall.add_child(col)
+	wall.position = center
+	world.add_child(wall)
+
+
+# gdlint:ignore = async-function-name
+func _settle() -> void:
+	await physics_frame
+	await physics_frame
+	await physics_frame
+	await process_frame
+
+
+# No walls: the clamp must preserve the exact over-shoulder framing — camera at
+# the full lateral offset + back distance.
+# gdlint:ignore = async-function-name
+func _test_clamp_full_offset_when_clear() -> void:
+	var rig := _build_clamp_rig()
+	await _settle()
+
+	var expected := Vector3(CameraRig.THIRD_PERSON_CAMERA.x, 0, CameraRig.THIRD_PERSON_CAMERA.z)
+	var cam: Camera3D = rig["cam"]
+	if cam.global_position.distance_to(expected) > 0.05:
+		_fail(
+			(
+				"clamp moved the camera with no walls around (pos=%s, expected ~%s)"
+				% [cam.global_position, expected]
+			)
+		)
+	rig["world"].queue_free()
+
+
+# The reviewer case: a wall on the over-shoulder SIDE. The arm's centered ray
+# passes clean (arm stays full length), but the offset camera would end up
+# inside the wall — the clamp's sphere must pull it in front of the box.
+# gdlint:ignore = async-function-name
+func _test_clamp_catches_lateral_wall() -> void:
+	var rig := _build_clamp_rig()
+	# Box occupying x[0.5,1.5], z[2.5,3.5]: the unclamped camera (0.75,0,3) is
+	# inside it, while the arm's centered ray at x=0 misses it completely.
+	_add_box(rig["world"], Vector3(1.0, 0, 3.0), Vector3(1, 2, 1))
+	await _settle()
+
+	var arm: Node3D = rig["arm"]
+	if arm.position.z < CameraRig.THIRD_PERSON_CAMERA.z - 0.01:
+		_fail(
+			(
+				"setup broken: the arm's centered ray should NOT hit the lateral wall "
+				+ "(arm z=%.2f, expected %.2f)" % [arm.position.z, CameraRig.THIRD_PERSON_CAMERA.z]
+			)
+		)
+
+	var cam: Camera3D = rig["cam"]
+	# Pulled in front of the box's near face (2.5) minus the sphere radius (0.3),
+	# and clearly not collapsed to the pivot.
+	if cam.global_position.z > 2.3:
+		_fail(
+			(
+				"lateral wall: camera still inside the wall volume (pos=%s, z expected < 2.3)"
+				% cam.global_position
+			)
+		)
+	if cam.global_position.length() < CameraRig.CLAMP_MIN_DISTANCE - 0.01:
+		_fail("lateral wall: camera over-shrunk (pos=%s)" % cam.global_position)
+	rig["world"].queue_free()
+
+
+# Fully blocked (wall right behind the pivot): never pulls inside the avatar's
+# head — floors at CLAMP_MIN_DISTANCE.
+# gdlint:ignore = async-function-name
+func _test_clamp_floors_at_min_distance() -> void:
+	var rig := _build_clamp_rig()
+	_add_box(rig["world"], Vector3(0, 0, 1.0), Vector3(4, 4, 1))
+	await _settle()
+
+	var cam: Camera3D = rig["cam"]
+	var dist := cam.global_position.length()
+	if dist > 0.6:
+		_fail("blocked wall: camera not pulled in (dist=%.2f, expected near min)" % dist)
+	if dist < CameraRig.CLAMP_MIN_DISTANCE - 0.05:
+		_fail(
+			(
+				"blocked wall: camera pulled inside min distance (dist=%.2f, min=%.2f)"
+				% [dist, CameraRig.CLAMP_MIN_DISTANCE]
+			)
+		)
+	rig["world"].queue_free()
+
+
 func _test_rig_targets_third_person() -> void:
 	var t := CameraRig.rig_targets(true)
 	# Back distance is the pure Z, NOT the diagonal length — the lateral part is
@@ -172,6 +304,29 @@ func _test_scene_pivot_centered_and_masked() -> void:
 		_fail("CameraArm node (parent=Mount) missing — offset relocation not applied")
 	if not text.contains('parent="Mount/CameraArm"'):
 		_fail("Camera3D is not parented under Mount/CameraArm")
+
+
+# Guard the clamp wiring: the node must exist under Mount in player.tscn, and
+# player.gd must tween its lateral_offset (not the camera position directly).
+func _test_scene_has_collision_clamp() -> void:
+	var tscn := FileAccess.get_file_as_string("res://src/logic/player/player.tscn")
+	if tscn.is_empty():
+		_fail("could not read player.tscn")
+		return
+	if not tscn.contains('name="CameraCollisionClamp"'):
+		_fail("CameraCollisionClamp node missing in player.tscn")
+	var clamp_block := _node_block(tscn, "CameraCollisionClamp")
+	if not clamp_block.contains('parent="Mount"'):
+		_fail("CameraCollisionClamp must be a child of Mount")
+
+	var gd := FileAccess.get_file_as_string("res://src/logic/player/player.gd")
+	if gd.is_empty():
+		_fail("could not read player.gd")
+		return
+	if not gd.contains('"lateral_offset"'):
+		_fail("player.gd must tween camera_collision_clamp lateral_offset")
+	if gd.contains('tween_property(camera, "position:x"'):
+		_fail("player.gd still tweens camera position:x — must go through the clamp")
 
 
 # Return the .tscn text from `[node name="<name>" ...]` up to the next node header.

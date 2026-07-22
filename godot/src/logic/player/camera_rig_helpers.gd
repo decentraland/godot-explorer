@@ -17,6 +17,21 @@ const THIRD_PERSON_CAMERA := Vector3(0.75, 0, 3)
 # First person sits just in front of the pivot (inside the head).
 const FIRST_PERSON_SPRING_LENGTH := -0.2
 
+# CameraCollisionClamp (secondary volumetric sweep to the ACTUAL offset camera
+# position — the SpringArm alone only ray-casts its own axis).
+# Radius doubles as the standoff distance from walls, so it must stay >= the
+# proximity-fade start (ProximityFade.FADE_START_DISTANCE, 0.3): a wall the
+# camera is legitimately pressed against then stays fully visible.
+const CLAMP_SPHERE_RADIUS := 0.3
+# Extra pull-in beyond the sphere contact point.
+const CLAMP_EXTRA_MARGIN := 0.02
+# Never pull closer than this, even when fully blocked: keeps the camera out of
+# the avatar's head; any residual poke is cleaned up by the proximity fade.
+const CLAMP_MIN_DISTANCE := 0.3
+# Extension recovery speed (m/s). Shortening is instant (never clip), extending
+# is smoothed so geometry doesn't pop through on the way out.
+const CLAMP_EXTEND_SPEED := 8.0
+
 
 # Spring-arm length + camera-local X offset per camera mode.
 #

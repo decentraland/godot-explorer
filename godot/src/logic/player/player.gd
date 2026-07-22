@@ -92,6 +92,7 @@ var _raycast_exclude: Array[RID] = []
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
+@onready var camera_collision_clamp: CameraCollisionClamp = $Mount/CameraCollisionClamp
 @onready var avatar_raycast: RayCast3D = $Mount/CameraArm/Camera3D/AvatarRaycast
 @onready var outline_system: OutlineSystem = $Mount/CameraArm/Camera3D/OutlineSystem
 @onready var direction: Vector3 = Vector3(0, 0, 0)
@@ -135,11 +136,16 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 			. tween_property(mount_camera, "spring_length", targets.spring_length, 0.25)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
-		# Apply X offset for over-shoulder view in third person. The offset lives on
-		# the camera (below the spring arm) so the spring-arm pivot stays centered on
-		# the player capsule and its wall collision cast originates from a safe point.
-		tween_out.tween_property(camera, "position:x", targets.camera_offset_x, 0.25).set_ease(
-			Tween.EASE_IN_OUT
+		# Apply X offset for over-shoulder view in third person. The offset lives
+		# on the collision clamp, which positions the camera below the arm so the
+		# spring-arm pivot stays centered on the player capsule and sweeps a
+		# sphere to the real (offset) camera position every physics frame.
+		(
+			tween_out
+			. tween_property(
+				camera_collision_clamp, "lateral_offset", targets.camera_offset_x, 0.25
+			)
+			. set_ease(Tween.EASE_IN_OUT)
 		)
 		avatar.set_hidden(false)
 		avatar.set_rotation(Vector3(0, rotation.y, 0))
@@ -155,8 +161,12 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 			. set_ease(Tween.EASE_IN_OUT)
 		)
 		# Remove X offset for centered view in first person
-		tween_in.tween_property(camera, "position:x", targets.camera_offset_x, 0.25).set_ease(
-			Tween.EASE_IN_OUT
+		(
+			tween_in
+			. tween_property(
+				camera_collision_clamp, "lateral_offset", targets.camera_offset_x, 0.25
+			)
+			. set_ease(Tween.EASE_IN_OUT)
 		)
 		if camera.current:
 			avatar.set_hidden(true)

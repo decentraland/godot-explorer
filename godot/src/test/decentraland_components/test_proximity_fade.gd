@@ -11,6 +11,7 @@ extends SceneTree
 #     --script res://src/test/decentraland_components/test_proximity_fade.gd
 
 const Fade := preload("res://src/decentraland_components/proximity_fade.gd")
+const CameraRig := preload("res://src/logic/player/camera_rig_helpers.gd")
 
 var _failures: Array[String] = []
 
@@ -22,6 +23,7 @@ func _initialize() -> void:
 	_test_gltf_container_hook()
 	_test_rust_material_hook()
 	_test_spring_margin_keeps_pressed_wall_visible()
+	_test_clamp_radius_keeps_pressed_wall_visible()
 	_finish()
 
 
@@ -118,6 +120,18 @@ func _extract_margin(block: String) -> float:
 			if parts.size() == 2:
 				return parts[1].strip_edges().to_float()
 	return -1.0
+
+
+# Same invariant for the CameraCollisionClamp: its sphere radius is the
+# standoff distance, so a wall pressed against it must stay at/above fade start.
+func _test_clamp_radius_keeps_pressed_wall_visible() -> void:
+	if CameraRig.CLAMP_SPHERE_RADIUS < Fade.FADE_START_DISTANCE:
+		_fail(
+			(
+				"CLAMP_SPHERE_RADIUS (%.2f) < FADE_START_DISTANCE (%.2f): a pressed wall would dither"
+				% [CameraRig.CLAMP_SPHERE_RADIUS, Fade.FADE_START_DISTANCE]
+			)
+		)
 
 
 func _expect_eq(ctx: String, expected: float, actual: float) -> void:
