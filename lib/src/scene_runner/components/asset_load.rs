@@ -186,7 +186,13 @@ fn acquire_preload(scene: &mut Scene, hash: &str, path: &str) {
 
 /// Detach one reference; drop the shared preload (freeing RAM/GPU) at zero.
 fn release_preload(scene: &mut Scene, hash: &str) {
-    let Some(entry) = scene.asset_load.preloads.get_mut(hash) else {
+    release_preload_in(&mut scene.asset_load, hash);
+}
+
+/// Core of [`release_preload`] operating on just [`AssetLoadState`], so it can
+/// also be driven from entity-deletion cleanup (which lacks a full `&mut Scene`).
+fn release_preload_in(state: &mut AssetLoadState, hash: &str) {
+    let Some(entry) = state.preloads.get_mut(hash) else {
         return;
     };
     entry.refcount = entry.refcount.saturating_sub(1);
@@ -195,7 +201,26 @@ fn release_preload(scene: &mut Scene, hash: &str) {
     }
     // Removing the entry drops the retained `PackedScene`, releasing the GPU
     // resources once nothing else references them.
-    scene.asset_load.preloads.remove(hash);
+    state.preloads.remove(hash);
+}
+
+/// Stop tracking a deleted entity and release every preload it referenced.
+///
+/// Called from `deleted_entities.rs`: without it, an entity that carried
+/// `PBAssetLoad` and is then deleted would leave its `TrackedAsset`s in
+/// `entities` forever, never decrement preload refcounts, never free the
+/// retained `PackedScene`, and keep being iterated by
+/// [`sync_asset_load_loading_state`] each tick. No-op for entities that never
+/// had `PBAssetLoad`.
+pub fn release_entity_preloads(state: &mut AssetLoadState, entity: &SceneEntityId) {
+    let Some(tracked) = state.entities.remove(entity) else {
+        return;
+    };
+    for asset in &tracked {
+        if !asset.hash.is_empty() {
+            release_preload_in(state, &asset.hash);
+        }
+    }
 }
 
 /// Kick off the download for a freshly-created preload, mirroring

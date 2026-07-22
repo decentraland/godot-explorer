@@ -20,7 +20,7 @@ const GROW_ONLY_SET_COMPONENTS: [&str; 5] = [
     "VideoEvent",
     "AvatarEmoteCommand",
     "TriggerAreaResult",
-    // The renderer appends one value per per-asset transition; the scene-side
+    // The renderer appends one value per-asset transition; the scene-side
     // SDK reads AssetLoadLoadingState as a GrowOnlyValueSet (protocol PR #339).
     "AssetLoadLoadingState",
 ];
