@@ -609,6 +609,29 @@ fn set_godot_explorer_version() {
 
     println!("cargo:rustc-env=GODOT_EXPLORER_VERSION={}", full_version);
 
+    // Sentry-friendly semver release: `{major.minor.patch}+{build}`.
+    //
+    // Sentry only exposes `release.version` / `release.build` (and adoption,
+    // regression detection, "resolved in next release") when the release parses
+    // as clean semver `pkg@major.minor.patch(+build)`. The full `GODOT_EXPLORER_VERSION`
+    // above does NOT: it trails the git hash + `-{env}` into the semver prerelease
+    // slot and puts the build in a 4th dotted segment, so `release.build` stays empty.
+    //
+    // Here the build number goes into the numeric `+build` metadata slot (build number
+    // is globally monotonic per commit, so `release.build:>=N` == "this build or newer").
+    // The commit hash and environment are intentionally dropped — they're already carried
+    // by Sentry `dist` and `environment` respectively (see project_main_loop.gd init).
+    // When no build number is allocated (local/fork builds) the bare `{version}` is still
+    // valid semver.
+    let sentry_release = match build_segment.strip_prefix('.') {
+        Some(build) if !build.is_empty() => format!("{}+{}", version, build),
+        _ => version.clone(),
+    };
+    println!(
+        "cargo:rustc-env=GODOT_EXPLORER_SENTRY_RELEASE={}",
+        sentry_release
+    );
+
     // Get full commit hash for Sentry tags
     let full_commit_hash = commit_hash.clone().unwrap_or_default();
 
