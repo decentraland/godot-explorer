@@ -20,18 +20,12 @@
 //! `ResourceLoader::load`, not at `add_child`), so the later real load is an
 //! instant cache hit — no re-download, no re-processing, no re-upload.
 //!
-//! Optionally ([`PRELOAD_GHOST_TO_GPU`]) it also instantiates a hidden "ghost"
-//! node so skinned-mesh / `AnimationPlayer` setup is warmed too. It is kept OFF
-//! by default: it costs a full extra instance in RAM and, because the ghost is
-//! not rendered, it does not force render-pipeline (PSO) compilation — and PSO
-//! caching is disabled on iOS Metal anyway, so the marginal win is Android-only.
-//!
 //! Texture paths are decoded + GPU-uploaded via the texture cache; other
 //! non-GLTF paths only warm the download cache on disk.
 
 use std::time::Instant;
 
-use godot::classes::{Node, Node3D, PackedScene, ResourceLoader};
+use godot::classes::{PackedScene, ResourceLoader};
 use godot::prelude::*;
 
 use crate::{
@@ -50,13 +44,6 @@ use crate::{
     godot_classes::{dcl_global::DclGlobal, promise::Promise},
     scene_runner::scene::Scene,
 };
-
-/// Also instantiate a hidden ghost node when a GLTF preload finishes. Warms
-/// skinned-mesh / `AnimationPlayer` setup at the cost of a full extra instance
-/// in RAM. Default OFF — retaining the `PackedScene` already gets meshes and
-/// textures to the GPU; the ghost only adds pipeline/skeleton warmup that is a
-/// no-op on iOS (Metal PSO cache disabled). Flip to experiment / measure.
-const PRELOAD_GHOST_TO_GPU: bool = false;
 
 /// Per-scene state backing the `PBAssetLoad` component.
 #[derive(Default)]
@@ -96,8 +83,6 @@ pub struct PreloadEntry {
     pub scene_path: Option<String>,
     /// Retained loaded scene — pins meshes/textures in RAM + GPU. `None` until FINISHED.
     pub packed_scene: Option<Gd<PackedScene>>,
-    /// Optional hidden ghost instance (see [`PRELOAD_GHOST_TO_GPU`]).
-    pub ghost: Option<Gd<Node>>,
     /// Current `LoadingState` (Unknown/Loading/NotFound/FinishedWithError/Finished).
     pub state: i32,
 }
@@ -208,9 +193,6 @@ fn release_preload(scene: &mut Scene, hash: &str) {
     if entry.refcount > 0 {
         return;
     }
-    if let Some(mut ghost) = entry.ghost.take() {
-        ghost.queue_free();
-    }
     // Removing the entry drops the retained `PackedScene`, releasing the GPU
     // resources once nothing else references them.
     scene.asset_load.preloads.remove(hash);
@@ -294,7 +276,6 @@ fn loading_entry(
         promise,
         scene_path,
         packed_scene: None,
-        ghost: None,
         state: LoadingState::Loading as i32,
     }
 }
@@ -306,7 +287,6 @@ fn not_found_entry(is_gltf: bool) -> PreloadEntry {
         promise: None,
         scene_path: None,
         packed_scene: None,
-        ghost: None,
         state: LoadingState::NotFound as i32,
     }
 }
@@ -377,13 +357,8 @@ pub fn sync_asset_load_loading_state(
 fn advance_preloads(scene: &mut Scene, ref_time: &Instant, end_time_us: i64) -> bool {
     let hashes: Vec<String> = scene.asset_load.preloads.keys().cloned().collect();
 
-    // Ghosts are built in a second pass so we don't hold a `preloads` borrow
-    // while touching the scene tree.
-    let mut ghosts_to_build: Vec<(String, Gd<PackedScene>)> = Vec::new();
-
     for hash in hashes {
         if (Instant::now() - *ref_time).as_micros() as i64 > end_time_us {
-            build_ghosts(scene, ghosts_to_build);
             return false;
         }
 
@@ -433,9 +408,6 @@ fn advance_preloads(scene: &mut Scene, ref_time: &Instant, end_time_us: i64) -> 
 
         match loaded {
             Some(packed) => {
-                if PRELOAD_GHOST_TO_GPU && entry.ghost.is_none() {
-                    ghosts_to_build.push((hash.clone(), packed.clone()));
-                }
                 entry.packed_scene = Some(packed);
                 entry.state = LoadingState::Finished as i32;
             }
@@ -445,32 +417,5 @@ fn advance_preloads(scene: &mut Scene, ref_time: &Instant, end_time_us: i64) -> 
         }
     }
 
-    build_ghosts(scene, ghosts_to_build);
     true
-}
-
-/// Instantiate hidden ghost nodes for finished GLTF preloads (see
-/// [`PRELOAD_GHOST_TO_GPU`]). Parented under the scene root so they are freed
-/// with the scene; kept invisible so they never render.
-fn build_ghosts(scene: &mut Scene, ghosts: Vec<(String, Gd<PackedScene>)>) {
-    if ghosts.is_empty() {
-        return;
-    }
-    let mut root = scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>();
-    for (hash, packed) in ghosts {
-        let Some(node) = packed.instantiate() else {
-            continue;
-        };
-        if let Ok(mut node_3d) = node.clone().try_cast::<Node3D>() {
-            node_3d.set_visible(false);
-        }
-        root.add_child(&node);
-        if let Some(entry) = scene.asset_load.preloads.get_mut(&hash) {
-            entry.ghost = Some(node);
-        } else {
-            // Preload was released before its ghost landed — don't leak it.
-            let mut node = node;
-            node.queue_free();
-        }
-    }
 }
