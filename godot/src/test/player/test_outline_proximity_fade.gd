@@ -39,6 +39,7 @@ func _test_aabb_surface_distance() -> void:
 		_fail("corner distance: expected ~5.196, got %.3f" % corner)
 
 
+# gdlint:ignore = async-function-name
 func _test_compute_local_aabb() -> void:
 	var entity := Node3D.new()
 	root.add_child(entity)
