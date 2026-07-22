@@ -47,6 +47,8 @@ func _initialize() -> void:
 	await _test_clamp_full_offset_when_clear()
 	await _test_clamp_catches_lateral_wall()
 	await _test_clamp_back_to_wall_overlap()
+	await _test_clamp_corner_two_walls()
+	await _test_clamp_thin_door_orbit()
 	await _test_clamp_fully_blocked_stays_out_of_wall()
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
@@ -261,6 +263,54 @@ func _test_clamp_back_to_wall_overlap() -> void:
 		)
 	if cam.global_position.z < -0.6:
 		_fail("back-to-wall: camera shot off too far forward (pos=%s)" % cam.global_position)
+	rig["world"].queue_free()
+
+
+# Corner case (the reported door scenario): the mount-forward shifted origin
+# lands INSIDE the thin wall in front (W1) — the sphere cast goes blind
+# (start overlap is ignored) — and the camera would cross the thin wall
+# BEHIND the player (W2). The ray backbone from the pivot must catch W2.
+# gdlint:ignore = async-function-name
+func _test_clamp_corner_two_walls() -> void:
+	var rig := _build_clamp_rig()
+	_add_box(rig["world"], Vector3(0, 0, -0.35), Vector3(4, 4, 0.2))  # W1 front: z -0.45..-0.25
+	_add_box(rig["world"], Vector3(0, 0, 0.35), Vector3(4, 4, 0.2))  # W2 behind: z 0.25..0.45
+	await _settle()
+
+	var cam: Camera3D = rig["cam"]
+	# Must stay out of W2's volume (face at 0.25). In the squeezed corner the
+	# camera legitimately ends up millimetric from the face — the invariant is
+	# that it never enters the wall, not that it keeps full standoff.
+	if cam.global_position.z > 0.245:
+		_fail(
+			(
+				"corner: camera crossed the wall behind (pos=%s, z expected <= 0.245)"
+				% cam.global_position
+			)
+		)
+	rig["world"].queue_free()
+
+
+# The reported scenario: hugging a THIN door box and orbiting 180° so the
+# camera swings to the far side — the camera must never end up on the
+# opposite side of the door from the avatar.
+# gdlint:ignore = async-function-name
+func _test_clamp_thin_door_orbit() -> void:
+	var rig := _build_clamp_rig()
+	# Thin door in front: z -0.45..-0.25.
+	_add_box(rig["world"], Vector3(0, 0, -0.35), Vector3(4, 4, 0.2))
+	# Camera orbited to the far side of the door.
+	(rig["mount"] as SpringArm3D).rotation.y = PI
+	await _settle()
+
+	var cam: Camera3D = rig["cam"]
+	if cam.global_position.z < -0.24:
+		_fail(
+			(
+				"thin door orbit: camera crossed the door (pos=%s, z expected >= -0.24)"
+				% cam.global_position
+			)
+		)
 	rig["world"].queue_free()
 
 

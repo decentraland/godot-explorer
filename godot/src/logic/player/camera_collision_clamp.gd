@@ -24,6 +24,7 @@ var lateral_offset := 0.0
 
 var _sphere := SphereShape3D.new()
 var _params := PhysicsShapeQueryParameters3D.new()
+var _ray_params := PhysicsRayQueryParameters3D.new()
 # Current distance from the pivot along the camera segment; shortens instantly,
 # extends smoothly so geometry doesn't pop through on the way out.
 var _smoothed_dist := 0.0
@@ -43,6 +44,9 @@ func _ready() -> void:
 	_params.collision_mask = CameraRig.CAMERA_COLLISION_MASK
 	_params.collide_with_bodies = true
 	_params.collide_with_areas = false
+	_ray_params.collision_mask = CameraRig.CAMERA_COLLISION_MASK
+	_ray_params.collide_with_bodies = true
+	_ray_params.collide_with_areas = false
 	# Start fully extended so there's no snap on the first frames.
 	_smoothed_dist = CameraRig.THIRD_PERSON_CAMERA.z
 
@@ -66,36 +70,48 @@ func _process(delta: float) -> void:
 		return
 	var dir := segment / dist
 
-	# CRITICAL: cast_motion IGNORES geometry the shape already overlaps at the
-	# start (verified empirically: it reports safe=1.0 = all clear). With the
-	# player's back against a wall the pivot sits 0.25m from it and an r=0.4
-	# sphere at the pivot already penetrates — the cast went blind and the
-	# camera sailed through the wall. So the sphere is cast from a point
-	# shifted along the mount's FORWARD (toward the player's front, always
-	# opposite to where the camera looks back from): it starts clear of the
-	# wall behind and the wall is detected. When facing a wall the shifted
-	# origin may start inside it, but the motion then moves away from it, so
-	# the ignored overlap is harmless (that wall is not between origin and
-	# camera). No detection of the wall direction needed — the forward shift
-	# is self-aligning.
+	# cast_motion IGNORES geometry the shape already overlaps at the start
+	# (verified empirically: it reports safe=1.0 = all clear). Two layers:
+	#
+	# 1) RAY BACKBONE from the pivot: a point can never start overlapped (the
+	#    pivot lives inside the player capsule), so the camera CENTER can never
+	#    cross a wall — no matter the orbit, wall thickness, or shift below.
+	_ray_params.from = pivot
+	_ray_params.to = target
+	var ray_hit := _mount.get_world_3d().direct_space_state.intersect_ray(_ray_params)
+	var ray_allowed := dist
+	if not ray_hit.is_empty():
+		ray_allowed = maxf(dir.dot(ray_hit.position - pivot) - CameraRig.CLAMP_EXTRA_MARGIN, 0.0)
+
+	# 2) SPHERE VOLUME from a point shifted along the mount's FORWARD (the
+	#    player's front, always opposite to where the camera looks back from).
+	#    Back against a wall, a sphere at the pivot would already penetrate it
+	#    and the cast would go blind; shifted, it starts clear and detects it.
+	#    But facing a THIN wall (e.g. a door box), the shifted origin can land
+	#    INSIDE the wall — then the cast is blind again (the reported case:
+	#    hugging a door and orbiting 360° put the camera on the far side). So
+	#    the sphere is only trusted when its origin is NOT overlapped; the ray
+	#    backbone always applies regardless.
 	var shift: float = minf(CameraRig.CLAMP_SPHERE_RADIUS, dist)
 	var origin: Vector3 = pivot - _mount.global_transform.basis.z * shift
 	var motion: Vector3 = target - origin
 
-	var allowed := dist
+	var allowed := ray_allowed
 	_params.transform = Transform3D(Basis(), origin)
 	_params.motion = motion
-	var result := _mount.get_world_3d().direct_space_state.cast_motion(_params)
-	# cast_motion always returns [safe, unsafe]; safe < 1.0 means blocked.
-	if result.size() >= 2 and result[0] < 1.0:
-		# Contact position of the sphere center, projected back onto the camera
-		# segment so framing stays on the arm's line. May end up in front of
-		# the pivot — correct when hugging a wall (the own-avatar proximity
-		# fade hides the head the camera is forced into; no distance floor).
-		var contact_pos: Vector3 = (
-			origin + motion * result[0] - motion.normalized() * CameraRig.CLAMP_EXTRA_MARGIN
-		)
-		allowed = clampf(dir.dot(contact_pos - pivot), -shift, dist)
+	var space := _mount.get_world_3d().direct_space_state
+	if space.get_rest_info(_params).is_empty():
+		var result := space.cast_motion(_params)
+		# cast_motion always returns [safe, unsafe]; safe < 1.0 means blocked.
+		if result.size() >= 2 and result[0] < 1.0:
+			# Contact position of the sphere center, projected back onto the
+			# camera segment so framing stays on the arm's line. May end up in
+			# front of the pivot — correct when hugging a wall (the own-avatar
+			# proximity fade hides the head; no distance floor).
+			var contact_pos: Vector3 = (
+				origin + motion * result[0] - motion.normalized() * CameraRig.CLAMP_EXTRA_MARGIN
+			)
+			allowed = minf(allowed, clampf(dir.dot(contact_pos - pivot), -shift, dist))
 
 	if allowed < _smoothed_dist:
 		_smoothed_dist = allowed  # shorten instantly — never clip
