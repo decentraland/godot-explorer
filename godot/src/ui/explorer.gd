@@ -1311,6 +1311,9 @@ func _on_profile_container_visibility_changed() -> void:
 		return
 	if not profile_container.visible:
 		_show_joypad()
+		# Profile page grabs keyboard focus when shown; restore it so jump works.
+		Global.explorer_grab_focus()
+		capture_mouse()
 
 
 func _open_friends_panel() -> void:
