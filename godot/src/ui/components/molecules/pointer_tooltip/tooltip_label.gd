@@ -22,6 +22,9 @@ var text_down := ""
 var text_up := ""
 var last_state_pressed := false
 var stylebox: StyleBox
+# Content hash of the scene-replaced (PBTouchScreenControls) icon we're currently loading,
+# so a stale async fetch can bail if the tooltip is reused for another action meanwhile.
+var _custom_icon_hash: String = ""
 
 @onready var label_action = %Label_Action
 @onready var texture_rect_action_icon = %TextureRect_ActionIcon
@@ -48,6 +51,8 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 	text_up = text_pet_up if !text_pet_up.is_empty() else text_pet_down
 
 	var action_lower: String = action.to_lower()
+	# Reset any pending custom-icon load from a previous action on this reused node.
+	_custom_icon_hash = ""
 
 	if not label_text:
 		return
@@ -103,6 +108,39 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 			action_to_trigger = ""
 			printerr("Action doesn't exist ", action)
 
+	# If a scene replaced this action's icon (PBTouchScreenControls), swap the default glyph
+	# for that same icon so the hint matches the on-screen gamepad button. The default stays
+	# visible until the texture finishes loading (and if it never does).
+	if action_to_trigger == action_lower:
+		_async_apply_custom_icon_override(action_lower)
+
+
+## Loads the scene-replaced icon for `action` (shared with the joypad via
+## SdkTouchControlsApplier) and shows it in the icon slot once ready. Mirrors joypad.gd's
+## _async_set_button_icon: sync cache hit applies immediately, otherwise awaits the fetch,
+## bailing if this node was reassigned to another action meanwhile.
+func _async_apply_custom_icon_override(action: String) -> void:
+	var custom_icon := SdkTouchControlsApplier.get_custom_icon_for_action(action)
+	if custom_icon.is_empty():
+		return
+
+	var icon_hash := String(custom_icon.get("hash", ""))
+	var icon_url := String(custom_icon.get("url", ""))
+	_custom_icon_hash = icon_hash
+
+	var cached: Texture2D = Global.content_provider.get_texture_from_hash(icon_hash)
+	if cached != null:
+		_show_keyboard_icon(cached)
+		return
+
+	var promise: Promise = Global.content_provider.fetch_texture_by_url(icon_hash, icon_url)
+	var res = await PromiseUtils.async_awaiter(promise)
+	# Bail if the tooltip was reused for another action while we were awaiting.
+	if _custom_icon_hash != icon_hash:
+		return
+	if not (res is PromiseError):
+		_show_keyboard_icon(res.texture)
+
 
 func _show_keyboard(text: String) -> void:
 	show()
@@ -123,6 +161,16 @@ func _show_keyboard_icon(icon: Texture2D) -> void:
 func _physics_process(_delta):
 	if action_to_trigger == "ia_any":
 		return
+
+	# React to live icon changes (e.g. the Controls Builder reassigning a glyph) while the
+	# tooltip stays on screen: if this action's scene-replaced icon changed (added, swapped,
+	# or removed), re-resolve the glyph. Cheap no-op when the hash is unchanged.
+	if not action_to_trigger.is_empty():
+		var desired_hash := String(
+			SdkTouchControlsApplier.get_custom_icon_for_action(action_to_trigger).get("hash", "")
+		)
+		if desired_hash != _custom_icon_hash:
+			set_tooltip_data(text_down, text_up, action_to_trigger)
 
 	var new_pressed = Input.is_action_pressed(action_to_trigger)
 	if last_state_pressed != new_pressed:

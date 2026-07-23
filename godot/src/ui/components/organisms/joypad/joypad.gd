@@ -313,9 +313,9 @@ func _apply_touch_controls() -> void:
 		var action := String(entry.get("action", ""))
 		if bool(entry.get("hide", false)):
 			hidden[action] = true
-		var icon_hash := String(entry.get("icon_hash", ""))
-		if not icon_hash.is_empty():
-			icons[action] = {"hash": icon_hash, "url": String(entry.get("icon_url", ""))}
+		var custom_icon := SdkTouchControlsApplier.get_custom_icon_for_action(action)
+		if not custom_icon.is_empty():
+			icons[action] = custom_icon
 
 	_layout(hidden, icons, main_action)
 
