@@ -53,6 +53,9 @@ func _ready() -> void:
 	_ray_params.collision_mask = CameraRig.CAMERA_COLLISION_MASK
 	_ray_params.collide_with_bodies = true
 	_ray_params.collide_with_areas = false
+	# Inflates the swept shape so contact is reported with perpendicular
+	# clearance — the near plane must never rest inside the wall.
+	_params.margin = CameraRig.CLAMP_NEAR_CLEARANCE
 	# Start fully extended so there's no snap on the first frames.
 	_smoothed_dist = CameraRig.THIRD_PERSON_CAMERA.z
 	_debug_probe_setup()
@@ -88,7 +91,14 @@ func _process(delta: float) -> void:
 	var ray_hit := _mount.get_world_3d().direct_space_state.intersect_ray(_ray_params)
 	var ray_allowed := dist
 	if not ray_hit.is_empty():
-		ray_allowed = maxf(dir.dot(ray_hit.position - pivot) - CameraRig.CLAMP_EXTRA_MARGIN, 0.0)
+		# Back off along the segment enough that the PERPENDICULAR clearance to
+		# the wall equals CLAMP_NEAR_CLEARANCE: a fixed margin along the segment
+		# shrinks to ~0 perpendicularly on angled walls (near plane pokes in).
+		# The cos is capped so grazing rays don't produce absurd backoffs.
+		var n: Vector3 = ray_hit.get("normal", -dir)
+		var cosang: float = clampf(absf(dir.dot(n)), 0.3, 1.0)
+		var backoff: float = CameraRig.CLAMP_NEAR_CLEARANCE / cosang
+		ray_allowed = maxf(dir.dot(ray_hit.position - pivot) - backoff, 0.0)
 
 	# 2) SPHERE VOLUME from a point shifted along the mount's FORWARD (the
 	#    player's front, always opposite to where the camera looks back from).

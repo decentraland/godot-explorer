@@ -278,14 +278,17 @@ func _test_clamp_corner_two_walls() -> void:
 	await _settle()
 
 	var cam: Camera3D = rig["cam"]
-	# Must stay out of W2's volume (face at 0.25). In the squeezed corner the
-	# camera legitimately ends up millimetric from the face — the invariant is
-	# that it never enters the wall, not that it keeps full standoff.
-	if cam.global_position.z > 0.245:
+	# Must stay out of W2's volume (face at 0.25) AND keep near-plane
+	# clearance: pre-fix the camera rested at z=0.244 — 6mm from the face, so
+	# the 0.05 near plane poked into the wall ("justo al borde" report).
+	if cam.global_position.z > 0.25 - CameraRig.CLAMP_NEAR_CLEARANCE + 0.01:
 		_fail(
 			(
-				"corner: camera crossed the wall behind (pos=%s, z expected <= 0.245)"
-				% cam.global_position
+				"corner: camera rests at the wall face without near-plane clearance "
+				+ (
+					"(pos=%s, z expected <= %.2f)"
+					% [cam.global_position, 0.25 - CameraRig.CLAMP_NEAR_CLEARANCE + 0.01]
+				)
 			)
 		)
 	rig["world"].queue_free()

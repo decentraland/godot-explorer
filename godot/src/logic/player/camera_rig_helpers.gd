@@ -27,6 +27,13 @@ const FIRST_PERSON_SPRING_LENGTH := -0.2
 const CLAMP_SPHERE_RADIUS := 0.4
 # Extra pull-in beyond the sphere contact point.
 const CLAMP_EXTRA_MARGIN := 0.02
+# Perpendicular clearance the camera must keep from wall faces. The near plane
+# is 0.05 — anything less and it pokes into the wall even when the clamp
+# "worked" (the reported "camera rests right at the edge" clip, worst on
+# angled/curved trimesh where a margin along the segment shrinks to ~0
+# perpendicularly). Applied as the sphere query margin and as the ray's
+# normal-based backoff.
+const CLAMP_NEAR_CLEARANCE := 0.08
 # Extension recovery speed (m/s). Shortening is instant (never clip), extending
 # is smoothed so geometry doesn't pop through on the way out.
 const CLAMP_EXTEND_SPEED := 8.0
