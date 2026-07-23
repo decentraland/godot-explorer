@@ -127,6 +127,10 @@ func async_load_test_avatar():
 	var result_bloom = await async_bloom_unlit_test()
 	test_results.push_back(result_bloom)
 
+	# Run uiBackground wrapMode test
+	var result_ui_background = await async_ui_background_repeat_test()
+	test_results.push_back(result_ui_background)
+
 	# Report results and exit gracefully like scene tests
 	flush_logs()
 	if dump_test_result_and_get_ok():
@@ -288,6 +292,38 @@ func async_bloom_unlit_test() -> Dictionary:
 	# Save and compare snapshot
 	var test_name = "bloom_unlit_no_halo"
 	return await async_capture_and_compare_image(test_name, captured_image)
+
+
+func async_ui_background_repeat_test() -> Dictionary:
+	print("Testing uibackground_repeat_stretch...")
+
+	# 1.5 atlas widths wide, so the tiled result is 1:1 with the atlas texels and the
+	# wrapped region is a full half-tile.
+	var viewport_size = Vector2i(192, 64)
+
+	var sub_viewport = SubViewport.new()
+	sub_viewport.size = viewport_size
+	sub_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	sub_viewport.transparent_bg = false
+	sub_viewport.disable_3d = true
+	add_child(sub_viewport)
+
+	var probe = DclUiBackgroundTestProbe.new()
+	sub_viewport.add_child(probe)
+	probe.build_repeat_background(Vector2(viewport_size.x, viewport_size.y))
+
+	# The texture resolves through change_value's call_deferred, so the awaits below are
+	# what let the real _on_texture_loaded path run before the capture.
+	await get_tree().create_timer(0.5).timeout
+	await RenderingServer.frame_post_draw
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var captured_image = sub_viewport.get_texture().get_image()
+
+	sub_viewport.queue_free()
+
+	return await async_capture_and_compare_image("uibackground_repeat_stretch", captured_image)
 
 
 func async_capture_and_compare_image(test_name: String, captured_image: Image) -> Dictionary:

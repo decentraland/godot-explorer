@@ -50,8 +50,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
-@onready var preview_camera_3d: Camera3D = %PreviewCamera3D
-@onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 @onready var container_interface: MarginContainer = %Container_Interface
 
 #Audio items
@@ -105,11 +103,6 @@ func _ready():
 		_on_line_edit_preview_url_focus_entered
 	)
 	line_edit_custom_preview_url.button_pressed.connect(_on_button_connect_preview_pressed)
-
-	if Global.get_explorer():
-		preview_viewport_container.show()
-	else:
-		preview_viewport_container.hide()
 
 	# general
 	check_button_submit_message_closes_chat.button_pressed = (
@@ -210,7 +203,6 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	var section_v_separation: int = 56
 	var button_h: int = 74
 	var button_theme_variation: String = "SecondaryOutlinedButtonSmall"
-	var preview_h: int = 290
 	var margin_container_nav_v: int = 0
 	var margin_container_content_top: int = 12
 	label_title.label_settings.font_size = 44
@@ -224,7 +216,6 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 		section_v_separation = 72
 		button_h = 96
 		button_theme_variation = "SecondaryOutlinedButton"
-		preview_h = 351
 
 	container_gameplay.add_theme_constant_override("separation", section_v_separation)
 	container_graphics.add_theme_constant_override("separation", section_v_separation)
@@ -234,8 +225,6 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	button_clear_cache.theme_type_variation = button_theme_variation
 	button_sign_out.custom_minimum_size.y = button_h
 	button_sign_out.theme_type_variation = button_theme_variation
-
-	preview_viewport_container.custom_minimum_size.y = preview_h
 
 	for node in find_children("*", "PanelContainer", true, false):
 		if node.get_script() == _SECTION_TITLE_SCRIPT:
@@ -427,7 +416,6 @@ func _on_container_storage_visibility_changed():
 func _on_sdk_skybox_time_active_changed(is_active: bool) -> void:
 	skybox_warning.visible = is_active
 	check_button_dynamic_skybox.disabled = is_active
-	preview_viewport_container.visible = !is_active and Global.get_explorer() != null
 	dropdown_list_custom_skybox.disabled = is_active or check_button_dynamic_skybox.button_pressed
 
 

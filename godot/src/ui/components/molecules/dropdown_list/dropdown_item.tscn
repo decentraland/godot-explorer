@@ -2,6 +2,7 @@
 
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="1_g0h80"]
 [ext_resource type="Script" uid="uid://biymcj6akv6qd" path="res://src/ui/components/molecules/dropdown_list/dropdown_item.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="3_30kbm"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5hhsg"]
 content_margin_left = 16.0
@@ -19,8 +20,14 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_30kbm"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5lhf1"]
+
 [node name="DropdownItem" type="Button" unique_id=804628124]
 custom_minimum_size = Vector2(0, 68)
+offset_right = 172.0
+offset_bottom = 68.0
 size_flags_horizontal = 3
 focus_mode = 0
 mouse_filter = 1
@@ -38,8 +45,49 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_g0h80")
 theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_g0h80")
 theme_override_styles/focus = SubResource("StyleBoxFlat_g0h80")
 toggle_mode = true
-text = "Dropdown List Item"
 alignment = 0
 text_overrun_behavior = 3
 icon_alignment = 2
 script = ExtResource("1_script")
+
+[node name="HBoxContainer_Name" type="HBoxContainer" parent="." unique_id=71403233]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="VSeparator" type="VSeparator" parent="HBoxContainer_Name" unique_id=1768341959]
+layout_mode = 2
+theme_override_constants/separation = 8
+theme_override_styles/separator = SubResource("StyleBoxEmpty_30kbm")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer_Name" unique_id=1848709255]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+
+[node name="Label_Name" type="Label" parent="HBoxContainer_Name/VBoxContainer" unique_id=728407509]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+text = "Name"
+
+[node name="HSeparator" type="HSeparator" parent="HBoxContainer_Name/VBoxContainer" unique_id=2133343713]
+layout_mode = 2
+theme_override_constants/separation = 1
+theme_override_styles/separator = SubResource("StyleBoxEmpty_5lhf1")
+
+[node name="TextureRect_CheckedName" type="TextureRect" parent="HBoxContainer_Name" unique_id=1022939523]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("3_30kbm")
+expand_mode = 3

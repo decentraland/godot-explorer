@@ -80,12 +80,12 @@ struct EmailCompleteRequest<'a> {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct EmailCompleteResponse {
-    /// The EMAIL identity JWT — this is the only field we consume; it becomes
-    /// `accountAuthTokenToConnect` in the `/link` call. The `walletAddress`
-    /// returned alongside is the email identity's OWN address (not the final
-    /// one), so it is deliberately ignored.
     token: String,
+    /// The email identity's own wallet address. Used for login; ignored for
+    /// the upgrade/link flow (the guest address is preserved instead).
+    wallet_address: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -100,6 +100,48 @@ pub struct ThirdwebGuestSession {
     pub user_id: String,
     pub wallet_address: H160,
     pub is_new_user: bool,
+}
+
+/// Typed failure for `guest_login`, carrying a machine-stable `reason` code so
+/// analytics can bucket outcomes without parsing free-form error strings (the
+/// `?`/`anyhow` boundary erases whether a failure was a timeout, a network
+/// error, or an HTTP status). Implements `std::error::Error` so existing
+/// `anyhow`-based callers keep working via `?` / `Into`.
+#[derive(Debug)]
+pub struct GuestLoginError {
+    /// A machine-stable code. This function produces "http_4xx", "http_5xx",
+    /// "timeout", "network", "bad_response" or "invalid_address"; later steps
+    /// of the guest-login flow (see `perform_thirdweb_guest_login`) may also
+    /// construct this error with "sign_message" or "ephemeral". Kept as a
+    /// `&'static str` so the vocabulary is fixed at the call site.
+    pub reason: &'static str,
+    /// Upstream HTTP status when `reason` is "http_4xx"/"http_5xx". None otherwise.
+    pub http_status: Option<u16>,
+    /// Human-readable detail for logs (may include the upstream body). Not for
+    /// analytics grouping — use `reason`.
+    pub message: String,
+}
+
+impl std::fmt::Display for GuestLoginError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.http_status {
+            Some(status) => write!(f, "{} (status={}): {}", self.reason, status, self.message),
+            None => write!(f, "{}: {}", self.reason, self.message),
+        }
+    }
+}
+
+impl std::error::Error for GuestLoginError {}
+
+/// Classifies a reqwest transport error (no HTTP response was produced) into a
+/// stable `reason` code. Status-based codes are handled separately by the
+/// caller, which has the response in hand.
+fn classify_reqwest_error(e: &reqwest::Error) -> &'static str {
+    if e.is_timeout() {
+        "timeout"
+    } else {
+        "network"
+    }
 }
 
 const SESSION_PATH: &str = "user://thirdweb_session.json";
@@ -163,7 +205,7 @@ pub fn load_session_from_disk() -> Option<ThirdwebGuestSession> {
 
 /// Logs in as a guest with a deterministic session id. The same session id
 /// always returns the same wallet address (server-side, custodial).
-pub async fn guest_login(session_id: &str) -> Result<ThirdwebGuestSession, anyhow::Error> {
+pub async fn guest_login(session_id: &str) -> Result<ThirdwebGuestSession, GuestLoginError> {
     let url = format!("{}/v1/auth/complete", THIRDWEB_API_BASE);
     let body = GuestLoginRequest {
         method: "guest",
@@ -176,33 +218,57 @@ pub async fn guest_login(session_id: &str) -> Result<ThirdwebGuestSession, anyho
         url
     );
 
-    let response = reqwest::Client::builder()
+    let client = reqwest::Client::builder()
         .timeout(REQUEST_TIMEOUT)
-        .build()?
+        .build()
+        .map_err(|e| GuestLoginError {
+            reason: "network",
+            http_status: None,
+            message: format!("client build failed: {e}"),
+        })?;
+
+    let response = client
         .post(&url)
         .header("x-client-id", THIRDWEB_CLIENT_ID)
         .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
         .header("Content-Type", "application/json")
         .json(&body)
         .send()
-        .await?;
+        .await
+        .map_err(|e| GuestLoginError {
+            reason: classify_reqwest_error(&e),
+            http_status: None,
+            message: e.to_string(),
+        })?;
 
     let status = response.status();
     if !status.is_success() {
         let text = response.text().await.unwrap_or_default();
-        return Err(anyhow::anyhow!(
-            "thirdweb guest_login failed: status={}, body={}",
-            status,
-            text
-        ));
+        return Err(GuestLoginError {
+            reason: if status.is_server_error() {
+                "http_5xx"
+            } else {
+                "http_4xx"
+            },
+            http_status: Some(status.as_u16()),
+            message: format!("status={status}, body={text}"),
+        });
     }
 
-    let parsed: GuestLoginResponse = response.json().await?;
+    let parsed: GuestLoginResponse = response.json().await.map_err(|e| GuestLoginError {
+        reason: "bad_response",
+        http_status: Some(status.as_u16()),
+        message: format!("failed to parse response body: {e}"),
+    })?;
     let address = parsed
         .wallet_address
         .as_str()
         .as_h160()
-        .ok_or_else(|| anyhow::anyhow!("thirdweb returned invalid wallet address"))?;
+        .ok_or_else(|| GuestLoginError {
+            reason: "invalid_address",
+            http_status: None,
+            message: "thirdweb returned invalid wallet address".into(),
+        })?;
 
     tracing::info!(
         "thirdweb guest_login: success, address={:#x}, is_new_user={}",
@@ -291,7 +357,7 @@ pub async fn refresh_guest_session(
 ) -> Result<ThirdwebGuestSession, anyhow::Error> {
     let anchor = super::device_anchor::resolve_anchor(device_anchor_id);
     let session_id = super::device_anchor::compute_session_id(&anchor);
-    guest_login(&session_id).await
+    guest_login(&session_id).await.map_err(anyhow::Error::from)
 }
 
 /// Call A — sends a one-time code to `email`. No auth token required; the
@@ -332,10 +398,10 @@ pub async fn email_initiate(email: &str) -> Result<(), anyhow::Error> {
 }
 
 /// Call B — verifies the OTP and returns the EMAIL identity JWT. That token is
-/// fed to `link_email` as `accountAuthTokenToConnect`. The `walletAddress`
-/// returned by this endpoint is the email identity's own address and is NOT
-/// the final wallet — it is intentionally not parsed.
-pub async fn email_complete(email: &str, code: &str) -> Result<String, anyhow::Error> {
+/// Verifies the OTP code and returns `(email_jwt, email_wallet_address)`.
+/// The JWT is used either to link the email to an existing guest account
+/// (`link_email`) or directly as the auth token for a native email login.
+pub async fn email_complete(email: &str, code: &str) -> Result<(String, H160), anyhow::Error> {
     let url = format!("{}/v1/auth/complete", THIRDWEB_API_BASE);
     let body = EmailCompleteRequest {
         method: "email",
@@ -367,11 +433,17 @@ pub async fn email_complete(email: &str, code: &str) -> Result<String, anyhow::E
     }
 
     let parsed: EmailCompleteResponse = response.json().await?;
+    let address = parsed
+        .wallet_address
+        .as_str()
+        .as_h160()
+        .ok_or_else(|| anyhow::anyhow!("thirdweb email_complete: invalid wallet address"))?;
     tracing::info!(
-        "thirdweb email_complete: success, email_jwt_len={}",
+        "thirdweb email_complete: success, address={:#x}, email_jwt_len={}",
+        address,
         parsed.token.len()
     );
-    Ok(parsed.token)
+    Ok((parsed.token, address))
 }
 
 /// Call C — links the email identity (`email_jwt`) into the existing guest

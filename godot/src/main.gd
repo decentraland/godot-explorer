@@ -7,6 +7,10 @@ var _startup_time: int = Time.get_ticks_msec()
 func _ready():
 	print("[Startup] main._ready: %dms" % (Time.get_ticks_msec() - _startup_time))
 	Global.set_orientation_portrait()
+	# #2386: apply the UI content-scale synchronously here — before the first frame is
+	# presented — so the SplashOverlay (and all UI) render at their final scale from frame 0
+	# instead of popping 1.0 -> content_scale_factor a frame later when start() runs.
+	GraphicSettings.apply_ui_zoom(get_window())
 	start.call_deferred()
 
 

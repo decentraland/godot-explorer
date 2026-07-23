@@ -3,7 +3,8 @@ use std::{cell::RefCell, rc::Rc, sync::atomic::Ordering};
 use godot::{
     classes::{
         control::{FocusMode, MouseFilter},
-        Control, IControl, InputEvent, InputEventMouseButton, InputEventScreenDrag,
+        notify::ControlNotification,
+        Control, IControl, Input, InputEvent, InputEventMouseButton, InputEventScreenDrag,
         InputEventScreenTouch, Node,
     },
     global::MouseButton,
@@ -21,6 +22,7 @@ use crate::{
     godot_classes::dcl_global::DclGlobal,
     scene_runner::{
         components::ui::scene_ui::UiResults,
+        input::input_action_to_godot_action,
         scene_manager::{GLOBAL_TICK_NUMBER, GLOBAL_TIMESTAMP},
     },
 };
@@ -41,6 +43,11 @@ pub struct DclUiControl {
     listening_mouse_down: bool,
     listening_mouse_up: bool,
 
+    // Godot input actions (ia_*) fired while this element is pressed (PBUiInputBinding).
+    bound_actions: Vec<StringName>,
+    // Whether the bound actions are currently held (so we release on press-cancel/up).
+    bound_actions_pressed: bool,
+
     // Mobile swipe-off handoff: Godot drag-captures a touch to the control that
     // received the press, so once a finger presses this (interactive) control we
     // own the whole gesture. We track it here and, when the finger leaves our
@@ -60,6 +67,8 @@ impl IControl for DclUiControl {
             force_pointer_filter_mode: PointerFilterMode::PfmNone,
             listening_mouse_down: false,
             listening_mouse_up: false,
+            bound_actions: Vec::new(),
+            bound_actions_pressed: false,
             ui_result: None,
             dcl_entity_id: SceneEntityId::ROOT,
             pressed_touch_index: -1,
@@ -71,6 +80,19 @@ impl IControl for DclUiControl {
 
     fn ready(&mut self) {
         self.base_mut().set_focus_mode(FocusMode::NONE);
+    }
+
+    fn on_notification(&mut self, what: ControlNotification) {
+        // Release any held bound input actions (PBUiInputBinding) when this control leaves the
+        // tree. Full scene teardown frees the node via `base_ui.take()` + `queue_free` without
+        // going through CRDT deletion, so `clear_input_binding` is never called — without this
+        // a scene torn down while the player is pressing a bound UI element (e.g. teleporting
+        // mid-press) would leave the actions stuck in the `Input` singleton (phantom
+        // movement/jumps). `press_bound_actions` is idempotent, so this is a no-op when nothing
+        // is held.
+        if what == ControlNotification::EXIT_TREE {
+            self.press_bound_actions(false);
+        }
     }
 }
 
@@ -90,7 +112,11 @@ impl DclUiControl {
 
         if is_mobile {
             match input.try_cast::<InputEventScreenTouch>() {
-                Ok(event) => self.handle_touch(&event),
+                Ok(event) => {
+                    // Bound input actions (PBUiInputBinding) press/release on native touch.
+                    self.press_bound_actions(event.is_pressed());
+                    self.handle_touch(&event);
+                }
                 Err(input) => {
                     if let Ok(event) = input.try_cast::<InputEventScreenDrag>() {
                         self.handle_drag(&event);
@@ -100,6 +126,11 @@ impl DclUiControl {
         } else if let Ok(event) = input.try_cast::<InputEventMouseButton>() {
             let is_left_button = event.get_button_index() == MouseButton::LEFT;
             let down_event = event.is_pressed();
+
+            // Drive bound input actions (PBUiInputBinding) alongside SDK pointer results.
+            if is_left_button {
+                self.press_bound_actions(down_event);
+            }
 
             if self.listening_mouse_down && is_left_button && down_event {
                 self.push_pointer_result(PointerEventType::PetDown);
@@ -223,6 +254,23 @@ impl DclUiControl {
         }
     }
 
+    /// Press or release all bound input actions (PBUiInputBinding) on this element,
+    /// like the native on-screen buttons. Idempotent: holds state to avoid double press/release.
+    fn press_bound_actions(&mut self, press: bool) {
+        if self.bound_actions.is_empty() || press == self.bound_actions_pressed {
+            return;
+        }
+        self.bound_actions_pressed = press;
+        let mut input = Input::singleton();
+        for action in self.bound_actions.iter() {
+            if press {
+                input.action_press(action);
+            } else {
+                input.action_release(action);
+            }
+        }
+    }
+
     pub fn update_mouse_filter(&mut self) {
         match self.force_pointer_filter_mode {
             PointerFilterMode::PfmNone => {
@@ -277,7 +325,46 @@ impl DclUiControl {
                     .unwrap_or(false)
         });
 
-        self.set_connect_gui_input(self.listening_mouse_down || self.listening_mouse_up);
+        self.refresh_gui_input_connection();
+    }
+
+    /// gui_input must be connected when we either report pointer events or have bound actions.
+    fn refresh_gui_input_connection(&mut self) {
+        let want =
+            self.listening_mouse_down || self.listening_mouse_up || !self.bound_actions.is_empty();
+        self.set_connect_gui_input(want);
+    }
+
+    /// Sets the input actions bound to this UI element (PBUiInputBinding). Unmapped
+    /// actions (IaAny / IaModifier) are skipped with a warning.
+    pub fn set_input_binding(&mut self, actions: &[i32]) {
+        // Release any currently held actions before rebinding to avoid stuck inputs.
+        self.press_bound_actions(false);
+
+        self.bound_actions = actions
+            .iter()
+            .filter_map(|raw| {
+                let action = InputAction::from_i32(*raw)?;
+                match input_action_to_godot_action(action) {
+                    Some(name) => Some(StringName::from(name)),
+                    None => {
+                        godot_warn!(
+                            "PBUiInputBinding: input action {:?} has no bindable mapping, ignoring",
+                            action
+                        );
+                        None
+                    }
+                }
+            })
+            .collect();
+        self.refresh_gui_input_connection();
+    }
+
+    /// Clears all bound input actions, releasing any that are currently held.
+    pub fn clear_input_binding(&mut self) {
+        self.press_bound_actions(false);
+        self.bound_actions.clear();
+        self.refresh_gui_input_connection();
     }
 
     pub fn set_pointer_filter(&mut self, force_pointer_filter_mode: PointerFilterMode) {
