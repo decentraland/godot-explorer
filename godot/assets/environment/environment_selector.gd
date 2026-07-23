@@ -71,15 +71,13 @@ func set_shadow(shadow_quality: int):
 	# 1024 × 16-bit on the low tier ≈ 1/8 the bandwidth of 2048 × 32-bit.
 	var atlas_size: int = 2048
 	var atlas_16_bits: bool = false
+	# NOTE: light energy is owned by SkyBase._process (per-frame elevation
+	# falloff); don't set it here — it gets overwritten anyway.
 	match shadow_quality:
 		0:  # no shadow
 			sky.main_light.shadow_enabled = false
-			# Increase light energy when shadows are off to compensate
-			sky.main_light.light_energy = 1.0
 		1:  # low res shadow — Mali-bandwidth-tuned
 			sky.main_light.shadow_enabled = true
-			# Use base light energy when shadows are on
-			sky.main_light.light_energy = 0.7
 			# Shorter shadow distance for better performance
 			sky.main_light.directional_shadow_max_distance = 30.0
 			atlas_size = 1024
@@ -87,10 +85,18 @@ func set_shadow(shadow_quality: int):
 			quality = RenderingServer.SHADOW_QUALITY_HARD
 		2:  # high res shadow
 			sky.main_light.shadow_enabled = true
-			sky.main_light.light_energy = 0.7
 			# Full shadow distance for high quality
 			sky.main_light.directional_shadow_max_distance = 50.0
 			quality = RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM
+
+	# Moon light: night fill. Shadows on for every tier that has shadows at
+	# all: the sun light is hidden at night, so there's never more than one
+	# shadow-casting directional active (except briefly at dusk/dawn).
+	if sky.moon_light != null:
+		sky.moon_light.shadow_enabled = shadow_quality >= 1
+		sky.moon_light.directional_shadow_max_distance = (
+			sky.main_light.directional_shadow_max_distance
+		)
 
 	RenderingServer.directional_soft_shadow_filter_set_quality(quality)
 	RenderingServer.directional_shadow_atlas_set_size(atlas_size, atlas_16_bits)
