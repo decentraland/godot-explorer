@@ -28,6 +28,12 @@ var _ray_params := PhysicsRayQueryParameters3D.new()
 # Current distance from the pivot along the camera segment; shortens instantly,
 # extends smoothly so geometry doesn't pop through on the way out.
 var _smoothed_dist := 0.0
+# Diagnostics (enabled with DCL_CAM_DEBUG=1): classifies whatever the camera
+# crosses unblocked — pointer-only collider, other layer, or no collider at
+# all (single-sided shell / cmask=0).
+var _debug_probe := false
+var _debug_ray := PhysicsRayQueryParameters3D.new()
+var _debug_seen := {}
 # The spring resolves its length during its first physics steps (CameraArm
 # starts at z=0). Skip those frames: clamping against the unresolved zero
 # length would slam the camera to the pivot and slowly recover for no reason.
@@ -49,6 +55,7 @@ func _ready() -> void:
 	_ray_params.collide_with_areas = false
 	# Start fully extended so there's no snap on the first frames.
 	_smoothed_dist = CameraRig.THIRD_PERSON_CAMERA.z
+	_debug_probe_setup()
 
 
 func _process(delta: float) -> void:
@@ -119,3 +126,53 @@ func _process(delta: float) -> void:
 		_smoothed_dist = move_toward(_smoothed_dist, allowed, CameraRig.CLAMP_EXTEND_SPEED * delta)
 
 	_camera.global_position = pivot + dir * _smoothed_dist
+
+	if _debug_probe:
+		_debug_probe_pass(space, pivot, target, allowed, dist)
+
+
+# --- Diagnostics (DCL_CAM_DEBUG=1) ---
+# When nothing on the physics layer blocked the camera (allowed == dist),
+# probe what ELSE is on the path so field reports of "camera goes through X"
+# can be classified: pointer-only collider, no collider at all, or a
+# single-sided (backface-less) trimesh the casts slip through from behind.
+
+
+func _debug_probe_setup() -> void:
+	_debug_probe = OS.get_environment("DCL_CAM_DEBUG") == "1"
+	_debug_ray.collide_with_bodies = true
+	_debug_ray.collide_with_areas = false
+
+
+func _debug_probe_pass(
+	space: PhysicsDirectSpaceState3D, pivot: Vector3, target: Vector3, allowed: float, dist: float
+) -> void:
+	if allowed < dist - 0.001:
+		return  # physics collision handled this frame — nothing to diagnose
+	_debug_ray.from = pivot
+	_debug_ray.to = target
+	_debug_ray.collision_mask = 1  # CL_POINTER
+	var hit := space.intersect_ray(_debug_ray)
+	if not hit.is_empty():
+		_debug_report("POINTER-ONLY collider", hit)
+		return
+	_debug_ray.collision_mask = 3  # pointer | physics: anything at all?
+	hit = space.intersect_ray(_debug_ray)
+	if not hit.is_empty():
+		_debug_report("collider on other layer(s)", hit)
+		return
+	_debug_report_key("NO-COLLIDER on camera path (single-sided shell or cmask=0)", "no-collider")
+
+
+func _debug_report(kind: String, hit: Dictionary) -> void:
+	var collider = hit.get("collider")
+	var key := str(collider.get_instance_id()) if collider != null else "?"
+	var layers: int = collider.collision_layer if collider != null else -1
+	_debug_report_key("%s: %s layers=%d at %s" % [kind, collider, layers, hit.get("position")], key)
+
+
+func _debug_report_key(msg: String, key: String) -> void:
+	if _debug_seen.has(key):
+		return
+	_debug_seen[key] = true
+	print("[CamDebug] ", msg)
