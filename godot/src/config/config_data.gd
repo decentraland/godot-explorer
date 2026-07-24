@@ -154,6 +154,13 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 
 var terms_and_conditions_version: int = 0
 
+# Guest upgrade nudge cadence (issue #2372). session_count counts app launches; the
+# upgrade_modal_* fields track how many times the aspirational upgrade modal was shown and
+# when, to gate the max-3 schedule (2nd session / +5 days / +10 days).
+var session_count: int = 0
+var upgrade_modal_shown_count: int = 0
+var upgrade_modal_last_shown_unix: int = 0
+
 # Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
 # re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
 # request — which on Android returns immediately without a dialog — isn't re-attempted
@@ -456,6 +463,18 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
+	self.session_count = settings_file.get_value(
+		"user", "session_count", data_default.session_count
+	)
+
+	self.upgrade_modal_shown_count = settings_file.get_value(
+		"user", "upgrade_modal_shown_count", data_default.upgrade_modal_shown_count
+	)
+
+	self.upgrade_modal_last_shown_unix = settings_file.get_value(
+		"user", "upgrade_modal_last_shown_unix", data_default.upgrade_modal_last_shown_unix
+	)
+
 	self.notif_permission_last_prompt_unix = settings_file.get_value(
 		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
 	)
@@ -571,5 +590,10 @@ func save_to_settings_file():
 		"config", "day1_notification_scheduled", self.day1_notification_scheduled
 	)
 	new_settings_file.set_value("config", "low_spec_warning_shown", self.low_spec_warning_shown)
+	new_settings_file.set_value("user", "session_count", self.session_count)
+	new_settings_file.set_value("user", "upgrade_modal_shown_count", self.upgrade_modal_shown_count)
+	new_settings_file.set_value(
+		"user", "upgrade_modal_last_shown_unix", self.upgrade_modal_last_shown_unix
+	)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

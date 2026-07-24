@@ -31,7 +31,6 @@ config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/stretch_mode=0
 boot_splash/image="res://assets/ui/splash-isotype.png"
-boot_splash/show_image=true
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
 

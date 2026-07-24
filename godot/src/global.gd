@@ -125,6 +125,8 @@ var locations: Node
 
 var modal_manager: ModalManager
 
+var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
+
 var standalone = false
 
 var network_inspector_window: Window = null
@@ -623,12 +625,16 @@ func _ready():
 	self.modal_manager = load("res://src/ui/components/organisms/modal/modal_manager.gd").new()
 	self.modal_manager.set_name("modal_manager")
 
+	self.upgrade_nudge_coordinator = load("res://src/upgrade_nudge_coordinator.gd").new()
+	self.upgrade_nudge_coordinator.set_name("upgrade_nudge_coordinator")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
 	get_tree().root.add_child.call_deferred(self.locations)
 	get_tree().root.add_child.call_deferred(self.modal_manager)
+	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)

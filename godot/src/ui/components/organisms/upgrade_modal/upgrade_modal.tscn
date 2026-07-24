@@ -7,6 +7,7 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_48o53"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_b5pi2"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="11_omn3q"]
+[ext_resource type="Script" path="res://src/ui/components/organisms/upgrade_modal/upgrade_modal.gd" id="12_script"]
 
 [sub_resource type="Shader" id="Shader_blur"]
 code = "shader_type canvas_item;
@@ -57,6 +58,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_force_pass_scroll_events = false
 color = Color(0, 0, 0, 0.333333)
+script = ExtResource("12_script")
 metadata/mobile_preview_orientation = "both"
 
 [node name="Blur" type="ColorRect" parent="." unique_id=58522777]
@@ -154,6 +156,7 @@ theme_override_constants/separation = 54
 theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
 
 [node name="Button_AddEmail" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=967609012]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -167,6 +170,7 @@ theme_override_constants/separation = 32
 theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
 
 [node name="Button_MaybeLater" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=218859755]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 size_flags_horizontal = 3
