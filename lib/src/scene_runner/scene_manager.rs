@@ -45,7 +45,8 @@ use super::{
         find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
     },
     input::InputState,
-    loading_session::LoadingSession,
+    loading_funnel::{LoadingBeginContext, LoadingFunnel},
+    loading_session::{LoadingPhase, LoadingSession},
     pool_manager::PoolManager,
     scene::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
@@ -140,6 +141,11 @@ pub struct SceneManager {
     // Loading session tracking
     current_loading_session: Option<LoadingSession>,
     next_session_id: u64,
+
+    // Loading funnel: pure per-load accumulator emitted as a single Segment "Loading Event".
+    // Fed from the loading-session lifecycle below plus a few GDScript push-calls
+    // (loading_begin_episode / loading_end_episode / loading_mark_* / loading_realm_change_failed).
+    loading_funnel: LoadingFunnel,
 
     // Benchmark toggles (issue #1862). Set by gp_benchmark_runner.gd from
     // godot/bench/genesis_plaza.config.json before scenes start ticking.
@@ -324,6 +330,8 @@ impl SceneManager {
         if let Some(session) = &mut self.current_loading_session {
             session.report_scene_spawned(new_scene_id, 0);
         }
+        // Loading funnel: first scene spawned is a funnel milestone.
+        self.loading_funnel.on_scene_spawned(Instant::now());
 
         self.base_mut().call_deferred(
             "emit_signal",
@@ -425,6 +433,15 @@ impl SceneManager {
             "loading_started",
             &[session_id.to_variant(), count.to_variant()],
         );
+        // Loading funnel: begin an "auto" load if none is active yet (streaming into a parcel
+        // with no loading-screen entry point), then record the initial metadata phase.
+        if !self.loading_funnel.is_active() {
+            let ctx = self.make_loading_begin_context("auto".to_string(), String::new());
+            let ev = self.loading_funnel.begin(ctx, Instant::now());
+            self.emit_loading_events(vec![ev]);
+        }
+        self.loading_funnel
+            .on_phase(LoadingPhase::Metadata, Instant::now());
         self.base_mut().emit_signal(
             "loading_phase_changed",
             &[GString::from("metadata").to_variant()],
@@ -647,6 +664,7 @@ impl SceneManager {
                 new_phase,
                 session_id
             );
+            self.loading_funnel.on_phase(new_phase, Instant::now());
             self.base_mut().emit_signal(
                 "loading_phase_changed",
                 &[GString::from(new_phase.as_str()).to_variant()],
@@ -655,6 +673,7 @@ impl SceneManager {
 
         if is_complete {
             tracing::debug!("[LOADING] COMPLETE - session {} finished", session_id);
+            self.loading_funnel.on_complete(Instant::now());
             self.current_loading_session = None;
             self.base_mut()
                 .emit_signal("loading_complete", &[session_id.to_variant()]);
@@ -663,18 +682,21 @@ impl SceneManager {
 
     /// Internal: Emit loading progress
     fn emit_loading_progress(&mut self) {
-        if let Some(session) = &mut self.current_loading_session {
-            let progress = session.calculate_progress();
-            let (ready, total) = session.get_scene_counts();
-            self.base_mut().emit_signal(
-                "loading_progress",
-                &[
-                    progress.to_variant(),
-                    (ready as i32).to_variant(),
-                    (total as i32).to_variant(),
-                ],
-            );
-        }
+        let Some(session) = &mut self.current_loading_session else {
+            return;
+        };
+        let progress = session.calculate_progress();
+        let (ready, total) = session.get_scene_counts();
+        // Loading funnel: accumulate the 25-30% plateau band.
+        self.loading_funnel.on_progress(progress, Instant::now());
+        self.base_mut().emit_signal(
+            "loading_progress",
+            &[
+                progress.to_variant(),
+                (ready as i32).to_variant(),
+                (total as i32).to_variant(),
+            ],
+        );
     }
 
     /// Internal: Check for individual scene timeouts (called from physics_process)
@@ -790,14 +812,155 @@ impl SceneManager {
             }
         }
 
+        let current_parcel = self.current_parcel_scene_id;
+        let mut current_parcel_rendered = false;
         for scene_id in scenes_ready {
             tracing::debug!("[LOADING] Scene {:?} reported READY", scene_id);
             session.report_scene_ready(scene_id);
+            if scene_id == current_parcel {
+                current_parcel_rendered = true;
+            }
+        }
+
+        // Loading funnel: the current parcel scene reaching ready is the "scene rendered" milestone.
+        if current_parcel_rendered {
+            self.loading_funnel.on_scene_rendered(Instant::now());
         }
 
         // Check for phase transitions and emit progress
         self.check_loading_phase_transition();
         self.emit_loading_progress();
+    }
+
+    // ---- Loading funnel (single Segment "Loading Event") -------------------------------------
+    // Session-derived milestones are fed internally from the lifecycle above. A few marks
+    // originate in GDScript UI/realm code (the loading-screen boundary, the /about fetch, scene
+    // discovery, realm-resolution failure, GLTF group failures) and are pushed in through these
+    // #[func]s. The Godot-boundary helpers below read counts / emit so LoadingFunnel stays pure.
+
+    /// Begin a load (loading screen shown). Supersedes any already-open load first.
+    #[func]
+    pub fn loading_begin_episode(&mut self, when: GString, realm: GString) {
+        if self.loading_funnel.is_active() {
+            self.loading_end_episode(GString::from("superseded"));
+        }
+        let ctx = self.make_loading_begin_context(when.to_string(), realm.to_string());
+        let ev = self.loading_funnel.begin(ctx, Instant::now());
+        self.emit_loading_events(vec![ev]);
+    }
+
+    /// End the current load (loading screen hidden, or superseded).
+    #[func]
+    pub fn loading_end_episode(&mut self, reason: GString) {
+        let (loaded, loading, _) = self.loading_content_counts();
+        let frames = Self::loading_process_frames();
+        // Only a fallback for a load that began with no realm at all — the funnel keeps what it
+        // knew at begin otherwise. See `LoadingFunnel::end`.
+        let realm = self.current_realm_string();
+        let events = self.loading_funnel.end(
+            &reason.to_string(),
+            &realm,
+            loaded,
+            loading,
+            frames,
+            Instant::now(),
+        );
+        self.emit_loading_events(events);
+    }
+
+    /// GDScript (realm.gd): the /about fetch returned — realm resolution milestone.
+    #[func]
+    pub fn loading_mark_about_end(&mut self) {
+        self.loading_funnel.mark_about_end(Instant::now());
+    }
+
+    /// GDScript (scene_fetcher.gd): the desired-scene set was produced — discovery milestone.
+    #[func]
+    pub fn loading_mark_discovery(&mut self) {
+        self.loading_funnel.mark_discovery(Instant::now());
+    }
+
+    /// GDScript (realm.gd): realm resolution failed — emit a realm_change_failed event correlated
+    /// to the current load and mark it so it ends as `error`.
+    #[func]
+    pub fn loading_realm_change_failed(&mut self, realm: GString, reason: GString) {
+        let ev = self
+            .loading_funnel
+            .realm_change_failed(&realm.to_string(), &reason.to_string());
+        self.emit_loading_events(vec![ev]);
+    }
+
+    /// GDScript (gltf_loading_coordinator.gd): a source group failed to fetch/load.
+    #[func]
+    pub fn loading_note_asset_failure(&mut self, count: i32) {
+        self.loading_funnel.note_asset_failure(count.max(0) as i64);
+    }
+
+    fn make_loading_begin_context(&self, when: String, realm: String) -> LoadingBeginContext {
+        let realm = if realm.is_empty() {
+            self.current_realm_string()
+        } else {
+            realm
+        };
+        let os = godot::classes::Os::singleton();
+        LoadingBeginContext {
+            when,
+            realm,
+            cpu_count: os.get_processor_count(),
+            platform: os.get_name().to_string(),
+            process_frames: Self::loading_process_frames(),
+        }
+    }
+
+    /// (loaded, loading, download_mbs) from the ContentProvider — 0s if the singleton is gone.
+    fn loading_content_counts(&self) -> (i64, i64, f64) {
+        let Some(global) = DclGlobal::try_singleton() else {
+            return (0, 0, 0.0);
+        };
+        let content_provider = global.bind().content_provider.clone();
+        let cp = content_provider.bind();
+        (
+            cp.count_loaded_resources() as i64,
+            cp.count_loading_resources() as i64,
+            cp.get_download_speed_mbs(),
+        )
+    }
+
+    fn current_realm_string(&self) -> String {
+        let Some(global) = DclGlobal::try_singleton() else {
+            return String::new();
+        };
+        let mut realm = global.bind().realm.clone();
+        realm
+            .call("get_realm_string", &[])
+            .try_to::<GString>()
+            .map(|g| g.to_string())
+            .unwrap_or_default()
+    }
+
+    fn loading_process_frames() -> i64 {
+        godot::classes::Engine::singleton().get_process_frames() as i64
+    }
+
+    fn emit_loading_events(
+        &self,
+        events: Vec<crate::analytics::data_definition::SegmentEventLoading>,
+    ) {
+        if events.is_empty() {
+            return;
+        }
+        let Some(global) = DclGlobal::try_singleton() else {
+            return;
+        };
+        let mut metrics = global.bind().metrics.clone();
+        let mut metrics = metrics.bind_mut();
+        for ev in events {
+            metrics.queue_loading_event(ev);
+        }
+        // Flush right after every loading event so `started` and each `progress` pulse ship
+        // immediately: a load can be abandoned (quit / kill) before the periodic 10s flush would
+        // fire, and the whole point of these events is to survive that.
+        metrics.flush();
     }
 
     // ============== End Loading Session API ==============
@@ -808,6 +971,7 @@ impl SceneManager {
             emote_urn: emote_id.to_string(),
             r#loop: looping,
             timestamp: 0,
+            mask: None,
         };
 
         // Primary player send to all the scenes
@@ -2036,6 +2200,7 @@ impl SceneManager {
         if let Some(mut global) = DclGlobal::try_singleton() {
             let mut global_bind = global.bind_mut();
             global_bind.reset_input_modifiers();
+            global_bind.reset_touch_controls();
             let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
             drop(global_bind);
@@ -2447,6 +2612,7 @@ impl INode for SceneManager {
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
+            loading_funnel: LoadingFunnel::default(),
             bench_disable_tweens: false,
             bench_disable_transforms: false,
         }
@@ -2479,6 +2645,19 @@ impl INode for SceneManager {
 
         // Check loading session timeouts
         self.check_loading_timeouts();
+
+        // Loading funnel: track peak pending assets and network throughput while a load is active.
+        // Every PULSE_MS the tick returns a `progress` snapshot so a load that never completes
+        // (user quits / client killed mid-load) still leaves its last-known state in Segment.
+        if self.loading_funnel.is_active() {
+            let (loaded, loading, mb_s) = self.loading_content_counts();
+            if let Some(ev) = self
+                .loading_funnel
+                .note_tick(loading - loaded, mb_s, Instant::now())
+            {
+                self.emit_loading_events(vec![ev]);
+            }
+        }
 
         // SceneManager is owned by DclGlobal (autoload) and outlives the Explorer scene.
         // After change_scene_to_file (e.g. Sign Out), `player_avatar_node` becomes a

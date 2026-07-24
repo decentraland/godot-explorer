@@ -302,6 +302,7 @@ func _is_there_any_new_scene_to_load() -> bool:
 func _async_on_desired_scene_changed():
 	var desired_scenes = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = desired_scenes.get("loadable_scenes", [])
+	Global.scene_runner.loading_mark_discovery()
 
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
@@ -619,10 +620,42 @@ func _request_regenerate_floating_islands() -> void:
 	_regenerate_floating_islands.call_deferred()
 
 
+## Returns true when the single loaded world / local-dev scene opts out of the
+## auto-generated landscape terrain via scene.json `landscapeTerrain: false`.
+## Genesis City always ignores the flag, and multi-scene setups are deferred
+## (terrain stays on) to match Unity Explorer's feature-parity behavior.
+func _should_disable_landscape_terrain() -> bool:
+	if Global.realm == null:
+		return false
+	if Realm.is_genesis_city(Global.realm.realm_name):
+		return false
+
+	var single_scene: SceneItem = null
+	for scene_id in loaded_scenes.keys():
+		var scene: SceneItem = loaded_scenes[scene_id]
+		if scene.is_global:
+			continue
+		if single_scene != null:
+			return false
+		single_scene = scene
+
+	if single_scene == null or single_scene.scene_entity_definition == null:
+		return false
+	return not single_scene.scene_entity_definition.is_landscape_terrain_enabled()
+
+
 func _regenerate_floating_islands() -> void:
 	_regen_scheduled = false
 	# Guard against overlapping generation
 	if islands_manager == null:
+		return
+
+	# Honor scene.json `landscapeTerrain: false`: skip terrain for opted-out single-scene
+	# worlds. Never starts the floating-islands loading phase, so no "terrain loaded" event
+	# fires and the loading session treats it as skipped (reaches 100%).
+	if _should_disable_landscape_terrain():
+		_clear_floating_islands_state()
+		last_scene_group_hash = ""
 		return
 
 	# Collect parcels from ALL loaded scenes (not just player's current scene)

@@ -34,16 +34,13 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG),
 // unless PROTOCOL_FIXED_VERSION_URL pins a specific tarball.
 //
-// Pinned for the 1.11.0 RC: tracking `next` re-resolves on every CI run, so an
-// upstream protocol publish can break or change builds with no repo change
-// (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
-// Bump the pin deliberately — grab the new tarball URL from
-// `https://registry.npmjs.org/@dcl/protocol/next` (dist.tarball), update any
-// affected generated-struct usages, and set it here. Reset to `None` to track
-// @next again after the release is cut.
-const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
-    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-28974105118.commit-a598406.tgz",
-);
+// Pinned to the `@dcl/protocol@next` (protocol `main`) build that includes the merged
+// controls-customization change (PR #426: TouchScreenControls/UiInputBinding, TextureUnion
+// `icon`). Now that #426 is on `main`, this tracks the published main channel; it still
+// intentionally overrides main's 1.11.0 RC pin
+// (protocol-1.0.0-28974105118.commit-a598406) until godot `main` bumps its own pin, at which
+// point the two converge.
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some("https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-29501656680.commit-6a4362a.tgz");
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {

@@ -10,7 +10,7 @@ extends Control
 ##   AVATAR_CUSTOMIZE    -> %AvatarCustomize        (backpack avatar editor)
 ##   AVATAR_NAMING       -> %AvatarNaming           (choose-name mode)
 ##   COMEBACK            -> %RestoreAndChooseName  (restore mode: welcome back)
-##   DCL_SPLASH          -> %DclSplash              (spinner)
+##   DCL_SPLASH          -> SplashOverlay autoload  (global spinner)
 ##   DISCOVER_FTUE       -> %DiscoverFtue            (first time user experience)
 ##
 ## Auth flow (Create Account / Sign In only changes the label):
@@ -62,7 +62,6 @@ var _guest_login_attempt: int = 0
 
 @onready var control_main = %Main
 @onready var dcl_line_edit: VBoxContainer = %DclLineEdit
-@onready var control_dcl_splash = %DclSplash
 @onready var control_version_upgrade = %VersionUpgrade
 @onready var control_signin = %SignIn
 @onready var control_account_home = %AccountHome
@@ -107,9 +106,10 @@ func set_background(texture: Texture2D) -> void:
 
 
 func show_panel(child_node: Control, subpanel: Control = null):
-	if child_node == control_dcl_splash:
-		set_background(BG_GRADIENT)
-	elif control_with_discover_bg.has(child_node):
+	# #2386: reaching show_panel means we're revealing interactive content, so dismiss the
+	# global startup splash overlay (the splash no longer routes through show_panel).
+	SplashOverlay.fade_out()
+	if control_with_discover_bg.has(child_node):
 		set_background(BG_DISCOVER)
 	elif child_node == control_avatar_naming or child_node == control_avatar_create:
 		set_background(BG_AVATAR)
@@ -161,7 +161,9 @@ func show_avatar_naming_screen():
 func show_dcl_splash_screen():
 	current_screen_name = "DCL_SPLASH"
 	button_back.hide()
-	show_panel(control_dcl_splash)
+	# #2386: the splash now lives in the global SplashOverlay autoload, which persists across
+	# scene changes (no per-scene DclSplash, no gray swap flash). Show the spinner state.
+	SplashOverlay.show_spinner()
 
 
 func show_version_upgrade_screen():
@@ -186,28 +188,6 @@ func show_account_home_screen():
 	track_lobby_screen("ACCOUNT_HOME")
 	button_back.hide()
 	show_panel(control_account_home)
-
-
-# True when the guest entry path must be hidden (iOS, gated for Apple review, #2308).
-# The `?disable-guest-gating=true` deeplink param re-enables guest for QA/testing.
-func _is_guest_entry_disabled() -> bool:
-	if not Global.is_ios_or_emulating() or not Global.IOS_GUEST_ENTRY_DISABLED:
-		return false
-	var override := str(Global.deep_link_obj.params.get("disable-guest-gating", ""))
-	if override.to_lower() == "true" or override == "1":
-		return false
-	return true
-
-
-# Entry "home" screen: the guest chooser (ACCOUNT_HOME) normally, or the sign-in
-# screen directly when the guest path is disabled (iOS during Apple review, #2308).
-func show_entry_home_screen() -> void:
-	if _is_guest_entry_disabled():
-		is_creating_account = false
-		sign_in_title.text = "Sign in to Decentraland"
-		show_auth_home_screen()
-	else:
-		show_account_home_screen()
 
 
 func show_account_home_loading_screen():
@@ -260,9 +240,7 @@ func show_auth_home_screen():
 	track_lobby_screen(get_auth_home_screen_name())
 	container_sign_in_step1.show()
 	container_sign_in_step2.hide()
-	# When the guest path is gated this screen IS the root (no ACCOUNT_HOME to
-	# return to), so hide the back arrow; otherwise show it.
-	button_back.visible = not _is_guest_entry_disabled()
+	button_back.show()
 	show_panel(control_signin)
 
 
@@ -528,8 +506,16 @@ func _ready():
 		get_tree().change_scene_to_file.call_deferred(
 			"res://src/ui/components/organisms/menu/menu.tscn"
 		)
+		# #2386: dismiss the startup splash overlay once the menu scene is up.
+		SplashOverlay.fade_out.call_deferred()
 	else:
-		show_entry_home_screen()
+		show_account_home_screen()
+
+
+func _exit_tree() -> void:
+	# #2386: leaving the lobby (to explorer or menu, via any change_scene path) dismisses the
+	# global startup splash overlay. Safety net so it can never get stuck covering a new scene.
+	SplashOverlay.fade_out()
 
 
 func _notification(what: int) -> void:
@@ -610,6 +596,8 @@ func _debug_clear_guest_state() -> int:
 
 func go_to_explorer():
 	if is_inside_tree():
+		# #2386: dismiss the startup splash overlay so the explorer's own loading screen shows.
+		SplashOverlay.fade_out()
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
@@ -640,7 +628,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			return
 # gdlint: ignore=no-else-return
 		else:
-			show_entry_home_screen()
+			show_account_home_screen()
 
 	if _skip_lobby:
 		go_to_explorer()
@@ -675,10 +663,10 @@ func _on_need_open_url(url: String, _description: String, use_webview: bool) -> 
 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> void:
 	_accept_eula()
-	# Also surface the OS notification prompt on sign-in success: the per-tap calls
-	# (Play-as-Guest / go-to-Sign-In) never fire on the iOS guest-gated path, where the
-	# user lands directly on the sign-in screen. NotificationsManager's has-permission +
-	# cooldown guards make this a no-op when it was already prompted this session.
+	# Also surface the OS notification prompt on sign-in success, covering the paths
+	# that reach a wallet without a per-tap call (Play-as-Guest / go-to-Sign-In), such
+	# as a recovered session. NotificationsManager's has-permission + cooldown guards
+	# make this a no-op when it was already prompted this session.
 	_request_notification_permission_if_needed()
 	Global.metrics.update_identity(address, is_guest)
 	# Play-as-Guest uses a thirdweb guest wallet whose `is_guest` arg is false; treat
@@ -720,7 +708,7 @@ func _on_button_update_pressed() -> void:
 
 func _on_button_not_now_pressed() -> void:
 	Global.metrics.track_click_button("not_now", current_screen_name, "")
-	show_entry_home_screen()
+	show_account_home_screen()
 
 
 func _on_button_different_account_pressed():
@@ -804,11 +792,11 @@ func _on_button_back_pressed():
 		return
 	match current_screen_name:
 		"AVATAR_CREATE":
-			show_entry_home_screen()
+			show_account_home_screen()
 		"AVATAR_NAMING":
 			async_show_avatar_create_screen()
 		_:
-			show_entry_home_screen()
+			show_account_home_screen()
 
 
 # gdlint:ignore = async-function-name
@@ -848,13 +836,13 @@ func _on_discard_cancelled() -> void:
 func _handle_back_action():
 	match current_screen_name:
 		"ACCOUNT_HOME":
-			show_entry_home_screen()
+			show_account_home_screen()
 		"AUTH_HOME_ANDROID", "AUTH_HOME_IOS", "AUTH_HOME_DESKTOP":
-			show_entry_home_screen()
+			show_account_home_screen()
 		"AUTH_BROWSER_OPEN":
 			_on_button_cancel_pressed()
 		"AVATAR_CREATE":
-			show_entry_home_screen()
+			show_account_home_screen()
 		"AVATAR_CUSTOMIZE", "AVATAR_NAMING":
 			async_show_avatar_create_screen()
 
@@ -998,7 +986,7 @@ func _fail_guest_login(attempt: int, reason: String) -> void:
 	waiting_for_new_wallet = false
 	# Recoverable — just triggers the retry modal, so keep it out of Sentry.
 	push_warning("Guest login failed: " + reason)
-	show_entry_home_screen()
+	show_account_home_screen()
 	await _async_show_guest_login_error()
 
 
