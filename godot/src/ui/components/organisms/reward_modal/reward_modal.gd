@@ -70,6 +70,27 @@ func _on_button_claim_pressed() -> void:
 	_async_claim()
 
 
+## Reduces a URL to its origin (scheme://host), dropping any path/query. The rewards server's
+## catalyst allow-list matches by origin, so a trailing "/main/" or "/content/" gets rejected.
+## Returns "" for an empty input so the caller's fallback chain keeps working.
+func _catalyst_origin(url: String) -> String:
+	if url.is_empty():
+		return ""
+	var scheme := "https://"
+	var rest := url
+	if url.begins_with("https://"):
+		rest = url.substr(scheme.length())
+	elif url.begins_with("http://"):
+		scheme = "http://"
+		rest = url.substr(scheme.length())
+	var slash := rest.find("/")
+	if slash != -1:
+		rest = rest.substr(0, slash)
+	if rest.is_empty():
+		return ""
+	return scheme + rest
+
+
 ## Performs the real claim (client-side equivalent of Genesis' claimToken/requestToken):
 ## a signed POST to the rewards server that assigns the wearable to the player's wallet.
 func _async_claim() -> void:
@@ -92,15 +113,19 @@ func _async_claim() -> void:
 	button_claim.disabled = true
 	button_claim.text = "CLAIMING…"
 
-	# The rewards server validates `catalyst`: it must be a valid URI — the realm base URL the
-	# SDK exposes to scenes as realmInfo.baseUrl. It can be empty when claiming outside a realm
-	# (e.g. right after upgrading from Discover), and the server rejects an empty string as
-	# non-uri, so fall back to the content URL and finally the default main realm.
-	var catalyst := str(Global.realm.realm_url)
+	# The rewards server matches `catalyst` by ORIGIN (scheme://host) against the DAO catalyst
+	# allow-list AND then actually reaches it, so we must send the origin of a REAL, reachable
+	# catalyst peer — NOT the realm-provider load balancer:
+	#   - content_base_url = /about content.publicUrl → the resolved peer we're connected to
+	#     (e.g. https://peer-ec1.decentraland.org/content/ → https://peer-ec1.decentraland.org ✓).
+	#     Genesis' claim.ts sends realmInfo.baseUrl, which is likewise the resolved catalyst.
+	#   - fallback (claiming outside a realm — post-upgrade from Discover / the dev-tools button):
+	#     a concrete DAO catalyst peer. We must NOT fall back to main_realm(): its origin
+	#     (realm-provider-ea…) passes the allow-list but is "catalyst_unreachable" at the bare
+	#     origin — the load balancer only responds under a /main path we can't include here.
+	var catalyst := _catalyst_origin(str(Global.realm.content_base_url))
 	if catalyst.is_empty():
-		catalyst = str(Global.realm.content_base_url)
-	if catalyst.is_empty():
-		catalyst = DclUrls.main_realm()
+		catalyst = _catalyst_origin(Realm.DAO_SERVERS[0])
 	var url := RewardCampaigns.get_rewards_server() + "/api/rewards?campaign_id=" + _campaign_id
 	var body_dict := {
 		"campaign_key": _campaign_key,
