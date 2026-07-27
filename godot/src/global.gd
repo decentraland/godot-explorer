@@ -162,6 +162,11 @@ var sentry_seeder: SentrySeeder = null
 # child of Global so it can use timers and signals across the session lifetime.
 var attestation: AttestationService = null
 
+# Remote feature flags fetched from the mobile-bff at startup. Query with
+# `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are
+# applied automatically when the response arrives — see feature_flags.gd.
+var feature_flags: FeatureFlags = null
+
 var _is_portrait: bool = true
 
 # Opt-in, set by a `decentraland://open?enable-upgraded-deletion=true` deeplink
@@ -685,6 +690,11 @@ func _ready():
 	# service self-gates on EULA acceptance and caches the issued session token on disk.
 	self.attestation = AttestationService.new()
 	add_child(self.attestation)
+	# Remote feature flags: the node kicks its own fire-and-forget fetch on _ready
+	# and applies comms-affecting flags (e.g. `archipielago`) when they arrive.
+	self.feature_flags = FeatureFlags.new()
+	self.feature_flags.set_name("feature_flags")
+	add_child(self.feature_flags)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)

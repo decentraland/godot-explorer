@@ -8,7 +8,9 @@ pub fn gatekeeper_url_local() -> String {
     crate::urls::comms_gatekeeper_local()
 }
 
-// Temporary flags for testing different connection scenarios
+// Compile-time defaults for connection scenarios. Archipelago can additionally be
+// toggled at runtime via the remote `archipielago` feature flag — see
+// `CommunicationManager::set_archipelago_enabled`.
 #[cfg(feature = "use_livekit")]
 pub const DISABLE_ARCHIPELAGO: bool = false;
 #[cfg(feature = "use_livekit")]

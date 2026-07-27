@@ -228,6 +228,13 @@ pub struct CommunicationManager {
     /// gone with them. Pulse and ws-room realms are unaffected. Dev/testing switch.
     #[cfg(feature = "use_livekit")]
     livekit_runtime_enabled: Option<bool>,
+    /// Runtime archipelago switch (remote feature flag `archipielago`, applied from GDScript
+    /// via `set_archipelago_enabled`): `None` follows the compile-time default
+    /// (`!DISABLE_ARCHIPELAGO`). While disabled, the archipelago adapter is skipped and a
+    /// fallback connection keeps the shared message processor — and with it scene rooms and
+    /// Pulse — alive.
+    #[cfg(feature = "use_livekit")]
+    archipelago_runtime_enabled: Option<bool>,
 
     // Reconnection timer for scene rooms
     #[cfg(feature = "use_livekit")]
@@ -293,6 +300,8 @@ impl INode for CommunicationManager {
             pending_pulse_emote_urn: None,
             #[cfg(feature = "use_livekit")]
             livekit_runtime_enabled: None,
+            #[cfg(feature = "use_livekit")]
+            archipelago_runtime_enabled: None,
             #[cfg(feature = "use_livekit")]
             scene_room_reconnect_at: None,
             #[cfg(feature = "use_livekit")]
@@ -698,6 +707,14 @@ impl CommunicationManager {
             let no_livekit = cli.bind().no_livekit;
             !no_livekit
         })
+    }
+
+    /// Whether the archipelago connection may be established (see
+    /// `archipelago_runtime_enabled`).
+    #[cfg(feature = "use_livekit")]
+    fn archipelago_enabled(&self) -> bool {
+        self.archipelago_runtime_enabled
+            .unwrap_or(!DISABLE_ARCHIPELAGO)
     }
 
     /// Endpoint precedence: deeplink `pulse-server=` override > CLI `--pulse-server` /
@@ -1215,6 +1232,60 @@ impl CommunicationManager {
         false
     }
 
+    /// Runtime (remote feature flag `archipielago`): toggle the archipelago connection.
+    /// Disabling while connected tears archipelago (and its island room) down and falls back
+    /// to a processor-only connection, so scene rooms and Pulse keep working. Enabling
+    /// re-derives the adapter from the current realm about — the archipelago adapter string
+    /// is filtered out while the flag is off, so it can't be replayed from
+    /// `current_connection_str`.
+    #[func]
+    pub fn set_archipelago_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_livekit")]
+        {
+            let changed = self.archipelago_enabled() != enabled;
+            self.archipelago_runtime_enabled = Some(enabled);
+            if !changed {
+                return;
+            }
+            tracing::info!("archipelago: runtime enabled = {enabled}");
+            if enabled {
+                if self.block_auto_reconnect {
+                    return;
+                }
+                if let Some((protocol, Some(adapter))) = self._internal_get_comms_from_realm() {
+                    // Skip non-v3 realms and realms whose adapter is already connected
+                    // (non-archipelago realms are unaffected by this flag).
+                    if protocol != "v3" || adapter == self.current_connection_str {
+                        return;
+                    }
+                    if self.comms_on_hold {
+                        self.saved_adapter_for_resume = adapter;
+                    } else {
+                        self.change_adapter(adapter);
+                    }
+                }
+            } else if matches!(self.current_connection, CommsConnection::Archipelago(_)) {
+                if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                    archipelago.clean();
+                }
+                self.current_connection = CommsConnection::None;
+                self.create_fallback_connection();
+            }
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        let _ = enabled;
+    }
+
+    #[func]
+    pub fn is_archipelago_enabled(&self) -> bool {
+        #[cfg(feature = "use_livekit")]
+        {
+            self.archipelago_enabled()
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        false
+    }
+
     /// The local player was instantly repositioned (explorer.gd move_to: UI teleports and
     /// scene movePlayerTo both funnel through it). Announce it to the Pulse server as a
     /// same-realm TeleportRequest so remote peers snap instead of interpolating across the
@@ -1702,7 +1773,7 @@ impl CommunicationManager {
             .map(|v| GString::from_variant(&v).to_string());
 
         #[cfg(feature = "use_livekit")]
-        let disable_archipelago = DISABLE_ARCHIPELAGO;
+        let disable_archipelago = !self.archipelago_enabled();
         #[cfg(not(feature = "use_livekit"))]
         let disable_archipelago = false;
 
@@ -1746,7 +1817,7 @@ impl CommunicationManager {
 
         if comms_fixed_adapter.is_none() {
             #[cfg(feature = "use_livekit")]
-            if DISABLE_ARCHIPELAGO {
+            if !self.archipelago_enabled() {
                 // When archipelago is disabled, fall back to a direct LiveKit connection
                 tracing::warn!(
                     "🔄 Archipelago disabled, attempting fallback to direct LiveKit connection"
@@ -1891,10 +1962,10 @@ impl CommunicationManager {
             }
             #[cfg(feature = "use_livekit")]
             "archipelago" => {
-                if DISABLE_ARCHIPELAGO {
-                    tracing::debug!(
-                        "⚠️  Archipelago connections are disabled (DISABLE_ARCHIPELAGO = true)"
-                    );
+                if !self.archipelago_enabled() {
+                    tracing::info!("⚠️  Archipelago connection skipped (disabled by flag)");
+                    // Scene rooms and Pulse still need the shared processor
+                    let _ = self.ensure_message_processor();
                 } else if !self.livekit_enabled() {
                     tracing::warn!("🔇 LiveKit disabled (pulse-only mode) — skipping archipelago");
                     // Pulse and avatars still need the shared processor
@@ -2835,7 +2906,7 @@ fn parse_comms_adapter_value(
             }
             if disable_archipelago {
                 tracing::debug!(
-                    "⚠️  Archipelago URL detected but ignored due to DISABLE_ARCHIPELAGO flag: {}",
+                    "⚠️  Archipelago URL detected but ignored (archipelago disabled): {}",
                     a
                 );
                 return None;

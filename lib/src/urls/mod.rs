@@ -242,6 +242,12 @@ pub fn app_versions() -> String {
         suffix(ServiceGroup::MobileBff)
     )
 }
+pub fn feature_flags() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/feature-flags",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
 
 // Notifications
 pub fn notifications_api() -> String {
