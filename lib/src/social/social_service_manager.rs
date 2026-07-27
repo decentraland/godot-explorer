@@ -18,6 +18,9 @@ use crate::social::friends::build_auth_chain;
 use crate::urls;
 const CONNECTION_TIMEOUT_SECS: u64 = 10;
 const RPC_TIMEOUT_SECS: u64 = 15;
+/// Shorter than the godot-layer 15s wrapper so a stuck subscribe fails (and clears the
+/// connection) here, instead of the outer timeout dropping the future mid-RPC.
+const SUBSCRIBE_TIMEOUT_SECS: u64 = 10;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectionState {
@@ -698,15 +701,38 @@ impl SocialServiceManager {
 
         let mut state = self.state.write().await;
         let cancel_token = state.connection_cancel_token.clone();
+        let generation = state.connection_generation;
         let service = self.ensure_connection(&mut state).await?;
 
-        let mut stream = service
-            .subscribe_to_friendship_updates()
-            .await
-            .map_err(|e| {
+        let result = tokio::time::timeout(
+            Duration::from_secs(SUBSCRIBE_TIMEOUT_SECS),
+            service.subscribe_to_friendship_updates(),
+        )
+        .await;
+
+        // A failed subscribe can leave a half-open stream on the server that the protocol
+        // gives us no way to close — the next attempt on this connection would then be
+        // rejected as a duplicate subscription. Drop the connection so recovery happens
+        // on a fresh one.
+        let mut stream = match result {
+            Ok(Ok(stream)) => stream,
+            Ok(Err(e)) => {
                 tracing::error!("Failed to subscribe to friendship updates: {:?}", e);
-                anyhow!("Failed to subscribe to friendship updates: {:?}", e)
-            })?;
+                Self::try_clear_connection(&mut state, generation);
+                return Err(anyhow!(
+                    "Failed to subscribe to friendship updates: {:?}",
+                    e
+                ));
+            }
+            Err(_) => {
+                tracing::error!(
+                    "Timeout subscribing to friendship updates after {}s",
+                    SUBSCRIBE_TIMEOUT_SECS
+                );
+                Self::try_clear_connection(&mut state, generation);
+                return Err(anyhow!("Timeout subscribing to friendship updates"));
+            }
+        };
 
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -747,15 +773,36 @@ impl SocialServiceManager {
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityUpdate>> {
         let mut state = self.state.write().await;
         let cancel_token = state.connection_cancel_token.clone();
+        let generation = state.connection_generation;
         let service = self.ensure_connection(&mut state).await?;
 
-        let mut stream = service
-            .subscribe_to_friend_connectivity_updates()
-            .await
-            .map_err(|e| {
+        let result = tokio::time::timeout(
+            Duration::from_secs(SUBSCRIBE_TIMEOUT_SECS),
+            service.subscribe_to_friend_connectivity_updates(),
+        )
+        .await;
+
+        // See subscribe_to_friendship_updates: a failed subscribe may leave a half-open
+        // server stream we cannot close, so drop the connection to recover cleanly.
+        let mut stream = match result {
+            Ok(Ok(stream)) => stream,
+            Ok(Err(e)) => {
                 tracing::error!("Failed to subscribe to connectivity updates: {:?}", e);
-                anyhow!("Failed to subscribe to connectivity updates: {:?}", e)
-            })?;
+                Self::try_clear_connection(&mut state, generation);
+                return Err(anyhow!(
+                    "Failed to subscribe to connectivity updates: {:?}",
+                    e
+                ));
+            }
+            Err(_) => {
+                tracing::error!(
+                    "Timeout subscribing to connectivity updates after {}s",
+                    SUBSCRIBE_TIMEOUT_SECS
+                );
+                Self::try_clear_connection(&mut state, generation);
+                return Err(anyhow!("Timeout subscribing to connectivity updates"));
+            }
+        };
 
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -857,12 +904,33 @@ impl SocialServiceManager {
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<BlockUpdate>> {
         let mut state = self.state.write().await;
         let cancel_token = state.connection_cancel_token.clone();
+        let generation = state.connection_generation;
         let service = self.ensure_connection(&mut state).await?;
 
-        let mut stream = service.subscribe_to_block_updates().await.map_err(|e| {
-            tracing::error!("Failed to subscribe to block updates: {:?}", e);
-            anyhow!("Failed to subscribe to block updates: {:?}", e)
-        })?;
+        let result = tokio::time::timeout(
+            Duration::from_secs(SUBSCRIBE_TIMEOUT_SECS),
+            service.subscribe_to_block_updates(),
+        )
+        .await;
+
+        // See subscribe_to_friendship_updates: a failed subscribe may leave a half-open
+        // server stream we cannot close, so drop the connection to recover cleanly.
+        let mut stream = match result {
+            Ok(Ok(stream)) => stream,
+            Ok(Err(e)) => {
+                tracing::error!("Failed to subscribe to block updates: {:?}", e);
+                Self::try_clear_connection(&mut state, generation);
+                return Err(anyhow!("Failed to subscribe to block updates: {:?}", e));
+            }
+            Err(_) => {
+                tracing::error!(
+                    "Timeout subscribing to block updates after {}s",
+                    SUBSCRIBE_TIMEOUT_SECS
+                );
+                Self::try_clear_connection(&mut state, generation);
+                return Err(anyhow!("Timeout subscribing to block updates"));
+            }
+        };
 
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
