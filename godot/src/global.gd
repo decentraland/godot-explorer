@@ -1364,6 +1364,10 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 
 
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
+	# Block a private world before any navigation (no-op for genesis/parcel teleports); covers
+	# both the active-explorer teleport and the cold-start-from-lobby branch below.
+	if not await _async_precheck_realm_access(new_realm):
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
@@ -1384,6 +1388,11 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 
 
 func async_join_world(world_realm: String) -> void:
+	# Block a private world before any navigation. Covers both cases below: with an active
+	# explorer the modal replaces the loading flash; without one (cold start from the lobby)
+	# it stops us from booting the explorer scene straight into the world we can't enter.
+	if not await _async_precheck_realm_access(world_realm):
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
@@ -1560,6 +1569,37 @@ func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> v
 	# fail to load, same as they do for the generic failure toast.
 	_clear_boot_realm_if_denied(world_name)
 	Global.modal_manager.async_show_private_world_modal(world_name)
+
+
+## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the
+## user can't enter blocks with the modal instantly instead of first flashing a loading
+## transition (#1725). The answer is cached, so the safety-net gate in Realm.async_set_realm
+## reuses it without a second fetch. Non-worlds resolve synchronously with no network hit.
+## Returns false when access was denied (the modal is already up); true otherwise.
+func _async_precheck_realm_access(new_realm_string: String) -> bool:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		new_realm_string, Realm.resolve_realm_url(new_realm_string)
+	)
+	if world_name.is_empty():
+		return true
+	if await WorldPermissionsHelper.async_is_allowed(world_name):
+		return true
+	_on_realm_access_denied(new_realm_string, world_name)
+	return false
+
+
+## Fire-and-forget prefetch of a world's access, meant to run when its jump-in card opens.
+## By the time the user taps JUMP IN the answer is cached, so the click-time precheck resolves
+## synchronously: an allowed world goes straight to the loading screen with no visible gap, a
+## private one shows the modal instantly. No-op (and no network) for non-worlds. Silent — it
+## never shows a modal; the decision surfaces only on the actual navigation.
+func warm_realm_access(realm_string: String) -> void:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		realm_string, Realm.resolve_realm_url(realm_string)
+	)
+	if world_name.is_empty():
+		return
+	WorldPermissionsHelper.async_is_allowed(world_name)
 
 
 ## async_join_world / async_teleport_to persist the destination *before* the explorer scene

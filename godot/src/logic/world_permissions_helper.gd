@@ -16,6 +16,16 @@ class_name WorldPermissionsHelper
 
 const ACCESS_ALLOW_LIST := "allow-list"
 
+## How long a resolved access answer stays valid. Long enough that the prefetch at the
+## navigation entry point and the safety-net gate in Realm.async_set_realm share one fetch,
+## short enough that an allow-list edit is picked up on the next attempt.
+const CACHE_TTL_MS := 30000
+
+## world_name -> { "address": String, "allowed": bool, "expires_ms": int }. Only definitive
+## server answers are cached; fail-open results (network/parse errors) are not, so a retry
+## re-attempts. An address change invalidates an entry (the stored address won't match).
+static var _access_cache: Dictionary = {}
+
 
 ## Returns the bare `<name>.dcl.eth` when the realm being entered is a world, or "" when
 ## it is not (genesis city, a local preview, a custom catalyst...).
@@ -36,8 +46,16 @@ static func world_name_from_realm(realm_string: String, resolved_url: String) ->
 	return ""
 
 
-## Whether the current user may enter `world_name`. See the fail-open note above.
+## Whether the current user may enter `world_name`. Result is cached for CACHE_TTL_MS so a
+## prefetch and the safety-net gate don't both hit the network. See the fail-open note above.
 static func async_is_allowed(world_name: String) -> bool:
+	var address := Global.player_identity.get_address_str().to_lower()
+	var now := Time.get_ticks_msec()
+
+	var cached = _access_cache.get(world_name)
+	if cached != null and cached.get("address") == address and cached.get("expires_ms", 0) > now:
+		return cached.get("allowed")
+
 	var url := Realm.dcl_world_url(world_name) + "/permissions"
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
@@ -58,7 +76,11 @@ static func async_is_allowed(world_name: String) -> bool:
 		push_warning("World permissions returned invalid JSON for " + world_name)
 		return true
 
-	return is_access_allowed(json, Global.player_identity.get_address_str())
+	var allowed := is_access_allowed(json, address)
+	_access_cache[world_name] = ({
+		"address": address, "allowed": allowed, "expires_ms": now + CACHE_TTL_MS
+	})
+	return allowed
 
 
 ## Pure decision over a `/permissions` payload. Denies only a plain wallet allow-list the

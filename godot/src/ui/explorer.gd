@@ -1518,7 +1518,6 @@ func _on_loading_started() -> void:
 	_is_loading = true
 	_ban_check_generation += 1
 	Global.modal_manager.ban_pre_check_active = false
-	Global.modal_manager.private_world_block_active = false
 	_pending_notification_toast = {}  # Clear any pending notification
 	_session_hide_main_hud = false
 	_session_hide_view_profile = true
