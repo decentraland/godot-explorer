@@ -28,10 +28,9 @@ pub const GODOT_BUILD_SHA: &str = "aed178f10";
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently `None`:
-/// the issue #2002 iOS main-thread-freeze fix (decentraland/godotengine#17) is merged and
-/// `GODOT_BUILD_SHA` above points at its merge commit.
-pub const GODOT_USE_BRANCH: Option<&str> = None;
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently pinned
+/// to the Adreno ubershader crash-fix backport (decentraland/godotengine#19) for on-device testing.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/adreno-ubershader-crash");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
