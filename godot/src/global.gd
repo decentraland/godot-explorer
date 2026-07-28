@@ -1569,6 +1569,12 @@ func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> v
 	# fail to load, same as they do for the generic failure toast.
 	_clear_boot_realm_if_denied(world_name)
 	Global.modal_manager.async_show_private_world_modal(world_name)
+	# A cold start straight into a denied world booted the explorer with no realm ever set, so
+	# dismissing the modal would strand the user in an empty scene. Fall back to the main realm
+	# in that case only; an in-session denial (has_realm() true) leaves the user where they were.
+	# Deferred to avoid re-entering async_set_realm from its own denial signal.
+	if is_instance_valid(Global.get_explorer()) and not Global.realm.has_realm():
+		Global.realm.async_set_realm.call_deferred(DclUrls.main_realm())
 
 
 ## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the

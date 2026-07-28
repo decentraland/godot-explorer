@@ -159,7 +159,8 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		new_realm_string, candidate_realm_url
 	)
 	if not world_name.is_empty() and not await WorldPermissionsHelper.async_is_allowed(world_name):
-		printerr("[REALM] Access denied for private world: ", world_name)
+		# Expected, handled outcome (not an error) — use print so it does not ship to Sentry.
+		print("[REALM] Access denied for private world: ", world_name)
 		# Close the analytics loading episode without raising the generic failure toast.
 		Global.scene_runner.loading_realm_change_failed(
 			new_realm_string, "private_world_access_denied"

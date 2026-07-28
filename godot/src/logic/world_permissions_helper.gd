@@ -26,6 +26,11 @@ const CACHE_TTL_MS := 30000
 ## re-attempts. An address change invalidates an entry (the stored address won't match).
 static var _access_cache: Dictionary = {}
 
+## world_name -> Promise<bool> for a request currently in flight. The card-open warm and a fast
+## JUMP IN would otherwise each fire their own GET; the second caller awaits this shared promise
+## instead. Cleared as soon as the request settles — the value cache above takes over from there.
+static var _inflight: Dictionary = {}
+
 
 ## Returns the bare `<name>.dcl.eth` when the realm being entered is a world, or "" when
 ## it is not (genesis city, a local preview, a custom catalyst...).
@@ -46,8 +51,9 @@ static func world_name_from_realm(realm_string: String, resolved_url: String) ->
 	return ""
 
 
-## Whether the current user may enter `world_name`. Result is cached for CACHE_TTL_MS so a
-## prefetch and the safety-net gate don't both hit the network. See the fail-open note above.
+## Whether the current user may enter `world_name`. A fresh value-cache hit returns synchronously;
+## otherwise a single GET is shared across concurrent callers (see _inflight) and its definitive
+## answer is cached for CACHE_TTL_MS. See the fail-open note above.
 static func async_is_allowed(world_name: String) -> bool:
 	var address := Global.player_identity.get_address_str().to_lower()
 	var now := Time.get_ticks_msec()
@@ -56,6 +62,23 @@ static func async_is_allowed(world_name: String) -> bool:
 	if cached != null and cached.get("address") == address and cached.get("expires_ms", 0) > now:
 		return cached.get("allowed")
 
+	# Dedup: if a request for this world is already in flight, await its result instead of firing
+	# a second GET (the card-open warm followed by a fast JUMP IN is the common case).
+	var pending = _inflight.get(world_name)
+	if pending is Promise:
+		return await PromiseUtils.async_awaiter(pending)
+
+	var decision := Promise.new()
+	_inflight[world_name] = decision
+	var allowed := await _async_fetch_access(world_name, address, now)
+	_inflight.erase(world_name)
+	decision.resolve_with_data(allowed)
+	return allowed
+
+
+## Performs the actual GET + decision and caches definitive answers. Fail-open results
+## (network/parse errors) are intentionally left uncached so a later attempt retries.
+static func _async_fetch_access(world_name: String, address: String, now: int) -> bool:
 	var url := Realm.dcl_world_url(world_name) + "/permissions"
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)

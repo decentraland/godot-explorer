@@ -134,7 +134,7 @@ func _ready() -> void:
 	code_modal_scene = load(CODE_MODAL_SCENE_PATH)
 	if not code_modal_scene:
 		push_error("ModalManager: Could not load code modal scene at: " + CODE_MODAL_SCENE_PATH)
-	Global.on_menu_close.connect(_on_menu_close_blocked_entry_recheck)
+	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
 
@@ -1040,15 +1040,16 @@ func _force_hide_loading_screen() -> void:
 	explorer.loading_ui.loading_screen_progress_logic.hide_loading_screen()
 
 
-func _on_menu_close_blocked_entry_recheck() -> void:
+func _on_menu_close_ban_recheck() -> void:
 	# Re-show the ban pre-check modal if it is still active and re-open discover
 	if ban_pre_check_active:
 		async_show_ban_pre_check_modal.call_deferred()
 
 
-## Re-shows the blocking modal that is still keeping the user out of the explorer, if any.
-## Returns true when one was re-shown, so callers can stop their own navigation.
-func reshow_blocked_entry_modal() -> bool:
+## Re-shows the ban pre-check modal if it is still keeping the user out of the explorer.
+## Returns true when it was re-shown, so callers can stop their own navigation. The private
+## world modal is intentionally not covered here — its OK button just dismisses.
+func reshow_ban_modal() -> bool:
 	if ban_pre_check_active:
 		async_show_ban_pre_check_modal()
 		return true
