@@ -10,7 +10,6 @@ extends RefCounted
 ## that assigns the wearable to the player's wallet.
 
 const REWARDS_SERVER_PROD := "https://rewards.decentraland.org"
-const REWARDS_SERVER_ZONE := "https://rewards.decentraland.zone"
 
 ## Keyed by a short reference used as the `?claim=<ref>` deeplink value.
 ## - campaign_id / campaign_key: the signed campaign credentials (from the rewards dashboard).
@@ -30,7 +29,6 @@ const CAMPAIGNS := {
 ## The rewards host to claim against. The seeded campaigns are PRODUCTION campaigns
 ## (their keys only validate on rewards.decentraland.org), so we hit prod regardless of
 ## build environment — claiming from a dev build with a real wallet still grants the real
-## wearable, which is exactly what we want to verify. REWARDS_SERVER_ZONE is kept for
-## future test campaigns.
+## wearable, which is exactly what we want to verify.
 static func get_rewards_server() -> String:
 	return REWARDS_SERVER_PROD

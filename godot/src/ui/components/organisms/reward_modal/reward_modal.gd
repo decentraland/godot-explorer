@@ -176,9 +176,9 @@ func _handle_claim_json(json: Dictionary) -> void:
 		_show_error("This reward is not available right now.")
 		return
 
-	# Generic server error.
+	# Any other non-ok response: friendly copy, never the raw code (already logged above).
 	if ok == false:
-		_show_error(str(json.get("error", code if not code.is_empty() else "Invalid response")))
+		_show_error(_friendly_claim_error(code))
 		return
 
 	var data = json.get("data", [])
@@ -220,6 +220,22 @@ func _show_already_claimed() -> void:
 	button_claim.disabled = true
 	button_claim.text = "CLAIMED"
 	label_text.text = "You already have this reward."
+
+
+## Maps a rewards-server error code to user-facing copy. Unknown codes fall through to a
+## generic message so a raw code (e.g. "catalyst_unreachable") never reaches the UI — the
+## real code is still logged by _process_claim_response for debugging.
+func _friendly_claim_error(code: String) -> String:
+	match code:
+		"campaign_not_found", "campaign_key_not_found", "campaign_not_owner":
+			return "This reward is not available right now."
+		"already_claimed", "user_already_claimed":
+			return "You already have this reward."
+		"supply_reached", "out_of_stock":
+			return "This reward is out of stock."
+		"catalyst_invalid", "catalyst_unreachable", "user_address_not_connected", "user_address_position":
+			return "We couldn't verify your session. Please try again in a moment."
+	return "Something went wrong claiming your reward. Please try again."
 
 
 func _show_error(message: String) -> void:

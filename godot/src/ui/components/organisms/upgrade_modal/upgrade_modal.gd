@@ -24,7 +24,8 @@ func open() -> void:
 
 func _on_add_email_pressed() -> void:
 	if Global.metrics != null:
-		Global.metrics.track_click_button("add_email", "account_upgrade_modal", "")
+		# Screen name must match the SCREEN_VIEW above so the click joins it in analytics.
+		Global.metrics.track_click_button("add_email", "ACCOUNT_UPGRADE_MODAL_SHOW", "")
 	# Close this nudge and open the same "Add Email" input-modal flow the Discover upgrade
 	# notice uses — one shared experience that ends in the reward (issues #2377 / #2372).
 	Global.modal_manager.close_upgrade_modal()
@@ -33,7 +34,7 @@ func _on_add_email_pressed() -> void:
 
 func _on_maybe_later_pressed() -> void:
 	if Global.metrics != null:
-		Global.metrics.track_click_button("maybe_later", "account_upgrade_modal", "")
+		Global.metrics.track_click_button("maybe_later", "ACCOUNT_UPGRADE_MODAL_SHOW", "")
 	Global.modal_manager.close_upgrade_modal()
 
 

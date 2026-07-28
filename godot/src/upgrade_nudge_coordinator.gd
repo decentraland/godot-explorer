@@ -36,8 +36,6 @@ var _evaluated_this_session: bool = false
 
 func _ready() -> void:
 	var config: ConfigData = Global.get_config()
-	# Count this app launch once, before any cadence evaluation.
-	config.session_count += 1
 	# Stamp the install anchor on the very first session; it never changes afterwards. Only Modal 1
 	# is measured from it (Modals 2 and 3 count from the previous modal's actual appearance).
 	if config.upgrade_modal_first_seen_unix == 0:
@@ -88,7 +86,11 @@ func _async_evaluate() -> void:
 		return
 
 	print("[UpgradeNudge] showing upgrade modal (shown=%d)" % config.upgrade_modal_shown_count)
-	await Global.modal_manager.async_show_upgrade_modal()
+	# Only advance the cadence if the modal was actually shown — otherwise a failed reveal
+	# would burn a nudge slot and shift the next deadline.
+	if not await Global.modal_manager.async_show_upgrade_modal():
+		print("[UpgradeNudge] modal failed to show; cadence not advanced")
+		return
 
 	config.upgrade_modal_shown_count += 1
 	config.upgrade_modal_last_shown_unix = int(Time.get_unix_time_from_system())

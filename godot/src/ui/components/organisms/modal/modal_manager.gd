@@ -1199,11 +1199,14 @@ func _remove_code_modal() -> void:
 ## Shows the reward modal for a claimable campaign.
 ## @param campaign: { campaign_id, campaign_key, urn } — see RewardCampaigns.CAMPAIGNS.
 ## Fetches the item thumbnail (when a urn is provided) before revealing the modal.
-func async_show_reward_modal(campaign: Dictionary) -> void:
+## Returns true only if the modal was actually created and revealed, so callers can
+## gate analytics / cadence bookkeeping on a real appearance.
+func async_show_reward_modal(campaign: Dictionary) -> bool:
 	var modal = await _async_create_reward_modal()
 	if not modal:
-		return
+		return false
 	await modal.async_setup(campaign)
+	return true
 
 
 func close_reward_modal() -> void:
@@ -1265,12 +1268,14 @@ func _remove_reward_modal() -> void:
 		_reward_canvas_layer = null
 
 
-## Shows the aspirational guest-upgrade nudge modal (issue #2372).
-func async_show_upgrade_modal() -> void:
+## Shows the aspirational guest-upgrade nudge modal (issue #2372). Returns true only if the
+## modal was actually created and opened, so the coordinator advances its cadence only then.
+func async_show_upgrade_modal() -> bool:
 	var modal = await _async_create_upgrade_modal()
 	if not modal:
-		return
+		return false
 	modal.open()
+	return true
 
 
 func close_upgrade_modal() -> void:
@@ -1461,10 +1466,12 @@ func _async_add_email_confirmed(_code: String, _email: String) -> void:
 	close_code_modal()
 	# Grant the exclusive upgrade wearable via the reward modal (issue #2372). The reward
 	# modal IS the success screen ("Your email has been verified. Enjoy the free wearable!").
-	Global.metrics.track_screen_viewed(
-		"ACCOUNT_UPGRADE_REWARD_SHOW", JSON.stringify({"method": "otp"})
-	)
-	await async_show_reward_modal(RewardCampaigns.CAMPAIGNS["MobilePet"])
+	# Report the SCREEN_VIEW only once the modal has actually been revealed.
+	var reward_shown := await async_show_reward_modal(RewardCampaigns.CAMPAIGNS["MobilePet"])
+	if reward_shown:
+		Global.metrics.track_screen_viewed(
+			"ACCOUNT_UPGRADE_REWARD_SHOW", JSON.stringify({"method": "otp"})
+		)
 	# The guest is now upgraded (Rust set the cached flag on link) — notify the app so the
 	# Discover/Settings notice, badge, credits button, etc. update without a network call.
 	Global.guest_upgrade_state_refreshed.emit(true)
