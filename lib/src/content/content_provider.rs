@@ -2467,7 +2467,7 @@ impl ContentProvider {
     }
 
     /// Insert a promise into the cache using its InstanceId
-    fn cache_promise(&mut self, key: String, promise: &Gd<Promise>) {
+    pub(crate) fn cache_promise(&mut self, key: String, promise: &Gd<Promise>) {
         self.promises.insert(key, promise.instance_id());
     }
 

@@ -134,6 +134,7 @@ func _ready():
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
+	_setup_fast_day_cycle_toggle()
 	refresh_graphic_settings()
 
 	var j = 0
@@ -693,6 +694,33 @@ func _setup_impostor_benchmark_button() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
 	)
 	container_advanced.add_child(bench_button)
+
+
+func _setup_fast_day_cycle_toggle() -> void:
+	# Fast day/night cycle (10s per full day) to verify skybox lighting
+	# transitions without waiting (issue #2516). Developer tab only, added at
+	# the top cloning an existing row so it matches the settings style.
+	if Global.is_production():
+		return
+	var template_row := (
+		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
+	)
+	if template_row == null:
+		return
+	# duplicate(0): skip copying the template's signal connections.
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = "FastDayCycle"
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = "Fast Day/Night Cycle (10s)"
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	check.name = "CheckButton_FastDayCycle"
+	check.button_pressed = false
+	check.toggled.connect(
+		func(pressed: bool) -> void: Global.skybox_time.debug_time_rotation = pressed
+	)
+	var rows_container := template_row.get_parent()
+	rows_container.add_child(row)
+	rows_container.move_child(row, 0)
 
 
 func _setup_dynamic_graphics() -> void:
