@@ -560,6 +560,11 @@ func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
 
 
+func _on_button_show_reward_modal_pressed() -> void:
+	# Dev Tools shortcut: preview the wearable claim modal without doing a full email upgrade.
+	Global.modal_manager.async_show_reward_modal(RewardCampaigns.CAMPAIGNS["MobilePet"])
+
+
 func _on_button_test_notification_pressed() -> void:
 	# Test notification with emojis and accents in both title and body
 	# This will test if iOS can display both correctly
