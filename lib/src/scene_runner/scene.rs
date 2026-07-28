@@ -38,8 +38,8 @@ use crate::{
 
 use super::{
     components::{
-        gltf_node_modifiers::GltfNodeModifierState, particle_system::ParticleSystemItem,
-        trigger_area::TriggerAreaState, tween::Tween,
+        asset_load::AssetLoadState, gltf_node_modifiers::GltfNodeModifierState,
+        particle_system::ParticleSystemItem, trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -113,6 +113,8 @@ pub enum SceneUpdateState {
     MeshCollider,
     GltfContainer,
     SyncGltfContainer,
+    AssetLoad,
+    SyncAssetLoad,
     GltfNodeModifiers,
     NftShape,
     Animator,
@@ -157,7 +159,9 @@ impl SceneUpdateState {
             Self::Billboard => Self::MeshCollider,
             Self::MeshCollider => Self::GltfContainer,
             Self::GltfContainer => Self::SyncGltfContainer,
-            Self::SyncGltfContainer => Self::GltfNodeModifiers,
+            Self::SyncGltfContainer => Self::AssetLoad,
+            Self::AssetLoad => Self::SyncAssetLoad,
+            Self::SyncAssetLoad => Self::GltfNodeModifiers,
             Self::GltfNodeModifiers => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
@@ -284,6 +288,9 @@ pub struct Scene {
     pub gltf_node_modifier_states: HashMap<SceneEntityId, GltfNodeModifierState>,
     // Entities pending GltfNodeModifiers re-application after GLTF loads
     pub gltf_node_modifiers_pending: HashSet<SceneEntityId>,
+
+    // AssetLoad (PBAssetLoad) - scene-driven asset pre-loading state
+    pub asset_load: AssetLoadState,
 
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
@@ -417,6 +424,7 @@ impl Scene {
             trigger_areas: TriggerAreaState::default(),
             gltf_node_modifier_states: HashMap::new(),
             gltf_node_modifiers_pending: HashSet::new(),
+            asset_load: AssetLoadState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -498,6 +506,7 @@ impl Scene {
             trigger_areas: TriggerAreaState::default(),
             gltf_node_modifier_states: HashMap::new(),
             gltf_node_modifiers_pending: HashSet::new(),
+            asset_load: AssetLoadState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),

@@ -83,6 +83,8 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::MeshCollider => "MeshCollider",
         S::GltfContainer => "GltfContainer",
         S::SyncGltfContainer => "SyncGltfContainer",
+        S::AssetLoad => "AssetLoad",
+        S::SyncAssetLoad => "SyncAssetLoad",
         S::GltfNodeModifiers => "GltfNodeModifiers",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
@@ -115,6 +117,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
 use super::{
     components::{
         animator::update_animator,
+        asset_load::{sync_asset_load_loading_state, update_asset_load},
         audio_source::update_audio_source,
         avatar_attach::update_avatar_attach,
         avatar_data::update_avatar_scene_updates,
@@ -421,6 +424,16 @@ pub fn _process_scene(
                 SceneUpdateState::SyncGltfContainer => {
                     !sync_gltf_loading_state(scene, crdt_state, ref_time, effective_end_time_us)
                 }
+                SceneUpdateState::AssetLoad => {
+                    update_asset_load(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::SyncAssetLoad => !sync_asset_load_loading_state(
+                    scene,
+                    crdt_state,
+                    ref_time,
+                    effective_end_time_us,
+                ),
                 SceneUpdateState::GltfNodeModifiers => {
                     tracing::debug!("Entering GltfNodeModifiers state");
                     let still_processing = !update_gltf_node_modifiers(

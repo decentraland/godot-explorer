@@ -166,6 +166,9 @@ func _ready():
 	var settings_node = settings_panel.get_node("MarginContainer/Settings")
 	if settings_node:
 		settings_node.request_debug_panel.connect(_on_control_menu_request_debug_panel)
+		# Without this, the in-game "Scene Paused" toggle does nothing (menu.gd wires
+		# request_pause_scenes for the pre-explorer path only).
+		settings_node.request_pause_scenes.connect(_on_control_menu_request_pause_scenes)
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
@@ -1308,6 +1311,9 @@ func _on_profile_container_visibility_changed() -> void:
 		return
 	if not profile_container.visible:
 		_show_joypad()
+		# Profile page grabs keyboard focus when shown; restore it so jump works.
+		Global.explorer_grab_focus()
+		capture_mouse()
 
 
 func _open_friends_panel() -> void:

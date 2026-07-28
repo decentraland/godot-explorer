@@ -46,7 +46,9 @@ func _initialize() -> void:
 	if DclGlobal.is_telemetry_disabled():
 		return
 
-	var release_string = "org.decentraland.godotexplorer@" + DclGlobal.get_version()
+	# Clean semver (`{version}+{build}`) so Sentry parses release.version / release.build.
+	# Commit hash and env are carried separately via `dist` / `environment` below.
+	var release_string = "org.decentraland.godotexplorer@" + DclGlobal.get_sentry_release()
 
 	# Detect environment from version string
 	self.is_dev_version = DclGlobal.is_dev()

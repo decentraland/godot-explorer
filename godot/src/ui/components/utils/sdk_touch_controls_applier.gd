@@ -22,6 +22,23 @@ func _init(virtual_joystick: Control, label_crosshair: Control) -> void:
 	_label_crosshair = label_crosshair
 
 
+## Returns the scene-replaced icon `{ "hash", "url" }` a PBTouchScreenControls set for
+## `action` (e.g. "ia_primary"), or an empty Dictionary when the controls are inactive or
+## the action has no custom icon. Single source of truth shared by the joypad buttons and
+## the pointer tooltip so both render the same replaced glyph.
+static func get_custom_icon_for_action(action: String) -> Dictionary:
+	if not Global.touch_controls_active:
+		return {}
+	for entry in Global.touch_controls_inputs:
+		if String(entry.get("action", "")) != action:
+			continue
+		var icon_hash := String(entry.get("icon_hash", ""))
+		if icon_hash.is_empty():
+			return {}
+		return {"hash": icon_hash, "url": String(entry.get("icon_url", ""))}
+	return {}
+
+
 ## `hidden_for_hide_ui` is the explorer's "hide UI" state, which wins when restoring.
 func apply(hidden_for_hide_ui: bool) -> void:
 	_apply_joystick(hidden_for_hide_ui)
