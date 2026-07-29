@@ -16,10 +16,23 @@ extends Node
 # Set to 0 in production.
 @export var debug_cycle_seconds: float = 0.0
 
+# Moon (night fill) light. The baked light_cycle animation doubles as a moon
+# trajectory on its night arc (~21:00 → ~05:00), so MoonLight just copies the
+# MainLight rotation and ramps energy/color with the moon factor.
+@export var moon_light_color: Color = Color(0.55, 0.65, 0.95)
+@export var moon_light_energy: float = 0.9
+
+# Minimum sun elevation (degrees) during daytime. Below this the key light
+# grazes the horizon and avatars/objects lose their ground shadow (issue
+# #2516). Only the light is clamped; the visual sun in the sky shader keeps
+# following the baked animation.
+@export var min_sun_elevation_degrees: float = 12.0
+
 var _moon_smooth_dir := Vector3(0.0, 1.0, 0.0)
 
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var main_light: DirectionalLight3D = $SkyLights/MainLight
+@onready var moon_light: DirectionalLight3D = get_node_or_null("SkyLights/MoonLight")
 @onready var anim_player: AnimationPlayer = $SkyLights/AnimationPlayer
 @onready var initial_sun_energy = main_light.light_energy
 @onready var sky_material = world_environment.environment.sky.sky_material
@@ -81,19 +94,66 @@ func _process(_delta: float) -> void:
 	# layer indices and blend factor from this same global, so no extra push needed.
 	RenderingServer.global_shader_parameter_set("day_night_cycle", skybox_time)
 
-	# Energy from light elevation (positive when sun above horizon)
-	var light_dir = -main_light.global_transform.basis.z
+	# 0.0 during the day, 1.0 when the baked animation is on its night (moon)
+	# arc. Crossfades the sun light out and the moon light in around dusk/dawn.
+	var moon_factor := SkyCycleMath.compute_moon_factor(skybox_time)
+
+	# The baked dusk whip (light teleports from sunset parking to the night
+	# arc, ~19:55-21:04) must stay dark — no light may follow that sweep.
+	var lights_out := SkyCycleMath.is_lights_out(skybox_time)
+
+	# The animation's sampled rotation before any correction/clamping.
+	var animated_basis := main_light.global_transform.basis
+
+	# The baked keyframes came from Unity WITHOUT the handedness correction
+	# (180° around Y) — only the sky shader's celestial disc was compensated.
+	# Apply the same correction to the lights themselves, so shadows fall AWAY
+	# from the visible sun/moon instead of towards it (#2516).
+	var light_basis := animated_basis.rotated(Vector3.UP, PI)
+
+	# Energy from light elevation (positive when sun above horizon). The 180°
+	# correction preserves Y, so elevation is unaffected.
+	var light_dir = -light_basis.z
 	var elevation = -light_dir.y
-	var energy_factor = smoothstep(-0.05, 0.3, elevation)
+	var energy_factor := SkyCycleMath.compute_sun_energy_factor(elevation)
 
-	main_light.visible = energy_factor > 0.01
-	main_light.light_energy = initial_sun_energy * energy_factor
+	main_light.global_transform.basis = light_basis
 
-	# Visual sun direction — driven by the animation. The 180° rotation around Y mirrors
-	# the X/Z components to compensate for the Unity (left-handed) → Godot (right-handed)
-	# coordinate flip that wasn't applied when the keyframes were imported.
-	var sun_dir = main_light.global_transform.basis.z
-	sun_dir = Vector3(-sun_dir.x, sun_dir.y, -sun_dir.z)
+	# Daytime only: keep the key light from grazing the horizon so it always
+	# casts a readable ground shadow (issue #2516). The visual sun drawn by the
+	# sky shader still follows the corrected direction.
+	if moon_factor < 1.0 and elevation > 0.0:
+		var clamped_sun_dir := SkyCycleMath.clamp_direction_elevation(
+			-light_dir, deg_to_rad(min_sun_elevation_degrees)
+		)
+		if clamped_sun_dir != -light_dir:
+			main_light.global_transform.basis = Basis.looking_at(-clamped_sun_dir, Vector3.UP)
+
+	# The sun light hands over to the moon light at night (moon_factor). The
+	# sun gate keeps it off while the animation is on the night arc —
+	# otherwise it would flash warm light from the moonset position at ~4am.
+	var sun_factor := (
+		energy_factor * (1.0 - moon_factor) * SkyCycleMath.compute_sun_gate(skybox_time)
+	)
+	main_light.visible = sun_factor > 0.01 and not lights_out
+	main_light.light_energy = initial_sun_energy * sun_factor
+
+	# Moon light: cool fill following the corrected night arc, so night scenes
+	# keep a directional contribution instead of collapsing to ambient-only
+	# black. Energy is purely time-driven: the fade-in starts once the arc is
+	# stable (post-whip), the fade-out ends exactly at the horizon crossing,
+	# so it never cuts abruptly nor uplights from below the horizon (#2516).
+	if moon_light != null:
+		moon_light.visible = moon_factor > 0.01 and not lights_out
+		if moon_light.visible:
+			moon_light.global_transform.basis = light_basis
+			moon_light.light_energy = moon_light_energy * moon_factor
+			moon_light.light_color = moon_light_color
+
+	# Visual sun direction — the corrected light direction, which is exactly
+	# where the sky shader draws the celestial disc (the shader-side 180°
+	# mirror that used to compensate is now applied to the lights).
+	var sun_dir = light_basis.z
 	RenderingServer.global_shader_parameter_set("sun_direction", sun_dir)
 
 	# Moon = opposite of visual sun. The sun stays mostly above horizon in the animation,
@@ -120,10 +180,12 @@ func _process(_delta: float) -> void:
 	if directional_light_gradient:
 		var sun_col := directional_light_gradient.sample(skybox_time)
 		main_light.light_color = sun_col
-		# Mirror to a global shader param so unshaded materials (e.g. the
-		# octahedral impostor) can match the day/night cycle.
+		# Mirror the effective key-light color (sun by day, moon by night) to a
+		# global shader param so unshaded materials (e.g. the octahedral
+		# impostor) can match the day/night cycle.
+		var key_col := sun_col.lerp(moon_light_color, moon_factor)
 		RenderingServer.global_shader_parameter_set(
-			"sun_color", Vector3(sun_col.r, sun_col.g, sun_col.b)
+			"sun_color", Vector3(key_col.r, key_col.g, key_col.b)
 		)
 	if ambient_light_gradient:
 		var amb_col := ambient_light_gradient.sample(skybox_time)
