@@ -205,9 +205,14 @@ void sky() {
 
   // Gate celestial rendering by time-of-day, not visual sun_dir.y.
   float day_factor = max(0.0, sin(day_night_cycle * PI));
+  // The moon (crescent bite + moon tint, driven by moon_mask_size) must stay
+  // visible at night — day_factor alone is 0 at midnight and would hide it
+  // (#2516). The orbiting second sun stays day-only.
+  float moon_gate = smoothstep(0.0, 0.01, moon_mask_size);
   float sun_with_bite = sun_disc * moon_mask_step;
-  float combined_disc = clamp(sun_with_bite + second_sun_disc, 0.0, 1.0);
-  float celestial = combined_disc * sun_opacity * sun_opacity * day_factor;
+  float combined_disc = clamp(
+      sun_with_bite * max(day_factor, moon_gate) + second_sun_disc * day_factor, 0.0, 1.0);
+  float celestial = combined_disc * sun_opacity * sun_opacity;
 
   // 1.0 at midnight, 0.0 at noon. Drives star visibility.
   float day_night_blend = 1.0 - sin(day_night_cycle * PI);
@@ -256,7 +261,7 @@ void sky() {
   vec3 sun_col = vec3(2.0);
   vec3 moon_tint = textureLod(moon_color_cycle, vec2(day_night_cycle, 0.0), 0.0).rgb;
   vec3 moon_col = moon_tint * 7.0;
-  float moon_influence = smoothstep(0.0, 0.01, moon_mask_size);
+  float moon_influence = moon_gate;
   vec3 celestial_col = mix(sun_col, moon_col, moon_influence);
 
   COLOR += celestial_col * celestial * (1.0 - clouds_mask * 0.9);
