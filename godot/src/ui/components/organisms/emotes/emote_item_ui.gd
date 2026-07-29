@@ -215,6 +215,7 @@ func set_equipped(equipped: bool) -> void:
 
 ## Shows the "NEW" tag (top-right corner) for a recently-acquired emote (#2300).
 func set_new_badge(is_new: bool) -> void:
+	# The wheel variant (emote_wheel_item.tscn) has no badge node; only square items do.
 	if is_instance_valid(panel_new_badge):
 		panel_new_badge.visible = is_new
 

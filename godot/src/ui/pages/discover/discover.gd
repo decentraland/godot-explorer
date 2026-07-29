@@ -42,6 +42,8 @@ func _ready():
 	friend_jump_in.jump_in_world.connect(_on_friend_jump_in_world)
 	friend_jump_in.hide()
 
+	places_featured.card_tapped.connect(_on_featured_card_tapped)
+
 	Global.notification_clicked.connect(_on_notification_clicked)
 
 	search_container.hide()
@@ -63,6 +65,18 @@ func _ready():
 	places_favorites.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_favorites)
 	)
+
+
+func _on_featured_card_tapped(index: int) -> void:
+	var cards = places_featured.get_cards()
+	if index >= 0 and index < cards.size():
+		var card = cards[index]
+		var data = card.get_place_data().duplicate()
+		var tex = card.get_texture()
+		if tex:
+			data["_preloaded_texture"] = tex
+		jump_in.set_data(data)
+		jump_in.open_panel.call_deferred()
 
 
 func on_item_pressed(data):
@@ -517,8 +531,7 @@ func _on_button_back_to_explorer_pressed() -> void:
 		return
 
 	if Global.get_explorer():
-		if Global.modal_manager.ban_pre_check_active:
-			Global.modal_manager.async_show_ban_pre_check_modal()
+		if Global.modal_manager.reshow_ban_modal():
 			return
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()

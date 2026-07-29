@@ -51,6 +51,13 @@ func process_deep_link(url: String) -> void:
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
 
+	# Touch-feedback debug overlay (issue #2562): off by default, enabled on demand.
+	var touch_feedback_value: String = Global.deep_link_obj.params.get("touch-feedback", "")
+	if not touch_feedback_value.is_empty():
+		var touch_feedback_enable: bool = touch_feedback_value.to_lower() in ["true", "1", "yes"]
+		TouchFeedback.set_enabled(touch_feedback_enable)
+		print("[DEEPLINK] touch-feedback=", touch_feedback_enable)
+
 	# Opt-in gate for deleting an UPGRADED (email-linked) guest. Sticky-on for the
 	# session; only takes effect on a NON-production build (see
 	# Global.is_upgraded_deletion_enabled() + account_deletion_popup.gd).
@@ -173,20 +180,23 @@ func _route_teleport() -> void:
 	var realm = Global.deep_link_obj.preview
 	if realm.is_empty():
 		realm = Global.deep_link_obj.realm
+	var location: Vector2i = Global.deep_link_obj.location
+	var has_location := Global.deep_link_obj.is_location_defined()
+
+	# The deeplink target is captured above and consumed now — clear realm/location on the shared
+	# deep_link_obj so a later explorer boot (e.g. teleporting away after a private-world block)
+	# can't re-read this stale realm and re-trigger the modal (#2569 review, iOS). preview is left
+	# untouched: it drives preview/hot-reload mode with its own lifecycle.
+	Global.deep_link_obj.realm = ""
+	Global.deep_link_obj.location = Vector2i.MAX
 
 	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
-	if (
-		not realm.is_empty()
-		and Realm.is_dcl_ens(realm)
-		and not Global.deep_link_obj.is_location_defined()
-	):
+	if not realm.is_empty() and Realm.is_dcl_ens(realm) and not has_location:
 		Global.async_join_world(realm)
-		return
-
-	if Global.deep_link_obj.is_location_defined():
+	elif has_location:
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.async_teleport_to(Global.deep_link_obj.location, realm)
+		Global.async_teleport_to(location, realm)
 	elif not realm.is_empty():
 		Global.async_teleport_to(Vector2i.ZERO, realm)
 

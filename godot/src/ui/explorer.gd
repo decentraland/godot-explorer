@@ -49,6 +49,8 @@ var _session_hide_world_interactions: bool = true
 var _session_hide_player_names: bool = true
 var _session_hide_scene_ui: bool = true
 var _mobile_controls_hidden_for_hide_ui: bool = false
+# Applies scene-driven (PBTouchScreenControls) joystick/crosshair hiding; see the class doc.
+var _sdk_touch_controls: SdkTouchControlsApplier = null
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -94,6 +96,9 @@ var _debug_panel_from_settings: bool = false
 
 
 func _process(_dt):
+	if not Global.is_xr():
+		_sdk_touch_controls.apply(_mobile_controls_hidden_for_hide_ui)
+
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
@@ -161,6 +166,9 @@ func _ready():
 	var settings_node = settings_panel.get_node("MarginContainer/Settings")
 	if settings_node:
 		settings_node.request_debug_panel.connect(_on_control_menu_request_debug_panel)
+		# Without this, the in-game "Scene Paused" toggle does nothing (menu.gd wires
+		# request_pause_scenes for the pre-explorer path only).
+		settings_node.request_pause_scenes.connect(_on_control_menu_request_pause_scenes)
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
@@ -238,6 +246,7 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
+	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair)
 
 	if Global.is_xr():
 		mobile_ui.hide()
@@ -248,7 +257,11 @@ func _ready():
 		reset_cursor_position()
 		_update_virtual_controls_visibility()
 	else:
-		mobile_ui.hide()
+		# Desktop is development-only in this build: show the on-screen controls so the
+		# native joystick/joypad (and the TouchscreenInputControls / UiInputBinding features)
+		# stay visible and debuggable. Keep the desktop crosshair/cursor behaviour as-is.
+		mobile_ui.show()
+		_update_virtual_controls_visibility()
 
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
@@ -1013,7 +1026,8 @@ func capture_mouse():
 	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if label_crosshair and ui_root:
-		label_crosshair.show()
+		if not Global.touch_controls_hide_crosshair:  # respect scene-driven crosshair hide
+			label_crosshair.show()
 		ui_root.grab_focus.call_deferred()
 
 
@@ -1059,8 +1073,14 @@ func _is_ui_hud_mode_exception(node: Node) -> bool:
 	)
 
 
+# Whether the on-screen controls (joypad + virtual joystick) are present. They show on
+# mobile and on desktop (development), but never in XR.
+func _onscreen_controls_enabled() -> bool:
+	return not Global.is_xr()
+
+
 func _apply_mobile_controls_hide_ui(hidden: bool) -> void:
-	if not Global.is_mobile():
+	if not _onscreen_controls_enabled():
 		return
 	_mobile_controls_hidden_for_hide_ui = hidden
 	if hidden:
@@ -1291,6 +1311,9 @@ func _on_profile_container_visibility_changed() -> void:
 		return
 	if not profile_container.visible:
 		_show_joypad()
+		# Profile page grabs keyboard focus when shown; restore it so jump works.
+		Global.explorer_grab_focus()
+		capture_mouse()
 
 
 func _open_friends_panel() -> void:
@@ -1552,7 +1575,7 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if Global.is_mobile():
+		if _onscreen_controls_enabled():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
@@ -1569,7 +1592,7 @@ func _on_chat_write_mode_changed(is_writing: bool) -> void:
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if Global.is_mobile():
+		if _onscreen_controls_enabled():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()

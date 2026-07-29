@@ -44,6 +44,10 @@ impl SpawnPosition {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SpawnPoint {
     pub name: Option<String>,
+    // `default` is optional in the SDK scene schema; a spawn point without it is not the default.
+    // Without `#[serde(default)]`, a missing field aborts the whole scene-metadata parse, which
+    // silently drops the scene (e.g. pixelarcade.dcl.eth has a spawn point with no `default`).
+    #[serde(default)]
     pub default: bool,
     pub position: SpawnPosition,
 }
@@ -75,6 +79,7 @@ pub struct SceneEntityMetadata {
     pub runtime_version: Option<String>,
     pub spawn_points: Option<Vec<SpawnPoint>>,
     pub authoritative_multiplayer: Option<bool>,
+    pub landscape_terrain: Option<bool>,
     #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
 }

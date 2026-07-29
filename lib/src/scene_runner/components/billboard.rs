@@ -115,6 +115,10 @@ mod test {
         scene.godot_dcl_scene.ensure_node_3d(&entity);
         SceneCrdtStateProtoComponents::get_billboard_mut(&mut crdt_state).put(
             entity,
+            // Whether `..Default::default()` is needed depends on the pinned @dcl/protocol:
+            // newer builds add optional PBBillboard fields (e.g. target_entity), older ones
+            // don't. Keep it so protocol bumps can't break this test again.
+            #[allow(clippy::needless_update)]
             Some(PbBillboard {
                 billboard_mode: Some(3),
                 ..Default::default()
