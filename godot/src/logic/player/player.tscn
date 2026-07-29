@@ -6,7 +6,6 @@
 [ext_resource type="PackedScene" uid="uid://qyi7gcf7tphy" path="res://src/logic/player/outline_system.tscn" id="3_sxiuh"]
 [ext_resource type="PackedScene" uid="uid://biigqf0xvnrcj" path="res://src/logic/player/stuck_detector.tscn" id="4_stuck"]
 [ext_resource type="Script" uid="uid://8dutfncs4yky" path="res://src/logic/player/camera_collision_clamp.gd" id="5_clamp"]
-[ext_resource type="Script" uid="uid://ebvvpxgwq0pw" path="res://src/logic/player/own_avatar_proximity_fade.gd" id="6_ownfade"]
 
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
 length = 1.0779
@@ -64,9 +63,6 @@ collide_with_bodies = false
 [node name="Avatar" parent="." unique_id=1332077066 instance=ExtResource("2_n22nx")]
 top_level = true
 skip_process = true
-
-[node name="OwnAvatarProximityFade" type="Node" parent="Avatar" unique_id=1332077067]
-script = ExtResource("6_ownfade")
 
 [node name="AudioStreamPlayer_Camera" type="AudioStreamPlayer" parent="." unique_id=901349121]
 bus = &"UI"

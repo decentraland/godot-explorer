@@ -12,7 +12,6 @@ extends SceneTree
 #     --script res://src/test/player/test_outline_proximity_fade.gd
 
 const Outline := preload("res://src/logic/player/outline_system.gd")
-const Fade := preload("res://src/decentraland_components/proximity_fade.gd")
 
 var _failures: Array[String] = []
 
@@ -21,7 +20,7 @@ var _failures: Array[String] = []
 func _initialize() -> void:
 	_test_aabb_surface_distance()
 	_test_compute_local_aabb()
-	_test_suppression_threshold_vs_fade()
+	_test_suppression_threshold_sane()
 	_test_script_wiring()
 	_finish()
 
@@ -62,25 +61,25 @@ func _test_compute_local_aabb() -> void:
 	entity.queue_free()
 
 
-# The suppression threshold must be >= the fade start: the outline may only
-# vanish once the dither is actually active (never while the object is solid).
-func _test_suppression_threshold_vs_fade() -> void:
-	var threshold: float = Fade.FADE_START_DISTANCE + Outline.OUTLINE_SUPPRESS_MARGIN
-	if threshold < Fade.FADE_START_DISTANCE:
-		_fail("suppression threshold below fade start — outline would vanish early")
-	if Outline.OUTLINE_SUPPRESS_MARGIN <= 0.0:
-		_fail("OUTLINE_SUPPRESS_MARGIN must be > 0 (Sobel must never see dither)")
+# The suppression threshold must be positive and small enough that the
+# outline only vanishes at point-blank range (never while the object is
+# comfortably visible).
+func _test_suppression_threshold_sane() -> void:
+	if Outline.OUTLINE_SUPPRESS_DISTANCE <= 0.0:
+		_fail("OUTLINE_SUPPRESS_DISTANCE must be > 0")
+	if Outline.OUTLINE_SUPPRESS_DISTANCE > 1.0:
+		_fail("OUTLINE_SUPPRESS_DISTANCE too large — outline would vanish early")
 
 
-# Guard the wiring: the per-frame gate must reference the fade band and the
-# entity AABB cache must be refreshed on target change.
+# Guard the wiring: the per-frame gate must use the suppression distance and
+# the entity AABB cache must be refreshed on target change.
 func _test_script_wiring() -> void:
 	var code := FileAccess.get_file_as_string("res://src/logic/player/outline_system.gd")
 	if code.is_empty():
 		_fail("could not read outline_system.gd")
 		return
-	if not code.contains("ProximityFade.FADE_START_DISTANCE"):
-		_fail("outline_system.gd does not reference the fade band")
+	if not code.contains("OUTLINE_SUPPRESS_DISTANCE"):
+		_fail("outline_system.gd does not use OUTLINE_SUPPRESS_DISTANCE")
 	if not code.contains("_is_entity_outline_suppressed"):
 		_fail("outline_system.gd is missing the suppression check")
 	if not code.contains("compute_local_aabb(entity)"):

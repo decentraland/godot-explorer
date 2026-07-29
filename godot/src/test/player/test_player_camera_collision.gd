@@ -49,6 +49,7 @@ func _initialize() -> void:
 	await _test_clamp_back_to_wall_overlap()
 	await _test_clamp_corner_two_walls()
 	await _test_clamp_thin_door_orbit()
+	await _test_clamp_whiskers_catch_bulge_beside_line()
 	await _test_clamp_fully_blocked_stays_out_of_wall()
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
@@ -312,6 +313,51 @@ func _test_clamp_thin_door_orbit() -> void:
 			(
 				"thin door orbit: camera crossed the door (pos=%s, z expected >= -0.24)"
 				% cam.global_position
+			)
+		)
+	rig["world"].queue_free()
+
+
+func _add_cylinder(world: Node3D, center: Vector3, radius: float, height: float) -> void:
+	var body := StaticBody3D.new()
+	body.collision_layer = CL_PHYSICS
+	body.collision_mask = 0
+	var col := CollisionShape3D.new()
+	var cyl := CylinderShape3D.new()
+	cyl.radius = radius
+	cyl.height = height
+	col.shape = cyl
+	body.add_child(col)
+	body.position = center
+	world.add_child(body)
+
+
+# The live Genesis Plaza case: a curved column BESIDE the camera line. The
+# shifted sphere is blind (its origin is overlapped by a wall in front) and
+# the CENTER ray just misses the column — but the offset camera rests with
+# the near plane on its curved surface. The outer whisker ray must catch it.
+# gdlint:ignore = async-function-name
+func _test_clamp_whiskers_catch_bulge_beside_line() -> void:
+	var rig := _build_clamp_rig()
+	# Wall in front: overlaps the shifted origin -> sphere untrusted.
+	_add_box(rig["world"], Vector3(0, 0, -0.35), Vector3(4, 4, 0.2))
+	# Column at (1.3, 0, 3.0) r=0.5: the segment's closest approach is ~0.53
+	# (center ray misses by 3cm); the +0.4 whisker passes ~0.18 from the
+	# center (hits). Without whiskers the camera ends at (0.75,0,3), 5cm from
+	# the column surface — near plane on the wall.
+	_add_cylinder(rig["world"], Vector3(1.3, 0, 3.0), 0.5, 4.0)
+	await _settle()
+
+	var cam: Camera3D = rig["cam"]
+	# The camera must keep real clearance from the column's curved surface
+	# (center (1.3,0,3), r=0.5): without whiskers it rests at (0.75,0,3) —
+	# 0.55 from the center, i.e. 5cm from the surface, near plane on the wall.
+	var dist_to_column := Vector2(cam.global_position.x - 1.3, cam.global_position.z - 3.0).length()
+	if dist_to_column < 0.6:
+		_fail(
+			(
+				"column bulge: camera too close to the curved surface (pos=%s, dist=%.2f < 0.6)"
+				% [cam.global_position, dist_to_column]
 			)
 		)
 	rig["world"].queue_free()

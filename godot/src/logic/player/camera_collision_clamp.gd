@@ -83,22 +83,33 @@ func _process(delta: float) -> void:
 	# cast_motion IGNORES geometry the shape already overlaps at the start
 	# (verified empirically: it reports safe=1.0 = all clear). Two layers:
 	#
-	# 1) RAY BACKBONE from the pivot: a point can never start overlapped (the
-	#    pivot lives inside the player capsule), so the camera CENTER can never
-	#    cross a wall — no matter the orbit, wall thickness, or shift below.
-	_ray_params.from = pivot
-	_ray_params.to = target
-	var ray_hit := _mount.get_world_3d().direct_space_state.intersect_ray(_ray_params)
-	var ray_allowed := dist
-	if not ray_hit.is_empty():
-		# Back off along the segment enough that the PERPENDICULAR clearance to
-		# the wall equals CLAMP_NEAR_CLEARANCE: a fixed margin along the segment
-		# shrinks to ~0 perpendicularly on angled walls (near plane pokes in).
-		# The cos is capped so grazing rays don't produce absurd backoffs.
-		var n: Vector3 = ray_hit.get("normal", -dir)
-		var cosang: float = clampf(absf(dir.dot(n)), 0.3, 1.0)
-		var backoff: float = CameraRig.CLAMP_NEAR_CLEARANCE / cosang
-		ray_allowed = maxf(dir.dot(ray_hit.position - pivot) - backoff, 0.0)
+	# 1) RAY WHISKERS from the pivot: three parallel rays along the segment
+	#    (center ± sphere radius, horizontally). A point can never start
+	#    overlapped (the pivot lives inside the player capsule), so the camera
+	#    CENTER can never cross a collider in the ribbon — no matter the orbit,
+	#    wall thickness, or shift alignment. The OUTER whiskers also catch
+	#    walls BESIDE the center line — curved surfaces bulging into the camera
+	#    (the live Genesis Plaza case: sphere blind from a hugged wall, single
+	#    ray missing a bulge).
+	var allowed := dist
+	var perp := dir.cross(Vector3.UP)
+	if perp.length_squared() < 0.01:
+		perp = dir.cross(Vector3.RIGHT)
+	perp = perp.normalized()
+	var space := _mount.get_world_3d().direct_space_state
+	for k in [-CameraRig.CLAMP_SPHERE_RADIUS, 0.0, CameraRig.CLAMP_SPHERE_RADIUS]:
+		var from: Vector3 = pivot + perp * float(k)
+		_ray_params.from = from
+		_ray_params.to = from + segment
+		var hit := space.intersect_ray(_ray_params)
+		if not hit.is_empty():
+			# Back off along the segment enough that the PERPENDICULAR clearance
+			# to the wall equals CLAMP_NEAR_CLEARANCE (capped for grazing rays).
+			var n: Vector3 = hit.get("normal", -dir)
+			var cosang: float = clampf(absf(dir.dot(n)), 0.3, 1.0)
+			var backoff: float = CameraRig.CLAMP_NEAR_CLEARANCE / cosang
+			var hit_allowed: float = maxf(dir.dot(hit.position - pivot) - backoff, 0.0)
+			allowed = minf(allowed, hit_allowed)
 
 	# 2) SPHERE VOLUME from a point shifted along the mount's FORWARD (the
 	#    player's front, always opposite to where the camera looks back from).
@@ -107,16 +118,14 @@ func _process(delta: float) -> void:
 	#    But facing a THIN wall (e.g. a door box), the shifted origin can land
 	#    INSIDE the wall — then the cast is blind again (the reported case:
 	#    hugging a door and orbiting 360° put the camera on the far side). So
-	#    the sphere is only trusted when its origin is NOT overlapped; the ray
-	#    backbone always applies regardless.
+	#    the sphere is only trusted when its origin is NOT overlapped; the
+	#    whiskers always apply regardless.
 	var shift: float = minf(CameraRig.CLAMP_SPHERE_RADIUS, dist)
 	var origin: Vector3 = pivot - _mount.global_transform.basis.z * shift
 	var motion: Vector3 = target - origin
 
-	var allowed := ray_allowed
 	_params.transform = Transform3D(Basis(), origin)
 	_params.motion = motion
-	var space := _mount.get_world_3d().direct_space_state
 	if space.get_rest_info(_params).is_empty():
 		var result := space.cast_motion(_params)
 		# cast_motion always returns [safe, unsafe]; safe < 1.0 means blocked.

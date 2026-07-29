@@ -19,11 +19,9 @@ const FIRST_PERSON_SPRING_LENGTH := -0.2
 
 # CameraCollisionClamp (secondary volumetric sweep to the ACTUAL offset camera
 # position — the SpringArm alone only ray-casts its own axis).
-# Radius doubles as the standoff distance from walls, so it must stay >= the
-# proximity-fade start (ProximityFade.FADE_START_DISTANCE, 0.3): a wall the
-# camera is legitimately pressed against then stays fully visible. Not larger
-# than ~0.4: bigger spheres touch both frames of ~1m doorways and glue the
-# camera to the avatar's head in every doorway.
+# Radius doubles as the standoff distance from walls. Not larger than ~0.4:
+# bigger spheres touch both frames of ~1m doorways and glue the camera to the
+# avatar's head in every doorway.
 const CLAMP_SPHERE_RADIUS := 0.4
 # Extra pull-in beyond the sphere contact point.
 const CLAMP_EXTRA_MARGIN := 0.02

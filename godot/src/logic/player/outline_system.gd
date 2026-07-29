@@ -3,15 +3,12 @@ extends Node3D
 
 const OUTLINE_LAYER = 20  # Using layer 20 for outlined objects (bit 19, value 524288)
 
-const ProximityFade := preload("res://src/decentraland_components/proximity_fade.gd")
-
-# The outlined meshes render in the SubViewport with their real materials, so
-# the camera proximity fade (issue #1814) dithers them there too — leaving a
-# checkerboard depth texture that the Sobel reads as edges EVERYWHERE (the
-# rainbow flood artifact). Suppress the outline while the target's surface is
-# inside the fade band: an outline around a dissolving object is pointless
-# anyway. Extra margin so the Sobel never sees a dithered frame.
-const OUTLINE_SUPPRESS_MARGIN := 0.1
+# Suppress the outline while the outlined entity's surface is this close to
+# the camera: at point-blank range the object fills the view and its outline
+# is just screen-flooding noise (originally added when the scene proximity
+# fade dithered the outline SubViewport's depth texture into a Sobel flood;
+# the fade is gone, but the close-range suppression was kept deliberately).
+const OUTLINE_SUPPRESS_DISTANCE := 0.4
 
 var main_camera: Camera3D = null
 var current_outlined_avatar: Node3D = null
@@ -119,7 +116,7 @@ func _is_entity_outline_suppressed() -> bool:
 		return false
 	var world_aabb: AABB = current_outlined_entity.global_transform * _entity_local_aabb
 	var dist := aabb_surface_distance(main_camera.global_position, world_aabb)
-	return dist < ProximityFade.FADE_START_DISTANCE + OUTLINE_SUPPRESS_MARGIN
+	return dist < OUTLINE_SUPPRESS_DISTANCE
 
 
 func set_outlined_avatar(avatar: Node3D):

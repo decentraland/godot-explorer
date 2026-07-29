@@ -1,18 +1,18 @@
 extends SceneTree
 
-# Test for the own-avatar proximity fade (issue #1814). When the camera is
-# forced into the local avatar's head, the WHOLE avatar dissolves uniformly
-# (object-level) — not per-fragment, which would show a cross-section of the
-# skull. Mechanism: per-instance shader param `own_fade` + dither discard in
-# the avatar shaders (GeometryInstance3D.transparency is ignored by the mobile
-# renderer for opaque materials — verified empirically with a rendered probe).
-# Remote avatars never get the node, so they're unaffected.
+# Test for the avatar proximity fade (issue #1814). When the camera gets
+# within arm's reach of an avatar's head — the local player pinned against a
+# wall, or any avatar in the camera's personal space — the WHOLE avatar
+# dissolves uniformly (object-level), driven by a per-instance `own_fade`
+# shader param + dither discard in the avatar shaders. Attached to every
+# avatar by avatar.gd; only the explorer's world camera drives it.
 #
-# Run headless (no Rust extension needed):
+# Run headless (the Rust extension loads from lib/target, providing
+# DclCamera3D for the camera gate):
 #   .bin/godot/godot4_bin --headless --path godot \
-#     --script res://src/test/player/test_own_avatar_proximity_fade.gd
+#     --script res://src/test/player/test_avatar_proximity_fade.gd
 
-const OwnFade := preload("res://src/logic/player/own_avatar_proximity_fade.gd")
+const Fade := preload("res://src/logic/player/avatar_proximity_fade.gd")
 
 # Mirrors the own_fade contract of the dcl_toon / mask shaders.
 const FADE_SHADER_CODE := """
@@ -29,26 +29,18 @@ func _initialize() -> void:
 	await _test_far_camera_keeps_avatar_opaque()
 	await _test_close_camera_fades_whole_avatar()
 	await _test_mid_distance_partial_fade()
+	await _test_subviewport_avatar_does_not_fade()
 	_test_consts_sane()
 	_test_avatar_shaders_support_own_fade()
-	_test_scene_guard()
+	_test_avatar_gd_wires_the_node()
 	_finish()
 
 
-# Mirror of the player.tscn structure: Player > Mount + Avatar > meshes + fade.
+# Head sits at avatar origin + HEAD_HEIGHT; rig at the origin keeps math trivial.
 func _build_rig() -> Dictionary:
-	var player := Node3D.new()
-	player.name = "Player"
-	root.add_child(player)
-
-	var mount := Node3D.new()
-	mount.name = "Mount"
-	mount.position = Vector3(0, 1.71, 0)
-	player.add_child(mount)
-
 	var avatar := Node3D.new()
 	avatar.name = "Avatar"
-	player.add_child(avatar)
+	root.add_child(avatar)
 
 	var mesh := MeshInstance3D.new()
 	mesh.mesh = BoxMesh.new()
@@ -59,14 +51,14 @@ func _build_rig() -> Dictionary:
 	mesh.material_override = mat
 	avatar.add_child(mesh)
 
-	var fade: OwnAvatarProximityFade = OwnFade.new()
+	var fade: AvatarProximityFade = Fade.new()
 	avatar.add_child(fade)
 
-	var camera := Camera3D.new()
+	var camera := DclCamera3D.new()
 	root.add_child(camera)
 	camera.make_current()
 
-	return {"player": player, "mesh": mesh, "camera": camera}
+	return {"avatar": avatar, "mesh": mesh, "camera": camera}
 
 
 # gdlint:ignore = async-function-name
@@ -84,40 +76,72 @@ func _fade_at(mesh: MeshInstance3D, camera: Camera3D, pos: Vector3) -> float:
 # gdlint:ignore = async-function-name
 func _test_far_camera_keeps_avatar_opaque() -> void:
 	var rig := _build_rig()
-	var t := await _fade_at(rig["mesh"], rig["camera"], Vector3(0, 1.71, 3.0))
+	var t := await _fade_at(rig["mesh"], rig["camera"], Vector3(0, Fade.HEAD_HEIGHT, 3.0))
 	if t > 0.01:
 		_fail("far camera: avatar fade = %.2f, expected 0 (fully opaque)" % t)
-	rig["player"].queue_free()
+	rig["avatar"].queue_free()
 	rig["camera"].queue_free()
 
 
-# The reported case: camera pulled to the clamp's minimum distance (0.3) sits
-# right at the head — the whole avatar must be fully transparent.
+# Camera pulled to the head (collision clamp against a wall): fully faded.
 # gdlint:ignore = async-function-name
 func _test_close_camera_fades_whole_avatar() -> void:
 	var rig := _build_rig()
-	var t := await _fade_at(rig["mesh"], rig["camera"], Vector3(0, 1.71, 0.3))
+	var t := await _fade_at(rig["mesh"], rig["camera"], Vector3(0, Fade.HEAD_HEIGHT, 0.3))
 	if t < 0.99:
 		_fail("close camera: avatar fade = %.2f, expected 1 (fully faded)" % t)
-	rig["player"].queue_free()
+	rig["avatar"].queue_free()
 	rig["camera"].queue_free()
 
 
 # gdlint:ignore = async-function-name
 func _test_mid_distance_partial_fade() -> void:
 	var rig := _build_rig()
-	var mid: float = (OwnFade.FADE_START_DISTANCE + OwnFade.FADE_GONE_DISTANCE) * 0.5
-	var t := await _fade_at(rig["mesh"], rig["camera"], Vector3(0, 1.71, mid))
+	var mid: float = (Fade.FADE_START_DISTANCE + Fade.FADE_GONE_DISTANCE) * 0.5
+	var t := await _fade_at(rig["mesh"], rig["camera"], Vector3(0, Fade.HEAD_HEIGHT, mid))
 	if not is_equal_approx(t, 0.5):
 		_fail("mid camera: avatar fade = %.2f, expected ~0.5" % t)
-	rig["player"].queue_free()
+	rig["avatar"].queue_free()
 	rig["camera"].queue_free()
 
 
+# Preview avatars live in SubViewports (backpack, passport, impostor
+# capture): they must NOT fade even with a close-up camera.
+# gdlint:ignore = async-function-name
+func _test_subviewport_avatar_does_not_fade() -> void:
+	var sub := SubViewport.new()
+	sub.size = Vector2i(64, 64)
+	root.add_child(sub)
+
+	var avatar := Node3D.new()
+	sub.add_child(avatar)
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = BoxMesh.new()
+	var shader := Shader.new()
+	shader.code = FADE_SHADER_CODE
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	mesh.material_override = mat
+	avatar.add_child(mesh)
+	var fade: AvatarProximityFade = Fade.new()
+	avatar.add_child(fade)
+
+	var cam := Camera3D.new()
+	sub.add_child(cam)
+	cam.make_current()
+	cam.global_position = Vector3(0, Fade.HEAD_HEIGHT, 0.3)
+	await process_frame
+	await process_frame
+	var value: Variant = mesh.get_instance_shader_parameter("own_fade")
+	if value != null and value != 0.0:
+		_fail("subviewport avatar: fade = %s, expected unset/0" % value)
+	sub.queue_free()
+
+
 func _test_consts_sane() -> void:
-	if OwnFade.FADE_GONE_DISTANCE <= 0.0:
+	if Fade.FADE_GONE_DISTANCE <= 0.0:
 		_fail("FADE_GONE_DISTANCE must be > 0")
-	if OwnFade.FADE_GONE_DISTANCE >= OwnFade.FADE_START_DISTANCE:
+	if Fade.FADE_GONE_DISTANCE >= Fade.FADE_START_DISTANCE:
 		_fail("FADE_GONE_DISTANCE must be < FADE_START_DISTANCE")
 
 
@@ -142,17 +166,14 @@ func _test_avatar_shaders_support_own_fade() -> void:
 			_fail(path + " is missing the own_fade dither discard")
 
 
-# The node must live under the LOCAL player's Avatar in player.tscn — that is
-# what scopes the effect to the own avatar only.
-func _test_scene_guard() -> void:
-	var text := FileAccess.get_file_as_string("res://src/logic/player/player.tscn")
-	if text.is_empty():
-		_fail("could not read player.tscn")
+# Every avatar gets the node from avatar.gd (local player, remote, NPCs).
+func _test_avatar_gd_wires_the_node() -> void:
+	var code := FileAccess.get_file_as_string("res://src/decentraland_components/avatar/avatar.gd")
+	if code.is_empty():
+		_fail("could not read avatar.gd")
 		return
-	if not text.contains('name="OwnAvatarProximityFade"'):
-		_fail("OwnAvatarProximityFade node missing in player.tscn")
-	if not text.contains('parent="Avatar"'):
-		_fail("OwnAvatarProximityFade must be a child of the Avatar node")
+	if not code.contains("AvatarProximityFade.new()"):
+		_fail("avatar.gd does not attach AvatarProximityFade to every avatar")
 
 
 func _fail(msg: String) -> void:
@@ -161,10 +182,10 @@ func _fail(msg: String) -> void:
 
 func _finish() -> void:
 	if _failures.is_empty():
-		print("[test_own_avatar_proximity_fade] PASS")
+		print("[test_avatar_proximity_fade] PASS")
 		quit(0)
 		return
 	for f in _failures:
 		printerr(f)
-	printerr("[test_own_avatar_proximity_fade] FAIL: %d case(s)" % _failures.size())
+	printerr("[test_avatar_proximity_fade] FAIL: %d case(s)" % _failures.size())
 	quit(1)

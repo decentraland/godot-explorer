@@ -17,9 +17,7 @@ use crate::{
 };
 use godot::{
     classes::{
-        base_material_3d::{
-            DistanceFadeMode, EmissionOperator, Feature, Flags, ShadingMode, Transparency,
-        },
+        base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode, Transparency},
         image::Format,
         Image, ImageTexture, Material, MeshInstance3D, ResourceLoader, Shader, ShaderMaterial,
         StandardMaterial3D, Texture2D,
@@ -468,13 +466,6 @@ pub fn apply_dcl_material_properties(
             }
         }
     }
-
-    // Camera proximity fade (issue #1814): dissolve geometry the camera clips into.
-    // Values must stay in sync with godot/src/decentraland_components/proximity_fade.gd
-    // (FADE_GONE_DISTANCE / FADE_START_DISTANCE).
-    godot_material.set_distance_fade(DistanceFadeMode::PIXEL_DITHER);
-    godot_material.set_distance_fade_min_distance(0.1);
-    godot_material.set_distance_fade_max_distance(0.3);
 }
 
 /// Apply DCL unlit material properties to a ShaderMaterial.
