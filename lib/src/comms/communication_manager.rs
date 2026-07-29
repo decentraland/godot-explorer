@@ -116,7 +116,7 @@ use crate::comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoo
 #[cfg(feature = "use_pulse")]
 use crate::comms::pulse::{
     pulse_room::{PulseRoom, PulseRoomEvent},
-    transport::PulseTransportConfig,
+    transport::{PulseDisconnect, PulseTransportConfig},
 };
 use crate::http_request::http_queue_requester::HttpQueueRequester;
 
@@ -124,6 +124,13 @@ use crate::http_request::http_queue_requester::HttpQueueRequester;
 /// session (Unity parity: 5 attempts, then permanent LiveKit-only fallback until restart).
 #[cfg(feature = "use_pulse")]
 const PULSE_SESSION_FAILURE_LIMIT: u32 = 5;
+
+/// How long after `notify_app_resumed` a `DuplicateIdentity`/`DuplicateSession` eviction is
+/// treated as our own pre-background session being reclaimed (retry) rather than another
+/// device taking over the account (park + modal). Mobile OSes cut the app's network within
+/// seconds of backgrounding, so every resume rebuilds sessions that may still be alive
+/// server-side — the eviction that follows is self-inflicted.
+const RESUME_GRACE_PERIOD: Duration = Duration::from_secs(30);
 
 #[allow(clippy::large_enum_variant)]
 enum CommsConnection {
@@ -163,6 +170,9 @@ pub struct CommunicationManager {
     archipelago_profile_announced: bool,
     /// Flag to prevent automatic reconnection after DuplicateIdentity disconnect
     block_auto_reconnect: bool,
+    /// End of the post-resume window during which Duplicate* evictions are retried instead
+    /// of treated as another device (see [`RESUME_GRACE_PERIOD`]). `None` = no window armed.
+    resume_grace_until: Option<Instant>,
 
     /// When true, all comms are disconnected/deferred until loading finishes
     comms_on_hold: bool,
@@ -271,6 +281,7 @@ impl INode for CommunicationManager {
             last_profile_version_broadcast: Instant::now(),
             archipelago_profile_announced: false,
             block_auto_reconnect: false,
+            resume_grace_until: None,
             comms_on_hold: false,
             saved_adapter_for_resume: GString::default(),
             multiplayer_debug: false,
@@ -484,7 +495,25 @@ impl INode for CommunicationManager {
         if let Some((reason, room_id)) = disconnect_info {
             use crate::comms::adapter::message_processor::DisconnectReason;
 
-            if reason == DisconnectReason::DuplicateIdentity {
+            if reason == DisconnectReason::DuplicateIdentity && self.in_resume_grace() {
+                // Right after a resume the server can still hold this client's
+                // pre-background session; the eviction that follows our rejoin is
+                // self-inflicted, not another device. Scene and island rooms have their own
+                // reconnect machinery (5s timer / ArchipelagoManager) — only a main-room
+                // eviction needs an explicit retry, routed through the DisconnectHandler's
+                // auto-reconnect path (reason 3 = Other).
+                tracing::warn!(
+                    "Disconnected from '{}': DuplicateIdentity within resume grace — treating as stale self-session eviction, reconnecting",
+                    room_id
+                );
+                if !room_id.starts_with("scene-") && !room_id.starts_with("archipelago-livekit-") {
+                    let saved_connection_str = self.current_connection_str.clone();
+                    self.clean();
+                    self.current_connection_str = saved_connection_str;
+                    self.base_mut()
+                        .emit_signal("disconnected", &[3i32.to_variant()]);
+                }
+            } else if reason == DisconnectReason::DuplicateIdentity {
                 // DuplicateIdentity from ANY room → full disconnect (existing behavior)
                 tracing::warn!("Disconnected from '{}': DuplicateIdentity - another client connected with same identity", room_id);
                 self.block_auto_reconnect = true;
@@ -780,7 +809,20 @@ impl CommunicationManager {
                         return;
                     }
                 }
-                PulseRoomEvent::Dead => {
+                PulseRoomEvent::Dead { reason } => {
+                    // The Pulse server evicts oldest-first on a duplicate wallet, so a
+                    // DuplicateSession right after a resume is our own pre-background zombie
+                    // being reclaimed — one rebuild wins the session back.
+                    if reason == Some(PulseDisconnect::DuplicateSession) && self.in_resume_grace() {
+                        tracing::warn!(
+                            "pulse: DuplicateSession within resume grace — rebuilding room to reclaim the session"
+                        );
+                        if let Some(mut pulse_room) = self.pulse_room.take() {
+                            pulse_room.clean();
+                        }
+                        self.ensure_pulse_room();
+                        return;
+                    }
                     // Terminal code — parked until the next change_adapter rebuilds the room.
                     tracing::warn!("pulse: room dead until next adapter change");
                 }
@@ -2073,6 +2115,31 @@ impl CommunicationManager {
         self.current_connection = CommsConnection::None;
         self.current_connection_str = GString::default();
         self.archipelago_profile_announced = false;
+    }
+
+    /// The app returned to the foreground (GDScript calls this on
+    /// `NOTIFICATION_APPLICATION_FOCUS_IN`). Mobile OSes cut the app's network shortly after
+    /// backgrounding, so every transport is rebuilding right now: forgive the Pulse failure
+    /// strikes that a slow-returning radio would burn, and arm the grace window that lets
+    /// Duplicate* evictions (our own zombie sessions being reclaimed) retry instead of
+    /// locking comms behind the "session ended" modal.
+    #[func]
+    pub fn notify_app_resumed(&mut self) {
+        #[cfg(feature = "use_pulse")]
+        if self.pulse_session_failures > 0 {
+            tracing::info!(
+                "app resumed — clearing {} pulse session failure strike(s)",
+                self.pulse_session_failures
+            );
+            self.pulse_session_failures = 0;
+        }
+        self.resume_grace_until = Some(Instant::now() + RESUME_GRACE_PERIOD);
+        tracing::info!("app resumed — comms resume grace window armed");
+    }
+
+    fn in_resume_grace(&self) -> bool {
+        self.resume_grace_until
+            .is_some_and(|until| Instant::now() < until)
     }
 
     /// Disconnect all comms while a scene is loading.

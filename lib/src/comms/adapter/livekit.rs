@@ -45,6 +45,9 @@ const LK_STATE_CONNECTING: u8 = 0;
 const LK_STATE_CONNECTED: u8 = 1;
 const LK_STATE_RECONNECTING: u8 = 2;
 const LK_STATE_DISCONNECTED: u8 = 3;
+/// Connect rejected by the signal server (401) — the token can never work; retrying with the
+/// same connection string is pointless. Owners should fetch a fresh one instead.
+const LK_STATE_AUTH_FAILED: u8 = 4;
 
 pub struct NetworkMessage {
     pub data: Vec<u8>,
@@ -144,6 +147,7 @@ impl LivekitRoom {
             LK_STATE_CONNECTED => "connected",
             LK_STATE_RECONNECTING => "reconnecting",
             LK_STATE_DISCONNECTED => "disconnected",
+            LK_STATE_AUTH_FAILED => "auth_failed",
             _ => "connecting",
         }
     }
@@ -324,7 +328,14 @@ fn spawn_livekit_task(
             }
             Err(e) => {
                 tracing::warn!("🔌 LiveKit connection failed - room: '{}', error: {:?}", room_id, e);
-                connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
+                // The livekit error chain is opaque across SDK versions; a 401 in its debug
+                // form is the signal server rejecting the token (expired after a long app
+                // background). Surface it so owners stop retrying the dead token.
+                let auth_failed = format!("{e:?}").contains("401");
+                connection_state.store(
+                    if auth_failed { LK_STATE_AUTH_FAILED } else { LK_STATE_DISCONNECTED },
+                    Ordering::Relaxed,
+                );
                 return;
             }
         };

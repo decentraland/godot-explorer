@@ -30,7 +30,7 @@ use tokio::sync::mpsc;
 
 use super::decoder::{from_movement, PulseDecoder, PulseEvent, PulseParcelGrid};
 use super::transport::{
-    self, PulseDriverHandle, PulseFrame, PulseLink, PulseReliability, PulseStatus,
+    self, PulseDisconnect, PulseDriverHandle, PulseFrame, PulseLink, PulseReliability, PulseStatus,
     PulseTransportConfig,
 };
 use super::PULSE_ROOM_ID;
@@ -81,8 +81,10 @@ pub enum PulseRoomEvent {
     /// A connection attempt ended before ever establishing (connect failure, pipe close,
     /// handshake never acked). Caller counts it toward the session-fallback strike limit.
     AttemptFailed,
-    /// Terminal disconnect — the room is parked in `Dead` and will not reconnect.
-    Dead,
+    /// Terminal disconnect — the room is parked in `Dead` and will not reconnect. Carries the
+    /// server's reason so the caller can decide whether a rebuild is still warranted (e.g. a
+    /// `DuplicateSession` eviction right after an app resume is our own zombie, not a rival).
+    Dead { reason: Option<PulseDisconnect> },
 }
 
 pub struct PulseRoom {
@@ -364,16 +366,16 @@ impl PulseRoom {
                 }
                 Ok(PulseStatus::Disconnected(reason)) => {
                     tracing::warn!("pulse: disconnected ({reason:?})");
-                    self.lost_connection(reason.should_retry(), now, events);
+                    self.lost_connection(Some(reason), now, events);
                 }
                 // Never established (DNS/socket/connect timeout) — always transient.
                 Ok(PulseStatus::Failed(error)) => {
                     tracing::warn!("pulse: failed ({error})");
-                    self.lost_connection(true, now, events);
+                    self.lost_connection(None, now, events);
                 }
                 Err(mpsc::error::TryRecvError::Empty) => break,
                 Err(mpsc::error::TryRecvError::Disconnected) => {
-                    self.lost_connection(true, now, events);
+                    self.lost_connection(None, now, events);
                     break;
                 }
             }
@@ -382,8 +384,14 @@ impl PulseRoom {
 
     /// The transport is gone — tear the driver/link down, surface the peer loss, and decide
     /// what's next: rebuild from `Down` after a cooldown, or park in `Dead` for a terminal
-    /// reason. Idempotent: with no live link it's a no-op.
-    fn lost_connection(&mut self, retry: bool, now: Instant, events: &mut Vec<PulseRoomEvent>) {
+    /// reason. `reason` is `None` for reason-less losses (never-established failures, pipe
+    /// close), which are always retryable. Idempotent: with no live link it's a no-op.
+    fn lost_connection(
+        &mut self,
+        reason: Option<PulseDisconnect>,
+        now: Instant,
+        events: &mut Vec<PulseRoomEvent>,
+    ) {
         if self.link.is_none() {
             return;
         }
@@ -395,6 +403,7 @@ impl PulseRoom {
         if !self.established_this_attempt {
             events.push(PulseRoomEvent::AttemptFailed);
         }
+        let retry = reason.is_none_or(PulseDisconnect::should_retry);
         self.state = if retry {
             tracing::info!("pulse: transport dropped — reinitialising after cooldown");
             Connection::Down {
@@ -402,7 +411,7 @@ impl PulseRoom {
             }
         } else {
             tracing::warn!("pulse: terminal disconnect — not reconnecting");
-            events.push(PulseRoomEvent::Dead);
+            events.push(PulseRoomEvent::Dead { reason });
             Connection::Dead
         };
     }
@@ -828,18 +837,46 @@ mod tests {
 
         driver
             .status
-            .try_send(PulseStatus::Disconnected(
-                super::super::transport::PulseDisconnect::AuthFailed,
-            ))
+            .try_send(PulseStatus::Disconnected(PulseDisconnect::AuthFailed))
             .unwrap();
         let events = room.poll(now, || None);
         assert_eq!(
             events,
-            vec![PulseRoomEvent::AttemptFailed, PulseRoomEvent::Dead]
+            vec![
+                PulseRoomEvent::AttemptFailed,
+                PulseRoomEvent::Dead {
+                    reason: Some(PulseDisconnect::AuthFailed)
+                }
+            ]
         );
         assert!(matches!(room.state, Connection::Dead));
         // Dead is sticky: further polls do nothing.
         assert!(room.poll(now, || None).is_empty());
+    }
+
+    /// A DuplicateSession eviction is terminal for the room, but the event must carry the
+    /// reason so the CommunicationManager can rebuild after an app resume (the eviction is
+    /// then our own pre-background zombie being reclaimed, not a rival device).
+    #[tokio::test]
+    async fn duplicate_session_dead_carries_reason() {
+        let (sender, _keep) = processor_channel();
+        let (mut room, driver) = test_room(sender);
+        room.state = Connection::Established;
+        room.established_this_attempt = true;
+        let now = Instant::now();
+
+        driver
+            .status
+            .try_send(PulseStatus::Disconnected(PulseDisconnect::DuplicateSession))
+            .unwrap();
+        let events = room.poll(now, || None);
+        assert_eq!(
+            events,
+            vec![PulseRoomEvent::Dead {
+                reason: Some(PulseDisconnect::DuplicateSession)
+            }]
+        );
+        assert!(matches!(room.state, Connection::Dead));
     }
 
     #[tokio::test]

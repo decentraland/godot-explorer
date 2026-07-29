@@ -1539,6 +1539,12 @@ func _check_dclenv_change() -> bool:
 
 
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		# Mobile OSes cut app networking shortly after backgrounding, killing every comms
+		# session. Tell the comms manager we're back so it forgives transient reconnect
+		# failures and treats Duplicate* evictions as our own stale session being reclaimed.
+		comms.notify_app_resumed()
+
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile() and !Global.is_virtual_mobile():
 			var new_url: String = ""

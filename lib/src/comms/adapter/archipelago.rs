@@ -286,6 +286,16 @@ impl ArchipelagoManager {
                     }
                 }
                 _ => {
+                    // The WS session is gone and its island token dies with it: drop the
+                    // internal-retry fuel so island reconnection waits for the fresh
+                    // IslandChanged the re-handshake will deliver, instead of racing it
+                    // with a possibly-expired token (a second same-identity join gets one
+                    // of our sessions evicted with DuplicateIdentity).
+                    tracing::info!(
+                        "comms > archipelago ws lost — island reconnect deferred to the fresh island assignment"
+                    );
+                    self.last_island_conn_str = None;
+                    self.island_reconnect_at = None;
                     self.state = ArchipelagoState::Connecting;
                 }
             },
@@ -298,15 +308,42 @@ impl ArchipelagoManager {
         };
 
         if !adapter_ok {
-            tracing::warn!(
-                "🔌 Archipelago LiveKit room disconnected, scheduling reconnection in 1s"
-            );
+            let token_rejected = self
+                .adapter
+                .as_ref()
+                .is_some_and(|adapter| adapter.connection_state_str() == "auth_failed");
             self.adapter = None;
-            self.island_reconnect_at = Some(Instant::now() + Duration::from_secs(1));
+            if token_rejected {
+                // The saved token outlived its TTL (long app background): no retry with it
+                // can ever succeed, and the WS won't resend IslandChanged for an island we
+                // are already assigned to. Recycle the WS session — its re-handshake yields
+                // a fresh IslandChanged with a valid token.
+                tracing::warn!(
+                    "🔌 Island room token rejected — recycling archipelago session for a fresh island assignment"
+                );
+                self.last_island_conn_str = None;
+                self.island_reconnect_at = None;
+                self.ws_peer.close();
+                self.state = ArchipelagoState::Connecting;
+                // Backdate the last attempt so the Connecting arm redials immediately
+                // instead of waiting out the reconnect interval.
+                self.last_try_to_connect = Instant::now()
+                    .checked_sub(Duration::from_secs(RECONNECT_INTERVAL_SECS + 1))
+                    .unwrap_or_else(Instant::now);
+            } else {
+                tracing::warn!(
+                    "🔌 Archipelago LiveKit room disconnected, scheduling reconnection in 1s"
+                );
+                self.island_reconnect_at = Some(Instant::now() + Duration::from_secs(1));
+            }
         }
 
-        // Attempt to reconnect to the island LiveKit room
+        // Attempt to reconnect to the island LiveKit room. Gated on a healthy WS session:
+        // while the WS is re-handshaking a fresh IslandChanged is imminent and will rebuild
+        // the room — retrying the saved conn_str here would just race it with a second
+        // same-identity join.
         if self.adapter.is_none()
+            && matches!(self.state, ArchipelagoState::WelcomeMessageReceived)
             && self
                 .island_reconnect_at
                 .is_some_and(|t| t <= Instant::now())
@@ -370,6 +407,10 @@ impl ArchipelagoManager {
                     }
                     self.ws_peer.close();
                     self.state = ArchipelagoState::Connecting;
+                    // Kicked voids the island membership along with the session — don't
+                    // let the internal retry rejoin the island behind the server's back.
+                    self.last_island_conn_str = None;
+                    self.island_reconnect_at = None;
                 }
                 server_packet::Message::IslandChanged(msg) => {
                     tracing::debug!("connecting to island {:?}", msg.island_id);
@@ -380,10 +421,30 @@ impl ArchipelagoManager {
                     };
                     match protocol {
                         "livekit" => {
-                            // Store connection info for reconnection
+                            let same_live_island = self.last_island_id.as_deref()
+                                == Some(msg.island_id.as_str())
+                                && self
+                                    .adapter
+                                    .as_ref()
+                                    .is_some_and(|a| a.connection_state_str() == "connected");
+
+                            // Store connection info for reconnection (always refresh the
+                            // token — the previous one may be near expiry).
                             self.last_island_conn_str = Some(msg.conn_str.clone());
                             self.last_island_id = Some(msg.island_id.clone());
                             self.island_reconnect_at = None;
+
+                            // A re-assignment to the island we're already connected to
+                            // (WS re-handshake) must not rejoin: the overlapping
+                            // same-identity join would get one of our sessions evicted
+                            // with DuplicateIdentity.
+                            if same_live_island {
+                                tracing::debug!(
+                                    "island {:?} unchanged and room alive — keeping the existing connection",
+                                    msg.island_id
+                                );
+                                continue;
+                            }
 
                             if let Some(shared_sender) = &self.shared_processor_sender {
                                 tracing::debug!(
