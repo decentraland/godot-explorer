@@ -13,6 +13,14 @@
 
     <application>
         <!--
+        Predictive back opt-out: targetSdk 36 stops calling onBackPressed(), which Godot 4.6.2
+        still relies on for NOTIFICATION_WM_GO_BACK_REQUEST. Stops working at targetSdk 37.
+        -->
+        <activity
+            android:name="com.godot.game.GodotApp"
+            android:enableOnBackInvokedCallback="false" />
+
+        <!--
         Plugin metadata:
 
         - In the `android:name` attribute, the `org.godotengine.plugin.v2` prefix
