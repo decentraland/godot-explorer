@@ -47,6 +47,10 @@ const BAN_PRE_CHECK_TITLE = "You can't enter"
 const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
 const BAN_PRE_CHECK_PRIMARY = "BACK TO DISCOVER"
 
+const PRIVATE_WORLD_TITLE = "%s is private"
+const PRIVATE_WORLD_BODY = "Only invited people can enter."
+const PRIVATE_WORLD_PRIMARY = "OK"
+
 const BAN_KICKED_TITLE = "You've been banned"
 const BAN_KICKED_BODY = "Please contact support for more information."
 const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
@@ -379,6 +383,29 @@ func async_show_ban_pre_check_modal() -> void:
 
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_ban_pre_check_go_to_discover)
+
+
+## Shows the private-world modal (#1725): the target world restricts access to an
+## allow-list the user is not on, so the realm change was refused before loading.
+## @param world_name: The world being refused, e.g. "myworld.dcl.eth"
+func async_show_private_world_modal(world_name: String) -> void:
+	_force_hide_loading_screen()
+
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.blocker = true
+	current_modal.set_title(PRIVATE_WORLD_TITLE % world_name.trim_suffix(".dcl.eth"))
+	current_modal.set_body(PRIVATE_WORLD_BODY)
+	current_modal.set_primary_button_text(PRIVATE_WORLD_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
 
 
 ## Shows a ban kicked modal (when kicked from a scene in real-time)
@@ -1014,10 +1041,19 @@ func _force_hide_loading_screen() -> void:
 
 
 func _on_menu_close_ban_recheck() -> void:
-	if not ban_pre_check_active:
-		return
-	# Re-show the ban modal and re-open discover
-	async_show_ban_pre_check_modal.call_deferred()
+	# Re-show the ban pre-check modal if it is still active and re-open discover
+	if ban_pre_check_active:
+		async_show_ban_pre_check_modal.call_deferred()
+
+
+## Re-shows the ban pre-check modal if it is still keeping the user out of the explorer.
+## Returns true when it was re-shown, so callers can stop their own navigation. The private
+## world modal is intentionally not covered here — its OK button just dismisses.
+func reshow_ban_modal() -> bool:
+	if ban_pre_check_active:
+		async_show_ban_pre_check_modal()
+		return true
+	return false
 
 
 ## Clear suppress flag after loading finishes.
