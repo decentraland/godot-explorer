@@ -1594,6 +1594,18 @@ func _async_precheck_realm_access(new_realm_string: String) -> bool:
 	return false
 
 
+## Silent access check for a cold-start deeplink realm — like _async_precheck_realm_access but it
+## never shows the modal (the destination the caller routes to surfaces it). True for non-worlds
+## and allowed worlds. Used by the lobby to decide whether a deeplink can boot the explorer.
+func _async_is_realm_access_allowed(realm_string: String) -> bool:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		realm_string, Realm.resolve_realm_url(realm_string)
+	)
+	if world_name.is_empty():
+		return true
+	return await WorldPermissionsHelper.async_is_allowed(world_name)
+
+
 ## Fire-and-forget prefetch of a world's access, meant to run when its jump-in card opens.
 ## By the time the user taps JUMP IN the answer is cached, so the click-time precheck resolves
 ## synchronously: an allowed world goes straight to the loading screen with no visible gap, a
