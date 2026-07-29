@@ -25,6 +25,11 @@ const FIRST_PERSON_SPRING_LENGTH := -0.2
 const CLAMP_SPHERE_RADIUS := 0.4
 # Extra pull-in beyond the sphere contact point.
 const CLAMP_EXTRA_MARGIN := 0.02
+# Radius of the static contact sphere (system 2): the camera's own collision
+# bubble, depenetrated along contact normals each frame. Kept at/below the
+# player capsule radius (0.25) so hugging a wall does not constantly fight
+# the arm's collapsed position, and well above the near plane (0.05).
+const CLAMP_CONTACT_RADIUS := 0.2
 # Perpendicular clearance the camera must keep from wall faces. The near plane
 # is 0.05 — anything less and it pokes into the wall even when the clamp
 # "worked" (the reported "camera rests right at the edge" clip, worst on

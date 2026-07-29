@@ -25,6 +25,10 @@ var lateral_offset := 0.0
 var _sphere := SphereShape3D.new()
 var _params := PhysicsShapeQueryParameters3D.new()
 var _ray_params := PhysicsRayQueryParameters3D.new()
+# System 2: static contact sphere at the camera position (depenetration).
+var _contact_sphere := SphereShape3D.new()
+var _contact_params := PhysicsShapeQueryParameters3D.new()
+var _contact_offset := Vector3.ZERO
 # Current distance from the pivot along the camera segment; shortens instantly,
 # extends smoothly so geometry doesn't pop through on the way out.
 var _smoothed_dist := 0.0
@@ -56,6 +60,12 @@ func _ready() -> void:
 	# Inflates the swept shape so contact is reported with perpendicular
 	# clearance — the near plane must never rest inside the wall.
 	_params.margin = CameraRig.CLAMP_NEAR_CLEARANCE
+	_contact_sphere.radius = CameraRig.CLAMP_CONTACT_RADIUS
+	_contact_params.shape = _contact_sphere
+	_contact_params.collision_mask = CameraRig.CAMERA_COLLISION_MASK
+	_contact_params.collide_with_bodies = true
+	_contact_params.collide_with_areas = false
+	_contact_params.margin = 0.0
 	# Start fully extended so there's no snap on the first frames.
 	_smoothed_dist = CameraRig.THIRD_PERSON_CAMERA.z
 	_debug_probe_setup()
@@ -70,6 +80,8 @@ func _process(delta: float) -> void:
 		_warmup_frames -= 1
 		return
 	var pivot := _mount.global_transform.origin
+	var space := _mount.get_world_3d().direct_space_state
+
 	# Analytic target: spring-resolved length behind the pivot + lateral offset.
 	# (Computed, not read from the camera, because we overwrite the camera
 	# position below and it must not feed back into the next frame.)
@@ -96,7 +108,6 @@ func _process(delta: float) -> void:
 	if perp.length_squared() < 0.01:
 		perp = dir.cross(Vector3.RIGHT)
 	perp = perp.normalized()
-	var space := _mount.get_world_3d().direct_space_state
 	for k in [-CameraRig.CLAMP_SPHERE_RADIUS, 0.0, CameraRig.CLAMP_SPHERE_RADIUS]:
 		var from: Vector3 = pivot + perp * float(k)
 		_ray_params.from = from
@@ -144,7 +155,38 @@ func _process(delta: float) -> void:
 	else:
 		_smoothed_dist = move_toward(_smoothed_dist, allowed, CameraRig.CLAMP_EXTEND_SPEED * delta)
 
-	_camera.global_position = pivot + dir * _smoothed_dist
+	var base := pivot + dir * _smoothed_dist
+
+	# SYSTEM 2 — CONTACT SPHERE: a static sphere at the camera position,
+	# depenetrated from anything the line clamp could not see. Covers the edge
+	# cases no longitudinal cast handles: walls PARALLEL to the segment
+	# (pull-in can't help — clearance along them is constant), corners poking
+	# into the frustum sides, and any residual poke while the sweep sphere is
+	# blind. The push goes along the contact normal (lateral, off the arm's
+	# line); the stored offset decays back to the line once contact clears.
+	var pos := base + _contact_offset
+	var pushed := false
+	for i in range(3):
+		_contact_params.transform = Transform3D(Basis(), pos)
+		var rest := space.get_rest_info(_contact_params)
+		if rest.is_empty():
+			break
+		var n: Vector3 = rest.get("normal", Vector3.UP)
+		var depth: float = CameraRig.CLAMP_CONTACT_RADIUS - (pos - rest.get("point", pos)).dot(n)
+		if depth <= 0.0:
+			break
+		pushed = true
+		pos += n * (depth + CameraRig.CLAMP_EXTRA_MARGIN)
+	if pushed:
+		_contact_offset = pos - base
+	else:
+		# No contact: slide back onto the arm's line.
+		_contact_offset = _contact_offset.move_toward(
+			Vector3.ZERO, CameraRig.CLAMP_EXTEND_SPEED * delta
+		)
+		pos = base + _contact_offset
+
+	_camera.global_position = pos
 
 	if _debug_probe:
 		_debug_probe_pass(space, pivot, target, allowed, dist)

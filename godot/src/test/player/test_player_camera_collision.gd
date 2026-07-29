@@ -50,6 +50,7 @@ func _initialize() -> void:
 	await _test_clamp_corner_two_walls()
 	await _test_clamp_thin_door_orbit()
 	await _test_clamp_whiskers_catch_bulge_beside_line()
+	await _test_contact_sphere_depenetrates_parallel_wall()
 	await _test_clamp_fully_blocked_stays_out_of_wall()
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
@@ -358,6 +359,41 @@ func _test_clamp_whiskers_catch_bulge_beside_line() -> void:
 			(
 				"column bulge: camera too close to the curved surface (pos=%s, dist=%.2f < 0.6)"
 				% [cam.global_position, dist_to_column]
+			)
+		)
+	rig["world"].queue_free()
+
+
+# The live Genesis Plaza case (system 2): a wall PARALLEL to the camera
+# segment on the over-shoulder side. The whiskers and rays never cross it
+# (the camera path stays x < 0.8), the sweep sphere is blind (origin
+# overlapped by W1), and pull-in along the segment can't help — clearance to
+# a parallel wall is constant. The contact sphere must depenetrate the
+# camera LATERALLY, without pulling it in.
+# gdlint:ignore = async-function-name
+func _test_contact_sphere_depenetrates_parallel_wall() -> void:
+	var rig := _build_clamp_rig()
+	# W1 in front: blinds the sweep sphere (start overlap).
+	_add_box(rig["world"], Vector3(0, 0, -0.35), Vector3(4, 4, 0.2))
+	# Thin parallel wall: face at x=0.92, z in [2.5, 6] — placed so every
+	# longitudinal cast slips past it (ray paths cross neither its side nor
+	# its front face), while the offset camera rests ~0.17 from the face.
+	_add_box(rig["world"], Vector3(0.945, 0, 4.25), Vector3(0.05, 4, 3.5))
+	await _settle()
+
+	var cam: Camera3D = rig["cam"]
+	if cam.global_position.x > 0.74:
+		_fail(
+			(
+				"parallel wall: camera rests at the wall (pos=%s, x expected <= 0.74)"
+				% cam.global_position
+			)
+		)
+	if cam.global_position.z < 2.5:
+		_fail(
+			(
+				"parallel wall: camera wrongly pulled in (pos=%s, z expected > 2.5)"
+				% cam.global_position
 			)
 		)
 	rig["world"].queue_free()
