@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://hg42snfhm6ei" path="res://src/mobile/joystick/textures/joyknobpng.png" id="5_hv66r"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_ni4n8"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_sgp5i"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="9_spinr"]
 
 [sub_resource type="Shader" id="Shader_blur"]
 code = "shader_type canvas_item;
@@ -224,6 +225,12 @@ font = ExtResource("5_ni4n8")
 font_size = 26
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
+[sub_resource type="LabelSettings" id="LabelSettings_vfn1r"]
+font = ExtResource("5_ni4n8")
+font_size = 32
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+shadow_color = Color(0, 0, 0, 0.49803922)
+
 [node name="RewardModal" type="ColorRect" unique_id=33032563]
 anchors_preset = 15
 anchor_right = 1.0
@@ -279,7 +286,7 @@ libraries/ = SubResource("AnimationLibrary_hv66r")
 
 [node name="AnimationPlayer2" type="AnimationPlayer" parent="VBoxContainer/PanelContainer/MarginContainer_Reward" unique_id=1640257635]
 libraries/ = SubResource("AnimationLibrary_ni4n8")
-autoplay = &"bounce_reward"
+autoplay = &"RESET"
 
 [node name="CenterContainer" type="CenterContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Reward" unique_id=900715673]
 layout_mode = 2
@@ -333,6 +340,23 @@ pivot_offset = Vector2(157, 120)
 texture = ExtResource("3_3sajc")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="LoadingSpinner" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer/Control/Control" instance=ExtResource("9_spinr")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+show_background = true
 
 [node name="CPUParticles2D" type="CPUParticles2D" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer/Control" unique_id=936758621]
 scale = Vector2(-1.2908275, 0.9143959)
@@ -398,6 +422,19 @@ size_flags_horizontal = 3
 theme = ExtResource("6_sgp5i")
 theme_override_font_sizes/font_size = 24
 text = "CLAIM REWARD"
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 28
+theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
+
+[node name="Label_TapToContinue" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Tap to continue"
+label_settings = SubResource("LabelSettings_vfn1r")
+horizontal_alignment = 1
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/Button_Claim" to="." method="_on_button_claim_pressed"]
