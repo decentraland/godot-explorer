@@ -180,20 +180,23 @@ func _route_teleport() -> void:
 	var realm = Global.deep_link_obj.preview
 	if realm.is_empty():
 		realm = Global.deep_link_obj.realm
+	var location: Vector2i = Global.deep_link_obj.location
+	var has_location := Global.deep_link_obj.is_location_defined()
+
+	# The deeplink target is captured above and consumed now — clear realm/location on the shared
+	# deep_link_obj so a later explorer boot (e.g. teleporting away after a private-world block)
+	# can't re-read this stale realm and re-trigger the modal (#2569 review, iOS). preview is left
+	# untouched: it drives preview/hot-reload mode with its own lifecycle.
+	Global.deep_link_obj.realm = ""
+	Global.deep_link_obj.location = Vector2i.MAX
 
 	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
-	if (
-		not realm.is_empty()
-		and Realm.is_dcl_ens(realm)
-		and not Global.deep_link_obj.is_location_defined()
-	):
+	if not realm.is_empty() and Realm.is_dcl_ens(realm) and not has_location:
 		Global.async_join_world(realm)
-		return
-
-	if Global.deep_link_obj.is_location_defined():
+	elif has_location:
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.async_teleport_to(Global.deep_link_obj.location, realm)
+		Global.async_teleport_to(location, realm)
 	elif not realm.is_empty():
 		Global.async_teleport_to(Vector2i.ZERO, realm)
 

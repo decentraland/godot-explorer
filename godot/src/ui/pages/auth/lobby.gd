@@ -49,6 +49,9 @@ var button_reset_guest_debug: Button = null
 
 var _skip_lobby: bool = false
 var _skip_lobby_to_menu: bool = false
+# Re-entrancy guard: several paths (sign-in close, profile change, late deep_link_received)
+# can all try to redirect on the same cold-start deeplink. Only the first wins.
+var _redirecting_by_deep_link: bool = false
 var _last_panel: Control = null
 var _playing: String
 var _logo_tap_count: int = 0
@@ -361,7 +364,7 @@ func _on_preset_selected(preset_data: Dictionary) -> void:
 # ADR-290: Snapshots no longer uploaded
 func async_close_sign_in():
 	if _should_go_to_explorer_from_deeplink():
-		go_to_explorer()
+		_async_redirect_by_deep_link()
 		return
 
 	if Global.is_xr():
@@ -601,6 +604,35 @@ func go_to_explorer():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
+## Cold-start deeplink redirect. Booting the explorer straight into a private world the user
+## can't enter stranded them in a random Genesis parcel with the "is private" modal on top
+## (#2569 review, Android). On mobile, gate the world first: a denied one is handed to the menu
+## instead, where the deeplink router surfaces the modal over Discover (matching iOS and the
+## in-session behaviour). Everything else — allowed worlds, locations, non-world realms and the
+## whole desktop path — boots the explorer exactly as before.
+func _async_redirect_by_deep_link() -> void:
+	if _redirecting_by_deep_link:
+		return
+	_redirecting_by_deep_link = true
+
+	if Global.is_mobile() and not Global.is_virtual_mobile():
+		var realm := Global.deep_link_obj.preview
+		if realm.is_empty():
+			realm = Global.deep_link_obj.realm
+		if (
+			not realm.is_empty()
+			and not Global.deep_link_obj.is_location_defined()
+			and not await Global._async_is_realm_access_allowed(realm)
+		):
+			# Denied: leave the pending deeplink in place so menu.gd routes it on ready and the
+			# router raises the modal over Discover (its precheck reuses this cached decision).
+			if is_inside_tree():
+				get_tree().change_scene_to_file("res://src/ui/components/organisms/menu/menu.tscn")
+			return
+
+	go_to_explorer()
+
+
 ## Check if any deeplink parameter should redirect to explorer (preview, realm, or location)
 func _should_go_to_explorer_from_deeplink() -> bool:
 	return (
@@ -653,7 +685,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	else:
 		ready_for_redirect_by_deep_link = true
 		if _should_go_to_explorer_from_deeplink():
-			go_to_explorer()
+			_async_redirect_by_deep_link()
 			return
 
 
@@ -1074,7 +1106,7 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 
 func _on_deep_link_received():
 	if ready_for_redirect_by_deep_link:
-		go_to_explorer.call_deferred()
+		_async_redirect_by_deep_link.call_deferred()
 
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:
