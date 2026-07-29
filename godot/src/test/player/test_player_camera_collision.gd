@@ -396,6 +396,16 @@ func _test_contact_sphere_depenetrates_parallel_wall() -> void:
 				% cam.global_position
 			)
 		)
+
+	# Anti-flicker: while the contact persists the depenetrated position must
+	# be a stable fixed point — the previous stateful offset decayed each
+	# frame and swung the camera back INTO the wall every other frame.
+	var pos_a := cam.global_position
+	for i in range(5):
+		await process_frame
+	var pos_b := cam.global_position
+	if pos_a.distance_to(pos_b) > 0.05:
+		_fail("parallel wall: camera oscillates between frames (%s -> %s)" % [pos_a, pos_b])
 	rig["world"].queue_free()
 
 

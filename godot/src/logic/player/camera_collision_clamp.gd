@@ -162,9 +162,17 @@ func _process(delta: float) -> void:
 	# cases no longitudinal cast handles: walls PARALLEL to the segment
 	# (pull-in can't help — clearance along them is constant), corners poking
 	# into the frustum sides, and any residual poke while the sweep sphere is
-	# blind. The push goes along the contact normal (lateral, off the arm's
-	# line); the stored offset decays back to the line once contact clears.
-	var pos := base + _contact_offset
+	# blind.
+	#
+	# The resolution is computed STATELESSLY from `base` every frame: while the
+	# contact persists, the depenetrated position is a deterministic fixed
+	# point — no oscillation. (The previous stateful version started from
+	# `base + offset` and decayed the offset the moment contact cleared, which
+	# pulled the camera straight back INTO contact — the reported
+	# frame-on/frame-off flicker.) The stored offset only smooths the RETURN
+	# to the arm's line once the contact is truly gone, and snaps instantly
+	# whenever a push is needed (never clip).
+	var pos := base
 	var pushed := false
 	for i in range(3):
 		_contact_params.transform = Transform3D(Basis(), pos)
@@ -177,16 +185,15 @@ func _process(delta: float) -> void:
 			break
 		pushed = true
 		pos += n * (depth + CameraRig.CLAMP_EXTRA_MARGIN)
-	if pushed:
-		_contact_offset = pos - base
+	var target_offset := pos - base if pushed else Vector3.ZERO
+	if pushed and target_offset.length() >= _contact_offset.length():
+		_contact_offset = target_offset  # growing push: instant — never clip
 	else:
-		# No contact: slide back onto the arm's line.
 		_contact_offset = _contact_offset.move_toward(
-			Vector3.ZERO, CameraRig.CLAMP_EXTEND_SPEED * delta
+			target_offset, CameraRig.CLAMP_EXTEND_SPEED * delta
 		)
-		pos = base + _contact_offset
 
-	_camera.global_position = pos
+	_camera.global_position = base + _contact_offset
 
 	if _debug_probe:
 		_debug_probe_pass(space, pivot, target, allowed, dist)
