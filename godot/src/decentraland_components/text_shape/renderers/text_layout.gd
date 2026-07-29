@@ -107,21 +107,21 @@ const TEXTSHAPE_LINE_SPACING_DEFAULT: float = 0.0
 # maps to): F_SANS_SERIF -> Inter SemiBold, F_SERIF -> Noto Serif, F_MONOSPACE -> Atkinson
 # Hyperlegible Mono. Dedicated TextShape-only files under assets/themes/fonts/text_shape/, all
 # imported as MSDF and FLATTENED (contours unioned via FontForge removeOverlap) so MSDF
-# generation doesn't choke on overlapping contours. Serif/mono are referenced by UID; sans is a
-# res:// path.
+# generation doesn't choke on overlapping contours. Referenced by UID so they survive file
+# moves/renames; the comment is the source filename for reference.
 #
 # F_SANS_SERIF uses Inter Semi Bold v3.3 (UPM 2816), matched to the exact build the Unity
 # reference bakes its "Inter-SemiBold SDF" atlas from — Inter's legacy "Inter UI"-era release.
 # We previously shipped the Inter v4 "24pt" optical cut (wrong letterforms) and then Inter
 # v3.019 (right family, later version, subtly different glyphs); v3.3 is the version-accurate
 # match (issue #2371).
-const FONT_SANS: String = "res://assets/themes/fonts/text_shape/Inter-SemiBold.ttf"
+const FONT_SANS: String = "uid://dsp1v3gwqgdvu"  # Inter-SemiBold.ttf (v3.3, flattened)
 const FONT_SERIF: String = "uid://d4f8lc838jeet"  # NotoSerif.ttf
 const FONT_MONO: String = "uid://4ldm8tygdnbc"  # AtkinsonHyperlegibleMono.ttf
 
 # Real bold faces per family (flattened, MSDF). Used as Label3D's `bold_font` so [b] markup
 # renders a true bold weight instead of synthetic embolden (which mangles MSDF glyphs).
-const FONT_SANS_BOLD: String = "res://assets/themes/fonts/text_shape/Inter-Bold.ttf"  # Inter Bold v3.3, flattened (matches Unity)
+const FONT_SANS_BOLD: String = "uid://ru8tau3y1nqn"  # Inter-Bold.ttf (v3.3, flattened)
 const FONT_SERIF_BOLD: String = "uid://1vmt0d4x5gr1"  # NotoSerif-Bold.ttf
 const FONT_MONO_BOLD: String = "uid://bfqjyubth6dkc"  # AtkinsonHyperlegibleMono-Bold.ttf
 
