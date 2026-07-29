@@ -20,14 +20,15 @@ extends Node
 ## player opens discover / a menu.
 
 # Modal 1's delay is measured from install; Modals 2 and 3 from the previous modal's appearance.
-# PRODUCTION: 18h after install, then +5 days, then +5 more days.
-#   const MODAL_1_DELAY_HOURS := 18
-#   const MODAL_2_DELAY_HOURS := 5 * 24
-#   const MODAL_3_DELAY_HOURS := 5 * 24
-# TESTING (active): 1h after install, then +2h, then +2h (≈ appears at ~1h / 3h / 5h from install).
-const MODAL_1_DELAY_HOURS := 1
-const MODAL_2_DELAY_HOURS := 2
-const MODAL_3_DELAY_HOURS := 2
+# PRODUCTION (active): 18h after install, then +5 days, then +5 more days.
+const MODAL_1_DELAY_HOURS := 18
+const MODAL_2_DELAY_HOURS := 5 * 24
+const MODAL_3_DELAY_HOURS := 5 * 24
+# TESTING: 1h after install, then +2h, then +2h (≈ appears at ~1h / 3h / 5h from install). To
+# test the nudge in real time, swap the three consts above for these:
+#   const MODAL_1_DELAY_HOURS := 1
+#   const MODAL_2_DELAY_HOURS := 2
+#   const MODAL_3_DELAY_HOURS := 2
 const HOUR_SECONDS := 3600
 const MAX_SHOWS := 3
 

@@ -137,7 +137,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
 [node name="Label2" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1579565577]
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
-text = "Add email to unlock Decentraland accross devices and claim an"
+text = "Add email to unlock Decentraland across devices and claim an"
 label_settings = SubResource("LabelSettings_v81pj")
 horizontal_alignment = 1
 autowrap_mode = 2

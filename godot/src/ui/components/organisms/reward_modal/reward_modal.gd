@@ -41,7 +41,8 @@ func async_setup(campaign: Dictionary) -> void:
 
 	var item = Global.content_provider.get_wearable(urn)
 	if item == null:
-		printerr("RewardModal: failed to fetch wearable definition for URN: ", urn)
+		# Expected-and-handled: fall back to the placeholder art. Not a Sentry-worthy fault.
+		push_warning("RewardModal: failed to fetch wearable definition for URN: ", urn)
 		show()
 		return
 
@@ -50,7 +51,8 @@ func async_setup(campaign: Dictionary) -> void:
 	)
 	var res = await PromiseUtils.async_awaiter(texture_promise)
 	if res is PromiseError:
-		printerr("RewardModal: failed to fetch texture for URN: ", urn, " — ", res.get_error())
+		# Expected-and-handled: keep the placeholder art. Not a Sentry-worthy fault.
+		push_warning("RewardModal: failed to fetch texture for URN: ", urn, " — ", res.get_error())
 	else:
 		texture_rect_reward.texture = res.texture
 
@@ -136,6 +138,10 @@ func _async_claim() -> void:
 	print("[RewardModal] claim POST ", url, " catalyst=", catalyst, " beneficiary=", beneficiary)
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_POST, body)
+	# The modal can be force-closed (close_reward_modal) while the request is in flight; bail out
+	# before touching _claiming or any node so we never operate on a freed instance.
+	if not is_instance_valid(self):
+		return
 	_claiming = false
 
 	_process_claim_response(response)
@@ -249,7 +255,8 @@ func _async_load_reward_image(url: String) -> void:
 	var promise = Global.content_provider.fetch_texture_by_url(url.md5_text(), url)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
-		printerr("RewardModal: failed to fetch reward image: ", res.get_error())
+		# Expected-and-handled: keep the current texture. Not a Sentry-worthy fault.
+		push_warning("RewardModal: failed to fetch reward image: ", res.get_error())
 		return
 	if is_instance_valid(texture_rect_reward):
 		texture_rect_reward.texture = res.texture

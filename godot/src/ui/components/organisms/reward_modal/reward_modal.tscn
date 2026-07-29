@@ -224,12 +224,6 @@ font = ExtResource("5_ni4n8")
 font_size = 26
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[sub_resource type="LabelSettings" id="LabelSettings_vfn1r"]
-font = ExtResource("5_ni4n8")
-font_size = 32
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-shadow_color = Color(0, 0, 0, 0.49803922)
-
 [node name="RewardModal" type="ColorRect" unique_id=33032563]
 anchors_preset = 15
 anchor_right = 1.0
@@ -337,6 +331,8 @@ grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(157, 120)
 texture = ExtResource("3_3sajc")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="CPUParticles2D" type="CPUParticles2D" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer/Control" unique_id=936758621]
 scale = Vector2(-1.2908275, 0.9143959)
@@ -402,17 +398,6 @@ size_flags_horizontal = 3
 theme = ExtResource("6_sgp5i")
 theme_override_font_sizes/font_size = 24
 text = "CLAIM REWARD"
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1356476217]
-layout_mode = 2
-theme_override_constants/separation = 28
-theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
-
-[node name="Label" type="Label" parent="VBoxContainer" unique_id=1807737563]
-layout_mode = 2
-text = "Tap to continue"
-label_settings = SubResource("LabelSettings_vfn1r")
-horizontal_alignment = 1
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/Button_Claim" to="." method="_on_button_claim_pressed"]
