@@ -7,12 +7,21 @@
 class_name TextLayout
 extends RefCounted
 
-## Empirical correction factor between Unity TMP's expected sizing and the
-## effective sizing in the live DCL Unity client (visually tuned to 17/18).
-const DCL_TMP_SIZE_FACTOR: float = 17.0 / 18.0
-
-## Unity TMP `fontSize` (world units per em) -> Godot glyph pixels.
-const TMP_TO_LABEL3D_FONT_SIZE: float = 22.0 * DCL_TMP_SIZE_FACTOR
+## Unity TMP `fontSize` -> Godot glyph pixels, per font face (keyed by .ttf filename).
+## ONE combined number per face — it folds the old base conversion (22) x pitch-match factor
+## (0.887) = 19.514, AND a per-font glyph-size correction, into a single multiplier. Calibrated
+## on the measurement grid (issue #2371): at the shared 19.514, Godot rendered glyphs OVERSIZED
+## vs Unity (sans +7.0%, serif +3.7%, mono +2.0%), so each face is divided by its ratio:
+## 19.514 / 1.070, / 1.0373, / 1.0205.
+##
+## This matches GLYPH SIZE, which also shrinks the line pitch — restored per-face by
+## TEXTSHAPE_LINE_SPACING_EM below.
+const TMP_TO_LABEL3D_FONT_SIZE := {
+	"Inter-SemiBold.ttf": 18.242,
+	"NotoSerif.ttf": 18.812,
+	"AtkinsonHyperlegibleMono.ttf": 19.122,
+}
+const TMP_TO_LABEL3D_FONT_SIZE_DEFAULT: float = 19.514
 
 ## Unity TMP autosize bounds in TMP `fontSize` units.
 const UNITY_TMP_FONT_SIZE_MIN: float = 18.0
@@ -22,8 +31,17 @@ const UNITY_TMP_FONT_SIZE_MAX: float = 72.0
 ## the Label3D tier vs the Unity reference (0.2 base x the 10% tuning that was dialed in).
 const TMP_TO_LABEL3D_OUTLINE_WIDTH: float = 0.02
 
-## Extra per-glyph spacing as per-mille of the em (scales with font size). Calibrated value.
-const GLYPH_SPACING_PER_MILLE: float = 75.0
+## Extra per-glyph spacing as per-mille of the em (scales with font size), per font face.
+## Godot was rendering text WIDER than Unity (Sans ~2.3%, Serif ~6.2%, Mono ~6.5% on the
+## "Hamburgefonstiv" width test, issue #2371), i.e. too much tracking — so the old global 75
+## is reduced per face by the measured excess. Mono needed a second pass (still ~0.7% wide at
+## 33) down to 28. Final: Sans 61, Serif 38, Mono 28.
+const GLYPH_SPACING_PER_MILLE := {
+	"Inter-SemiBold.ttf": 61.0,
+	"NotoSerif.ttf": 38.0,
+	"AtkinsonHyperlegibleMono.ttf": 28.0,
+}
+const GLYPH_SPACING_PER_MILLE_DEFAULT: float = 75.0
 
 ## Unity TMP rect width (meters) -> Godot Label3D `width` (wrap width).
 const TMP_TO_LABEL3D_WIDTH: float = 200.0
@@ -44,26 +62,109 @@ const PIXEL_SIZE: float = 0.005
 const MSDF_SIZE: float = 48.0
 const MSDF_PIXEL_RANGE: float = 32.0
 
-# TextShape faces, matching the Unity reference's Font List (the SDF font asset each
-# Font enum maps to): F_SANS_SERIF -> Inter SemiBold, F_SERIF -> Noto Serif,
-# F_MONOSPACE -> Atkinson Hyperlegible Mono. These are TextShape-only files imported as
-# MSDF. No real Bold face: the reference ships no Bold weight and faux-bolds the base
-# (and the shared Inter-Bold.ttf must stay raster for the rest of the UI) — see styled_font.
-# Dedicated TextShape fonts (assets/themes/fonts/text_shape/), referenced by UID so they survive
-# file moves/renames. Comment is the source filename for reference. All MSDF, flattened.
-const FONT_SANS: String = "uid://bxaoncoti34uk"  # Inter_24pt-SemiBold.ttf
+## Per-face vertical anchor correction (fraction of the em) between Godot's Label3D and
+## Unity's TMP, applied to the first line so the two clients position TextShape blocks at the
+## same height (issue #2371).
+##
+## Why it's needed: with the font matched (Inter v3.3) and the line pitch matched, a
+## measurement grid showed Unity's TOP-anchored text still hangs a little LOWER than Godot's —
+## a difference in how each engine's TOP alignment places the first
+## line (TMP anchors via the rect/pivot, Label3D hangs from the ascent line). It's a constant
+## (non-accumulating) offset, so not a drift bug, but it forces a different startY per client.
+## We shift Godot down by it to match Unity. Values below are keyed by the face's .ttf filename
+## and were calibrated on the grid across sizes 12 & 24 (Unity-minus-Godot startY / world-per-em,
+## averaged over the two sizes). Re-derived after the per-font glyph-size shrink changed the
+## font size: sans ~0.088, serif ~0.064, mono ~0.029 em.
+##
+## RELATED, SEPARATE effect (documented here so this isn't rediscovered): Godot quantizes the
+## font's ascent/descent to whole pixels at MSDF_SIZE when it bakes the MSDF atlas —
+## get_ascent(size) == ceil(true_em * MSDF_SIZE) / MSDF_SIZE * size — inflating the line box
+## ~2-3% vs the font's true hhea metrics (Inter: ascent 0.962 -> 47/48 = 0.979 em, descent
+## 0.234 -> 12/48 = 0.250 em at MSDF_SIZE 48). Unity/TMP uses the TRUE metrics. That inflation
+## is real, but it is SMALL and pushes Godot's anchor the OPPOSITE way from the gap above (it
+## makes Godot hang slightly lower, not higher), so it is not the cause and is not corrected
+## here. Raising MSDF_SIZE would shrink it but costs ~(new/48)^2 atlas memory (rejected).
+const TEXTSHAPE_ANCHOR_OFFSET_EM := {
+	"Inter-SemiBold.ttf": 0.088,
+	"NotoSerif.ttf": 0.064,
+	"AtkinsonHyperlegibleMono.ttf": 0.029,
+}
+const TEXTSHAPE_ANCHOR_OFFSET_DEFAULT: float = 0.088
+
+## Per-face line-spacing (fraction of the em) ADDED to Godot's line advance so the line PITCH
+## matches Unity after the per-font glyph-size shrink (which shrank the pitch too). Verified on
+## the live client that Label3D.line_spacing works (adds space BELOW each line; the first line's
+## top is unaffected, so this is independent of the anchor offset above). Calibrated on the grid
+## (issue #2371) across sizes 12 & 24: sans ~0.086, serif ~0.056, mono ~0.031 em.
+const TEXTSHAPE_LINE_SPACING_EM := {
+	"Inter-SemiBold.ttf": 0.086,
+	"NotoSerif.ttf": 0.056,
+	"AtkinsonHyperlegibleMono.ttf": 0.031,
+}
+const TEXTSHAPE_LINE_SPACING_DEFAULT: float = 0.0
+
+# TextShape faces, matching the Unity reference's Font List (the SDF font asset each Font enum
+# maps to): F_SANS_SERIF -> Inter SemiBold, F_SERIF -> Noto Serif, F_MONOSPACE -> Atkinson
+# Hyperlegible Mono. Dedicated TextShape-only files under assets/themes/fonts/text_shape/, all
+# imported as MSDF and FLATTENED (contours unioned via FontForge removeOverlap) so MSDF
+# generation doesn't choke on overlapping contours. Referenced by UID so they survive file
+# moves/renames; the comment is the source filename for reference.
+#
+# F_SANS_SERIF uses Inter Semi Bold v3.3 (UPM 2816), matched to the exact build the Unity
+# reference bakes its "Inter-SemiBold SDF" atlas from — Inter's legacy "Inter UI"-era release.
+# We previously shipped the Inter v4 "24pt" optical cut (wrong letterforms) and then Inter
+# v3.019 (right family, later version, subtly different glyphs); v3.3 is the version-accurate
+# match (issue #2371).
+const FONT_SANS: String = "uid://dsp1v3gwqgdvu"  # Inter-SemiBold.ttf (v3.3, flattened)
 const FONT_SERIF: String = "uid://d4f8lc838jeet"  # NotoSerif.ttf
 const FONT_MONO: String = "uid://4ldm8tygdnbc"  # AtkinsonHyperlegibleMono.ttf
 
 # Real bold faces per family (flattened, MSDF). Used as Label3D's `bold_font` so [b] markup
 # renders a true bold weight instead of synthetic embolden (which mangles MSDF glyphs).
-const FONT_SANS_BOLD: String = "uid://4ucbg28hw2rx"  # Inter_24pt-Bold.ttf
+const FONT_SANS_BOLD: String = "uid://ru8tau3y1nqn"  # Inter-Bold.ttf (v3.3, flattened)
 const FONT_SERIF_BOLD: String = "uid://1vmt0d4x5gr1"  # NotoSerif-Bold.ttf
 const FONT_MONO_BOLD: String = "uid://bfqjyubth6dkc"  # AtkinsonHyperlegibleMono-Bold.ttf
 
 
-static func unity_to_godot_font_size(tmp_font_size: float) -> float:
-	return tmp_font_size * TMP_TO_LABEL3D_FONT_SIZE
+## Looks up a per-face value in `table` by the font's .ttf filename, returning `fallback` for
+## an unknown or null face. Shared by all the per-font correction tables above.
+static func _per_font(table: Dictionary, font: Font, fallback: float) -> float:
+	if font != null:
+		var key := String(font.resource_path).get_file()
+		if table.has(key):
+			return table[key]
+	return fallback
+
+
+## font == null uses the shared default multiplier (e.g. inline <size> markup, which has no
+## face in scope); the per-font glyph correction only applies when a face is passed.
+static func unity_to_godot_font_size(tmp_font_size: float, font: Font = null) -> float:
+	return (
+		tmp_font_size * _per_font(TMP_TO_LABEL3D_FONT_SIZE, font, TMP_TO_LABEL3D_FONT_SIZE_DEFAULT)
+	)
+
+
+## Local-space (pre-entity-scale) Y offset in meters to add to the Label3D position so its
+## anchored text lands where Unity TMP places it. Only the TOP anchor is grid-calibrated (the
+## ranking-board case); BOTTOM gets the mirror correction and MIDDLE is left unchanged
+## (centering matches closely). Positive Y is up.
+static func anchor_offset(font: Font, godot_font_size: int, v_align: int) -> float:
+	var em := _per_font(TEXTSHAPE_ANCHOR_OFFSET_EM, font, TEXTSHAPE_ANCHOR_OFFSET_DEFAULT)
+	var dy: float = em * float(godot_font_size) * PIXEL_SIZE
+	match v_align:
+		VERTICAL_ALIGNMENT_TOP:
+			return -dy  # Unity hangs lower -> move Godot down to match.
+		VERTICAL_ALIGNMENT_BOTTOM:
+			return dy
+		_:
+			return 0.0
+
+
+## Extra line spacing (glyph pixels) added to Label3D so the line pitch matches Unity after the
+## per-font glyph-size shrink. Keyed by the face's .ttf filename.
+static func line_spacing_px(font: Font, godot_font_size: int) -> float:
+	var em := _per_font(TEXTSHAPE_LINE_SPACING_EM, font, TEXTSHAPE_LINE_SPACING_DEFAULT)
+	return em * float(godot_font_size)
 
 
 static func unity_to_godot_outline_size(godot_font_size: float, tmp_outline_width: float) -> float:
@@ -177,7 +278,7 @@ static func resolve(params: Dictionary, font: Font) -> Dictionary:
 			else 0.0
 		)
 		if fit_w <= 0.0 or fit_h <= 0.0:
-			godot_font_size = unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MIN)
+			godot_font_size = unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MIN, font)
 		else:
 			godot_font_size = float(
 				_compute_auto_font_size(
@@ -185,15 +286,15 @@ static func resolve(params: Dictionary, font: Font) -> Dictionary:
 					plain_text,
 					fit_w,
 					fit_h,
-					int(unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MIN)),
-					int(unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MAX)),
+					int(unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MIN, font)),
+					int(unity_to_godot_font_size(UNITY_TMP_FONT_SIZE_MAX, font)),
 				)
 			)
 	else:
 		var tmp_size: float = (
 			params.get("font_size", 3.0) if params.get("has_font_size", false) else 3.0
 		)
-		godot_font_size = maxf(unity_to_godot_font_size(tmp_size), 1.0)
+		godot_font_size = maxf(unity_to_godot_font_size(tmp_size, font), 1.0)
 
 	var outline_w: float = (
 		params.get("outline_width", 0.0) if params.get("has_outline_width", false) else 0.0
@@ -264,7 +365,10 @@ static func resolve(params: Dictionary, font: Font) -> Dictionary:
 	)
 	var shadow_outline_size := unity_to_godot_shadow_blur(godot_font_size, shadow_blur)
 
-	var glyph_spacing_px := int(round(GLYPH_SPACING_PER_MILLE / 1000.0 * godot_font_size))
+	var spacing_permille := _per_font(
+		GLYPH_SPACING_PER_MILLE, font, GLYPH_SPACING_PER_MILLE_DEFAULT
+	)
+	var glyph_spacing_px := int(round(spacing_permille / 1000.0 * godot_font_size))
 
 	return {
 		"godot_font_size": int(godot_font_size),

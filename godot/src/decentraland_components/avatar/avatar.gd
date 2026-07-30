@@ -270,6 +270,11 @@ func _ready():
 	)
 	nickname_quad.billboard = billboard_mode
 
+	# Personal-space dissolve for any avatar near the world camera (issue #1814).
+	var proximity_fade := AvatarProximityFade.new()
+	proximity_fade.name = "AvatarProximityFade"
+	add_child(proximity_fade)
+
 	wearable_loader = WearableLoader.new()
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
