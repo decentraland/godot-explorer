@@ -89,6 +89,10 @@ func set_data(data):
 func open_panel() -> void:
 	_close()
 	self.show()
+	# Warm the private-world access cache so a later JUMP IN decides from cache (no card-close
+	# gap for allowed worlds, instant modal for private ones). No-op for non-world places.
+	if not item_data.is_empty() and PlacesHelper.is_world(item_data):
+		Global.warm_realm_access(PlacesHelper.get_position_and_realm(item_data)[1])
 	if Global.is_orientation_portrait():
 		instantiate_portrait_panel()
 		orientation = "portrait"

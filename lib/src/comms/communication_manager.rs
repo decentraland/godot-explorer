@@ -43,12 +43,59 @@ pub enum SceneRoomConnectionRequest {
     Banned {
         scene_id: String,
     },
+    /// A reconnect attempt finished without producing a connection (the
+    /// gatekeeper request failed). Carries no room change; it only clears the
+    /// in-flight marker so the reconnect loop can try again.
+    Failed {
+        scene_id: String,
+    },
 }
 
 #[derive(Debug)]
 enum SceneAdapterError {
     Banned,
     Other(String),
+}
+
+/// Safety net for the scene-room reconnect in-flight guard: if an attempt's
+/// terminal signal is ever lost, treat it as stale after this long and allow a
+/// fresh attempt rather than wedging reconnection forever.
+#[cfg(feature = "use_livekit")]
+const SCENE_ROOM_CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// Base delay before the first scene-room reconnect attempt after a disconnect.
+#[cfg(feature = "use_livekit")]
+const SCENE_ROOM_RECONNECT_BASE_SECS: u64 = 5;
+/// Cap for the exponential backoff between failing scene-room reconnect attempts.
+/// Backoff (base → 2× per failure, capped here) stops a persistently-failing
+/// reconnect from hammering the gatekeeper every 5s while connectivity is poor —
+/// each successful attempt is a server-side re-join (issue #2382).
+#[cfg(feature = "use_livekit")]
+const SCENE_ROOM_RECONNECT_MAX_SECS: u64 = 60;
+
+/// Decides whether the scene-room reconnect loop should spawn a new attempt now.
+/// Pure (no Godot/Tokio deps) so the in-flight guard is unit-testable. The guard:
+/// don't start a reconnect while one is already in flight, unless it has been
+/// outstanding longer than `connect_timeout` (a lost-signal safety net).
+#[cfg(feature = "use_livekit")]
+#[allow(clippy::too_many_arguments)]
+fn should_start_scene_room_reconnect(
+    comms_on_hold: bool,
+    scene_room_is_some: bool,
+    current_scene_id_is_some: bool,
+    reconnect_at: Option<Instant>,
+    connect_in_flight: Option<Instant>,
+    now: Instant,
+    connect_timeout: Duration,
+) -> bool {
+    if comms_on_hold || scene_room_is_some || !current_scene_id_is_some {
+        return false;
+    }
+    if reconnect_at.is_none_or(|t| t > now) {
+        return false;
+    }
+    // Block a new attempt while one is still in flight, unless it has gone stale.
+    !matches!(connect_in_flight, Some(started) if now.duration_since(started) < connect_timeout)
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -250,6 +297,21 @@ pub struct CommunicationManager {
     #[cfg(feature = "use_livekit")]
     scene_room_reconnect_at: Option<Instant>,
 
+    // Guards against overlapping scene-room reconnect attempts. `reconnect_scene_room`
+    // spawns an async gatekeeper request and returns immediately, leaving `scene_room`
+    // None for the whole round-trip; without this marker the 5s reconnect loop would
+    // fire another attempt every tick while one is still in flight, each producing a
+    // duplicate authoritative-server join (issue #2382). Some(t) = an attempt spawned
+    // at t is outstanding; cleared on its terminal outcome or after a safety timeout.
+    #[cfg(feature = "use_livekit")]
+    scene_room_connect_in_flight: Option<Instant>,
+
+    // Current backoff (seconds) between scene-room reconnect attempts. Reset to
+    // SCENE_ROOM_RECONNECT_BASE_SECS on a fresh disconnect / successful connect,
+    // doubled (capped) after each failing attempt.
+    #[cfg(feature = "use_livekit")]
+    scene_room_reconnect_backoff_secs: u64,
+
     // Channel for scene room connection requests from async tasks
     #[cfg(feature = "use_livekit")]
     scene_room_connection_receiver: mpsc::Receiver<SceneRoomConnectionRequest>,
@@ -315,6 +377,10 @@ impl INode for CommunicationManager {
             archipelago_runtime_enabled: None,
             #[cfg(feature = "use_livekit")]
             scene_room_reconnect_at: None,
+            #[cfg(feature = "use_livekit")]
+            scene_room_connect_in_flight: None,
+            #[cfg(feature = "use_livekit")]
+            scene_room_reconnect_backoff_secs: SCENE_ROOM_RECONNECT_BASE_SECS,
             #[cfg(feature = "use_livekit")]
             scene_room_connection_receiver,
             #[cfg(feature = "use_livekit")]
@@ -456,6 +522,7 @@ impl INode for CommunicationManager {
                     }
                     self.scene_room = None;
                     self.scene_room_reconnect_at = None;
+                    self.scene_room_connect_in_flight = None;
                 }
                 self.current_scene_id = None;
                 self.base_mut()
@@ -586,24 +653,43 @@ impl INode for CommunicationManager {
                                         // Only schedule reconnection if we weren't kicked
                                         // (kick handling above already called clean() which clears current_scene_id)
                 if self.current_scene_id.is_some() {
-                    tracing::warn!("🔌 Scene room disconnected, scheduling reconnection in 5s");
-                    self.scene_room_reconnect_at = Some(Instant::now() + Duration::from_secs(5));
+                    // Fresh outage: reset the backoff and schedule the first attempt.
+                    self.scene_room_reconnect_backoff_secs = SCENE_ROOM_RECONNECT_BASE_SECS;
+                    tracing::warn!(
+                        "🔌 Scene room disconnected, scheduling reconnection in {}s",
+                        SCENE_ROOM_RECONNECT_BASE_SECS
+                    );
+                    self.scene_room_reconnect_at =
+                        Some(Instant::now() + Duration::from_secs(SCENE_ROOM_RECONNECT_BASE_SECS));
                 }
             }
         }
 
-        // Attempt scene room reconnection if timer has expired
+        // Attempt scene room reconnection if the timer has expired and no attempt
+        // is already in flight. The in-flight guard prevents overlapping gatekeeper
+        // requests from each producing a duplicate authoritative join, and the
+        // backoff prevents hammering while connectivity is poor (issue #2382).
         #[cfg(feature = "use_livekit")]
-        if !self.comms_on_hold
-            && self.scene_room.is_none()
-            && self.current_scene_id.is_some()
-            && self
-                .scene_room_reconnect_at
-                .is_some_and(|t| t <= Instant::now())
-        {
+        if should_start_scene_room_reconnect(
+            self.comms_on_hold,
+            self.scene_room.is_some(),
+            self.current_scene_id.is_some(),
+            self.scene_room_reconnect_at,
+            self.scene_room_connect_in_flight,
+            Instant::now(),
+            SCENE_ROOM_CONNECT_TIMEOUT,
+        ) {
+            tracing::debug!(
+                "🔄 Scene room reconnect attempt (next retry in {}s)",
+                self.scene_room_reconnect_backoff_secs
+            );
+            self.scene_room_connect_in_flight = Some(Instant::now());
             self.reconnect_scene_room();
-            // Schedule next retry in case this attempt fails
-            self.scene_room_reconnect_at = Some(Instant::now() + Duration::from_secs(5));
+            // Schedule next retry (in case this attempt fails) with exponential backoff.
+            self.scene_room_reconnect_at =
+                Some(Instant::now() + Duration::from_secs(self.scene_room_reconnect_backoff_secs));
+            self.scene_room_reconnect_backoff_secs =
+                (self.scene_room_reconnect_backoff_secs * 2).min(SCENE_ROOM_RECONNECT_MAX_SECS);
         }
 
         // Poll the Pulse room (state machine + inbound bridging)
@@ -888,13 +974,23 @@ impl CommunicationManager {
             .await
             {
                 Ok(adapter_url) => {
-                    if adapter_url.starts_with("livekit:") {
-                        let livekit_url =
-                            adapter_url.strip_prefix("livekit:").unwrap_or(&adapter_url);
+                    if let Some(livekit_url) = adapter_url.strip_prefix("livekit:") {
                         let _ = connection_sender
                             .send(SceneRoomConnectionRequest::Connect {
                                 scene_id: scene_entity_id,
                                 livekit_url: livekit_url.to_string(),
+                            })
+                            .await;
+                    } else {
+                        // Non-livekit adapter: nothing to connect. Signal Failed so the
+                        // in-flight guard clears and the loop can retry.
+                        tracing::warn!(
+                            "🔄 Scene room adapter was not a livekit URL: {}",
+                            adapter_url
+                        );
+                        let _ = connection_sender
+                            .send(SceneRoomConnectionRequest::Failed {
+                                scene_id: scene_entity_id,
                             })
                             .await;
                     }
@@ -909,6 +1005,11 @@ impl CommunicationManager {
                 }
                 Err(SceneAdapterError::Other(e)) => {
                     tracing::warn!("🔄 Scene room reconnection failed (will retry): {}", e);
+                    let _ = connection_sender
+                        .send(SceneRoomConnectionRequest::Failed {
+                            scene_id: scene_entity_id,
+                        })
+                        .await;
                 }
             }
         });
@@ -2110,6 +2211,7 @@ impl CommunicationManager {
         {
             self.scene_room = None;
             self.scene_room_reconnect_at = None;
+            self.scene_room_connect_in_flight = None;
         }
         self.current_scene_id = None;
         self.current_connection = CommsConnection::None;
@@ -2176,9 +2278,11 @@ impl CommunicationManager {
         }
 
         // Reconnect the scene room — _on_change_scene_id saved current_scene_id
-        // during the hold but deferred the actual connection.
+        // during the hold but deferred the actual connection. Mark the attempt
+        // in-flight so the poll loop doesn't spawn an overlapping reconnect.
         #[cfg(feature = "use_livekit")]
         if self.current_scene_id.is_some() {
+            self.scene_room_connect_in_flight = Some(Instant::now());
             self.reconnect_scene_room();
         }
     }
@@ -2259,9 +2363,17 @@ impl CommunicationManager {
                 }
                 self.scene_room = None;
                 self.scene_room_reconnect_at = None;
+                self.scene_room_connect_in_flight = None;
                 self.current_scene_id = None;
                 self.base_mut()
                     .emit_signal("disconnected", &[2i32.to_variant()]);
+            }
+            SceneRoomConnectionRequest::Failed { scene_id } => {
+                // A reconnect attempt finished without a connection. Clear the in-flight
+                // marker so the reconnect loop can retry on the next expiry; leave the
+                // room/timer state untouched (backoff already scheduled the next attempt).
+                tracing::debug!("🔄 Scene room reconnect attempt failed for '{}'", scene_id);
+                self.scene_room_connect_in_flight = None;
             }
             SceneRoomConnectionRequest::Connect {
                 scene_id,
@@ -2303,6 +2415,9 @@ impl CommunicationManager {
 
                 self.scene_room = Some(scene_room);
                 self.scene_room_reconnect_at = None;
+                self.scene_room_connect_in_flight = None;
+                // Successful connect: reset the backoff for the next outage.
+                self.scene_room_reconnect_backoff_secs = SCENE_ROOM_RECONNECT_BASE_SECS;
 
                 // Announce initial profile to the scene room
                 self.announce_initial_profile();
@@ -2346,6 +2461,7 @@ impl CommunicationManager {
         }
         self.scene_room = None;
         self.scene_room_reconnect_at = None;
+        self.scene_room_connect_in_flight = None;
         self.current_scene_id = Some(scene_entity_id.clone());
 
         // If loading is in progress, defer scene room creation until release
@@ -2997,6 +3113,111 @@ fn parse_comms_adapter_value(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ==========================================
+    // Tests for should_start_scene_room_reconnect (issue #2382 in-flight guard)
+    // ==========================================
+
+    #[cfg(feature = "use_livekit")]
+    mod scene_room_reconnect_guard {
+        use super::*;
+
+        const TIMEOUT: Duration = SCENE_ROOM_CONNECT_TIMEOUT;
+
+        // Base state that WOULD start a reconnect: not on hold, no room, a scene is
+        // set, timer expired, nothing in flight.
+        fn call(
+            connect_in_flight: Option<Instant>,
+            reconnect_at: Option<Instant>,
+            now: Instant,
+        ) -> bool {
+            should_start_scene_room_reconnect(
+                false, // comms_on_hold
+                false, // scene_room_is_some
+                true,  // current_scene_id_is_some
+                reconnect_at,
+                connect_in_flight,
+                now,
+                TIMEOUT,
+            )
+        }
+
+        #[test]
+        fn eligible_when_nothing_in_flight() {
+            let now = Instant::now();
+            let expired = now - Duration::from_secs(1);
+            assert!(call(None, Some(expired), now));
+        }
+
+        #[test]
+        fn blocked_while_recent_attempt_in_flight() {
+            // The core regression: an attempt started 3s ago must block a new one even
+            // though the 5s timer has expired.
+            let now = Instant::now();
+            let expired = now - Duration::from_secs(1);
+            let in_flight = now - Duration::from_secs(3);
+            assert!(!call(Some(in_flight), Some(expired), now));
+        }
+
+        #[test]
+        fn retries_when_in_flight_attempt_is_stale() {
+            // Self-heal: if the terminal signal was lost, an attempt older than the
+            // timeout must not wedge reconnection forever.
+            let now = Instant::now();
+            let expired = now - Duration::from_secs(1);
+            let stale = now - TIMEOUT - Duration::from_secs(1);
+            assert!(call(Some(stale), Some(expired), now));
+        }
+
+        #[test]
+        fn blocked_when_timer_not_expired() {
+            let now = Instant::now();
+            let future = now + Duration::from_secs(5);
+            assert!(!call(None, Some(future), now));
+        }
+
+        #[test]
+        fn blocked_when_no_reconnect_timer_set() {
+            let now = Instant::now();
+            assert!(!call(None, None, now));
+        }
+
+        #[test]
+        fn blocked_when_on_hold_or_room_present_or_no_scene() {
+            let now = Instant::now();
+            let expired = now - Duration::from_secs(1);
+            // on hold
+            assert!(!should_start_scene_room_reconnect(
+                true,
+                false,
+                true,
+                Some(expired),
+                None,
+                now,
+                TIMEOUT
+            ));
+            // room already present
+            assert!(!should_start_scene_room_reconnect(
+                false,
+                true,
+                true,
+                Some(expired),
+                None,
+                now,
+                TIMEOUT
+            ));
+            // no current scene
+            assert!(!should_start_scene_room_reconnect(
+                false,
+                false,
+                false,
+                Some(expired),
+                None,
+                now,
+                TIMEOUT
+            ));
+        }
+    }
 
     // ==========================================
     // Tests for parse_comms_adapter_value
