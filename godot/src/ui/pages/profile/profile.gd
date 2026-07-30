@@ -692,6 +692,9 @@ func _async_accept_friend_request(friend_address: String) -> void:
 	# Accept Friend metric (no friendship_id available in profile context)
 	Global.metrics.track_accept_friend(friend_address, "")
 
+	# Emit signal locally since the service doesn't stream back our own actions
+	Global.social_service.friendship_request_accepted.emit(friend_address)
+
 	_async_update_buttons_and_lists()
 
 

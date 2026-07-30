@@ -383,8 +383,7 @@ func _on_friendship_request_rejected(address: String) -> void:
 func _on_friendship_deleted(address: String) -> void:
 	print("FriendsPanel: _on_friendship_deleted called for address: ", address)
 	# Remove from online tracking
-	if _online_friends.has(address):
-		_online_friends.erase(address)
+	_online_friends.erase(address.to_lower())
 
 	# Remove from online/offline lists
 	var removed_online = online_list.remove_item_by_address(address)
@@ -425,14 +424,17 @@ func _async_fetch_friend_profile(address: String) -> SocialItemData:
 
 
 func _on_friend_connectivity_updated(address: String, status: int) -> void:
-	# Update our tracking of online friends
-	var was_online = _online_friends.has(address)
+	# Update our tracking of online friends.
+	# Keys are lowercased: addresses reach us in mixed casings (profile userId from the
+	# social service vs checksummed ethAddress from profiles/avatars).
+	var address_key = address.to_lower()
+	var was_online = _online_friends.has(address_key)
 	var is_now_online = status == CONNECTIVITY_ONLINE
 
 	if is_now_online:
-		_online_friends[address] = true
+		_online_friends[address_key] = true
 	else:
-		_online_friends.erase(address)
+		_online_friends.erase(address_key)
 
 	# Move the friend between online/offline lists without full reload
 	if was_online and not is_now_online:
@@ -468,18 +470,19 @@ func _send_friend_online_chat_message(friend_name: String) -> void:
 
 
 func is_friend_online(address: String) -> bool:
-	return _online_friends.has(address)
+	return _online_friends.has(address.to_lower())
 
 
 func _async_check_friend_connectivity(address: String) -> void:
 	# Check if a friend is currently online by checking if they're in the nearby avatars
 	# This is a fallback for when connectivity updates haven't arrived yet
+	var address_key = address.to_lower()
 	var avatars = Global.avatars.get_avatars()
 	for avatar in avatars:
 		if avatar != null and avatar is Avatar:
-			if avatar.avatar_id == address:
+			if avatar.avatar_id.to_lower() == address_key:
 				# Friend is nearby, mark as online
-				_online_friends[address] = true
+				_online_friends[address_key] = true
 				return
 
 	# If friend is not nearby, they might still be online but in a different location
