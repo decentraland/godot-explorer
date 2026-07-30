@@ -841,7 +841,7 @@ dependencies = [
 [[package]]
 name = "dcl-rpc"
 version = "2.3.7"
-source = "git+https://github.com/decentraland/rpc-rust?rev=aa2302d6918e2d1c7f2e298aa972d8a6bba6c389#aa2302d6918e2d1c7f2e298aa972d8a6bba6c389"
+source = "git+https://github.com/decentraland/rpc-rust?rev=63391e28649b5340fb1dc020a2e654df7e1de418#63391e28649b5340fb1dc020a2e654df7e1de418"
 dependencies = [
  "async-channel",
  "async-trait",
