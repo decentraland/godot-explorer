@@ -159,8 +159,11 @@ func route() -> void:
 				or not Global.deep_link_obj.preview.is_empty()
 			):
 				_route_teleport()
-			else:
+			elif Global.deep_link_obj.params.is_empty():
 				deep_link_jump.emit()
+			# else: config-only params (multiplayer_debug, pulse, rust-log, scene-stats,
+			# …) were already applied in process_deep_link — a link with no navigation
+			# target must not pop an empty jump-in panel over Discover.
 		"/events":
 			var event_id: String = Global.deep_link_obj.params.get("id", "")
 			if not event_id.is_empty():

@@ -1560,6 +1560,15 @@ func _apply_comms_deeplink_params(deep_link) -> void:
 	if not livekit_value.is_empty():
 		print("[DEEPLINK] livekit=", livekit_value)
 		comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
+	# `multiplayer_debug=true` (legacy alias livekit_debug): latch the flag on the
+	# comms manager, which survives scene changes — a deeplink with no navigation
+	# target is consumed while the lobby/menu is active, and the explorer that boots
+	# later re-reads the flag from comms (deep_link_obj is not a reliable carrier
+	# across that flow). Enable-only: absence of the param must not turn the panel
+	# off on a later deeplink.
+	if deep_link.multiplayer_debug:
+		print("[DEEPLINK] multiplayer_debug=true")
+		comms.set_multiplayer_debug(true)
 
 
 func _notification(what: int) -> void:

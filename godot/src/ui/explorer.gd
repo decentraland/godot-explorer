@@ -232,9 +232,12 @@ func _ready():
 	# Preview-only scene-stats / limits overlay (never created in production)
 	_update_scene_stats_ui()
 
-	# multiplayer_debug deep link parameter auto-enables the multiplayer debug panel
-	if Global.deep_link_obj.multiplayer_debug:
-		_on_control_menu_request_multiplayer_debug(true)
+	# multiplayer_debug deep link parameter auto-enables the multiplayer debug panel.
+	# Checked via the comms flag too: a target-less deeplink is consumed while the
+	# lobby/menu is active, and the Rust-side flag is the carrier that survives into
+	# this later explorer boot. The signal covers deeplinks arriving while in-world.
+	Global.deep_link_router.deep_link_received.connect(_check_multiplayer_debug_deeplink)
+	_check_multiplayer_debug_deeplink()
 
 	# Scene Inspector: the bridge is now dialed from app startup (Global._ready),
 	# not here — so the channel is live from second 0, before login / world entry.
@@ -747,6 +750,11 @@ func _on_touch_screen_button_released():
 
 func _on_panel_chat_submit_message(message: String):
 	_chat_commands.submit_message(message)
+
+
+func _check_multiplayer_debug_deeplink() -> void:
+	if Global.deep_link_obj.multiplayer_debug or Global.comms.get_multiplayer_debug():
+		_on_control_menu_request_multiplayer_debug(true)
 
 
 func _on_control_menu_request_multiplayer_debug(enabled):
