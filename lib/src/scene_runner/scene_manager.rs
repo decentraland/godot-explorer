@@ -28,8 +28,7 @@ use crate::{
 use godot::{
     classes::{
         control::{LayoutPreset, MouseFilter},
-        InputEvent, InputEventMouseButton, InputEventMouseMotion, InputEventScreenDrag,
-        InputEventScreenTouch, PhysicsRayQueryParameters3D,
+        PhysicsRayQueryParameters3D,
     },
     prelude::*,
 };
@@ -87,12 +86,8 @@ pub struct SceneManager {
 
     // Cached center position of viewport for raycasting
     viewport_center: Vector2,
-    // Latest real pointer position (mouse/touch) in viewport pixels, captured in
-    // `input()`. Drives PrimaryPointerInfo.screen_coordinates so it stays correct
-    // even during scene-UI interaction, which never updates `cursor_position`.
-    pointer_screen_position: Vector2,
-    // Previous frame pointer position, used to compute PrimaryPointerInfo screen_delta.
-    last_pointer_screen_position: Vector2,
+    // Previous frame screen point, used to compute PrimaryPointerInfo screen_delta
+    last_cursor_position: Vector2,
     // Cached raycast query for performance
     cached_raycast_query: Gd<PhysicsRayQueryParameters3D>,
 
@@ -1445,23 +1440,17 @@ impl SceneManager {
 
         // Compute PrimaryPointerInfo (SDK component 1209) once per frame. Written on the
         // scene RootEntity so scenes reading `worldRayDirection` (e.g. Genesis Plaza's
-        // fishing raycast) get a valid vector instead of `undefined` (issue #2411).
+        // fishing raycast) get a valid vector instead of `undefined` (issue #2411). Uses the
+        // same screen point selection as `get_current_mouse_entity`.
         let primary_pointer_info = camera_node.as_ref().map(|camera_node| {
-            // Ray aim point for worldRayDirection: cursor in cinematic mode, else the
-            // viewport centre (matches `get_current_mouse_entity`).
-            let ray_point = if self.raycast_use_cursor_position {
+            let screen_point = if self.raycast_use_cursor_position {
                 self.cursor_position
             } else {
                 self.viewport_center
             };
-            let dir = camera_node.project_ray_normal(ray_point);
-
-            // Screen coordinates/delta come from the real pointer position tracked in
-            // `input()`, so they stay accurate during scene-UI interaction (drag/drop),
-            // which never updates `cursor_position`.
-            let screen_point = self.pointer_screen_position;
-            let screen_delta = screen_point - self.last_pointer_screen_position;
-            self.last_pointer_screen_position = screen_point;
+            let dir = camera_node.project_ray_normal(screen_point);
+            let screen_delta = screen_point - self.last_cursor_position;
+            self.last_cursor_position = screen_point;
 
             PbPrimaryPointerInfo {
                 pointer_type: Some(PointerType::PotMouse as i32),
@@ -2662,8 +2651,7 @@ impl INode for SceneManager {
                 canvas_size.y as i32,
             ),
             viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
-            pointer_screen_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
-            last_pointer_screen_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
+            last_cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             raycast_use_cursor_position: false,
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
@@ -2691,25 +2679,6 @@ impl INode for SceneManager {
             let viewport_size = viewport.get_visible_rect();
             self.viewport_center =
                 Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
-        }
-
-        // Receive raw input so we can track the real pointer position (see `input()`).
-        self.base_mut().set_process_input(true);
-    }
-
-    // Track the latest real pointer position (mouse/touch) for PrimaryPointerInfo's
-    // screen_coordinates/screen_delta. `input()` sees events before scene UI consumes
-    // them, so this stays correct even while dragging a UI element — unlike
-    // `cursor_position`, which is only updated on the cinematic-camera path.
-    fn input(&mut self, event: Gd<InputEvent>) {
-        if let Ok(e) = event.clone().try_cast::<InputEventMouseMotion>() {
-            self.pointer_screen_position = e.get_position();
-        } else if let Ok(e) = event.clone().try_cast::<InputEventMouseButton>() {
-            self.pointer_screen_position = e.get_position();
-        } else if let Ok(e) = event.clone().try_cast::<InputEventScreenTouch>() {
-            self.pointer_screen_position = e.get_position();
-        } else if let Ok(e) = event.try_cast::<InputEventScreenDrag>() {
-            self.pointer_screen_position = e.get_position();
         }
     }
 
