@@ -23,6 +23,9 @@ func _on_collapse_button_pressed():
 	collapse_button.text = "▸" if collapsed else "▾"
 	if not collapsed:
 		_on_timer_timeout()
+	# A Control never shrinks below its grown size on its own — snap the panel back to
+	# its (now header-only) minimum, or the collapsed panel keeps the full height.
+	reset_size.call_deferred()
 
 
 func _state_color(state: String) -> String:
@@ -130,6 +133,9 @@ func _on_timer_timeout():
 	lines.append_array(_peer_lines())
 
 	rich_text_label.text = "\n".join(lines)
+	# Shrink back when the content got shorter (fewer peers/lines) — a Control keeps
+	# its grown size otherwise.
+	reset_size.call_deferred()
 
 
 func _build_pulse_line(info: Dictionary) -> String:

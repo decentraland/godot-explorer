@@ -1467,7 +1467,10 @@ func _notification(what: int) -> void:
 func _on_deep_link_jump() -> void:
 	control_menu.async_show_discover()
 	if is_instance_valid(control_menu.control_discover.instance):
-		control_menu.control_discover.instance.jump_in.open_panel()
+		# Only open the sheet when it actually has a place loaded — a deeplink with no
+		# navigation target must land on Discover itself, not an empty "Scene Title" card.
+		if not control_menu.control_discover.instance.jump_in.item_data.is_empty():
+			control_menu.control_discover.instance.jump_in.open_panel()
 
 
 func _on_deep_link_open_event(event_id: String) -> void:
