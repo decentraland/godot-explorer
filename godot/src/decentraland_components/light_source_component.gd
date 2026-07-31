@@ -261,13 +261,6 @@ func _exit_tree() -> void:
 	request_recompute()
 
 
-func _notification(what: int) -> void:
-	# Moving the light re-evaluates its range/budget state on the next tick.
-	if what == Node3D.NOTIFICATION_TRANSFORM_CHANGED:
-		if is_inside_tree():
-			request_recompute()
-
-
 # --- Light configuration (called from Rust) ---
 
 
