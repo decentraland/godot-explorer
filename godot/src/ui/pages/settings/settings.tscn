@@ -1117,6 +1117,21 @@ mouse_filter = 2
 theme_override_constants/separation = 74
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
+[node name="Button_ShowRewardModal" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=771122335]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 96)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_type_variation = &"SecondaryOutlinedButton"
+text = "Show Reward Modal (MobilePet)"
+
+[node name="HSeparator_RewardModal" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=771122336]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 74
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
 [node name="Button_OpenUserData" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1475551528]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 96)
@@ -1399,6 +1414,7 @@ font = ExtResource("25_jf4mt")
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/LiveKitDebug/CheckButton_LiveKitDebug" to="." method="_on_check_button_livekit_debug_toggled"]
 [connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/DropdownList_Realm" to="." method="_on_dropdown_list_realm_item_selected"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_ShowRewardModal" to="." method="_on_button_show_reward_modal_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_ReturnToDiscover" to="." method="_on_button_return_to_discover_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
