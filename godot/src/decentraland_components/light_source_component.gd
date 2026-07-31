@@ -15,8 +15,9 @@ const DCL_LIGHT_AUTO_RANGE_DIVISOR: float = 160.0
 const DCL_LIGHT_SHADOW_CASTER_MASK_ALL: int = 0xFFFFFFFF
 const DCL_LIGHT_SHADOW_CASTER_MASK_NONE: int = 0
 
-const DEBUG_SPOT_CONE_MAX_LENGTH: float = 2.0
-const DEBUG_SPOT_CONE_MAX_RADIUS: float = 1.35
+# Readability cap for gizmo cone radius: wide authored angles (e.g. 179°)
+# would otherwise produce kilometer-long lines. Length is never capped.
+const DEBUG_SPOT_CONE_MAX_RADIUS: float = 30.0
 const DEBUG_SPOT_CONE_MIN_LENGTH: float = 0.18
 const DEBUG_POINT_SPHERE_RADIUS: float = 1.0
 const DEBUG_SPOT_CONE_SEGMENTS: int = 32
@@ -684,7 +685,7 @@ func _update_debug_gizmo(
 			debug_spot_inner_cone_mesh.visible = true
 		if debug_point_sphere_mesh != null:
 			debug_point_sphere_mesh.visible = false
-		_update_debug_spot_cones(inner_angle, outer_angle)
+		_update_debug_spot_cones(light_range, inner_angle, outer_angle)
 	else:
 		if debug_spot_outer_cone_mesh != null:
 			debug_spot_outer_cone_mesh.visible = false
@@ -692,7 +693,7 @@ func _update_debug_gizmo(
 			debug_spot_inner_cone_mesh.visible = false
 		if debug_point_sphere_mesh != null:
 			debug_point_sphere_mesh.visible = true
-		_update_debug_point_sphere()
+		_update_debug_point_sphere(light_range)
 
 	_update_debug_info_labels(kind, intensity, light_range, inner_angle, outer_angle)
 
@@ -714,13 +715,18 @@ func _update_debug_origin_marker() -> void:
 	debug_status_label.position = DEBUG_STATUS_LABEL_POS
 
 
-func _update_debug_spot_cones(inner_angle: float, outer_angle: float) -> void:
-	_update_debug_spot_cone_mesh(debug_spot_outer_cone_mesh, outer_angle, "spot_outer", true)
-	_update_debug_spot_cone_mesh(debug_spot_inner_cone_mesh, inner_angle, "spot_inner", false)
+func _update_debug_spot_cones(light_range: float, inner_angle: float, outer_angle: float) -> void:
+	_update_debug_spot_cone_mesh(
+		debug_spot_outer_cone_mesh, light_range, outer_angle, "spot_outer", true
+	)
+	_update_debug_spot_cone_mesh(
+		debug_spot_inner_cone_mesh, light_range, inner_angle, "spot_inner", false
+	)
 
 
 func _update_debug_spot_cone_mesh(
 	target_mesh_instance: MeshInstance3D,
+	light_range: float,
 	angle_degrees: float,
 	material_kind: String,
 	draw_rays: bool
@@ -728,7 +734,7 @@ func _update_debug_spot_cone_mesh(
 	if target_mesh_instance == null:
 		return
 
-	var dimensions: Dictionary = _get_debug_spot_cone_dimensions(angle_degrees)
+	var dimensions: Dictionary = _get_debug_spot_cone_dimensions(light_range, angle_degrees)
 	var cone_length: float = float(dimensions["length"])
 	var cone_radius: float = float(dimensions["radius"])
 
@@ -759,13 +765,13 @@ func _update_debug_spot_cone_mesh(
 	target_mesh_instance.scale = Vector3.ONE
 
 
-func _update_debug_point_sphere() -> void:
+func _update_debug_point_sphere(light_range: float) -> void:
 	if debug_point_sphere_mesh == null:
 		return
 
 	var mesh: ImmediateMesh = ImmediateMesh.new()
 	var mat: StandardMaterial3D = _make_debug_material("point", 0.95)
-	var radius: float = DEBUG_POINT_SPHERE_RADIUS
+	var radius: float = maxf(light_range, DEBUG_POINT_SPHERE_RADIUS)
 
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES, mat)
 
@@ -824,8 +830,8 @@ func _update_debug_info_labels(
 	_set_debug_info_label(3, DEBUG_INFO_LABEL_BUDGET_POS, budget_text)
 
 	if kind == "spot":
-		var inner_anchor: Vector3 = _get_debug_spot_circle_anchor(inner_angle, -1.0)
-		var outer_anchor: Vector3 = _get_debug_spot_circle_anchor(outer_angle, 1.0)
+		var inner_anchor: Vector3 = _get_debug_spot_circle_anchor(light_range, inner_angle, -1.0)
+		var outer_anchor: Vector3 = _get_debug_spot_circle_anchor(light_range, outer_angle, 1.0)
 		_set_debug_info_label(
 			4, inner_anchor + Vector3(-0.36, -0.14, 0.0), "inner:" + _fmtf(inner_angle)
 		)
@@ -871,10 +877,10 @@ func _update_debug_info_lines() -> void:
 
 		if last_kind == "spot":
 			if i == 4:
-				line_start = _get_debug_spot_circle_anchor(last_inner_angle, -1.0)
+				line_start = _get_debug_spot_circle_anchor(last_light_range, last_inner_angle, -1.0)
 				line_end = label.position
 			elif i == 5:
-				line_start = _get_debug_spot_circle_anchor(last_outer_angle, 1.0)
+				line_start = _get_debug_spot_circle_anchor(last_light_range, last_outer_angle, 1.0)
 				line_end = label.position
 
 		mesh.surface_add_vertex(line_start)
@@ -888,26 +894,27 @@ func _update_debug_info_lines() -> void:
 	debug_info_lines_mesh.scale = Vector3.ONE
 
 
-func _get_debug_spot_cone_dimensions(angle_degrees: float) -> Dictionary:
+# Gizmo geometry shows the REAL light coverage: cone length = authored range,
+# radius from the authored angle. Wide angles can produce huge radii, so the
+# radius is capped as a readability tradeoff (length stays truthful).
+func _get_debug_spot_cone_dimensions(light_range: float, angle_degrees: float) -> Dictionary:
 	var safe_angle: float = clampf(angle_degrees, 0.1, 175.0)
 	var half_angle_rad: float = deg_to_rad(safe_angle * 0.5)
 	var tan_half_angle: float = tan(half_angle_rad)
 
-	var cone_length: float = DEBUG_SPOT_CONE_MAX_LENGTH
-	if tan_half_angle > 0.0:
-		var length_for_max_radius: float = DEBUG_SPOT_CONE_MAX_RADIUS / tan_half_angle
-		cone_length = minf(DEBUG_SPOT_CONE_MAX_LENGTH, length_for_max_radius)
-
-	cone_length = maxf(cone_length, DEBUG_SPOT_CONE_MIN_LENGTH)
+	var cone_length: float = maxf(light_range, DEBUG_SPOT_CONE_MIN_LENGTH)
+	var cone_radius: float = minf(tan_half_angle * cone_length, DEBUG_SPOT_CONE_MAX_RADIUS)
 
 	return {
 		"length": cone_length,
-		"radius": tan_half_angle * cone_length,
+		"radius": cone_radius,
 	}
 
 
-func _get_debug_spot_circle_anchor(angle_degrees: float, side: float) -> Vector3:
-	var dimensions: Dictionary = _get_debug_spot_cone_dimensions(angle_degrees)
+func _get_debug_spot_circle_anchor(
+	light_range: float, angle_degrees: float, side: float
+) -> Vector3:
+	var dimensions: Dictionary = _get_debug_spot_cone_dimensions(light_range, angle_degrees)
 	return Vector3(side * float(dimensions["radius"]), 0.0, -float(dimensions["length"]))
 
 
