@@ -25,7 +25,14 @@ func _on_collapse_button_pressed():
 		_on_timer_timeout()
 	# A Control never shrinks below its grown size on its own — snap the panel back to
 	# its (now header-only) minimum, or the collapsed panel keeps the full height.
-	reset_size.call_deferred()
+	_snap_height.call_deferred()
+
+
+# Shrink only the height to the content's minimum. reset_size() must not be used
+# here: both labels autowrap (minimum width ~0), so it would also collapse the
+# scene's authored 440px width to the collapse button's width.
+func _snap_height() -> void:
+	size = Vector2(size.x, 0.0)
 
 
 func _state_color(state: String) -> String:
@@ -135,7 +142,7 @@ func _on_timer_timeout():
 	rich_text_label.text = "\n".join(lines)
 	# Shrink back when the content got shorter (fewer peers/lines) — a Control keeps
 	# its grown size otherwise.
-	reset_size.call_deferred()
+	_snap_height.call_deferred()
 
 
 func _build_pulse_line(info: Dictionary) -> String:
