@@ -943,10 +943,7 @@ impl AvatarScene {
         let player = SceneEntityId::PLAYER;
         let profile = self.last_updated_profile.get(&player)?;
         let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-        let player_node = scene_runner.bind().get_player_avatar_node();
-        if !player_node.is_instance_valid() {
-            return None;
-        }
+        let player_node = scene_runner.bind().get_player_avatar_node()?;
         let pos = player_node.get_global_position();
 
         let mut d = VarDictionary::new();
@@ -968,10 +965,9 @@ impl AvatarScene {
     #[func]
     fn debug_get_local_player_instance_id(&self) -> i64 {
         let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-        let player_node = scene_runner.bind().get_player_avatar_node();
-        if !player_node.is_instance_valid() {
+        let Some(player_node) = scene_runner.bind().get_player_avatar_node() else {
             return -1;
-        }
+        };
         player_node.instance_id().to_i64()
     }
 

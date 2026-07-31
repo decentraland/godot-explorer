@@ -1054,7 +1054,13 @@ func sign_out() -> void:
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
 
-	# 8. Swap to a fresh lobby on the next frame, after the current signal/await
+	# 8. Detach scene_runner.base_ui from the dying Explorer so freeing it can't
+	#    free UI nodes Rust still references — a cache-hot scene spawn racing the
+	#    next explorer._ready() would panic on the freed control
+	#    (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
+	scene_runner.detach_base_ui()
+
+	# 9. Swap to a fresh lobby on the next frame, after the current signal/await
 	#    stack fully unwinds (sign_out may have been reached via the deferred
 	#    logout signal). lobby._ready clears _signing_out.
 	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
@@ -1114,6 +1120,12 @@ func return_to_discover() -> void:
 	# Discover/menu is portrait-only; reset orientation so returning from a
 	# landscape in-world screen (settings) doesn't strand the user in landscape.
 	set_orientation_portrait()
+
+	# Detach scene_runner.base_ui from the dying Explorer so freeing it can't
+	# free UI nodes Rust still references — a cache-hot scene spawn racing the
+	# next explorer._ready() would panic on the freed control
+	# (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
+	scene_runner.detach_base_ui()
 
 	# Swap to the standalone Discover menu on the next frame, after the current
 	# call stack (the settings button handler) fully unwinds. menu._ready clears
