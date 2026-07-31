@@ -1176,18 +1176,25 @@ impl MessageProcessor {
                 avatar_scene.update_avatar_transform_with_rfc4_position(peer_alias, &position);
             }
             rfc4::packet::Message::Movement(movement) => {
-                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
-                if let Some(peer) = self.peer_identities.get_mut(&address) {
-                    if movement.timestamp <= peer.last_movement_timestamp {
-                        tracing::debug!(
-                            "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
-                            address,
-                            movement.timestamp,
-                            peer.last_movement_timestamp
-                        );
-                        return;
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting).
+                // NOT for the pulse room: its movements are already strictly ordered by the
+                // decoder's per-subject sequence window, and its timestamps are the server
+                // tick in f32 seconds — at large server uptimes (>~2^20 s) the f32 ULP
+                // exceeds the 100 ms packet interval, so consecutive updates quantize equal
+                // and a `<=` check here would silently drop them.
+                if room_id != PULSE_ROOM_ID {
+                    if let Some(peer) = self.peer_identities.get_mut(&address) {
+                        if movement.timestamp <= peer.last_movement_timestamp {
+                            tracing::debug!(
+                                "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
+                                address,
+                                movement.timestamp,
+                                peer.last_movement_timestamp
+                            );
+                            return;
+                        }
+                        peer.last_movement_timestamp = movement.timestamp;
                     }
-                    peer.last_movement_timestamp = movement.timestamp;
                 }
 
                 tracing::debug!(
@@ -1902,8 +1909,8 @@ impl MessageProcessor {
 }
 
 // MessageProcessor itself needs a live Godot engine (Gd<AvatarScene>), so the full
-// interleaved pulse/livekit sequences are covered by the M4 cross-client matrix (see
-// plan_pulse/05); what IS engine-free — the gate's message classification — is pinned here.
+// interleaved pulse/livekit sequences are covered by the cross-client QA matrix; what IS
+// engine-free — the gate's message classification — is pinned here.
 #[cfg(test)]
 mod tests {
     use super::*;

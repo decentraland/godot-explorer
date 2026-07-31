@@ -34,32 +34,9 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
-	# Pulse transport params. `pulse-server=<host:port>` joins a specific Pulse
-	# server (shareable — everyone opening the link lands on the same instance,
-	# also implies enabling); `pulse=true/false` toggles it with the configured
-	# endpoint. No-ops on builds without the use_pulse feature.
-	var pulse_server_value = Global.deep_link_obj.params.get("pulse-server", "")
-	if not pulse_server_value.is_empty():
-		print("[DEEPLINK] pulse-server=", pulse_server_value)
-		Global.comms.set_pulse_server(pulse_server_value)
-	var pulse_value = Global.deep_link_obj.params.get("pulse", "")
-	if not pulse_value.is_empty():
-		print("[DEEPLINK] pulse=", pulse_value)
-		Global.comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false` (default true): whether movement keeps going over
-	# LiveKit while Pulse is established. false = Pulse-only movement while up.
-	var dual_channel_value = Global.deep_link_obj.params.get("dual-channel", "")
-	if not dual_channel_value.is_empty():
-		print("[DEEPLINK] dual-channel=", dual_channel_value)
-		Global.comms.set_livekit_movement_dual_channel(
-			dual_channel_value.to_lower() in ["true", "1", "yes"]
-		)
-	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
-	# scene messages). Dev/testing switch; `livekit=true` re-enables.
-	var livekit_value = Global.deep_link_obj.params.get("livekit", "")
-	if not livekit_value.is_empty():
-		print("[DEEPLINK] livekit=", livekit_value)
-		Global.comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
+	# Pulse transport params (pulse-server / pulse / dual-channel / livekit); the
+	# shared helper no-ops on builds without the use_pulse feature.
+	Global._apply_comms_deeplink_params(Global.deep_link_obj)
 
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 

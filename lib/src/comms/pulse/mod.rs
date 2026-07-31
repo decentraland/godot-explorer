@@ -1,5 +1,4 @@
 //! Pulse transport — the ENet/UDP avatar-state relay that coexists with LiveKit.
-//! See `plan_pulse/` at the repo root for the architecture and rollout docs.
 //!
 //! Module map (port of bevy-explorer `crates/comms/src/pulse/` @ 3f65c164, ENet only):
 //! - [`transport`] — the byte-boundary seam (frames, status, disconnect codes, channel pair)

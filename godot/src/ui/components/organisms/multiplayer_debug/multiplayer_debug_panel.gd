@@ -83,9 +83,10 @@ func _on_timer_timeout():
 	if is_instance_valid(Global.realm):
 		realm_name = String(Global.realm.realm_name)
 	if not realm_name.is_empty():
-		lines.append("Realm: %s" % realm_name)
+		lines.append("Realm: %s" % _escape_bbcode(realm_name))
 
-	var adapter: String = _summarize_access_token(info.get("adapter", ""))
+	# Server-derived strings are escaped like peer names — a stray '[' corrupts the markup.
+	var adapter: String = _escape_bbcode(_summarize_access_token(info.get("adapter", "")))
 	var connection_state: String = info.get("connection_state", "unknown")
 	lines.append("Adapter: %s [%s]" % [adapter, connection_state])
 
@@ -105,7 +106,7 @@ func _on_timer_timeout():
 		var archipelago_state: String = info.get("archipelago_state", "none")
 		var island_id: String = info.get("island_id", "")
 		var island_room_state: String = info.get("island_room_state", "none")
-		var island_label := island_id if not island_id.is_empty() else "-"
+		var island_label := _escape_bbcode(island_id) if not island_id.is_empty() else "-"
 		lines.append(
 			(
 				"Archipelago: %s | island %s (%s)"
@@ -119,7 +120,7 @@ func _on_timer_timeout():
 
 	var scene_room: String = info.get("scene_room", "")
 	var scene_room_state: String = info.get("scene_room_state", "none")
-	var scene_label := scene_room if not scene_room.is_empty() else "-"
+	var scene_label := _escape_bbcode(scene_room) if not scene_room.is_empty() else "-"
 	lines.append("Scene room: %s %s" % [scene_label, _colored_state(scene_room_state)])
 
 	lines.append(_build_pulse_line(info))

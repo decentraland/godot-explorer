@@ -470,26 +470,9 @@ func _ready():
 
 		_apply_optimized_content_base_url(deep_link_obj)
 
-		# Pulse transport params (mirrors deep_link_router.process_deep_link — this
-		# fake-deeplink path doesn't route through it). pulse-server implies enabling.
-		var pulse_server_value = deep_link_obj.params.get("pulse-server", "")
-		if not pulse_server_value.is_empty():
-			print("[DEEPLINK] pulse-server=", pulse_server_value)
-			comms.set_pulse_server(pulse_server_value)
-		var pulse_value = deep_link_obj.params.get("pulse", "")
-		if not pulse_value.is_empty():
-			print("[DEEPLINK] pulse=", pulse_value)
-			comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-		var dual_channel_value = deep_link_obj.params.get("dual-channel", "")
-		if not dual_channel_value.is_empty():
-			print("[DEEPLINK] dual-channel=", dual_channel_value)
-			comms.set_livekit_movement_dual_channel(
-				dual_channel_value.to_lower() in ["true", "1", "yes"]
-			)
-		var livekit_value = deep_link_obj.params.get("livekit", "")
-		if not livekit_value.is_empty():
-			print("[DEEPLINK] livekit=", livekit_value)
-			comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
+		# Pulse transport params (this fake-deeplink path doesn't route through
+		# deep_link_router.process_deep_link).
+		_apply_comms_deeplink_params(deep_link_obj)
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
@@ -1548,12 +1531,47 @@ func _check_dclenv_change() -> bool:
 	return true
 
 
+# Applies the comms deeplink params (pulse-server / pulse / dual-channel / livekit).
+# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path,
+# so a new param only has to be added once.
+func _apply_comms_deeplink_params(deep_link) -> void:
+	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
+	# opening the link lands on the same instance; implies enabling).
+	var pulse_server_value = deep_link.params.get("pulse-server", "")
+	if not pulse_server_value.is_empty():
+		print("[DEEPLINK] pulse-server=", pulse_server_value)
+		comms.set_pulse_server(pulse_server_value)
+	# `pulse=true/false` toggles the transport with the configured endpoint.
+	var pulse_value = deep_link.params.get("pulse", "")
+	if not pulse_value.is_empty():
+		print("[DEEPLINK] pulse=", pulse_value)
+		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
+	# `dual-channel=true/false` (default true): whether movement keeps going over
+	# LiveKit while Pulse is established. false = Pulse-only movement while up.
+	var dual_channel_value = deep_link.params.get("dual-channel", "")
+	if not dual_channel_value.is_empty():
+		print("[DEEPLINK] dual-channel=", dual_channel_value)
+		comms.set_livekit_movement_dual_channel(
+			dual_channel_value.to_lower() in ["true", "1", "yes"]
+		)
+	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
+	# scene messages). Dev/testing switch; `livekit=true` re-enables.
+	var livekit_value = deep_link.params.get("livekit", "")
+	if not livekit_value.is_empty():
+		print("[DEEPLINK] livekit=", livekit_value)
+		comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		# Mobile OSes cut app networking shortly after backgrounding, killing every comms
 		# session. Tell the comms manager we're back so it forgives transient reconnect
 		# failures and treats Duplicate* evictions as our own stale session being reclaimed.
-		comms.notify_app_resumed()
+		# Real mobile only: on desktop every alt-tab fires FOCUS_IN, and a 30s grace window
+		# armed that often would retry genuine another-device evictions instead of
+		# surfacing the "session ended" modal.
+		if Global.is_mobile() and !Global.is_virtual_mobile():
+			comms.notify_app_resumed()
 
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile() and !Global.is_virtual_mobile():

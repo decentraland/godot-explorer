@@ -15,7 +15,7 @@
 //! built-in one — is wire-incompatible. No compressor and no checksum, matching the server's host.
 
 use std::io::{self, ErrorKind};
-use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -85,11 +85,22 @@ fn run(config: PulseTransportConfig, mut channels: PulseDriverChannels, stop: &A
     let _ = channels.status.try_send(PulseStatus::Connecting);
 
     // Resolve the server address (DNS). A failure here is never-established → Failed (retryable).
+    // Prefer IPv4: on NAT64/DNS64 carriers (IPv6-only mobile networks) a synthesized AAAA
+    // record can come first, and `addrs.next()` alone would pick it even when a real A
+    // record exists. When only IPv6 resolves, take it — `drive` binds a matching-family
+    // socket, so a v6 pick still gets a socket it can actually send from.
     let address = match (config.host.as_str(), config.port).to_socket_addrs() {
-        Ok(mut addrs) => match addrs.next() {
-            Some(address) => address,
-            None => return fail(&mut channels, format!("no address for {}", config.host)),
-        },
+        Ok(addrs) => {
+            let addrs: Vec<SocketAddr> = addrs.collect();
+            match addrs
+                .iter()
+                .find(|address| address.is_ipv4())
+                .or_else(|| addrs.first())
+            {
+                Some(address) => *address,
+                None => return fail(&mut channels, format!("no address for {}", config.host)),
+            }
+        }
         Err(err) => {
             return fail(
                 &mut channels,
@@ -111,8 +122,14 @@ fn run(config: PulseTransportConfig, mut channels: PulseDriverChannels, stop: &A
 }
 
 async fn drive(channels: &mut PulseDriverChannels, address: SocketAddr, stop: &AtomicBool) {
-    // Ephemeral local UDP socket; ENet drives it non-blocking via `PulseSocket`.
-    let socket = match UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await {
+    // Ephemeral local UDP socket matching the resolved address family; ENet drives it
+    // non-blocking via `PulseSocket`.
+    let bind_address: SocketAddr = if address.is_ipv6() {
+        (Ipv6Addr::UNSPECIFIED, 0).into()
+    } else {
+        (Ipv4Addr::UNSPECIFIED, 0).into()
+    };
+    let socket = match UdpSocket::bind(bind_address).await {
         Ok(socket) => PulseSocket(socket),
         Err(err) => return fail(channels, format!("udp bind failed: {err}")),
     };
@@ -135,6 +152,9 @@ async fn drive(channels: &mut PulseDriverChannels, address: SocketAddr, stop: &A
         Err(err) => return fail(channels, format!("enet connect failed: {err}")),
     };
 
+    // Send failures repeat at frame rate while the peer is wedged — warn once, then debug.
+    let mut warned_send_failed = false;
+
     while !stop.load(Ordering::Relaxed) {
         // Block until there's work: an outbound frame to send, an inbound datagram to read, or the
         // maintenance deadline so ENet's timers keep ticking.
@@ -146,13 +166,13 @@ async fn drive(channels: &mut PulseDriverChannels, address: SocketAddr, stop: &A
         match outbound {
             // Channel closed — the protocol layer dropped the link; stop the driver.
             Some(None) => break,
-            Some(Some(frame)) => queue_frame(&mut host, peer, &frame),
+            Some(Some(frame)) => queue_frame(&mut host, peer, &frame, &mut warned_send_failed),
             None => {}
         }
 
         // Drain any further queued outbound without blocking; the next service flushes them.
         while let Ok(frame) = channels.outbound.try_recv() {
-            queue_frame(&mut host, peer, &frame);
+            queue_frame(&mut host, peer, &frame, &mut warned_send_failed);
         }
 
         // Service the host: socket I/O + dispatch all ready events.
@@ -186,7 +206,12 @@ async fn drive(channels: &mut PulseDriverChannels, address: SocketAddr, stop: &A
 /// Queue one outbound [`PulseFrame`] onto the peer. Channel and packet kind together reproduce the
 /// server's `ENetChannel` wire commands: reliable → `SEND_RELIABLE`, unreliable-sequenced →
 /// `SEND_UNRELIABLE`, unreliable-unsequenced → `SEND_UNSEQUENCED`.
-fn queue_frame(host: &mut enet::Host<PulseSocket>, peer: enet::PeerID, frame: &PulseFrame) {
+fn queue_frame(
+    host: &mut enet::Host<PulseSocket>,
+    peer: enet::PeerID,
+    frame: &PulseFrame,
+    warned_send_failed: &mut bool,
+) {
     let (channel_id, packet) = match frame.reliability {
         PulseReliability::Reliable => (0, enet::Packet::reliable(frame.bytes.as_slice())),
         PulseReliability::UnreliableSequenced => {
@@ -198,7 +223,13 @@ fn queue_frame(host: &mut enet::Host<PulseSocket>, peer: enet::PeerID, frame: &P
         ),
     };
     if let Err(err) = host.peer_mut(peer).send(channel_id, &packet) {
-        tracing::warn!("pulse: peer send failed: {err}");
+        // Repeats at frame rate while the peer is wedged — Sentry-visible once per driver.
+        if *warned_send_failed {
+            tracing::debug!("pulse: peer send failed: {err}");
+        } else {
+            *warned_send_failed = true;
+            tracing::warn!("pulse: peer send failed (repeats logged at debug): {err}");
+        }
     }
 }
 

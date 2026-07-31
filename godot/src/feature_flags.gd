@@ -18,6 +18,7 @@ const TIMEOUT_SECONDS := 5.0
 
 # Flag names exactly as served by the mobile-bff payload.
 const FLAG_ARCHIPELAGO := "archipielago"
+const FLAG_PULSE := "pulse"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -65,7 +66,9 @@ func _async_load() -> void:
 
 	var result = await PromiseUtils.async_race([http_fn, timeout_fn])
 	if result is PromiseError:
-		printerr("[FeatureFlags] fetch failed (fail-open defaults): ", result.get_error())
+		# Expected on offline/slow cold starts — fail-open is the design, so this must
+		# not be error-level (Sentry quota).
+		push_warning("[FeatureFlags] fetch failed (fail-open defaults): " + str(result.get_error()))
 	else:
 		_flags = FeatureFlags.parse_response(result.get_string_response_as_json())
 		print("[FeatureFlags] loaded: ", _flags)
@@ -78,5 +81,11 @@ func _async_load() -> void:
 # Applies the comms-affecting flags. `archipielago=false` skips the archipelago
 # connection while scene rooms (and Pulse) keep working — see
 # CommunicationManager::set_archipelago_enabled on the Rust side.
+# `pulse=false` is a fleet-wide kill switch for the Pulse transport: it tears the
+# room down (or prevents its creation) and LiveKit avatar sync takes over. It is
+# disable-only on purpose — a server flag must never force-enable Pulse over a
+# local `--no-pulse` / `pulse=false` test run.
 func _apply_flags() -> void:
 	Global.comms.set_archipelago_enabled(is_enabled(FLAG_ARCHIPELAGO, true))
+	if not is_enabled(FLAG_PULSE, true):
+		Global.comms.set_pulse_enabled(false)

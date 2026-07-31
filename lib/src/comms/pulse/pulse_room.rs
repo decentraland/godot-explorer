@@ -116,6 +116,10 @@ pub struct PulseRoom {
     last_announced_profile_version: Option<u32>,
     /// Log the out-of-grid suppression only once per excursion.
     warned_out_of_grid: bool,
+    /// Log inbound decode failures only once per connection: a wire-format mismatch makes
+    /// EVERY packet fail at the server's full send rate — a Sentry quota burst if warned
+    /// per packet. Reset on transport loss so each new connection gets one report.
+    warned_decode_failed: bool,
 }
 
 impl PulseRoom {
@@ -141,6 +145,7 @@ impl PulseRoom {
             last_state: None,
             last_announced_profile_version: None,
             warned_out_of_grid: false,
+            warned_decode_failed: false,
         }
     }
 
@@ -230,7 +235,8 @@ impl PulseRoom {
             return;
         }
         let Some(state) = self.last_state.clone() else {
-            tracing::warn!("pulse: emote before any movement sent; skipping EmoteStart");
+            // Expected in the ≤1 s window between handshake and the first movement tick.
+            tracing::debug!("pulse: emote before any movement sent; skipping EmoteStart");
             return;
         };
         self.send_client_message(
@@ -399,6 +405,7 @@ impl PulseRoom {
         self.driver = None; // dropping joins the already-exited driver thread
         self.last_state = None;
         self.last_announced_profile_version = None;
+        self.warned_decode_failed = false;
         self.flood_peer_left();
         if !self.established_this_attempt {
             events.push(PulseRoomEvent::AttemptFailed);
@@ -516,7 +523,15 @@ impl PulseRoom {
             let decoded = match pulse::ServerMessage::decode(bytes.as_slice()) {
                 Ok(message) => self.decoder.handle(message),
                 Err(err) => {
-                    tracing::warn!("pulse: failed to decode ServerMessage: {err}");
+                    // A wire-format mismatch fails EVERY packet — warn once per connection.
+                    if self.warned_decode_failed {
+                        tracing::debug!("pulse: failed to decode ServerMessage: {err}");
+                    } else {
+                        self.warned_decode_failed = true;
+                        tracing::warn!(
+                            "pulse: failed to decode ServerMessage (repeats logged at debug): {err}"
+                        );
+                    }
                     continue;
                 }
             };

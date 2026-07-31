@@ -17,7 +17,7 @@
 //! The animation rider that rides on LiveKit `Movement` packets has no Pulse equivalent; it keeps
 //! arriving over LiveKit and converges on the same wallet address.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use ethers_core::types::H160;
 use godot::prelude::Vector3;
@@ -285,6 +285,10 @@ impl SubjectState {
 pub struct PulseDecoder {
     grid: PulseParcelGrid,
     subjects: HashMap<u32, Subject>,
+    /// Subjects with a `ResyncRequest` in flight. A 10 Hz delta stream would otherwise
+    /// repeat the (reliable) request once per packet until the server's full state lands.
+    /// Cleared when the resync resolves (an applied full state / fresh join), or on leave.
+    pending_resync: HashSet<u32>,
 }
 
 impl PulseDecoder {
@@ -292,6 +296,7 @@ impl PulseDecoder {
         Self {
             grid,
             subjects: HashMap::new(),
+            pending_resync: HashSet::new(),
         }
     }
 
@@ -379,6 +384,21 @@ impl PulseDecoder {
             return Vec::new();
         };
 
+        let mut events = Vec::new();
+        // The server recycles subject slots: a PlayerJoined on an occupied slot with a
+        // different wallet is a different peer, and the replaced wallet gets no PlayerLeft
+        // of its own. Emit a synthetic Left first — otherwise the old peer's "pulse" room
+        // membership (and with it the transport-preference gate discarding its LiveKit
+        // sync) leaks for the rest of the session.
+        if let Some(existing) = self.subjects.get(&full.subject_id) {
+            if existing.wallet != address {
+                events.push(PulseEvent::Left {
+                    address: existing.wallet,
+                });
+            }
+        }
+        self.pending_resync.remove(&full.subject_id);
+
         let baseline = SubjectState::from_player_state(&state);
         let movement = self.to_movement(&baseline, full.server_tick);
         self.subjects.insert(
@@ -390,25 +410,25 @@ impl PulseDecoder {
             },
         );
 
-        vec![
-            PulseEvent::Joined {
-                subject_id: full.subject_id,
-                address,
-                profile_version: joined.profile_version,
-            },
-            PulseEvent::Movement {
-                address,
-                movement: Box::new(movement),
-                // A peer entering the interest set has no prior position to interpolate
-                // from — snap (is_instant). Lerping from the avatar's previous/default
-                // target makes it sprint across the scene, and the delta-derived run flag
-                // then latches until the next update (never, for a stationary peer).
-                teleport: true,
-            },
-        ]
+        events.push(PulseEvent::Joined {
+            subject_id: full.subject_id,
+            address,
+            profile_version: joined.profile_version,
+        });
+        events.push(PulseEvent::Movement {
+            address,
+            movement: Box::new(movement),
+            // A peer entering the interest set has no prior position to interpolate
+            // from — snap (is_instant). Lerping from the avatar's previous/default
+            // target makes it sprint across the scene, and the delta-derived run flag
+            // then latches until the next update (never, for a stationary peer).
+            teleport: true,
+        });
+        events
     }
 
     fn on_left(&mut self, subject_id: u32) -> Vec<PulseEvent> {
+        self.pending_resync.remove(&subject_id);
         match self.subjects.remove(&subject_id) {
             Some(subject) => vec![PulseEvent::Left {
                 address: subject.wallet,
@@ -437,6 +457,8 @@ impl PulseDecoder {
         subject.baseline = SubjectState::from_player_state(&state);
         subject.last_seq = sequence;
         let address = subject.wallet;
+        // An applied full state resolves any in-flight resync for this subject.
+        self.pending_resync.remove(&subject_id);
         let movement = self.to_movement_for(subject_id, server_tick);
         vec![PulseEvent::Movement {
             address,
@@ -445,13 +467,25 @@ impl PulseDecoder {
         }]
     }
 
+    /// Emit a `ResyncRequest` unless one is already in flight for this subject: the request
+    /// rides the reliable channel, so repeating it per 10 Hz delta until the server's full
+    /// state lands is pure upstream spam. An unknown subject whose full state can never be
+    /// applied (no wallet without a PlayerJoined) thus asks exactly once, not forever.
+    fn request_resync(&mut self, subject_id: u32, known_seq: u32) -> Vec<PulseEvent> {
+        if self.pending_resync.insert(subject_id) {
+            vec![PulseEvent::Resync(pulse::ResyncRequest {
+                subject_id,
+                known_seq,
+            })]
+        } else {
+            Vec::new()
+        }
+    }
+
     fn on_delta(&mut self, delta: pulse::PlayerStateDeltaTier0) -> Vec<PulseEvent> {
         let Some(subject) = self.subjects.get_mut(&delta.subject_id) else {
             // No baseline yet — ask the server for full state (known_seq 0 = "I have nothing").
-            return vec![PulseEvent::Resync(pulse::ResyncRequest {
-                subject_id: delta.subject_id,
-                known_seq: 0,
-            })];
+            return self.request_resync(delta.subject_id, 0);
         };
 
         // Already have this (e.g. a reliable resync retransmit of a seq we applied unreliably).
@@ -462,15 +496,15 @@ impl PulseDecoder {
         // The delta is diffed from `baseline_seq`; we can only apply it if our state is exactly
         // that sequence. Otherwise we missed an intermediate delta — resync from what we have.
         if delta.baseline_seq != subject.last_seq {
-            return vec![PulseEvent::Resync(pulse::ResyncRequest {
-                subject_id: delta.subject_id,
-                known_seq: subject.last_seq,
-            })];
+            let known_seq = subject.last_seq;
+            return self.request_resync(delta.subject_id, known_seq);
         }
 
         subject.baseline.apply_delta(&delta);
         subject.last_seq = delta.new_seq;
         let address = subject.wallet;
+        // A delta lining back up with our window also resolves any in-flight resync.
+        self.pending_resync.remove(&delta.subject_id);
         let movement = self.to_movement_for(delta.subject_id, delta.server_tick);
         vec![PulseEvent::Movement {
             address,
@@ -908,6 +942,45 @@ mod tests {
     }
 
     #[test]
+    fn resync_requested_once_until_resolved() {
+        let mut decoder = PulseDecoder::new(PulseParcelGrid::default());
+        decoder.handle(server_msg(joined(5, (1.0, 2.0, 3.0), 0)));
+
+        let gap_delta = |new_seq: u32| {
+            pulse::server_message::Message::PlayerStateDelta(pulse::PlayerStateDeltaTier0 {
+                subject_id: SUBJECT,
+                baseline_seq: new_seq - 1,
+                new_seq,
+                ..Default::default()
+            })
+        };
+
+        // First gap delta requests a resync; follow-ups while it's in flight must not —
+        // a 10 Hz delta stream would otherwise repeat the reliable request per packet.
+        assert!(matches!(
+            decoder.handle(server_msg(gap_delta(7))).as_slice(),
+            [PulseEvent::Resync(_)]
+        ));
+        assert!(decoder.handle(server_msg(gap_delta(8))).is_empty());
+
+        // The server's full state resolves it...
+        decoder.handle(server_msg(pulse::server_message::Message::PlayerStateFull(
+            pulse::PlayerStateFull {
+                subject_id: SUBJECT,
+                sequence: 9,
+                server_tick: 2000,
+                state: Some(player_state((1.0, 2.0, 3.0), 0)),
+            },
+        )));
+
+        // ...and a later gap may request again.
+        assert!(matches!(
+            decoder.handle(server_msg(gap_delta(12))).as_slice(),
+            [PulseEvent::Resync(_)]
+        ));
+    }
+
+    #[test]
     fn delta_for_unknown_subject_requests_full() {
         let mut decoder = PulseDecoder::new(PulseParcelGrid::default());
         let delta = pulse::PlayerStateDeltaTier0 {
@@ -926,6 +999,19 @@ mod tests {
             }
             other => panic!("expected Resync, got {other:?}"),
         }
+
+        // Still unknown (no PlayerJoined) — further deltas must not repeat the request.
+        let delta = pulse::PlayerStateDeltaTier0 {
+            subject_id: 99,
+            baseline_seq: 1,
+            new_seq: 2,
+            ..Default::default()
+        };
+        assert!(decoder
+            .handle(server_msg(
+                pulse::server_message::Message::PlayerStateDelta(delta)
+            ))
+            .is_empty());
     }
 
     #[test]
@@ -989,6 +1075,17 @@ mod tests {
             })
             .expect("no Joined event");
         assert_eq!(join_addr, OTHER_WALLET.as_h160().unwrap());
+
+        // The replaced wallet must get a synthetic Left, or its "pulse" room membership
+        // (and the transport-preference gate) leaks for the rest of the session.
+        let left_addr = events
+            .iter()
+            .find_map(|e| match e {
+                PulseEvent::Left { address } => Some(*address),
+                _ => None,
+            })
+            .expect("no Left event for the replaced wallet");
+        assert_eq!(left_addr, wallet());
 
         // The old wallet's window is gone: a delta against the old seq (5) must resync from the
         // NEW binding's seq (1).

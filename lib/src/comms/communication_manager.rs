@@ -736,6 +736,12 @@ impl CommunicationManager {
             &[voice_chat_enabled, "fallback".to_variant()],
         );
 
+        // Pulse has no adapter string of its own — every path that ends in a live comms
+        // state must offer it a (re)creation chance, or a fallback-only session (e.g. the
+        // archipelago kill switch with no fixedAdapter) silently never starts it.
+        #[cfg(feature = "use_pulse")]
+        self.ensure_pulse_room();
+
         tracing::debug!("✅ Fallback connection established - scene rooms will work");
     }
 
@@ -1287,6 +1293,7 @@ impl CommunicationManager {
             if let Some(mut pulse_room) = self.pulse_room.take() {
                 pulse_room.clean();
                 self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
             }
             self.ensure_pulse_room();
         }
@@ -1308,6 +1315,7 @@ impl CommunicationManager {
             } else if let Some(mut pulse_room) = self.pulse_room.take() {
                 pulse_room.clean();
                 self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
             }
             tracing::info!("pulse: runtime enabled = {enabled}");
         }
@@ -1607,7 +1615,7 @@ impl CommunicationManager {
             }
         };
 
-        // Dual-channel movement (see plan_pulse/06): while the flag is on (default), movement
+        // Dual-channel movement: while the flag is on (default), movement
         // rides LiveKit exactly as today even when Pulse is established (Unity prod contract —
         // LiveKit-only peers must still see us). With the flag off, the island movement sends
         // (main room + archipelago) are skipped ONLY while Pulse is established, so a Pulse drop
@@ -1848,6 +1856,11 @@ impl CommunicationManager {
                 if let Some(pulse_room) = &mut self.pulse_room {
                     pulse_room.send_emote_stop();
                 }
+                // Drop any never-flushed intent: an emote pressed while moving never reaches
+                // playback (idle gate), and its stale urn must not be announced by the next
+                // unrelated emote. Only on this edge — clearing on every `false` would eat
+                // the intent during the async emote load.
+                self.pending_pulse_emote_urn = None;
             }
         }
         self.is_emoting = emoting;
@@ -2178,6 +2191,7 @@ impl CommunicationManager {
         if let Some(mut pulse_room) = self.pulse_room.take() {
             pulse_room.clean();
             self.pulse_teleport_pending = false;
+            self.pending_pulse_emote_urn = None;
         }
 
         match &mut self.current_connection {
@@ -2276,6 +2290,12 @@ impl CommunicationManager {
             tracing::info!("Comms resuming after loading");
             self.change_adapter(adapter);
         }
+
+        // A hold that started before comms were up leaves saved_adapter empty and skips
+        // change_adapter — resurrect Pulse explicitly (idempotent; deferred during the hold
+        // by ensure_pulse_room's comms_on_hold check).
+        #[cfg(feature = "use_pulse")]
+        self.ensure_pulse_room();
 
         // Reconnect the scene room — _on_change_scene_id saved current_scene_id
         // during the hold but deferred the actual connection. Mark the attempt
