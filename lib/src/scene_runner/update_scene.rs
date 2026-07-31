@@ -106,6 +106,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::TriggerArea => "TriggerArea",
         S::VirtualCameras => "VirtualCameras",
         S::AudioSource => "AudioSource",
+        S::ParticleSystem => "ParticleSystem",
         S::ProcessRpcs => "ProcessRpcs",
         S::ComputeCrdtState => "ComputeCrdtState",
         S::SendToThread => "SendToThread",
@@ -134,6 +135,7 @@ use super::{
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
+        particle_system::update_particle_system,
         physics_combined::{update_physics_combined_force, update_physics_combined_impulse},
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
@@ -547,6 +549,10 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::AudioSource => {
                     update_audio_source(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::ParticleSystem => {
+                    update_particle_system(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
                 SceneUpdateState::SceneUi => {

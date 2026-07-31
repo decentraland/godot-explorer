@@ -531,6 +531,7 @@ func _ready():
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
+	self.realm.realm_access_denied.connect(_on_realm_access_denied)
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
@@ -1369,6 +1370,10 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 
 
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
+	# Block a private world before any navigation (no-op for genesis/parcel teleports); covers
+	# both the active-explorer teleport and the cold-start-from-lobby branch below.
+	if not await _async_precheck_realm_access(new_realm):
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
@@ -1389,6 +1394,11 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 
 
 func async_join_world(world_realm: String) -> void:
+	# Block a private world before any navigation. Covers both cases below: with an active
+	# explorer the modal replaces the loading flash; without one (cold start from the lobby)
+	# it stops us from booting the explorer scene straight into the world we can't enter.
+	if not await _async_precheck_realm_access(world_realm):
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
@@ -1557,6 +1567,80 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 		"error",
 		"alert"
 	)
+
+
+func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> void:
+	# The world restricts access and this user is not on its allow-list (#1725). Only
+	# Global.realm is wired here — transient Realm instances (portable experiences) just
+	# fail to load, same as they do for the generic failure toast.
+	_clear_boot_realm_if_denied(world_name)
+	Global.modal_manager.async_show_private_world_modal(world_name)
+	# A cold start straight into a denied world booted the explorer with no realm ever set, so
+	# dismissing the modal would strand the user in an empty scene. Fall back to the main realm
+	# in that case only; an in-session denial (has_realm() true) leaves the user where they were.
+	# Deferred to avoid re-entering async_set_realm from its own denial signal.
+	if is_instance_valid(Global.get_explorer()) and not Global.realm.has_realm():
+		Global.realm.async_set_realm.call_deferred(DclUrls.main_realm())
+
+
+## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the
+## user can't enter blocks with the modal instantly instead of first flashing a loading
+## transition (#1725). The answer is cached, so the safety-net gate in Realm.async_set_realm
+## reuses it without a second fetch. Non-worlds resolve synchronously with no network hit.
+## Returns false when access was denied (the modal is already up); true otherwise.
+func _async_precheck_realm_access(new_realm_string: String) -> bool:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		new_realm_string, Realm.resolve_realm_url(new_realm_string)
+	)
+	if world_name.is_empty():
+		return true
+	if await WorldPermissionsHelper.async_is_allowed(world_name):
+		return true
+	_on_realm_access_denied(new_realm_string, world_name)
+	return false
+
+
+## Silent access check for a cold-start deeplink realm — like _async_precheck_realm_access but it
+## never shows the modal (the destination the caller routes to surfaces it). True for non-worlds
+## and allowed worlds. Used by the lobby to decide whether a deeplink can boot the explorer.
+func _async_is_realm_access_allowed(realm_string: String) -> bool:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		realm_string, Realm.resolve_realm_url(realm_string)
+	)
+	if world_name.is_empty():
+		return true
+	return await WorldPermissionsHelper.async_is_allowed(world_name)
+
+
+## Fire-and-forget prefetch of a world's access, meant to run when its jump-in card opens.
+## By the time the user taps JUMP IN the answer is cached, so the click-time precheck resolves
+## synchronously: an allowed world goes straight to the loading screen with no visible gap, a
+## private one shows the modal instantly. No-op (and no network) for non-worlds. Silent — it
+## never shows a modal; the decision surfaces only on the actual navigation.
+func warm_realm_access(realm_string: String) -> void:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		realm_string, Realm.resolve_realm_url(realm_string)
+	)
+	if world_name.is_empty():
+		return
+	WorldPermissionsHelper.async_is_allowed(world_name)
+
+
+## async_join_world / async_teleport_to persist the destination *before* the explorer scene
+## gets to run the private-world gate, so a refused world would otherwise stay as the boot
+## realm and re-open this modal on every cold start. Point it back at the main realm.
+func _clear_boot_realm_if_denied(world_name: String) -> void:
+	var config = Global.get_config()
+	var stored: String = config.last_realm_joined
+	if stored.is_empty():
+		return
+	var stored_world := WorldPermissionsHelper.world_name_from_realm(
+		stored, Realm.resolve_realm_url(stored)
+	)
+	if stored_world != world_name:
+		return
+	config.last_realm_joined = DclUrls.main_realm()
+	config.save_to_settings_file()
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
