@@ -1338,6 +1338,14 @@ impl DclSocialService {
         let address = update.address;
         let is_blocked = update.is_blocked;
 
+        // The stream regularly delivers updates with an empty address (server-side
+        // noise, ~19/user/day). Emitting them just makes every consumer fail the
+        // H160 parse downstream, so drop them here.
+        if address.is_empty() {
+            tracing::debug!("Skipping block update with empty address");
+            return;
+        }
+
         node.call_deferred(
             "emit_signal",
             &[

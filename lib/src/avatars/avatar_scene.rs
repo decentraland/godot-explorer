@@ -587,6 +587,19 @@ impl AvatarScene {
         };
 
         let mut img = image;
+        // On mobile the content pipeline hands us VRAM-compressed (ETC2) images,
+        // which resize/convert/generate_mipmaps/update_layer all reject.
+        if img.is_compressed() {
+            let err = img.decompress();
+            if err != godot::global::Error::OK {
+                tracing::debug!(
+                    "Dropping compressed impostor image for slot {}: {:?}",
+                    impostor_id,
+                    err
+                );
+                return;
+            }
+        }
         if img.get_width() != IMPOSTOR_TEX_WIDTH || img.get_height() != IMPOSTOR_TEX_HEIGHT {
             img.resize(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT);
         }
