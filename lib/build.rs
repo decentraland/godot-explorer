@@ -399,8 +399,8 @@ fn main() -> io::Result<()> {
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/v3/archipelago.proto").into(),
     );
 
-    // Pulse comms protos, shipped by the pinned @dcl/protocol tarball (protocol PR #449 branch
-    // build — see PROTOCOL_FIXED_VERSION_URL in src/install_dependency.rs). Compiled
+    // Pulse comms protos, shipped by the pinned @dcl/protocol tarball (built from protocol
+    // `main`, commit 0ff6038 — see PROTOCOL_FIXED_VERSION_URL in src/install_dependency.rs). Compiled
     // unconditionally — runtime code is gated by the `use_pulse` feature instead, keeping the
     // build script feature-free. options.proto must be in the compile set so the
     // FileDescriptorSet carries the quantization extension values for build_quant.
@@ -484,8 +484,8 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-/// The pinned @dcl/protocol build (PR #449 branch) tracks protocol `main`, whose
-/// rfc4 `comms.proto` lacks fields the Pulse transport and Unity interop rely on
+/// The pinned @dcl/protocol build (protocol `main`, commit 0ff6038) has an
+/// rfc4 `comms.proto` that lacks fields the Pulse transport and Unity interop rely on
 /// (they live in protocol `experimental`): `PlayerEmote` 4..=11 (`is_stopping` &
 /// co., bridged from Pulse `EmoteStopped` and already sent by Unity peers over
 /// LiveKit) and `Chat.forwarded_from` (SFU forwarding). The npm tree is gitignored
