@@ -2231,6 +2231,10 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(true);
             }
 
+            // Stop and clear every particle system (idle scenes tick too slowly
+            // for the per-frame reconcile to feel immediate).
+            super::components::particle_system::reconcile_user_presence(scene, false);
+
             // Stop any wind/impulse the player just walked out of.
             scene.active_external_force = Vector3::ZERO;
             scene.pending_impulses.clear();
@@ -2260,6 +2264,9 @@ impl SceneManager {
             for (_, video_player_node) in scene.video_players.iter_mut() {
                 video_player_node.bind_mut().set_muted(false);
             }
+
+            // Resume particle systems (restarts the ones in PLAYING state).
+            super::components::particle_system::reconcile_user_presence(scene, true);
 
             scene
                 .avatar_scene_updates

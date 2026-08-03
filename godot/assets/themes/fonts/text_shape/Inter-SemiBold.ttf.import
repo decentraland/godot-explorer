@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://bxaoncoti34uk"
-path="res://.godot/imported/Inter_24pt-SemiBold.ttf-18ba2aaf8ce9dc08a42d754677401767.fontdata"
+uid="uid://dsp1v3gwqgdvu"
+path="res://.godot/imported/Inter-SemiBold.ttf-7f5d16ac5bf1dba224034b1712a430a5.fontdata"
 
 [deps]
 
-source_file="res://assets/themes/fonts/text_shape/Inter_24pt-SemiBold.ttf"
-dest_files=["res://.godot/imported/Inter_24pt-SemiBold.ttf-18ba2aaf8ce9dc08a42d754677401767.fontdata"]
+source_file="res://assets/themes/fonts/text_shape/Inter-SemiBold.ttf"
+dest_files=["res://.godot/imported/Inter-SemiBold.ttf-7f5d16ac5bf1dba224034b1712a430a5.fontdata"]
 
 [params]
 
