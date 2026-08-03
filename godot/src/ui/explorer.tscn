@@ -330,6 +330,7 @@ offset_right = 77.0
 offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 0
+mouse_filter = 2
 
 [node name="Label_Version" type="Label" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_VersionFPS" unique_id=2080384115]
 unique_name_in_owner = true
