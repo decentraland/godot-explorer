@@ -24,6 +24,9 @@ const WEARABLE_NAME_PREFIX = "__"
 # "off screen" freezes a drawn one.
 const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 2.8, 2.0))
 
+# Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
+const DEFAULT_NAMETAG_HEIGHT := 1.9
+
 const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
 const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
 const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
@@ -640,6 +643,43 @@ func async_update_avatar(
 	)
 	await PromiseUtils.async_all(promise)
 	await async_fetch_wearables_dependencies()
+
+
+## World-space Y the nameplate should float at. Hybrid: posed skeleton bone
+## tops follow emotes (crouch lowers the tag) and wearable bones merged into
+## the skeleton count; but joints sit below the actual mesh surface (skull,
+## hats), so we add a clearance measured from the bind pose:
+## bind mesh AABB top minus bind bone top. Hats/wings live in the bind AABB
+## (meters, feet at 0 — the skeleton's 0.01 scale does NOT apply to them,
+## skinning bypasses it via bind poses), bones live in cm (scale applies).
+# ponytail: recomputed per call (NameplateLayer calls it per frame per avatar);
+# ~70 bone reads + precomputed per-mesh AABBs are cheap — cache only if
+# profiling says otherwise.
+func get_bounds_top_y() -> float:
+	var bone_count := body_shape_skeleton_3d.get_bone_count()
+	if bone_count == 0:
+		return global_position.y + DEFAULT_NAMETAG_HEIGHT
+	var skeleton_xform := body_shape_skeleton_3d.global_transform
+	var posed_top := -INF
+	var rest_top := -INF
+	for i in bone_count:
+		posed_top = maxf(
+			posed_top, (skeleton_xform * body_shape_skeleton_3d.get_bone_global_pose(i).origin).y
+		)
+		rest_top = maxf(
+			rest_top, (skeleton_xform * body_shape_skeleton_3d.get_bone_global_rest(i).origin).y
+		)
+	var mesh_top := -INF
+	for child in body_shape_skeleton_3d.get_children():
+		if child is MeshInstance3D and child.visible:
+			var aabb: AABB = child.transform * child.get_aabb()
+			mesh_top = maxf(mesh_top, aabb.end.y)
+	if mesh_top == -INF:
+		# Meshes not loaded yet: joint top + a plain head's worth of clearance.
+		return posed_top + 0.3
+	var mesh_top_world := to_global(Vector3(0, mesh_top, 0)).y
+	var clearance := maxf(mesh_top_world - rest_top, 0.15)
+	return posed_top + clearance
 
 
 func set_force_hide_name(value: bool) -> void:
