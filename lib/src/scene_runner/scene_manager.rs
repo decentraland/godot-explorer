@@ -2060,9 +2060,14 @@ impl SceneManager {
 
             let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
             let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
+            // Build the hit from the CAMERA ray origin (not the avatar position) so
+            // `hit.length`/`global_origin`/`direction` are camera-relative, per
+            // raycast_hit.proto. This is what makes `max_distance` a true camera-distance
+            // gate (pointer_events.proto), independent of `max_player_distance` which is
+            // measured from the avatar. Avatar position was an incidental earlier choice.
             let raycast_data = RaycastHit::from_godot_raycast(
                 scene_position,
-                self.player_avatar_node.get_global_position(),
+                raycast_from,
                 &raycast_result,
                 Some(dcl_entity_id as u32),
             )?;
