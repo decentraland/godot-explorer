@@ -1,16 +1,16 @@
 /// Get the gatekeeper URL (transformed based on environment)
-#[cfg(feature = "use_livekit")]
 pub fn gatekeeper_url() -> String {
     crate::urls::comms_gatekeeper()
 }
 
 /// Get the local/preview gatekeeper URL (transformed based on environment)
-#[cfg(feature = "use_livekit")]
 pub fn gatekeeper_url_local() -> String {
     crate::urls::comms_gatekeeper_local()
 }
 
-// Temporary flags for testing different connection scenarios
+// Compile-time defaults for connection scenarios. Archipelago can additionally be
+// toggled at runtime via the remote `archipielago` feature flag — see
+// `CommunicationManager::set_archipelago_enabled`.
 #[cfg(feature = "use_livekit")]
 pub const DISABLE_ARCHIPELAGO: bool = false;
 #[cfg(feature = "use_livekit")]
@@ -33,6 +33,17 @@ pub const PROFILE_REQUEST_INTERVAL_SECS: f32 = 10.0;
 
 // Protocol version
 pub const DEFAULT_PROTOCOL_VERSION: u32 = 100;
+
+// Pulse (ENet avatar-state relay) game port. The endpoint host comes from
+// crate::urls::pulse_server(), overridable via --pulse-server / PULSE_SERVER.
+#[cfg(feature = "use_pulse")]
+pub const PULSE_SERVER_PORT: u16 = 7777;
+
+/// The `IncomingMessage::room_id` for everything bridged from Pulse. A load-bearing room id
+/// (like the `"scene-"`/`"livekit-"` prefixes): MessageProcessor keys the per-peer transport
+/// preference and the inactivity-sweep exemption on it. Unconditional (not `use_pulse`-gated)
+/// so MessageProcessor's gate logic compiles in every feature combination.
+pub const PULSE_ROOM_ID: &str = "pulse";
 
 /// Truncates a string to at most `max_bytes` while respecting UTF-8 character boundaries.
 /// Returns the original string if it's already within the limit.

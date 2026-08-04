@@ -520,6 +520,13 @@ pub fn update_scene_ui(
     ui_canvas_information: &PbUiCanvasInformation,
     current_parcel_scene_id: &SceneId,
 ) {
+    // The scene's UI subtree dies with the Explorer's base_ui on teardown;
+    // reconciling against freed controls would panic (GODOT-EXPLORER-1DY).
+    // Skip — the scene is about to be reaped.
+    if !scene.godot_dcl_scene.root_node_ui.is_instance_valid() {
+        return;
+    }
+
     let ui_is_visible = if let SceneType::Parcel = scene.scene_type {
         &scene.scene_id == current_parcel_scene_id
     } else {
