@@ -648,6 +648,54 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_VERSION").contains("-staging")
     }
 
+    /// Context snapshot for the frame spike logger (issue #2593): cumulative
+    /// CRDT throughput + process-wide V8 used heap. Cheap atomic reads, safe
+    /// to call per spike.
+    #[func]
+    pub fn get_spike_context() -> VarDictionary {
+        let m = crate::dcl::js::engine::snapshot_crdt_metrics();
+        let v8_used =
+            crate::dcl::js::V8_USED_HEAP_BYTES_TOTAL.load(std::sync::atomic::Ordering::Relaxed);
+        let mut d = VarDictionary::new();
+        let _ = d.insert("crdt_send_bytes", m.send_bytes);
+        let _ = d.insert("crdt_send_ops", m.send_ops);
+        let _ = d.insert("crdt_recv_bytes", m.recv_bytes);
+        let _ = d.insert("crdt_recv_ops", m.recv_ops);
+        let _ = d.insert("v8_used_heap_bytes", v8_used);
+        use std::sync::atomic::Ordering::Relaxed;
+        let _ = d.insert(
+            "transform_puts_tween",
+            crate::dcl::js::engine::TRANSFORM_PUTS_TWEEN.load(Relaxed),
+        );
+        let _ = d.insert(
+            "transform_puts_avatar",
+            crate::dcl::js::engine::TRANSFORM_PUTS_AVATAR.load(Relaxed),
+        );
+        d
+    }
+
+    /// Reset CRDT counters and enable per-component breakdown recording.
+    /// Costly (per-recv mutex) — debugging only, pair with crdt_breakdown_drain.
+    #[func]
+    pub fn crdt_breakdown_begin() {
+        crate::dcl::js::engine::reset_crdt_metrics();
+    }
+
+    /// Drain per-component dirty counts (disables recording), format top-10.
+    #[func]
+    pub fn crdt_breakdown_drain() -> GString {
+        let b = crate::dcl::js::engine::drain_crdt_component_breakdown();
+        let mut s = String::new();
+        for (id, n) in b.lww.iter().take(10) {
+            s.push_str(&format!("lww:{id}={n} "));
+        }
+        s.push_str("| ");
+        for (id, n) in b.gos.iter().take(10) {
+            s.push_str(&format!("gos:{id}={n} "));
+        }
+        GString::from(s.as_str())
+    }
+
     #[func]
     pub fn is_dev() -> bool {
         env!("GODOT_EXPLORER_VERSION").contains("-dev")

@@ -32,7 +32,15 @@ use scene_inspector_ops::SceneDebugFlag;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
+
+/// Process-wide sum of V8 used heap across all live scene threads, fed by
+/// each scene's 1s heap sample (delta-based). Read by the spike logger.
+/// ponytail: dead scenes leave residue (never subtracted); fine for spike
+/// attribution within a session — reset per app run. Upgrade path: subtract
+/// the scene's last sample on SceneDying if totals drift in long sessions.
+pub static V8_USED_HEAP_BYTES_TOTAL: AtomicI64 = AtomicI64::new(0);
 use std::time::Duration;
 
 use deno_core::error::JsError;
@@ -493,6 +501,9 @@ pub(crate) fn scene_thread(
     let mut elapsed = Duration::default();
     let mut reported_error_filter = 0;
     let mut last_memory_stats_update = std::time::Instant::now();
+    // Last heap sample this scene contributed to the process-wide totals
+    // (spike logger, issue #2593). Deltas are added each second.
+    let mut prev_used_heap: i64 = 0;
 
     let mut tick_counter: u32 = 0;
 
@@ -604,6 +615,10 @@ pub(crate) fn scene_thread(
 
             state.borrow_mut().put(deno_stats);
             last_memory_stats_update = std::time::Instant::now();
+
+            let used = deno_stats.used_heap_size_bytes as i64;
+            V8_USED_HEAP_BYTES_TOTAL.fetch_add(used - prev_used_heap, Ordering::Relaxed);
+            prev_used_heap = used;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
