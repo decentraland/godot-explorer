@@ -122,6 +122,36 @@ fn navbar_profile_hitbox_matches_visible_bubble() {
     );
 }
 
+/// Later siblings draw and hit-test on top. The debug tools row (console +
+/// scene stats) must beat scene UI for input, but render *below* the
+/// Friends/Notifications/Settings panels and the navbar — so it has to sit
+/// after `SceneUIContainer` and before `LeftRightSafeContainer`.
+#[test]
+fn debug_tools_sit_between_scene_ui_and_right_panels() {
+    let nodes = parse_tscn("../godot/src/ui/explorer.tscn");
+    let ui_children: Vec<&str> = nodes
+        .iter()
+        .filter(|n| n.parent.as_deref() == Some("UI"))
+        .map(|n| n.name.as_str())
+        .collect();
+    let idx = |name: &str| {
+        ui_children
+            .iter()
+            .position(|n| *n == name)
+            .unwrap_or_else(|| panic!("{name} not found under UI — was it renamed?"))
+    };
+    let scene_ui = idx("SceneUIContainer");
+    let debug_tools = idx("SafeMarginContainerDebug");
+    let hud_panels = idx("LeftRightSafeContainer");
+    assert!(
+        scene_ui < debug_tools && debug_tools < hud_panels,
+        "explorer: SafeMarginContainerDebug (debug console + scene stats) must come \
+         after SceneUIContainer but before LeftRightSafeContainer, so the debug \
+         tools receive input over scene UI yet render below the Friends/\
+         Notifications/Settings panels (issue #2578).",
+    );
+}
+
 /// The bottom-center version/FPS strip is an HBoxContainer of Labels; the
 /// Labels ignore input but the HBox itself defaulted to PASS.
 #[test]
