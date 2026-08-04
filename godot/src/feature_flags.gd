@@ -10,7 +10,9 @@ extends Node
 ## gracefully (e.g. tearing archipelago down while keeping scene rooms alive).
 ##
 ## Fail-open: on timeout, network error or malformed payload every flag keeps
-## its default and the feature stays enabled.
+## its default and the feature stays enabled. Exception: `pulse` is fail-closed —
+## the transport activates only when the payload explicitly enables it (see
+## _apply_flags).
 
 signal flags_loaded
 
@@ -81,11 +83,12 @@ func _async_load() -> void:
 # Applies the comms-affecting flags. `archipielago=false` skips the archipelago
 # connection while scene rooms (and Pulse) keep working — see
 # CommunicationManager::set_archipelago_enabled on the Rust side.
-# `pulse=false` is a fleet-wide kill switch for the Pulse transport: it tears the
-# room down (or prevents its creation) and LiveKit avatar sync takes over. It is
-# disable-only on purpose — a server flag must never force-enable Pulse over a
-# local `--no-pulse` / `pulse=false` test run.
+# `pulse` is the fail-closed exception: the transport activates only when the
+# payload explicitly enables it — a fetch failure or an absent flag reports
+# `false` and Pulse stays off (LiveKit avatar sync covers everything). The flag
+# only decides the default: explicit local opt-ins (deeplink `pulse=true` /
+# `pulse-server=`, CLI `--pulse`) and opt-outs (`--no-pulse`, `pulse=false`)
+# always win — see CommunicationManager::pulse_enabled on the Rust side.
 func _apply_flags() -> void:
 	Global.comms.set_archipelago_enabled(is_enabled(FLAG_ARCHIPELAGO, true))
-	if not is_enabled(FLAG_PULSE, true):
-		Global.comms.set_pulse_enabled(false)
+	Global.comms.set_pulse_flag_enabled(is_enabled(FLAG_PULSE, false))

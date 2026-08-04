@@ -269,6 +269,12 @@ pub struct CommunicationManager {
     /// Runtime activation override (deeplink `pulse=true/false`): `None` follows the CLI/env.
     #[cfg(feature = "use_pulse")]
     pulse_runtime_enabled: Option<bool>,
+    /// Server `pulse` feature-flag verdict, reported once per run by feature_flags.gd when
+    /// the mobile-bff fetch settles. Fail-closed: `None` (not reported yet) and `Some(false)`
+    /// (flag off, absent, or fetch failed) both keep Pulse off unless an explicit
+    /// runtime/CLI opt-in overrides it — see `pulse_enabled`.
+    #[cfg(feature = "use_pulse")]
+    pulse_flag_enabled: Option<bool>,
     /// Runtime endpoint override (deeplink `pulse-server=host:port`, shareable so a group can
     /// join the same server). Wins over --pulse-server / PULSE_SERVER / the default endpoint.
     #[cfg(feature = "use_pulse")]
@@ -367,6 +373,8 @@ impl INode for CommunicationManager {
             livekit_movement_dual_channel: true,
             #[cfg(feature = "use_pulse")]
             pulse_runtime_enabled: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_flag_enabled: None,
             #[cfg(feature = "use_pulse")]
             pulse_endpoint_override: None,
             #[cfg(feature = "use_pulse")]
@@ -773,8 +781,20 @@ impl CommunicationManager {
         }
     }
 
+    /// Effective Pulse activation. Precedence: runtime override (deeplink `pulse=` /
+    /// `pulse-server=`) > CLI (`--no-pulse` always disables, `--pulse` force-enables) >
+    /// server `pulse` feature flag, fail-closed — Pulse stays off until feature_flags.gd
+    /// confirms the flag is on (fetch failure or an absent flag keeps it off). A server
+    /// flag can never force-enable Pulse over a local opt-out.
+    #[cfg(feature = "use_pulse")]
+    fn pulse_enabled(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> bool {
+        self.pulse_runtime_enabled.unwrap_or_else(|| {
+            cli.pulse && (cli.pulse_explicit || self.pulse_flag_enabled == Some(true))
+        })
+    }
+
     /// Create the Pulse room if activation is on and it doesn't exist yet.
-    /// Activation: deeplink override (`pulse=`/`pulse-server=`) > CLI `--pulse` / env.
+    /// Activation: see `pulse_enabled` (deeplink > CLI > feature flag, fail-closed).
     /// Endpoint: deeplink `pulse-server=` > `--pulse-server` / `PULSE_SERVER` > default
     /// `urls::pulse_server():7777` (env-resolved via the `comms` group; `dclenv=zone`
     /// or `dclenv=comms::zone,org` both target the zone deployment).
@@ -802,7 +822,7 @@ impl CommunicationManager {
 
         let cli = global.bind().cli.clone();
         let cli = cli.bind();
-        if !self.pulse_runtime_enabled.unwrap_or(cli.pulse) {
+        if !self.pulse_enabled(&cli) {
             return;
         }
         if cli.no_livekit_movement {
@@ -1318,6 +1338,32 @@ impl CommunicationManager {
                 self.pending_pulse_emote_urn = None;
             }
             tracing::info!("pulse: runtime enabled = {enabled}");
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
+    }
+
+    /// Server `pulse` feature-flag verdict (feature_flags.gd, once per run when the
+    /// mobile-bff fetch settles; `false` on fetch failure or an absent flag — fail-closed).
+    /// Decides the default only: explicit runtime/CLI opt-ins and opt-outs win (see
+    /// `pulse_enabled`), so the flag can neither kill a `pulse=true`/`pulse-server=`
+    /// deeplink test run nor force-enable Pulse over `--no-pulse`.
+    #[func]
+    pub fn set_pulse_flag_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.pulse_flag_enabled = Some(enabled);
+            tracing::info!("pulse: feature flag enabled = {enabled}");
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let effective = self.pulse_enabled(&cli.bind());
+            if effective {
+                self.ensure_pulse_room();
+            } else if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
+            }
         }
         #[cfg(not(feature = "use_pulse"))]
         let _ = enabled;
@@ -2746,7 +2792,7 @@ impl CommunicationManager {
             let global = DclGlobal::singleton();
             let cli = global.bind().cli.clone();
             let cli = cli.bind();
-            let pulse_enabled = self.pulse_runtime_enabled.unwrap_or(cli.pulse);
+            let pulse_enabled = self.pulse_enabled(&cli);
             let pulse_state = if self.pulse_disabled_for_session {
                 "disabled_for_session"
             } else if let Some(pulse_room) = &self.pulse_room {
