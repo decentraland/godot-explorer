@@ -794,6 +794,12 @@ func _on_button_lets_go_pressed():
 		Global.metrics.track_screen_viewed("AUTH_DEPLOY_SUCCESS", "")
 		Global.metrics.flush.call_deferred()
 
+		# ADR-290: generate local snapshot so the own profile picture is visible
+		# (deploy strips snapshots server-side, so do it after the deploy)
+		await Global.snapshot.async_generate_for_avatar(avatar, current_profile)
+		current_profile.set_avatar(avatar)
+		Global.player_identity.set_profile(current_profile)
+
 	show_discover_ftue_screen()
 
 

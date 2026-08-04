@@ -1121,6 +1121,16 @@ func send_scene_failed_metrics(
 func _on_try_spawn_scene(
 	scene_item: SceneItem, local_main_js_path: String, local_main_crdt_path: String
 ):
+	# Between Explorer teardown (sign-out / return-to-discover / realm change)
+	# and the next explorer._ready() there is nothing to spawn into — a
+	# cache-hot load resolving in that window used to reach start_scene() with
+	# a freed base_ui (GODOT-EXPLORER-1DY / -1E0). Drop the entry so the
+	# regular position scan re-fetches it once the Explorer is back.
+	if not is_instance_valid(Global.get_explorer()):
+		printerr("Skipping scene spawn, no explorer: ", scene_item.id)
+		loaded_scenes.erase(scene_item.id)
+		return false
+
 	if not local_main_js_path.is_empty() and not FileAccess.file_exists(local_main_js_path):
 		printerr("Couldn't get main.js file:", local_main_js_path)
 		local_main_js_path = ""
