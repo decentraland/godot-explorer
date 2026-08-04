@@ -66,8 +66,10 @@ pub struct SceneMetaScene {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct SceneDisplay {
     pub title: Option<String>,
+    pub navmap_thumbnail: Option<String>,
 }
 
 #[derive(Default, Serialize, Deserialize, Debug)]
@@ -169,5 +171,42 @@ impl serde::Serialize for SceneMetaScene {
 
         let original = OriginalSceneMetaScene { base, parcels };
         original.serialize(serializer)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scene_display_parses_navmap_thumbnail() {
+        let json = serde_json::json!({
+            "display": {
+                "title": "Raft Game",
+                "navmapThumbnail": "images/raft_game.png"
+            },
+            "main": "bin/index.js",
+            "scene": { "base": "14,5", "parcels": ["14,5", "14,6"] }
+        });
+
+        let meta: SceneEntityMetadata = serde_json::from_value(json).unwrap();
+        let display = meta.display.unwrap();
+        assert_eq!(display.title.as_deref(), Some("Raft Game"));
+        assert_eq!(
+            display.navmap_thumbnail.as_deref(),
+            Some("images/raft_game.png")
+        );
+    }
+
+    #[test]
+    fn scene_display_without_thumbnail_parses() {
+        let json = serde_json::json!({
+            "display": { "title": "No Thumb" },
+            "main": "bin/index.js",
+            "scene": { "base": "0,0", "parcels": ["0,0"] }
+        });
+
+        let meta: SceneEntityMetadata = serde_json::from_value(json).unwrap();
+        assert_eq!(meta.display.unwrap().navmap_thumbnail, None);
     }
 }

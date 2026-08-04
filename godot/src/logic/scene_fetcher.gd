@@ -191,6 +191,15 @@ func get_scene_data(coord: Vector2i) -> SceneItem:
 	return loaded_scenes.get(scene_entity_id)
 
 
+## Returns the scene entity definition covering the given parcel, or null when
+## the coordinator has not (yet) mapped that parcel to a scene.
+func get_scene_definition_at(coord: Vector2i) -> DclSceneEntityDefinition:
+	var scene_entity_id := scene_entity_coordinator.get_scene_entity_id(coord)
+	if scene_entity_id.is_empty():
+		return null
+	return scene_entity_coordinator.get_scene_definition(scene_entity_id)
+
+
 func get_scene_data_by_scene_id(scene_id: int) -> SceneItem:
 	for scene: SceneItem in loaded_scenes.values():
 		if scene.scene_number_id == scene_id:

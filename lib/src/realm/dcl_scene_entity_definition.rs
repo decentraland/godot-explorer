@@ -51,6 +51,19 @@ impl DclSceneEntityDefinition {
         scene_display.to_godot()
     }
 
+    /// Relative path (within the scene's content mapping) of the scene.json
+    /// `display.navmapThumbnail` image, or empty when the scene defines none.
+    #[func]
+    fn get_navmap_thumbnail(&self) -> GString {
+        self.inner
+            .scene_meta_scene
+            .display
+            .as_ref()
+            .and_then(|d| d.navmap_thumbnail.as_deref())
+            .unwrap_or("")
+            .into()
+    }
+
     #[func]
     fn is_global(&self) -> bool {
         self.inner.is_global
