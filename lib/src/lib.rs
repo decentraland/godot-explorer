@@ -25,6 +25,8 @@ pub mod deep_link;
 pub mod env;
 pub mod godot_classes;
 pub mod http_request;
+#[cfg(test)]
+mod hud_input_lint;
 pub mod notifications;
 pub mod profile;
 pub mod realm;
