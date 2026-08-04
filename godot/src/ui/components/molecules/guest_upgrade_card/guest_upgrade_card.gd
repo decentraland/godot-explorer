@@ -16,6 +16,13 @@ extends MarginContainer
 	set(value):
 		side_margin = value
 		_apply_full_width()
+## Top margin (px) applied to the settings card while in landscape (in-game). Portrait settings
+## gets its top spacing from the settings layout; the tighter landscape layout leaves the card
+## flush against the tab buttons, so this restores the separation (issue #2403).
+@export var landscape_settings_top_margin: int = 40:
+	set(value):
+		landscape_settings_top_margin = value
+		_apply_top_margin()
 
 ## True once the network check has completed with an authoritative result
 ## (prevents re-checking every time the parent becomes visible afterwards).
@@ -38,10 +45,24 @@ func _apply_full_width() -> void:
 		add_theme_constant_override("margin_right", side_margin)
 
 
+# Only the landscape (in-game) settings card needs a top margin: portrait settings already gets its
+# spacing from the layout, and discover is untouched. Skipped in the editor where Global is inert.
+func _apply_top_margin() -> void:
+	var top: int = 0
+	if (
+		not Engine.is_editor_hint()
+		and shown_in == "settings"
+		and not Global.is_orientation_portrait()
+	):
+		top = landscape_settings_top_margin
+	add_theme_constant_override("margin_top", top)
+
+
 func _ready() -> void:
 	_apply_full_width()
 	if Engine.is_editor_hint():
 		return
+	_apply_top_margin()
 	button_add_email.pressed.connect(_async_on_add_email_pressed)
 	visibility_changed.connect(_on_visibility_changed)
 	Global.orientation_changed.connect(_on_orientation_changed)
@@ -50,6 +71,7 @@ func _ready() -> void:
 
 
 func _on_orientation_changed(_is_portrait: bool) -> void:
+	_apply_top_margin()
 	_async_update_visibility()
 
 
@@ -66,8 +88,6 @@ func refresh_visibility() -> void:
 # gdlint:ignore = async-function-name
 func _async_update_visibility() -> void:
 	visible = false
-	if not Global.is_orientation_portrait():
-		return
 	if Global.player_identity == null or not Global.player_identity.is_thirdweb_guest():
 		return
 
@@ -137,9 +157,25 @@ func _async_on_add_email_pressed() -> void:
 	Global.metrics.track_click_button(
 		"UPGRADE_NOTICE_TAP", "UPGRADE_NOTICE_SHOW", JSON.stringify({"shown_in": _get_shown_in()})
 	)
+	# In-game the Settings panel is landscape but the Add Email modal is portrait-only, so route the
+	# guest through Discover first (which closes Settings and switches the app to portrait) before
+	# starting the flow, so the modal renders in portrait like everywhere else (issue #2403).
+	if shown_in == "settings" and Global.get_explorer():
+		Global.open_discover.emit()
+		await _async_wait_for_portrait()
 	# The full Add Email → OTP → reward flow lives in the modal manager so this notice and the
 	# aspirational upgrade modal share one identical experience (issues #2377 / #2372).
 	await Global.modal_manager.async_start_add_email_flow()
+
+
+# Discover switches the app to portrait asynchronously; wait a few frames so the Add Email modal is
+# created at the portrait size instead of mid-rotation. Bail out after a short cap so we never hang
+# if the orientation never changes.
+func _async_wait_for_portrait() -> void:
+	var frames: int = 0
+	while not Global.is_orientation_portrait() and frames < 30:
+		await get_tree().process_frame
+		frames += 1
 
 
 # The shared flow emits guest_upgrade_state_refreshed(true) once the guest upgrades — hide the
