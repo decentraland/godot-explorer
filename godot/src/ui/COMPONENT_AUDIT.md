@@ -203,7 +203,7 @@ Layouts ship as scripts only (no `.tscn`); each is a reusable container/wrapper 
 | `debug_panel.tscn` | `components/organisms/debug_panel/` | `components/debug_panel/` | Dev debug panel |
 | `network_inspector_ui.tscn` | `components/organisms/debug_panel/network_inspector/` | `components/debug_panel/network_inspector/` | Network-inspector UI |
 | `request_entry.tscn` | `components/organisms/debug_panel/network_inspector/` | `components/debug_panel/network_inspector/` | Network-inspector row |
-| `livekit_debug_panel.tscn` | `components/organisms/livekit_debug/` | `components/livekit_debug/` | LiveKit voice debug panel |
+| `multiplayer_debug_panel.tscn` | `components/organisms/multiplayer_debug/` | `components/multiplayer_debug/` | Multiplayer comms debug panel |
 
 ## Duplication / unification candidates
 

@@ -163,6 +163,10 @@ impl DclUrls {
     pub fn app_versions() -> GString {
         urls::app_versions().to_godot()
     }
+    #[func]
+    pub fn feature_flags() -> GString {
+        urls::feature_flags().to_godot()
+    }
 
     // Proxy
     #[func]
