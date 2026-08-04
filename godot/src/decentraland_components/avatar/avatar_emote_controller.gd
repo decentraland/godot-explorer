@@ -106,6 +106,10 @@ var _grace_period_until: float = 0.0
 
 # Lock to prevent concurrent async emote loading
 var _is_loading_emote: bool = false
+# Bumped by stop_emote(); async_play_emote captures it before the async load and
+# skips the deferred playback when it changed — otherwise a stop arriving while the
+# emote GLB downloads is lost and a looping emote starts anyway (and never ends).
+var _stop_generation: int = 0
 
 # Track prop visibility nodes that need to be hidden on idle
 # This avoids modifying idle_anim at runtime which can crash the mixer
@@ -161,6 +165,7 @@ func stop_emote():
 	playing_single = false
 	playing_mixed = false
 	playing_loop = false
+	_stop_generation += 1
 
 
 ## Play an emote by ID or URN (supports both wearable and scene emotes).
@@ -424,6 +429,7 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 
 	# Set loading lock
 	_is_loading_emote = true
+	var stop_generation := _stop_generation
 
 	# _async_load_emote handles both wearable and scene emotes via unified path
 	await _async_load_emote(emote_urn)
@@ -443,6 +449,11 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 
 	# Clear loading lock
 	_is_loading_emote = false
+
+	# A stop arrived while the emote was downloading — it was cancelled before it
+	# ever played; starting it now would resurrect it (loops: forever).
+	if stop_generation != _stop_generation:
+		return
 
 	# Use call_deferred to ensure playback happens on main thread after async loading
 	play_emote.call_deferred(emote_urn)

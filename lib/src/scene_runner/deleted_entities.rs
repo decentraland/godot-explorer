@@ -43,6 +43,7 @@ pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
         godot_dcl_scene.entities.remove(deleted_entity);
 
         scene.audio_sources.remove(deleted_entity);
+        scene.particle_systems.remove(deleted_entity);
         scene.audio_streams.remove(deleted_entity);
         scene.video_players.remove(deleted_entity);
         scene.dup_animator.remove(deleted_entity);

@@ -74,7 +74,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_qvy7f")
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Add email to play across mobile and desktop."
+text = "Add email to play across mobile and desktop, and claim an exclusive Wearable."
 label_settings = SubResource("LabelSettings_vwd20")
 autowrap_mode = 2
 

@@ -2,7 +2,7 @@ extends Control
 
 signal request_debug_panel(enabled: bool)
 signal request_pause_scenes(enabled: bool)
-signal request_livekit_debug(enabled: bool)
+signal request_multiplayer_debug(enabled: bool)
 signal panel_closed
 
 enum SceneLogLevel {
@@ -75,6 +75,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var check_button_multiplayer_debug: CheckButton = %CheckButton_MultiplayerDebug
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
 @onready var button_graphics: Button = %Button_Graphics
@@ -342,6 +343,8 @@ func refresh_values():
 	process_tick_quota.value = Global.get_config().process_tick_quota_ms
 	if is_instance_valid(Global.raycast_debugger):
 		check_button_raycast_debugger.set_pressed_no_signal(true)
+	if is_instance_valid(Global.comms):
+		check_button_multiplayer_debug.set_pressed_no_signal(Global.comms.get_multiplayer_debug())
 
 
 func _on_button_connect_preview_pressed():
@@ -559,6 +562,11 @@ func _on_button_account_pressed() -> void:
 
 func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
+
+
+func _on_button_show_reward_modal_pressed() -> void:
+	# Dev Tools shortcut: preview the wearable claim modal without doing a full email upgrade.
+	Global.modal_manager.async_show_reward_modal(RewardCampaigns.CAMPAIGNS["MobilePet"])
 
 
 func _on_button_test_notification_pressed() -> void:
@@ -865,8 +873,8 @@ func _on_check_button_scene_processing_paused_toggled(toggled_on: bool) -> void:
 	emit_signal("request_pause_scenes", toggled_on)
 
 
-func _on_check_button_livekit_debug_toggled(toggled_on: bool) -> void:
-	request_livekit_debug.emit(toggled_on)
+func _on_check_button_multiplayer_debug_toggled(toggled_on: bool) -> void:
+	request_multiplayer_debug.emit(toggled_on)
 
 
 func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
