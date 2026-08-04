@@ -42,9 +42,10 @@ pub struct DclParseDeepLink {
     #[var]
     saved_profile: GString,
 
-    /// Enable LiveKit debug panel from deep link (livekit_debug=true)
+    /// Enable the multiplayer debug panel from deep link (multiplayer_debug=true;
+    /// legacy alias: livekit_debug=true)
     #[var]
-    livekit_debug: bool,
+    multiplayer_debug: bool,
 
     /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
     #[var]
@@ -108,7 +109,7 @@ impl DclParseDeepLink {
             is_walletconnect_callback: false,
             dclenv: GString::new(),
             saved_profile: GString::new(),
-            livekit_debug: false,
+            multiplayer_debug: false,
             path: GString::new(),
             disable_profile_deploy: false,
             fake_owned_wearables: PackedStringArray::new(),
@@ -140,7 +141,7 @@ impl DclParseDeepLink {
             dclenv: GString::from(&r.dclenv),
             is_walletconnect_callback: r.is_walletconnect_callback,
             saved_profile: GString::from(&r.saved_profile),
-            livekit_debug: r.livekit_debug,
+            multiplayer_debug: r.multiplayer_debug,
             path: GString::from(&r.path),
             disable_profile_deploy: r.disable_profile_deploy,
             fake_owned_wearables: PackedStringArray::from_iter(

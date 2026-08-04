@@ -2316,7 +2316,11 @@ impl ContentProvider {
         TokioRuntime::spawn(async move {
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let url = format!("{}profiles/default{}", lambda_server_base_url, slot);
+            let url = format!(
+                "{}/profiles/default{}",
+                lambda_server_base_url.trim_end_matches('/'),
+                slot
+            );
             let profile_result =
                 request_lambda_profile_by_url(url, profile_base_url.as_str(), http_requester).await;
 

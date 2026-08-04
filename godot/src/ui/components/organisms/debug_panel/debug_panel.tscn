@@ -37,11 +37,13 @@ mouse_filter = 2
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
+mouse_filter = 2
 
 [node name="HBoxContainer_TopButtons" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1776876775]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
+mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="Button_ShowHide" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer_TopButtons" unique_id=1347699769]

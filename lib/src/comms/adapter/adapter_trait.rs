@@ -14,4 +14,8 @@ pub trait Adapter {
 
     fn broadcast_voice(&mut self, frame: Vec<i16>);
     fn support_voice_chat(&self) -> bool;
+
+    fn connection_state_str(&self) -> &'static str {
+        "unknown"
+    }
 }
