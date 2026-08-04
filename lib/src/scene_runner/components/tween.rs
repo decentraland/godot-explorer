@@ -363,9 +363,14 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 transform
             }
             Some(Mode::Rotate(data)) => {
-                let start = data.start.clone().unwrap().to_godot();
-                let end = data.end.clone().unwrap().to_godot();
-                transform.rotation = start + ((end - start) * ease_value);
+                let start = data.start.clone().unwrap().to_godot().normalized();
+                let end = data.end.clone().unwrap().to_godot().normalized();
+                // Use slerp instead of component-wise lerp so the rotation follows the
+                // shortest arc at constant angular velocity. Godot's slerp internally
+                // negates `end` when dot(start, end) < 0, handling the quaternion double
+                // cover (q and -q are the same rotation) — that's what stops the segment
+                // from spinning the long way around and snapping back (issue #2320).
+                transform.rotation = start.slerp(end, ease_value);
                 transform
             }
             Some(Mode::Scale(data)) => {
