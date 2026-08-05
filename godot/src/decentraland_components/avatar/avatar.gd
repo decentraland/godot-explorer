@@ -1,3 +1,4 @@
+# gdlint: disable=max-file-lines
 class_name Avatar
 extends DclAvatar
 
@@ -23,6 +24,9 @@ const WEARABLE_NAME_PREFIX = "__"
 # screen" only animates an avatar that might be off-screen, whereas a too-eager
 # "off screen" freezes a drawn one.
 const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 2.8, 2.0))
+
+# Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
+const DEFAULT_NAMETAG_HEIGHT := 1.9
 
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
@@ -172,6 +176,10 @@ var _profile_ready: bool = false
 # for the dev pending nameplate: banned => "Failed", otherwise "Loading".
 var _profile_request_failures: int = 0
 var _profile_request_banned: bool = false
+# Cached nametag bounds, see get_bounds_top_y(). _nametag_posed_top = max
+# dot(skeleton basis Y row, bone pose origin); _nametag_clearance in meters.
+var _nametag_posed_top := 0.0
+var _nametag_clearance := 0.3
 var _impostor_layer: int = -1
 var _lod_phase: int = 0
 var _mesh_lod_visibility_captured: bool = false
@@ -253,6 +261,9 @@ func _ready():
 	wearable_loader = WearableLoader.new()
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
+	body_shape_skeleton_3d.skeleton_updated.connect(self._recompute_nametag_posed_top)
+	_recompute_nametag_clearance()
+	_recompute_nametag_posed_top()
 
 	avatar_modifier_area_detector.set_avatar_modifier_area.connect(
 		self._on_set_avatar_modifier_area
@@ -623,6 +634,59 @@ func async_update_avatar(
 	await async_fetch_wearables_dependencies()
 
 
+## World-space Y the nameplate should float at: posed skeleton top plus a
+## clearance covering mesh volume above the topmost joint (skull, hats), plus
+## NameplateLayer's fixed margin. Posed bone tops follow emotes (crouch lowers
+## the tag); wearable bones merged into the skeleton count too.
+##
+## Perf: both parts are cached. _recompute_nametag_posed_top runs on
+## skeleton_updated (LOD-throttled); _recompute_nametag_clearance runs on
+## wearable load. Mesh AABBs are bind-space (meters, feet at 0 — the
+## skeleton's 0.01 scale does NOT apply, skinning bypasses it via bind poses);
+## bones live in cm (scale applies via the skeleton transform).
+func get_bounds_top_y() -> float:
+	if body_shape_skeleton_3d.get_bone_count() == 0:
+		return global_position.y + DEFAULT_NAMETAG_HEIGHT
+	return (
+		body_shape_skeleton_3d.global_transform.origin.y + _nametag_posed_top + _nametag_clearance
+	)
+
+
+## Posed top, cached per skeleton update. The basis Y row is constant while the
+## avatar only yaws/moves, so the per-frame cost in get_bounds_top_y is just
+## adding the skeleton's world origin.
+func _recompute_nametag_posed_top() -> void:
+	var basis := body_shape_skeleton_3d.global_transform.basis
+	var y_row := Vector3(basis[0].y, basis[1].y, basis[2].y)
+	var top := -INF
+	for i in body_shape_skeleton_3d.get_bone_count():
+		top = maxf(top, y_row.dot(body_shape_skeleton_3d.get_bone_global_pose(i).origin))
+	if top != -INF:
+		_nametag_posed_top = top
+
+
+## Clearance above the topmost joint: bind mesh AABB top minus bind bone top.
+## Recomputed on wearable load; stale only if mesh visibility changes without
+## a reload (rare, and erring tall is harmless).
+func _recompute_nametag_clearance() -> void:
+	var skeleton_xform := body_shape_skeleton_3d.global_transform
+	var rest_top := -INF
+	for i in body_shape_skeleton_3d.get_bone_count():
+		rest_top = maxf(
+			rest_top, (skeleton_xform * body_shape_skeleton_3d.get_bone_global_rest(i).origin).y
+		)
+	var mesh_top := -INF
+	for child in body_shape_skeleton_3d.get_children():
+		if child is MeshInstance3D and child.visible:
+			var aabb: AABB = child.transform * child.get_aabb()
+			mesh_top = maxf(mesh_top, aabb.end.y)
+	if mesh_top == -INF or rest_top == -INF:
+		_nametag_clearance = 0.3
+		return
+	var mesh_top_world := to_global(Vector3(0, mesh_top, 0)).y
+	_nametag_clearance = maxf(mesh_top_world - rest_top, 0.15)
+
+
 func set_force_hide_name(value: bool) -> void:
 	if _force_hide_name == value:
 		return
@@ -983,6 +1047,7 @@ func async_load_wearables():
 			body_shape_skeleton_3d.reset_bone_pose(i)
 
 	body_shape_skeleton_3d.visible = true
+	_recompute_nametag_clearance()
 	finish_loading = true
 	# Emotes - get from cached emote scenes
 	for emote_urn in avatar_data.get_emotes():
