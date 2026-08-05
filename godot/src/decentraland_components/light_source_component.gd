@@ -10,6 +10,12 @@ const DEBUG_DCL_LIGHTS_LOG: bool = false
 
 const DCL_LIGHT_AUTO_RANGE_DIVISOR: float = 160.0
 
+# SDK intensity is authored in candela-ish units where ~100 is a normal
+# accent light and the Rust fallback default is 300. The reference client
+# passes it through to Unity's unitless intensity; Godot's unitless energy
+# lands visually close at /100: 100 -> 1.0 (visible), 300 -> 3.0 (bright).
+const DCL_LIGHT_INTENSITY_DIVISOR: float = 100.0
+
 # Godot needs shadow_enabled=true for light_projector to work, so "shadows off"
 # removes dynamic casters via shadow_caster_mask instead of disabling the shadow.
 const DCL_LIGHT_SHADOW_CASTER_MASK_ALL: int = 0xFFFFFFFF
@@ -399,7 +405,7 @@ func _clear_light() -> void:
 
 
 func _convert_intensity(intensity: float) -> float:
-	return intensity / 16000.0
+	return intensity / DCL_LIGHT_INTENSITY_DIVISOR
 
 
 func _get_avatar_range_state(light_range: float) -> int:
