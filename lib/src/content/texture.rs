@@ -1,8 +1,8 @@
 use crate::utils::infer_mime;
 
 use super::{
-    content_provider::ContentProviderContext, packed_array::PackedByteArrayFromVec,
-    thread_safety::GodotSingleThreadSafety,
+    cache_file_name::cache_file_path, content_provider::ContentProviderContext,
+    packed_array::PackedByteArrayFromVec, thread_safety::GodotSingleThreadSafety,
 };
 use godot::{
     builtin::{GString, PackedByteArray, Variant, Vector2i},
@@ -243,7 +243,7 @@ pub async fn load_image_texture(
     file_hash: String,
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
-    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+    let absolute_file_path = cache_file_path(&ctx.content_folder, &file_hash);
     let bytes_vec = ctx
         .resource_provider
         .fetch_resource_with_data(&url, &file_hash, &absolute_file_path)

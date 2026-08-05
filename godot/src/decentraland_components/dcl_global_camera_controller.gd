@@ -120,6 +120,11 @@ func _process(delta: float) -> void:
 				explorer.player.avatar.set_hidden(false)
 				explorer.player.outline_system.hide()
 
+			# Entering tap-cursor mode: re-center both the visual crosshair and the
+			# pointer raycast cursor so aim starts on the framed target (not a stale
+			# tap from a previous virtual-camera session).
+			_center_pointer_cursor()
+
 		# Reset transition counter and store start transform
 		transition_time_counter = 0.0
 		transition_start_transform = global_virtual_camera.global_transform
@@ -229,7 +234,21 @@ func _restore_player_camera_visibility() -> void:
 	# first/third person camera behaviour.
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
-		explorer.reset_cursor_position()
 		explorer.player.outline_system.show()
 		if explorer.player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
 			explorer.player.avatar.set_hidden(true)
+	# Reset BOTH the visual crosshair and the raycast cursor so they can't desync
+	# (reset_cursor_position alone only moves the visual, leaving cursor_position stale).
+	_center_pointer_cursor()
+
+
+# Center both the visual crosshair and the pointer raycast cursor. While a virtual
+# camera is active the explorer uses tap-cursor raycasting (raycast_use_cursor_position),
+# so the crosshair and the raycast origin are separate state that must be kept in sync.
+func _center_pointer_cursor() -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.reset_cursor_position()
+	var vp := get_viewport()
+	if vp != null:
+		Global.scene_runner.set_cursor_position(vp.get_visible_rect().size * 0.5)
