@@ -19,11 +19,13 @@ use crate::godot_classes::dcl_hashing::hash_v1;
 /// Max length of a single path component on every filesystem we ship on.
 const MAX_FILE_NAME_BYTES: usize = 255;
 
-/// Budget reserved for what callers add around the hash: the `wearable_`/`emote_` prefixes and
-/// the `.scn` / `.tmp` (download in progress) suffixes.
-const RESERVED_BYTES: usize = 16;
-
-const MAX_HASH_BYTES: usize = MAX_FILE_NAME_BYTES - RESERVED_BYTES;
+/// Hard cap on the hash part of a cache file name. Well under `MAX_FILE_NAME_BYTES` on
+/// purpose: it leaves room for the `wearable_`/`emote_` prefixes and the `.scn` / `.tmp`
+/// suffixes callers add, and it keeps the *whole* path short on platforms that bound the
+/// full path too (Windows `MAX_PATH` is 260 for the entire string). Everything we hash
+/// legitimately is far below it — catalyst CIDs are 59 bytes and url-texture
+/// `hashed_{hex}_q{N}` names ~74 — so in practice only oversized preview hashes fold.
+const MAX_HASH_BYTES: usize = 128;
 
 /// File name to use inside the content cache folder for `hash`.
 ///
@@ -52,10 +54,15 @@ mod tests {
     }
 
     #[test]
-    fn short_hashes_are_used_verbatim() {
+    fn names_within_the_cap_are_used_verbatim() {
         let cid = "bafkreibmrvrdgqthfrvehyell552sk7ivuas2ozzjdmlojbzttqlcrxiya";
         assert_eq!(cache_file_name(cid), cid);
         assert!(matches!(cache_file_name(cid), Cow::Borrowed(_)));
+
+        // The cap is exact: MAX_HASH_BYTES still passes through, one more byte folds.
+        let at_cap = "a".repeat(MAX_HASH_BYTES);
+        assert_eq!(cache_file_name(&at_cap), at_cap.as_str());
+        assert_ne!(cache_file_name(&format!("{}a", at_cap)), at_cap.as_str());
     }
 
     #[test]
@@ -65,7 +72,7 @@ mod tests {
 
         let name = cache_file_name(&hash);
         assert_ne!(name, hash.as_str());
-        assert!(format!("wearable_{}.scn", name).len() <= MAX_FILE_NAME_BYTES);
+        assert!(format!("wearable_{}.scn", name).len() <= MAX_HASH_BYTES);
     }
 
     #[test]
