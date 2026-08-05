@@ -58,6 +58,10 @@ pub fn create_or_update_light(
     let active = light.active.unwrap_or(true);
     light_node.call("set_light_enabled", &[active.to_variant()]);
 
+    // Proto default shadow=false: lights only cast when the scene opts in.
+    let shadow = light.shadow.unwrap_or(false);
+    light_node.call("set_shadow_enabled", &[shadow.to_variant()]);
+
     if let Some(texture_union) = light.shadow_mask_texture.as_ref() {
         has_shadow_mask_texture = true;
 

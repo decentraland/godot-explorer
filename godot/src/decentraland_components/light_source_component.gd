@@ -339,6 +339,11 @@ func remove_light() -> void:
 		debug_gizmo_root.visible = false
 
 
+func set_shadow_enabled(enabled: bool) -> void:
+	runtime_shadows_enabled = enabled
+	_update_light_rendering_by_range()
+
+
 func set_light_enabled(enabled: bool) -> void:
 	runtime_light_enabled = enabled
 	visible = enabled and dcl_lights_system_enabled
