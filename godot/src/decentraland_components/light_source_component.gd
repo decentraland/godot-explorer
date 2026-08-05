@@ -288,8 +288,15 @@ func set_spot(
 	spot.light_color = color
 	spot.light_energy = _convert_intensity(intensity)
 	spot.spot_range = light_range
-	spot.spot_angle = outer_angle
-	spot.spot_angle_attenuation = 1.0
+	# DCL/Unity angles describe the FULL cone; Godot's spot_angle is the
+	# angular RADIUS (center to edge, hard max 89.99). Halve to convert.
+	var godot_outer: float = minf(outer_angle * 0.5, 89.99)
+	spot.spot_angle = godot_outer
+	# Godot has no inner-angle plateau; approximate the inner->outer falloff
+	# with the attenuation exponent (higher = brightness holds longer toward
+	# the edge, like a wide inner cone).
+	var inner_radius: float = minf(inner_angle * 0.5, godot_outer)
+	spot.spot_angle_attenuation = godot_outer / maxf(godot_outer - inner_radius, 0.01)
 
 	last_kind = "spot"
 	last_intensity = intensity
