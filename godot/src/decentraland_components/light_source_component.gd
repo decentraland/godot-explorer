@@ -10,11 +10,13 @@ const DEBUG_DCL_LIGHTS_LOG: bool = false
 
 const DCL_LIGHT_AUTO_RANGE_DIVISOR: float = 160.0
 
-# SDK intensity is authored in candela-ish units where ~100 is a normal
-# accent light and the Rust fallback default is 300. The reference client
-# passes it through to Unity's unitless intensity; Godot's unitless energy
-# lands visually close at /100: 100 -> 1.0 (visible), 300 -> 3.0 (bright).
-const DCL_LIGHT_INTENSITY_DIVISOR: float = 100.0
+# SDK intensity is candela (proto default 16000). The reference client passes
+# it through to Unity's physical-unit intensity, so candela -> Godot energy
+# divides by the proto default: 16000 -> 1.0. Validated against mainnet
+# scenes (rituals, doriangray, RAGE). Note: the sdk7 dynamic-lights test
+# scene authors ~100, which renders nearly invisible — its values are 100x
+# below real-world authoring, not a conversion bug.
+const DCL_LIGHT_INTENSITY_DIVISOR: float = 16000.0
 
 # Godot needs shadow_enabled=true for light_projector to work, so "shadows off"
 # removes dynamic casters via shadow_caster_mask instead of disabling the shadow.
@@ -406,6 +408,10 @@ func _clear_light() -> void:
 
 func _convert_intensity(intensity: float) -> float:
 	return intensity / DCL_LIGHT_INTENSITY_DIVISOR
+
+
+# ponytail: keep the /100 observation here in case a scene authored against
+# the broken test-scene convention needs a compat knob later.
 
 
 func _get_avatar_range_state(light_range: float) -> int:

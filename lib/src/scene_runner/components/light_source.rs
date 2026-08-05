@@ -41,8 +41,13 @@ pub fn create_or_update_light(
 
     let color_variant = Color::from_rgb(r, g, b).to_variant();
 
-    let intensity = light.intensity.unwrap_or(300.0);
-    let range = light.range.unwrap_or(15.0);
+    // Proto defaults: intensity 16000 (candela); range -1 means "auto",
+    // computed as pow(intensity, 0.25) — same as the Unity reference client.
+    let intensity = light.intensity.unwrap_or(16000.0);
+    let range = match light.range {
+        Some(r) if r >= 0.0 => r,
+        _ => intensity.powf(0.25),
+    };
 
     let mut projector_src = String::new();
     let mut projector_texture_path = String::new();
