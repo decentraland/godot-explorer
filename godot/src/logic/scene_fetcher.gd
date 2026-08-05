@@ -941,7 +941,9 @@ func async_load_scene(
 	if scene_entity_definition.is_sdk7():
 		var script_path := scene_entity_definition.get_main_js_path()
 		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)
-		local_main_js_path = "user://content/" + scene_entity_definition.get_main_js_hash()
+		local_main_js_path = Global.content_provider.get_cache_file_path(
+			scene_entity_definition.get_main_js_hash()
+		)
 	else:
 		if (
 			not FIXED_LOCAL_ADAPTATION_LAYER.is_empty()
@@ -976,7 +978,7 @@ func async_load_scene(
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
 	var local_main_crdt_path: String = String()
 	if not main_crdt_file_hash.is_empty():
-		local_main_crdt_path = "user://content/" + main_crdt_file_hash
+		local_main_crdt_path = Global.content_provider.get_cache_file_path(main_crdt_file_hash)
 		var promise: Promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
 
 		var res = await PromiseUtils.async_awaiter(promise)

@@ -160,7 +160,7 @@ func _async_fetch_local_video() -> String:
 		video_state = VIDEO_STATE_ERROR
 		return ""
 
-	var local_video_path = "user://content/" + file_hash
+	var local_video_path = Global.content_provider.get_cache_file_path(file_hash)
 	return local_video_path.replace("user:/", OS.get_user_data_dir())
 
 
@@ -686,7 +686,7 @@ func async_request_video(file_hash):
 
 
 func _on_video_loaded(file_hash: String):
-	var local_video_path = "user://content/" + file_hash
+	var local_video_path = Global.content_provider.get_cache_file_path(file_hash)
 	var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
 	self.resolve_resource(absolute_file_path)
 
