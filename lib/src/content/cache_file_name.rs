@@ -16,7 +16,8 @@ use std::borrow::Cow;
 
 use crate::godot_classes::dcl_hashing::hash_v1;
 
-/// Max length of a single path component on every filesystem we ship on.
+/// Max length of a single path component on every filesystem we ship on. The cap below has to
+/// stay under it — with room for what callers add around the hash.
 const MAX_FILE_NAME_BYTES: usize = 255;
 
 /// Hard cap on the hash part of a cache file name. Well under `MAX_FILE_NAME_BYTES` on
@@ -26,6 +27,8 @@ const MAX_FILE_NAME_BYTES: usize = 255;
 /// legitimately is far below it — catalyst CIDs are 59 bytes and url-texture
 /// `hashed_{hex}_q{N}` names ~74 — so in practice only oversized preview hashes fold.
 const MAX_HASH_BYTES: usize = 128;
+
+const _: () = assert!(MAX_HASH_BYTES < MAX_FILE_NAME_BYTES);
 
 /// File name to use inside the content cache folder for `hash`.
 ///
