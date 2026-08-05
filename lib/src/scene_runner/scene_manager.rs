@@ -70,11 +70,16 @@ pub struct SceneManager {
 
     scenes: HashMap<SceneId, Scene>,
 
-    #[var]
-    player_avatar_node: Gd<Node3D>,
+    // The Player (avatar/body) dies with the Explorer on teardown while the
+    // SceneManager autoload survives. Nullable + validity-filtered getters so a
+    // property read in that window returns null instead of panicking on the
+    // freed instance (GODOT-EXPLORER-1DY family) — a plain #[var] getter would
+    // panic before any GDScript is_instance_valid() check could run.
+    #[var(get = get_player_avatar_node, set = set_player_avatar_node)]
+    player_avatar_node: Option<Gd<Node3D>>,
 
-    #[var]
-    player_body_node: Gd<Node3D>,
+    #[var(get = get_player_body_node, set = set_player_body_node)]
+    player_body_node: Option<Gd<Node3D>>,
 
     #[var]
     console: Callable,
@@ -218,6 +223,17 @@ impl SceneManager {
         dcl_scene_entity_definition: Gd<DclSceneEntityDefinition>,
         inspect: bool,
     ) -> i32 {
+        // base_ui dies with the Explorer (sign-out / return-to-discover / realm
+        // change), and a cache-hot scene load can resolve before the next
+        // explorer._ready() -> recreate_base_ui(). Cloning the freed control
+        // below would panic and abort the spawn (GODOT-EXPLORER-1DY / -1E0), so
+        // recreate eagerly; a later recreate_base_ui() is harmless because scene
+        // UI roots only attach to the *current* base_ui.
+        if !self.base_ui.is_instance_valid() {
+            tracing::warn!("start_scene: base_ui was freed (explorer teardown) — recreating");
+            self.recreate_base_ui();
+        }
+
         let scene_entity_definition = dcl_scene_entity_definition.bind().get_ref();
 
         let content_mapping = scene_entity_definition.content_mapping.clone();
@@ -365,6 +381,21 @@ impl SceneManager {
         base_ui.connect("resized", &callable_on_ui_resize);
         self.base_ui = base_ui;
         self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
+    /// Detach base_ui (and the scene UI roots parented under it) from the dying
+    /// Explorer tree. Called by sign_out()/return_to_discover() right before
+    /// change_scene_to_file so freeing the Explorer can't free UI nodes Rust
+    /// still references (GODOT-EXPLORER-1DY); the orphan is freed by the next
+    /// recreate_base_ui().
+    #[func]
+    fn detach_base_ui(&mut self) {
+        if !self.base_ui.is_instance_valid() {
+            return;
+        }
+        if let Some(mut parent) = self.base_ui.get_parent() {
+            parent.remove_child(&self.base_ui.clone().upcast::<Node>());
+        }
     }
 
     #[func]
@@ -997,9 +1028,39 @@ impl SceneManager {
         player_body_node: Gd<Node3D>,
         console: Callable,
     ) {
-        self.player_avatar_node = player_avatar_node.clone();
-        self.player_body_node = player_body_node.clone();
+        self.player_avatar_node = Some(player_avatar_node);
+        self.player_body_node = Some(player_body_node);
         self.console = console;
+    }
+
+    /// Validity-filtered: the Player is freed with the Explorer on teardown, so
+    /// a read in that window returns null rather than a dangling handle.
+    #[func]
+    pub fn get_player_avatar_node(&self) -> Option<Gd<Node3D>> {
+        self.player_avatar_node
+            .as_ref()
+            .filter(|node| node.is_instance_valid())
+            .cloned()
+    }
+
+    #[func]
+    fn set_player_avatar_node(&mut self, node: Option<Gd<Node3D>>) {
+        self.player_avatar_node = node;
+    }
+
+    /// Validity-filtered: the Player is freed with the Explorer on teardown, so
+    /// a read in that window returns null rather than a dangling handle.
+    #[func]
+    pub fn get_player_body_node(&self) -> Option<Gd<Node3D>> {
+        self.player_body_node
+            .as_ref()
+            .filter(|node| node.is_instance_valid())
+            .cloned()
+    }
+
+    #[func]
+    fn set_player_body_node(&mut self, node: Option<Gd<Node3D>>) {
+        self.player_body_node = node;
     }
 
     #[func]
@@ -1370,7 +1431,10 @@ impl SceneManager {
     fn compute_scene_distance(&mut self) {
         self.current_parcel_scene_id = SceneId::INVALID;
 
-        let mut player_global_position = self.player_avatar_node.get_global_transform().origin;
+        let Some(player_avatar) = self.get_player_avatar_node() else {
+            return;
+        };
+        let mut player_global_position = player_avatar.get_global_transform().origin;
         player_global_position.x *= 0.0625;
         player_global_position.y *= 0.0625;
         player_global_position.z *= -0.0625;
@@ -1411,9 +1475,9 @@ impl SceneManager {
         // SceneManager outlives the Explorer scene (autoload singleton). When the user
         // signs out via change_scene_to_file, player_avatar_node becomes a dangling
         // reference until the next Explorer load reassigns it via set_player_node.
-        if !self.player_avatar_node.is_instance_valid() {
+        let Some(player_avatar) = self.get_player_avatar_node() else {
             return;
-        }
+        };
 
         let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let end_time_us = start_time_us + MAX_TIME_PER_SCENE_TICK_US;
@@ -1422,7 +1486,7 @@ impl SceneManager {
 
         self.receive_from_thread();
 
-        let player_global_transform = self.player_avatar_node.get_global_transform();
+        let player_global_transform = player_avatar.get_global_transform();
         let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d());
 
         let (camera_global_transform, camera_mode) = match camera_node.as_ref() {
@@ -2246,10 +2310,14 @@ impl SceneManager {
 
             // leave it orphan! it will be re-added when you are in the scene, and deleted on scene deletion
             // Use call_deferred to avoid "Parent node is busy" errors during rapid scene transitions
-            self.base_ui.call_deferred(
-                "remove_child",
-                &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
-            );
+            // The UI root dies with the old Explorer's base_ui subtree on
+            // teardown — cloning it freed would panic (GODOT-EXPLORER-1DY).
+            if scene.godot_dcl_scene.root_node_ui.is_instance_valid() {
+                self.base_ui.call_deferred(
+                    "remove_child",
+                    &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
+                );
+            }
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
@@ -2273,8 +2341,15 @@ impl SceneManager {
                 .internal_player_data
                 .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: true });
 
-            self.base_ui
-                .add_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
+            // Only a living scene with a live UI root gets re-attached: a ToKill
+            // scene's UI is about to be freed, and a freed root (old Explorer's
+            // base_ui subtree) would panic on clone (GODOT-EXPLORER-1DY).
+            if matches!(scene.state, SceneState::Alive)
+                && scene.godot_dcl_scene.root_node_ui.is_instance_valid()
+            {
+                self.base_ui
+                    .add_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
+            }
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
@@ -2600,8 +2675,8 @@ impl INode for SceneManager {
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            player_avatar_node: Node3D::new_alloc(),
-            player_body_node: Node3D::new_alloc(),
+            player_avatar_node: None,
+            player_body_node: None,
 
             player_position: Vector2i::new(-1000, -1000),
 
@@ -2679,9 +2754,9 @@ impl INode for SceneManager {
         // After change_scene_to_file (e.g. Sign Out), `player_avatar_node` becomes a
         // dangling reference until the next Explorer load reassigns it via set_player_node.
         // The pointer/raycast/tooltip block below derefs that node, so bail out here.
-        if !self.player_avatar_node.is_instance_valid() {
+        let Some(player_avatar) = self.get_player_avatar_node() else {
             return;
-        }
+        };
 
         // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
         // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.
@@ -2778,7 +2853,7 @@ impl INode for SceneManager {
             }
         }
 
-        let player_position = self.player_avatar_node.get_global_position();
+        let player_position = player_avatar.get_global_position();
         let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
             let size = viewport.get_visible_rect().size;
             viewport.get_camera_3d().map(|camera| (camera, size))
@@ -2981,7 +3056,10 @@ impl INode for SceneManager {
             return;
         };
 
-        let player_transform = self.player_avatar_node.get_global_transform();
+        let Some(player_avatar) = self.get_player_avatar_node() else {
+            return;
+        };
+        let player_transform = player_avatar.get_global_transform();
         let camera_transform = current_camera_node.get_global_transform();
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {

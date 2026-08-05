@@ -1,3 +1,4 @@
+# gdlint: disable=max-file-lines
 class_name Avatar
 extends DclAvatar
 
@@ -24,16 +25,8 @@ const WEARABLE_NAME_PREFIX = "__"
 # "off screen" freezes a drawn one.
 const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 2.8, 2.0))
 
-const TOON_SHADER = preload("res://assets/avatar/dcl_toon.gdshader")
-const TOON_SHADER_ALPHA_CLIP = preload("res://assets/avatar/dcl_toon_alpha_clip.gdshader")
-const TOON_SHADER_ALPHA_BLEND = preload("res://assets/avatar/dcl_toon_alpha_blend.gdshader")
-const TOON_SHADER_DOUBLE = preload("res://assets/avatar/dcl_toon_double.gdshader")
-const TOON_SHADER_ALPHA_CLIP_DOUBLE = preload(
-	"res://assets/avatar/dcl_toon_alpha_clip_double.gdshader"
-)
-const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
-	"res://assets/avatar/dcl_toon_alpha_blend_double.gdshader"
-)
+# Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
+const DEFAULT_NAMETAG_HEIGHT := 1.9
 
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
@@ -156,17 +149,18 @@ var _prop_last_glide_state: int = 0
 var _prop_sync_pending: bool = true
 var _glide_forward_blend: float = 0.0
 
+# Network emote that arrived while the avatar was still loading — Pulse replays
+# the peer's last emote announcement at join, and LiveKit emotes can race the
+# profile fetch. Playing it now would resolve against the default body shape and
+# be wiped by the rebuild anyway, so it's latched and replayed on avatar_ready.
+var _pending_network_emote: String = ""
+
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
 
-# Indices of bones added to body_shape_skeleton_3d by _merge_extra_wearable_bones_into_base
-# and currently in use by the active wearables.
-var _active_extra_bone_indices: Array[int] = []
-# Slots recycled from previous merges (renamed + disabled) waiting to be reused by the next
-# merge. Skeleton3D has no remove_bone() in Godot 4.6, so reusing slots is the only way to
-# keep bone_count bounded across outfit / body-shape changes.
-var _free_bone_pool: Array[int] = []
-var _stale_bone_counter: int = 0
+# Merges/recycles extra wearable bones and applies the shared toon materials;
+# bound to body_shape_skeleton_3d in _ready.
+var _mesh_assembler: AvatarMeshAssembler = null
 
 var _lod_state: int = LODState.FULL
 # 2D screen-space nameplate (non-XR) vs legacy viewport quad (XR). Runtime lives in
@@ -182,6 +176,10 @@ var _profile_ready: bool = false
 # for the dev pending nameplate: banned => "Failed", otherwise "Loading".
 var _profile_request_failures: int = 0
 var _profile_request_banned: bool = false
+# Cached nametag bounds, see get_bounds_top_y(). _nametag_posed_top = max
+# dot(skeleton basis Y row, bone pose origin); _nametag_clearance in meters.
+var _nametag_posed_top := 0.0
+var _nametag_clearance := 0.3
 var _impostor_layer: int = -1
 var _lod_phase: int = 0
 var _mesh_lod_visibility_captured: bool = false
@@ -245,18 +243,9 @@ var _anim_throttle_active: bool = false
 @onready var glider_prop: Node3D = %GliderProp
 @onready var audio_player_double_jump: AudioStreamPlayer3D = %AudioPlayer_DoubleJump
 
-# Cache of toon ShaderMaterials keyed by source BaseMaterial3D's instance_id.
-# Lets avatars wearing the same wearable share a single ShaderMaterial across
-# the whole scene. Skin/hair surfaces clone-on-write in apply_color_and_facial
-# so per-avatar tints don't leak.
-static var _toon_material_cache: Dictionary = {}
-
-# Issue #1945: matches a Blender-style `_<digits>$` duplicate-import suffix on a
-# bone name (e.g. `Avatar_Hips_2`). Compiled once and shared across instances.
-static var _bone_suffix_regex: RegEx = RegEx.create_from_string("^(.*)_\\d+$")
-
 
 func _ready():
+	_mesh_assembler = AvatarMeshAssembler.new(body_shape_skeleton_3d)
 	var billboard_mode = (
 		BaseMaterial3D.BillboardMode.BILLBOARD_FIXED_Y
 		if Global.is_xr()
@@ -272,6 +261,9 @@ func _ready():
 	wearable_loader = WearableLoader.new()
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
+	body_shape_skeleton_3d.skeleton_updated.connect(self._recompute_nametag_posed_top)
+	_recompute_nametag_clearance()
+	_recompute_nametag_posed_top()
 
 	avatar_modifier_area_detector.set_avatar_modifier_area.connect(
 		self._on_set_avatar_modifier_area
@@ -642,6 +634,59 @@ func async_update_avatar(
 	await async_fetch_wearables_dependencies()
 
 
+## World-space Y the nameplate should float at: posed skeleton top plus a
+## clearance covering mesh volume above the topmost joint (skull, hats), plus
+## NameplateLayer's fixed margin. Posed bone tops follow emotes (crouch lowers
+## the tag); wearable bones merged into the skeleton count too.
+##
+## Perf: both parts are cached. _recompute_nametag_posed_top runs on
+## skeleton_updated (LOD-throttled); _recompute_nametag_clearance runs on
+## wearable load. Mesh AABBs are bind-space (meters, feet at 0 — the
+## skeleton's 0.01 scale does NOT apply, skinning bypasses it via bind poses);
+## bones live in cm (scale applies via the skeleton transform).
+func get_bounds_top_y() -> float:
+	if body_shape_skeleton_3d.get_bone_count() == 0:
+		return global_position.y + DEFAULT_NAMETAG_HEIGHT
+	return (
+		body_shape_skeleton_3d.global_transform.origin.y + _nametag_posed_top + _nametag_clearance
+	)
+
+
+## Posed top, cached per skeleton update. The basis Y row is constant while the
+## avatar only yaws/moves, so the per-frame cost in get_bounds_top_y is just
+## adding the skeleton's world origin.
+func _recompute_nametag_posed_top() -> void:
+	var basis := body_shape_skeleton_3d.global_transform.basis
+	var y_row := Vector3(basis[0].y, basis[1].y, basis[2].y)
+	var top := -INF
+	for i in body_shape_skeleton_3d.get_bone_count():
+		top = maxf(top, y_row.dot(body_shape_skeleton_3d.get_bone_global_pose(i).origin))
+	if top != -INF:
+		_nametag_posed_top = top
+
+
+## Clearance above the topmost joint: bind mesh AABB top minus bind bone top.
+## Recomputed on wearable load; stale only if mesh visibility changes without
+## a reload (rare, and erring tall is harmless).
+func _recompute_nametag_clearance() -> void:
+	var skeleton_xform := body_shape_skeleton_3d.global_transform
+	var rest_top := -INF
+	for i in body_shape_skeleton_3d.get_bone_count():
+		rest_top = maxf(
+			rest_top, (skeleton_xform * body_shape_skeleton_3d.get_bone_global_rest(i).origin).y
+		)
+	var mesh_top := -INF
+	for child in body_shape_skeleton_3d.get_children():
+		if child is MeshInstance3D and child.visible:
+			var aabb: AABB = child.transform * child.get_aabb()
+			mesh_top = maxf(mesh_top, aabb.end.y)
+	if mesh_top == -INF or rest_top == -INF:
+		_nametag_clearance = 0.3
+		return
+	var mesh_top_world := to_global(Vector3(0, mesh_top, 0)).y
+	_nametag_clearance = maxf(mesh_top_world - rest_top, 0.15)
+
+
 func set_force_hide_name(value: bool) -> void:
 	if _force_hide_name == value:
 		return
@@ -798,8 +843,8 @@ func async_try_to_set_body_shape(body_shape_hash):
 			child.queue_free()
 
 	# Recycle any extra bones merged in the previous assembly so the upcoming
-	# _merge_extra_wearable_bones_into_base pass starts from a clean slate.
-	_recycle_extra_wearable_bones()
+	# merge_extra_bones pass starts from a clean slate.
+	_mesh_assembler.recycle_extra_bones()
 
 	# Reparent children directly (no need to duplicate since wearable_loader
 	# returns a fresh instantiated scene that we'll discard anyway)
@@ -812,184 +857,6 @@ func async_try_to_set_body_shape(body_shape_hash):
 	# Free the now-empty body shape container
 	body_shape.queue_free()
 	_reresolve_active_anchors()
-
-
-# Renames bones previously merged via _merge_extra_wearable_bones_into_base to a
-# unique stale sentinel, disables them, detaches them from the active hierarchy
-# (parent=-1, rest=identity), and pushes their indices into the free pool so the
-# next merge can reuse them instead of growing the skeleton. Detaching keeps the
-# per-frame skeleton transform walk cheap by leaving stale slots as flat roots.
-func _recycle_extra_wearable_bones() -> void:
-	if _active_extra_bone_indices.is_empty():
-		return
-	for bone_idx in _active_extra_bone_indices:
-		if bone_idx < 0 or bone_idx >= body_shape_skeleton_3d.get_bone_count():
-			continue
-		var stale_name = "__stale_bone_%d" % _stale_bone_counter
-		_stale_bone_counter += 1
-		body_shape_skeleton_3d.set_bone_name(bone_idx, stale_name)
-		body_shape_skeleton_3d.set_bone_enabled(bone_idx, false)
-		body_shape_skeleton_3d.set_bone_parent(bone_idx, -1)
-		body_shape_skeleton_3d.set_bone_rest(bone_idx, Transform3D.IDENTITY)
-		body_shape_skeleton_3d.reset_bone_pose(bone_idx)
-		_free_bone_pool.push_back(bone_idx)
-	_active_extra_bone_indices.clear()
-
-
-# Resolves a wearable bone name to its counterpart in body_shape_skeleton_3d,
-# stripping a Blender-style duplicate-import suffix (`_2`, `_001`, ...) only
-# when the un-suffixed name already exists. Returns the original name otherwise
-# so genuine extra bones (ADR-316 spring bones) still get merged as new bones.
-# Fixes #1945: wearables exported from Blender after re-importing the DCL armature
-# carry `Avatar_Hips_2` etc. — without this collapse they merge as a parallel,
-# un-animated leg/spine chain that stays in rest pose during emotes/jump/glide.
-func _resolve_to_base_bone_name(bone_name: String) -> String:
-	if body_shape_skeleton_3d.find_bone(bone_name) != -1:
-		return bone_name
-	var m := _bone_suffix_regex.search(bone_name)
-	if m == null:
-		return bone_name
-	var stripped := m.get_string(1)
-	if body_shape_skeleton_3d.find_bone(stripped) != -1:
-		return stripped
-	return bone_name
-
-
-# Copies bones that exist in the wearable's Skeleton3D but not in body_shape_skeleton_3d
-# (typically ADR-316 spring bones for hair, earrings, capes, etc.). Parents are added
-# before children so parent-by-name resolution always succeeds. Without this, mesh
-# skins referencing indices beyond body_shape_skeleton_3d.get_bone_count() log
-# `Skin bind #N contains bone index bind: N, which is greater than the skeleton bone count`.
-func _merge_extra_wearable_bones_into_base(wearable_skel: Skeleton3D) -> void:
-	var wearable_bone_count = wearable_skel.get_bone_count()
-	if wearable_bone_count == 0:
-		return
-
-	# Collect missing bones along with their depth in the wearable hierarchy so we
-	# can add parents before children.
-	var missing: Array = []  # Array of [depth, wearable_idx, name]
-	for i in wearable_bone_count:
-		var bone_name = wearable_skel.get_bone_name(i)
-		# Skip if the bone already exists in the base, including under its
-		# de-suffixed name. The wearable's `Avatar_Hips_2` collapses onto the
-		# animated `Avatar_Hips` instead of being merged as a parallel root.
-		if _resolve_to_base_bone_name(bone_name) != bone_name:
-			continue
-		if body_shape_skeleton_3d.find_bone(bone_name) != -1:
-			continue
-		var depth = 0
-		var cursor = wearable_skel.get_bone_parent(i)
-		while cursor != -1:
-			depth += 1
-			cursor = wearable_skel.get_bone_parent(cursor)
-		missing.push_back([depth, i, bone_name])
-
-	if missing.is_empty():
-		return
-
-	missing.sort_custom(func(a, b): return a[0] < b[0])
-
-	for entry in missing:
-		var wearable_idx: int = entry[1]
-		var bone_name: String = entry[2]
-		var new_idx: int
-		if not _free_bone_pool.is_empty():
-			new_idx = _free_bone_pool.pop_back()
-			body_shape_skeleton_3d.set_bone_name(new_idx, bone_name)
-			body_shape_skeleton_3d.set_bone_enabled(new_idx, true)
-		else:
-			new_idx = body_shape_skeleton_3d.add_bone(bone_name)
-		body_shape_skeleton_3d.set_bone_rest(new_idx, wearable_skel.get_bone_rest(wearable_idx))
-		body_shape_skeleton_3d.reset_bone_pose(new_idx)
-		_active_extra_bone_indices.push_back(new_idx)
-		# Always reset parent: a recycled slot may have been linked to a stale
-		# parent from its previous use. Resolve through the same de-suffix path
-		# so a spring bone whose parent is `Avatar_Spine_2` reparents onto the
-		# base `Avatar_Spine` instead of leaving as root.
-		var parent_wearable_idx = wearable_skel.get_bone_parent(wearable_idx)
-		var parent_base_idx = -1
-		if parent_wearable_idx != -1:
-			var parent_name = wearable_skel.get_bone_name(parent_wearable_idx)
-			parent_base_idx = body_shape_skeleton_3d.find_bone(
-				_resolve_to_base_bone_name(parent_name)
-			)
-			if parent_base_idx == -1:
-				push_warning(
-					(
-						"[AVATAR] Extra bone '%s' parent '%s' not found in base skeleton; leaving as root"
-						% [bone_name, parent_name]
-					)
-				)
-		body_shape_skeleton_3d.set_bone_parent(new_idx, parent_base_idx)
-
-
-# Rewrites a MeshInstance3D's Skin so every bind references its target bone by name.
-# Godot resolves named binds against the attached skeleton at runtime, so once the
-# mesh is reparented to body_shape_skeleton_3d (which may have been extended with
-# extra wearable bones) every joint resolves correctly, including ADR-316 spring bones.
-# Issue #1945: when the wearable was exported with duplicate-suffixed bones
-# (`Avatar_Hips_2`, `Avatar_LeftLeg_2`, ...), the de-suffix lookup retargets the
-# binds onto the animated base bones — without it the mesh tracks merged but
-# inert `_2` clones and stays in rest pose during emotes/jump/glide.
-func _rebind_skin_by_name(mesh: MeshInstance3D, wearable_skel: Skeleton3D) -> void:
-	if mesh.skin == null:
-		return
-	var skin: Skin = mesh.skin.duplicate()
-	var wearable_bone_count = wearable_skel.get_bone_count()
-	for i in skin.get_bind_count():
-		var bone_idx = skin.get_bind_bone(i)
-		if bone_idx >= 0 and bone_idx < wearable_bone_count:
-			var bone_name = wearable_skel.get_bone_name(bone_idx)
-			skin.set_bind_name(i, _resolve_to_base_bone_name(bone_name))
-	mesh.skin = skin
-
-
-func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
-	var is_alpha_scissor = base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	var is_alpha_blend = (
-		base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA
-		or base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_HASH
-		or base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
-	)
-	var double_sided = base_mat.cull_mode == BaseMaterial3D.CULL_DISABLED
-	var toon_mat = ShaderMaterial.new()
-	if is_alpha_scissor and double_sided:
-		toon_mat.shader = TOON_SHADER_ALPHA_CLIP_DOUBLE
-	elif is_alpha_scissor:
-		toon_mat.shader = TOON_SHADER_ALPHA_CLIP
-	elif is_alpha_blend and double_sided:
-		toon_mat.shader = TOON_SHADER_ALPHA_BLEND_DOUBLE
-	elif is_alpha_blend:
-		toon_mat.shader = TOON_SHADER_ALPHA_BLEND
-	elif double_sided:
-		toon_mat.shader = TOON_SHADER_DOUBLE
-	else:
-		toon_mat.shader = TOON_SHADER
-	toon_mat.set_shader_parameter("albedo_color", base_mat.albedo_color)
-	if base_mat.albedo_texture:
-		toon_mat.set_shader_parameter("albedo_texture", base_mat.albedo_texture)
-	if base_mat.emission_enabled:
-		toon_mat.set_shader_parameter("emission_color", base_mat.emission)
-		if base_mat.emission_texture:
-			toon_mat.set_shader_parameter("emission_texture", base_mat.emission_texture)
-	if is_alpha_scissor:
-		toon_mat.set_shader_parameter("alpha_scissor_threshold", base_mat.alpha_scissor_threshold)
-	return toon_mat
-
-
-func apply_toon_material(node_to_apply: Node):
-	if not (node_to_apply is MeshInstance3D) or node_to_apply.mesh == null:
-		return
-	for surface_idx in range(node_to_apply.mesh.get_surface_count()):
-		var mat = node_to_apply.mesh.surface_get_material(surface_idx)
-		if mat == null or not (mat is BaseMaterial3D):
-			continue
-		var key: int = mat.get_instance_id()
-		var cached = _toon_material_cache.get(key)
-		if cached == null or not is_instance_valid(cached):
-			cached = _convert_to_toon(mat)
-			_toon_material_cache[key] = cached
-		node_to_apply.set_surface_override_material(surface_idx, cached)
 
 
 func async_load_wearables():
@@ -1075,11 +942,11 @@ func async_load_wearables():
 			# Spring bones (ADR-316) and other extra bones not in the base armature
 			# must be copied into body_shape_skeleton_3d before meshes are reparented,
 			# otherwise mesh skins reference bone indices that don't exist here.
-			_merge_extra_wearable_bones_into_base(skeleton_3d)
+			_mesh_assembler.merge_extra_bones(skeleton_3d)
 
 			for child in skeleton_3d.get_children():
 				if child is MeshInstance3D:
-					_rebind_skin_by_name(child, skeleton_3d)
+					_mesh_assembler.rebind_skin_by_name(child, skeleton_3d)
 				skeleton_3d.remove_child(child)
 				child.set_owner(null)  # Clear owner since we're reparenting
 				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
@@ -1164,9 +1031,9 @@ func async_load_wearables():
 
 	AvatarBuildProfiler.mark("mesh_duplicate")
 
-	apply_toon_material(body_shape_skeleton_3d)
+	_mesh_assembler.apply_toon_material(body_shape_skeleton_3d)
 	for child in body_shape_skeleton_3d.get_children():
-		apply_toon_material(child)
+		_mesh_assembler.apply_toon_material(child)
 
 	AvatarBuildProfiler.mark("toon")
 
@@ -1180,6 +1047,7 @@ func async_load_wearables():
 			body_shape_skeleton_3d.reset_bone_pose(i)
 
 	body_shape_skeleton_3d.visible = true
+	_recompute_nametag_clearance()
 	finish_loading = true
 	# Emotes - get from cached emote scenes
 	for emote_urn in avatar_data.get_emotes():
@@ -1216,6 +1084,13 @@ func async_load_wearables():
 		var pending_emote = get_meta("pending_expression_trigger")
 		remove_meta("pending_expression_trigger")
 		_async_play_expression_trigger(pending_emote)
+
+	# Replay a network emote that arrived while the avatar was loading (e.g. the
+	# stored announcement Pulse delivers at join for a peer already mid-emote).
+	if not _pending_network_emote.is_empty():
+		var pending_network_urn := _pending_network_emote
+		_pending_network_emote = ""
+		async_play_emote(pending_network_urn)
 
 
 func apply_color_and_facial():
@@ -1809,7 +1684,18 @@ func _play_emote_audio(file_hash: String):
 
 
 func async_play_emote(emote_urn: String):
+	if not avatar_ready:
+		_pending_network_emote = emote_urn
+		return
 	await emote_controller.async_play_emote(emote_urn)
+
+
+## Stop a looping emote on network request (rfc4 PlayerEmote.is_stopping /
+## Pulse EmoteStopped). Called from Rust (AvatarScene::stop_emote).
+func stop_emote_from_network():
+	_pending_network_emote = ""
+	if emote_controller:
+		emote_controller.stop_emote()
 
 
 ## Register scene emote content info for later retrieval.

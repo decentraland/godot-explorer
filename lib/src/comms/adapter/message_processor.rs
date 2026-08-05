@@ -15,7 +15,7 @@ use crate::{
             truncate_utf8_safe, DEFAULT_PROTOCOL_VERSION, INACTIVE_PEER_THRESHOLD_SECS,
             MAX_CHAT_MESSAGES, MAX_CHAT_MESSAGE_SIZE, MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE,
             MESSAGE_CHANNEL_SIZE, OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS,
-            PROFILE_UPDATE_CHANNEL_SIZE,
+            PROFILE_UPDATE_CHANNEL_SIZE, PULSE_ROOM_ID,
         },
         profile::{SerializedProfile, UserProfile},
     },
@@ -133,6 +133,12 @@ struct Peer {
     lambdas_endpoint: Option<String>, // Peer's lambda URL from LiveKit metadata (lambdasEndpoint)
     last_movement_timestamp: f32,     // Dedup: last movement timestamp received
     last_emote_incremental_id: u32,   // Dedup: last emote incremental ID received
+    /// Transport-preference gate: true while this peer is a live member of the "pulse" room
+    /// (set on any pulse-bridged message, cleared by a pulse PeerLeft). While set, this peer's
+    /// movement/emotes from LiveKit rooms are DISCARDED — never merged: LiveKit timestamps are
+    /// the sender's clock and Pulse timestamps are the server tick, so comparing them starves
+    /// one source permanently. On either flip both dedup layers are reset for the same reason.
+    pulse_live: bool,
 }
 
 struct ProfileUpdate {
@@ -282,6 +288,45 @@ impl MessageProcessor {
             disconnect_reason: None,
             room_metadata_banned: false,
         }
+    }
+
+    /// Which rfc4 messages the transport-preference gate applies to: exactly the avatar-sync
+    /// slice that rides Pulse (movement in its three encodings, and emotes). Everything else
+    /// either never rides Pulse (chat, scene, profile request/response) or is idempotent
+    /// (profile-version announcements) and flows from both transports untouched.
+    fn is_gated_by_pulse_preference(message: &rfc4::packet::Message) -> bool {
+        matches!(
+            message,
+            rfc4::packet::Message::Position(_)
+                | rfc4::packet::Message::Movement(_)
+                | rfc4::packet::Message::MovementCompressed(_)
+                | rfc4::packet::Message::PlayerEmote(_)
+        )
+    }
+
+    /// Compares two lambdas endpoints ignoring trailing-slash style — Godot
+    /// publishes `…/lambdas/` in its LiveKit metadata while Unity publishes
+    /// `…/lambdas`, and the slash-only mismatch must not make the realm's own
+    /// endpoint look like a different catalyst.
+    fn is_same_lambda_endpoint(a: &str, b: &str) -> bool {
+        a.trim_end_matches('/') == b.trim_end_matches('/')
+    }
+
+    /// Validates a peer-advertised `lambdasEndpoint` (untrusted LiveKit
+    /// metadata). Anything that isn't a plausible http(s) URL is discarded so
+    /// the profile fetch keeps using the realm's own lambda endpoint instead.
+    fn sanitize_lambdas_endpoint(endpoint: &str) -> Option<&str> {
+        let trimmed = endpoint.trim();
+        let host_and_path = trimmed
+            .strip_prefix("https://")
+            .or_else(|| trimmed.strip_prefix("http://"))?;
+        if host_and_path.is_empty()
+            || host_and_path.starts_with('/')
+            || trimmed.chars().any(char::is_whitespace)
+        {
+            return None;
+        }
+        Some(trimmed)
     }
 
     /// Returns true if the address looks like a real player (non-synthetic Ethereum address).
@@ -500,9 +545,16 @@ impl MessageProcessor {
         for (address, peer) in self.peer_identities.iter_mut() {
             let mut inactive_rooms = Vec::new();
 
-            // Check each room the peer has been seen in
+            // Check each room the peer has been seen in.
+            // "pulse" is exempt: its server stops sending deltas for static distant peers by
+            // design (interest-management tiers), so activity is not a liveness signal there.
+            // Membership is authoritative instead — reliable PlayerJoined/PlayerLeft, plus the
+            // synthetic PeerLeft flood PulseRoom emits on any teardown.
             let rooms_to_check: Vec<String> = peer.room_activity.keys().cloned().collect();
             for room_id in rooms_to_check {
+                if room_id == PULSE_ROOM_ID {
+                    continue;
+                }
                 if let Some(&last_seen) = peer.room_activity.get(&room_id) {
                     if last_seen.elapsed() > inactive_threshold {
                         inactive_rooms.push(room_id);
@@ -808,6 +860,7 @@ impl MessageProcessor {
                     lambdas_endpoint: None,
                     last_movement_timestamp: f32::NEG_INFINITY,
                     last_emote_incremental_id: 0,
+                    pulse_live: false,
                 },
             );
 
@@ -857,6 +910,12 @@ impl MessageProcessor {
             new_alias
         };
 
+        // Any pulse-bridged message (except the departure itself) marks the peer as live on
+        // Pulse, engaging the transport-preference gate; the flip resets the dedup layers.
+        if room_id == PULSE_ROOM_ID && !matches!(message.message, MessageType::PeerLeft) {
+            self.set_peer_pulse_live(message.address, true);
+        }
+
         // Handle non-RFC4 messages that need avatar_scene
         match &message.message {
             MessageType::InitVoice(voice_init) => {
@@ -903,7 +962,12 @@ impl MessageProcessor {
             }
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
-                self.handle_rfc4_message(rfc4_msg.message.clone(), peer_alias, message.address);
+                self.handle_rfc4_message(
+                    rfc4_msg.message.clone(),
+                    peer_alias,
+                    message.address,
+                    &room_id,
+                );
             }
             MessageType::PeerJoined => {
                 // Peer joined event - ensure peer exists and update room activity
@@ -947,7 +1011,11 @@ impl MessageProcessor {
                             }
                         }
                     }
-                    if let Some(endpoint) = json.get("lambdasEndpoint").and_then(|v| v.as_str()) {
+                    if let Some(endpoint) = json
+                        .get("lambdasEndpoint")
+                        .and_then(|v| v.as_str())
+                        .and_then(Self::sanitize_lambdas_endpoint)
+                    {
                         if let Some(peer) = self.peer_identities.get_mut(&message.address) {
                             if peer.lambdas_endpoint.as_deref() != Some(endpoint) {
                                 tracing::debug!(
@@ -998,7 +1066,37 @@ impl MessageProcessor {
         }
     }
 
+    /// Flip a peer's transport preference. On EITHER flip direction, both dedup layers (the
+    /// per-peer fields here and the per-alias state in AvatarScene) reset: LiveKit and Pulse
+    /// timestamps come from incomparable clocks, so stale dedup state from the previous source
+    /// would permanently starve the new one (see `Peer::pulse_live`).
+    fn set_peer_pulse_live(&mut self, address: H160, live: bool) {
+        let Some(peer) = self.peer_identities.get_mut(&address) else {
+            return;
+        };
+        if peer.pulse_live == live {
+            return;
+        }
+        peer.pulse_live = live;
+        peer.last_movement_timestamp = f32::NEG_INFINITY;
+        peer.last_emote_incremental_id = 0;
+        let alias = peer.alias;
+        tracing::debug!(
+            "🔀 Peer {:#x} (alias: {}) transport preference → {}",
+            address,
+            alias,
+            if live { "pulse" } else { "livekit" }
+        );
+        let mut avatar_scene_ref = self.avatars.clone();
+        avatar_scene_ref.bind_mut().reset_movement_dedup(alias);
+    }
+
     fn handle_peer_left(&mut self, address: H160, room_id: String) {
+        // Leaving the pulse room (a real PlayerLeft or PulseRoom's teardown flood) hands the
+        // peer back to LiveKit-driven rendering within this same frame.
+        if room_id == PULSE_ROOM_ID {
+            self.set_peer_pulse_live(address, false);
+        }
         if let Some(peer) = self.peer_identities.get_mut(&address) {
             peer.room_activity.remove(&room_id);
             tracing::debug!(
@@ -1037,7 +1135,27 @@ impl MessageProcessor {
         message: rfc4::packet::Message,
         peer_alias: u32,
         address: H160,
+        room_id: &str,
     ) {
+        // Transport-preference gate: while a peer is live on Pulse, its avatar-sync messages
+        // from LiveKit rooms are discarded outright (see `Peer::pulse_live` for why merging is
+        // impossible). Chat/Scene/ProfileRequest/Response never ride Pulse and ProfileVersion
+        // is idempotent — none of those are gated.
+        if room_id != PULSE_ROOM_ID
+            && Self::is_gated_by_pulse_preference(&message)
+            && self
+                .peer_identities
+                .get(&address)
+                .is_some_and(|peer| peer.pulse_live)
+        {
+            tracing::trace!(
+                "🔀 Discarding LiveKit avatar-sync message from pulse-live peer {:#x} (room '{}')",
+                address,
+                room_id
+            );
+            return;
+        }
+
         match message {
             rfc4::packet::Message::Position(position) => {
                 tracing::debug!(
@@ -1058,18 +1176,25 @@ impl MessageProcessor {
                 avatar_scene.update_avatar_transform_with_rfc4_position(peer_alias, &position);
             }
             rfc4::packet::Message::Movement(movement) => {
-                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
-                if let Some(peer) = self.peer_identities.get_mut(&address) {
-                    if movement.timestamp <= peer.last_movement_timestamp {
-                        tracing::debug!(
-                            "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
-                            address,
-                            movement.timestamp,
-                            peer.last_movement_timestamp
-                        );
-                        return;
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting).
+                // NOT for the pulse room: its movements are already strictly ordered by the
+                // decoder's per-subject sequence window, and its timestamps are the server
+                // tick in f32 seconds — at large server uptimes (>~2^20 s) the f32 ULP
+                // exceeds the 100 ms packet interval, so consecutive updates quantize equal
+                // and a `<=` check here would silently drop them.
+                if room_id != PULSE_ROOM_ID {
+                    if let Some(peer) = self.peer_identities.get_mut(&address) {
+                        if movement.timestamp <= peer.last_movement_timestamp {
+                            tracing::debug!(
+                                "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
+                                address,
+                                movement.timestamp,
+                                peer.last_movement_timestamp
+                            );
+                            return;
+                        }
+                        peer.last_movement_timestamp = movement.timestamp;
                     }
-                    peer.last_movement_timestamp = movement.timestamp;
                 }
 
                 tracing::debug!(
@@ -1174,7 +1299,7 @@ impl MessageProcessor {
                             "{}...",
                             truncate_utf8_safe(&chat.message, MAX_CHAT_MESSAGE_SIZE)
                         ),
-                        timestamp: chat.timestamp,
+                        ..chat
                     }
                 } else {
                     chat
@@ -1298,8 +1423,13 @@ impl MessageProcessor {
                         let version_ok = |r: &Result<UserProfile, _>| matches!(r, Ok(p) if p.version >= announced_version_for_retry);
 
                         // Determine fetch endpoint: peer's lambdas endpoint if available, else realm lambda
-                        let fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
-                            Some(endpoint) if endpoint != lamda_server_base_url => {
+                        let mut fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
+                            Some(endpoint)
+                                if !Self::is_same_lambda_endpoint(
+                                    endpoint,
+                                    &lamda_server_base_url,
+                                ) =>
+                            {
                                 endpoint.to_string()
                             }
                             _ => lamda_server_base_url.clone(),
@@ -1330,6 +1460,36 @@ impl MessageProcessor {
                             if version_ok(&result) {
                                 break;
                             }
+                            // A hard error from the peer-advertised endpoint (bad metadata,
+                            // unreachable catalyst) must not burn the whole retry chain:
+                            // switch to the realm endpoint for the remaining attempts and
+                            // try it right away. An Ok-but-stale response keeps retrying
+                            // the same endpoint — that's catalyst propagation lag, not a
+                            // broken URL.
+                            if result.is_err()
+                                && !Self::is_same_lambda_endpoint(
+                                    &fetch_endpoint,
+                                    &lamda_server_base_url,
+                                )
+                            {
+                                tracing::debug!(
+                                    "peer lambdas endpoint {} failed for {:#x}, falling back to realm endpoint {}",
+                                    fetch_endpoint,
+                                    address,
+                                    lamda_server_base_url
+                                );
+                                fetch_endpoint = lamda_server_base_url.clone();
+                                result = request_lambda_profile(
+                                    address,
+                                    fetch_endpoint.as_str(),
+                                    profile_base_url.as_str(),
+                                    http_requester.clone(),
+                                )
+                                .await;
+                                if version_ok(&result) {
+                                    break;
+                                }
+                            }
                         }
 
                         // Step 2: asset-bundle-registry fallback (for legacy clients without lambdasEndpoint)
@@ -1348,7 +1508,10 @@ impl MessageProcessor {
                         // Step 3: realm lambda fallback (if peer endpoint != realm and registry also failed)
                         let result = if version_ok(&result) {
                             result
-                        } else if fetch_endpoint != lamda_server_base_url {
+                        } else if !Self::is_same_lambda_endpoint(
+                            &fetch_endpoint,
+                            &lamda_server_base_url,
+                        ) {
                             tracing::debug!(
                                 "Falling back to realm lambda for {:#x}: {}",
                                 address,
@@ -1612,6 +1775,16 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Voice(_voice) => {}
             rfc4::packet::Message::PlayerEmote(player_emote) => {
+                // A stop signal ends the looping emote. Handled BEFORE the incremental-id
+                // dedup: a stop must neither depend on nor affect id ordering (Pulse stops
+                // carry no meaningful id; Unity's LiveKit stops reuse the start's id).
+                if player_emote.is_stopping == Some(true) {
+                    tracing::debug!("Received PlayerEmote stop from {:#x}", address);
+                    let mut avatar_scene_ref = self.avatars.clone();
+                    avatar_scene_ref.bind_mut().stop_emote(peer_alias);
+                    return;
+                }
+
                 // Deduplicate: skip if incremental_id is not newer (dual-room broadcasting)
                 if let Some(peer) = self.peer_identities.get_mut(&address) {
                     if player_emote.incremental_id <= peer.last_emote_incremental_id {
@@ -1687,28 +1860,146 @@ impl MessageProcessor {
     }
 
     /// Returns room connectivity info for each peer.
-    /// Each entry is (address, room_description) where room_description is
-    /// "Scene", "Archipelago", or "Both".
-    pub fn get_peer_room_info(&self) -> Vec<(H160, String)> {
+    /// Each entry is (address, room_description, name) where room_description lists
+    /// every room the peer is seen in, joined with " + " — e.g. "PULSE + SCENE +
+    /// ARCHIPELAGO", "SCENE + ARCHIPELAGO", "PULSE", or "NONE". A trailing '*' on
+    /// PULSE marks that Pulse is the source currently driving the avatar
+    /// (transport-preference gate). `name` is the profile display name, empty while
+    /// the profile hasn't been resolved yet.
+    pub fn get_peer_room_info(&self) -> Vec<(H160, String, String)> {
         let mut result = Vec::new();
         for (address, peer) in &self.peer_identities {
             let mut has_scene = false;
             let mut has_archipelago = false;
+            let mut has_pulse = false;
             for room_id in peer.room_activity.keys() {
                 if room_id.starts_with("scene-") {
                     has_scene = true;
+                } else if room_id == PULSE_ROOM_ID {
+                    has_pulse = true;
                 } else {
                     has_archipelago = true;
                 }
             }
-            let room_desc = match (has_scene, has_archipelago) {
-                (true, true) => "Both".to_string(),
-                (true, false) => "Scene".to_string(),
-                (false, true) => "Archipelago".to_string(),
-                (false, false) => "None".to_string(),
+            let mut parts: Vec<&str> = Vec::new();
+            if has_pulse {
+                // Mark which source is actually driving the avatar right now.
+                parts.push(if peer.pulse_live { "PULSE*" } else { "PULSE" });
+            }
+            if has_scene {
+                parts.push("SCENE");
+            }
+            if has_archipelago {
+                parts.push("ARCHIPELAGO");
+            }
+            let room_desc = if parts.is_empty() {
+                "NONE".to_string()
+            } else {
+                parts.join(" + ")
             };
-            result.push((*address, room_desc));
+            let name = peer
+                .profile
+                .as_ref()
+                .map(|profile| profile.content.name.clone())
+                .unwrap_or_default();
+            result.push((*address, room_desc, name));
         }
         result
+    }
+}
+
+// MessageProcessor itself needs a live Godot engine (Gd<AvatarScene>), so the full
+// interleaved pulse/livekit sequences are covered by the cross-client QA matrix; what IS
+// engine-free — the gate's message classification — is pinned here.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pulse_preference_gates_exactly_the_avatar_sync_slice() {
+        use rfc4::packet::Message;
+
+        // Gated: the avatar-sync slice that rides Pulse.
+        assert!(MessageProcessor::is_gated_by_pulse_preference(
+            &Message::Movement(rfc4::Movement::default())
+        ));
+        assert!(MessageProcessor::is_gated_by_pulse_preference(
+            &Message::MovementCompressed(rfc4::MovementCompressed::default())
+        ));
+        assert!(MessageProcessor::is_gated_by_pulse_preference(
+            &Message::Position(rfc4::Position::default())
+        ));
+        assert!(MessageProcessor::is_gated_by_pulse_preference(
+            &Message::PlayerEmote(rfc4::PlayerEmote::default())
+        ));
+
+        // Never gated: doesn't ride Pulse, or idempotent.
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::Chat(rfc4::Chat::default())
+        ));
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::Scene(rfc4::Scene::default())
+        ));
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::ProfileVersion(rfc4::AnnounceProfileVersion::default())
+        ));
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::ProfileRequest(rfc4::ProfileRequest::default())
+        ));
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::ProfileResponse(rfc4::ProfileResponse::default())
+        ));
+    }
+
+    #[test]
+    fn lambda_endpoint_comparison_ignores_trailing_slash_style() {
+        // Godot metadata carries `…/lambdas/`, Unity metadata carries `…/lambdas` —
+        // same catalyst, must compare equal so the realm endpoint isn't treated
+        // as a different fetch target.
+        assert!(MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas",
+            "https://peer.decentraland.org/lambdas/"
+        ));
+        assert!(MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas/",
+            "https://peer.decentraland.org/lambdas/"
+        ));
+        assert!(!MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas",
+            "https://peer-ec2.decentraland.org/lambdas/"
+        ));
+    }
+
+    #[test]
+    fn sanitize_lambdas_endpoint_accepts_only_plausible_http_urls() {
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(" https://peer.decentraland.org/lambdas "),
+            Some("https://peer.decentraland.org/lambdas")
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("http://localhost:7070/lambdas/"),
+            Some("http://localhost:7070/lambdas/")
+        );
+        assert_eq!(MessageProcessor::sanitize_lambdas_endpoint(""), None);
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("not a url"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("ftp://peer.decentraland.org/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https:///lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://peer.decentraland.org/lam bdas"),
+            None
+        );
     }
 }
