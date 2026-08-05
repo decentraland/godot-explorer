@@ -26,14 +26,30 @@ func _ready():
 
 
 func _exit_tree():
-	# Detach from the shared load group
+	# Detach from the shared load group. Leaving the tree is NOT the same as
+	# finishing the load: `dcl_gltf_loading_state` deliberately stays LOADING so a
+	# re-parented container resumes rather than reporting a false FINISHED. Clearing
+	# `_requested_hash` is what marks it as "no longer attached to any group" —
+	# `_enter_tree` uses exactly that to re-request.
 	if not _requested_hash.is_empty():
 		GltfLoadingCoordinator.unregister(self, _requested_hash)
+		_requested_hash = ""
 
 	# Free pending orphan node (legacy path)
 	if dcl_pending_node != null:
 		dcl_pending_node.queue_free()
 		dcl_pending_node = null
+
+
+func _enter_tree():
+	# Re-parenting an entity (a normal SDK operation) takes its GltfContainer out of
+	# the tree and back in. `_ready` only ever runs once, so without this the load is
+	# never re-requested: the container sits in LOADING with no group behind it, Rust
+	# keeps counting it in `scene.gltf_loading`, and the loading screen stays pinned
+	# until the 120s per-container timeout. Only re-request when we are genuinely
+	# mid-load and detached — a FINISHED or errored container must not reload.
+	if dcl_gltf_loading_state == GltfContainerLoadingState.LOADING and _requested_hash.is_empty():
+		async_load_gltf.call_deferred()
 
 
 #region Loading Flow

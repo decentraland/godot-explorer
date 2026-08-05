@@ -360,8 +360,15 @@ impl LoadingSession {
                 // Check if all registered assets are loaded
                 let total_expected: u32 = self.expected_assets.values().sum();
                 let total_loaded: u32 = self.loaded_assets.values().sum();
+                // A scene already in `ready_scenes` no longer gates this phase: either it
+                // genuinely finished, or `check_loading_timeouts` force-marked it ready after
+                // SCENE_TIMEOUT_SECS without progress. That timeout was the only escape from a
+                // stalled load, but it fed `ready_scenes` alone — so this gate stayed pinned on
+                // assets that were never going to arrive, and a single unresolved GLTF could hold
+                // the loading screen for minutes with the scene fully playable behind it.
                 let all_loaded = self.expected_assets.iter().all(|(scene_id, expected)| {
-                    self.loaded_assets.get(scene_id).unwrap_or(&0) >= expected
+                    self.ready_scenes.contains(scene_id)
+                        || self.loaded_assets.get(scene_id).unwrap_or(&0) >= expected
                 });
 
                 // Transition conditions:
@@ -497,6 +504,59 @@ mod tests {
         session.report_scene_ready(SceneId(1));
         session.check_phase_transition();
         assert_eq!(session.phase, LoadingPhase::Done);
+    }
+
+    /// A GLTF that never reports finished must not pin the Assets phase forever.
+    ///
+    /// Reproduces the observed stall: a scene loads 5 of 6 assets and the 6th never
+    /// resolves (its container was detached from the shared load group and left in
+    /// LOADING). The per-scene timeout marks the scene ready; the session must then
+    /// be able to complete instead of waiting on an asset that will never arrive.
+    #[test]
+    fn test_stalled_asset_does_not_pin_assets_phase() {
+        let mut session = LoadingSession::new(1, vec!["scene1".to_string()]);
+        session.report_scene_fetched("scene1");
+        session.check_phase_transition();
+        session.report_scene_spawned(SceneId(1), 0);
+        session.check_phase_transition();
+        assert_eq!(session.phase, LoadingPhase::Assets);
+
+        // Six assets discovered, only five ever complete.
+        for _ in 0..6 {
+            session.report_asset_loading_started(SceneId(1));
+        }
+        for _ in 0..5 {
+            session.report_asset_loaded(SceneId(1));
+        }
+
+        // Discovery has settled, so only the missing asset holds the phase.
+        session.assets_phase_start = Some(Instant::now() - std::time::Duration::from_secs(6));
+        session.last_asset_registered = Some(Instant::now() - std::time::Duration::from_secs(6));
+        session.check_phase_transition();
+        assert_eq!(
+            session.phase,
+            LoadingPhase::Assets,
+            "phase must hold while the scene still looks alive"
+        );
+
+        // The scene goes quiet past SCENE_TIMEOUT_SECS, so the timeout sweep force-marks
+        // it ready — the existing escape hatch that previously did not reach this gate.
+        let stalled =
+            Instant::now() - std::time::Duration::from_secs(LoadingSession::SCENE_TIMEOUT_SECS + 1);
+        session.scene_last_progress.insert(SceneId(1), stalled);
+        let timed_out = session.get_timed_out_scenes(Instant::now());
+        assert_eq!(timed_out, vec![SceneId(1)]);
+        session.mark_timed_out_scenes_ready(timed_out);
+
+        session.check_phase_transition();
+        assert_eq!(session.phase, LoadingPhase::Ready);
+        session.check_phase_transition();
+        assert_eq!(
+            session.phase,
+            LoadingPhase::Done,
+            "a permanently stalled asset must not hold the loading screen"
+        );
+        assert_eq!(session.calculate_progress(), 100.0);
     }
 
     #[test]
