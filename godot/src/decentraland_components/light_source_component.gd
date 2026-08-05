@@ -71,11 +71,12 @@ var debug_budget_candidate: bool = false
 var debug_last_distance_to_avatar: float = -1.0
 
 # Runtime-editable light settings (static so the settings menu can modify them).
-# Defaults are placeholders: GraphicSettings.apply_graphic_profile overwrites
-# them per profile at startup. See PROFILE_DEFINITIONS.
+# Defaults are ON so desktop/Custom-profile users don't have to enable them
+# every run; apply_graphic_profile overwrites them per profile (mobile
+# profiles clamp them down). See PROFILE_DEFINITIONS.
 static var dcl_lights_system_enabled: bool = true
-static var dcl_lights_rendering_enabled: bool = false
-static var force_dcl_light_shadows_off: bool = true
+static var dcl_lights_rendering_enabled: bool = true
+static var force_dcl_light_shadows_off: bool = false
 
 static var debug_dcl_lights_gizmo: bool = false
 
