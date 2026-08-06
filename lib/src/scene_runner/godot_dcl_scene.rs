@@ -388,3 +388,36 @@ impl GodotDclScene {
         }
     }
 }
+
+/// SDK7 VisibilityComponent semantics: visibility affects ONLY the entity's own
+/// visual content, NOT nested child entities. Hiding the entity node itself would
+/// hide the whole subtree (child entities included), diverging from the reference
+/// client — e.g. bloomgarden plant slots (hidden parent) with live roses (visible
+/// child entities) render invisible (#1888).
+pub fn set_own_visuals_visible(node_3d: &mut Gd<Node3D>, visible: bool) {
+    node_3d.set_meta("dcl_own_visible", &visible.to_variant());
+    for child in node_3d.get_children().iter_shared() {
+        if child.has_meta("dcl_own_visual") {
+            if let Ok(mut child_3d) = child.try_cast::<Node3D>() {
+                child_3d.set_visible(visible);
+            }
+        }
+    }
+}
+
+/// Add a direct child that is part of the entity's own visuals, tagging it so
+/// `set_own_visuals_visible` can toggle it and applying the entity's current
+/// own-visibility. Nested entity nodes (DclNodeEntity3d) must NOT be added through
+/// here — they manage their own visibility.
+pub fn add_own_visual_child(node_3d: &mut Gd<Node3D>, child: &Gd<Node>) {
+    let visible = node_3d
+        .get_meta("dcl_own_visible")
+        .try_to::<bool>()
+        .unwrap_or(true);
+    let mut child = child.clone();
+    child.set_meta("dcl_own_visual", &true.to_variant());
+    if let Ok(mut child_3d) = child.clone().try_cast::<Node3D>() {
+        child_3d.set_visible(visible);
+    }
+    node_3d.add_child(&child);
+}

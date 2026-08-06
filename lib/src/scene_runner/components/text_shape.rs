@@ -10,7 +10,7 @@ use crate::{
         },
         ui_text_tags::strip_tags_extract_first_color,
     },
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
 use godot::{
     classes::{
@@ -262,7 +262,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 label_3d.set_font(&font_resource);
                 if add_to_base {
                     label_3d.set_name("TextShape");
-                    node_3d.add_child(&label_3d.upcast::<Node>());
+                    add_own_visual_child(&mut node_3d, &label_3d.upcast::<Node>());
                 }
 
                 // TODO: missing properties

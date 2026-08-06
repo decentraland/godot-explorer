@@ -121,6 +121,29 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 			var enabled: bool = args.get("enabled", false)
 			dispatcher.set_include_bin_payload(enabled)
 
+		"node_query":
+			# Generic live node probe for debugging: find nodes by name substring,
+			# dump arbitrary props and call no/any-arg methods.
+			# args: {name: String, props: [String], calls: [[method, arg1, ...]], max: int}
+			var results := []
+			var qname: String = args.get("name", "")
+			var qprops: Array = args.get("props", [])
+			var qmax: int = args.get("max", 5)
+			var found := get_tree().root.find_children("*", "", true, false).filter(
+				func(n): return qname.to_lower() in n.name.to_lower()
+			)
+			for n in found.slice(0, qmax):
+				var entry := {
+					"name": str(n.name), "path": str(n.get_path()), "class": n.get_class()
+				}
+				for p in qprops:
+					entry[p] = var_to_str(n.get(p))
+				for c in args.get("calls", []):
+					if n.has_method(c[0]):
+						entry["call:" + c[0]] = var_to_str(n.callv(c[0], c.slice(1)))
+				results.append(entry)
+			data = {"count": found.size(), "nodes": results}
+
 		_:
 			ok = false
 			data = {"error": "unknown command: " + cmd}
