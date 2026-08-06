@@ -94,9 +94,9 @@ var _debug_panel_from_settings: bool = false
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
-@onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
 @onready var button_show_ui: Button = %Button_ShowUI
 @onready var margin_container_show_ui: MarginContainer = %MarginContainer_ShowUI
+@onready var h_box_container_left_panels: HBoxContainer = %HBoxContainerLeftPanels
 
 
 func _process(_dt):
@@ -184,8 +184,8 @@ func _ready():
 	# Connect to notification clicks to handle friend request notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
-	# Connect on open emotes backpack
-	Global.open_backpack.connect(_on_backpack_emote_opened)
+	# Connect on open backpack (from the navbar button or the emote wheel)
+	Global.open_backpack.connect(_on_backpack_open)
 
 	# Connect deep link router signals for path-based actions
 	Global.deep_link_router.deep_link_jump.connect(_on_deep_link_jump)
@@ -1133,6 +1133,8 @@ func _on_profile_container_visibility_changed() -> void:
 func _open_friends_panel() -> void:
 	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
+	# Hide the whole chat panel while the navbar is open (redesigned HUD).
+	chat_panel.hide()
 
 
 func _async_open_profile_by_address(user_address: String):
@@ -1221,7 +1223,7 @@ func _show_friends_panel() -> void:
 		notifications_panel.hide_panel()
 	if settings_panel.visible:
 		settings_panel.hide()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1242,7 +1244,7 @@ func _show_settings_panel() -> void:
 		friends_panel.hide_panel()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1264,7 +1266,7 @@ func _show_notifications_panel() -> void:
 		friends_panel.hide_panel()
 	if settings_panel.visible:
 		settings_panel.hide()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1445,12 +1447,14 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 				notifications_panel.hide_panel()
 			if settings_panel.visible:
 				settings_panel.hide()
-			h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+			h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_STOP
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
 			if Global.is_mobile():
 				release_mouse()
 			joypad.hide()
+			# Keep chat hidden while the navbar friends panel is open (redesigned HUD).
+			chat_panel.hide()
 
 
 func _notification(what: int) -> void:
@@ -1509,11 +1513,10 @@ func _update_virtual_controls_visibility() -> void:
 	virtual_joystick.show()
 
 
-func _on_backpack_emote_opened(on_emotes := false) -> void:
-	if not on_emotes:
-		return
-	navbar.open_navbar_silently()
-	navbar.set_button_pressed(navbar.BUTTON.BACKPACK)
+func _on_backpack_open(_on_emotes := false) -> void:
+	# Backpack is a fullscreen menu screen: collapse and hide the navbar just like
+	# Discover, for both entry points (navbar button and emote wheel).
+	_enter_menu_screen()
 
 
 func _close_all_panels():
@@ -1521,17 +1524,26 @@ func _close_all_panels():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Restore the chat panel hidden while the navbar was open, unless the main HUD is hidden.
+	if not _session_hide_main_hud:
+		chat_panel.show()
 	_show_joypad()
 
 
 func _on_discover_open():
+	_enter_menu_screen()
+
+
+# Shared cleanup when entering a fullscreen menu screen (Discover / Backpack):
+# collapse the navbar dropdown, close the side panels and hide the navbar.
+func _enter_menu_screen():
 	navbar.collapse()
 	_show_joypad()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
@@ -1540,7 +1552,7 @@ func _on_menu_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	release_mouse()
 
 
@@ -1612,7 +1624,7 @@ func _on_change_parcel(_position: Vector2i):
 	parcel_position = _position
 
 
-func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
+func _on_h_box_container_left_panels_gui_input(event: InputEvent) -> void:
 	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
 		_close_all_panels()
 		navbar.collapse()

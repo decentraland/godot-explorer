@@ -282,6 +282,7 @@ func _ready():
 
 	container_backpack.show()
 	backpack_loading.hide()
+	_update_back_to_explorer_visibility()
 
 	_setup_ios_marketplace_section()
 
@@ -310,9 +311,11 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_right", 0)
 		right_editor_container.add_theme_constant_override("margin_bottom", 0)
 	else:
-		right_editor_container.add_theme_constant_override("margin_top", 10)
+		# Landscape: keep the wearables panel flush to the top and right screen edges
+		# (redesigned HUD). Left/bottom keep a small inset from the avatar bar.
+		right_editor_container.add_theme_constant_override("margin_top", 0)
 		right_editor_container.add_theme_constant_override("margin_left", 20)
-		right_editor_container.add_theme_constant_override("margin_right", 20)
+		right_editor_container.add_theme_constant_override("margin_right", 0)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
 		emote_editor._on_landscape()
 		color_carrousel.on_landscape()
@@ -1208,12 +1211,21 @@ func _on_visibility_changed() -> void:
 	if not is_node_ready() or not is_inside_tree():
 		return
 	if is_visible_in_tree():
-		if Global.get_explorer():
-			if button_back_to_explorer:
-				button_back_to_explorer.hide()
+		_update_back_to_explorer_visibility()
 	else:
 		# Leaving backpack — restore avatar preview to real state
 		_marketplace_preview_restore()
+
+
+# In landscape the backpack owns its "back to explorer" button, because the navbar/menu is
+# hidden while the backpack is open. In portrait it stays hidden. When there is no explorer
+# (e.g. onboarding) the scene's own default visibility is kept.
+func _update_back_to_explorer_visibility() -> void:
+	if not is_instance_valid(button_back_to_explorer):
+		return
+	if Global.get_explorer() == null:
+		return
+	button_back_to_explorer.visible = not Global.is_orientation_portrait()
 
 
 func _on_button_back_to_explorer_pressed() -> void:

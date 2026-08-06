@@ -41,6 +41,7 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
+@onready var check_button_first_person_camera: CheckButton = %CheckButton_FirstPersonCamera
 @onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
 @onready var check_button_hide_view_profile: CheckButton = %CheckButton_HideViewProfile
 @onready var check_button_hide_world_interactions: CheckButton = %CheckButton_HideWorldInteractions
@@ -51,6 +52,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
 @onready var container_interface: MarginContainer = %Container_Interface
+@onready var container_camera: Control = %Container_Camera
 
 #Audio items
 @onready var general_volume: SettingsSlider = %GeneralVolume
@@ -109,6 +111,7 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+	_refresh_camera_mode_row()
 
 	if not Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
 		Global.session_hide_ui_toggle_sync.connect(_on_session_hide_ui_toggle_sync)
@@ -443,6 +446,37 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 		Global.get_config().save_to_settings_file()
 
 
+# Camera mode (first/third person) is runtime-only state, not persisted config: the
+# toggle just drives Global.set_camera_mode(), reusing the logic the removed HUD
+# camera button used. The camera only exists inside the explorer; before entering a
+# place there is nothing to switch and Global.set_camera_mode() would be lost (player.gd
+# forces THIRD_PERSON on spawn), leaving the toggle out of sync. So hide the whole row
+# until we're in the explorer, matching the Hide-UI section. Disabled while a scene locks
+# the mode or forces cinematic.
+func _refresh_camera_mode_row() -> void:
+	var in_explorer := is_instance_valid(Global.get_explorer())
+	container_camera.visible = in_explorer
+	if not in_explorer:
+		return
+	var locked := (
+		Global.camera_mode_blocked or Global.current_camera_mode == Global.CameraMode.CINEMATIC
+	)
+	check_button_first_person_camera.disabled = locked
+	check_button_first_person_camera.set_pressed_no_signal(
+		Global.current_camera_mode == Global.CameraMode.FIRST_PERSON
+	)
+
+
+func _on_check_button_first_person_camera_toggled(toggled_on: bool) -> void:
+	if not is_instance_valid(Global.get_explorer()) or Global.camera_mode_blocked:
+		_refresh_camera_mode_row()
+		return
+	var mode: Global.CameraMode = (
+		Global.CameraMode.FIRST_PERSON if toggled_on else Global.CameraMode.THIRD_PERSON
+	)
+	Global.set_camera_mode(mode)
+
+
 func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
 	Global.metrics.track_click_button("HIDE_UI", "SETTINGS", "")
 	var explorer = Global.get_explorer()
@@ -547,6 +581,7 @@ func _on_button_graphics_pressed() -> void:
 func _on_button_gameplay_pressed() -> void:
 	show_control(container_gameplay)
 	_refresh_hide_explorer_ui_row()
+	_refresh_camera_mode_row()
 	_async_scroll_to_tab_button(button_gameplay)
 
 

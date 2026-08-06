@@ -52,6 +52,8 @@ corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_bg"]
 bg_color = Color(0.133333, 0.129412, 0.145098, 1)
 corner_radius_top_left = 24
@@ -59,11 +61,10 @@ corner_radius_top_right = 24
 corner_radius_bottom_right = 24
 corner_radius_bottom_left = 24
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
-
 [node name="explorer" type="Node" unique_id=1276646984]
 script = ExtResource("1_5n8xk")
 metadata/mobile_preview_orientation = "landscape"
+metadata/_edit_horizontal_guides_ = [60.0]
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=253544351]
 visible = false
@@ -121,10 +122,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_top = 0
 script = ExtResource("5_c8ksg")
-use_top = false
-use_bottom = false
 
 [node name="MobileUI" type="Control" parent="UI/LeftRightSafeContainerMobile" unique_id=1539864390]
 unique_name_in_owner = true
@@ -226,6 +224,7 @@ expand_icon = true
 
 [node name="SafeMarginContainerDebug" type="MarginContainer" parent="UI" unique_id=868273897]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -239,7 +238,7 @@ min_margin_top = 110
 min_margin_right = 12
 metadata/_edit_lock_ = true
 
-[node name="HBoxContainer_DebugTools" type="HBoxContainer" parent="UI/SafeMarginContainerDebug"]
+[node name="HBoxContainer_DebugTools" type="HBoxContainer" parent="UI/SafeMarginContainerDebug" unique_id=169913972]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 8
@@ -256,10 +255,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_top = 0
 script = ExtResource("5_c8ksg")
-use_top = false
-use_bottom = false
 
 [node name="InteractableHUD" type="Control" parent="UI/LeftRightSafeContainer" unique_id=1898741314]
 layout_mode = 2
@@ -282,7 +278,7 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HBoxContainer_RightPanels" type="HBoxContainer" parent="UI/LeftRightSafeContainer/InteractableHUD" unique_id=2005524203]
+[node name="HBoxContainerLeftPanels" type="HBoxContainer" parent="UI/LeftRightSafeContainer/InteractableHUD" unique_id=2005524203]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -292,53 +288,49 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
-alignment = 2
-metadata/_edit_lock_ = true
 
-[node name="MarginContainer" type="MarginContainer" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels" unique_id=1719818041]
+[node name="VSeparator" type="VSeparator" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels" unique_id=834468868]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_bottom = 16
+theme_override_constants/separation = 110
+theme_override_styles/separator = SubResource("StyleBoxEmpty_c5h7v")
 
-[node name="VBoxContainer_RightPanels" type="VBoxContainer" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels/MarginContainer" unique_id=1190000788]
+[node name="MarginContainer" type="MarginContainer" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels" unique_id=1719818041]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="VBoxContainer_LeftPanels" type="VBoxContainer" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels/MarginContainer" unique_id=1190000788]
 custom_minimum_size = Vector2(370, 0)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="NotificationsPanel" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels" unique_id=1351118609 instance=ExtResource("14_notif_panel")]
+[node name="NotificationsPanel" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels" unique_id=1351118609 instance=ExtResource("14_notif_panel")]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(450, 500)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="FriendsPanel" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels" unique_id=644859130 instance=ExtResource("21_cwgs4")]
+[node name="FriendsPanel" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels" unique_id=644859130 instance=ExtResource("21_cwgs4")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="SettingsPanel" type="PanelContainer" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels" unique_id=580837958]
+[node name="SettingsPanel" type="PanelContainer" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels" unique_id=580837958]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(640, 0)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_settings_bg")
 
-[node name="MarginContainer" type="MarginContainer" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels/SettingsPanel" unique_id=1052710726]
+[node name="MarginContainer" type="MarginContainer" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels/SettingsPanel" unique_id=1052710726]
 layout_mode = 2
 theme_override_constants/margin_top = 28
 
-[node name="Settings" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels/MarginContainer/VBoxContainer_RightPanels/SettingsPanel/MarginContainer" unique_id=61276201 instance=ExtResource("33_settings")]
+[node name="Settings" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels/SettingsPanel/MarginContainer" unique_id=61276201 instance=ExtResource("33_settings")]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 panel_mode = true
-
-[node name="VSeparator" type="VSeparator" parent="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels" unique_id=834468868]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 117
-theme_override_styles/separator = SubResource("StyleBoxEmpty_c5h7v")
 
 [node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/LeftRightSafeContainer/InteractableHUD" unique_id=193054843]
 layout_mode = 1
@@ -395,8 +387,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
-use_top = false
-use_bottom = false
 
 [node name="Navbar" parent="UI/SafeMarginContainerNavbar" unique_id=1143439956 instance=ExtResource("21_admxk")]
 unique_name_in_owner = true
@@ -461,7 +451,7 @@ script = ExtResource("20_064cw")
 [connection signal="load_scenes_pressed" from="UI/LeftRightSafeContainer/InteractableHUD/TopBottomSafeContainer/ChatPanel" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="share_place" from="UI/LeftRightSafeContainer/InteractableHUD/TopBottomSafeContainer/ChatPanel" to="." method="_share_place"]
 [connection signal="submit_message" from="UI/LeftRightSafeContainer/InteractableHUD/TopBottomSafeContainer/ChatPanel" to="." method="_on_panel_chat_submit_message"]
-[connection signal="gui_input" from="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainer_RightPanels" to="." method="_on_h_box_container_right_panels_gui_input"]
+[connection signal="gui_input" from="UI/LeftRightSafeContainer/InteractableHUD/HBoxContainerLeftPanels" to="." method="_on_h_box_container_left_panels_gui_input"]
 [connection signal="emote_wheel_closed" from="UI/LeftRightSafeContainer/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
 [connection signal="emote_wheel_opened" from="UI/LeftRightSafeContainer/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]

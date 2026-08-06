@@ -66,8 +66,6 @@ var touch_index: int = -1
 var _joystick_position := Vector2.ZERO
 var _tip_position := Vector2.ZERO
 var _joystick_visible := false
-var _is_navbar_open := false
-var _camera_touch_index: int = -1
 
 @onready var _sprint_timer := %SprintTimer
 
@@ -75,8 +73,6 @@ var _camera_touch_index: int = -1
 @onready var _active_area: Control = $ActiveArea
 
 @onready var _tip_default_position := Vector2.ZERO
-
-@onready var _button_camera := %Button_Camera
 
 # FUNCTIONS
 
@@ -92,21 +88,7 @@ func _ready() -> void:
 
 	_active_area.gui_input.connect(_on_gui_input)
 
-	# Drive the camera button from raw touch so it works for every finger, not just
-	# the primary one Godot synthesizes a mouse event from. toggle_mode unlocks
-	# set_pressed_no_signal() for press feedback; button_mask = 0 makes the base
-	# Button ignore the emulated mouse so we keep a single, consistent path.
-	_button_camera.toggle_mode = true
-	_button_camera.button_mask = 0
-	_button_camera.gui_input.connect(_on_button_camera_gui_input)
-
 	Global.loading_started.connect(_on_loading_scene)
-	Global.camera_mode_set.connect(_on_camera_mode_set)
-	Global.camera_mode_block_changed.connect(_on_camera_mode_block_changed)
-	var connect_explorer_signals := func():
-		Global.get_explorer().navbar.navbar_opened.connect(_on_navbar_opened)
-		Global.get_explorer().navbar.navbar_closed.connect(_on_navbar_closed)
-	connect_explorer_signals.call_deferred()
 	_on_loading_scene()
 
 
@@ -114,36 +96,8 @@ func _on_loading_scene() -> void:
 	_dynamic_material.set_shader_parameter("state", 0)
 
 
-func _on_navbar_opened() -> void:
-	_is_navbar_open = true
-	_refresh_camera_button_visibility()
-
-
-func _on_navbar_closed() -> void:
-	_is_navbar_open = false
-	_refresh_camera_button_visibility()
-
-
-func _on_camera_mode_set(_camera_mode: Global.CameraMode) -> void:
-	_refresh_camera_button_visibility()
-
-
-func _on_camera_mode_block_changed(_blocked: bool) -> void:
-	_refresh_camera_button_visibility()
-
-
-func _refresh_camera_button_visibility() -> void:
-	var should_show := (
-		not _is_navbar_open
-		and Global.current_camera_mode != Global.CameraMode.CINEMATIC
-		and not Global.camera_mode_blocked
-	)
-	_button_camera.visible = should_show
-
-
-## Hides the joystick graphic + touch area while keeping the camera (first/third-person)
-## button usable. Used when a scene hides the native joystick via PBTouchscreenInputControls:
-## dimming the whole node would also hide the still-needed view-toggle button.
+## Hides the joystick graphic + touch area. Used when a scene hides the native
+## joystick via PBTouchscreenInputControls.
 func set_visuals_hidden(hidden: bool) -> void:
 	$Dynamic.visible = not hidden
 	_active_area.visible = not hidden
@@ -342,32 +296,3 @@ func _on_resized() -> void:
 	if not is_node_ready():
 		return
 	_reset()
-
-
-func _on_button_camera_gui_input(event: InputEvent) -> void:
-	if not (event is InputEventScreenTouch):
-		return
-	if event.pressed:
-		if _camera_touch_index == -1:
-			_camera_touch_index = event.index
-			_button_camera.set_pressed_no_signal(true)
-		_button_camera.accept_event()
-	elif event.index == _camera_touch_index:
-		_button_camera.set_pressed_no_signal(false)
-		_camera_touch_index = -1
-		_on_button_camera_pressed()
-		_button_camera.accept_event()
-
-
-func _on_button_camera_pressed() -> void:
-	if Global.camera_mode_blocked:
-		return
-	const CAMERA_MODE_1P = preload("res://assets/ui/camera_mode_1p.svg")
-	const CAMERA_MODE_3P = preload("res://assets/ui/camera_mode_3p.svg")
-	match Global.player_camera_node.get_camera_mode():
-		Global.CameraMode.THIRD_PERSON:
-			_button_camera.icon = CAMERA_MODE_3P
-			Global.set_camera_mode(Global.CameraMode.FIRST_PERSON)
-		Global.CameraMode.FIRST_PERSON:
-			_button_camera.icon = CAMERA_MODE_1P
-			Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)
