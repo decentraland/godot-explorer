@@ -34,6 +34,10 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	# Pulse transport params (pulse-server / pulse / dual-channel / livekit); the
+	# shared helper no-ops on builds without the use_pulse feature.
+	Global._apply_comms_deeplink_params(Global.deep_link_obj)
+
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
@@ -50,6 +54,21 @@ func process_deep_link(url: String) -> void:
 	if not kill_sky_value.is_empty():
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
+
+	# Touch-feedback debug overlay (issue #2562): off by default, enabled on demand.
+	var touch_feedback_value: String = Global.deep_link_obj.params.get("touch-feedback", "")
+	if not touch_feedback_value.is_empty():
+		var touch_feedback_enable: bool = touch_feedback_value.to_lower() in ["true", "1", "yes"]
+		TouchFeedback.set_enabled(touch_feedback_enable)
+		print("[DEEPLINK] touch-feedback=", touch_feedback_enable)
+
+	# Opt-in gate for deleting an UPGRADED (email-linked) guest. Sticky-on for the
+	# session; only takes effect on a NON-production build (see
+	# Global.is_upgraded_deletion_enabled() + account_deletion_popup.gd).
+	var upgraded_deletion_value = Global.deep_link_obj.params.get("enable-upgraded-deletion", "")
+	if upgraded_deletion_value.to_lower() in ["true", "1", "yes"]:
+		Global._enable_upgraded_deletion = true
+		print("[DEEPLINK] enable-upgraded-deletion=true")
 
 	# Genesis Plaza profiling benchmark (issue #1862). The CLI path spawns the
 	# runner from Global._ready, but on mobile the deep link is not parsed by
@@ -140,8 +159,11 @@ func route() -> void:
 				or not Global.deep_link_obj.preview.is_empty()
 			):
 				_route_teleport()
-			else:
+			elif Global.deep_link_obj.params.is_empty():
 				deep_link_jump.emit()
+			# else: config-only params (multiplayer_debug, pulse, rust-log, scene-stats,
+			# …) were already applied in process_deep_link — a link with no navigation
+			# target must not pop an empty jump-in panel over Discover.
 		"/events":
 			var event_id: String = Global.deep_link_obj.params.get("id", "")
 			if not event_id.is_empty():
@@ -165,20 +187,23 @@ func _route_teleport() -> void:
 	var realm = Global.deep_link_obj.preview
 	if realm.is_empty():
 		realm = Global.deep_link_obj.realm
+	var location: Vector2i = Global.deep_link_obj.location
+	var has_location := Global.deep_link_obj.is_location_defined()
+
+	# The deeplink target is captured above and consumed now — clear realm/location on the shared
+	# deep_link_obj so a later explorer boot (e.g. teleporting away after a private-world block)
+	# can't re-read this stale realm and re-trigger the modal (#2569 review, iOS). preview is left
+	# untouched: it drives preview/hot-reload mode with its own lifecycle.
+	Global.deep_link_obj.realm = ""
+	Global.deep_link_obj.location = Vector2i.MAX
 
 	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
-	if (
-		not realm.is_empty()
-		and Realm.is_dcl_ens(realm)
-		and not Global.deep_link_obj.is_location_defined()
-	):
+	if not realm.is_empty() and Realm.is_dcl_ens(realm) and not has_location:
 		Global.async_join_world(realm)
-		return
-
-	if Global.deep_link_obj.is_location_defined():
+	elif has_location:
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.async_teleport_to(Global.deep_link_obj.location, realm)
+		Global.async_teleport_to(location, realm)
 	elif not realm.is_empty():
 		Global.async_teleport_to(Vector2i.ZERO, realm)
 

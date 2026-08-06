@@ -101,14 +101,57 @@ pub fn test_scene_generation(
 
     Ok(())
 }
+pub fn test_lighting_generation(
+    with_build_envs: Option<HashMap<String, String>>,
+) -> Result<(), anyhow::Error> {
+    println!("=== running lighting snapshot generation ===");
+    let lighting_output = Path::new("./godot/output/");
+    let extra_args = ["--lighting-renderer"]
+        .iter()
+        .map(|it| it.to_string())
+        .collect();
+
+    run_godot_tolerating_shutdown_crash(extra_args, lighting_output, with_build_envs)?;
+
+    let lighting_snapshot_folder = Path::new("./tests/snapshots/lighting").canonicalize()?;
+    let comparison_folder = lighting_snapshot_folder.join("comparison");
+
+    // Move files
+    move_dir_recursive(&lighting_output.canonicalize()?, &comparison_folder)?;
+
+    // Baselines must exist — otherwise there's nothing to regress against.
+    let baseline_count = std::fs::read_dir(&lighting_snapshot_folder)?
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().and_then(|x| x.to_str()) == Some("png"))
+        .count();
+    if baseline_count == 0 {
+        anyhow::bail!(
+            "No lighting baselines in {}. Generate them once with \
+             `cargo run -- test-tools`, then promote the results: \
+             `mv tests/snapshots/lighting/comparison/*.png tests/snapshots/lighting/` \
+             and commit them.",
+            lighting_snapshot_folder.display()
+        );
+    }
+
+    // Stricter than scenes/avatars (0.90): lighting regressions are exactly
+    // the subtle color-grade shifts a loose threshold misses (issue #2516).
+    compare_images_folders(&lighting_snapshot_folder, &comparison_folder, 0.95)
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    Ok(())
+}
+
 pub fn test_godot_tools(
     with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
     let avatar_result = test_avatar_generation(with_build_envs.clone());
     let scene_result = test_scene_generation(with_build_envs.clone());
+    let lighting_result = test_lighting_generation(with_build_envs.clone());
 
     scene_result?;
     avatar_result?;
+    lighting_result?;
 
     Ok(())
 }

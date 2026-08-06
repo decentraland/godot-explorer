@@ -512,6 +512,16 @@ impl WebSocketRoom {
     fn _change_profile(&mut self, new_profile: UserProfile) {
         self.player_profile = Some(new_profile);
     }
+
+    pub fn state_name(&self) -> &'static str {
+        match self.state {
+            WsRoomState::Connecting => "connecting",
+            WsRoomState::Connected => "ws_open",
+            WsRoomState::IdentMessageSent => "identifying",
+            WsRoomState::ChallengeMessageSent => "challenge_sent",
+            WsRoomState::WelcomeMessageReceived => "connected",
+        }
+    }
 }
 
 fn get_next_packet(mut peer: Gd<WebSocketPeer>) -> Option<(usize, ws_packet::Message)> {
@@ -559,5 +569,9 @@ impl Adapter for WebSocketRoom {
     fn consume_scene_messages(&mut self, _scene_id: &str) -> Vec<(H160, Vec<u8>)> {
         // Scene messages are now handled by MessageProcessor
         Vec::new()
+    }
+
+    fn connection_state_str(&self) -> &'static str {
+        self.state_name()
     }
 }

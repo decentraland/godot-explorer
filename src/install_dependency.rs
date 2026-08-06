@@ -34,15 +34,20 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG),
 // unless PROTOCOL_FIXED_VERSION_URL pins a specific tarball.
 //
-// Pinned for the 1.11.0 RC: tracking `next` re-resolves on every CI run, so an
+// Pinning rationale: tracking `next` re-resolves on every CI run, so an
 // upstream protocol publish can break or change builds with no repo change
 // (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
-// Bump the pin deliberately — grab the new tarball URL from
-// `https://registry.npmjs.org/@dcl/protocol/next` (dist.tarball), update any
-// affected generated-struct usages, and set it here. Reset to `None` to track
-// @next again after the release is cut.
+// Bump the pin deliberately and update any affected generated-struct usages.
+//
+// Pinned to the npm `next` release built from protocol `main` commit 0ff6038
+// (PR #449 merged) — ships the decentraland/pulse protos + options.proto
+// (quantization FieldOptions) for the Pulse transport, plus PR #426
+// TouchscreenInputControls/UiInputBinding that godot main's components need.
+// It does NOT carry the `experimental`-only rfc4 fields (PlayerEmote.is_stopping
+// & co., Chat.forwarded_from) — those are re-added by the build-time patch in
+// lib/build.rs (`patched_rfc4_comms_proto`).
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
-    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-28974105118.commit-a598406.tgz",
+    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-30827383791.commit-0ff6038.tgz",
 );
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 

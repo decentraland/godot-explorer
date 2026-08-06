@@ -80,12 +80,12 @@ struct EmailCompleteRequest<'a> {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct EmailCompleteResponse {
-    /// The EMAIL identity JWT — this is the only field we consume; it becomes
-    /// `accountAuthTokenToConnect` in the `/link` call. The `walletAddress`
-    /// returned alongside is the email identity's OWN address (not the final
-    /// one), so it is deliberately ignored.
     token: String,
+    /// The email identity's own wallet address. Used for login; ignored for
+    /// the upgrade/link flow (the guest address is preserved instead).
+    wallet_address: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -100,6 +100,48 @@ pub struct ThirdwebGuestSession {
     pub user_id: String,
     pub wallet_address: H160,
     pub is_new_user: bool,
+}
+
+/// Typed failure for `guest_login`, carrying a machine-stable `reason` code so
+/// analytics can bucket outcomes without parsing free-form error strings (the
+/// `?`/`anyhow` boundary erases whether a failure was a timeout, a network
+/// error, or an HTTP status). Implements `std::error::Error` so existing
+/// `anyhow`-based callers keep working via `?` / `Into`.
+#[derive(Debug)]
+pub struct GuestLoginError {
+    /// A machine-stable code. This function produces "http_4xx", "http_5xx",
+    /// "timeout", "network", "bad_response" or "invalid_address"; later steps
+    /// of the guest-login flow (see `perform_thirdweb_guest_login`) may also
+    /// construct this error with "sign_message" or "ephemeral". Kept as a
+    /// `&'static str` so the vocabulary is fixed at the call site.
+    pub reason: &'static str,
+    /// Upstream HTTP status when `reason` is "http_4xx"/"http_5xx". None otherwise.
+    pub http_status: Option<u16>,
+    /// Human-readable detail for logs (may include the upstream body). Not for
+    /// analytics grouping — use `reason`.
+    pub message: String,
+}
+
+impl std::fmt::Display for GuestLoginError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.http_status {
+            Some(status) => write!(f, "{} (status={}): {}", self.reason, status, self.message),
+            None => write!(f, "{}: {}", self.reason, self.message),
+        }
+    }
+}
+
+impl std::error::Error for GuestLoginError {}
+
+/// Classifies a reqwest transport error (no HTTP response was produced) into a
+/// stable `reason` code. Status-based codes are handled separately by the
+/// caller, which has the response in hand.
+fn classify_reqwest_error(e: &reqwest::Error) -> &'static str {
+    if e.is_timeout() {
+        "timeout"
+    } else {
+        "network"
+    }
 }
 
 const SESSION_PATH: &str = "user://thirdweb_session.json";
@@ -163,7 +205,7 @@ pub fn load_session_from_disk() -> Option<ThirdwebGuestSession> {
 
 /// Logs in as a guest with a deterministic session id. The same session id
 /// always returns the same wallet address (server-side, custodial).
-pub async fn guest_login(session_id: &str) -> Result<ThirdwebGuestSession, anyhow::Error> {
+pub async fn guest_login(session_id: &str) -> Result<ThirdwebGuestSession, GuestLoginError> {
     let url = format!("{}/v1/auth/complete", THIRDWEB_API_BASE);
     let body = GuestLoginRequest {
         method: "guest",
@@ -176,33 +218,57 @@ pub async fn guest_login(session_id: &str) -> Result<ThirdwebGuestSession, anyho
         url
     );
 
-    let response = reqwest::Client::builder()
+    let client = reqwest::Client::builder()
         .timeout(REQUEST_TIMEOUT)
-        .build()?
+        .build()
+        .map_err(|e| GuestLoginError {
+            reason: "network",
+            http_status: None,
+            message: format!("client build failed: {e}"),
+        })?;
+
+    let response = client
         .post(&url)
         .header("x-client-id", THIRDWEB_CLIENT_ID)
         .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
         .header("Content-Type", "application/json")
         .json(&body)
         .send()
-        .await?;
+        .await
+        .map_err(|e| GuestLoginError {
+            reason: classify_reqwest_error(&e),
+            http_status: None,
+            message: e.to_string(),
+        })?;
 
     let status = response.status();
     if !status.is_success() {
         let text = response.text().await.unwrap_or_default();
-        return Err(anyhow::anyhow!(
-            "thirdweb guest_login failed: status={}, body={}",
-            status,
-            text
-        ));
+        return Err(GuestLoginError {
+            reason: if status.is_server_error() {
+                "http_5xx"
+            } else {
+                "http_4xx"
+            },
+            http_status: Some(status.as_u16()),
+            message: format!("status={status}, body={text}"),
+        });
     }
 
-    let parsed: GuestLoginResponse = response.json().await?;
+    let parsed: GuestLoginResponse = response.json().await.map_err(|e| GuestLoginError {
+        reason: "bad_response",
+        http_status: Some(status.as_u16()),
+        message: format!("failed to parse response body: {e}"),
+    })?;
     let address = parsed
         .wallet_address
         .as_str()
         .as_h160()
-        .ok_or_else(|| anyhow::anyhow!("thirdweb returned invalid wallet address"))?;
+        .ok_or_else(|| GuestLoginError {
+            reason: "invalid_address",
+            http_status: None,
+            message: "thirdweb returned invalid wallet address".into(),
+        })?;
 
     tracing::info!(
         "thirdweb guest_login: success, address={:#x}, is_new_user={}",
@@ -291,7 +357,7 @@ pub async fn refresh_guest_session(
 ) -> Result<ThirdwebGuestSession, anyhow::Error> {
     let anchor = super::device_anchor::resolve_anchor(device_anchor_id);
     let session_id = super::device_anchor::compute_session_id(&anchor);
-    guest_login(&session_id).await
+    guest_login(&session_id).await.map_err(anyhow::Error::from)
 }
 
 /// Call A — sends a one-time code to `email`. No auth token required; the
@@ -332,10 +398,10 @@ pub async fn email_initiate(email: &str) -> Result<(), anyhow::Error> {
 }
 
 /// Call B — verifies the OTP and returns the EMAIL identity JWT. That token is
-/// fed to `link_email` as `accountAuthTokenToConnect`. The `walletAddress`
-/// returned by this endpoint is the email identity's own address and is NOT
-/// the final wallet — it is intentionally not parsed.
-pub async fn email_complete(email: &str, code: &str) -> Result<String, anyhow::Error> {
+/// Verifies the OTP code and returns `(email_jwt, email_wallet_address)`.
+/// The JWT is used either to link the email to an existing guest account
+/// (`link_email`) or directly as the auth token for a native email login.
+pub async fn email_complete(email: &str, code: &str) -> Result<(String, H160), anyhow::Error> {
     let url = format!("{}/v1/auth/complete", THIRDWEB_API_BASE);
     let body = EmailCompleteRequest {
         method: "email",
@@ -367,11 +433,17 @@ pub async fn email_complete(email: &str, code: &str) -> Result<String, anyhow::E
     }
 
     let parsed: EmailCompleteResponse = response.json().await?;
+    let address = parsed
+        .wallet_address
+        .as_str()
+        .as_h160()
+        .ok_or_else(|| anyhow::anyhow!("thirdweb email_complete: invalid wallet address"))?;
     tracing::info!(
-        "thirdweb email_complete: success, email_jwt_len={}",
+        "thirdweb email_complete: success, address={:#x}, email_jwt_len={}",
+        address,
         parsed.token.len()
     );
-    Ok(parsed.token)
+    Ok((parsed.token, address))
 }
 
 /// Call C — links the email identity (`email_jwt`) into the existing guest
@@ -433,6 +505,10 @@ struct LinkedProfile {
     /// the `GET /v1/wallets/me` payload and required to target an unlink.
     #[serde(default)]
     id: Option<String>,
+    /// Email address for `email` profiles — the `/v1/auth/unlink` schema targets
+    /// an email identity by `details.email` (not by `id`).
+    #[serde(default)]
+    email: Option<String>,
 }
 
 /// Fetches the account's linked auth profiles from the unified v1 API
@@ -482,9 +558,16 @@ pub async fn get_linked_profile_types(token: &str) -> Result<Vec<String>, anyhow
     Ok(types)
 }
 
-#[derive(Debug, Serialize)]
+/// Identifier the `/v1/auth/unlink` schema expects inside `details`. It differs
+/// by auth method: a `guest` (and social/passkey) identity is targeted by its
+/// opaque `id`, an `email` identity by its `email` address. Only the relevant
+/// field is serialized.
+#[derive(Debug, Serialize, Default)]
 struct UnlinkDetails<'a> {
-    id: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    id: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    email: Option<&'a str>,
 }
 
 #[derive(Debug, Serialize)]
@@ -492,6 +575,95 @@ struct UnlinkRequest<'a> {
     #[serde(rename = "type")]
     profile_type: &'a str,
     details: UnlinkDetails<'a>,
+    /// thirdweb guards against orphaning a wallet: unlinking the LAST auth method
+    /// is refused with `400 "user must have at least one account …"` unless this
+    /// is set. We always want the delete semantics, so it's `true`. It is a no-op
+    /// when the profile being unlinked is not the last one.
+    #[serde(rename = "allowAccountDeletion")]
+    allow_account_deletion: bool,
+}
+
+/// Builds the `details` identifier `/v1/auth/unlink` needs for a given profile:
+/// `email` is targeted by its address, everything else (`guest`, social, …) by
+/// its opaque `id`. Returns `None` when the profile carries no usable
+/// identifier (the caller skips it).
+fn unlink_details_for(profile: &LinkedProfile) -> Option<UnlinkDetails<'_>> {
+    let by_id = || {
+        profile.id.as_deref().map(|id| UnlinkDetails {
+            id: Some(id),
+            email: None,
+        })
+    };
+    match profile.profile_type.as_str() {
+        "email" => profile
+            .email
+            .as_deref()
+            .map(|email| UnlinkDetails {
+                id: None,
+                email: Some(email),
+            })
+            .or_else(by_id),
+        _ => by_id(),
+    }
+}
+
+/// POSTs a single `/v1/auth/unlink` and normalizes the response. A 2xx is
+/// success. The **last-profile quirk** also counts as success: unlinking the
+/// final identity makes the API delete the user and then answer `500` with
+/// "User not found" / "Failed to unlink authentication account" (it can't
+/// re-fetch the just-deleted user). Any other status is an error.
+async fn post_unlink(
+    token: &str,
+    profile_type: &str,
+    details: UnlinkDetails<'_>,
+) -> Result<(), anyhow::Error> {
+    let url = format!("{}/v1/auth/unlink", THIRDWEB_API_BASE);
+    let body = UnlinkRequest {
+        profile_type,
+        details,
+        allow_account_deletion: true,
+    };
+
+    let response = reqwest::Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .build()?
+        .post(&url)
+        .header("x-client-id", THIRDWEB_CLIENT_ID)
+        .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
+        .header("Authorization", format!("Bearer {}", token))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = response.status();
+    let text = response.text().await.unwrap_or_default();
+
+    if status.is_success() {
+        tracing::info!(
+            "thirdweb unlink: {} unlinked (status={})",
+            profile_type,
+            status
+        );
+        return Ok(());
+    }
+
+    let lower = text.to_lowercase();
+    if status.as_u16() == 500 && (lower.contains("not found") || lower.contains("failed to unlink"))
+    {
+        tracing::info!(
+            "thirdweb unlink: {} last-profile deletion (500 treated as success)",
+            profile_type
+        );
+        return Ok(());
+    }
+
+    Err(anyhow::anyhow!(
+        "thirdweb unlink {} failed: status={}, body={}",
+        profile_type,
+        status,
+        text
+    ))
 }
 
 /// Deletes a non-upgraded guest account by unlinking its sole `guest` profile
@@ -528,51 +700,70 @@ pub async fn unlink_guest_profile(token: &str) -> Result<(), anyhow::Error> {
         return Err(anyhow::anyhow!("guest profile missing id — cannot unlink"));
     };
 
-    let url = format!("{}/v1/auth/unlink", THIRDWEB_API_BASE);
-    let body = UnlinkRequest {
-        profile_type: "guest",
-        details: UnlinkDetails { id },
-    };
+    post_unlink(
+        token,
+        "guest",
+        UnlinkDetails {
+            id: Some(id),
+            email: None,
+        },
+    )
+    .await
+}
 
-    let response = reqwest::Client::builder()
-        .timeout(REQUEST_TIMEOUT)
-        .build()?
-        .post(&url)
-        .header("x-client-id", THIRDWEB_CLIENT_ID)
-        .header("Origin", THIRDWEB_ALLOWED_ORIGIN)
-        .header("Authorization", format!("Bearer {}", token))
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await?;
-
-    let status = response.status();
-    let text = response.text().await.unwrap_or_default();
-
-    if status.is_success() {
-        tracing::info!(
-            "thirdweb unlink_guest_profile: unlinked (status={})",
-            status
-        );
+/// Fully deletes an **upgraded** guest by unlinking EVERY linked profile — the
+/// "double unlink" of the `guest` identity AND the linked `email` (plus any
+/// other) identity. Removing all profiles deletes the thirdweb user outright, so
+/// the account is gone (not merely stripped back to a bare guest) and the
+/// deterministic `sessionId` is freed for a brand-new wallet on the next
+/// `guest_login`.
+///
+/// Non-`guest` profiles are unlinked first and `guest` LAST, so the last-profile
+/// 500-as-success quirk lands on the known guest request. It is best-effort per
+/// profile: a failure on one is logged and the rest still run; the call only
+/// returns an error if at least one unlink failed for real.
+///
+/// Unlike `unlink_guest_profile` this deliberately does NOT refuse an upgraded
+/// account — deleting the recoverable email account is the whole point. It is
+/// gated upstream (non-prod + the `enable-upgraded-deletion` deeplink).
+///
+/// `token` must be a fresh guest JWT (see `refresh_guest_session`); a guest
+/// login on an already-upgraded account returns that same user's token.
+pub async fn unlink_upgraded_account(token: &str) -> Result<(), anyhow::Error> {
+    let profiles = get_linked_profiles(token).await?;
+    if profiles.is_empty() {
+        tracing::info!("thirdweb unlink_upgraded_account: no profiles — nothing to do");
         return Ok(());
     }
 
-    // Last-profile deletion: the user is gone, so the API 500s trying to
-    // re-fetch it. Treat "not found" / "failed to unlink" 500s as success.
-    let lower = text.to_lowercase();
-    if status.as_u16() == 500 && (lower.contains("not found") || lower.contains("failed to unlink"))
-    {
-        tracing::info!(
-            "thirdweb unlink_guest_profile: last-profile deletion (500 treated as success)"
-        );
-        return Ok(());
+    // Unlink the guest identity LAST so the user-deletion 500 lands on it.
+    let mut ordered: Vec<&LinkedProfile> = profiles.iter().collect();
+    ordered.sort_by_key(|p| u8::from(p.profile_type == "guest"));
+
+    let mut last_err: Option<anyhow::Error> = None;
+    for profile in ordered {
+        let Some(details) = unlink_details_for(profile) else {
+            tracing::warn!(
+                "thirdweb unlink_upgraded_account: profile {} has no identifier — skipping",
+                profile.profile_type
+            );
+            continue;
+        };
+        if let Err(e) = post_unlink(token, &profile.profile_type, details).await {
+            tracing::error!(
+                "thirdweb unlink_upgraded_account: {} unlink failed: {:?}",
+                profile.profile_type,
+                e
+            );
+            last_err = Some(e);
+        }
     }
 
-    Err(anyhow::anyhow!(
-        "thirdweb unlink_guest_profile failed: status={}, body={}",
-        status,
-        text
-    ))
+    if let Some(e) = last_err {
+        return Err(e);
+    }
+    tracing::info!("thirdweb unlink_upgraded_account: all profiles unlinked");
+    Ok(())
 }
 
 /// `true` when the account has any auth method beyond the silent `guest` login —

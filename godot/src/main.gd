@@ -7,6 +7,10 @@ var _startup_time: int = Time.get_ticks_msec()
 func _ready():
 	print("[Startup] main._ready: %dms" % (Time.get_ticks_msec() - _startup_time))
 	Global.set_orientation_portrait()
+	# #2386: apply the UI content-scale synchronously here — before the first frame is
+	# presented — so the SplashOverlay (and all UI) render at their final scale from frame 0
+	# instead of popping 1.0 -> content_scale_factor a frame later when start() runs.
+	GraphicSettings.apply_ui_zoom(get_window())
 	start.call_deferred()
 
 
@@ -76,6 +80,11 @@ func _start():
 	elif Global.cli.client_test_mode:
 		print("Running in Client Test mode")
 		get_tree().change_scene_to_file("res://src/client_tests/client_test_scene.tscn")
+	elif Global.cli.has_arg("--lighting-renderer"):
+		print("Running in Lighting-Renderer mode")
+		get_tree().change_scene_to_file(
+			"res://src/tool/lighting_renderer/lighting_renderer_standalone.tscn"
+		)
 	elif Global.cli.scene_test_mode or Global.cli.scene_renderer_mode:
 		print("Running in Scene Test mode")
 		Global.get_config().guest_profile = {}

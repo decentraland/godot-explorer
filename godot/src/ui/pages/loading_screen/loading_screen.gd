@@ -41,6 +41,13 @@ func enable_loading_screen(intended_realm: String = "", when: String = "") -> vo
 	close_button.show()
 	_loading_cancelled = false
 	_intended_realm = intended_realm if Realm.is_dcl_ens(intended_realm) else ""
+	# Pass the caller's realm as given, not `_intended_realm`: that one is narrowed to a bare dcl
+	# ENS for the places API below, so forwarding it would drop every non-world destination and
+	# fall back to the realm being *left* — bucketing a teleport to Genesis as wherever we came
+	# from. The funnel classifies both the bare and resolved-URL shapes.
+	Global.scene_runner.loading_begin_episode(
+		when, intended_realm if not intended_realm.is_empty() else Global.realm.get_realm_string()
+	)
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
@@ -83,6 +90,7 @@ func async_hide_loading_screen_effect():
 	tween.tween_property(self, "modulate", Color.TRANSPARENT, 1.0)
 	await tween.finished
 	hide()
+	Global.scene_runner.loading_end_episode("hidden")
 	modulate = Color.WHITE
 	self.position.y = 0
 
@@ -129,7 +137,7 @@ func _on_timer_check_progress_timeout_timeout():
 	if not DclGlobal.is_production() and Global.content_provider.get_optimized_scene_count() > 0:
 		opt_suffix = " - Opt"
 	label_loading_state.text = (
-		"(%d/%d resources at %.2fmb/s)%s"
+		"%d/%d resources at %.2fmb/s%s"
 		% [loaded_resources, loading_resources, download_speed_mbs, opt_suffix]
 	)
 
@@ -212,6 +220,12 @@ func _on_scene_runner_loading_started(_session_id: int, _expected_count: int) ->
 	if _loading_cancelled or _place_data_set:
 		return
 	var pos = Global.scene_fetcher.current_position
+	# Local preview scenes are not in the places catalog — a position query would return
+	# whatever Genesis City scene owns that parcel. Use the preview scene's own
+	# scene.json metadata (display.title / display.navmapThumbnail) instead.
+	if Global.cli.preview_mode or not Global.deep_link_obj.preview.is_empty():
+		_set_place_data_from_scene_definition(pos)
+		return
 	# For genesis (no intended world realm) a valid parcel is required for the API call.
 	# For DCL worlds the fetch is by realm name and position is irrelevant.
 	if _intended_realm.is_empty() and pos == SceneFetcher.INVALID_PARCEL:
@@ -238,6 +252,24 @@ func _async_fetch_place_data(pos: Vector2i, generation: int) -> void:
 	set_place_data(data_array[0])
 
 
+func _set_place_data_from_scene_definition(pos: Vector2i) -> void:
+	var scene_definition: DclSceneEntityDefinition = Global.scene_fetcher.get_scene_definition_at(
+		pos
+	)
+	if scene_definition == null:
+		return
+	var data := {"title": String(scene_definition.get_title())}
+	var thumbnail_file := String(scene_definition.get_navmap_thumbnail())
+	if not thumbnail_file.is_empty():
+		var content_mapping := scene_definition.get_content_mapping()
+		var file_hash := String(content_mapping.get_hash(thumbnail_file))
+		if file_hash.is_empty():
+			printerr("Preview scene thumbnail not in content mapping: ", thumbnail_file)
+		else:
+			data["image"] = String(content_mapping.get_base_url()) + file_hash
+	set_place_data(data)
+
+
 func set_place_data(data: Dictionary) -> void:
 	_place_data_set = true
 	var title = data.get("title", "")
@@ -262,7 +294,7 @@ func set_place_creator(creator: String) -> void:
 		rich_text_label_creator.hide()
 		return
 	rich_text_label_creator.show()
-	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] " + creator
+	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] [b]" + creator + "[/b]"
 
 
 func set_place_image(image_url: String) -> void:
@@ -299,4 +331,8 @@ func _on_close_button_pressed() -> void:
 	Global.metrics.track_click_button("CANCEL_LOADING", "LOADING", "")
 	_clear_place_ui()
 	_loading_cancelled = true
+	# return_to_discover() tears the Explorer down without running the hide effect, so the
+	# episode would stay open until the next load supersedes it and be misreported as
+	# `superseded`. Close it here so the user-initiated abort is recorded as `cancelled`.
+	Global.scene_runner.loading_end_episode("cancelled")
 	Global.return_to_discover()

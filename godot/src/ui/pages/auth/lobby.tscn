@@ -9,7 +9,6 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
 [ext_resource type="PackedScene" uid="uid://5x6lss2vy1x0" path="res://src/ui/pages/discover/first_time_user_experience.tscn" id="5_3tlbd"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_g62s5"]
-[ext_resource type="PackedScene" path="res://src/ui/components/molecules/dcl_splash/dcl_splash.tscn" id="5_l114c"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/pages/backpack/backpack_portrait.tscn" id="9_qv8xq"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_ypsmd"]
 [ext_resource type="LabelSettings" uid="uid://cjsuieuof7bhf" path="res://assets/themes/lobby_title_small.tres" id="10_3tlbd"]
@@ -29,6 +28,7 @@
 [ext_resource type="LabelSettings" uid="uid://btf4wblw0y5bf" path="res://assets/themes/lobby_subtitle.tres" id="22_eula"]
 [ext_resource type="PackedScene" uid="uid://d0hixhgq3pfdu" path="res://src/ui/pages/settings/underlined_button.tscn" id="23_65md3"]
 [ext_resource type="Script" uid="uid://ds5fipbkuuh6" path="res://src/ui/components/atoms/labels/text_with_links/text_with_links.gd" id="24_65md3"]
+[ext_resource type="PackedScene" uid="uid://d0pdbg48kqrkv" path="res://src/ui/pages/auth/sign_in_with_email.tscn" id="27_l114c"]
 [ext_resource type="Texture2D" uid="uid://c55bxhde80ljl" path="res://assets/ui/sign-in/back-chevron.svg" id="back_chevron"]
 
 [sub_resource type="Shader" id="Shader_ijrai"]
@@ -158,26 +158,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="DclSplash" parent="Main" unique_id=964062833 instance=ExtResource("5_l114c")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="TextureProgressBar" parent="Main/DclSplash" unique_id=774353178 instance=ExtResource("11_7iulh")]
-custom_minimum_size = Vector2(128, 128)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -64.0
-offset_right = 64.0
-offset_bottom = 64.0
-grow_horizontal = 2
-grow_vertical = 2
-speed_scale = 2.0
 
 [node name="AccountHomeLoading" type="Control" parent="Main" unique_id=374747450]
 unique_name_in_owner = true
@@ -858,9 +838,12 @@ color = Color(1, 1, 1, 0.7019608)
 font = ExtResource("15_vtvnx")
 font_size = 30
 
+[node name="SignInWithEmail" parent="Main" unique_id=299044425 instance=ExtResource("27_l114c")]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="SignIn" type="Control" parent="Main" unique_id=1717754795]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Main/SignIn" unique_id=256010208]
@@ -880,6 +863,7 @@ layout_mode = 2
 
 [node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/MarginContainer/VBoxContainer" unique_id=1737794804]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 0

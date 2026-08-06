@@ -4,6 +4,10 @@ extends DclRealm
 signal realm_changed
 signal realm_changing
 signal realm_change_failed(new_realm_string: String, reason: String)
+## The target world is private and the user is not on its allow-list (#1725).
+## Kept apart from `realm_change_failed` so it surfaces the "is private" modal
+## instead of the generic "World unavailable" toast.
+signal realm_access_denied(new_realm_string: String, world_name: String)
 
 const DAO_SERVERS: Array[String] = [
 	"https://peer-ec1.decentraland.org/",
@@ -148,6 +152,22 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	prints(
 		"[REALM] async_set_realm", new_realm_string, search_new_pos, "resolved", candidate_realm_url
 	)
+
+	# Private worlds (#1725): refuse before emitting, fetching or mutating anything, so a
+	# world the user can't enter never starts loading.
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		new_realm_string, candidate_realm_url
+	)
+	if not world_name.is_empty() and not await WorldPermissionsHelper.async_is_allowed(world_name):
+		# Expected, handled outcome (not an error) — use print so it does not ship to Sentry.
+		print("[REALM] Access denied for private world: ", world_name)
+		# Close the analytics loading episode without raising the generic failure toast.
+		Global.scene_runner.loading_realm_change_failed(
+			new_realm_string, "private_world_access_denied"
+		)
+		realm_access_denied.emit(new_realm_string, world_name)
+		return false
+
 	realm_changing.emit()
 
 	var promise: Promise = Global.http_requester.request_json(
@@ -171,9 +191,22 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		return false
 
 	var response: RequestResponse = res
+	Global.scene_runner.loading_mark_about_end()
 	var json = response.get_string_response_as_json()
 	if json == null or not json is Dictionary:
 		var reason := "invalid /about response"
+		printerr("[REALM] ", reason, " for ", new_realm_string)
+		_emit_realm_change_failed(new_realm_string, reason)
+		return false
+
+	# Guard malformed /about `content` BEFORE committing realm state. A null/missing
+	# `content` or a non-String `content.publicUrl` would otherwise throw at
+	# `content_base_url` below — after realm state was already partially committed and with
+	# NO `realm_change_failed` emitted — leaving a silently stuck loading screen (F-11 / RC-6).
+	# (`or` short-circuits, so `.get()` is never called on a non-Dictionary `content`.)
+	var about_content = json.get("content")
+	if not about_content is Dictionary or not about_content.get("publicUrl") is String:
+		var reason := "/about missing or malformed content.publicUrl"
 		printerr("[REALM] ", reason, " for ", new_realm_string)
 		_emit_realm_change_failed(new_realm_string, reason)
 		return false
@@ -284,6 +317,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 
 
 func _emit_realm_change_failed(new_realm_string: String, reason: String) -> void:
+	Global.scene_runner.loading_realm_change_failed(new_realm_string, reason)
 	realm_change_failed.emit(new_realm_string, reason)
 
 

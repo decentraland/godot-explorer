@@ -2,7 +2,7 @@ extends Control
 
 signal request_debug_panel(enabled: bool)
 signal request_pause_scenes(enabled: bool)
-signal request_livekit_debug(enabled: bool)
+signal request_multiplayer_debug(enabled: bool)
 signal panel_closed
 
 enum SceneLogLevel {
@@ -50,8 +50,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
-@onready var preview_camera_3d: Camera3D = %PreviewCamera3D
-@onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
 @onready var container_interface: MarginContainer = %Container_Interface
 
 #Audio items
@@ -77,6 +75,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var check_button_multiplayer_debug: CheckButton = %CheckButton_MultiplayerDebug
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
 @onready var button_graphics: Button = %Button_Graphics
@@ -105,11 +104,6 @@ func _ready():
 		_on_line_edit_preview_url_focus_entered
 	)
 	line_edit_custom_preview_url.button_pressed.connect(_on_button_connect_preview_pressed)
-
-	if Global.get_explorer():
-		preview_viewport_container.show()
-	else:
-		preview_viewport_container.hide()
 
 	# general
 	check_button_submit_message_closes_chat.button_pressed = (
@@ -141,6 +135,7 @@ func _ready():
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
+	_setup_fast_day_cycle_toggle()
 	refresh_graphic_settings()
 
 	var j = 0
@@ -209,7 +204,6 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	var section_v_separation: int = 56
 	var button_h: int = 74
 	var button_theme_variation: String = "SecondaryOutlinedButtonSmall"
-	var preview_h: int = 290
 	var margin_container_nav_v: int = 0
 	var margin_container_content_top: int = 12
 	label_title.label_settings.font_size = 44
@@ -223,7 +217,6 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 		section_v_separation = 72
 		button_h = 96
 		button_theme_variation = "SecondaryOutlinedButton"
-		preview_h = 351
 
 	container_gameplay.add_theme_constant_override("separation", section_v_separation)
 	container_graphics.add_theme_constant_override("separation", section_v_separation)
@@ -233,8 +226,6 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	button_clear_cache.theme_type_variation = button_theme_variation
 	button_sign_out.custom_minimum_size.y = button_h
 	button_sign_out.theme_type_variation = button_theme_variation
-
-	preview_viewport_container.custom_minimum_size.y = preview_h
 
 	for node in find_children("*", "PanelContainer", true, false):
 		if node.get_script() == _SECTION_TITLE_SCRIPT:
@@ -352,6 +343,8 @@ func refresh_values():
 	process_tick_quota.value = Global.get_config().process_tick_quota_ms
 	if is_instance_valid(Global.raycast_debugger):
 		check_button_raycast_debugger.set_pressed_no_signal(true)
+	if is_instance_valid(Global.comms):
+		check_button_multiplayer_debug.set_pressed_no_signal(Global.comms.get_multiplayer_debug())
 
 
 func _on_button_connect_preview_pressed():
@@ -426,7 +419,6 @@ func _on_container_storage_visibility_changed():
 func _on_sdk_skybox_time_active_changed(is_active: bool) -> void:
 	skybox_warning.visible = is_active
 	check_button_dynamic_skybox.disabled = is_active
-	preview_viewport_container.visible = !is_active and Global.get_explorer() != null
 	dropdown_list_custom_skybox.disabled = is_active or check_button_dynamic_skybox.button_pressed
 
 
@@ -572,6 +564,11 @@ func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
 
 
+func _on_button_show_reward_modal_pressed() -> void:
+	# Dev Tools shortcut: preview the wearable claim modal without doing a full email upgrade.
+	Global.modal_manager.async_show_reward_modal(RewardCampaigns.CAMPAIGNS["MobilePet"])
+
+
 func _on_button_test_notification_pressed() -> void:
 	# Test notification with emojis and accents in both title and body
 	# This will test if iOS can display both correctly
@@ -705,6 +702,33 @@ func _setup_impostor_benchmark_button() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
 	)
 	container_advanced.add_child(bench_button)
+
+
+func _setup_fast_day_cycle_toggle() -> void:
+	# Fast day/night cycle (10s per full day) to verify skybox lighting
+	# transitions without waiting (issue #2516). Developer tab only, added at
+	# the top cloning an existing row so it matches the settings style.
+	if Global.is_production():
+		return
+	var template_row := (
+		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
+	)
+	if template_row == null:
+		return
+	# duplicate(0): skip copying the template's signal connections.
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = "FastDayCycle"
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = "Fast Day/Night Cycle (10s)"
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	check.name = "CheckButton_FastDayCycle"
+	check.button_pressed = false
+	check.toggled.connect(
+		func(pressed: bool) -> void: Global.skybox_time.debug_time_rotation = pressed
+	)
+	var rows_container := template_row.get_parent()
+	rows_container.add_child(row)
+	rows_container.move_child(row, 0)
 
 
 func _setup_dynamic_graphics() -> void:
@@ -849,8 +873,8 @@ func _on_check_button_scene_processing_paused_toggled(toggled_on: bool) -> void:
 	emit_signal("request_pause_scenes", toggled_on)
 
 
-func _on_check_button_livekit_debug_toggled(toggled_on: bool) -> void:
-	request_livekit_debug.emit(toggled_on)
+func _on_check_button_multiplayer_debug_toggled(toggled_on: bool) -> void:
+	request_multiplayer_debug.emit(toggled_on)
 
 
 func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:

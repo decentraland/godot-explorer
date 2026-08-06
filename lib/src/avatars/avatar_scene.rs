@@ -587,6 +587,28 @@ impl AvatarScene {
         };
 
         let mut img = image;
+        // The entry image outlives this call (it stays in the content
+        // provider's promise cache): on mobile we compress it to ETC2 at the
+        // end of this function to reclaim RAM, so a recapture re-reads it
+        // compressed. resize/convert/mipmaps all reject compressed formats —
+        // decompress first.
+        if img.is_compressed() {
+            let err = img.decompress();
+            if err != godot::global::Error::OK {
+                tracing::warn!(
+                    "set_impostor_texture: failed to decompress source image for slot {}: {:?}",
+                    impostor_id,
+                    err
+                );
+                return;
+            }
+        }
+        // A recapture also inherits this function's own mutations from the
+        // previous pass (resized, mipmaps appended). Drop the mip chain or the
+        // PNG snapshot below would serialize the whole chain as mip0.
+        if img.has_mipmaps() {
+            img.clear_mipmaps();
+        }
         if img.get_width() != IMPOSTOR_TEX_WIDTH || img.get_height() != IMPOSTOR_TEX_HEIGHT {
             img.resize(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT);
         }
@@ -625,6 +647,21 @@ impl AvatarScene {
         // it gets a real slot (after frustum churn or session restart).
         if let Some(rgba) = png_payload {
             self.save_cached_texture_async(&cache_key, rgba);
+        }
+
+        // Reclaim RAM: the entry image stays alive in the content provider's
+        // promise cache all session. We're done reading pixels, so compress it
+        // (mobile only — a recapture enters through the decompress guard).
+        #[cfg(any(target_os = "ios", target_os = "android"))]
+        if !img.is_compressed() {
+            let err = img.compress(godot::classes::image::CompressMode::ETC2);
+            if err != godot::global::Error::OK {
+                tracing::warn!(
+                    "set_impostor_texture: failed to compress entry image for slot {}: {:?}",
+                    impostor_id,
+                    err
+                );
+            }
         }
     }
 
@@ -744,7 +781,7 @@ impl AvatarScene {
         };
 
         let dcl_transform = DclTransformAndParent::from_godot(&transform, Vector3::ZERO);
-        self._update_avatar_transform(&entity_id, dcl_transform);
+        self._update_avatar_transform(&entity_id, dcl_transform, false);
     }
 
     #[func]
@@ -943,10 +980,7 @@ impl AvatarScene {
         let player = SceneEntityId::PLAYER;
         let profile = self.last_updated_profile.get(&player)?;
         let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-        let player_node = scene_runner.bind().get_player_avatar_node();
-        if !player_node.is_instance_valid() {
-            return None;
-        }
+        let player_node = scene_runner.bind().get_player_avatar_node()?;
         let pos = player_node.get_global_position();
 
         let mut d = VarDictionary::new();
@@ -968,10 +1002,9 @@ impl AvatarScene {
     #[func]
     fn debug_get_local_player_instance_id(&self) -> i64 {
         let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-        let player_node = scene_runner.bind().get_player_avatar_node();
-        if !player_node.is_instance_valid() {
+        let Some(player_node) = scene_runner.bind().get_player_avatar_node() else {
             return -1;
-        }
+        };
         player_node.instance_id().to_i64()
     }
 
@@ -1056,6 +1089,7 @@ impl AvatarScene {
             emote_urn: emote_id.to_string(),
             r#loop: looping,
             timestamp: 0,
+            mask: None,
         };
 
         // Push dirty state only in active scenes
@@ -1411,14 +1445,22 @@ impl AvatarScene {
         &mut self,
         avatar_entity_id: &SceneEntityId,
         dcl_transform: DclTransformAndParent,
+        instant: bool,
     ) {
         let avatar_scene = self
             .avatar_godot_scene
             .get_mut(avatar_entity_id)
             .expect("avatar not found");
-        avatar_scene
-            .bind_mut()
-            .set_target_position(dcl_transform.to_godot_transform_3d());
+        if instant {
+            // Teleport: snap, don't interpolate across the jump.
+            avatar_scene
+                .bind_mut()
+                .snap_to_position(dcl_transform.to_godot_transform_3d());
+        } else {
+            avatar_scene
+                .bind_mut()
+                .set_target_position(dcl_transform.to_godot_transform_3d());
+        }
 
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
@@ -1496,7 +1538,7 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform);
+        self._update_avatar_transform(&entity_id, dcl_transform, false);
         self.last_position_index.insert(alias, transform.index);
         true
     }
@@ -1550,7 +1592,7 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform);
+        self._update_avatar_transform(&entity_id, dcl_transform, movement.is_instant);
         // Wire-authoritative animation state for remote double-jump / glide.
         if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar.bind_mut().apply_wire_movement_state(
@@ -1607,7 +1649,7 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform);
+        self._update_avatar_transform(&entity_id, dcl_transform, false);
         self.last_movement_timestamp.insert(alias, timestamp);
         true
     }
@@ -1677,6 +1719,27 @@ impl AvatarScene {
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar_scene.call("async_play_emote", &[emote_urn.to_variant()]);
         }
+    }
+
+    /// Stop a remote avatar's looping emote (rfc4 `PlayerEmote.is_stopping` — sent by Unity
+    /// peers over LiveKit and synthesized from Pulse `EmoteStopped`). Deliberately does not
+    /// touch the incremental-id dedup: a stop must neither depend on nor affect id ordering.
+    pub fn stop_emote(&mut self, alias: u32) {
+        let Some(entity_id) = self.avatar_entity.get(&alias) else {
+            return;
+        };
+        if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(entity_id) {
+            avatar_scene.call("stop_emote_from_network", &[]);
+        }
+    }
+
+    /// Clear the per-alias movement/emote dedup state. Called by MessageProcessor when a peer's
+    /// preferred transport flips (Pulse ⇄ LiveKit): the two sources use incomparable clocks
+    /// (sender clock vs Pulse server tick), so carrying dedup state across the switch would
+    /// permanently starve the newly-preferred source.
+    pub fn reset_movement_dedup(&mut self, alias: u32) {
+        self.last_movement_timestamp.remove(&alias);
+        self.last_emote_incremental_id.remove(&alias);
     }
 
     pub fn update_avatar(&mut self, entity_id: SceneEntityId, profile: &UserProfile) {

@@ -370,8 +370,9 @@ func _on_button_google_pressed() -> void:
 
 
 func _on_button_email_pressed() -> void:
-	async_login("")
 	Global.metrics.track_click_button("email", lobby.current_screen_name, "")
+	lobby._accept_eula()
+	lobby.show_auth_email_screen()
 
 
 func _on_button_discord_pressed() -> void:

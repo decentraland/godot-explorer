@@ -3,12 +3,23 @@ render_mode ambient_light_disabled, cull_back, depth_prepass_alpha;
 
 #include "dcl_toon.gdshaderinc"
 
+// Own-avatar proximity fade (issue #1814): uniform (object-level) dissolve of
+// the local player's avatar when the camera is forced into the head. Driven
+// per-instance via set_instance_shader_parameter by own_avatar_proximity_fade.gd.
+instance uniform float own_fade : hint_range(0.0, 1.0) = 0.0;
+
 uniform vec4 material_color;
 uniform vec4 mask_color;
 uniform sampler2D base_texture : hint_default_white;
 uniform sampler2D mask_texture : hint_default_white;
 
 void fragment() {
+	if (own_fade > 0.0) {
+		float own_dither = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
+		if (own_dither < own_fade) {
+			discard;
+		}
+	}
 	vec4 base = texture(base_texture, UV);
 	vec4 mask = texture(mask_texture, UV);
 

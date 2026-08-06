@@ -2,7 +2,7 @@ use ethers_core::types::H160;
 use ethers_signers::LocalWallet;
 use godot::prelude::*;
 use rand::thread_rng;
-use std::time::UNIX_EPOCH;
+use std::time::{Instant, UNIX_EPOCH};
 use tokio::task::JoinHandle;
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
@@ -97,6 +97,22 @@ impl DclPlayerIdentity {
 
     #[signal]
     fn auth_error(error_message: GString);
+
+    /// One per silent thirdweb guest-login attempt, for analytics. `outcome` is
+    /// "success" | "failure". On success `failure_reason` is "" and `http_status`
+    /// is -1; `is_new_user` says whether a NEW wallet was minted. On failure
+    /// `failure_reason` is a stable code (see thirdweb_guest::GuestLoginError)
+    /// and `http_status` is the upstream status or -1. `duration_ms` is the
+    /// whole attempt's wall-clock time. Emitted deferred from the login task so
+    /// GDScript (analytics_controller.gd) can forward it to Segment.
+    #[signal]
+    fn guest_login_outcome(
+        outcome: GString,
+        is_new_user: bool,
+        failure_reason: GString,
+        http_status: i64,
+        duration_ms: i64,
+    );
 
     #[func]
     fn try_set_remote_wallet(
@@ -265,21 +281,25 @@ impl DclPlayerIdentity {
         let anchor_input = device_anchor_id.to_string();
 
         handle.spawn(async move {
+            let started = Instant::now();
             let result = perform_thirdweb_guest_login(anchor_input).await;
+            let duration_ms = started.elapsed().as_millis() as i64;
             let Some(mut promise) = get_promise() else {
                 tracing::error!("thirdweb guest_login: promise dropped");
                 return;
             };
 
+            // Reused by both arms to reach the node on the main thread: the
+            // success arm installs the wallet, and both emit the analytics signal.
+            let mut identity = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id).ok();
+
             match result {
-                Ok((address, ephemeral_auth_chain)) => {
-                    let address_str = format!("{:#x}", address);
-                    let ephemeral_chain_json = serde_json::to_string(&ephemeral_auth_chain)
+                Ok(outcome) => {
+                    let address_str = format!("{:#x}", outcome.address);
+                    let ephemeral_chain_json = serde_json::to_string(&outcome.chain)
                         .expect("serialize ephemeral auth chain");
 
-                    if let Ok(mut identity) =
-                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
-                    {
+                    if let Some(identity) = identity.as_mut() {
                         // Thirdweb wallets are real custodial wallets — same model
                         // as WalletConnect / Apple / Google as far as Decentraland
                         // is concerned. The thirdweb "guest" label is just the auth
@@ -297,6 +317,17 @@ impl DclPlayerIdentity {
                         // deferred) wallet install, which resets it to `false`.
                         // Both run on the main thread in submission order.
                         identity.call_deferred("_set_thirdweb_guest_flag", &[true.to_variant()]);
+                        identity.call_deferred(
+                            "emit_signal",
+                            &[
+                                "guest_login_outcome".to_variant(),
+                                "success".to_variant(),
+                                outcome.is_new_user.to_variant(),
+                                GString::from("").to_variant(),
+                                (-1_i64).to_variant(),
+                                duration_ms.to_variant(),
+                            ],
+                        );
                     }
 
                     promise
@@ -305,6 +336,19 @@ impl DclPlayerIdentity {
                 }
                 Err(e) => {
                     tracing::error!("thirdweb guest_login failed: {:?}", e);
+                    if let Some(identity) = identity.as_mut() {
+                        identity.call_deferred(
+                            "emit_signal",
+                            &[
+                                "guest_login_outcome".to_variant(),
+                                "failure".to_variant(),
+                                false.to_variant(),
+                                e.reason.to_variant(),
+                                e.http_status.map(i64::from).unwrap_or(-1).to_variant(),
+                                duration_ms.to_variant(),
+                            ],
+                        );
+                    }
                     promise
                         .bind_mut()
                         .reject(GString::from(&format!("Guest login failed: {}", e)));
@@ -418,6 +462,70 @@ impl DclPlayerIdentity {
         promise
     }
 
+    /// Native email login: verifies the OTP `code` sent to `email`, then mints
+    /// a local ephemeral keypair and delegates signing to the email wallet.
+    /// Unlike `async_link_email_verify` (which merges the email into an existing
+    /// guest), this signs in directly as the email identity — no guest session is
+    /// required or created. Resolves with the email wallet address string on
+    /// success; rejects with a human-readable error otherwise.
+    #[func]
+    fn async_login_email_verify(&mut self, email: GString, code: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let instance_id = self.base().instance_id();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let email = email.to_string();
+        let code = code.to_string();
+
+        handle.spawn(async move {
+            let result = perform_email_login(email, code).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::warn!("thirdweb email_login: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok((address, ephemeral_auth_chain)) => {
+                    let address_str = format!("{:#x}", address);
+                    let ephemeral_chain_json = serde_json::to_string(&ephemeral_auth_chain)
+                        .expect("serialize ephemeral auth chain");
+
+                    if let Ok(mut identity) =
+                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                    {
+                        identity.call_deferred(
+                            "try_set_remote_wallet",
+                            &[
+                                address_str.clone().to_variant(),
+                                1_u64.to_variant(),
+                                ephemeral_chain_json.to_variant(),
+                            ],
+                        );
+                    }
+
+                    promise
+                        .bind_mut()
+                        .resolve_with_data(address_str.to_variant());
+                }
+                Err(e) => {
+                    tracing::warn!("thirdweb email_login failed: {:?}", e);
+                    promise
+                        .bind_mut()
+                        .reject(GString::from(&format!("Could not verify code: {}", e)));
+                }
+            }
+        });
+
+        promise
+    }
+
     /// Queries thirdweb for the account's linked auth methods and refreshes the
     /// cached `is_thirdweb_guest_upgraded` flag. Resolves with `true` when the
     /// guest already has a non-`guest` profile (email/social), `false` when it
@@ -519,6 +627,54 @@ impl DclPlayerIdentity {
                 Err(e) => {
                     // Non-fatal: the caller wipes local state + signs out anyway.
                     tracing::warn!("thirdweb delete_guest failed (non-fatal): {:?}", e);
+                    promise.bind_mut().resolve_with_data(false.to_variant());
+                }
+            }
+        });
+
+        promise
+    }
+
+    /// Like `async_delete_guest_account` but for an **upgraded** guest: unlinks
+    /// BOTH the `guest` and the linked `email` profile (double unlink), fully
+    /// deleting the recoverable thirdweb user rather than merely stripping it
+    /// back to a bare guest. A fresh guest JWT is re-derived from the anchor (a
+    /// guest login on an upgraded account returns that same user's token).
+    ///
+    /// This bypasses the `unlink_guest_profile` safety refusal, so it MUST only
+    /// be called behind the non-prod + `enable-upgraded-deletion` deeplink gate
+    /// (enforced in GDScript). Best-effort: resolves `true` on success, `false`
+    /// on failure — it never rejects — so the caller can still wipe local
+    /// storage and sign out regardless of the network outcome.
+    #[func]
+    fn async_delete_upgraded_account(&mut self, device_anchor_id: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
+            return promise;
+        };
+
+        let anchor = device_anchor_id.to_string();
+
+        handle.spawn(async move {
+            let result = perform_delete_upgraded_account(anchor).await;
+            let Some(mut promise) = get_promise() else {
+                tracing::error!("thirdweb delete_upgraded: promise dropped");
+                return;
+            };
+
+            match result {
+                Ok(()) => {
+                    tracing::info!("thirdweb delete_upgraded: upgraded account deleted");
+                    promise.bind_mut().resolve_with_data(true.to_variant());
+                }
+                Err(e) => {
+                    // Non-fatal: the caller wipes local state + signs out anyway.
+                    tracing::warn!("thirdweb delete_upgraded failed (non-fatal): {:?}", e);
                     promise.bind_mut().resolve_with_data(false.to_variant());
                 }
             }
@@ -1170,9 +1326,18 @@ impl DclPlayerIdentity {
 /// usual ~30 day window. The thirdweb JWT itself is dropped after step 5 —
 /// every cold start re-runs steps 1–6 (idempotent because the anchor is
 /// stable, so thirdweb returns the same wallet address).
+/// Successful outcome of the guest-login flow. Carries `is_new_user` so
+/// analytics can tell a freshly minted wallet apart from a returning anchor
+/// re-logging into its existing wallet ("wallets created" = new mints only).
+struct GuestLoginOutcome {
+    address: H160,
+    chain: EphemeralAuthChain,
+    is_new_user: bool,
+}
+
 async fn perform_thirdweb_guest_login(
     device_anchor_id: String,
-) -> Result<(H160, EphemeralAuthChain), anyhow::Error> {
+) -> Result<GuestLoginOutcome, thirdweb_guest::GuestLoginError> {
     let anchor = device_anchor::resolve_anchor(&device_anchor_id);
     let session_id = device_anchor::compute_session_id(&anchor);
 
@@ -1180,13 +1345,21 @@ async fn perform_thirdweb_guest_login(
 
     let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
 
+    // The wallet already exists server-side at this point; a signing failure
+    // still fails the login, but under its own reason so the dashboard doesn't
+    // misattribute it to wallet creation.
     let signature_hex = thirdweb_guest::sign_message(
         &session.token,
         session.wallet_address,
         1,
         &ephemeral_message,
     )
-    .await?;
+    .await
+    .map_err(|e| thirdweb_guest::GuestLoginError {
+        reason: "sign_message",
+        http_status: None,
+        message: e.to_string(),
+    })?;
 
     let signer_address_str = format!("{:#x}", session.wallet_address);
     let chain = create_ephemeral_from_external_signature(
@@ -1195,7 +1368,12 @@ async fn perform_thirdweb_guest_login(
         &ephemeral_keys,
         expiration,
         &ephemeral_message,
-    )?;
+    )
+    .map_err(|e| thirdweb_guest::GuestLoginError {
+        reason: "ephemeral",
+        http_status: None,
+        message: e.to_string(),
+    })?;
 
     // Persist the JWT so future cold starts can renew the ephemeral
     // delegation without re-running `guest_login`. Failure is non-fatal:
@@ -1207,7 +1385,11 @@ async fn perform_thirdweb_guest_login(
         );
     }
 
-    Ok((session.wallet_address, chain))
+    Ok(GuestLoginOutcome {
+        address: session.wallet_address,
+        chain,
+        is_new_user: session.is_new_user,
+    })
 }
 
 /// Runs the "Upgrade to OTP" link end-to-end:
@@ -1224,7 +1406,7 @@ async fn perform_link_email(
     email: String,
     code: String,
 ) -> Result<H160, anyhow::Error> {
-    let email_jwt = thirdweb_guest::email_complete(&email, &code).await?;
+    let (email_jwt, _email_address) = thirdweb_guest::email_complete(&email, &code).await?;
 
     // Prefer a freshly minted guest session (idempotent: same anchor → same
     // wallet → fresh token). Fall back to the persisted token only if the
@@ -1260,6 +1442,35 @@ async fn perform_link_email(
     Ok(session.wallet_address)
 }
 
+/// Native email login — verifies the OTP and mints a DCL ephemeral auth chain
+/// signed by the email identity's own wallet:
+///   1. `email_complete` → email JWT + email wallet address
+///   2. mint a local ephemeral keypair + Decentraland delegation message
+///   3. `sign_message` with the email JWT to sign the delegation
+///   4. assemble the EphemeralAuthChain
+async fn perform_email_login(
+    email: String,
+    code: String,
+) -> Result<(H160, EphemeralAuthChain), anyhow::Error> {
+    let (email_jwt, email_address) = thirdweb_guest::email_complete(&email, &code).await?;
+
+    let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
+
+    let signature_hex =
+        thirdweb_guest::sign_message(&email_jwt, email_address, 1, &ephemeral_message).await?;
+
+    let signer_address_str = format!("{:#x}", email_address);
+    let chain = create_ephemeral_from_external_signature(
+        &signer_address_str,
+        &signature_hex,
+        &ephemeral_keys,
+        expiration,
+        &ephemeral_message,
+    )?;
+
+    Ok((email_address, chain))
+}
+
 /// Deletes the guest account server-side (issue #2335):
 ///   1. re-derive a FRESH guest JWT from the anchor (the persisted one may be
 ///      expired) — idempotent: same anchor → same wallet → fresh token
@@ -1268,4 +1479,15 @@ async fn perform_link_email(
 async fn perform_delete_guest_account(device_anchor_id: String) -> Result<(), anyhow::Error> {
     let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
     thirdweb_guest::unlink_guest_profile(&session.token).await
+}
+
+/// Fully deletes an UPGRADED guest account server-side (enable-upgraded-deletion):
+///   1. re-derive a FRESH guest JWT from the anchor (a guest login on an
+///      upgraded account returns that same user's token)
+///   2. `unlink_upgraded_account` unlinks BOTH the `guest` and the `email` (plus
+///      any other) profile, deleting the whole thirdweb user so the account is
+///      gone and the sessionId is freed for a brand-new wallet.
+async fn perform_delete_upgraded_account(device_anchor_id: String) -> Result<(), anyhow::Error> {
+    let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
+    thirdweb_guest::unlink_upgraded_account(&session.token).await
 }

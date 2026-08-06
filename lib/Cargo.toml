@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "1.11.1"
+version = "1.12.0"
 edition = "2021"
 publish = false
 
@@ -65,6 +65,12 @@ futures-util = "0.3.30"
 
 livekit = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", features=["rustls-tls-webpki-roots"], optional = true }
 
+# Pulse (ENet/UDP avatar-state relay). MUST be this fork: it's a pure-Rust ENet retargeted to
+# the nxrighthere ENet-CSharp "modified protocol" the Pulse server runs — stock lsalzman ENet
+# (including Godot's built-in one) is wire-incompatible. DCL-org mirror of
+# robtfm/rusty_enet branch decentraland-pulse (rev 6fa651d, tree-identical); pinned by rev.
+rusty_enet = { git = "https://github.com/dcl-regenesislabs/rusty_enet", rev = "8023f9b39e12d4b11a2a054ade49fa8365a5e250", optional = true }
+
 taffy = "0.5.2"
 tracing-test = "0.2.4"
 
@@ -103,8 +109,11 @@ oslog = "0.2"
 libc = "0.2"
 
 [features]
-default = ["use_livekit", "use_deno"]
+default = ["use_livekit", "use_deno", "use_pulse"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
+# Compiled in by default (pure-Rust dep, keeps CI/mobile builds from bitrotting);
+# runtime activation is opt-in via --pulse / --pulse-server / PULSE_SERVER.
+use_pulse = ["dep:rusty_enet"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
 use_voice_chat = []
@@ -121,6 +130,9 @@ enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 [build-dependencies]
 webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", optional = true }
 prost-build = "0.11.8"
+# Reads the Pulse quantization field options out of the FileDescriptorSet (build_quant.rs).
+# 0.11.x pairs with prost 0.11 (same pairing bevy-explorer uses).
+prost-reflect = "0.11"
 chrono = "0.4.31"
 # Pinned to a commit (not a branch) so CI builds are immutable — a moved branch must not
 # change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
