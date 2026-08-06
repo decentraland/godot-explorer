@@ -40,22 +40,6 @@ Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xewta"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ep3jl"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_47ptg"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c03rv"]
-
-[sub_resource type="Theme" id="Theme_eontw"]
-Label/font_sizes/font_size = 23
-
-[sub_resource type="LabelSettings" id="LabelSettings_m1jcl"]
-font = ExtResource("17_ewc0a")
-font_size = 30
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_blskf"]
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_47ptg"]
 bg_color = Color(0, 0, 0, 0.4)
 border_width_left = 1
@@ -76,6 +60,22 @@ line_spacing = -3.0
 font = ExtResource("23_c03rv")
 font_size = 26
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ep3jl"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_47ptg"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c03rv"]
+
+[sub_resource type="Theme" id="Theme_eontw"]
+Label/font_sizes/font_size = 23
+
+[sub_resource type="LabelSettings" id="LabelSettings_m1jcl"]
+font = ExtResource("17_ewc0a")
+font_size = 30
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_blskf"]
 
 [sub_resource type="Theme" id="Theme_3h20j"]
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
@@ -375,41 +375,76 @@ layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0
 
-[node name="SectionChatAndSocial" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera" unique_id=899213898]
+[node name="SectionCamera" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera" unique_id=899213898]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionChatAndSocial" unique_id=1315421628]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera" unique_id=1315421628]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="SectionTittle_Camera" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionChatAndSocial/VBoxContainer" unique_id=1716650739 instance=ExtResource("15_h5vs5")]
+[node name="SectionTittle_Camera" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=1716650739 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
 title = "CAMERA"
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionChatAndSocial/VBoxContainer" unique_id=307181499]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=307181499]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
-[node name="FirstPersonCamera" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionChatAndSocial/VBoxContainer" unique_id=1057195548]
-layout_mode = 2
-theme_override_constants/separation = 32
-
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionChatAndSocial/VBoxContainer/FirstPersonCamera" unique_id=1637102814]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("16_blskf")
-theme_override_font_sizes/font_size = 14
-text = "First Person"
-label_settings = ExtResource("17_67hd5")
-
-[node name="CheckButton_FirstPersonCamera" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionChatAndSocial/VBoxContainer/FirstPersonCamera" unique_id=1098554941]
+[node name="DropdownList_CameraMode" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=1973191162 instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 0
-theme = ExtResource("12_sa1v7")
+max_visible_items = 2
+title = ""
+
+[node name="CameraModeWarning" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=491620087]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator5" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning" unique_id=1657068228]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 28
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="Panel_Camera" type="PanelContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning" unique_id=188998951]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_47ptg")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning/Panel_Camera" unique_id=445547336]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 16
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning/Panel_Camera/MarginContainer" unique_id=1608477618]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning/Panel_Camera/MarginContainer/HBoxContainer" unique_id=900220253]
+custom_minimum_size = Vector2(54, 54)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("22_ewc0a")
+expand_mode = 1
+
+[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning/Panel_Camera/MarginContainer/HBoxContainer" unique_id=352132082]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("18_xewta")
+theme_override_font_sizes/font_size = 12
+text = "The camera mode is set by the creator. It can't be changed."
+label_settings = SubResource("LabelSettings_ep3jl")
+vertical_alignment = 1
+autowrap_mode = 2
+text_overrun_behavior = 4
 
 [node name="Container_Interface" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1096616038]
 unique_name_in_owner = true
@@ -1433,7 +1468,6 @@ font = ExtResource("25_jf4mt")
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Nav/TabsScrollContainer/HBoxContainer/Button_Storage" to="." method="_on_button_storage_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Nav/TabsScrollContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionChatAndSocial/VBoxContainer/FirstPersonCamera/CheckButton_FirstPersonCamera" to="." method="_on_check_button_first_person_camera_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/CheckButton_HideExplorerUI" to="." method="_on_check_button_hide_explorer_ui_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HidePlayerNames/CheckButton_HidePlayerNames" to="." method="_on_check_button_hide_player_names_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideViewProfile/CheckButton_HideViewProfile" to="." method="_on_check_button_hide_view_profile_toggled"]

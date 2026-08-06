@@ -884,6 +884,7 @@ func _is_ui_hud_mode_exception(node: Node) -> bool:
 		or node == safe_area_hud
 		or node == profile_container
 		or node == safe_area_controls
+		or node == virtual_joystick
 		or node == mobile_camera_input
 	)
 
@@ -1395,6 +1396,7 @@ func _async_run_ban_check() -> void:
 func _on_orientation_changed(is_portrait: bool) -> void:
 	if is_portrait:
 		mobile_ui.hide()
+		virtual_joystick.hide()
 		emote_wheel.hide()
 		navbar.hide()
 		_set_scene_ui_visible(false)
@@ -1412,6 +1414,7 @@ func _on_chat_write_mode_changed(is_writing: bool) -> void:
 		return
 	if is_writing:
 		mobile_ui.hide()
+		virtual_joystick.hide()
 		emote_wheel.hide()
 		navbar.hide()
 		_set_scene_ui_visible(false)

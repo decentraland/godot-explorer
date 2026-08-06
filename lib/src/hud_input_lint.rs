@@ -157,12 +157,5 @@ fn debug_tools_sit_between_scene_ui_and_right_panels() {
 #[test]
 fn version_fps_strip_does_not_block_scene_ui() {
     let nodes = parse_tscn("../godot/src/ui/explorer.tscn");
-    assert_click_through(
-        find(
-            &nodes,
-            "HBoxContainer_VersionFPS",
-            "UI/SafeAreaHud/InteractableHUD",
-        ),
-        "explorer",
-    );
+    assert_click_through(find(&nodes, "HBoxContainer_VersionFPS", "UI"), "explorer");
 }

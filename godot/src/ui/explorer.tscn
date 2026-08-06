@@ -137,12 +137,11 @@ unique_name_in_owner = true
 editor_description = "Action buttons, to jump and interact."
 layout_mode = 1
 
-[node name="VirtualJoystick_Left" parent="UI/SafeAreaControls/MobileUI" unique_id=858042680 node_paths=PackedStringArray("margin_control") instance=ExtResource("9_lxw33")]
+[node name="VirtualJoystick_Left" parent="UI" unique_id=858042680 instance=ExtResource("9_lxw33")]
 unique_name_in_owner = true
-editor_description = "Virtual joystick to control avatar movement."
+editor_description = "Virtual joystick to control avatar movement. Direct UI child (full-screen travel); margin_control intentionally unset — it only applies when nested inside a safe-margin container."
 layout_mode = 1
 deadzone_size = 0.0
-margin_control = NodePath("../..")
 
 [node name="Label_Crosshair" type="Label" parent="UI" unique_id=2000293560]
 unique_name_in_owner = true
@@ -208,9 +207,42 @@ size_flags_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 12
 
+[node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI" unique_id=193054843]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -77.0
+offset_top = -33.0
+offset_right = 77.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Label_Version" type="Label" parent="UI/HBoxContainer_VersionFPS" unique_id=2080384115]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
+theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "v0.1.0-alpha-abcd1f"
+
+[node name="Label_FPS" type="Label" parent="UI/HBoxContainer_VersionFPS" unique_id=1795956625]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
+theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "FPS"
+
 [node name="SafeAreaHud" type="MarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
-editor_description = "Safe-area frame for the whole interactive HUD (navbar, chat, navbar panels, emotes, version/FPS). Sits AFTER SceneUIContainer so it wins input over scene UI. Shares hud_margins.tres. Hidden as a whole in hide-UI mode. Navbar lives here (not split out) because Control_Menu is fullscreen and hides the navbar, so they never overlap."
+editor_description = "Safe-area frame for the interactive HUD (navbar, chat, navbar panels, emotes). Sits AFTER SceneUIContainer so it wins input over scene UI. Shares hud_margins.tres. The fullscreen Control_Menu draws opaque over the navbar (nothing hides it in code), so they never visually overlap."
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -223,7 +255,7 @@ margin_profile = ExtResource("34_hudmg")
 
 [node name="InteractableHUD" type="Control" parent="UI/SafeAreaHud" unique_id=1898741314]
 unique_name_in_owner = true
-editor_description = "The hideable HUD content group (chat, navbar panels, version/FPS, emotes, navbar). Hide-UI hides THIS node, not the whole SafeAreaHud, so the sibling Show-UI button survives and children keep their own visibility state."
+editor_description = "The hideable HUD content group (chat, navbar panels, emotes, navbar). Hide-UI hides THIS node, not the whole SafeAreaHud, so the sibling Show-UI button survives and children keep their own visibility state."
 layout_mode = 2
 mouse_filter = 2
 
@@ -284,39 +316,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 panel_mode = true
-
-[node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI/SafeAreaHud/InteractableHUD" unique_id=193054843]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -77.0
-offset_top = -25.0
-offset_right = 77.0
-offset_bottom = -8.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-
-[node name="Label_Version" type="Label" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainer_VersionFPS" unique_id=2080384115]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
-theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 12
-text = "v0.1.0-alpha-abcd1f"
-
-[node name="Label_FPS" type="Label" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainer_VersionFPS" unique_id=1795956625]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
-theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 12
-text = "FPS"
 
 [node name="EmoteWheel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=228992295 instance=ExtResource("21_pows0")]
 unique_name_in_owner = true

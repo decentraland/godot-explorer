@@ -41,7 +41,8 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
-@onready var check_button_first_person_camera: CheckButton = %CheckButton_FirstPersonCamera
+@onready var dropdown_list_camera_mode: DropdownList = %DropdownList_CameraMode
+@onready var camera_mode_warning: Control = %CameraModeWarning
 @onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
 @onready var check_button_hide_view_profile: CheckButton = %CheckButton_HideViewProfile
 @onready var check_button_hide_world_interactions: CheckButton = %CheckButton_HideWorldInteractions
@@ -111,7 +112,16 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+	dropdown_list_camera_mode.add_item("First person", Global.CameraMode.FIRST_PERSON)
+	dropdown_list_camera_mode.add_item("Third person", Global.CameraMode.THIRD_PERSON)
+	dropdown_list_camera_mode.item_selected.connect(_on_dropdown_list_camera_mode_item_selected)
 	_refresh_camera_mode_row()
+	# Keep the camera dropdown in sync with runtime changes (scene locks the mode / forces
+	# cinematic, or the other Settings instance toggles it) — both instances listen globally.
+	if not Global.camera_mode_set.is_connected(_on_camera_mode_set):
+		Global.camera_mode_set.connect(_on_camera_mode_set)
+	if not Global.camera_mode_block_changed.is_connected(_on_camera_mode_block_changed):
+		Global.camera_mode_block_changed.connect(_on_camera_mode_block_changed)
 
 	if not Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
 		Global.session_hide_ui_toggle_sync.connect(_on_session_hide_ui_toggle_sync)
@@ -447,12 +457,12 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 
 
 # Camera mode (first/third person) is runtime-only state, not persisted config: the
-# toggle just drives Global.set_camera_mode(), reusing the logic the removed HUD
+# dropdown just drives Global.set_camera_mode(), reusing the logic the removed HUD
 # camera button used. The camera only exists inside the explorer; before entering a
 # place there is nothing to switch and Global.set_camera_mode() would be lost (player.gd
-# forces THIRD_PERSON on spawn), leaving the toggle out of sync. So hide the whole row
-# until we're in the explorer, matching the Hide-UI section. Disabled while a scene locks
-# the mode or forces cinematic.
+# forces THIRD_PERSON on spawn), leaving the dropdown out of sync. So hide the whole row
+# until we're in the explorer, matching the Hide-UI section. When a scene locks the mode
+# or forces cinematic the dropdown is disabled and the "set by the creator" warning shows.
 func _refresh_camera_mode_row() -> void:
 	var in_explorer := is_instance_valid(Global.get_explorer())
 	container_camera.visible = in_explorer
@@ -461,20 +471,32 @@ func _refresh_camera_mode_row() -> void:
 	var locked := (
 		Global.camera_mode_blocked or Global.current_camera_mode == Global.CameraMode.CINEMATIC
 	)
-	check_button_first_person_camera.disabled = locked
-	check_button_first_person_camera.set_pressed_no_signal(
-		Global.current_camera_mode == Global.CameraMode.FIRST_PERSON
+	dropdown_list_camera_mode.disabled = locked
+	camera_mode_warning.visible = locked
+	var first_person := Global.current_camera_mode == Global.CameraMode.FIRST_PERSON
+	dropdown_list_camera_mode.select(
+		Global.CameraMode.FIRST_PERSON if first_person else Global.CameraMode.THIRD_PERSON
 	)
 
 
-func _on_check_button_first_person_camera_toggled(toggled_on: bool) -> void:
+func _on_dropdown_list_camera_mode_item_selected(index: int) -> void:
 	if not is_instance_valid(Global.get_explorer()) or Global.camera_mode_blocked:
 		_refresh_camera_mode_row()
 		return
 	var mode: Global.CameraMode = (
-		Global.CameraMode.FIRST_PERSON if toggled_on else Global.CameraMode.THIRD_PERSON
+		Global.CameraMode.FIRST_PERSON
+		if index == Global.CameraMode.FIRST_PERSON
+		else Global.CameraMode.THIRD_PERSON
 	)
 	Global.set_camera_mode(mode)
+
+
+func _on_camera_mode_set(_camera_mode: Global.CameraMode) -> void:
+	_refresh_camera_mode_row()
+
+
+func _on_camera_mode_block_changed(_blocked: bool) -> void:
+	_refresh_camera_mode_row()
 
 
 func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
@@ -566,6 +588,10 @@ func _exit_tree() -> void:
 		Global.session_hide_ui_toggle_sync.disconnect(_on_session_hide_ui_toggle_sync)
 	if Global.session_hide_ui_options_sync.is_connected(_on_session_hide_ui_options_sync):
 		Global.session_hide_ui_options_sync.disconnect(_on_session_hide_ui_options_sync)
+	if Global.camera_mode_set.is_connected(_on_camera_mode_set):
+		Global.camera_mode_set.disconnect(_on_camera_mode_set)
+	if Global.camera_mode_block_changed.is_connected(_on_camera_mode_block_changed):
+		Global.camera_mode_block_changed.disconnect(_on_camera_mode_block_changed)
 
 
 func _on_button_developer_pressed() -> void:

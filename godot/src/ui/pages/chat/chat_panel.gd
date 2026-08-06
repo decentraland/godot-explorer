@@ -142,8 +142,8 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 	var safe_window_height: float = max(float(window_size.y), 1.0)
 	var y_factor: float = viewport_size.y / safe_window_height
 	var adjusted_height: int = virtual_keyboard_height
-	# iOS keyboard height includes the bottom safe area, but SafeMarginContainerHUD
-	# already accounts for it — subtract to avoid double-counting
+	# iOS keyboard height includes the bottom safe area, but the chat's ancestor
+	# SafeMarginContainer (SafeAreaHud) already accounts for it — subtract to avoid double-counting
 	if OS.get_name() == "iOS":
 		var safe_area := Global.get_safe_area()
 		var bottom_inset: int = window_size.y - safe_area.position.y - safe_area.size.y
