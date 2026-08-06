@@ -464,16 +464,16 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 # until we're in the explorer, matching the Hide-UI section. When a scene locks the mode
 # or forces cinematic the dropdown is disabled and the "set by the creator" warning shows.
 func _refresh_camera_mode_row() -> void:
-	var in_explorer := is_instance_valid(Global.get_explorer())
+	var in_explorer: bool = is_instance_valid(Global.get_explorer())
 	container_camera.visible = in_explorer
 	if not in_explorer:
 		return
-	var locked := (
+	var locked: bool = (
 		Global.camera_mode_blocked or Global.current_camera_mode == Global.CameraMode.CINEMATIC
 	)
 	dropdown_list_camera_mode.disabled = locked
 	camera_mode_warning.visible = locked
-	var first_person := Global.current_camera_mode == Global.CameraMode.FIRST_PERSON
+	var first_person: bool = Global.current_camera_mode == Global.CameraMode.FIRST_PERSON
 	dropdown_list_camera_mode.select(
 		Global.CameraMode.FIRST_PERSON if first_person else Global.CameraMode.THIRD_PERSON
 	)
