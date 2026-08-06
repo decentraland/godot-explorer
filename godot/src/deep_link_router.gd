@@ -34,6 +34,10 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	# Pulse transport params (pulse-server / pulse / dual-channel / livekit); the
+	# shared helper no-ops on builds without the use_pulse feature.
+	Global._apply_comms_deeplink_params(Global.deep_link_obj)
+
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
@@ -155,8 +159,11 @@ func route() -> void:
 				or not Global.deep_link_obj.preview.is_empty()
 			):
 				_route_teleport()
-			else:
+			elif Global.deep_link_obj.params.is_empty():
 				deep_link_jump.emit()
+			# else: config-only params (multiplayer_debug, pulse, rust-log, scene-stats,
+			# …) were already applied in process_deep_link — a link with no navigation
+			# target must not pop an empty jump-in panel over Discover.
 		"/events":
 			var event_id: String = Global.deep_link_obj.params.get("id", "")
 			if not event_id.is_empty():

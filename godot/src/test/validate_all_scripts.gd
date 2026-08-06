@@ -53,8 +53,13 @@ func find_all_scripts(path: String) -> Array:
 
 		while file_name != "":
 			if dir.current_is_dir():
-				if not file_name.begins_with("."):
-					scripts.append_array(find_all_scripts(path + "/" + file_name))
+				var sub_path = path + "/" + file_name
+				# Skip hidden dirs and embedded Godot projects (e.g. the Android build
+				# template's instrumented assets): their scripts resolve against their
+				# own project, not ours.
+				var is_nested_project = FileAccess.file_exists(sub_path + "/project.godot")
+				if not file_name.begins_with(".") and not is_nested_project:
+					scripts.append_array(find_all_scripts(sub_path))
 			elif file_name.ends_with(".gd"):
 				scripts.append(path + "/" + file_name)
 
