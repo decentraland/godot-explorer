@@ -45,8 +45,9 @@ const DEBUG_STATUS_LABEL_POS: Vector3 = Vector3.ZERO
 # (matches the reference client's FadeDuration).
 const FADE_DURATION: float = 0.25
 
-# Camera-direction culling: lights behind the camera don't render, except
-# very close ones (they wrap into view when the camera turns).
+# Camera-direction culling: lights behind the camera don't render, unless
+# their influence sphere still reaches the camera (you're standing inside
+# their glow) or they're very close (wrap into view when the camera turns).
 const CAMERA_CULL_CLOSE_RADIUS: float = 6.0
 # dot(camera_forward, to_light) threshold; 0.2 ~= 78 deg half-angle (FOV + margin).
 const CAMERA_CULL_MIN_DOT: float = 0.2
@@ -491,7 +492,10 @@ func _is_in_camera_view() -> bool:
 	var to_light: Vector3 = global_position - camera_position
 	var dist: float = to_light.length()
 
-	if dist <= CAMERA_CULL_CLOSE_RADIUS or dist <= 0.0:
+	# Keep lights whose range still reaches the camera: turning those off
+	# would visibly kill lit surfaces on screen.
+	var reach: float = maxf(CAMERA_CULL_CLOSE_RADIUS, _get_activation_range(last_light_range))
+	if dist <= reach or dist <= 0.0:
 		return true
 
 	return camera_forward.dot(to_light / dist) >= CAMERA_CULL_MIN_DOT
