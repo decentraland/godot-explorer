@@ -587,6 +587,20 @@ impl AvatarScene {
         };
 
         let mut img = image;
+        // Body textures fetched through the content pipeline arrive
+        // VRAM-compressed on mobile (ASTC/ETC2); resize/convert/mipmaps all
+        // reject compressed formats, so decompress first.
+        if img.is_compressed() {
+            let err = img.decompress();
+            if err != godot::global::Error::OK {
+                tracing::warn!(
+                    "set_impostor_texture: failed to decompress source image for slot {}: {:?}",
+                    impostor_id,
+                    err
+                );
+                return;
+            }
+        }
         if img.get_width() != IMPOSTOR_TEX_WIDTH || img.get_height() != IMPOSTOR_TEX_HEIGHT {
             img.resize(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT);
         }
