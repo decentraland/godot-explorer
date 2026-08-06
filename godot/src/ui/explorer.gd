@@ -920,8 +920,11 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 		# SafeAreaHud stays visible (exception); we toggle its content group so the
 		# Show-UI button (a sibling of hud_content) survives and children keep their state.
 		hud_content.show()
-		# The navbar panel flow toggles chat_panel.visible independently; make sure it
-		# comes back with the HUD (same guard as _close_all_panels).
+		# Invariant: showing the HUD always means the chat is visible. Hide-UI is applied
+		# on navbar-close, where _close_all_panels' normal "re-show the chat" is suppressed
+		# while hidden — so the chat is always left hidden by the time we restore, and we
+		# must re-assert it here. (Write-mode can't leak a hidden chatbar: writing hides the
+		# navbar, so Settings/hide-UI is unreachable while writing.)
 		chat_panel.show()
 		for node in _ui_children_hidden_for_hud_mode:
 			if is_instance_valid(node):
