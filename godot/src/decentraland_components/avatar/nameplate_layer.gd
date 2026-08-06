@@ -29,6 +29,9 @@ const CL_PHYSICS := 2
 const OCCLUSION_MASK := CL_PHYSICS
 # Frames between occlusion raycasts per avatar (staggered) — not every frame.
 const OCCLUSION_PERIOD := 6
+# Small gap above the computed bounds top (clearance already covers head/hat
+# volume — see Avatar.get_bounds_top_y).
+const NAMETAG_MARGIN := 0.1
 # Debug: set true at runtime (e.g. the scene-inspector `eval` command, non-production) to bypass
 # the occlusion raycast entirely so tags fade by distance only — confirms whether a
 # vanishing tag is an occlusion artifact. `NameplateLayer.debug_disable_occlusion = true`.
@@ -97,7 +100,7 @@ static func update(avatar) -> void:
 	var target_a := 0.0
 	var cam = avatar.get_viewport().get_camera_3d()
 	if cam != null and avatar._nametag_gate_visible:
-		var anchor: Vector3 = avatar.nickname_quad.global_transform.origin
+		var anchor: Vector3 = _anchor(avatar)
 		# Fade by the camera distance — what the camera actually sees.
 		var dist: float = cam.global_position.distance_to(anchor)
 		if dist <= FADE_END and not cam.is_position_behind(anchor):
@@ -134,10 +137,19 @@ static func update_occlusion(avatar) -> void:
 	var cam = avatar.get_viewport().get_camera_3d()
 	if cam == null:
 		return
-	var anchor: Vector3 = avatar.nickname_quad.global_transform.origin
+	var anchor: Vector3 = _anchor(avatar)
 	if cam.global_position.distance_to(anchor) > FADE_END:
 		return
 	avatar._nameplate_occluded = _occluded(avatar, cam.global_position, anchor)
+
+
+## 3D point the nameplate floats at: head anchor horizontally (follows the
+## avatar), top of the avatar+wearables bounds + margin vertically — instead of
+## the fixed bone offset, so tall wearables don't overlap the tag.
+static func _anchor(avatar) -> Vector3:
+	var anchor: Vector3 = avatar.nickname_quad.global_transform.origin
+	anchor.y = avatar.get_bounds_top_y() + NAMETAG_MARGIN
+	return anchor
 
 
 ## True if solid world geometry (a CL_PHYSICS body — the walls/floor the player collides

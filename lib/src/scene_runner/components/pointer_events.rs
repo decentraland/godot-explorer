@@ -145,6 +145,55 @@ impl PbPointerEvents {
             .iter()
             .any(|pe| pe.interaction_type != Some(i32::from(InteractionType::Proximity)))
     }
+
+    // Returns true if the entity is in an "active hover" state: any non-proximity
+    // hover-enter OR hover-leave entry is within its configured interaction range.
+    // This single tracked state is what drives cursor HOVER_ENTER/LEAVE, while the
+    // per-event presence checks (has_pointer_event_without_proximity) gate whether a
+    // given transition is actually emitted — preserving the independence between the
+    // enter-only and leave-only configurations.
+    pub fn has_active_hover_in_range(&self, camera_distance: f32, player_distance: f32) -> bool {
+        self.pointer_events.iter().any(|pe| {
+            let et = pe.event_type();
+            if (et != PointerEventType::PetHoverEnter && et != PointerEventType::PetHoverLeave)
+                || pe.interaction_type == Some(i32::from(InteractionType::Proximity))
+            {
+                return false;
+            }
+            let (max_distance, max_player_distance) = pe
+                .event_info
+                .as_ref()
+                .map(|i| (i.max_distance, i.max_player_distance))
+                .unwrap_or((None, None));
+            event_info_in_range(
+                max_distance,
+                max_player_distance,
+                camera_distance,
+                player_distance,
+            )
+        })
+    }
+}
+
+// Shared interaction-range rule for a single PointerEvents entry's event_info.
+// Used by cursor hover events, click gating, and the hover feedback/overlay so all
+// three behave identically. Distance rule per pointer_events.proto:
+//   - only max_distance:        camera_distance <= max_distance
+//   - only max_player_distance: player_distance <= max_player_distance
+//   - both:                     OR of the two
+//   - neither:                  default max_distance = 10 (camera distance only)
+pub fn event_info_in_range(
+    max_distance: Option<f32>,
+    max_player_distance: Option<f32>,
+    camera_distance: f32,
+    player_distance: f32,
+) -> bool {
+    match (max_distance, max_player_distance) {
+        (None, None) => camera_distance <= 10.0,
+        (Some(d), None) => camera_distance <= d,
+        (None, Some(pd)) => player_distance <= pd,
+        (Some(d), Some(pd)) => camera_distance <= d || player_distance <= pd,
+    }
 }
 
 pub fn get_entity_pointer_event<'a>(
@@ -156,6 +205,22 @@ pub fn get_entity_pointer_event<'a>(
     let entity = scene.godot_dcl_scene.get_godot_entity_node(entity_id)?;
     let pointer_events = entity.pointer_events.as_ref()?;
     Some(pointer_events)
+}
+
+// Distance from the player to an entity's base_3d node. Returns f32::MAX if the
+// entity (or its Node3D) is gone, so any max_player_distance gate fails closed.
+pub fn entity_player_distance(
+    scenes: &HashMap<SceneId, Scene>,
+    scene_id: &SceneId,
+    entity_id: &SceneEntityId,
+    player_position: godot::prelude::Vector3,
+) -> f32 {
+    scenes
+        .get(scene_id)
+        .and_then(|scene| scene.godot_dcl_scene.get_godot_entity_node(entity_id))
+        .and_then(|node| node.base_3d.as_ref())
+        .map(|node_3d| player_position.distance_to(node_3d.get_global_position()))
+        .unwrap_or(f32::MAX)
 }
 
 pub fn find_active_proximity_entity(
@@ -222,7 +287,6 @@ pub fn find_active_proximity_entity(
 pub fn pointer_events_system(
     scenes: &mut HashMap<SceneId, Scene>,
     changed_inputs: &HashSet<(InputAction, bool)>,
-    previous_raycast: &Option<GodotDclRaycastResult>,
     current_raycast: &Option<GodotDclRaycastResult>,
     player_position: godot::prelude::Vector3,
     camera_and_viewport: &Option<(
@@ -230,6 +294,7 @@ pub fn pointer_events_system(
         godot::prelude::Vector2,
     )>,
     last_proximity_entity: &mut Option<(SceneId, SceneEntityId)>,
+    last_hover_entity: &mut Option<GodotDclRaycastResult>,
 ) {
     let global_tick_number = GLOBAL_TICK_NUMBER.load(Ordering::Relaxed);
 
@@ -251,8 +316,9 @@ pub fn pointer_events_system(
     pointer_events_system_without_proximity(
         scenes,
         changed_inputs,
-        previous_raycast,
         current_raycast,
+        player_position,
+        last_hover_entity,
         global_tick_number,
     );
 }
@@ -281,6 +347,7 @@ fn proximity_events_system(
         if let Some((scene_id, entity_id)) = *last_proximity_entity {
             if let Some(pointer_events) = get_entity_pointer_event(scenes, &scene_id, &entity_id) {
                 if pointer_events.has_pointer_event(PointerEventType::PetHoverLeave) {
+                    // Proximity events have no raycast hit by design.
                     let result = PbPointerEventsResult {
                         button: InputAction::IaAny as i32,
                         hit: None,
@@ -299,6 +366,7 @@ fn proximity_events_system(
         if let Some((scene_id, entity_id)) = current_proximity_entity {
             if let Some(pointer_events) = get_entity_pointer_event(scenes, &scene_id, &entity_id) {
                 if pointer_events.has_pointer_event(PointerEventType::PetHoverEnter) {
+                    // Proximity events have no raycast hit by design.
                     let result = PbPointerEventsResult {
                         button: InputAction::IaAny as i32,
                         hit: None,
@@ -359,61 +427,79 @@ fn proximity_events_system(
 fn pointer_events_system_without_proximity(
     scenes: &mut HashMap<SceneId, Scene>,
     changed_inputs: &HashSet<(InputAction, bool)>,
-    previous_raycast: &Option<GodotDclRaycastResult>,
     current_raycast: &Option<GodotDclRaycastResult>,
+    player_position: godot::prelude::Vector3,
+    last_hover_entity: &mut Option<GodotDclRaycastResult>,
     global_tick_number: u32,
 ) {
-    if !GodotDclRaycastResult::eq_key(current_raycast, previous_raycast) {
-        if let Some(raycast) = previous_raycast.as_ref() {
-            if let Some(pointer_event) =
-                get_entity_pointer_event(scenes, &raycast.scene_id, &raycast.entity_id)
-            {
-                if pointer_event
-                    .has_pointer_event_without_proximity(PointerEventType::PetHoverLeave)
-                {
-                    let pointer_event_result = PbPointerEventsResult {
-                        button: InputAction::IaAny as i32,
-                        hit: None,
-                        state: PointerEventType::PetHoverLeave as i32,
-                        timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
-                        analog: None,
-                        tick_number: global_tick_number,
-                    };
+    // Effective hover target this frame: the raycast entity, but only while it has a
+    // (non-proximity) hover event AND is within its interaction range right now.
+    // Re-evaluated every tick so HOVER_ENTER/LEAVE respond to distance changes, not
+    // just to the raycast target changing (fixes: enter not firing when walking into
+    // range, leave not firing when walking out of range while still pointing).
+    let current_hover = current_raycast.as_ref().and_then(|raycast| {
+        let player_distance = entity_player_distance(
+            scenes,
+            &raycast.scene_id,
+            &raycast.entity_id,
+            player_position,
+        );
+        get_entity_pointer_event(scenes, &raycast.scene_id, &raycast.entity_id)
+            .is_some_and(|pe| pe.has_active_hover_in_range(raycast.hit.length, player_distance))
+            .then(|| raycast.clone())
+    });
 
-                    scenes
-                        .get_mut(&raycast.scene_id)
-                        .unwrap()
+    // Emit LEAVE/ENTER on any change of the effective hover target (entity change OR
+    // range-boundary crossing). Range decides the active state; per-event presence
+    // decides whether the transition is emitted. LEAVE must NOT re-check range: being
+    // out of range is exactly why we leave.
+    if !GodotDclRaycastResult::eq_key(&current_hover, last_hover_entity) {
+        if let Some(prev) = last_hover_entity.as_ref() {
+            let emit_leave = get_entity_pointer_event(scenes, &prev.scene_id, &prev.entity_id)
+                .is_some_and(|pe| {
+                    pe.has_pointer_event_without_proximity(PointerEventType::PetHoverLeave)
+                });
+            if emit_leave {
+                let pointer_event_result = PbPointerEventsResult {
+                    button: InputAction::IaAny as i32,
+                    hit: Some(prev.hit.clone()),
+                    state: PointerEventType::PetHoverLeave as i32,
+                    timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
+                    analog: None,
+                    tick_number: global_tick_number,
+                };
+                if let Some(scene) = scenes.get_mut(&prev.scene_id) {
+                    scene
                         .pointer_events_result
-                        .push((raycast.entity_id, pointer_event_result));
+                        .push((prev.entity_id, pointer_event_result));
                 }
             }
         }
 
-        if let Some(raycast) = current_raycast.as_ref() {
-            if let Some(pointer_event) =
-                get_entity_pointer_event(scenes, &raycast.scene_id, &raycast.entity_id)
-            {
-                if pointer_event
-                    .has_pointer_event_without_proximity(PointerEventType::PetHoverEnter)
-                {
-                    let pointer_event_result = PbPointerEventsResult {
-                        button: InputAction::IaAny as i32,
-                        hit: None,
-                        state: PointerEventType::PetHoverEnter as i32,
-                        timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
-                        analog: None,
-                        tick_number: global_tick_number,
-                    };
-
-                    scenes
-                        .get_mut(&raycast.scene_id)
-                        .unwrap()
+        if let Some(curr) = current_hover.as_ref() {
+            let emit_enter = get_entity_pointer_event(scenes, &curr.scene_id, &curr.entity_id)
+                .is_some_and(|pe| {
+                    pe.has_pointer_event_without_proximity(PointerEventType::PetHoverEnter)
+                });
+            if emit_enter {
+                let pointer_event_result = PbPointerEventsResult {
+                    button: InputAction::IaAny as i32,
+                    hit: Some(curr.hit.clone()),
+                    state: PointerEventType::PetHoverEnter as i32,
+                    timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
+                    analog: None,
+                    tick_number: global_tick_number,
+                };
+                if let Some(scene) = scenes.get_mut(&curr.scene_id) {
+                    scene
                         .pointer_events_result
-                        .push((raycast.entity_id, pointer_event_result));
+                        .push((curr.entity_id, pointer_event_result));
                 }
             }
         }
     }
+
+    *last_hover_entity = current_hover;
 
     let (current_raycast_scene_id, current_raycast_entity_id, raycast_hit) =
         if let Some(raycast) = current_raycast.as_ref() {
@@ -477,6 +563,14 @@ fn pointer_events_system_without_proximity(
 
     let pointer_event = pointer_event.unwrap().clone();
 
+    // Player distance to the clicked entity, computed once for the click range gate.
+    let click_player_distance = entity_player_distance(
+        scenes,
+        &current_raycast_scene_id,
+        &current_raycast_entity_id,
+        player_position,
+    );
+
     for pointer_event in pointer_event.pointer_events.iter() {
         if pointer_event.interaction_type == Some(i32::from(InteractionType::Proximity)) {
             continue;
@@ -490,8 +584,12 @@ fn pointer_events_system_without_proximity(
         let pointer_event_button = event_info.button.unwrap_or(InputAction::IaAny as i32);
 
         if let Some(raycast_hit) = raycast_hit.clone() {
-            let max_distance = *event_info.max_distance.as_ref().unwrap_or(&10.0);
-            if raycast_hit.length > max_distance {
+            if !event_info_in_range(
+                event_info.max_distance,
+                event_info.max_player_distance,
+                raycast_hit.length,
+                click_player_distance,
+            ) {
                 continue;
             }
         }

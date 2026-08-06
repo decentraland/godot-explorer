@@ -14,6 +14,8 @@ use godot::classes::resource_saver::SaverFlags;
 use godot::classes::{Node, PackedScene, Resource, ResourceSaver};
 use godot::prelude::*;
 
+use super::cache_file_name::cache_file_name;
+
 /// Saves a Node3D as a PackedScene to the specified file path
 ///
 /// # Arguments
@@ -49,7 +51,7 @@ pub fn save_node_as_scene(node: Gd<Node3D>, file_path: &str) -> Result<(), Strin
 /// * `content_folder` - The cache folder path (e.g., "/path/to/cache/")
 /// * `hash` - The content hash
 pub fn get_scene_path_for_hash(content_folder: &str, hash: &str) -> String {
-    format!("{}{}.scn", content_folder, hash)
+    format!("{}{}.scn", content_folder, cache_file_name(hash))
 }
 
 /// Gets the absolute path for a cached wearable scene by its hash
@@ -58,7 +60,7 @@ pub fn get_scene_path_for_hash(content_folder: &str, hash: &str) -> String {
 /// * `content_folder` - The cache folder path (e.g., "/path/to/cache/")
 /// * `hash` - The content hash
 pub fn get_wearable_path_for_hash(content_folder: &str, hash: &str) -> String {
-    format!("{}wearable_{}.scn", content_folder, hash)
+    format!("{}wearable_{}.scn", content_folder, cache_file_name(hash))
 }
 
 /// Gets the absolute path for a cached emote scene by its hash
@@ -67,5 +69,5 @@ pub fn get_wearable_path_for_hash(content_folder: &str, hash: &str) -> String {
 /// * `content_folder` - The cache folder path (e.g., "/path/to/cache/")
 /// * `hash` - The content hash
 pub fn get_emote_path_for_hash(content_folder: &str, hash: &str) -> String {
-    format!("{}emote_{}.scn", content_folder, hash)
+    format!("{}emote_{}.scn", content_folder, cache_file_name(hash))
 }

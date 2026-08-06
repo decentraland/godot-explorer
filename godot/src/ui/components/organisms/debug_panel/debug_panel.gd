@@ -300,7 +300,7 @@ func _on_button_open_source_pressed():
 		printerr("no main js file found for current scene")
 		return
 
-	var js_file_path = "user://content/" + main_js_hash
+	var js_file_path = Global.content_provider.get_cache_file_path(main_js_hash)
 	var absolute_path = ProjectSettings.globalize_path(js_file_path)
 
 	if not FileAccess.file_exists(js_file_path):

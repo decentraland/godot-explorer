@@ -12,6 +12,7 @@ use tokio::time::{timeout, Instant};
 
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
+use crate::content::cache_file_name::cache_file_name;
 use crate::content::semaphore_ext::CappedSemaphore;
 
 pub struct FileMetadata {
@@ -184,7 +185,7 @@ impl ResourceProvider {
     /// Delete a file from the cache by its hash.
     /// Returns the metadata if the file was found and deleted.
     pub async fn delete_file_by_hash(&self, file_hash: &str) -> Option<FileMetadata> {
-        let file_path = self.cache_folder.join(file_hash);
+        let file_path = self.cache_folder.join(cache_file_name(file_hash).as_ref());
         let file_path = file_path.to_str().unwrap().to_string();
         self.delete_file(&file_path).await
     }
@@ -468,7 +469,7 @@ impl ResourceProvider {
 
     pub async fn file_exists(&self, file_hash: &str) -> bool {
         let existing_files = self.existing_files.read().await;
-        let absolute_file_path = self.cache_folder.join(file_hash);
+        let absolute_file_path = self.cache_folder.join(cache_file_name(file_hash).as_ref());
         let absolute_file_path = absolute_file_path.to_str().unwrap().to_string();
         existing_files.contains_key(&absolute_file_path)
     }
@@ -489,7 +490,7 @@ impl ResourceProvider {
 
     pub async fn store_file(&self, file_hash: &str, bytes: &[u8]) -> Result<(), String> {
         self.ensure_initialized().await?;
-        let absolute_file_path = self.cache_folder.join(file_hash);
+        let absolute_file_path = self.cache_folder.join(cache_file_name(file_hash).as_ref());
 
         // Write the bytes to a temporary file first
         let tmp_dest = absolute_file_path.with_extension("tmp");

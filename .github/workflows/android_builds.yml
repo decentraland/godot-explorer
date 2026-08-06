@@ -358,9 +358,14 @@ jobs:
           path: android-debug-symbols/
           if-no-files-found: error
         
-      # Upload debug symbols to Sentry for production builds (main/release only)
+      # Upload debug symbols to Sentry for production builds (main/release only).
+      # continue-on-error: the APK/AAB are already built and uploaded by this point, so a
+      # Sentry hiccup (e.g. server-side "Reported checksum mismatch") must never fail the
+      # build — it only costs us symbolication. We notify instead.
       - name: Upload debug symbols to Sentry
+        id: sentry_symbols
         if: success() && (github.ref_name == 'main' || github.ref_name == 'release')
+        continue-on-error: true
         shell: bash
         run: |
           EXPLORER_VERSION=$(cargo run -- explorer-version)
@@ -457,6 +462,13 @@ jobs:
           else
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
           fi
+
+      # Notify only — the step above is continue-on-error, so the job stays green.
+      - name: Sentry symbol upload failed — notify (non-blocking)
+        if: always() && steps.sentry_symbols.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning title=Sentry symbol upload failed::Android native symbols for ${{ github.ref_name }} were not uploaded — crashes may be unsymbolicated. The APK/AAB themselves are unaffected."
 
       # Build Report Comment
       - name: Prepare Build Report

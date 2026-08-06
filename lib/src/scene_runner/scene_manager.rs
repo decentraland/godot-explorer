@@ -42,7 +42,8 @@ use tokio::sync::mpsc::error::TrySendError;
 
 use super::{
     components::pointer_events::{
-        find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
+        entity_player_distance, event_info_in_range, find_active_proximity_entity,
+        get_entity_pointer_event, pointer_events_system,
     },
     input::InputState,
     loading_funnel::{LoadingBeginContext, LoadingFunnel},
@@ -121,7 +122,10 @@ pub struct SceneManager {
     memory_warning_dismissed: bool,
 
     input_state: InputState,
-    last_raycast_result: Option<GodotDclRaycastResult>,
+    // Entity currently in the "active hover" state (raycast target AND within its
+    // interaction range), with the hit captured when it became active. Drives cursor
+    // HOVER_ENTER/LEAVE so they respond to distance changes, not just target changes.
+    last_hover_entity: Option<GodotDclRaycastResult>,
     last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
     #[var]
@@ -2120,9 +2124,14 @@ impl SceneManager {
 
             let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
             let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
+            // Build the hit from the CAMERA ray origin (not the avatar position) so
+            // `hit.length`/`global_origin`/`direction` are camera-relative, per
+            // raycast_hit.proto. This is what makes `max_distance` a true camera-distance
+            // gate (pointer_events.proto), independent of `max_player_distance` which is
+            // measured from the avatar. Avatar position was an incidental earlier choice.
             let raycast_data = RaycastHit::from_godot_raycast(
                 scene_position,
-                self.get_player_avatar_node()?.get_global_position(),
+                raycast_from,
                 &raycast_result,
                 Some(dcl_entity_id as u32),
             )?;
@@ -2675,7 +2684,7 @@ impl INode for SceneManager {
             begin_time: Instant::now(),
             console: Callable::invalid(),
             input_state: InputState::default(),
-            last_raycast_result: None,
+            last_hover_entity: None,
             last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
             highlighted_entity: None,
@@ -2859,17 +2868,25 @@ impl INode for SceneManager {
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
-            &self.last_raycast_result,
             &current_pointer_raycast_result,
             player_position,
             &camera_and_viewport,
             &mut self.last_proximity_entity,
+            &mut self.last_hover_entity,
         );
 
         let mut tooltips = VarArray::new();
         let mut new_highlighted: Option<Gd<Node3D>> = None;
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
             let mut should_highlight = false;
+            // Player distance to the hovered entity, for the feedback range gate
+            // (so the overlay respects max_player_distance, matching cursor events).
+            let feedback_player_distance = entity_player_distance(
+                &self.scenes,
+                &raycast.scene_id,
+                &raycast.entity_id,
+                player_position,
+            );
             if let Some(pointer_events) =
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
@@ -2880,8 +2897,14 @@ impl INode for SceneManager {
                     }
                     if let Some(info) = pointer_event.event_info.as_ref() {
                         let show_feedback = info.show_feedback.as_ref().unwrap_or(&true);
-                        let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
-                        if !show_feedback || raycast.hit.length > max_distance {
+                        if !show_feedback
+                            || !event_info_in_range(
+                                info.max_distance,
+                                info.max_player_distance,
+                                raycast.hit.length,
+                                feedback_player_distance,
+                            )
+                        {
                             continue;
                         }
 
@@ -3019,7 +3042,6 @@ impl INode for SceneManager {
             self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
-        self.last_raycast_result = current_pointer_raycast_result;
         GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 
