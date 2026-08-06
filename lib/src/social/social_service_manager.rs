@@ -703,10 +703,7 @@ impl SocialServiceManager {
         let mut stream = service
             .subscribe_to_friendship_updates()
             .await
-            .map_err(|e| {
-                tracing::error!("Failed to subscribe to friendship updates: {:?}", e);
-                anyhow!("Failed to subscribe to friendship updates: {:?}", e)
-            })?;
+            .map_err(|e| anyhow!("Failed to subscribe to friendship updates: {:?}", e))?;
 
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
