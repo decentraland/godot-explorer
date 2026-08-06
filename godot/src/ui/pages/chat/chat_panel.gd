@@ -6,8 +6,11 @@ signal load_scenes_pressed
 
 enum ChatState { CLOSED, OPEN, WRITING }
 
-const LANDSCAPE_MARGINS := {"left": 0, "top": 0, "right": 0, "bottom": 0}
-const PORTRAIT_MARGINS := {"left": 40, "top": 0, "right": 40, "bottom": 64}
+# Left/top/right margins live on the chat's SafeMarginContainer in explorer.tscn
+# (hud_margins.tres, orientation-aware). Only the bottom stays here because it is
+# state-dependent (open vs writing) and keyboard-aware.
+const LANDSCAPE_BOTTOM := 0
+const PORTRAIT_BOTTOM := 64
 const WIDTH_OPEN := 420
 
 var _current_state: ChatState = ChatState.CLOSED
@@ -72,13 +75,11 @@ func _apply_writing_state() -> void:
 
 
 func _apply_default_margins() -> void:
-	var m := PORTRAIT_MARGINS if Global.is_orientation_portrait() else LANDSCAPE_MARGINS
-	add_theme_constant_override("margin_left", m["left"])
-	add_theme_constant_override("margin_top", m["top"])
-	add_theme_constant_override("margin_right", m["right"])
-	var bottom: int = m["bottom"]
-	# In portrait, compensate the safe area bottom margin added by SafeMarginContainerHUD
-	# so the chat sits exactly PORTRAIT_MARGINS.bottom pixels from the screen edge.
+	# Sides/top come from the chat's SafeMarginContainer (hud_margins.tres). Only the
+	# bottom is set here.
+	var bottom: int = PORTRAIT_BOTTOM if Global.is_orientation_portrait() else LANDSCAPE_BOTTOM
+	# In portrait, compensate the safe area bottom margin added by the SafeMarginContainer
+	# so the chat sits exactly PORTRAIT_BOTTOM pixels from the screen edge.
 	if Global.is_orientation_portrait() and _current_state != ChatState.CLOSED:
 		var safe_area := Global.get_safe_area()
 		var window_size := DisplayServer.window_get_size()

@@ -80,7 +80,9 @@ var _debug_panel_from_settings: bool = false
 @onready var control_menu = %Control_Menu
 @onready var mobile_ui = %MobileUI
 @onready var mobile_camera_input: Control = %MobileCameraInput
-@onready var left_right_safe_container_mobile: MarginContainer = %LeftRightSafeContainerMobile
+@onready var safe_area_controls: MarginContainer = %SafeAreaControls
+@onready var safe_area_hud: MarginContainer = %SafeAreaHud
+@onready var hud_content: Control = %InteractableHUD
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
@@ -95,7 +97,6 @@ var _debug_panel_from_settings: bool = false
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
 @onready var button_show_ui: Button = %Button_ShowUI
-@onready var margin_container_show_ui: MarginContainer = %MarginContainer_ShowUI
 @onready var h_box_container_left_panels: HBoxContainer = %HBoxContainerLeftPanels
 
 
@@ -873,16 +874,16 @@ func set_visible_ui(value: bool, use_hud_mode: bool = false):
 		ui_root.hide()
 
 	if value:
-		margin_container_show_ui.hide()
+		button_show_ui.hide()
 
 
 func _is_ui_hud_mode_exception(node: Node) -> bool:
 	return (
 		node == ui_safe_area
 		or node == control_menu
-		or node == margin_container_show_ui
+		or node == safe_area_hud
 		or node == profile_container
-		or node == left_right_safe_container_mobile
+		or node == safe_area_controls
 		or node == mobile_camera_input
 	)
 
@@ -915,13 +916,20 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 	ui_root.show()
 	_apply_mobile_controls_hide_ui(not full_hud)
 	if full_hud:
+		# SafeAreaHud stays visible (exception); we toggle its content group so the
+		# Show-UI button (a sibling of hud_content) survives and children keep their state.
+		hud_content.show()
+		# The navbar panel flow toggles chat_panel.visible independently; make sure it
+		# comes back with the HUD (same guard as _close_all_panels).
+		chat_panel.show()
 		for node in _ui_children_hidden_for_hud_mode:
 			if is_instance_valid(node):
 				node.show()
 		_ui_children_hidden_for_hud_mode.clear()
-		margin_container_show_ui.hide()
+		button_show_ui.hide()
 		return
 
+	hud_content.hide()
 	for child in ui_root.get_children():
 		if _is_ui_hud_mode_exception(child):
 			continue
@@ -932,7 +940,7 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 			_ui_children_hidden_for_hud_mode.append(canvas_child)
 			canvas_child.hide()
 
-	margin_container_show_ui.show()
+	button_show_ui.show()
 
 
 func _on_control_menu_request_debug_panel(enabled):
