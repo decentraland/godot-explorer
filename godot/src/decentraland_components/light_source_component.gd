@@ -41,6 +41,16 @@ const DEBUG_INFO_LABEL_BUDGET_POS: Vector3 = Vector3(0.0, -0.42, 0.0)
 const DEBUG_STATUS_LABEL_PIXEL_SIZE: float = 0.0011
 const DEBUG_STATUS_LABEL_POS: Vector3 = Vector3.ZERO
 
+# Light energy fades in/out over this many seconds when render state changes
+# (matches the reference client's FadeDuration).
+const FADE_DURATION: float = 0.25
+
+# Camera-direction culling: lights behind the camera don't render, except
+# very close ones (they wrap into view when the camera turns).
+const CAMERA_CULL_CLOSE_RADIUS: float = 6.0
+# dot(camera_forward, to_light) threshold; 0.2 ~= 78 deg half-angle (FOV + margin).
+const CAMERA_CULL_MIN_DOT: float = 0.2
+
 var current_light: Light3D = null
 var projector_texture: Texture2D = null
 var projector_texture_path: String = ""
@@ -70,6 +80,13 @@ var debug_budget_rank: int = -1
 var debug_budget_candidate: bool = false
 var debug_last_distance_to_avatar: float = -1.0
 
+# Fade state: render state changes ramp light_energy 0 <-> _base_energy over
+# FADE_DURATION instead of hard-toggling visible. Advanced by the manager.
+var _base_energy: float = 0.0
+var _energy_scale: float = 0.0
+var _render_target: bool = false
+var _fade_active: bool = false
+
 # Runtime-editable light settings (static so the settings menu can modify them).
 # Defaults are ON so desktop/Custom-profile users don't have to enable them
 # every run; apply_graphic_profile overwrites them per profile (mobile
@@ -90,6 +107,9 @@ static var projector_texture_cache: Dictionary = {}
 static var registered_lights: Array[DclLightSourceComponent] = []
 static var reference_position: Vector3 = Vector3.ZERO
 static var has_reference_position: bool = false
+static var camera_position: Vector3 = Vector3.ZERO
+static var camera_forward: Vector3 = Vector3.FORWARD
+static var has_camera: bool = false
 
 # Set whenever range/budget state must be recomputed (new light, removal,
 # settings change, transform change). Consumed by LightSourceManager's tick.
@@ -162,10 +182,27 @@ static func get_light_settings() -> Dictionary:
 ## recompute was requested (new light, removal, settings change). This is the
 ## ONLY place where range/budget/visibility state is recomputed — lights
 ## themselves never run per-frame logic.
-static func tick(new_reference_position: Vector3, has_reference: bool) -> void:
+static func tick(
+	new_reference_position: Vector3,
+	has_reference: bool,
+	cam_pos: Vector3,
+	cam_forward: Vector3,
+	cam_available: bool
+) -> void:
 	reference_position = new_reference_position
 	has_reference_position = has_reference
+	camera_position = cam_pos
+	camera_forward = cam_forward
+	has_camera = cam_available
 	_update_global_light_budget()
+
+
+## Called EVERY frame by the manager: advances fades only for lights in
+## transition (cheap early-out per light, no per-light _process nodes).
+static func tick_fades(delta: float) -> void:
+	for light in registered_lights:
+		if is_instance_valid(light) and light._fade_active:
+			light._tick_fade(delta)
 
 
 static func clear_reference_position() -> void:
@@ -226,6 +263,7 @@ static func _update_global_light_budget() -> void:
 			or light.last_kind == ""
 			or not light.runtime_light_enabled
 			or light._get_avatar_range_state(light.last_light_range) != 1
+			or not light._is_in_camera_view()
 		):
 			light._update_light_rendering_by_range()
 			continue
@@ -286,7 +324,8 @@ func set_spot(
 
 	var spot: SpotLight3D = current_light as SpotLight3D
 	spot.light_color = color
-	spot.light_energy = _convert_intensity(intensity)
+	_base_energy = _convert_intensity(intensity)
+	_apply_fade()
 	spot.spot_range = light_range
 	# DCL/Unity angles describe the FULL cone; Godot's spot_angle is the
 	# angular RADIUS (center to edge, hard max 89.99). Halve to convert.
@@ -325,7 +364,8 @@ func set_point(color: Color, intensity: float, light_range: float) -> void:
 
 	var omni: OmniLight3D = current_light as OmniLight3D
 	omni.light_color = color
-	omni.light_energy = _convert_intensity(intensity)
+	_base_energy = _convert_intensity(intensity)
+	_apply_fade()
 	omni.omni_range = light_range
 
 	last_kind = "point"
@@ -379,7 +419,7 @@ func _update_light_rendering_by_range() -> void:
 		_set_light_render_state(false)
 		return
 
-	var should_render: bool = range_state == 1
+	var should_render: bool = range_state == 1 and _is_in_camera_view()
 	if use_global_light_budget:
 		should_render = should_render and budget_light_enabled
 
@@ -390,27 +430,71 @@ func _set_light_render_state(should_render: bool) -> void:
 	if current_light == null:
 		return
 
-	current_light.visible = should_render
+	if should_render == _render_target and not _fade_active:
+		return
 
+	_render_target = should_render
+
+	# Shadows switch instantly (a shadow popping after the light faded would
+	# look worse than no fade on the shadow itself).
 	if not should_render:
 		current_light.shadow_enabled = false
 		current_light.shadow_caster_mask = DCL_LIGHT_SHADOW_CASTER_MASK_NONE
+	else:
+		var has_projector: bool = (
+			current_light is SpotLight3D
+			and projector_texture_path != ""
+			and projector_texture_path != DEFAULT_PROJECTOR_TEXTURE_PATH
+		)
+
+		# Godot requires shadow_enabled=true for light_projector to work, so
+		# projector lights keep it on even when dynamic shadows are disabled.
+		current_light.shadow_enabled = runtime_shadows_enabled or has_projector
+
+		if force_dcl_light_shadows_off:
+			current_light.shadow_caster_mask = DCL_LIGHT_SHADOW_CASTER_MASK_NONE
+		else:
+			current_light.shadow_caster_mask = DCL_LIGHT_SHADOW_CASTER_MASK_ALL
+
+	_fade_active = true
+
+
+func _tick_fade(delta: float) -> void:
+	if current_light == null:
+		_fade_active = false
 		return
 
-	var has_projector: bool = (
-		current_light is SpotLight3D
-		and projector_texture_path != ""
-		and projector_texture_path != DEFAULT_PROJECTOR_TEXTURE_PATH
-	)
-
-	# Godot requires shadow_enabled=true for light_projector to work, so
-	# projector lights keep it on even when dynamic shadows are disabled.
-	current_light.shadow_enabled = runtime_shadows_enabled or has_projector
-
-	if force_dcl_light_shadows_off:
-		current_light.shadow_caster_mask = DCL_LIGHT_SHADOW_CASTER_MASK_NONE
+	var step: float = delta / FADE_DURATION
+	if _render_target:
+		_energy_scale = minf(_energy_scale + step, 1.0)
+		if _energy_scale >= 1.0:
+			_fade_active = false
 	else:
-		current_light.shadow_caster_mask = DCL_LIGHT_SHADOW_CASTER_MASK_ALL
+		_energy_scale = maxf(_energy_scale - step, 0.0)
+		if _energy_scale <= 0.0:
+			_fade_active = false
+
+	_apply_fade()
+
+
+func _apply_fade() -> void:
+	if current_light == null:
+		return
+	current_light.visible = _energy_scale > 0.0
+	current_light.light_energy = _base_energy * _energy_scale
+
+
+func _is_in_camera_view() -> bool:
+	if not has_camera:
+		return true
+
+	var to_light: Vector3 = global_position - camera_position
+	var dist: float = to_light.length()
+
+	if dist <= CAMERA_CULL_CLOSE_RADIUS or dist <= 0.0:
+		return true
+
+	return camera_forward.dot(to_light / dist) >= CAMERA_CULL_MIN_DOT
 
 
 func _clear_light() -> void:
