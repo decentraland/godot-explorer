@@ -953,16 +953,45 @@ impl ContentProvider {
             .collect();
         tracing::debug!("[extract_emote] Root children: {:?}", children);
 
-        // Read armature_prop (first Node3D child that's not AnimationPlayer)
+        // Read armature_prop by NAME, the way the runtime pipeline picks it
+        // (`gltf::emote::process_emote_animations` -> find_child("Armature_Prop")).
+        //
+        // Position alone is not enough. The runtime path builds a synthetic `EmoteRoot`
+        // whose only Node3D child is the prop, so "first non-AnimationPlayer Node3D"
+        // happened to be right there. Optimized assets come from the asset-optimizer
+        // instead, which makes no such guarantee: its first Node3D child is typically the
+        // avatar's own "Armature". `avatar_emote_controller` then rejects that node
+        // (it only accepts names starting with "Armature_Prop", so it can't destroy the
+        // avatar skeleton), and the emote plays with no prop and no error — the emote's
+        // prop is simply missing on optimized builds. Same divergence the AnimationPlayer
+        // lookup below already handles ("EmoteAnimations" vs "AnimationPlayer").
         let mut armature_prop: Option<Gd<Node3D>> = None;
+        let mut first_node3d: Option<Gd<Node3D>> = None;
         for child in root.get_children().iter_shared() {
             if child.is_class("AnimationPlayer") {
                 continue;
             }
+            let named_prop = child.get_name().to_string().starts_with("Armature_Prop");
             if let Ok(node3d) = child.try_cast::<Node3D>() {
-                armature_prop = Some(node3d);
-                break;
+                if named_prop {
+                    armature_prop = Some(node3d);
+                    break;
+                }
+                if first_node3d.is_none() {
+                    first_node3d = Some(node3d);
+                }
             }
+        }
+        if armature_prop.is_none() {
+            if let Some(node) = first_node3d.as_ref() {
+                tracing::warn!(
+                    "[extract_emote] hash={}: no 'Armature_Prop*' child; falling back to '{}'. \
+                     Consumers that match on the name will drop this prop.",
+                    file_hash,
+                    node.get_name()
+                );
+            }
+            armature_prop = first_node3d;
         }
 
         // Read animations from embedded AnimationPlayer
